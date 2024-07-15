@@ -61,6 +61,10 @@ func NewModelBuilder(p *Builder, model interface{}) (mb *ModelBuilder) {
 	return
 }
 
+func (mb *ModelBuilder) Builder() *Builder {
+	return mb.p
+}
+
 func (mb *ModelBuilder) HasDetailing() bool {
 	return mb.hasDetailing
 }

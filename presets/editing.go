@@ -41,6 +41,10 @@ func (mb *ModelBuilder) Editing(vs ...interface{}) (r *EditingBuilder) {
 	return r
 }
 
+func (b *EditingBuilder) ModelBuilder() *ModelBuilder {
+	return b.mb
+}
+
 // string / []string / *FieldsSection
 func (b *EditingBuilder) Only(vs ...interface{}) (r *EditingBuilder) {
 	r = b

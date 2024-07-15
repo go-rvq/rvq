@@ -49,6 +49,10 @@ func (mb *ModelBuilder) Detailing(vs ...interface{}) (r *DetailingBuilder) {
 	return r
 }
 
+func (b *DetailingBuilder) ModelBuilder() *ModelBuilder {
+	return b.mb
+}
+
 func (b *DetailingBuilder) GetDrawer() bool {
 	return b.drawer
 }

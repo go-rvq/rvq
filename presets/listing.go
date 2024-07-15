@@ -69,6 +69,10 @@ func (mb *ModelBuilder) Listing(vs ...string) (r *ListingBuilder) {
 	return r
 }
 
+func (b *ListingBuilder) ModelBuilder() *ModelBuilder {
+	return b.mb
+}
+
 func (b *ListingBuilder) Only(vs ...string) (r *ListingBuilder) {
 	r = b
 	ivs := make([]interface{}, 0, len(vs))
