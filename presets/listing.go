@@ -188,6 +188,9 @@ const (
 	dataTablePortalName            = "dataTable"
 	dataTableAdditionsPortalName   = "dataTableAdditions"
 	listingDialogContentPortalName = "listingDialogContentPortal"
+
+	SelectedEventParamName       = "selectedEvent"
+	SelectedEventConfigParamName = "selectedEventConfig"
 )
 
 func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -1212,7 +1215,8 @@ func (b *ListingBuilder) getTableComponents(
 		panic(err)
 	}
 
-	haveCheckboxes := len(b.bulkActions) > 0
+	selectedEventName := ctx.R.URL.Query().Get(SelectedEventParamName)
+	haveCheckboxes := selectedEventName == "" && len(b.bulkActions) > 0
 
 	cellWrapperFunc := func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
 		tdbind := cell
@@ -1238,6 +1242,21 @@ func (b *ListingBuilder) getTableComponents(
 		}
 		return tdbind
 	}
+
+	if selectedEventName != "" {
+		selectedEventConfig := ctx.R.URL.Query().Get(SelectedEventConfigParamName)
+
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
+			onclick := web.Plaid().
+				EventFunc(selectedEventName).
+				Query(ParamID, id).
+				Query(SelectedEventConfigParamName, selectedEventConfig)
+			cell.SetAttr("@click.self",
+				onclick.Go()+`;`+CloseListingDialogVarScript)
+			return cell
+		}
+	}
+
 	if b.cellWrapperFunc != nil {
 		cellWrapperFunc = b.cellWrapperFunc
 	}
