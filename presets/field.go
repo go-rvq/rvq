@@ -133,6 +133,13 @@ func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *Fi
 	return b
 }
 
+func (b *FieldBuilder) RequestLabel(fb *FieldsBuilder, info *ModelInfo, r *http.Request) string {
+	if info != nil {
+		return i18n.PT(r, ModelsI18nModuleKey, info.Label(), fb.getLabel(b.NameLabel))
+	}
+	return fb.getLabel(b.NameLabel)
+}
+
 type NestedConfig interface {
 	nested()
 }
@@ -693,10 +700,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		return nil
 	}
 
-	label := b.getLabel(f.NameLabel)
-	if info != nil {
-		label = i18n.PT(ctx.R, ModelsI18nModuleKey, info.Label(), b.getLabel(f.NameLabel))
-	}
+	label := f.RequestLabel(b, info, ctx.R)
 
 	contextKeyPath := f.name
 	if parentFormValueKey != "" {
