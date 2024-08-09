@@ -109,10 +109,9 @@ func (b *Verifier) SnakeOn(vs ...string) (r *Verifier) {
 }
 
 func (b *Verifier) ObjectOn(v interface{}) (r *Verifier) {
-	if b.builder == nil {
+	if b.builder == nil || v == nil {
 		return b
 	}
-
 	b.vr.objs = append(b.vr.objs, v)
 	b.vr.resourcesParts = append(b.vr.resourcesParts, ToPermissionRN(v)...)
 	return b

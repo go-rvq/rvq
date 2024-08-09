@@ -188,7 +188,7 @@ func (b *VNumberInputBuilder) Error(v bool) (r *VNumberInputBuilder) {
 	return b
 }
 
-func (b *VNumberInputBuilder) ErrorMessages(v interface{}) (r *VNumberInputBuilder) {
+func (b *VNumberInputBuilder) ErrorMessages(v ...string) (r *VNumberInputBuilder) {
 	b.tag.Attr(":error-messages", h.JSONString(v))
 	return b
 }

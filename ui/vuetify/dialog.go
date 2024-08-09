@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/qor5/web/v3"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -23,7 +24,7 @@ func (b *VDialogBuilder) Activator(v interface{}) (r *VDialogBuilder) {
 	return b
 }
 
-func (b *VDialogBuilder) Fullscreen(v bool) (r *VDialogBuilder) {
+func (b *VDialogBuilder) Fullscreen(v any) (r *VDialogBuilder) {
 	b.tag.Attr(":fullscreen", fmt.Sprint(v))
 	return b
 }
@@ -33,7 +34,7 @@ func (b *VDialogBuilder) RetainFocus(v bool) (r *VDialogBuilder) {
 	return b
 }
 
-func (b *VDialogBuilder) Scrollable(v bool) (r *VDialogBuilder) {
+func (b *VDialogBuilder) Scrollable(v any) (r *VDialogBuilder) {
 	b.tag.Attr(":scrollable", fmt.Sprint(v))
 	return b
 }
@@ -139,32 +140,62 @@ func (b *VDialogBuilder) OpenDelay(v interface{}) (r *VDialogBuilder) {
 }
 
 func (b *VDialogBuilder) Height(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":height", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":height", v)
 	return b
 }
 
 func (b *VDialogBuilder) MaxHeight(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":max-height", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":max-height", v)
 	return b
 }
 
 func (b *VDialogBuilder) MaxWidth(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":max-width", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":max-width", v)
 	return b
 }
 
 func (b *VDialogBuilder) MinHeight(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":min-height", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":min-height", v)
 	return b
 }
 
 func (b *VDialogBuilder) MinWidth(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":min-width", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":min-width", v)
 	return b
 }
 
 func (b *VDialogBuilder) Width(v interface{}) (r *VDialogBuilder) {
-	b.tag.Attr(":width", h.JSONString(v))
+	if va, ok := v.(web.Var); ok {
+		v = string(va)
+	} else {
+		v = h.JSONString(v)
+	}
+	b.tag.Attr(":width", v)
 	return b
 }
 

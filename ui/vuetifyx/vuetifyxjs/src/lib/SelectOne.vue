@@ -2,30 +2,21 @@
   <label class="v-label theme--light" v-html="label"></label>
   <v-card v-if="internalSelectedItems.length > 0" variant="flat" class="mb-2">
     <v-list>
-      <draggable
-        v-model="internalSelectedItems"
-        :item-key="itemValue"
-        @change="changeOrder"
-        handle=".handle"
+      <v-list-item
+        v-for="element in internalSelectedItems"
+        :prepend-avatar="element[itemImage]"
+        :title="element[itemText]"
+        animation="300"
       >
-        <template #item="{ element }">
-          <v-list-item
-            :prepend-avatar="element[itemImage]"
-            :title="element[itemText]"
-            animation="300"
-          >
-            <template v-slot:append>
-              <v-icon icon="mdi-drag" class="handle mx-2 cursor-grab"></v-icon>
-              <v-btn @click="removeItem(element[itemValue])" variant="text" icon="mdi-delete">
-              </v-btn>
-            </template>
-          </v-list-item>
+        <template v-slot:append>
+          <v-btn @click="removeItem(element[itemValue])" variant="text" icon="mdi-delete"> </v-btn>
         </template>
-      </draggable>
+      </v-list-item>
     </v-list>
   </v-card>
 
   <v-autocomplete
+    v-if="internalSelectedItems.length == 0"
     :item-value="itemValue"
     :item-title="itemText"
     :items="internalItems"
@@ -95,7 +86,7 @@ const props = defineProps({
 })
 const internalSelectedItems: Ref<any[]> = ref([])
 const internalItems: Ref<any[]> = ref([])
-const autocompleteValue: Ref<any[]> = ref([])
+const autocompleteValue: Ref<any> = ref([])
 const isLoading = ref(false)
 const noFilter = ref(false)
 
@@ -114,6 +105,7 @@ onMounted(() => {
 // methods
 const addItem = (event: any) => {
   autocompleteValue.value = []
+
   if (
     internalSelectedItems.value.find(
       (element) => element[props.itemValue] == event[props.itemValue]
@@ -121,28 +113,26 @@ const addItem = (event: any) => {
   ) {
     return
   }
-  internalSelectedItems.value.push(
+
+  let newValues: any[] = []
+  newValues.push(
     internalItems.value.find((element) => element[props.itemValue] == event[props.itemValue])
   )
+  internalSelectedItems.value = newValues
   setValue()
 }
-const changeOrder = (event: any) => {
-  setValue()
-}
+
 const removeItem = (id: string) => {
-  internalSelectedItems.value = internalSelectedItems.value.filter(
-    (element) => element[props.itemValue] != id
-  )
+  internalSelectedItems.value = []
   setValue()
 }
 
 const setValue = () => {
-  emit(
-    'update:modelValue',
-    internalSelectedItems.value.map((i) => {
-      return i[props.itemValue]
-    })
-  )
+  let val = null
+  if (internalSelectedItems.value.length > 0) {
+    val = internalSelectedItems.value[0][props.itemValue]
+  }
+  emit('update:modelValue', val)
 }
 
 let search: any, focused: any
@@ -155,10 +145,6 @@ if (props.searchItemsFunc) {
       clearTimeout(timeoutId)
       timeoutId = setTimeout(func, delay, val)
     }
-  }
-
-  interface ListData {
-    result: any[]
   }
 
   const doSearch = (val: String) => {

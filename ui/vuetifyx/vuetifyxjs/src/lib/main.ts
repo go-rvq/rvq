@@ -3,6 +3,7 @@ import { App } from 'vue'
 import Datepicker from '@/lib/Datepicker.vue'
 import Datetimepicker from '@/lib/Datetimepicker.vue'
 import SelectMany from '@/lib/SelectMany.vue'
+import SelectOne from '@/lib/SelectOne.vue'
 import LinkageSelect from '@/lib/LinkageSelect.vue'
 import Autocomplete from '@/lib/Autocomplete.vue'
 import TextDatepicker from '@/lib/TextDatepicker.vue'
@@ -19,6 +20,7 @@ const vuetifyx = {
     app.component('vx-datepicker', Datepicker)
     app.component('vx-datetimepicker', Datetimepicker)
     app.component('vx-selectmany', SelectMany)
+    app.component('vx-selectone', SelectOne)
     app.component('vx-linkageselect', LinkageSelect)
     app.component('vx-filter', Filter)
     app.component('vx-autocomplete', Autocomplete)

@@ -14,14 +14,16 @@ import (
 
 type (
 	CellComponentFunc    func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent
-	CellWrapperFunc      func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent
-	HeadCellWrapperFunc  func(cell h.MutableAttrHTMLComponent, field string, title string) h.HTMLComponent
-	RowWrapperFunc       func(row h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent
-	RowMenuItemFunc      func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent
+	CellWrapperFunc      func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
+	HeadCellWrapperFunc  func(cell h.MutableAttrHTMLComponent, field string, title string, ctx *web.EventContext) h.HTMLComponent
+	RowWrapperFunc       func(row h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
+	RowMenuItemFunc      func(recordIndex int, obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent
 	RowComponentFunc     func(obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	OnSelectFunc         func(id string, ctx *web.EventContext) string
 	OnSelectAllFunc      func(idsOfPage []string, ctx *web.EventContext) string
 	OnClearSelectionFunc func(ctx *web.EventContext) string
+	RowStartFunc         func(rowIndex int, id string, obj interface{}, dataTableID string, ctx *web.EventContext) RowEndFunc
+	RowEndFunc           func(row *h.HTMLTagBuilder)
 )
 
 type DataTableBuilder struct {
@@ -32,6 +34,7 @@ type DataTableBuilder struct {
 	cellWrapper        CellWrapperFunc
 	headCellWrapper    HeadCellWrapperFunc
 	rowWrapper         RowWrapperFunc
+	rowStart           RowStartFunc
 	rowMenuItemFuncs   []RowMenuItemFunc
 	rowExpandFunc      RowComponentFunc
 	columns            []*DataTableColumnBuilder
@@ -46,6 +49,7 @@ type DataTableBuilder struct {
 	selectableColumnsBtn h.HTMLComponent
 	onSelectFunc         OnSelectFunc
 	onSelectAllFunc      OnSelectAllFunc
+	density              string
 }
 
 func DataTable(data interface{}) (r *DataTableBuilder) {
@@ -109,6 +113,11 @@ func (b *DataTableBuilder) RowWrapperFunc(v RowWrapperFunc) (r *DataTableBuilder
 	return b
 }
 
+func (b *DataTableBuilder) RowStarter(v RowStartFunc) *DataTableBuilder {
+	b.rowStart = v
+	return b
+}
+
 func (b *DataTableBuilder) RowMenuItemFuncs(vs ...RowMenuItemFunc) (r *DataTableBuilder) {
 	b.rowMenuItemFuncs = vs
 	return b
@@ -154,6 +163,15 @@ func (b *DataTableBuilder) OnSelectFunc(v OnSelectFunc) (r *DataTableBuilder) {
 	return b
 }
 
+func (b *DataTableBuilder) Density() string {
+	return b.density
+}
+
+func (b *DataTableBuilder) SetDensity(density string) *DataTableBuilder {
+	b.density = density
+	return b
+}
+
 type primarySlugger interface {
 	PrimarySlug() string
 }
@@ -170,14 +188,14 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 	initContextLocalsMap := map[string]interface{}{
 		selectedCountVarName: len(selected),
 	}
-
 	// map[obj_id]{rowMenus}
 	objRowMenusMap := make(map[string][]h.HTMLComponent)
+	var i int
 	reflectutils.ForEach(b.data, func(obj interface{}) {
 		id := ObjectID(obj)
 		var opMenuItems []h.HTMLComponent
 		for _, f := range b.rowMenuItemFuncs {
-			item := f(obj, id, ctx)
+			item := f(i, obj, id, ctx)
 			if item == nil {
 				continue
 			}
@@ -186,6 +204,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 		if len(opMenuItems) > 0 {
 			objRowMenusMap[id] = opMenuItems
 		}
+		i++
 	})
 
 	hasRowMenuCol := len(objRowMenusMap) > 0 || b.selectableColumnsBtn != nil
@@ -197,18 +216,27 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 
 	hasExpand := b.rowExpandFunc != nil
 
-	i := 0
+	i = 0
 	tdCount := 0
 	haveMoreRecord := false
 	reflectutils.ForEach(b.data, func(obj interface{}) {
 		id := ObjectID(obj)
-
 		idsOfPage = append(idsOfPage, id)
+
 		inputValue := ""
 		if slices.Contains(selected, id) {
 			inputValue = id
 		}
-		var tds []h.HTMLComponent
+		var (
+			row *h.HTMLTagBuilder
+			tds []h.HTMLComponent
+			end RowEndFunc
+		)
+
+		if b.rowStart != nil {
+			end = b.rowStart(i, id, obj, "", ctx)
+		}
+
 		if hasExpand {
 			initContextLocalsMap[fmt.Sprintf("%s_%d", expandVarName, i)] = false
 			localsExpandVarName := fmt.Sprintf("locals.%s_%d", expandVarName, i)
@@ -259,7 +287,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 
 			var tdWrapped h.HTMLComponent = std
 			if b.cellWrapper != nil {
-				tdWrapped = b.cellWrapper(std, id, obj, "")
+				tdWrapped = b.cellWrapper(std, id, obj, "", ctx)
 			}
 
 			bindTds = append(bindTds, tdWrapped)
@@ -279,7 +307,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 
 						v.VList(
 							rowMenus...,
-						),
+						).Elevation(8),
 					),
 				).Style("width: 64px;").Class("pl-0")
 			} else {
@@ -289,7 +317,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 		}
 
 		tdCount = len(bindTds)
-		row := h.Tr(bindTds...)
+		row = h.Tr(bindTds...)
 		if b.loadMoreCount > 0 && i >= b.loadMoreCount {
 			if len(b.loadMoreURL) > 0 {
 				return
@@ -299,8 +327,12 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 			haveMoreRecord = true
 		}
 
+		if end != nil {
+			end(row)
+		}
+
 		if b.rowWrapper != nil {
-			rows = append(rows, b.rowWrapper(row, id, obj, ""))
+			rows = append(rows, b.rowWrapper(row, id, obj, "", ctx))
 		} else {
 			rows = append(rows, row)
 		}
@@ -372,6 +404,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 					(h.MutableAttrHTMLComponent)(th),
 					f.name,
 					f.title,
+					ctx,
 				)
 			}
 			heads = append(heads, head)
@@ -437,6 +470,16 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 			)
 		}
 	}
+	vtable := v.VTable(
+		thead,
+		h.Tbody(rows...),
+		tfoot,
+	)
+
+	if b.density != "" {
+		vtable.Density(b.density)
+	}
+
 	table := web.Scope(
 		h.Div(
 			selectedCountNotice,
@@ -447,11 +490,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 		).
 			Class("bg-grey-lighten-3 text-center pt-2 pb-2").
 			Attr("v-show", "locals.selected_count > 0"),
-		v.VTable(
-			thead,
-			h.Tbody(rows...),
-			tfoot,
-		),
+		vtable,
 	).VSlot("{ locals }").Init(fmt.Sprintf(` { selected_count : %v , loadmore : false }`, len(selected)))
 
 	if inPlaceLoadMore {
@@ -465,12 +504,20 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 	return table.MarshalHTML(c)
 }
 
-func ObjectID(obj interface{}) string {
-	var id string
+func ObjectID(obj interface{}) (id string) {
 	if slugger, ok := obj.(primarySlugger); ok {
 		id = slugger.PrimarySlug()
 	} else {
+		defer func() {
+			if r := recover(); r != nil {
+				id = ""
+				return
+			}
+		}()
 		id = fmt.Sprint(reflectutils.MustGet(obj, "ID"))
+	}
+	if id == "0" {
+		id = ""
 	}
 	return id
 }
