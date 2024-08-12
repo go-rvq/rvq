@@ -177,7 +177,7 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 				),
 			).Attr("style", "margin-top:15px;margin-bottom:15px;"))
 
-			if d := field.Value(obj).(string); d != "" {
+			if d := field.Value().(string); d != "" {
 				detailElems = append(detailElems, DiffComponent(d, ctx.R))
 			}
 

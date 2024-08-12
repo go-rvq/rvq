@@ -250,7 +250,7 @@ func (b *FieldDefaults) fieldTypeByTypeOrCreate(tv reflect.Type) (r *FieldDefaul
 }
 
 func cfTextTd(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return h.Td(h.Text(field.StringValue(obj)))
+	return h.Td(h.Text(field.StringValue()))
 }
 
 func cfCheckbox(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -274,7 +274,7 @@ func cfNumber(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTM
 func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
-	if v := field.Value(obj); v != nil {
+	if v := field.Value(); v != nil {
 		switch vt := v.(type) {
 		case time.Time:
 			val = vt.Format("2006-01-02 15:04")
@@ -300,7 +300,7 @@ func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLC
 func cfTimeReadonly(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
-	if v := field.Value(obj); v != nil {
+	if v := field.Value(); v != nil {
 		switch vt := v.(type) {
 		case time.Time:
 			val = vt.Format(msgr.TimeFormats.DateTime)
@@ -331,7 +331,7 @@ func cfTextField(obj interface{}, field *FieldContext, ctx *web.EventContext) h.
 	return VTextField().
 		Type("text").
 		Variant(FieldVariantUnderlined).
-		Attr(web.VField(field.FormKey, field.StringValue(obj))...).
+		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
@@ -340,7 +340,7 @@ func cfTextField(obj interface{}, field *FieldContext, ctx *web.EventContext) h.
 func CFReadonlyText(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return vuetifyx.VXReadonlyField().
 		Label(field.Label).
-		Value(field.StringValue(obj))
+		Value(field.StringValue())
 }
 
 func cfReadonlyCheckbox(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {

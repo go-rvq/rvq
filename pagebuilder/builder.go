@@ -407,7 +407,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 
 		return VTextField().
 			Variant(FieldVariantUnderlined).
-			Attr(web.VField(field.Name, strings.TrimPrefix(field.Value(obj).(string), "/"))...).
+			Attr(web.VField(field.Name, strings.TrimPrefix(field.Value().(string), "/"))...).
 			Prefix("/").
 			ErrorMessages(vErr.GetFieldErrors("Page.Slug")...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
@@ -857,7 +857,7 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 
 		return VTextField().Label("Path").
 			Variant(FieldVariantUnderlined).
-			Attr(web.VField("Path", strings.TrimPrefix(field.Value(obj).(string), "/"))...).
+			Attr(web.VField("Path", strings.TrimPrefix(field.Value().(string), "/"))...).
 			Prefix("/").
 			ErrorMessages(vErr.GetFieldErrors("Category.Category")...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {

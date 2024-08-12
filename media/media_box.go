@@ -69,7 +69,7 @@ func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFun
 		if !ok {
 			cfg = &media_library.MediaBoxConfig{}
 		}
-		mediaBox := field.Value(obj).(media_library.MediaBox)
+		mediaBox := field.Value().(media_library.MediaBox)
 		return QMediaBox(db).
 			FieldName(field.FormKey).
 			Value(&mediaBox).
@@ -411,7 +411,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 
 func MediaBoxListFunc() presets.FieldComponentFunc {
 	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		mediaBox := field.Value(obj).(media_library.MediaBox)
+		mediaBox := field.Value().(media_library.MediaBox)
 		return h.Td(h.Img("").Src(mediaBox.URL(media_library.QorPreviewSizeName)).Style("height: 48px;"))
 	}
 }

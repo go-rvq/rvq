@@ -68,7 +68,7 @@ func (b *FieldBuilder) Nested(fb *NestedFieldBuilder, cfgs ...NestedConfig) (r *
 			}
 		}
 		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return NewListEditor(field).Value(field.Value(obj)).
+			return NewListEditor(field).Value(field.Value()).
 				DisplayFieldInSorter(displayFieldInSorter).
 				AddListItemRowEvent(addListItemRowEvent).
 				RemoveListItemRowEvent(removeListItemRowEvent).
@@ -76,7 +76,7 @@ func (b *FieldBuilder) Nested(fb *NestedFieldBuilder, cfgs ...NestedConfig) (r *
 		})
 	default:
 		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			val := field.Value(obj)
+			val := field.Value()
 			if val == nil {
 				t := reflectutils.GetType(obj, field.Name).Elem()
 				val = reflect.New(t).Interface()

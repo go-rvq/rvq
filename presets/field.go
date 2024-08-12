@@ -11,7 +11,9 @@ import (
 	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
+	"github.com/qor5/x/v3/zeroer"
 	"github.com/sunfmin/reflectutils"
+	h "github.com/theplant/htmlgo"
 )
 
 type FieldContext struct {
@@ -32,8 +34,8 @@ type FieldContext struct {
 	ValueOverride interface{}
 }
 
-func (fc *FieldContext) StringValue(obj interface{}) (r string) {
-	val := fc.Value(obj)
+func (fc *FieldContext) StringValue() (r string) {
+	val := fc.Value()
 	switch vt := val.(type) {
 	case []rune:
 		return string(vt)
@@ -50,16 +52,16 @@ func (fc *FieldContext) StringValue(obj interface{}) (r string) {
 	return fmt.Sprint(val)
 }
 
-func (fc *FieldContext) RawValue(obj interface{}) (r interface{}) {
+func (fc *FieldContext) RawValue() (r interface{}) {
 	fieldName := fc.Name
-	return reflectutils.MustGet(obj, fieldName)
+	return reflectutils.MustGet(fc.Obj, fieldName)
 }
 
-func (fc *FieldContext) Value(obj interface{}) (r interface{}) {
+func (fc *FieldContext) Value() (r interface{}) {
 	if fc.ValueOverride != nil {
 		return fc.ValueOverride
 	}
-	return fc.RawValue(obj)
+	return fc.RawValue()
 }
 
 func (fc *FieldContext) ContextValue(key interface{}) (r interface{}) {
@@ -213,6 +215,17 @@ func (b *FieldBuilder) WrapComponentFunc(v func(old FieldComponentFunc) FieldCom
 	}
 	b.compFunc = v(b.compFunc)
 	return b
+}
+
+func (b *FieldBuilder) DisableZeroRender() *FieldBuilder {
+	return b.WrapComponentFunc(func(old FieldComponentFunc) FieldComponentFunc {
+		return func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			if zeroer.IsZero(field.Value()) {
+				return nil
+			}
+			return old(obj, field, ctx)
+		}
+	})
 }
 
 func (b *FieldBuilder) SetterFunc(v FieldSetterFunc) (r *FieldBuilder) {

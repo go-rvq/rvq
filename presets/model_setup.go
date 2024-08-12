@@ -75,4 +75,9 @@ func (defaultModelSetup) InitField(f *FieldBuilder) {
 	}
 }
 
-func (defaultModelSetup) ConfigureField(*FieldBuilder) {}
+func (defaultModelSetup) ConfigureField(f *FieldBuilder) {
+	switch f.name {
+	case "ID", "CreatedAt", "UpdatedAt", "DeletedAt":
+		f.DisableZeroRender()
+	}
+}
