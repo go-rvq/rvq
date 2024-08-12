@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/iancoleman/strcase"
+	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
@@ -21,13 +21,69 @@ type FieldDefaultBuilder struct {
 	setterFunc FieldSetterFunc
 }
 
-type FieldMode int
+type FieldMode uint8
+
+func (f FieldMode) Is(m ...FieldMode) bool {
+	for _, other := range m {
+		if f == other {
+			return true
+		}
+	}
+	return false
+}
+
+func (m FieldMode) Has(f FieldMode) bool {
+	return m&f != 0
+}
+func (m FieldMode) HasAny(f ...FieldMode) bool {
+	for _, f := range f {
+		if m.Has(f) {
+			return true
+		}
+	}
+	return false
+}
+
+func (f FieldMode) Split() (modes []FieldMode) {
+	if f.Has(NEW) {
+		modes = append(modes, NEW)
+	}
+	if f.Has(EDIT) {
+		modes = append(modes, EDIT)
+	}
+	if f.Has(DETAIL) {
+		modes = append(modes, DETAIL)
+	}
+	if f.Has(LIST) {
+		modes = append(modes, LIST)
+	}
+	return
+}
 
 const (
-	WRITE FieldMode = iota
+	NONE FieldMode = iota << 1
 	LIST
 	DETAIL
+	NEW
+	EDIT
+
+	WRITE = NEW | EDIT
+	ALL   = LIST | DETAIL | WRITE
 )
+
+type FieldModeStack []FieldMode
+
+func (s FieldModeStack) Global() FieldMode {
+	return s[0]
+}
+
+func (s FieldModeStack) Dot() FieldMode {
+	return s[len(s)-1]
+}
+
+func (s FieldModeStack) DotStack() FieldModeStack {
+	return FieldModeStack{s.Dot()}
+}
 
 func NewFieldDefault(t reflect.Type) (r *FieldDefaultBuilder) {
 	r = &FieldDefaultBuilder{valType: t}
@@ -46,12 +102,12 @@ func (b *FieldDefaultBuilder) SetterFunc(v FieldSetterFunc) (r *FieldDefaultBuil
 
 var numberVals = []interface{}{
 	int(0), int8(0), int16(0), int32(0), int64(0),
-	uint(0), uint(8), uint16(0), uint32(0), uint64(0),
+	uint(0), uint8(8), uint16(0), uint32(0), uint64(0),
 	float32(0.0), float64(0.0),
 }
 
 var stringVals = []interface{}{
-	string(""),
+	"",
 	[]rune(""),
 	[]byte(""),
 }
@@ -71,6 +127,7 @@ func NewFieldDefaults(t FieldMode) (r *FieldDefaults) {
 	r = &FieldDefaults{
 		mode: t,
 	}
+
 	r.builtInFieldTypes()
 	return
 }
@@ -84,44 +141,66 @@ func (b *FieldDefaults) Exclude(patterns ...string) (r *FieldDefaults) {
 	return b
 }
 
-func (b *FieldDefaults) InspectFields(val interface{}) (r *FieldsBuilder) {
-	r, _ = b.inspectFieldsAndCollectName(val, nil)
-	r.Model(val)
-	return
+func (b *FieldDefaults) InspectFields(val interface{}, setup ...FieldSetuper) (r *FieldsBuilder) {
+	_, fields := reflect_utils.UniqueFieldsOfReflectType(reflect.TypeOf(val))
+	fieldBuilders := b.SetupFields(b.NewFieldBuilders(fields), setup...)
+
+	return &FieldsBuilder{
+		model:    val,
+		fields:   fieldBuilders,
+		defaults: b,
+	}
 }
 
-func (b *FieldDefaults) inspectFieldsAndCollectName(val interface{}, collectType reflect.Type) (r *FieldsBuilder, names []string) {
-	v := reflect.ValueOf(val)
+func (b *FieldDefaults) NewFieldBuilders(fields reflect_utils.IndexableStructFields) (fbs FieldBuilders) {
+	fbs = make(FieldBuilders, len(fields))
+	var validCount int
 
-	for v.Elem().Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	v = v.Elem()
-
-	t := v.Type()
-
-	r = &FieldsBuilder{
-		model: val,
-	}
-	r.Defaults(b)
-
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-
-		ft := b.fieldTypeByType(f.Type)
-
-		if !hasMatched(b.excludesPatterns, f.Name) && ft != nil {
-			r.Field(f.Name).
-				ComponentFunc(ft.compFunc).
-				SetterFunc(ft.setterFunc)
+	for _, f := range fields {
+		if hasMatched(b.excludesPatterns, f.Name) {
+			continue
 		}
-
-		if collectType != nil && f.Type == collectType {
-			names = append(names, strcase.ToSnake(f.Name))
+		fbs[validCount] = &FieldBuilder{
+			rt: f.Type,
+			NameLabel: NameLabel{
+				name: f.Name,
+			},
+			mode:        ALL,
+			structField: f,
 		}
+		validCount++
+	}
+	return fbs[:validCount]
+}
+
+func (b *FieldDefaults) SetupFields(fbs FieldBuilders, setupers ...FieldSetuper) (result FieldBuilders) {
+	var (
+		applyFt = func(f *FieldBuilder, ft *FieldDefaultBuilder) {
+			if f.compFunc == nil {
+				f.ComponentFunc(ft.compFunc)
+			}
+
+			if f.setterFunc == nil {
+				f.SetterFunc(ft.setterFunc)
+			}
+		}
+		withFt = func(f *FieldBuilder, rt reflect.Type) {
+			if ft := b.fieldTypeByType(rt); ft != nil {
+				applyFt(f, ft)
+			}
+		}
+	)
+
+	setuper := FieldSetupers(setupers)
+
+	for _, f := range fbs {
+		setuper.InitField(f)
+		withFt(f, f.structField.Type)
+		setuper.ConfigureField(f)
+		result = append(result, f)
 	}
 
-	return
+	return result
 }
 
 func hasMatched(patterns []string, name string) bool {
@@ -179,7 +258,7 @@ func cfCheckbox(obj interface{}, field *FieldContext, ctx *web.EventContext) h.H
 		Attr(web.VField(field.FormKey, reflectutils.MustGet(obj, field.Name).(bool))...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
-		Disabled(field.Disabled)
+		Disabled(field.ReadOnly)
 }
 
 func cfNumber(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -189,7 +268,7 @@ func cfNumber(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTM
 		Attr(web.VField(field.FormKey, fmt.Sprint(reflectutils.MustGet(obj, field.Name)))...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
-		Disabled(field.Disabled)
+		Disabled(field.ReadOnly)
 }
 
 func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -218,6 +297,24 @@ func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLC
 		OkText(msgr.OK)
 }
 
+func cfTimeReadonly(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
+	val := ""
+	if v := field.Value(obj); v != nil {
+		switch vt := v.(type) {
+		case time.Time:
+			val = vt.Format(msgr.TimeFormats.DateTime)
+		case *time.Time:
+			val = vt.Format(msgr.TimeFormats.DateTime)
+		default:
+			panic(fmt.Sprintf("unknown time type: %T\n", v))
+		}
+	}
+	return vuetifyx.VXReadonlyField().
+		Label(field.Label).
+		Value(val)
+}
+
 func cfTimeSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 	v := ctx.R.Form.Get(field.FormKey)
 	if v == "" {
@@ -234,13 +331,13 @@ func cfTextField(obj interface{}, field *FieldContext, ctx *web.EventContext) h.
 	return VTextField().
 		Type("text").
 		Variant(FieldVariantUnderlined).
-		Attr(web.VField(field.FormKey, fmt.Sprint(reflectutils.MustGet(obj, field.Name)))...).
+		Attr(web.VField(field.FormKey, field.StringValue(obj))...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
-		Disabled(field.Disabled)
+		Disabled(field.ReadOnly)
 }
 
-func cfReadonlyText(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func CFReadonlyText(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return vuetifyx.VXReadonlyField().
 		Label(field.Label).
 		Value(field.StringValue(obj))
@@ -276,12 +373,17 @@ func (b *FieldDefaults) builtInFieldTypes() {
 
 		for _, v := range numberVals {
 			b.FieldType(v).
-				ComponentFunc(cfReadonlyText)
+				ComponentFunc(CFReadonlyText)
 		}
 
 		for _, v := range stringVals {
 			b.FieldType(v).
-				ComponentFunc(cfReadonlyText)
+				ComponentFunc(CFReadonlyText)
+		}
+
+		for _, v := range timeVals {
+			b.FieldType(v).
+				ComponentFunc(cfTimeReadonly)
 		}
 		return
 	}

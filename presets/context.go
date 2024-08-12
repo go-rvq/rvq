@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	h "github.com/theplant/htmlgo"
 )
@@ -9,24 +10,69 @@ type presetsCtx int
 
 const (
 	ctxInDialog presetsCtx = iota
-	ctxActionsComponent
+	CtxActionsComponent
+	CtxMenuComponent
+	CtxPortals
 	ctxDetailingAfterTitleComponent
+	ctxModel
+	ParentsModelIDKey
 )
 
 func IsInDialog(ctx *web.EventContext) bool {
-	v, ok := ctx.ContextValue(ctxInDialog).(bool)
-	if !ok {
-		return false
-	}
+	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay)).IsDialog()
+}
+
+func IsInDrawer(ctx *web.EventContext) bool {
+	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay)).IsDrawer()
+}
+
+func OverlayMode(ctx *web.EventContext) actions.OverlayMode {
+	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+}
+
+func GetActionsComponent(ctx *web.EventContext) h.HTMLComponents {
+	v, _ := ctx.ContextValue(CtxActionsComponent).(h.HTMLComponents)
 	return v
 }
 
-func GetActionsComponent(ctx *web.EventContext) h.HTMLComponent {
-	v, _ := ctx.ContextValue(ctxActionsComponent).(h.HTMLComponent)
+func GetMenuComponent(ctx *web.EventContext) h.HTMLComponents {
+	v, _ := ctx.ContextValue(CtxMenuComponent).(h.HTMLComponents)
 	return v
 }
 
 func GetComponentFromContext(ctx *web.EventContext, key presetsCtx) (h.HTMLComponent, bool) {
 	v, ok := ctx.ContextValue(key).(h.HTMLComponent)
 	return v, ok
+}
+
+func GetPortals(ctx *web.EventContext) h.HTMLComponents {
+	v, _ := ctx.ContextValue(CtxPortals).(h.HTMLComponents)
+	return v
+}
+
+func WithPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
+	vlr := web.GetContextValuer(ctx.R.Context(), CtxPortals)
+	if vlr == nil {
+		ctx.WithContextValue(CtxPortals, h.HTMLComponents(portal))
+	} else {
+		vlr.Set(h.HTMLComponents(portal))
+	}
+}
+
+func AddPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
+	vlr := web.GetContextValuer(ctx.R.Context(), CtxPortals)
+	if vlr == nil {
+		ctx.WithContextValue(CtxPortals, h.HTMLComponents(portal))
+	} else {
+		vlr.Set(append(vlr.Get().(h.HTMLComponents), portal...))
+	}
+}
+
+func GetModel(ctx *web.EventContext) (v *ModelBuilder) {
+	v, _ = ctx.ContextValue(ctxModel).(*ModelBuilder)
+	return
+}
+
+func WithModel(ctx *web.EventContext, model *ModelBuilder) {
+	ctx.WithContextValue(ctxModel, model)
 }

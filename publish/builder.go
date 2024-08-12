@@ -59,19 +59,19 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 
 	if model, ok := obj.(VersionInterface); ok {
 		if schedulePublishModel, ok := model.(ScheduleInterface); ok {
-			VersionPublishModels[m.Info().URIName()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
+			VersionPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
 		}
 
 		b.configVersionAndPublish(pb, m, db)
 	} else {
 		if schedulePublishModel, ok := obj.(ScheduleInterface); ok {
-			NonVersionPublishModels[m.Info().URIName()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
+			NonVersionPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
 		}
 	}
 
 	if model, ok := obj.(ListInterface); ok {
 		if schedulePublishModel, ok := model.(ScheduleInterface); ok {
-			ListPublishModels[m.Info().URIName()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
+			ListPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
 		}
 	}
 
@@ -97,12 +97,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelBuilder, db *gorm.DB) {
 	ed := m.Editing()
 	creating := ed.Creating().Except(VersionsPublishBar)
-	var detailing *presets.DetailingBuilder
-	if !m.HasDetailing() {
-		detailing = m.Detailing().Drawer(true)
-	} else {
-		detailing = m.Detailing()
-	}
+	detailing := m.Detailing()
 
 	fb := detailing.GetField(VersionsPublishBar)
 	if fb != nil && fb.GetCompFunc() == nil {
@@ -110,7 +105,7 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 	}
 
 	m.Listing().WrapSearchFunc(makeSearchFunc(m, db))
-	m.Listing().RowMenu().RowMenuItem("Delete").ComponentFunc(func(obj interface{}, id string, ctx *web.EventContext) htmlgo.HTMLComponent {
+	m.Listing().RowMenu().RowMenuItem("Delete").ComponentFunc(func(rctx *presets.RecordMenuItemContext) htmlgo.HTMLComponent {
 		// DeleteRowMenu should be disabled when using the version interface
 		return nil
 	})

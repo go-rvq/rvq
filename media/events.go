@@ -1,6 +1,8 @@
 package media
 
 import (
+	"github.com/qor5/admin/v3/media/media_library"
+	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
 )
 
@@ -18,16 +20,17 @@ const (
 	doDeleteEvent           = "mediaLibrary_DoDelete"
 )
 
-func registerEventFuncs(hub web.EventFuncHub, mb *Builder) {
-	hub.RegisterEventFunc(openFileChooserEvent, fileChooser(mb))
+func registerEventFuncs(hub web.EventFuncHub, p *presets.Builder, b *Builder) {
+	mb := presets.NewModelBuilder(p, &media_library.MediaLibrary{})
+	hub.RegisterEventFunc(openFileChooserEvent, fileChooser(b))
 	hub.RegisterEventFunc(deleteFileEvent, deleteFileField())
-	hub.RegisterEventFunc(cropImageEvent, cropImage(mb))
-	hub.RegisterEventFunc(loadImageCropperEvent, loadImageCropper(mb))
-	hub.RegisterEventFunc(imageSearchEvent, searchFile(mb))
-	hub.RegisterEventFunc(imageJumpPageEvent, jumpPage(mb))
-	hub.RegisterEventFunc(uploadFileEvent, uploadFile(mb))
-	hub.RegisterEventFunc(chooseFileEvent, chooseFile(mb))
-	hub.RegisterEventFunc(updateDescriptionEvent, updateDescription(mb))
+	hub.RegisterEventFunc(cropImageEvent, cropImage(b))
+	hub.RegisterEventFunc(loadImageCropperEvent, loadImageCropper(b))
+	hub.RegisterEventFunc(imageSearchEvent, searchFile(b))
+	hub.RegisterEventFunc(imageJumpPageEvent, jumpPage(b))
+	hub.RegisterEventFunc(uploadFileEvent, uploadFile(b))
+	hub.RegisterEventFunc(chooseFileEvent, chooseFile(b))
+	hub.RegisterEventFunc(updateDescriptionEvent, updateDescription(b))
 	hub.RegisterEventFunc(deleteConfirmationEvent, deleteConfirmation(mb))
-	hub.RegisterEventFunc(doDeleteEvent, doDelete(mb))
+	hub.RegisterEventFunc(doDeleteEvent, doDelete(b))
 }

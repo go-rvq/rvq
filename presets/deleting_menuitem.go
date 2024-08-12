@@ -9,45 +9,45 @@ import (
 	h "github.com/theplant/htmlgo"
 )
 
-type RowMenuItemDeleteBuilder struct {
+type DeletingMenuItemBuilder struct {
 	modelInfo *ModelInfo
 	url       string
 	urlValues url.Values
 	wrapEvent func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder)
 }
 
-func NewRowMenuItemDeleteBuilder(modelInfo *ModelInfo) *RowMenuItemDeleteBuilder {
-	return &RowMenuItemDeleteBuilder{modelInfo: modelInfo}
+func NewDeletingMenuItemBuilder(modelInfo *ModelInfo) *DeletingMenuItemBuilder {
+	return &DeletingMenuItemBuilder{modelInfo: modelInfo}
 }
 
-func (r *RowMenuItemDeleteBuilder) Url() string {
+func (r *DeletingMenuItemBuilder) Url() string {
 	return r.url
 }
 
-func (r *RowMenuItemDeleteBuilder) SetUrl(url string) *RowMenuItemDeleteBuilder {
+func (r *DeletingMenuItemBuilder) SetUrl(url string) *DeletingMenuItemBuilder {
 	r.url = url
 	return r
 }
 
-func (r *RowMenuItemDeleteBuilder) UrlValues() url.Values {
+func (r *DeletingMenuItemBuilder) UrlValues() url.Values {
 	return r.urlValues
 }
 
-func (r *RowMenuItemDeleteBuilder) SetUrlValues(urlValues url.Values) *RowMenuItemDeleteBuilder {
+func (r *DeletingMenuItemBuilder) SetUrlValues(urlValues url.Values) *DeletingMenuItemBuilder {
 	r.urlValues = urlValues
 	return r
 }
 
-func (r *RowMenuItemDeleteBuilder) WrapEvent() func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
+func (r *DeletingMenuItemBuilder) WrapEvent() func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
 	return r.wrapEvent
 }
 
-func (r *RowMenuItemDeleteBuilder) SetWrapEvent(wrapEvent func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder)) *RowMenuItemDeleteBuilder {
+func (r *DeletingMenuItemBuilder) SetWrapEvent(wrapEvent func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder)) *DeletingMenuItemBuilder {
 	r.wrapEvent = wrapEvent
 	return r
 }
 
-func (r *RowMenuItemDeleteBuilder) Build() RecordMenuItemFunc {
+func (r *DeletingMenuItemBuilder) Build() RecordMenuItemFunc {
 	return func(rctx *RecordMenuItemContext) h.HTMLComponent {
 		var (
 			ctx = rctx.Ctx
@@ -64,8 +64,8 @@ func (r *RowMenuItemDeleteBuilder) Build() RecordMenuItemFunc {
 			EventFunc(actions.DeleteConfirmation).
 			Queries(r.urlValues).
 			Query(ParamID, id).
-			Query(ParamTargetPortal, rctx.SharedRecordPortal).
-			URL(r.url)
+			Query(ParamTargetPortal, rctx.TempPortal).
+			URL(mi.ListingHrefCtx(ctx))
 
 		if r.wrapEvent != nil {
 			r.wrapEvent(rctx, onclick)

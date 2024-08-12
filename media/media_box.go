@@ -53,7 +53,7 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 		FieldType(media_library.MediaBox{}).
 		ComponentFunc(MediaBoxComponentFunc(db, true))
 
-	registerEventFuncs(b.GetWebBuilder(), mb)
+	registerEventFuncs(b.GetWebBuilder(), b, mb)
 
 	b.I18n().
 		RegisterForModule(language.English, I18nMediaLibraryKey, Messages_en_US).
@@ -75,7 +75,7 @@ func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFun
 			Value(&mediaBox).
 			Label(field.Label).
 			Config(cfg).
-			Disabled(field.Disabled).
+			Disabled(field.ReadOnly).
 			Readonly(readonly)
 	}
 }
@@ -215,7 +215,7 @@ func fileThumb(filename string) h.HTMLComponent {
 	).Class("d-flex align-center justify-center")
 }
 
-func deleteConfirmation(mb *Builder) web.EventFunc {
+func deleteConfirmation(mb *presets.ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		msgr := i18n.MustGetModuleMessages(ctx.R, presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
 		field := ctx.R.FormValue("field")
@@ -226,7 +226,7 @@ func deleteConfirmation(mb *Builder) web.EventFunc {
 			Name: deleteConfirmPortalName(field),
 			Body: VDialog(
 				VCard(
-					VCardTitle(h.Text(msgr.DeleteConfirmationText(id))),
+					VCardTitle(h.Text(msgr.DeleteConfirmationText(mb.TTitle(ctx.R), mb.TTheTitle(ctx.R), id))),
 					VCardActions(
 						VSpacer(),
 						VBtn(msgr.Cancel).

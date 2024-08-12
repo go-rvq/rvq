@@ -225,7 +225,7 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 		}
 	})
 
-	editing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
+	presetModel.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
 		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
 			if mb.skip&Delete != 0 {
 				return in(obj, id, ctx)

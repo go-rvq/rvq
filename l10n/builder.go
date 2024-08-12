@@ -288,7 +288,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		}
 	})
 
-	m.Editing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
+	m.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
 		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
 			if err = in(obj, id, ctx); err != nil {
 				return

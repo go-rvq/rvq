@@ -100,8 +100,9 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		"Permissions",
 	)
 
-	permFb := pb.NewFieldsBuilder(presets.WRITE).Model(&perm.DefaultDBPolicy{}).Only("Effect", "Actions", "Resources")
-	ed.Field("Permissions").Nested(permFb)
+	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{})
+	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
+	ed.Field("Permissions").Nested(presets.NewNestedFieldBuilder(policeModel, permFb))
 
 	permFb.Field("Effect").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return VSelect().
@@ -141,11 +142,11 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	ed.FetchFunc(func(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error) {
+	ed.FetchFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
 		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
 	})
 
-	ed.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(*Role)
 		if u.Name == "" {
 			err.FieldError("Name", "Name is required")
@@ -172,7 +173,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	ed.DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
 		err = b.db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", id).Error; err != nil {
 				return err

@@ -216,7 +216,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 
 	eb := mb.Editing("Job", "Args")
 
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.AppendFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
 		qorJob := obj.(*QorJob)
 		if qorJob.Job == "" {
@@ -279,7 +279,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		}
 
 		var scheduledJobDetailing []HTMLComponent
-		eURL := path.Join(b.mb.Info().ListingHref(), fmt.Sprint(qorJob.ID))
+		eURL := path.Join(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...), fmt.Sprint(qorJob.ID))
 		if inst.Status == JobStatusScheduled {
 			jb := b.getJobBuilder(qorJob.Job)
 			if jb != nil && jb.r != nil {
@@ -288,7 +288,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 				if err != nil {
 					return Text(err.Error())
 				}
-				body := jb.rmb.Editing().ToComponent(jb.rmb.Info(), args, ctx)
+				body := jb.rmb.Editing().ToComponent(jb.rmb.Info(), args, field.Mode.DotStack(), ctx)
 				scheduledJobDetailing = []HTMLComponent{
 					body,
 					If(editIsAllowed(ctx.R, qorJob.Job) == nil,
@@ -697,7 +697,7 @@ func (b *Builder) eventUpdateJobProgressing(ctx *web.EventContext) (er web.Event
 			}
 		}
 	}
-	er.Body = b.jobProgressing(canEdit, msgr, qorJobID, qorJobName, inst.Status, inst.Progress, logs, hasMoreLogs, inst.ProgressText)
+	er.Body = b.jobProgressing(canEdit, msgr, qorJobID, qorJobName, inst.Status, inst.Progress, logs, hasMoreLogs, inst.ProgressText, presets.ParentsModelID(ctx.R))
 	if inst.Status != JobStatusNew && inst.Status != JobStatusRunning && inst.Status != JobStatusKilled {
 		er.RunScript = "vars.worker_updateJobProgressingInterval = 0"
 	} else {
@@ -749,6 +749,7 @@ func (b *Builder) jobProgressing(
 	logs []string,
 	hasMoreLogs bool,
 	progressText string,
+	parentsID presets.IDSlice,
 ) HTMLComponent {
 	logLines := make([]HTMLComponent, 0, len(logs)+1)
 	if hasMoreLogs {
@@ -775,7 +776,7 @@ func (b *Builder) jobProgressing(
 		}
 	}
 	inRefresh := status == JobStatusNew || status == JobStatusRunning
-	eURL := path.Join(b.mb.Info().ListingHref(), fmt.Sprint(id))
+	eURL := path.Join(b.mb.Info().ListingHref(parentsID...), fmt.Sprint(id))
 	return Div(
 		Div(Text(msgr.DetailTitleStatus)).Class("text-caption"),
 		Div().Class("d-flex align-center mb-5").Children(
@@ -903,5 +904,5 @@ func (b *Builder) jobEditingContent(
 	if jb.rmb == nil {
 		return Template()
 	}
-	return jb.rmb.Editing().ToComponent(jb.rmb.Info(), argsObj, ctx)
+	return jb.rmb.Editing().ToComponent(jb.rmb.Info(), argsObj, presets.FieldModeStack{presets.EDIT}, ctx)
 }

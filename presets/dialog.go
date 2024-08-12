@@ -7,67 +7,118 @@ import (
 	h "github.com/theplant/htmlgo"
 )
 
-type PortalDialog struct {
+type DialogBuilder struct {
 	width             string
-	portalName        string
+	height            string
+	targetPortal      string
 	contentPortalName string
+	wrap              func(comp *v.VDialogBuilder)
 }
 
-func NewPortalDialog(width string, portalName string) *PortalDialog {
-	return &PortalDialog{width: width, portalName: portalName, contentPortalName: portalName + "Content"}
+func Dialog(portalName string) *DialogBuilder {
+	return &DialogBuilder{targetPortal: portalName}
 }
 
-func (p *PortalDialog) Width() string {
+func (p *DialogBuilder) Width() string {
 	return p.width
 }
 
-func (p *PortalDialog) SetWidth(width string) *PortalDialog {
+func (p *DialogBuilder) SetWidth(width string) *DialogBuilder {
 	p.width = width
 	return p
 }
 
-func (p *PortalDialog) SetValidWidth(width string) *PortalDialog {
+func (p *DialogBuilder) SetValidWidth(width string) *DialogBuilder {
 	if width != "" {
 		p.width = width
 	}
 	return p
 }
 
-func (p *PortalDialog) PortalName() string {
-	return p.portalName
+func (p *DialogBuilder) Height() string {
+	return p.height
 }
 
-func (p *PortalDialog) SetPortalName(portalName string) *PortalDialog {
-	p.portalName = portalName
+func (p *DialogBuilder) SetHeight(height string) *DialogBuilder {
+	p.height = height
 	return p
 }
 
-func (p *PortalDialog) ContentPortalName() string {
+func (p *DialogBuilder) SetValidHeight(height string) *DialogBuilder {
+	if height != "" {
+		p.height = height
+	}
+	return p
+}
+
+func (p *DialogBuilder) TargetPortal() string {
+	return p.targetPortal
+}
+
+func (p *DialogBuilder) SetTargetPortal(portalName string) *DialogBuilder {
+	p.targetPortal = portalName
+	return p
+}
+
+func (p *DialogBuilder) SetValidPortalName(portalName string) *DialogBuilder {
+	if portalName != "" {
+		p.targetPortal = portalName
+	}
+	return p
+}
+
+func (p *DialogBuilder) ContentPortalName() string {
 	return p.contentPortalName
 }
 
-func (p *PortalDialog) SetContentPortalName(contentPortalName string) *PortalDialog {
+func (p *DialogBuilder) SetContentPortalName(contentPortalName string) *DialogBuilder {
 	p.contentPortalName = contentPortalName
 	return p
 }
 
-func (p *PortalDialog) Respond(r *web.EventResponse, comp h.HTMLComponent) {
-	varName := "vars.presetsDialog"
-	if p.portalName != actions.Dialog.PortalName() {
-		varName = varName + p.portalName
+func (p *DialogBuilder) ValidContentPortalName(portalName string) *DialogBuilder {
+	if portalName != "" {
+		p.contentPortalName = portalName
+	}
+	return p
+}
+
+func (p *DialogBuilder) Wrap(wrap func(comp *v.VDialogBuilder)) *DialogBuilder {
+	p.wrap = wrap
+	return p
+}
+
+func (p *DialogBuilder) Respond(r *web.EventResponse, comp h.HTMLComponent) {
+	if fvc := web.FirstValidComponent(comp); fvc != nil {
+		switch t := fvc.(type) {
+		case *v.VCardBuilder:
+			t.SetAttr("style", "height:inherit")
+		}
+	}
+	if p.contentPortalName != "" {
+		comp = web.Portal(comp).Name(p.contentPortalName).Style("height: inherit")
+	}
+
+	d := v.VDialog(comp).
+		Attr("v-model", "closer.show").
+		Fullscreen("closer.fullscreen")
+
+	if p.width != "" {
+		d.Width(web.Var("closer.fullscreen ? '100%' : " + p.width))
+	}
+
+	if p.height != "" {
+		d.Height(web.Var("closer.fullscreen ? '100%' : " + p.height))
+	}
+
+	if p.wrap != nil {
+		p.wrap(d)
 	}
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: p.portalName,
-		Body: web.Scope(
-			v.VDialog(
-				web.Portal(comp).Name(p.contentPortalName),
-			).
-				Attr("v-model", varName).
-				Width(p.width),
-		).VSlot("{ form }"),
+		Name: p.targetPortal,
+		Body: web.CloserScope(d, true),
 	})
-	r.RunScript = "setTimeout(function(){ " + varName + " = true }, 100)"
 }
 
 func (b *Builder) dialog(r *web.EventResponse, comp h.HTMLComponent, width string) {
@@ -78,7 +129,13 @@ func (b *Builder) dialog(r *web.EventResponse, comp h.HTMLComponent, width strin
 	p.Respond(r, comp)
 }
 
-func (b *Builder) Dialog() *PortalDialog {
-	return NewPortalDialog(b.rightDrawerWidth, actions.Dialog.PortalName()).
-		SetContentPortalName(actions.Dialog.ContentPortalName())
+func (b *Builder) Dialog() *DialogBuilder {
+	return Dialog(actions.Dialog.PortalName()).
+		SetContentPortalName(actions.Dialog.ContentPortalName()).
+		SetValidWidth(b.rightDrawerWidth)
+}
+
+func (b *Builder) DialogPortal(portal string) *DialogBuilder {
+	return Dialog(portal).
+		SetValidWidth(b.rightDrawerWidth)
 }

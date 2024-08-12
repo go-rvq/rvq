@@ -40,7 +40,7 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 		}
 
 		slug := ctx.Param(presets.ParamID)
-		obj, err = mb.Editing().Fetcher(obj, slug, ctx)
+		err = mb.Editing().Fetcher(obj, slug, ctx)
 		if err != nil {
 			return
 		}
@@ -82,7 +82,7 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 								On("click", web.Plaid().
 									EventFunc(eventSchedulePublish).
 									Query(presets.ParamID, slug).
-									URL(mb.Info().ListingHref()).
+									URL(mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 									Go(),
 								),
 						),
@@ -100,7 +100,7 @@ func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 
 		slug := ctx.Param(presets.ParamID)
 		obj := mb.NewModel()
-		obj, err := mb.Editing().Fetcher(obj, slug, ctx)
+		err := mb.Editing().Fetcher(obj, slug, ctx)
 		if err != nil {
 			return r, err
 		}
@@ -118,7 +118,7 @@ func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 		}
 
 		web.AppendRunScripts(&r, "locals.schedulePublishDialog = false")
-		if mb.HasDetailing() && mb.Detailing().GetDrawer() {
+		if mb.HasDetailing() {
 			web.AppendRunScripts(&r, web.Plaid().EventFunc(actions.ReloadList).Go())
 		}
 		return r, nil

@@ -12,6 +12,7 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
@@ -24,22 +25,62 @@ type DetailingBuilder struct {
 	tabPanels          []TabComponentFunc
 	sidePanel          ObjectComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
-	drawer             bool
+	editionDisabled    OkHandled
 	SectionsBuilder
+	RowMenuFields
 }
 
-type pageTitle interface {
-	PageTitle() string
+func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder {
+	db := &DetailingBuilder{mb: mb, SectionsBuilder: sb}
+	db.RowMenuFields.init(mb)
+	return db
+}
+
+func (mb *ModelBuilder) newDetailing() (r *DetailingBuilder) {
+	mb.detailing = NewDetailingBuilder(mb, SectionsBuilder{
+		mb:            mb,
+		FieldsBuilder: *mb.NewFieldsBuilder(mb.detailFieldBuilders.HasMode(DETAIL)...),
+	})
+
+	mb.detailing.FetchFunc(mb.Fetcher)
+	return
 }
 
 // string / []string / *FieldsSection
 func (mb *ModelBuilder) Detailing(vs ...interface{}) (r *DetailingBuilder) {
 	r = mb.detailing
 	if !mb.hasDetailing && len(vs) == 0 {
-		vs = mb.editing.FieldNames()
+		// put audited fields to end
+
+		var end []any
+		for _, f := range r.fields {
+			if f.audited {
+				end = append(end, f.name)
+			} else {
+				vs = append(vs, f.name)
+			}
+		}
+
+		vs = append(vs, end...)
 	}
 
 	mb.hasDetailing = true
+
+	rmb := r.RowMenu()
+	rmb.RowMenuItem("Delete").ComponentFunc(
+		NewDeletingMenuItemBuilder(mb.Info()).
+			SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
+				cb := web.DecodeCallback(rctx.Ctx.R.FormValue(ParamPostChangeCallback))
+				mode := GetOverlay(rctx.Ctx)
+				if mode.Overlayed() {
+					cb.AddScript("closer.show = false")
+				} else {
+					cb.AddScript(web.Plaid().PushState(true).Location(web.Location(nil).URL(mb.modelInfo.ListingHrefCtx(rctx.Ctx))).Go())
+				}
+				e.ValidQuery(ParamPostChangeCallback, cb.Encode())
+			}).
+			Build(),
+	)
 
 	if len(vs) == 0 {
 		return
@@ -49,12 +90,22 @@ func (mb *ModelBuilder) Detailing(vs ...interface{}) (r *DetailingBuilder) {
 	return r
 }
 
-func (b *DetailingBuilder) ModelBuilder() *ModelBuilder {
-	return b.mb
+func (mb *ModelBuilder) DisableDetailing() *ModelBuilder {
+	mb.hasDetailing = false
+	return mb
 }
 
-func (b *DetailingBuilder) GetDrawer() bool {
-	return b.drawer
+func (mb *ModelBuilder) SetDetailingBuilder(dt *DetailingBuilder) *ModelBuilder {
+	mb.detailing = dt
+	return mb
+}
+
+func (b DetailingBuilder) Clone() *DetailingBuilder {
+	return &b
+}
+
+func (b *DetailingBuilder) ModelBuilder() *ModelBuilder {
+	return b.mb
 }
 
 // string / []string / *FieldsSection
@@ -93,11 +144,6 @@ func (b *DetailingBuilder) WrapFetchFunc(w func(in FetchFunc) FetchFunc) (r *Det
 
 func (b *DetailingBuilder) GetFetchFunc() FetchFunc {
 	return b.fetcher
-}
-
-func (b *DetailingBuilder) Drawer(v bool) (r *DetailingBuilder) {
-	b.drawer = v
-	return b
 }
 
 func (b *DetailingBuilder) AfterTitleCompFunc(v ObjectComponentFunc) (r *DetailingBuilder) {
@@ -139,12 +185,15 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	r.Body = VContainer(h.Text(id))
 
 	obj := b.mb.NewModel()
+	msgr := MustGetMessages(ctx.R)
+	portalID := GetOrNewPortalID(ctx.R)
 
 	if id == "" {
-		panic("not found")
+		err = msgr.ErrEmptyParamID
+		return
 	}
 
-	obj, err = b.GetFetchFunc()(obj, id, ctx)
+	err = b.GetFetchFunc()(obj, id, ctx)
 	if err != nil {
 		if errors.Is(err, ErrRecordNotFound) {
 			return b.mb.p.DefaultNotFoundPageFunc(ctx)
@@ -152,81 +201,177 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
-	if b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, id))
+
+	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
 		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
 		return
 	}
 
+	f := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build())
+
+	if f.PrimaryAction != nil {
+		var cb web.Callback
+		cb.ReloadPortals = append(cb.ReloadPortals, detailingContentPortalName+portalID)
+		ctx.WithContextValue(CtxActionsComponent, f.PrimaryAction)
+		f.PrimaryAction = nil
+	}
+
+	if len(f.Menu) > 0 {
+		ctx.WithContextValue(CtxMenuComponent, f.Menu)
+	}
+
+	if len(f.MainPortals) > 0 {
+		AddPortals(ctx, f.MainPortals...)
+	}
+
+	r.Body = f.Component()
+
+	return
+}
+
+func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
+		err = perm.PermissionDenied
+		return
+	}
+
+	id := ctx.Param(ParamID)
+	obj := b.mb.NewModel()
 	msgr := MustGetMessages(ctx.R)
-	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, id))
+	targetPortal := ctx.R.FormValue(ParamTargetPortal)
+
+	if id == "" {
+		err = msgr.ErrEmptyParamID
+		return
+	}
+
+	if err = b.GetFetchFunc()(obj, id, ctx); err != nil {
+		return
+	}
+
+	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
+		return
+	}
+
+	comp := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build()).
+		FullComponent()
+
+	mode := GetOverlay(ctx)
+	if mode.IsDrawer() {
+		b.mb.p.Drawer(mode).
+			SetValidPortalName(targetPortal).
+			Respond(&r, comp)
+	} else {
+		b.mb.p.Dialog().
+			SetTargetPortal(targetPortal).
+			Respond(&r, comp)
+	}
+	return
+}
+
+func (b *DetailingBuilder) configureForm(f *Form) *Form {
+	var (
+		ctx        = f.b.ctx
+		obj        = f.Obj
+		portalName = ctx.R.FormValue(ParamTargetPortal)
+	)
+
 	if b.afterTitleCompFunc != nil {
 		ctx.WithContextValue(ctxDetailingAfterTitleComponent, b.afterTitleCompFunc(obj, ctx))
 	}
 
-	var notice h.HTMLComponent
 	if msg, ok := ctx.Flash.(string); ok {
-		notice = VSnackbar(h.Text(msg)).ModelValue(true).Location("top").Color("success")
+		f.Notice = VSnackbar(h.Text(msg)).ModelValue(true).Location("top").Color("success")
 	}
 
-	comp := web.Scope(b.ToComponent(b.mb.Info(), obj, ctx)).VSlot("{form}")
-	var tabsContent h.HTMLComponent = defaultToPage(commonPageConfig{
-		formContent: comp,
-		tabPanels:   b.tabPanels,
-		sidePanel:   b.sidePanel,
-	}, obj, ctx)
+	f.Portal = portalName
 
-	r.Body = VContainer(
-		notice,
-	).AppendChildren(tabsContent).Fluid(true)
+	if b.CanEditObj(ctx, obj) {
+		var cb web.Callback
+		cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
 
-	return
-}
+		overlayMode := f.b.overlayMode
 
-func (b *DetailingBuilder) showInDrawer(ctx *web.EventContext) (r web.EventResponse, err error) {
-	if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
-		return
+		if overlayMode.Overlayed() {
+			cb.AddScript(web.Plaid().
+				URL(ctx.R.RequestURI).
+				EventFunc(actions.Detailing).
+				StringQuery(ctx.Queries().Encode()).
+				Go())
+		} else {
+			cb.AddScript(web.Plaid().
+				URL(ctx.R.RequestURI).
+				StringQuery(ctx.Queries().Encode()).
+				Go())
+		}
+
+		editMode := overlayMode.Up()
+		editingPortalID := ctx.UID()
+		editPortal := formPortalName + editingPortalID
+
+		onclick := web.Plaid().
+			URL(b.mb.Info().ListingHrefCtx(ctx)).
+			EventFunc(actions.Edit).
+			Query(ParamID, f.b.id).
+			ValidQuery(ParamTargetPortal, editPortal).
+			ValidQuery(ParamOverlay, editMode.String()).
+			ValidQuery(ParamPostChangeCallback, cb.String())
+
+		f.MainPortals = append(f.MainPortals, web.Portal().Name(editPortal))
+
+		f.PrimaryAction = h.HTMLComponents{
+			VBtn("").
+				Variant(VariantFlat).
+				Color("primary").
+				Attr(":disabled", "isFetching").
+				Attr(":loading", "isFetching").
+				Attr("@click", onclick.Go()).
+				Attr("@click.middle",
+					fmt.Sprintf("(e) => e.view.window.open(%q, '_blank')", b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
+				Icon(true).
+				Density("comfortable").
+				Children(VIcon("mdi-pencil")),
+		}
 	}
 
-	pr, err := b.GetPageFunc()(ctx)
-	if err != nil {
-		return
-	}
+	f.Tabs = b.tabPanels
+	f.SidePanel = b.sidePanel
 
-	overlayType := ctx.R.FormValue(ParamOverlay)
-	closeBtnVarScript := CloseRightDrawerVarScript
-	if overlayType == actions.Dialog {
-		closeBtnVarScript = closeDialogVarScript
-	}
-
-	title := h.Div(h.Text(pr.PageTitle)).Class("d-flex")
+	title := h.Div(h.Text(MustGetMessages(ctx.R).DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, f.b.id)))).Class("d-flex")
 	if v, ok := GetComponentFromContext(ctx, ctxDetailingAfterTitleComponent); ok {
 		title.AppendChildren(VSpacer(), v)
 	}
 
-	comp := web.Scope(
-		VLayout(
-			VAppBar(
-				VAppBarTitle(title).Class("pl-2"),
-				VBtn("").Icon("mdi-close").
-					Attr("@click.stop", closeBtnVarScript),
-			).Color("white").Elevation(0),
+	f.Title = title
+	sharedPortal := ctx.UID()
+	f.MainPortals = append(f.MainPortals, web.Portal().Name(sharedPortal))
 
-			VMain(
-				VSheet(
-					VCard(pr.Body).Flat(true).Class("pa-1"),
-				).Class("pa-2"),
-			),
-		),
-	).VSlot("{ form }")
+	var menus h.HTMLComponents
+	b.RowMenu().listingItemFuncs(ctx).ForEachRowMenuItemFunc(sharedPortal, func(rctx *RecordMenuItemContext, name string) string {
+		name = sharedPortal + "--" + name
+		f.MainPortals = append(f.MainPortals, web.Portal().Name(name))
+		return name
+	}, func(i int, m vx.RowMenuItemFunc) {
+		menus = append(menus, m(0, f.Obj, f.b.id, ctx))
+	})
 
-	b.mb.p.overlay(ctx, &r, comp, b.mb.rightDrawerWidth)
-	return
+	if len(menus) > 0 {
+		f.Menu = append(
+			f.Menu,
+			VList(menus...).Class("record-menu").
+				OpenStrategy("single").
+				Class("primary--text").
+				Density(DensityCompact),
+		)
+	}
+
+	return f
 }
 
 func getPageTitle(obj interface{}, id string) string {
 	title := id
-	if pt, ok := obj.(pageTitle); ok {
+	if pt, ok := obj.(PageTitle); ok {
 		title = pt.PageTitle()
 	}
 	return title
@@ -244,14 +389,14 @@ func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse,
 		}
 
 		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: RightDrawerContentPortalName,
+			Name: actions.RightDrawer.PortalName(),
 			Body: b.actionForm(action, ctx),
 		})
 		return r, nil
 	}
 
 	r.PushState = web.Location(url.Values{})
-	r.RunScript = CloseRightDrawerVarScript
+	r.RunScript = actions.RightDrawer.CloseScript()
 
 	return
 }
@@ -302,7 +447,7 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 	f := b.Section(key)
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -327,7 +472,7 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 	f := b.Section(key)
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -374,7 +519,7 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 	}
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -406,7 +551,7 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 	}
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -444,7 +589,7 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 	}
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -492,7 +637,7 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 	f := b.Section(fieldName)
 
 	obj := b.mb.NewModel()
-	obj, err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
 	if err != nil {
 		return
 	}
@@ -530,4 +675,28 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 	})
 
 	return
+}
+
+func (mb *DetailingBuilder) EditionDisabled() OkHandled {
+	return mb.editionDisabled
+}
+
+func (mb *DetailingBuilder) SetEditionDisabled(editDisabled OkHandled) *DetailingBuilder {
+	mb.editionDisabled = editDisabled
+	return mb
+}
+
+func (mb *DetailingBuilder) CanEdit(ctx *web.EventContext) bool {
+	if mb.editionDisabled == nil {
+		return !CallOkHandled(mb.mb.editionDisabled, ctx)
+	}
+	return !CallOkHandled(mb.editionDisabled, ctx)
+}
+
+func (mb *DetailingBuilder) CanEditObj(ctx *web.EventContext, obj interface{}) bool {
+	if !mb.CanEdit(ctx) {
+		return false
+	}
+
+	return mb.mb.Info().CanUpdate(ctx.R, obj)
 }

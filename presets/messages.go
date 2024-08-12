@@ -1,12 +1,31 @@
 package presets
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 )
 
+type TimeFormatMessages struct {
+	Date     string
+	Time     string
+	DateTime string
+}
+
+type StrMap map[string]string
+
+func (m StrMap) Get(key string) string {
+	return m[key]
+}
+
 type Messages struct {
-	SuccessfullyUpdated                        string
-	Search                                     string
+	SuccessfullyUpdated string
+	SuccessfullyCreated string
+	SuccessfullyDeleted string
+	Search              string
+	TheFemaleTitle      string
+	TheMaleTitle        string
+
 	New                                        string
 	Update                                     string
 	Delete                                     string
@@ -17,6 +36,7 @@ type Messages struct {
 	Clear                                      string
 	Create                                     string
 	DeleteConfirmationTextTemplate             string
+	CreatingFemaleObjectTitleTemplate          string
 	CreatingObjectTitleTemplate                string
 	EditingObjectTitleTemplate                 string
 	ListingObjectTitleTemplate                 string
@@ -55,16 +75,35 @@ type Messages struct {
 	Language                                   string
 	Colon                                      string
 	NotFoundPageNotice                         string
+	AddRow                                     string
+
+	TimeFormats TimeFormatMessages
+
+	CommonFieldLabels StrMap
+
+	Error           string
+	ErrEmptyParamID error
 }
 
-func (msgr *Messages) DeleteConfirmationText(id string) string {
-	return strings.NewReplacer("{id}", id).
+func (msgr *Messages) TheTitle(female bool, title string) string {
+	if female {
+		return fmt.Sprintf(msgr.TheFemaleTitle, title)
+	}
+	return fmt.Sprintf(msgr.TheMaleTitle, title)
+}
+
+func (msgr *Messages) DeleteConfirmationText(model, theModelTitle, title string) string {
+	return strings.NewReplacer("{model}", model, "{the_model}", theModelTitle, "{title}", title).
 		Replace(msgr.DeleteConfirmationTextTemplate)
 }
 
-func (msgr *Messages) CreatingObjectTitle(modelName string) string {
+func (msgr *Messages) CreatingObjectTitle(modelName string, female bool) string {
+	tmpl := msgr.CreatingObjectTitleTemplate
+	if female && msgr.CreatingFemaleObjectTitleTemplate != "" {
+		tmpl = msgr.CreatingFemaleObjectTitleTemplate
+	}
 	return strings.NewReplacer("{modelName}", modelName).
-		Replace(msgr.CreatingObjectTitleTemplate)
+		Replace(tmpl)
 }
 
 func (msgr *Messages) EditingObjectTitle(label string, name string) string {
@@ -93,56 +132,63 @@ func (msgr *Messages) FilterBy(filter string) string {
 }
 
 var Messages_en_US = &Messages{
-	SuccessfullyUpdated:            "Successfully Updated",
-	Search:                         "Search",
-	New:                            "New",
-	Update:                         "Update",
-	Delete:                         "Delete",
-	Edit:                           "Edit",
-	FormTitle:                      "Form",
-	OK:                             "OK",
-	Cancel:                         "Cancel",
-	Clear:                          "Clear",
-	Create:                         "Create",
-	DeleteConfirmationTextTemplate: "Are you sure you want to delete object with id: {id}?",
-	CreatingObjectTitleTemplate:    "New {modelName}",
-	EditingObjectTitleTemplate:     "Editing {modelName} {id}",
-	ListingObjectTitleTemplate:     "Listing {modelName}",
-	DetailingObjectTitleTemplate:   "{modelName} {id}",
-	FiltersClear:                   "Clear Filters",
-	FiltersAdd:                     "Add Filters",
-	FilterApply:                    "Apply",
-	FilterByTemplate:               "Filter by {filter}",
-	FiltersDateInTheLast:           "is in the last",
-	FiltersDateEquals:              "is equal to",
-	FiltersDateBetween:             "is between",
-	FiltersDateIsAfter:             "is after",
-	FiltersDateIsAfterOrOn:         "is on or after",
-	FiltersDateIsBefore:            "is before",
-	FiltersDateIsBeforeOrOn:        "is before or on",
-	FiltersDateDays:                "days",
-	FiltersDateMonths:              "months",
-	FiltersDateAnd:                 "and",
-	FiltersDateTo:                  "to",
-	FiltersNumberEquals:            "is equal to",
-	FiltersNumberBetween:           "between",
-	FiltersNumberGreaterThan:       "is greater than",
-	FiltersNumberLessThan:          "is less than",
-	FiltersNumberAnd:               "and",
-	FiltersStringEquals:            "is equal to",
-	FiltersStringContains:          "contains",
-	FiltersMultipleSelectIn:        "in",
-	FiltersMultipleSelectNotIn:     "not in",
-	PaginationRowsPerPage:          "Rows per page: ",
-	ListingNoRecordToShow:          "No records to show",
-	ListingSelectedCountNotice:     "{count} records are selected. ",
-	ListingClearSelection:          "clear selection",
-	BulkActionNoAvailableRecords:   "None of the selected records can be executed with this action.",
+	SuccessfullyUpdated:               "Successfully Updated",
+	SuccessfullyCreated:               "Successfully Created",
+	SuccessfullyDeleted:               "Successfully Deleted",
+	Search:                            "Search",
+	New:                               "New",
+	Update:                            "Update",
+	Delete:                            "Delete",
+	Edit:                              "Edit",
+	FormTitle:                         "Form",
+	OK:                                "OK",
+	Cancel:                            "Cancel",
+	Clear:                             "Clear",
+	Create:                            "Create",
+	DeleteConfirmationTextTemplate:    "Are you sure you want to delete {the_model}: {title}?",
+	CreatingObjectTitleTemplate:       "New {modelName}",
+	CreatingFemaleObjectTitleTemplate: "New {modelName}",
+	EditingObjectTitleTemplate:        "Editing {modelName} {id}",
+	ListingObjectTitleTemplate:        "Listing {modelName}",
+	DetailingObjectTitleTemplate:      "{modelName} {id}",
+	FiltersClear:                      "Clear Filters",
+	FiltersAdd:                        "Add Filters",
+	FilterApply:                       "Apply",
+	FilterByTemplate:                  "Filter by {filter}",
+	FiltersDateInTheLast:              "is in the last",
+	FiltersDateEquals:                 "is equal to",
+	FiltersDateBetween:                "is between",
+	FiltersDateIsAfter:                "is after",
+	FiltersDateIsAfterOrOn:            "is on or after",
+	FiltersDateIsBefore:               "is before",
+	FiltersDateIsBeforeOrOn:           "is before or on",
+	FiltersDateDays:                   "days",
+	FiltersDateMonths:                 "months",
+	FiltersDateAnd:                    "and",
+	FiltersDateTo:                     "to",
+	FiltersNumberEquals:               "is equal to",
+	FiltersNumberBetween:              "between",
+	FiltersNumberGreaterThan:          "is greater than",
+	FiltersNumberLessThan:             "is less than",
+	FiltersNumberAnd:                  "and",
+	FiltersStringEquals:               "is equal to",
+	FiltersStringContains:             "contains",
+	FiltersMultipleSelectIn:           "in",
+	FiltersMultipleSelectNotIn:        "not in",
+	PaginationRowsPerPage:             "Rows per page: ",
+	ListingNoRecordToShow:             "No records to show",
+	ListingSelectedCountNotice:        "{count} records are selected. ",
+	ListingClearSelection:             "clear selection",
+	BulkActionNoAvailableRecords:      "None of the selected records can be executed with this action.",
 	BulkActionSelectedIdsProcessNoticeTemplate: "Partially selected records cannot be executed with this action: {ids}.",
 	ConfirmDialogPromptText:                    "Are you sure?",
 	Language:                                   "Language",
 	Colon:                                      ":",
 	NotFoundPageNotice:                         "Sorry, the requested page cannot be found. Please check the URL.",
+	AddRow:                                     "Add Row",
+
+	Error:           "ERROR",
+	ErrEmptyParamID: errors.New("Empty param ID"),
 }
 
 var Messages_zh_CN = &Messages{
@@ -157,7 +203,7 @@ var Messages_zh_CN = &Messages{
 	Cancel:                         "取消",
 	Clear:                          "清空",
 	Create:                         "创建",
-	DeleteConfirmationTextTemplate: "你确定你要删除这个对象吗，对象ID: {id}?",
+	DeleteConfirmationTextTemplate: "你确定你要删除这个对象吗，对象: {title}?",
 	CreatingObjectTitleTemplate:    "新建{modelName}",
 	EditingObjectTitleTemplate:     "编辑{modelName} {id}",
 	ListingObjectTitleTemplate:     "{modelName}列表",
@@ -209,7 +255,7 @@ var Messages_ja_JP = &Messages{
 	OK:                             "OK",
 	Cancel:                         "キャンセル",
 	Create:                         "新規作成",
-	DeleteConfirmationTextTemplate: ": {id}を削除して本当によろしいですか？",
+	DeleteConfirmationTextTemplate: ": {title}を削除して本当によろしいですか？",
 	CreatingObjectTitleTemplate:    "{modelName} を作る",
 	EditingObjectTitleTemplate:     "{modelName} {id} を編集する",
 	ListingObjectTitleTemplate:     "リスティング {modelName} ",

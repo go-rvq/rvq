@@ -30,7 +30,7 @@ func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuil
 		)
 		versionComponent := publish.DefaultVersionComponentFunc(pm)(obj, field, ctx)
 		if templateM != nil {
-			isTemplate = strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URIName()+"/")
+			isTemplate = strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URI()+"/")
 		}
 		if v, ok := obj.(PrimarySlugInterface); ok {
 			ps = v.PrimarySlug()
@@ -84,7 +84,7 @@ func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuil
 				).Class("pa-6 w-100 d-flex justify-space-between align-center").Style(`position:absolute;top:0;left:0`),
 			).Style(`position:relative`).Class("w-100").
 				Attr("@click",
-					web.Plaid().URL(fmt.Sprintf("%s/%s/editors/%v", b.prefix, pm.Info().URIName(), ps)).PushState(true).Go(),
+					web.Plaid().URL(fmt.Sprintf("%s/%s/editors/%v", b.prefix, pm.Info().URI(), ps)).PushState(true).Go(),
 				),
 			h.Div(
 				h.A(h.Text(previewDevelopUrl)).Href(previewDevelopUrl),
@@ -111,7 +111,7 @@ func templateSettings(_ *gorm.DB, pm *presets.ModelBuilder) presets.FieldCompone
 				EventFunc(actions.Edit).
 				Query(presets.ParamOverlay, actions.Dialog).
 				Query(presets.ParamID, p.PrimarySlug()).
-				URL(pm.Info().ListingHref()).Go(),
+				URL(pm.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).Go(),
 			)
 
 		return VContainer(

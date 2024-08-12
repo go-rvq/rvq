@@ -3,7 +3,9 @@ package presets
 import (
 	"net/http"
 	"net/url"
+	"slices"
 
+	"github.com/qor5/admin/v3/presets/data"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
@@ -33,13 +35,11 @@ type (
 type MessagesFunc func(r *http.Request) *Messages
 
 // Data Layer
-type DataOperator interface {
-	Search(obj interface{}, params *SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error)
-	// return ErrRecordNotFound if record not found
-	Fetch(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error)
-	Save(obj interface{}, id string, ctx *web.EventContext) (err error)
-	Delete(obj interface{}, id string, ctx *web.EventContext) (err error)
-}
+type (
+	DataOperator = data.DataOperator
+	SQLCondition = data.SQLCondition
+	SearchParams = data.SearchParams
+)
 
 type (
 	SetterFunc         func(obj interface{}, ctx *web.EventContext)
@@ -50,25 +50,10 @@ type (
 
 type (
 	SearchFunc func(model interface{}, params *SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error)
-	FetchFunc  func(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error)
+	FetchFunc  func(obj interface{}, id string, ctx *web.EventContext) (err error)
 	SaveFunc   func(obj interface{}, id string, ctx *web.EventContext) (err error)
 	DeleteFunc func(obj interface{}, id string, ctx *web.EventContext) (err error)
 )
-
-type SQLCondition struct {
-	Query string
-	Args  []interface{}
-}
-
-type SearchParams struct {
-	KeywordColumns []string
-	Keyword        string
-	SQLConditions  []*SQLCondition
-	PerPage        int64
-	Page           int64
-	OrderBy        string
-	PageURL        *url.URL
-}
 
 type SlugDecoder interface {
 	PrimaryColumnValuesBySlug(slug string) map[string]string
@@ -102,3 +87,43 @@ type (
 	ModelInstallFunc func(pb *Builder, mb *ModelBuilder) error
 	InstallFunc      func(pb *Builder) error
 )
+
+type ID struct {
+	Model *ModelBuilder
+	Value interface{}
+}
+
+type IDOfField struct {
+	ID    ID
+	Field string
+}
+
+func IDString(s string) ID {
+	return ID{Value: s}
+}
+
+type ModelConfigurer interface {
+	ConfigureModel(mb *ModelBuilder)
+}
+
+type ModelConfigurators []ModelConfigurer
+
+func (mc ModelConfigurators) ConfigureModel(mb *ModelBuilder) {
+	for _, m := range mc {
+		m.ConfigureModel(mb)
+	}
+}
+
+func (mc *ModelConfigurators) Append(m ...ModelConfigurer) {
+	*mc = append(*mc, m...)
+}
+
+func (mc *ModelConfigurators) Insert(i int, m ...ModelConfigurer) {
+	*mc = slices.Insert(*mc, i, m...)
+}
+
+type ModelConfiguratorFunc func(mb *ModelBuilder)
+
+func (f ModelConfiguratorFunc) ConfigureModel(mb *ModelBuilder) {
+	f(mb)
+}

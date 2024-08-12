@@ -60,7 +60,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			).Label(true).Variant(v.VariantOutlined).
 				Attr("style", "height:40px;").
 				On("click", web.Plaid().EventFunc(actions.OpenListingDialog).
-					URL(b.Info().PresetsPrefix()+"/"+field.ModelInfo.URIName()+"-version-list-dialog").
+					URL(b.Info().PresetsPrefix()+"/"+field.ModelInfo.URI()+"-version-list-dialog").
 					Query("select_id", primarySlugger.PrimarySlug()).
 					BeforeScript(fmt.Sprintf("%s ||= ''", VarCurrentDisplayID)).
 					ThenScript(fmt.Sprintf("%s = %q", VarCurrentDisplayID, primarySlugger.PrimarySlug())).
@@ -124,7 +124,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 				EventFunc(eventSchedulePublishDialog).
 				Query(presets.ParamOverlay, actions.Dialog).
 				Query(presets.ParamID, primarySlugger.PrimarySlug()).
-				URL(fmt.Sprintf("%s/%s", b.Info().PresetsPrefix(), b.Info().URIName())).Go()
+				URL(fmt.Sprintf("%s/%s", b.Info().PresetsPrefix(), b.Info().URI())).Go()
 			if config.Top {
 				scheduleBtn = v.VAutocomplete().PrependInnerIcon("mdi-alarm").Density(v.DensityCompact).
 					Variant(v.FieldVariantSoloFilled).ModelValue("Schedule Publish Time").
@@ -209,7 +209,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	// actually, VersionListDialog is a listing
 	// use this URL : URLName-version-list-dialog
 	mb := b.Model(pm.NewModel()).
-		URIName(pm.Info().URIName() + "-version-list-dialog").
+		URIName(pm.Info().URI() + "-version-list-dialog").
 		InMenu(false)
 
 	registerEventFuncsForVersion(mb, pm, db)
@@ -239,7 +239,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 				return in(model, params, ctx)
 			}
 		})
-	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
+	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		return cell
 	})
 	lb.Field("Version").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -338,7 +338,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 
 		return v.VBtn("Save").Disabled(id == "").Variant(v.VariantElevated).Color(v.ColorSecondary).Attr("@click", web.Plaid().
 			Query("select_id", id).
-			URL(pm.Info().PresetsPrefix()+"/"+pm.Info().URIName()).
+			URL(pm.Info().PresetsPrefix()+"/"+pm.Info().URI()).
 			EventFunc(eventSelectVersion).
 			Go())
 	})

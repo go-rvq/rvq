@@ -1,5 +1,7 @@
 package presets
 
+import "fmt"
+
 type Menu []interface{}
 
 func (b *Menu) Order(items ...interface{}) {

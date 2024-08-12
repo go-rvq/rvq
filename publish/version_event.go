@@ -109,17 +109,11 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 			)
 			return
 		}
-		if !mb.Detailing().GetDrawer() {
-			// open detailing without drawer
-			// jump URL to support referer
-			r.PushState = web.Location(nil).URL(mb.Info().DetailingHref(slug))
-			return
-		}
 		// close dialog and open detailingDrawer
 		web.AppendRunScripts(&r,
 			presets.CloseListingDialogVarScript,
 			presets.CloseRightDrawerVarScript,
-			web.Plaid().EventFunc(actions.DetailingDrawer).Query(presets.ParamID, slug).Go(),
+			web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, slug).Go(),
 		)
 
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
@@ -142,16 +136,10 @@ func selectVersion(pm *presets.ModelBuilder) web.EventFunc {
 			)
 			return
 		}
-		if !pm.Detailing().GetDrawer() {
-			// open detailing without drawer
-			// jump URL to support referer
-			r.PushState = web.Location(nil).URL(pm.Info().DetailingHref(id))
-			return
-		}
 		// close dialog and open detailingDrawer
 		web.AppendRunScripts(&r,
 			presets.CloseListingDialogVarScript,
-			fmt.Sprintf("if (!!%s && %s != %q) { %s }", VarCurrentDisplayID, VarCurrentDisplayID, id, presets.CloseRightDrawerVarScript+";"+web.Plaid().EventFunc(actions.DetailingDrawer).Query(presets.ParamID, id).Go()),
+			fmt.Sprintf("if (!!%s && %s != %q) { %s }", VarCurrentDisplayID, VarCurrentDisplayID, id, presets.CloseRightDrawerVarScript+";"+web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, id).Go()),
 		)
 		return
 	}
@@ -166,7 +154,7 @@ func renameVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 			Queries(ctx.Queries()).Go()
 
 		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: presets.DialogPortalName,
+			Name: actions.Dialog.PortalName(),
 			Body: web.Scope(
 				v.VDialog(
 					v.VCard(
@@ -204,7 +192,7 @@ func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 
 		id := ctx.R.FormValue(presets.ParamID)
 		obj := mb.NewModel()
-		obj, err = mb.Editing().Fetcher(obj, id, ctx)
+		err = mb.Editing().Fetcher(obj, id, ctx)
 		if err != nil {
 			return
 		}
@@ -260,7 +248,7 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 			return r, errors.New("no delete_id")
 		}
 
-		if err := mb.Editing().Deleter(mb.NewModel(), slug, ctx); err != nil {
+		if err := mb.Listing().Deleter(mb.NewModel(), slug, ctx); err != nil {
 			return r, err
 		}
 
@@ -281,7 +269,7 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 					return r, err
 				}
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					r.PushState = web.Location(nil).URL(pm.Info().ListingHref())
+					r.PushState = web.Location(nil).URL(pm.Info().ListingHref(presets.ParentsModelID(ctx.R)...))
 					return r, nil
 				}
 			}
@@ -294,13 +282,9 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 					web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, currentDisplaySlug).Go(),
 				)
 			} else {
-				if !pm.Detailing().GetDrawer() {
-					r.PushState = web.Location(nil).URL(pm.Info().DetailingHref(currentDisplaySlug))
-					return r, nil
-				}
 				web.AppendRunScripts(&r,
 					presets.CloseRightDrawerVarScript,
-					web.Plaid().EventFunc(actions.DetailingDrawer).Query(presets.ParamID, currentDisplaySlug).Go(),
+					web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, currentDisplaySlug).Go(),
 				)
 			}
 		}

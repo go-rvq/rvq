@@ -75,7 +75,7 @@ func (d *SectionsBuilder) appendNewSection(name string) (r *SectionBuilder) {
 		isList:                  false,
 	}
 	r.editingFB.Model(d.mb.model)
-	r.editingFB.defaults = d.mb.writeFields.defaults
+	r.editingFB.defaults = d.mb.editing.defaults
 	r.viewingFB.Model(d.mb.model)
 	r.viewingFB.defaults = d.mb.p.detailFieldDefaults
 	r.saver = r.DefaultSaveFunc
@@ -219,7 +219,7 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 	b.editingFB = *b.editingFB.Only(fields...)
 	if b.componentEditFunc == nil {
 		b.EditComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, b.name, ctx)
+			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, field.Mode, b.name, ctx)
 		})
 	}
 	b.Viewing(fields...)
@@ -231,7 +231,7 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 	b.viewingFB = *b.viewingFB.Only(fields...)
 	if b.componentViewFunc == nil {
 		b.ViewComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, b.name, ctx)
+			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, field.Mode, b.name, ctx)
 		})
 	}
 	return
@@ -713,11 +713,18 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 				continue
 			}
 			keyPath := fmt.Sprintf("%s.%s", prefix, f.name)
+
+			var label string
+			if !f.hiddenLabel {
+				label = b.editingFB.getLabel(f.NameLabel)
+			}
+
 			err := f.setterFunc(toObj, &FieldContext{
+				Obj:       toObj,
 				ModelInfo: info,
 				FormKey:   keyPath,
 				Name:      f.name,
-				Label:     b.editingFB.getLabel(f.NameLabel),
+				Label:     label,
 			}, ctx)
 			if err != nil {
 				return err

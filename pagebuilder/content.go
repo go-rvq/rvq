@@ -24,5 +24,5 @@ func (b *Builder) previewHref(ctx *web.EventContext, pm *presets.ModelBuilder, p
 		}
 	}
 	ur.Add(presets.ParamID, ps)
-	return b.prefix + "/" + pm.Info().URIName() + "/preview" + "?" + ur.Encode()
+	return b.prefix + "/" + pm.Info().URI() + "/preview" + "?" + ur.Encode()
 }

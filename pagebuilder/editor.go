@@ -85,7 +85,7 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 				editEvent := web.GET().EventFunc(actions.Edit).
 					URL(fmt.Sprintf(`%s/%s`, b.prefix, arr[0])).
 					Query(presets.ParamID, arr[1]).
-					Query(presets.ParamPortalName, pageBuilderRightContentPortal).
+					Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 					Query(presets.ParamOverlay, actions.Content).Go()
 				editContainerDrawer = web.RunScript(fmt.Sprintf(`function(){%s}`, editEvent))
 			}
@@ -228,7 +228,7 @@ func (b *Builder) renderEditContainer(ctx *web.EventContext) (r h.HTMLComponent,
 					h.Div(
 						VBtn("Save").Variant(VariantFlat).Color(ColorSecondary).Size(SizeSmall).Attr("@click", web.Plaid().
 							EventFunc(actions.Update).
-							URL(b.ContainerByName(modelName).mb.Info().ListingHref()).
+							URL(b.ContainerByName(modelName).mb.Info().UpdateHrefCtx(ctx)).
 							Query(presets.ParamID, modelID).
 							Go()),
 					),
@@ -236,7 +236,7 @@ func (b *Builder) renderEditContainer(ctx *web.EventContext) (r h.HTMLComponent,
 				VDivider(),
 				h.Div(
 
-					builder.Editing().ToComponent(builder.Info(), element, ctx),
+					builder.Editing().ToComponent(builder.Info(), element, presets.FieldModeStack{presets.EDIT}, ctx),
 				).Class("pa-6"),
 			),
 		),
@@ -433,8 +433,8 @@ func (b *Builder) pageEditorLayout(in web.PageFunc, config *presets.LayoutConfig
 		pr.PageTitle = fmt.Sprintf("%s - %s", innerPr.PageTitle, "Page Builder")
 		pr.Body = VLayout(
 
-			web.Portal().Name(presets.RightDrawerPortalName),
-			web.Portal().Name(presets.DialogPortalName),
+			web.Portal().Name(actions.RightDrawer.PortalName()),
+			web.Portal().Name(actions.Dialog.PortalName()),
 			web.Portal().Name(presets.DeleteConfirmPortalName),
 			web.Portal().Name(presets.ListingDialogPortalName),
 			web.Portal().Name(dialogPortalName),

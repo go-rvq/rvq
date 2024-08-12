@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/admin/v3/utils"
 	"gorm.io/gorm"
 )
@@ -34,6 +35,6 @@ func (version *Version) CreateVersion(db *gorm.DB, paramID string, obj interface
 }
 
 func IsVersion(obj interface{}) (IsVersion bool) {
-	_, IsVersion = utils.GetStruct(reflect.TypeOf(obj)).(VersionInterface)
+	_, IsVersion = reflect_utils.GetStruct(reflect.TypeOf(obj)).(VersionInterface)
 	return
 }

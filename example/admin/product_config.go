@@ -129,27 +129,27 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 		ButtonCompFunc(
 			func(ctx *web.EventContext) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - No parameters").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
-					Attr("@click", noParametersJob.URL())
+					Attr("@click", noParametersJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
 	listing.BulkAction("Action Job - Parameter input box").
 		ButtonCompFunc(
 			func(ctx *web.EventContext) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Parameter input box").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
-					Attr("@click", parametersBoxJob.URL())
+					Attr("@click", parametersBoxJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 	listing.BulkAction("Action Job - Display log").
 		ButtonCompFunc(
 			func(ctx *web.EventContext) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Display log").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
-					Attr("@click", displayLogJob.URL())
+					Attr("@click", displayLogJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
 	listing.BulkAction("Action Job - Get Args").
 		ButtonCompFunc(
 			func(ctx *web.EventContext) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Get Args").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
-					Attr("@click", getArgsJob.URL())
+					Attr("@click", getArgsJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
 	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {

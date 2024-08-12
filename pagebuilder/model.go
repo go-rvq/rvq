@@ -105,7 +105,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 				ModelID:        strconv.Itoa(int(c.ModelID)),
 				DisplayName:    displayName,
 				ContainerID:    strconv.Itoa(int(c.ID)),
-				URL:            b.builder.ContainerByName(c.ModelName).mb.Info().ListingHref(),
+				URL:            b.builder.ContainerByName(c.ModelName).mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...),
 				Shared:         c.Shared,
 				VisibilityIcon: vicon,
 				ParamID:        c.PrimarySlug(),
@@ -193,7 +193,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 															URL(web.Var(fmt.Sprintf(`"%s/"+element.label`, b.builder.prefix))).
 															EventFunc(actions.Edit).
 															Query(presets.ParamOverlay, actions.Content).
-															Query(presets.ParamPortalName, pageBuilderRightContentPortal).
+															Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 															Query(presets.ParamID, web.Var("element.model_id")).
 															Go(),
 													).Attr("v-show", "element.editShow || isHovering"),
@@ -248,7 +248,7 @@ func (b *ModelBuilder) addContainer(ctx *web.EventContext) (r web.EventResponse,
 		web.Plaid().
 			URL(fmt.Sprintf(`%s/%s`, b.builder.prefix, inflection.Plural(strcase.ToKebab(cb.name)))).
 			EventFunc(actions.Edit).
-			Query(presets.ParamPortalName, pageBuilderRightContentPortal).
+			Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 			Query(presets.ParamOverlay, actions.Content).
 			Query(presets.ParamID, modelID).
 			Go()
@@ -396,7 +396,7 @@ func (b *ModelBuilder) renameContainerDialog(ctx *web.EventContext) (r web.Event
 		EventFunc(RenameContainerEvent).Query(paramContainerID, paramID).Go()
 	portalName := dialogPortalName
 	if ctx.R.FormValue("portal") == "presets" {
-		portalName = presets.DialogPortalName
+		portalName = actions.Dialog.PortalName()
 	}
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: portalName,

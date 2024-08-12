@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/qor5/admin/v3/utils/testflow"
+	"github.com/qor5/web/v3"
 	"github.com/qor5/web/v3/multipartestutils"
 )
 
@@ -38,8 +39,8 @@ func generateStep(rr RequestResponse) (*Step, error) {
 		queries[key] = values[0]
 	}
 
-	eventFunc := queries["__execute_event__"]
-	delete(queries, "__execute_event__")
+	eventFunc := queries[web.ExecuteEventPatam]
+	delete(queries, web.ExecuteEventPatam)
 
 	formFields := make(map[string]string)
 	if rr.Request.MimeType == "multipart/form-data" {

@@ -261,7 +261,7 @@ func (b *Builder) ExpendContainers(v bool) (r *Builder) {
 func (b *Builder) Model(mb *presets.ModelBuilder) (r *ModelBuilder) {
 	r = &ModelBuilder{
 		mb:      mb,
-		editor:  b.ps.Model(mb.NewModel()).URIName(mb.Info().URIName() + "/editors"),
+		editor:  b.ps.Model(mb.NewModel()).URIName(mb.Info().URI() + "/editors"),
 		builder: b,
 		db:      b.db,
 	}
@@ -393,7 +393,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 	}
 
 	eb := pm.Editing("TemplateSelection", "Title", "CategoryID", "Slug")
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		c := obj.(*Page)
 		err = pageValidator(ctx.R.Context(), c, db, b.l10n)
 		return
@@ -592,7 +592,7 @@ func (b *Builder) configDetailLayoutFunc(
 	// change old detail layout
 	pb.DetailLayoutFunc(func(in web.PageFunc, cfg *presets.LayoutConfig) (out web.PageFunc) {
 		return func(ctx *web.EventContext) (pr web.PageResponse, err error) {
-			if !strings.Contains(ctx.R.RequestURI, "/"+pm.Info().URIName()+"/") && templateM != nil && !strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URIName()+"/") {
+			if !strings.Contains(ctx.R.RequestURI, "/"+pm.Info().URI()+"/") && templateM != nil && !strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URIName()+"/") {
 				pr, err = oldDetailLayout(in, cfg)(ctx)
 				return
 			}
@@ -612,9 +612,9 @@ func (b *Builder) configDetailLayoutFunc(
 				return pb.DefaultNotFoundPageFunc(ctx)
 			}
 			var isTemplate bool
-			isPage := strings.Contains(ctx.R.RequestURI, "/"+pm.Info().URIName()+"/")
+			isPage := strings.Contains(ctx.R.RequestURI, "/"+pm.Info().URI()+"/")
 			if templateM != nil {
-				isTemplate = strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URIName()+"/")
+				isTemplate = strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URI()+"/")
 			}
 
 			if isTemplate {
@@ -641,7 +641,7 @@ func (b *Builder) configDetailLayoutFunc(
 					return pb.DefaultNotFoundPageFunc(ctx)
 				}
 			}
-			obj, err = dmb.Detailing().GetFetchFunc()(obj, id, ctx)
+			err = dmb.Detailing().GetFetchFunc()(obj, id, ctx)
 			if err != nil {
 				if errors.Is(err, presets.ErrRecordNotFound) {
 					return pb.DefaultNotFoundPageFunc(ctx)
@@ -653,7 +653,7 @@ func (b *Builder) configDetailLayoutFunc(
 				locale := ctx.R.FormValue("locale")
 				if ctx.R.FormValue(web.EventFuncIDName) == "__reload__" && locale != "" && locale != l.EmbedLocale().LocaleCode {
 					// redirect to list page when change locale
-					http.Redirect(ctx.W, ctx.R, dmb.Info().ListingHref(), http.StatusSeeOther)
+					http.Redirect(ctx.W, ctx.R, dmb.Info().ListingHref(presets.ParentsModelID(ctx.R)...), http.StatusSeeOther)
 					return
 				}
 			}
@@ -746,8 +746,8 @@ func (b *Builder) configDetailLayoutFunc(
 					).
 						Elevation(0).
 						Density("compact").Class("px-6"),
-					web.Portal().Name(presets.RightDrawerPortalName),
-					web.Portal().Name(presets.DialogPortalName),
+					web.Portal().Name(actions.RightDrawer.PortalName()),
+					web.Portal().Name(actions.Dialog.PortalName()),
 					web.Portal().Name(presets.DeleteConfirmPortalName),
 					web.Portal().Name(presets.DefaultConfirmDialogPortalName),
 					web.Portal().Name(presets.ListingDialogPortalName),
@@ -772,7 +772,7 @@ func (b *Builder) configDetailLayoutFunc(
 							VMain(
 								VContainer(
 									VBtn("").Size(SizeXSmall).Icon("mdi-arrow-left").Tile(true).Variant(VariantOutlined).Attr("@click",
-										web.GET().URL(pm.Info().ListingHref()).PushState(true).Go(),
+										web.GET().URL(pm.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).PushState(true).Go(),
 									),
 									h.H1("{{vars.pageTitle}}").Class("ml-4"),
 									versionBadge.Class("mt-2 ml-2"),
@@ -866,7 +866,7 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 		return nil
 	})
 
-	eb.DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	lb.DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
 		cs := obj.(presets.SlugDecoder).PrimaryColumnValuesBySlug(id)
 		ID := cs["id"]
 		Locale := cs[l10n.SlugLocaleCode]
@@ -885,7 +885,7 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 		return
 	})
 
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		c := obj.(*Category)
 		err = categoryValidator(c, db, b.l10n)
 		return
@@ -1127,15 +1127,19 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 
 	pm := pb.Model(&Container{}).URIName("shared_containers").Label("Shared Containers")
 
-	pm.RegisterEventFunc(republishRelatedOnlinePagesEvent, republishRelatedOnlinePages(r.mb.Info().ListingHref()))
+	pm.RegisterEventFunc(republishRelatedOnlinePagesEvent, republishRelatedOnlinePages(r.mb.Info().ListingHrefCtx))
 
 	listing := pm.Listing("DisplayName").SearchColumns("display_name")
-	listing.RowMenu("Rename").RowMenuItem("Rename").ComponentFunc(func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
+	listing.RowMenu("Rename").RowMenuItem("Rename").ComponentFunc(func(rctx *presets.RecordMenuItemContext) h.HTMLComponent {
+		var (
+			ctx = rctx.Ctx
+			obj = rctx.Obj
+		)
 		c := obj.(*Container)
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
 		return VListItem().PrependIcon("mdi-pencil-outline").Title(msgr.Rename).Attr("@click",
 			web.Plaid().
-				URL(b.ContainerByName(c.ModelName).mb.Info().ListingHref()).
+				URL(b.ContainerByName(c.ModelName).mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 				EventFunc(RenameContainerDialogEvent).
 				Query(paramContainerID, c.PrimarySlug()).
 				Query(paramContainerName, c.DisplayName).
@@ -1150,14 +1154,14 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 	}
 	listing.Field("DisplayName").Label("Name")
 	listing.SearchFunc(sharedContainerSearcher(db, r))
-	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
+	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		tdbind := cell
 		c := obj.(*Container)
 
 		tdbind.SetAttr("@click.self",
 			web.Plaid().
 				EventFunc(actions.Edit).
-				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHref()).
+				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHrefCtx(ctx)).
 				Query(presets.ParamID, c.ModelID).
 				Query(paramOpenFromSharedContainer, 1).
 				Go()+fmt.Sprintf(`; vars.currEditingListItemID="%s-%d"`, dataTableID, c.ModelID))
@@ -1218,6 +1222,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 			if cover == "" {
 				cover = path.Join(b.prefix, b.imagesPrefix, strings.ReplaceAll(builder.name, " ", "")+".png")
 			}
+
 			c := VCol(
 				VCard(
 					VImg().Src(cover).Height(200),
@@ -1229,8 +1234,14 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 							Color(ColorPrimary).Attr("@click",
 							web.Plaid().
 								EventFunc(actions.New).
-								URL(builder.GetModelBuilder().Info().ListingHref()).
-								Query(presets.ParamOverlayAfterUpdateScript, web.POST().Query("ModelName", builder.name).EventFunc("addDemoContainer").Go()).
+								URL(builder.GetModelBuilder().Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
+								Query(presets.ParamPostChangeCallback, web.CallbackScript(
+									web.POST().
+										Query("ModelName", builder.name).
+										EventFunc("addDemoContainer").
+										AnyEvent().
+										Go()).Encode(),
+								).
 								Go()),
 					),
 				),
@@ -1260,7 +1271,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 								Color(ColorPrimary).Attr("@click",
 								web.Plaid().
 									EventFunc(actions.Edit).
-									URL(builder.GetModelBuilder().Info().ListingHref()).
+									URL(builder.GetModelBuilder().Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 									Query(presets.ParamID, fmt.Sprint(modelID)).
 									Go()),
 						),
@@ -1279,14 +1290,14 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 		)
 	})
 
-	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
+	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		tdbind := cell
 		c := obj.(*DemoContainer)
 
 		tdbind.SetAttr("@click.self",
 			web.Plaid().
 				EventFunc(actions.Edit).
-				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHref()).
+				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHrefCtx(ctx)).
 				Query(presets.ParamID, c.ModelID).
 				Go()+fmt.Sprintf(`; vars.currEditingListItemID="%s-%d"`, dataTableID, c.ModelID))
 
@@ -1601,14 +1612,14 @@ func (b *ContainerBuilder) getContainerDataID(id int) string {
 	return fmt.Sprintf(inflection.Plural(strcase.ToKebab(b.name))+"_%v", id)
 }
 
-func republishRelatedOnlinePages(pageURL string) web.EventFunc {
+func republishRelatedOnlinePages(pageURL func(ctx *web.EventContext) string) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		ids := strings.Split(ctx.R.FormValue("ids"), ",")
 		for _, id := range ids {
 			statusVar := fmt.Sprintf(`republish_status_%s`, strings.Replace(id, "-", "_", -1))
 			web.AppendRunScripts(&r,
 				web.Plaid().
-					URL(pageURL).
+					URL(pageURL(ctx)).
 					EventFunc(publish.EventRepublish).
 					Query("id", id).
 					Query(publish.ParamScriptAfterPublish, fmt.Sprintf(`vars.%s = "done"`, statusVar)).
@@ -1649,7 +1660,7 @@ func (b *Builder) generateEditorBarJsFunction(_ *web.EventContext) string {
 			URL(web.Var(fmt.Sprintf(`"%s/"+arr[0]`, b.prefix))).
 			Query(presets.ParamID, web.Var("arr[1]")).
 			Query(presets.ParamOverlay, actions.Content).
-			Query(presets.ParamPortalName, pageBuilderRightContentPortal).
+			Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 			Go()
 	addAction := fmt.Sprintf(`vars.containerTab="%s";`, EditorTabElements) +
 		web.Plaid().
@@ -1719,11 +1730,9 @@ func (b *ContainerBuilder) autoSaveContainer(ctx *web.EventContext) (r web.Event
 		return
 	}
 
-	if mb.Validator != nil {
-		if vErr = mb.Validator(obj, ctx); vErr.HaveErrors() {
-			err = errors.New(vErr.Error())
-			return
-		}
+	if vErr = mb.Validators.Validate(obj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {
+		err = errors.New(vErr.Error())
+		return
 	}
 
 	if err = mb.Saver(obj, id, ctx); err != nil {

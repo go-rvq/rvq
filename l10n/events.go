@@ -7,6 +7,7 @@ import (
 
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/presets"
+	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/admin/v3/utils"
 	"github.com/qor5/web/v3"
 	. "github.com/qor5/x/v3/ui/vuetify"
@@ -69,7 +70,7 @@ func localizeToConfirmation(db *gorm.DB, lb *Builder, mb *presets.ModelBuilder) 
 		}
 
 		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: presets.DialogPortalName,
+			Name: actions.Dialog.PortalName(),
 			Body: VDialog(
 				VCard(
 					VCardTitle(h.Text(MustGetTranslation(ctx.R, "Localize"))),
@@ -183,11 +184,9 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 				ModelInfo: mb.Info(),
 			}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
 
-			if me.Validator != nil {
-				if vErr := me.Validator(toObj, ctx); vErr.HaveErrors() {
-					presets.ShowMessage(&r, vErr.Error(), "error")
-					return
-				}
+			if vErr := me.Validators.Validate(toObj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {
+				presets.ShowMessage(&r, vErr.Error(), "error")
+				return
 			}
 
 			newContext := context.WithValue(ctx.R.Context(), FromID, fromID)

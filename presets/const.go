@@ -17,18 +17,21 @@ var PermRead = []string{PermList, PermGet}
 
 // params
 const (
-	ParamID                       = "id"
-	ParamAction                   = "action"
-	ParamOverlay                  = "overlay"
-	ParamOverlayAfterUpdateScript = "overlay_after_update_script"
-	ParamOverlayUpdateID          = "overlay_update_id"
-	ParamBulkActionName           = "bulk_action"
-	ParamListingActionName        = "listing_action"
-	ParamSelectedIds              = "selected_ids"
-	ParamInDialog                 = "presets_in_dialog"
-	ParamListingQueries           = "presets_listing_queries"
-	ParamAfterDeleteEvent         = "presets_after_delete_event"
-	ParamPortalName               = "portal_name"
+	ParamID                 = "id"
+	ParamSelectedID         = "selected_id"
+	ParamAction             = "action"
+	ParamOverlay            = "overlay"
+	ParamOverlayUpdateID    = "overlay_update_id"
+	ParamBulkActionName     = "bulk_action"
+	ParamListingActionName  = "listing_action"
+	ParamSelectedIds        = "selected_ids"
+	ParamListingQueries     = "presets_listing_queries"
+	ParamAfterDeleteEvent   = "presets_after_delete_event"
+	ParamPortalID           = "portal_id"
+	ParamTargetPortal       = "target_portal"
+	ParamPostChangeCallback = "presets_post_change_callback"
+	ParamActionsDisabled    = "actions_disabled"
+	ParamMustResult         = "must_result"
 
 	// list editor
 	ParamAddRowFormKey      = "listEditor_AddRowFormKey"

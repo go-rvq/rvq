@@ -9,7 +9,6 @@ import (
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
 	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
@@ -139,8 +138,13 @@ func runSwitchLocaleFunc(lb *Builder) func(ctx *web.EventContext) (r h.HTMLCompo
 	}
 }
 
-func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams url.Values) vx.RowMenuItemFunc {
-	return func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
+func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams url.Values) presets.RecordMenuItemFunc {
+	return func(rctx *presets.RecordMenuItemContext) h.HTMLComponent {
+		var (
+			ctx = rctx.Ctx
+			obj = rctx.Obj
+			id  = rctx.ID
+		)
 		if mi.Verifier().Do(presets.PermUpdate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
 			return nil
 		}

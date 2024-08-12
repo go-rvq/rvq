@@ -509,7 +509,7 @@ func (b *Builder) detailShowComponent(obj interface{}, field *presets.FieldConte
 }
 
 func (b *Builder) detailSaver(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	if err = EditSetterFunc(obj, &presets.FieldContext{Name: SeoDetailFieldName}, ctx); err != nil {
+	if err = EditSetterFunc(obj, &presets.FieldContext{Obj: obj, Name: SeoDetailFieldName}, ctx); err != nil {
 		return
 	}
 	if err = b.db.Updates(obj).Error; err != nil {

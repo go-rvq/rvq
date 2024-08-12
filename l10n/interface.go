@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/reflect_utils"
 )
 
 type LocaleInterface interface {
@@ -26,7 +26,7 @@ func EmbedLocale(v any) *Locale {
 }
 
 func IsLocalizable(obj interface{}) (isLocalizable bool) {
-	_, isLocalizable = utils.GetStruct(reflect.TypeOf(obj)).(LocaleInterface)
+	_, isLocalizable = reflect_utils.GetStruct(reflect.TypeOf(obj)).(LocaleInterface)
 	return
 }
 

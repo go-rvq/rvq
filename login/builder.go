@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/qor5/admin/v3/presets"
+	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/login"
@@ -37,7 +38,7 @@ func registerChangePasswordEvents(b *login.Builder, pb *presets.Builder) {
 	showVar := "showChangePasswordDialog"
 	pb.GetWebBuilder().RegisterEventFunc(OpenChangePasswordDialogEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: presets.DialogPortalName,
+			Name: actions.Dialog.PortalName(),
 			Body: changePasswordDialog(vh, ctx, showVar, defaultChangePasswordDialogContent(vh, pb)(ctx)),
 		})
 

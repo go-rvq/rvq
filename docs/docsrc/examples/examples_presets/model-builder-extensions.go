@@ -32,7 +32,7 @@ func PresetsModelBuilderExtensions(b *presets.Builder, db *gorm.DB) (
 				Attr("@click", web.POST().
 					EventFunc(actions.Update).
 					Queries(ctx.Queries()).
-					URL(mb.Info().ListingHref()).
+					URL(mb.Info().EditingHrefCtx(ctx, "0")).
 					Go()),
 		)
 	})

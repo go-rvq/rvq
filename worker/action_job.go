@@ -102,8 +102,8 @@ func (action ActionJobBuilder) GetParamsModelBuilder() *presets.ModelBuilder {
 	return action.jb.rmb
 }
 
-func (action ActionJobBuilder) URL() string {
-	return web.Plaid().URL(action.b.mb.Info().ListingHref()).EventFunc(ActionJobInputParams).Query("jobName", action.fullname).Go()
+func (action ActionJobBuilder) URL(parentsID ...presets.ID) string {
+	return web.Plaid().URL(action.b.mb.Info().ListingHref(parentsID...)).EventFunc(ActionJobInputParams).Query("jobName", action.fullname).Go()
 }
 
 func (b *Builder) eventActionJobCreate(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -126,7 +126,7 @@ func (b *Builder) eventActionJobCreate(ctx *web.EventContext) (r web.EventRespon
 	}
 
 	r.RunScript = web.Plaid().
-		URL(b.mb.Info().ListingHref()).
+		URL(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 		EventFunc(ActionJobResponse).
 		Query(presets.ParamID, fmt.Sprint(job.ID)).
 		Query("jobID", fmt.Sprintf("%d", job.ID)).
@@ -170,7 +170,7 @@ func (b *Builder) eventActionJobInputParams(ctx *web.EventContext) (r web.EventR
 						VBtn(msgr.Cancel).Elevation(0).Attr("@click", "vars.presetsDialog=false"),
 						VBtn(msgr.OK).Color("primary").Size(SizeLarge).
 							Attr("@click", web.Plaid().
-								URL(b.mb.Info().ListingHref()).
+								URL(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 								EventFunc(ActionJobCreate).
 								Query("jobName", jobName).
 								Go()),
@@ -203,7 +203,7 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 					VToolbarTitle(config.shortname).Class("pl-2"),
 					VSpacer(),
 					VBtn("").Icon("mdi-close").Attr("@click.stop", web.Plaid().
-						URL(b.mb.Info().ListingHref()).
+						URL(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 						EventFunc(ActionJobClose).
 						Query("jobID", jobID).
 						Query("jobName", jobName).
@@ -215,7 +215,7 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 						web.Scope(
 							web.Portal().Loader(
 								web.Plaid().EventFunc(ActionJobProgressing).
-									URL(b.mb.Info().ListingHref()).
+									URL(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 									Query("jobID", jobID).
 									Query("jobName", jobName),
 							).AutoReloadInterval("loaderLocals.actionJobProgressingInterval"),

@@ -3,12 +3,13 @@ package presets
 import (
 	"fmt"
 	"net/url"
+	"reflect"
+	"strings"
 	"time"
+	_ "unsafe"
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -37,69 +38,6 @@ func ShowMessage(r *web.EventResponse, msg string, color string) {
 		h.JSONString(msg), h.JSONString(color)))
 }
 
-func EditDeleteRowMenuItemFuncs(mi *ModelInfo, url string, editExtraParams url.Values) []vx.RowMenuItemFunc {
-	return []vx.RowMenuItemFunc{
-		editRowMenuItemFunc(mi, url, editExtraParams),
-		deleteRowMenuItemFunc(mi, url, editExtraParams),
-	}
-}
-
-func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) vx.RowMenuItemFunc {
-	return func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
-		msgr := MustGetMessages(ctx.R)
-		if mi.mb.Info().Verifier().Do(PermUpdate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
-			return nil
-		}
-
-		onclick := web.Plaid().
-			EventFunc(actions.Edit).
-			Queries(editExtraParams).
-			Query(ParamID, id).
-			URL(url)
-		if IsInDialog(ctx) {
-			onclick.URL(ctx.R.RequestURI).
-				Query(ParamOverlay, actions.Dialog).
-				Query(ParamInDialog, true).
-				Query(ParamListingQueries, ctx.Queries().Encode())
-		}
-		return VListItem(
-			web.Slot(
-				VIcon("mdi-pencil"),
-			).Name("prepend"),
-
-			VListItemTitle(h.Text(msgr.Edit)),
-		).Attr("@click", onclick.Go())
-	}
-}
-
-func deleteRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) vx.RowMenuItemFunc {
-	return func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
-		msgr := MustGetMessages(ctx.R)
-		if mi.mb.Info().Verifier().Do(PermDelete).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
-			return nil
-		}
-
-		onclick := web.Plaid().
-			EventFunc(actions.DeleteConfirmation).
-			Queries(editExtraParams).
-			Query(ParamID, id).
-			URL(url)
-		if IsInDialog(ctx) {
-			onclick.URL(ctx.R.RequestURI).
-				Query(ParamOverlay, actions.Dialog).
-				Query(ParamInDialog, true).
-				Query(ParamListingQueries, ctx.Queries().Encode())
-		}
-		return VListItem(
-			web.Slot(
-				VIcon("mdi-delete"),
-			).Name("prepend"),
-
-			VListItemTitle(h.Text(msgr.Delete)),
-		).Attr("@click", onclick.Go())
-	}
-}
-
 func copyURLWithQueriesRemoved(u *url.URL, qs ...string) *url.URL {
 	newU, _ := url.Parse(u.String())
 	newQuery := newU.Query()
@@ -110,10 +48,70 @@ func copyURLWithQueriesRemoved(u *url.URL, qs ...string) *url.URL {
 	return newU
 }
 
+func GetOverlay(ctx *web.EventContext) actions.OverlayMode {
+	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+}
+
 func isInDialogFromQuery(ctx *web.EventContext) bool {
-	return ctx.R.URL.Query().Get(ParamInDialog) == "true"
+	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay)) == actions.Dialog
 }
 
 func ptrTime(t time.Time) *time.Time {
 	return &t
+}
+
+func OkOrError(ok bool, err error) error {
+	if !ok {
+		return err
+	}
+	return nil
+}
+
+type dotToken struct {
+	Field            string
+	Left             string
+	IsArray          bool
+	ArrayIndex       int
+	IsAppendingArray bool
+}
+
+//go:linkname nextDot github.com/sunfmin/reflectutils.nextDot
+func nextDot(name string) (t *dotToken, err error)
+
+func GetFieldStruct(i interface{}, name string) (_ *reflect.StructField) {
+	var err error
+
+	t := reflect.TypeOf(i)
+
+	if name == "" {
+		return
+	}
+
+	var token *dotToken
+	token, err = nextDot(name)
+	if err != nil {
+		return nil
+	}
+
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+
+	if t.Kind() == reflect.Struct {
+		sf, ok := t.FieldByNameFunc(func(name string) bool {
+			return strings.EqualFold(name, token.Field)
+		})
+
+		if !ok {
+			return nil
+		}
+
+		if token.Left == "" {
+			return &sf
+		}
+
+		return GetFieldStruct(reflect.Zero(sf.Type).Interface(), token.Left)
+	}
+
+	return
 }

@@ -289,7 +289,7 @@ func TestFieldsBuilder(t *testing.T) {
 
 	deptFbs.Field("Employees").Nested(employeeFbs).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(
-			field.NestedFieldsBuilder.ToComponentForEach(field, obj.(*Department).Employees, ctx, nil),
+			field.Nested.ToComponentForEach(field, obj.(*Department).Employees, ctx, nil),
 			h.Button("Add Employee"),
 		).Class("employees")
 	})
@@ -306,7 +306,7 @@ func TestFieldsBuilder(t *testing.T) {
 	fbs.Field("Departments").Nested(deptFbs).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		// [0].Departments
 		return h.Div(
-			field.NestedFieldsBuilder.ToComponentForEach(field, obj.(*Org).Departments, ctx, nil),
+			field.Nested.ToComponentForEach(field, obj.(*Org).Departments, ctx, nil),
 			h.Button("Add Department"),
 		).Class("departments")
 	})

@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -58,7 +57,7 @@ func (b *ListEditorBuilder) DisplayFieldInSorter(v string) (r *ListEditorBuilder
 	return b
 }
 
-func (b *ListEditorBuilder) AddListItemRowEvnet(v string) (r *ListEditorBuilder) {
+func (b *ListEditorBuilder) AddListItemRowEvent(v string) (r *ListEditorBuilder) {
 	if v == "" {
 		return b
 	}
@@ -82,17 +81,17 @@ func (b *ListEditorBuilder) SortListItemsEvent(v string) (r *ListEditorBuilder) 
 	return b
 }
 
-func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error) {
-	ctx := web.MustGetEventContext(c)
+func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
+	msgr := MustGetMessages(ctx.R)
 	formKey := b.fieldContext.FormKey
 	var form h.HTMLComponent
 	if b.value != nil {
-		form = b.fieldContext.NestedFieldsBuilder.ToComponentForEach(b.fieldContext, b.value, ctx, func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+		form = b.fieldContext.Nested.ToComponentForEach(b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
 			return VCard(
-				h.If(!b.fieldContext.Disabled,
+				h.If(!b.fieldContext.ReadOnly,
 					VBtn("").Icon("mdi-delete").Class("float-right ma-2").
 						Attr("@click", web.Plaid().
-							URL(b.fieldContext.ModelInfo.ListingHref()).
+							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 							EventFunc(b.removeListItemRowEvent).
 							Queries(ctx.Queries()).
 							Query(ParamID, ctx.R.FormValue(ParamID)).
@@ -146,7 +145,7 @@ func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error)
 	}
 	return h.Div(
 		web.Scope(
-			h.If(!b.fieldContext.Disabled,
+			h.If(!b.fieldContext.ReadOnly,
 				h.Div(
 					h.Label(b.fieldContext.Label).Class("v-label theme--light text-caption"),
 					VSpacer(),
@@ -156,7 +155,7 @@ func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error)
 								Class("mt-n4").
 								Attr("@click",
 									web.Plaid().
-										URL(b.fieldContext.ModelInfo.ListingHref()).
+										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 										EventFunc(b.sortListItemsEvent).
 										Queries(ctx.Queries()).
 										Query(ParamID, ctx.R.FormValue(ParamID)).
@@ -170,7 +169,7 @@ func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error)
 								Class("mt-n4").
 								Attr("@click",
 									web.Plaid().
-										URL(b.fieldContext.ModelInfo.ListingHref()).
+										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 										EventFunc(b.sortListItemsEvent).
 										Queries(ctx.Queries()).
 										Query(ParamID, ctx.R.FormValue(ParamID)).
@@ -187,12 +186,12 @@ func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error)
 			sorter,
 			h.Div(
 				form,
-				h.If(!b.fieldContext.Disabled,
-					VBtn("Add row").
+				h.If(!b.fieldContext.ReadOnly,
+					VBtn(msgr.AddRow).
 						Variant(VariantText).
 						Color("primary").
 						Attr("@click", web.Plaid().
-							URL(b.fieldContext.ModelInfo.ListingHref()).
+							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 							EventFunc(b.addListItemRowEvent).
 							Queries(ctx.Queries()).
 							Query(ParamID, ctx.R.FormValue(ParamID)).
@@ -204,21 +203,27 @@ func (b *ListEditorBuilder) MarshalHTML(c context.Context) (r []byte, err error)
 			).Attr("v-show", h.JSONString(!isSortStart)).
 				Class("mt-1 mb-4"),
 		).Init(h.JSONString(sorterData)).VSlot("{ locals }"),
-	).MarshalHTML(c)
+	)
 }
 
 func addListItemRow(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		me := mb.Editing()
-		obj, _ := me.FetchAndUnmarshal(ctx.R.FormValue(ParamID), false, ctx)
+		id := ctx.R.FormValue(ParamID)
+		if id == "" {
+			me = me.CreatingBuilder()
+		}
+		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
 		formKey := ctx.R.FormValue(ParamAddRowFormKey)
 		t := reflectutils.GetType(obj, formKey+"[0]")
-		newVal := reflect.New(t.Elem()).Interface()
-		err = reflectutils.Set(obj, formKey+"[]", newVal)
-		if err != nil {
-			panic(err)
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
 		}
-		me.UpdateOverlayContent(ctx, &r, obj, "", nil)
+		newVal := reflect.New(t).Interface()
+		if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
+			return
+		}
+		me.form(obj, ctx).Respond(&r)
 		return
 	}
 }
@@ -226,7 +231,11 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		me := mb.Editing()
-		obj, _ := me.FetchAndUnmarshal(ctx.R.FormValue(ParamID), false, ctx)
+		id := ctx.R.FormValue(ParamID)
+		if id == "" {
+			me = me.CreatingBuilder()
+		}
+		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
 
 		formKey := ctx.R.FormValue(ParamRemoveRowFormKey)
 		lb := strings.LastIndex(formKey, "[")
@@ -239,7 +248,7 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 			return
 		}
 		ContextModifiedIndexesBuilder(ctx).AppendDeleted(sliceField, index)
-		me.UpdateOverlayContent(ctx, &r, obj, "", nil)
+		me.form(obj, ctx).Respond(&r)
 		r.RunScript = fmt.Sprintf(`form["%s"]=null;`, formKey)
 		return
 	}
@@ -248,7 +257,11 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 func sortListItems(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		me := mb.Editing()
-		obj, _ := me.FetchAndUnmarshal(ctx.R.FormValue(ParamID), false, ctx)
+		id := ctx.R.FormValue(ParamID)
+		if id == "" {
+			me = me.CreatingBuilder()
+		}
+		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
 		sortSectionFormKey := ctx.R.FormValue(ParamSortSectionFormKey)
 
 		isStartSort := ctx.R.FormValue(ParamIsStartSort)
@@ -266,8 +279,7 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			}
 			ContextModifiedIndexesBuilder(ctx).SetSorted(sortSectionFormKey, indexes)
 		}
-
-		me.UpdateOverlayContent(ctx, &r, obj, "", nil)
+		me.form(obj, ctx).Respond(&r)
 		return
 	}
 }

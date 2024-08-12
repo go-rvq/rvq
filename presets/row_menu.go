@@ -7,26 +7,29 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
+type RowMenuFields struct {
+	rowMenu *RowMenuBuilder
+}
+
 type RowMenuBuilder struct {
-	lb              *ListingBuilder
+	mb              *ModelBuilder
 	listings        []string
 	defaultListings []string
 	items           map[string]*RowMenuItemBuilder
 }
 
-func (b *ListingBuilder) RowMenu(listings ...string) *RowMenuBuilder {
-	if b.rowMenu == nil {
-		b.rowMenu = &RowMenuBuilder{
-			lb:       b,
-			listings: listings,
-			items:    make(map[string]*RowMenuItemBuilder),
-		}
+func (b *RowMenuFields) init(mb *ModelBuilder) *RowMenuBuilder {
+	b.rowMenu = &RowMenuBuilder{
+		mb:    mb,
+		items: make(map[string]*RowMenuItemBuilder),
 	}
+	return b.rowMenu
+}
 
+func (b *RowMenuFields) RowMenu(listings ...string) *RowMenuBuilder {
 	rmb := b.rowMenu
 	if len(listings) == 0 {
 		return rmb
@@ -44,7 +47,7 @@ func (b *RowMenuBuilder) Empty() {
 	b.items = make(map[string]*RowMenuItemBuilder)
 }
 
-func (b *RowMenuBuilder) listingItemFuncs(ctx *web.EventContext) (fs []vx.RowMenuItemFunc) {
+func (b *RowMenuBuilder) listingItemFuncs(ctx *web.EventContext) (fs RecordMenuItemFuncs) {
 	listings := b.defaultListings
 	if len(b.listings) > 0 {
 		listings = b.listings
@@ -65,7 +68,7 @@ type RowMenuItemBuilder struct {
 	name       string
 	icon       string
 	clickF     RowMenuItemClickFunc
-	compF      vx.RowMenuItemFunc
+	compF      RecordMenuItemFunc
 	permAction string
 	eventID    string
 }
@@ -78,20 +81,20 @@ func (b *RowMenuBuilder) RowMenuItem(name string) *RowMenuItemBuilder {
 	ib := &RowMenuItemBuilder{
 		rmb:     b,
 		name:    name,
-		eventID: fmt.Sprintf("%s_rowMenuItemFunc_%s", b.lb.mb.uriName, name),
+		eventID: fmt.Sprintf("%s_rowMenuItemFunc_%s", b.mb.uriName, name),
 	}
 	b.items[strcase.ToSnake(name)] = ib
 	b.defaultListings = append(b.defaultListings, name)
 
-	b.lb.mb.RegisterEventFunc(ib.eventID, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	b.mb.RegisterEventFunc(ib.eventID, func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		id := ctx.R.FormValue(ParamID)
 		if ib.permAction != "" {
-			obj := b.lb.mb.NewModel()
-			obj, err = b.lb.mb.editing.Fetcher(obj, id, ctx)
+			obj := b.mb.NewModel()
+			err = b.mb.editing.Fetcher(obj, id, ctx)
 			if err != nil {
 				return r, err
 			}
-			err = b.lb.mb.Info().Verifier().Do(ib.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed()
+			err = b.mb.Info().Verifier().Do(ib.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed()
 			if err != nil {
 				return r, err
 			}
@@ -117,7 +120,7 @@ func (b *RowMenuItemBuilder) OnClick(v RowMenuItemClickFunc) *RowMenuItemBuilder
 	return b
 }
 
-func (b *RowMenuItemBuilder) ComponentFunc(v vx.RowMenuItemFunc) *RowMenuItemBuilder {
+func (b *RowMenuItemBuilder) ComponentFunc(v RecordMenuItemFunc) *RowMenuItemBuilder {
 	b.compF = v
 	return b
 }
@@ -127,13 +130,19 @@ func (b *RowMenuItemBuilder) PermAction(v string) *RowMenuItemBuilder {
 	return b
 }
 
-func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) vx.RowMenuItemFunc {
+func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) RecordMenuItemFunc {
 	if b.compF != nil {
 		return b.compF
 	}
 
-	return func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
-		if b.permAction != "" && b.rmb.lb.mb.Info().Verifier().Do(b.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+	return func(rctx *RecordMenuItemContext) h.HTMLComponent {
+		var (
+			ctx = rctx.Ctx
+			obj = rctx.Obj
+			id  = rctx.ID
+		)
+
+		if b.permAction != "" && b.rmb.mb.Info().Verifier().Do(b.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
 			return nil
 		}
 		return VListItem(
@@ -141,7 +150,7 @@ func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) vx.RowMenuIte
 				VIcon(b.icon),
 			).Name("prepend"),
 
-			VListItemTitle(h.Text(i18n.PT(ctx.R, ModelsI18nModuleKey, strcase.ToCamel(b.rmb.lb.mb.label+" RowMenuItem"), b.name))),
+			VListItemTitle(h.Text(i18n.PT(ctx.R, ModelsI18nModuleKey, strcase.ToCamel(b.rmb.mb.label+" RowMenuItem"), b.name))),
 		).Attr("@click", web.Plaid().
 			EventFunc(b.eventID).
 			Query(ParamID, id).

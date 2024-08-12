@@ -8,7 +8,7 @@ import (
 
 type commonPageConfig struct {
 	// TODO it should be create in defaultToPage
-	formContent h.HTMLComponent
+	main h.HTMLComponent
 
 	tabPanels []TabComponentFunc
 	sidePanel ObjectComponentFunc
@@ -19,7 +19,7 @@ type commonPageConfig struct {
 func defaultToPage(config commonPageConfig, obj interface{}, ctx *web.EventContext) h.HTMLComponent {
 	msgr := MustGetMessages(ctx.R)
 
-	var asideContent h.HTMLComponent = config.formContent
+	var asideContent = config.main
 
 	if len(config.tabPanels) != 0 {
 		var tabs []h.HTMLComponent
@@ -31,9 +31,7 @@ func defaultToPage(config commonPageConfig, obj interface{}, ctx *web.EventConte
 				contents = append(contents, content)
 			}
 		}
-		if len(tabs) == 0 {
-			asideContent = config.formContent
-		} else {
+		if len(tabs) > 0 {
 			asideContent = web.Scope(
 				VTabs(
 					VTab(h.Text(msgr.FormTitle)).Value("default"),
@@ -42,7 +40,7 @@ func defaultToPage(config commonPageConfig, obj interface{}, ctx *web.EventConte
 
 				VTabsWindow(
 					VTabsWindowItem(
-						config.formContent,
+						asideContent,
 					).Value("default"),
 					h.Components(contents...),
 				).Attr("v-model", "locals.tab"),

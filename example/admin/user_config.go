@@ -3,7 +3,6 @@ package admin
 import (
 	"fmt"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/qor5/admin/v3/note"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/admin/v3/presets/gorm2op"
 	"github.com/qor5/admin/v3/publish"
 	"github.com/qor5/admin/v3/role"
 	"github.com/qor5/web/v3"
@@ -31,20 +29,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 	// MenuIcon("people")
 	user.Use(nb)
 
-	user.Listing().SearchFunc(func(model interface{}, params *presets.SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error) {
-		u := getCurrentUser(ctx.R)
-		qdb := db
-
-		// If the current user doesn't has 'admin' role, do not allow them to view admin and manager users
-		// We didn't do this on permission because of we are not supporting the permission on listing page
-		if currentRoles := u.GetRoles(); !slices.Contains(currentRoles, models.RoleAdmin) {
-			qdb = db.Joins("inner join user_role_join urj on users.id = urj.user_id inner join roles r on r.id = urj.role_id").
-				Group("users.id").
-				Having("COUNT(CASE WHEN r.name in (?) THEN 1 END) = 0", []string{models.RoleAdmin, models.RoleManager})
-		}
-
-		return gorm2op.DataOperator(qdb).Search(model, params, ctx)
-	})
+	user.Listing()
 
 	ed := user.Editing(
 		"Type",
@@ -410,7 +395,7 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 	lb.NewButtonFunc(func(ctx *web.EventContext) h.HTMLComponent { return nil })
 	lb.RowMenu().Empty()
 	registerSelectFavorPostEvent(db, pb)
-	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string) h.HTMLComponent {
+	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, _ *web.EventContext) h.HTMLComponent {
 		cell.SetAttr("@click.self", web.Plaid().
 			Query("id", strings.Split(id, "_")[0]).
 			EventFunc("selectFavorPost").

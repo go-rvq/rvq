@@ -12,7 +12,7 @@ func publishAction(_ *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, ab 
 		paramID := ctx.Param(presets.ParamID)
 
 		obj := mb.NewModel()
-		obj, err = mb.Editing().Fetcher(obj, paramID, ctx)
+		err = mb.Editing().Fetcher(obj, paramID, ctx)
 		if err != nil {
 			return
 		}
@@ -42,7 +42,7 @@ func unpublishAction(_ *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, a
 		paramID := ctx.Param(presets.ParamID)
 
 		obj := mb.NewModel()
-		obj, err = mb.Editing().Fetcher(obj, paramID, ctx)
+		err = mb.Editing().Fetcher(obj, paramID, ctx)
 		if err != nil {
 			return
 		}
