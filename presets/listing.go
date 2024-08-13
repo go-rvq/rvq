@@ -16,6 +16,7 @@ import (
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -58,6 +59,7 @@ type ListingBuilder struct {
 	dialogWidth       string
 	dialogHeight      string
 	dataTableDensity  string
+	dataListFormatter func(ctx *web.EventContext) func(r any) any
 	FieldsBuilder
 	RowMenuFields
 }
@@ -213,6 +215,15 @@ func (b *ListingBuilder) DialogHeight(v string) (r *ListingBuilder) {
 	return b
 }
 
+func (b *ListingBuilder) DataListFormatter() func(ctx *web.EventContext) func(r any) any {
+	return b.dataListFormatter
+}
+
+func (b *ListingBuilder) SetDataListFormatter(dataListFormatter func(ctx *web.EventContext) func(r any) any) *ListingBuilder {
+	b.dataListFormatter = dataListFormatter
+	return b
+}
+
 func (b *ListingBuilder) GetPageFunc() web.PageFunc {
 	if b.pageFunc != nil {
 		return b.pageFunc
@@ -264,8 +275,23 @@ func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, er
 		return
 	}
 
+	records := sr.objs
+
+	if b.dataListFormatter != nil {
+		var (
+			formatter        = b.dataListFormatter(ctx)
+			formattedRecords = make([]any, reflect.ValueOf(records).Len())
+		)
+
+		reflectutils.ForEach(sr.objs, func(i int, v interface{}) {
+			formattedRecords[i] = formatter(v)
+		})
+
+		records = formattedRecords
+	}
+
 	r.Data = map[string]any{
-		"records":    sr.objs,
+		"records":    records,
 		"totalCount": sr.totalCount,
 	}
 	return
