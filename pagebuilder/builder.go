@@ -365,8 +365,8 @@ func (b *Builder) configTemplateAndPage(pb *presets.Builder, r *ModelBuilder) {
 func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
 	db := b.db
 	lb := pm.Listing("ID", publish.ListingFieldLive, "Title", "Path")
-	lb.Field("Path").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		page := obj.(*Page)
+	lb.Field("Path").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		page := field.Obj.(*Page)
 		category, err := page.GetCategory(db)
 		if err != nil {
 			panic(err)
@@ -399,7 +399,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 		return
 	})
 
-	eb.Field("Slug").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	eb.Field("Slug").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var vErr web.ValidationErrors
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
@@ -415,8 +415,8 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 		m.Slug = path.Join("/", m.Slug)
 		return nil
 	})
-	eb.Field("CategoryID").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(*Page)
+	eb.Field("CategoryID").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(*Page)
 		categories := []*Category{}
 		locale, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 		if err := db.Model(&Category{}).Where("locale_code = ?", locale).Find(&categories).Error; err != nil {
@@ -437,12 +437,12 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 			ErrorMessages(vErr.GetFieldErrors("Page.Category")...)
 	})
 
-	eb.Field("TemplateSelection").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	eb.Field("TemplateSelection").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		if !b.templateEnabled {
 			return nil
 		}
 
-		p := obj.(*Page)
+		p := field.Obj.(*Page)
 
 		selectedID := ctx.R.FormValue(templateSelectedID)
 		body, err := getTplPortalComp(ctx, db, selectedID)
@@ -831,8 +831,8 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 		}
 	})
 
-	lb.Field("Name").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		cat := obj.(*Category)
+	lb.Field("Name").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		cat := field.Obj.(*Category)
 
 		icon := "mdi-folder"
 		if cat.IndentLevel != 0 {
@@ -849,7 +849,7 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 
 	eb := pm.Editing("Name", "Path", "Description")
 
-	eb.Field("Path").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	eb.Field("Path").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var vErr web.ValidationErrors
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
@@ -1210,7 +1210,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 	ed := pm.Editing("SelectContainer").ActionsFunc(func(obj interface{}, ctx *web.EventContext) h.HTMLComponent { return nil })
 	ed.Field("ModelName")
 	ed.Field("ModelID")
-	ed.Field("SelectContainer").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("SelectContainer").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		locale, localizable := l10n.IsLocalizableFromContext(ctx.R.Context())
 
 		var demoContainers []DemoContainer

@@ -20,15 +20,17 @@ import (
 )
 
 func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuilder) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var (
 			start, end, se string
 			onlineHint     h.HTMLComponent
 			isTemplate     bool
 			ps             string
 			id             uint
+
+			obj = field.Obj
 		)
-		versionComponent := publish.DefaultVersionComponentFunc(pm)(obj, field, ctx)
+		versionComponent := publish.DefaultVersionComponentFunc(pm)(field, ctx)
 		if templateM != nil {
 			isTemplate = strings.Contains(ctx.R.RequestURI, "/"+templateM.Info().URI()+"/")
 		}
@@ -96,8 +98,8 @@ func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuil
 }
 
 func templateSettings(_ *gorm.DB, pm *presets.ModelBuilder) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(*Template)
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(*Template)
 
 		overview := vx.DetailInfo(
 			vx.DetailColumn(
@@ -137,8 +139,8 @@ func detailingRow(label string, showComp h.HTMLComponent) (r *h.HTMLTagBuilder) 
 func detailPageEditor(dp *presets.DetailingBuilder, db *gorm.DB) {
 	dp.Section("Page").
 		Editing("Title", "Slug", "CategoryID").
-		ViewComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			p := obj.(*Page)
+		ViewComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			p := field.Obj.(*Page)
 			var (
 				category Category
 				err      error
@@ -153,8 +155,8 @@ func detailPageEditor(dp *presets.DetailingBuilder, db *gorm.DB) {
 				detailingRow("Slug", h.Text(p.Slug)),
 				detailingRow(msgr.Category, h.Text(category.Path)),
 			)
-		}).EditComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(*Page)
+		}).EditComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(*Page)
 		categories := []*Category{}
 		locale, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 		if err := db.Model(&Category{}).Where("locale_code = ?", locale).Find(&categories).Error; err != nil {

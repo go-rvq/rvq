@@ -17,8 +17,11 @@ import (
 )
 
 func draftCountFunc(db *gorm.DB) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		var count int64
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		var (
+			count int64
+			obj   = field.Obj
+		)
 		modelSchema, err := schema.Parse(obj, &sync.Map{}, db.NamingStrategy)
 		if err != nil {
 			return h.Td(h.Text("0"))
@@ -31,7 +34,7 @@ func draftCountFunc(db *gorm.DB) presets.FieldComponentFunc {
 }
 
 func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
+	return func(field *presets.FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
 
 		var (
@@ -39,6 +42,8 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 			err           error
 			modelSchema   *schema.Schema
 			scheduleStart Schedule
+
+			obj = field.Obj
 		)
 		defer func() {
 			if err != nil {
@@ -94,10 +99,10 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 }
 
 func StatusListFunc() presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
 
-		if s, ok := obj.(StatusInterface); ok {
+		if s, ok := field.Obj.(StatusInterface); ok {
 			return h.Td(statusChip(s.EmbedStatus().Status, msgr))
 		}
 		return nil

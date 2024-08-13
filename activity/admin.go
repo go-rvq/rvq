@@ -42,18 +42,19 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 	)
 	ab.lmb = mb
 	listing.Field("CreatedAt").Label(Messages_en_US.ModelCreatedAt).ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return h.Td(h.Text(obj.(*ActivityLog).CreatedAt.Format("2006-01-02 15:04:05 MST")))
+		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return h.Td(h.Text(field.Obj.(*ActivityLog).CreatedAt.Format("2006-01-02 15:04:05 MST")))
 		},
 	)
 	listing.Field("ModelKeys").Label(Messages_en_US.ModelKeys)
 	listing.Field("ModelName").Label(Messages_en_US.ModelName)
 	listing.Field("ModelLabel").Label(Messages_en_US.ModelLabel).ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			if obj.(*ActivityLog).ModelLabel == "" {
+		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			l := field.Obj.(*ActivityLog)
+			if l.ModelLabel == "" {
 				return h.Td(h.Text("-"))
 			}
-			return h.Td(h.Text(obj.(*ActivityLog).ModelLabel))
+			return h.Td(h.Text(l.ModelLabel))
 		},
 	)
 
@@ -149,9 +150,9 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 	})
 
 	detailing.Field("ModelDiffs").Label("Detail").ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+		func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
 			var (
-				record = obj.(ActivityLogInterface)
+				record = field.Obj.(ActivityLogInterface)
 				msgr   = i18n.MustGetModuleMessages(ctx.R, I18nActivityKey, Messages_en_US).(*Messages)
 			)
 

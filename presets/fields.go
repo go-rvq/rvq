@@ -67,7 +67,7 @@ func (b *FieldBuilder) Nested(fb *NestedFieldBuilder, cfgs ...NestedConfig) (r *
 				panic("unknown nested config")
 			}
 		}
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			return NewListEditor(field).Value(field.Value()).
 				DisplayFieldInSorter(displayFieldInSorter).
 				AddListItemRowEvent(addListItemRowEvent).
@@ -75,14 +75,14 @@ func (b *FieldBuilder) Nested(fb *NestedFieldBuilder, cfgs ...NestedConfig) (r *
 				SortListItemsEvent(sortListItemsEvent).Component(ctx)
 		})
 	default:
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			val := field.Value()
 			if val == nil {
-				t := reflectutils.GetType(obj, field.Name).Elem()
+				t := reflectutils.GetType(field.Obj, field.Name).Elem()
 				val = reflect.New(t).Interface()
 			}
 			modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
-			fieldInfo := b.nestedFieldsBuilder.mb.Info().ChildOf(field.ModelInfo, obj)
+			fieldInfo := b.nestedFieldsBuilder.mb.Info().ChildOf(field.ModelInfo, field.Obj)
 			body := b.nestedFieldsBuilder.toComponentWithFormValueKey(fieldInfo, val, field.Mode, field.FormKey, modifiedIndexes, ctx)
 			return h.Div(
 				h.Label(field.Label).Class("v-label theme--light text-caption"),
@@ -205,7 +205,9 @@ func (b *FieldsBuilder) Unmarshal(toObj interface{}, info *ModelInfo, removeDele
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R)
 
 	vErr = b.SetObjectFields(fromObj, toObj, &FieldContext{
-		ModelInfo: info,
+		EventContext: ctx,
+		Obj:          fromObj,
+		ModelInfo:    info,
 	}, removeDeletedAndSort, modifiedIndexes, ctx)
 
 	if vErr.HaveErrors() {
@@ -264,8 +266,11 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 				continue
 			default:
 				pf := &FieldContext{
-					ModelInfo: info,
-					FormKey:   formKey,
+					Field:        f,
+					Obj:          fromObj,
+					EventContext: ctx,
+					ModelInfo:    info,
+					FormKey:      formKey,
 				}
 				rt := reflectutils.GetType(toObj, f.name)
 				childFromObj := reflectutils.MustGet(fromObj, f.name)
@@ -411,8 +416,11 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 		sliceFieldName := fmt.Sprintf("%s[%d]", f.name, i)
 
 		pf := &FieldContext{
-			ModelInfo: info,
-			FormKey:   fmt.Sprintf("%s[%d]", formKey, i),
+			Field:        f,
+			EventContext: ctx,
+			Obj:          fromObj,
+			ModelInfo:    info,
+			FormKey:      fmt.Sprintf("%s[%d]", formKey, i),
 		}
 
 		childToObj := reflectutils.MustGet(toObj, sliceFieldName)
@@ -774,6 +782,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 	}
 
 	fctx := &FieldContext{
+		Field:        f,
 		Mode:         mode,
 		Obj:          obj,
 		EventContext: ctx,
@@ -795,7 +804,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		return nil
 	}
 
-	return f.compFunc(obj, fctx, ctx)
+	return f.compFunc(fctx, ctx)
 }
 
 type RowFunc func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent

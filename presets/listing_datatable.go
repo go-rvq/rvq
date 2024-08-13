@@ -21,9 +21,9 @@ func (b *ListingBuilder) SetDataTableDensity(dataTableDensity string) *ListingBu
 	return b
 }
 
-func (b *ListingBuilder) cellComponentFunc(obj interface{}, f *FieldBuilder) vx.CellComponentFunc {
+func (b *ListingBuilder) cellComponentFunc(f *FieldBuilder) vx.CellComponentFunc {
 	return func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent {
-		return f.compFunc(obj, b.mb.GetComponentFuncField(obj, f), ctx)
+		return f.compFunc(b.mb.GetComponentFuncField(obj, f), ctx)
 	}
 }
 
@@ -236,7 +236,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 			f = b.GetFieldOrDefault(f.name) // fill in empty compFunc and setter func with default
 			dataTable.(*vx.DataTableBuilder).Column(f.name).
 				Title(fctx.Label).
-				CellComponentFunc(b.cellComponentFunc(nil, f))
+				CellComponentFunc(b.cellComponentFunc(f))
 		}
 	}
 

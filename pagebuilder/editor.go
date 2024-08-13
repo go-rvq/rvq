@@ -98,7 +98,11 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 		if p, ok := obj.(publish.StatusInterface); ok {
 			ctx.R.Form.Set(paramStatus, p.EmbedStatus().Status)
 		}
-		versionComponent = publish.DefaultVersionComponentFunc(m.editor, publish.VersionComponentConfig{Top: true})(obj, &presets.FieldContext{ModelInfo: m.editor.Info()}, ctx)
+		versionComponent = publish.DefaultVersionComponentFunc(m.editor, publish.VersionComponentConfig{Top: true})(&presets.FieldContext{
+			Obj:          obj,
+			EventContext: ctx,
+			ModelInfo:    m.editor.Info(),
+		}, ctx)
 		exitHref = m.mb.Info().DetailingHref(ctx.Param(presets.ParamID))
 		pageAppbarContent = h.Components(
 			h.Div(

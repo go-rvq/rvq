@@ -181,6 +181,7 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 			}
 
 			me.SetObjectFields(fromObj, toObj, &presets.FieldContext{
+				Obj:       fromObj,
 				ModelInfo: mb.Info(),
 			}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
 

@@ -67,8 +67,9 @@ func tabsPanel(db *gorm.DB, mb *presets.ModelBuilder) presets.TabComponentFunc {
 }
 
 func noteFunc(db *gorm.DB, mb *presets.ModelBuilder) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (c h.HTMLComponent) {
+	return func(field *presets.FieldContext, ctx *web.EventContext) (c h.HTMLComponent) {
 		tn := mb.Info().Label()
+		obj := field.Obj
 
 		id := fmt.Sprint(reflectutils.MustGet(obj, "ID"))
 		if ps, ok := obj.(interface {

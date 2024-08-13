@@ -64,7 +64,7 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 }
 
 func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		cfg, ok := field.ContextValue(MediaBoxConfig).(*media_library.MediaBoxConfig)
 		if !ok {
 			cfg = &media_library.MediaBoxConfig{}
@@ -410,7 +410,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 }
 
 func MediaBoxListFunc() presets.FieldComponentFunc {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		mediaBox := field.Value().(media_library.MediaBox)
 		return h.Td(h.Img("").Src(mediaBox.URL(media_library.QorPreviewSizeName)).Style("height: 48px;"))
 	}

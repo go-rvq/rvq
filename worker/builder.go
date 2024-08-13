@@ -204,13 +204,13 @@ func (b *Builder) Install(pb *presets.Builder) error {
 			},
 		}
 	})
-	lb.Field("Job").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		qorJob := obj.(*QorJob)
+	lb.Field("Job").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		qorJob := field.Obj.(*QorJob)
 		return Td(Text(getTJob(ctx.R, qorJob.Job)))
 	})
-	lb.Field("Status").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	lb.Field("Status").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
-		qorJob := obj.(*QorJob)
+		qorJob := field.Obj.(*QorJob)
 		return Td(Text(getTStatus(msgr, qorJob.Status)))
 	})
 
@@ -230,11 +230,11 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		Label string
 		Value string
 	}
-	eb.Field("Job").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		qorJob := obj.(*QorJob)
+	eb.Field("Job").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		qorJob := field.Obj.(*QorJob)
 		return web.Portal(b.jobSelectList(ctx, qorJob.Job)).Name("worker_jobSelectList")
 	})
-	eb.Field("Args").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("Args").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		var vErr web.ValidationErrors
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
@@ -250,7 +250,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 			}
 		}
 
-		qorJob := obj.(*QorJob)
+		qorJob := field.Obj.(*QorJob)
 		return web.Portal(b.jobEditingContent(ctx, qorJob.Job, qorJob.Args)).Name("worker_jobEditingContent")
 	})
 
@@ -269,10 +269,10 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	mb.Detailing("DetailingPage").Field("DetailingPage").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	mb.Detailing("DetailingPage").Field("DetailingPage").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
 
-		qorJob := obj.(*QorJob)
+		qorJob := field.Obj.(*QorJob)
 		inst, err := getModelQorJobInstance(b.db, qorJob.ID)
 		if err != nil {
 			return Text(err.Error())

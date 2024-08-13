@@ -9,7 +9,6 @@ import (
 
 	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
@@ -458,8 +457,9 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
 		Body: f.editComponent(obj, &FieldContext{
-			FormKey: f.name,
-			Name:    f.name,
+			EventContext: ctx,
+			FormKey:      f.name,
+			Name:         f.name,
 		}, ctx),
 	})
 	return r, nil
@@ -488,9 +488,11 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
-		Body: f.viewComponent(obj, &FieldContext{
-			FormKey: f.name,
-			Name:    f.name,
+		Body: f.viewComponent(&FieldContext{
+			EventContext: ctx,
+			Obj:          obj,
+			FormKey:      f.name,
+			Name:         f.name,
 		}, ctx),
 	})
 	return r, nil
@@ -529,7 +531,11 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
-		Body: f.listComponent(obj, nil, ctx, int(deleteIndex), int(index), -1),
+		Body: f.listComponent(&FieldContext{
+			EventContext: ctx,
+			Obj:          obj,
+			Mode:         FieldModeStack{DETAIL},
+		}, ctx, int(deleteIndex), int(index), -1),
 	})
 
 	return
@@ -567,7 +573,11 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
-		Body: f.listComponent(obj, nil, ctx, -1, -1, int(index)),
+		Body: f.listComponent(&FieldContext{
+			EventContext: ctx,
+			Obj:          obj,
+			Mode:         FieldModeStack{DETAIL},
+		}, ctx, -1, -1, int(index)),
 	})
 
 	return
@@ -625,7 +635,11 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
-		Body: f.listComponent(obj, nil, ctx, int(index), -1, -1),
+		Body: f.listComponent(&FieldContext{
+			EventContext: ctx,
+			Obj:          obj,
+			Mode:         FieldModeStack{DETAIL},
+		}, ctx, int(index), -1, -1),
 	})
 
 	return
@@ -671,7 +685,11 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 
 	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: f.FieldPortalName(),
-		Body: f.listComponent(obj, nil, ctx, -1, listLen, -1),
+		Body: f.listComponent(&FieldContext{
+			EventContext: ctx,
+			Obj:          obj,
+			Mode:         FieldModeStack{DETAIL},
+		}, ctx, -1, listLen, -1),
 	})
 
 	return

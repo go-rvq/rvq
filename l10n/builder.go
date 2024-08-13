@@ -215,8 +215,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		ComponentFunc(localeListFunc(db, b))
 	pb.FieldDefaults(presets.WRITE).
 		FieldType(Locale{}).
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			value := b.localeValue(obj, field, ctx)
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+			value := b.localeValue(field, ctx)
 			return Input("").Type("hidden").Attr(web.VField("LocaleCode", value)...)
 		}).
 		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
@@ -237,8 +237,11 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	return nil
 }
 
-func (b *Builder) localeValue(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) string {
-	var value string
+func (b *Builder) localeValue(field *presets.FieldContext, ctx *web.EventContext) string {
+	var (
+		value string
+		obj   = field.Obj
+	)
 	id, err := reflectutils.Get(obj, "ID")
 	if err == nil && len(fmt.Sprint(id)) > 0 && fmt.Sprint(id) != "0" {
 		value = EmbedLocale(obj).LocaleCode
@@ -318,8 +321,8 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		ComponentFunc(localeListFunc(db, b))
 	pb.FieldDefaults(presets.WRITE).
 		FieldType(Locale{}).
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			value := b.localeValue(obj, field, ctx)
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+			value := b.localeValue(field, ctx)
 			return Input("").Type("hidden").Attr(web.VField("LocaleCode", value)...)
 		}).
 		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {

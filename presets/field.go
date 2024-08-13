@@ -64,6 +64,14 @@ func (fc *FieldContext) Value() (r interface{}) {
 	return fc.RawValue()
 }
 
+func (fc *FieldContext) SetContextValue(key, value interface{}) {
+	if fc.Context == nil {
+		fc.Context = context.WithValue(context.Background(), key, value)
+	} else {
+		fc.Context = context.WithValue(fc.Context, key, value)
+	}
+}
+
 func (fc *FieldContext) ContextValue(key interface{}) (r interface{}) {
 	if fc.Context == nil {
 		return
@@ -219,11 +227,11 @@ func (b *FieldBuilder) WrapComponentFunc(v func(old FieldComponentFunc) FieldCom
 
 func (b *FieldBuilder) DisableZeroRender() *FieldBuilder {
 	return b.WrapComponentFunc(func(old FieldComponentFunc) FieldComponentFunc {
-		return func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			if zeroer.IsZero(field.Value()) {
 				return nil
 			}
-			return old(obj, field, ctx)
+			return old(field, ctx)
 		}
 	})
 }

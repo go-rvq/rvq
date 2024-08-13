@@ -18,7 +18,7 @@ type (
 	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) h.HTMLComponent
 )
 
-type FieldComponentFunc func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent
+type FieldComponentFunc func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent
 
 type (
 	ActionComponentFunc func(id string, ctx *web.EventContext) h.HTMLComponent

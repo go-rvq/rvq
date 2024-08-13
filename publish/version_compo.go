@@ -31,8 +31,9 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 	if len(cfg) > 0 {
 		config = cfg[0]
 	}
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var (
+			obj            = field.Obj
 			version        VersionInterface
 			status         StatusInterface
 			primarySlugger presets.SlugEncoder
@@ -242,7 +243,8 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		return cell
 	})
-	lb.Field("Version").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	lb.Field("Version").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		versionName := obj.(VersionInterface).EmbedVersion().VersionName
 		p := obj.(presets.SlugEncoder)
 		id := ctx.R.FormValue("select_id")
@@ -262,22 +264,22 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 		)
 	})
 	lb.Field("State").ComponentFunc(StatusListFunc())
-	lb.Field("StartAt").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(ScheduleInterface)
+	lb.Field("StartAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(ScheduleInterface)
 
 		return h.Td(
 			h.Text(ScheduleTimeString(p.EmbedSchedule().ScheduledStartAt)),
 		)
 	}).Label("Start at")
-	lb.Field("EndAt").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(ScheduleInterface)
+	lb.Field("EndAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(ScheduleInterface)
 		return h.Td(
 			h.Text(ScheduleTimeString(p.EmbedSchedule().ScheduledEndAt)),
 		)
 	}).Label("End at")
 
-	lb.Field("Notes").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := obj.(presets.SlugEncoder)
+	lb.Field("Notes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		p := field.Obj.(presets.SlugEncoder)
 		rt := pm.Info().Label()
 		ri := p.PrimarySlug()
 		userID, _ := note.GetUserData(ctx)
@@ -292,10 +294,11 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 		)
 	}).Label("Unread Notes")
 
-	lb.Field("Option").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	lb.Field("Option").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
 		pmsgr := presets.MustGetMessages(ctx.R)
 
+		obj := field.Obj
 		id := obj.(presets.SlugEncoder).PrimarySlug()
 		versionName := obj.(VersionInterface).EmbedVersion().VersionName
 		status := obj.(StatusInterface).EmbedStatus().Status

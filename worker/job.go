@@ -64,9 +64,9 @@ func (jb *JobBuilder) Resource(r interface{}) *JobBuilder {
 	jb.rmb = jb.b.jpb.Model(r)
 
 	if _, ok := r.(Scheduler); ok {
-		jb.rmb.Editing().Field("ScheduleTime").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		jb.rmb.Editing().Field("ScheduleTime").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 			msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
-			t := obj.(Scheduler).GetScheduleTime()
+			t := field.Obj.(Scheduler).GetScheduleTime()
 			var v string
 			if t != nil {
 				v = t.Local().Format("2006-01-02 15:04")

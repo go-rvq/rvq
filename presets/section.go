@@ -218,8 +218,8 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 	r = b
 	b.editingFB = *b.editingFB.Only(fields...)
 	if b.componentEditFunc == nil {
-		b.EditComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, field.Mode, b.name, ctx)
+		b.EditComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode, b.name, ctx)
 		})
 	}
 	b.Viewing(fields...)
@@ -230,8 +230,8 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 	r = b
 	b.viewingFB = *b.viewingFB.Only(fields...)
 	if b.componentViewFunc == nil {
-		b.ViewComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, obj, field.Mode, b.name, ctx)
+		b.ViewComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode, b.name, ctx)
 		})
 	}
 	return
@@ -285,8 +285,8 @@ func (b *SectionBuilder) ViewComponentFunc(v FieldComponentFunc) (r *SectionBuil
 	}
 	b.componentViewFunc = v
 	if b.componentEditFunc != nil {
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewComponent(obj, field, ctx)
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.viewComponent(field, ctx)
 		})
 	}
 	return b
@@ -298,8 +298,8 @@ func (b *SectionBuilder) EditComponentFunc(v FieldComponentFunc) (r *SectionBuil
 	}
 	b.componentEditFunc = v
 	if b.componentViewFunc != nil {
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewComponent(obj, field, ctx)
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.viewComponent(field, ctx)
 		})
 	}
 	return b
@@ -316,8 +316,8 @@ func (b *SectionBuilder) ElementShowComponentFunc(v FieldComponentFunc) (r *Sect
 	}
 	b.elementViewFunc = v
 	if b.elementEditFunc != nil {
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.listComponent(obj, field, ctx, -1, -1, -1)
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.listComponent(field, ctx, -1, -1, -1)
 		})
 	}
 	return b
@@ -329,8 +329,8 @@ func (b *SectionBuilder) ElementEditComponentFunc(v FieldComponentFunc) (r *Sect
 	}
 	b.elementEditFunc = v
 	if b.elementViewFunc != nil {
-		b.ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.listComponent(obj, field, ctx, -1, -1, -1)
+		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return b.listComponent(field, ctx, -1, -1, -1)
 		})
 	}
 	return b
@@ -346,10 +346,10 @@ func (b *SectionBuilder) ListFieldPrefix(index int) string {
 	return fmt.Sprintf("%s[%b]", b.name, index)
 }
 
-func (b *SectionBuilder) viewComponent(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func (b *SectionBuilder) viewComponent(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	id := ctx.Queries().Get(ParamID)
 	if id == "" {
-		if slugIf, ok := obj.(SlugEncoder); ok {
+		if slugIf, ok := field.Obj.(SlugEncoder); ok {
 			id = slugIf.PrimarySlug()
 		}
 	}
@@ -357,7 +357,7 @@ func (b *SectionBuilder) viewComponent(obj interface{}, field *FieldContext, ctx
 	btn := VBtn("").Size(SizeXSmall).Variant("text").
 		Rounded("0").
 		Icon("mdi-square-edit-outline").
-		Attr("v-show", fmt.Sprintf("isHovering&&%t", b.componentEditBtnFunc(obj, ctx))).
+		Attr("v-show", fmt.Sprintf("isHovering&&%t", b.componentEditBtnFunc(field.Obj, ctx))).
 		Attr("@click", web.Plaid().EventFunc(actions.DoEditDetailingField).
 			Query(SectionFieldName, b.name).
 			Query(ParamID, id).
@@ -366,11 +366,11 @@ func (b *SectionBuilder) viewComponent(obj interface{}, field *FieldContext, ctx
 	hiddenComp := h.Div()
 	if len(b.hiddenFuncs) > 0 {
 		for _, f := range b.hiddenFuncs {
-			hiddenComp.AppendChildren(f(obj, ctx))
+			hiddenComp.AppendChildren(f(field.Obj, ctx))
 		}
 	}
 	content := h.Div()
-	showComponent := b.componentViewFunc(obj, field, ctx)
+	showComponent := b.componentViewFunc(field, ctx)
 	if showComponent != nil {
 		content.AppendChildren(
 			VHover(
@@ -385,7 +385,7 @@ func (b *SectionBuilder) viewComponent(obj interface{}, field *FieldContext, ctx
 								h.Div(btn).Style("width:32px;"),
 							).Class("d-flex justify-space-between"),
 						),
-					).Class("mb-6").Variant(VariantOutlined).Hover(b.componentHoverFunc(obj, ctx)).
+					).Class("mb-6").Variant(VariantOutlined).Hover(b.componentHoverFunc(field.Obj, ctx)).
 						Attr("v-bind", "props"),
 				).Name("default").Scope("{ isHovering, props }"),
 			),
@@ -428,7 +428,7 @@ func (b *SectionBuilder) editComponent(obj interface{}, field *FieldContext, ctx
 					VCardText(
 						h.Div(
 							// detailFields
-							h.Div(b.componentEditFunc(obj, field, ctx)).
+							h.Div(b.componentEditFunc(field, ctx)).
 								Class("flex-grow-1"),
 							// save btn
 							h.Div(btn).Class("align-self-end mt-4"),
@@ -480,7 +480,8 @@ func (b *SectionBuilder) DefaultListElementSaveFunc(obj interface{}, id string, 
 	return
 }
 
-func (b *SectionBuilder) listComponent(obj interface{}, _ *FieldContext, ctx *web.EventContext, deletedID, editID, saveID int) h.HTMLComponent {
+func (b *SectionBuilder) listComponent(field *FieldContext, ctx *web.EventContext, deletedID, editID, saveID int) h.HTMLComponent {
+	obj := field.Obj
 	if b.elementHoverFunc != nil {
 		b.elementHover = b.elementHoverFunc(obj, ctx)
 	}
@@ -608,10 +609,13 @@ func (b *SectionBuilder) showElement(obj any, index int, ctx *web.EventContext) 
 			Query(b.EditBtnKey(), strconv.Itoa(index)).
 			Go())
 
-	content := b.elementViewFunc(obj, &FieldContext{
-		Name:    b.name,
-		FormKey: fmt.Sprintf("%s[%b]", b.name, index),
-		Label:   b.label,
+	content := b.elementViewFunc(&FieldContext{
+		Mode:         FieldModeStack{DETAIL},
+		EventContext: ctx,
+		Obj:          obj,
+		Name:         b.name,
+		FormKey:      fmt.Sprintf("%s[%b]", b.name, index),
+		Label:        b.label,
 	}, ctx)
 
 	return web.Portal(
@@ -645,10 +649,13 @@ func (b *SectionBuilder) editElement(obj any, index, _ int, ctx *web.EventContex
 
 	contentDiv := h.Div(
 		h.Div(
-			b.elementEditFunc(obj, &FieldContext{
-				Name:    fmt.Sprintf("%s[%b]", b.name, index),
-				FormKey: fmt.Sprintf("%s[%b]", b.name, index),
-				Label:   fmt.Sprintf("%s[%b]", b.label, index),
+			b.elementEditFunc(&FieldContext{
+				EventContext: ctx,
+				Obj:          obj,
+				Mode:         FieldModeStack{EDIT},
+				Name:         fmt.Sprintf("%s[%b]", b.name, index),
+				FormKey:      fmt.Sprintf("%s[%b]", b.name, index),
+				Label:        fmt.Sprintf("%s[%b]", b.label, index),
 			}, ctx),
 		).Class("flex-grow-1"),
 		h.Div(deleteBtn).Class("d-flex pl-3"),
@@ -720,11 +727,12 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 			}
 
 			err := f.setterFunc(toObj, &FieldContext{
-				Obj:       toObj,
-				ModelInfo: info,
-				FormKey:   keyPath,
-				Name:      f.name,
-				Label:     label,
+				EventContext: ctx,
+				Obj:          toObj,
+				ModelInfo:    info,
+				FormKey:      keyPath,
+				Name:         f.name,
+				Label:        label,
 			}, ctx)
 			if err != nil {
 				return err

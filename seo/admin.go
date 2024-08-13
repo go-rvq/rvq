@@ -87,8 +87,8 @@ func (b *Builder) configListing(seoModel *presets.ModelBuilder) {
 
 	// Configure the indentation for Name field to display hierarchy.
 	listing.Field("Name").ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			seoSetting := obj.(*QorSEOSetting)
+		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			seoSetting := field.Obj.(*QorSEOSetting)
 			icon := "mdi-folder"
 			priority := b.GetSEOPriority(seoSetting.Name)
 			return &myTd{
@@ -149,8 +149,8 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	{
 		const formKeyForVariablesField = "Variables"
 		editing.Field("Variables").ComponentFunc(
-			func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-				seoSetting := obj.(*QorSEOSetting)
+			func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+				seoSetting := field.Obj.(*QorSEOSetting)
 				msgr := i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
 				settingVars := b.GetSEO(seoSetting.Name).settingVars
 				var variablesComps h.HTMLComponents
@@ -187,8 +187,8 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	}
 
 	editing.Field("Setting").ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			seoSetting := obj.(*QorSEOSetting)
+		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			seoSetting := field.Obj.(*QorSEOSetting)
 			return b.vseo("Setting", b.GetSEO(seoSetting.Name), &seoSetting.Setting, ctx.R)
 		},
 	)
@@ -227,8 +227,9 @@ func EditSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.Event
 	return reflectutils.Set(obj, field.Name, setting)
 }
 
-func (b *Builder) EditingComponentFunc(obj interface{}, _ *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	var (
+		obj         = field.Obj
 		msgr        = i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
 		fieldPrefix string
 		setting     Setting
@@ -476,8 +477,9 @@ func (b *Builder) configDetailing(pd *presets.DetailingBuilder) {
 		EditComponentFunc(b.EditingComponentFunc)
 }
 
-func (b *Builder) detailShowComponent(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	var (
+		obj         = field.Obj
 		msgr        = i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
 		fieldPrefix string
 		setting     Setting
@@ -509,7 +511,14 @@ func (b *Builder) detailShowComponent(obj interface{}, field *presets.FieldConte
 }
 
 func (b *Builder) detailSaver(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	if err = EditSetterFunc(obj, &presets.FieldContext{Obj: obj, Name: SeoDetailFieldName}, ctx); err != nil {
+	if err = EditSetterFunc(
+		obj,
+		&presets.FieldContext{
+			Mode: presets.FieldModeStack{presets.DETAIL},
+			Obj:  obj,
+			Name: SeoDetailFieldName,
+		},
+		ctx); err != nil {
 		return
 	}
 	if err = b.db.Updates(obj).Error; err != nil {

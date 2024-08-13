@@ -20,8 +20,9 @@ const (
 	SlugLocaleCode  = "locale_code"
 )
 
-func localeListFunc(db *gorm.DB, lb *Builder) func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func localeListFunc(db *gorm.DB, lb *Builder) presets.FieldComponentFunc {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		id, err := reflectutils.Get(obj, "ID")
 		if err != nil {
 			return nil

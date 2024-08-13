@@ -196,7 +196,7 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 	editing := presetModel.Editing()
 	d := presetModel.Detailing()
 
-	d.Field(Timeline).ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	d.Field(Timeline).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return vuetify.VTimeline(
 			vuetify.VTimelineItem(),
 		)

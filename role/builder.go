@@ -104,7 +104,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
 	ed.Field("Permissions").Nested(presets.NewNestedFieldBuilder(policeModel, permFb))
 
-	permFb.Field("Effect").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	permFb.Field("Effect").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return VSelect().
 			Variant(FieldVariantUnderlined).
 			Items([]string{perm.Allowed, perm.Denied}).
@@ -116,7 +116,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		p.Effect = ctx.R.FormValue(field.FormKey)
 		return
 	})
-	permFb.Field("Actions").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	permFb.Field("Actions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return VAutocomplete().
 			Variant(FieldVariantUnderlined).
 			Label(field.Label).
@@ -127,7 +127,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 			Items(b.actions)
 	})
 
-	permFb.Field("Resources").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	permFb.Field("Resources").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return VAutocomplete().
 			Variant(FieldVariantUnderlined).
 			Attr(web.VField(field.FormKey, field.StringValue())...).

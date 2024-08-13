@@ -249,29 +249,29 @@ func (b *FieldDefaults) fieldTypeByTypeOrCreate(tv reflect.Type) (r *FieldDefaul
 	return
 }
 
-func cfTextTd(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfTextTd(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return h.Td(h.Text(field.StringValue()))
 }
 
-func cfCheckbox(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfCheckbox(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return VCheckbox().
-		Attr(web.VField(field.FormKey, reflectutils.MustGet(obj, field.Name).(bool))...).
+		Attr(web.VField(field.FormKey, field.Value().(bool))...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
 
-func cfNumber(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfNumber(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return VTextField().
 		Type("number").
 		Variant(FieldVariantUnderlined).
-		Attr(web.VField(field.FormKey, fmt.Sprint(reflectutils.MustGet(obj, field.Name)))...).
+		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
 
-func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfTime(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
 	if v := field.Value(); v != nil {
@@ -297,7 +297,7 @@ func cfTime(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLC
 		OkText(msgr.OK)
 }
 
-func cfTimeReadonly(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfTimeReadonly(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
 	if v := field.Value(); v != nil {
@@ -327,7 +327,7 @@ func cfTimeSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (
 	return reflectutils.Set(obj, field.Name, t)
 }
 
-func cfTextField(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfTextField(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return VTextField().
 		Type("text").
 		Variant(FieldVariantUnderlined).
@@ -337,16 +337,16 @@ func cfTextField(obj interface{}, field *FieldContext, ctx *web.EventContext) h.
 		Disabled(field.ReadOnly)
 }
 
-func CFReadonlyText(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func CFReadonlyText(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return vuetifyx.VXReadonlyField().
 		Label(field.Label).
 		Value(field.StringValue())
 }
 
-func cfReadonlyCheckbox(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func cfReadonlyCheckbox(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return vuetifyx.VXReadonlyField().
 		Label(field.Label).
-		Value(reflectutils.MustGet(obj, field.Name)).
+		Value(field.Value()).
 		Checkbox(true)
 }
 
