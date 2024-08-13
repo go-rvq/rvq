@@ -10,7 +10,6 @@ import (
 	"github.com/qor5/admin/v3/presets/data"
 	"github.com/qor5/web/v3"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -127,24 +126,7 @@ func (b *DataOperatorBuilder) PostCreate(cb func(db *gorm.DB, obj interface{}, c
 }
 
 func (b *DataOperatorBuilder) dbCopy() *gorm.DB {
-	db := *b.db
-	cfg := *db.Config
-	db.Config = &cfg
-	if db.Statement != nil {
-		stmt := *db.Statement
-		db.Statement = &stmt
-		clauses := make(map[string]clause.Clause, len(db.Statement.Clauses))
-		for s, c := range db.Statement.Clauses {
-			clauses[s] = c
-		}
-		db.Statement.Clauses = clauses
-		preloads := make(map[string][]interface{}, len(db.Statement.Preloads))
-		for s, i := range db.Statement.Preloads {
-			preloads[s] = i
-		}
-		db.Statement.Preloads = preloads
-	}
-	return &db
+	return b.db.Session(&gorm.Session{})
 }
 
 func (b DataOperatorBuilder) tx(f func(b *DataOperatorBuilder) error) error {
@@ -195,16 +177,16 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 		})
 	}
 
-	wh := b.Prepare(Search, obj, "", params, ctx)
-
 	var (
 		c   int64
-		cdb = wh.Count(&c)
+		wh  = b.Prepare(Search, obj, "", params, ctx)
+		cdb = wh.Session(&gorm.Session{}).Count(&c)
 	)
-	err = cdb.Error
-	if err != nil {
+
+	if err = cdb.Error; err != nil {
 		return
 	}
+
 	totalCount = int(c)
 
 	if params.PerPage > 0 {
