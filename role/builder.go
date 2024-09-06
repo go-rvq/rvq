@@ -102,7 +102,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 
 	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{})
 	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
-	ed.Field("Permissions").Nested(presets.NewNestedFieldBuilder(policeModel, permFb))
+	ed.Field("Permissions").AutoNested(policeModel, permFb)
 
 	permFb.Field("Effect").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return VSelect().

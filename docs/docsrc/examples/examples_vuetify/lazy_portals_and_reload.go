@@ -80,7 +80,7 @@ func menuItems(ctx *web.EventContext) (r web.EventResponse, err error) {
 			).Name("activator").Scope("{ props: activatorProps }"),
 			web.Scope(
 				web.Portal().Loader(web.POST().EventFunc("addItemForm")).Name("addItemForm").Visible("true"),
-			).VSlot("{ locals, form }").FormInit(s),
+			).VSlot("locals, form }").FormInit(s),
 		).Width("500"),
 	)
 

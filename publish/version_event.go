@@ -207,7 +207,12 @@ func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 		}
 
 		listQueries := ctx.Queries().Get(presets.ParamListingQueries)
-		r.RunScript = web.Plaid().URL(ctx.R.URL.Path).StringQuery(listQueries).EventFunc(actions.UpdateListingDialog).Go()
+		r.RunScript = web.Plaid().
+			URL(ctx.R.URL.Path).
+			StringQuery(listQueries).
+			Query(presets.ParamPortalID, ctx.R.FormValue(presets.ParamPortalID)).
+			EventFunc(actions.UpdateListingDialog).
+			Go()
 		return
 	}
 }
@@ -298,7 +303,12 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 		}
 
 		web.AppendRunScripts(&r,
-			web.Plaid().URL(ctx.R.URL.Path).Queries(listQuery).EventFunc(actions.UpdateListingDialog).Go(),
+			web.Plaid().
+				URL(ctx.R.URL.Path).
+				Queries(listQuery).
+				EventFunc(actions.UpdateListingDialog).
+				Query(presets.ParamPortalID, ctx.R.FormValue(presets.ParamPortalID)).
+				Go(),
 			// web.Plaid().EventFunc(actions.ReloadList).Go(), // TODO: This will reload the dialog list, I don't know how to reload the main list yet.
 		)
 		return r, nil

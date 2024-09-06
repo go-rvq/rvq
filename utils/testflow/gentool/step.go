@@ -39,8 +39,8 @@ func generateStep(rr RequestResponse) (*Step, error) {
 		queries[key] = values[0]
 	}
 
-	eventFunc := queries[web.ExecuteEventPatam]
-	delete(queries, web.ExecuteEventPatam)
+	eventFunc := queries[web.ExecuteEventParam]
+	delete(queries, web.ExecuteEventParam)
 
 	formFields := make(map[string]string)
 	if rr.Request.MimeType == "multipart/form-data" {

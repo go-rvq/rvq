@@ -75,12 +75,12 @@ const CloseCustomDialog = "locals.customConfirmationDialog = false"
 func CustomDialog(title h.HTMLComponent, content h.HTMLComponent, okAction string, msgr *Messages) h.HTMLComponent {
 	Vcard := VCard()
 	if title != nil {
-		Vcard.AppendChildren(VCardTitle(title))
+		Vcard.AppendChild(VCardTitle(title))
 	}
 	if content != nil {
-		Vcard.AppendChildren(VCardText(content))
+		Vcard.AppendChild(VCardText(content))
 	}
-	Vcard.AppendChildren(
+	Vcard.AppendChild(
 		VCardActions(
 			VSpacer(),
 			VBtn(msgr.Cancel).

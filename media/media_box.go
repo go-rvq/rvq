@@ -319,7 +319,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 			).Disabled(disabled),
 	)
 	if mediaBox != nil && mediaBox.ID.String() != "" && mediaBox.ID.String() != "0" {
-		btnRow.AppendChildren(
+		btnRow.AppendChild(
 			VBtn(msgr.Delete).
 				Variant(VariantTonal).Color(ColorError).Size(SizeXSmall).PrependIcon("mdi-delete-outline").
 				Class("rounded-sm ml-2").
@@ -332,12 +332,12 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 		)
 	}
 	if !readonly {
-		c.AppendChildren(btnRow.Class())
+		c.AppendChild(btnRow.Class())
 	}
 	if mediaBox.ID.String() != "" && mediaBox.ID.String() != "0" {
 		row := VRow()
 		if len(cfg.Sizes) == 0 {
-			row.AppendChildren(
+			row.AppendChild(
 				VCol(
 					mediaBoxThumb(msgr, cfg, mediaBox, field, base.DefaultSizeKey, disabled),
 				).Cols(6).Sm(4).Class("pl-0"),
@@ -359,7 +359,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 				if cols == 0 {
 					cols = 6
 				}
-				row.AppendChildren(
+				row.AppendChild(
 					VCol(
 						mediaBoxThumb(msgr, cfg, mediaBox, field, k, disabled),
 					).Cols(cols).Sm(sm).Class("pl-0"),
@@ -367,7 +367,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 			}
 		}
 
-		c.AppendChildren(row)
+		c.AppendChild(row)
 
 		fieldName := fmt.Sprintf("%s.Description", field)
 		value := ctx.R.FormValue(fieldName)
@@ -375,7 +375,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 			value = mediaBox.Description
 		}
 		if !(len(value) == 0 && readonly) {
-			c.AppendChildren(
+			c.AppendChild(
 				VRow(
 					VCol(
 						h.If(

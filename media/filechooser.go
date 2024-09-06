@@ -210,7 +210,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		initCroppingVars = append(initCroppingVars, fmt.Sprintf("%s: false", croppingVar))
 		imgClickVars := fmt.Sprintf("vars.mediaShow = '%s'; vars.mediaName = '%s'; vars.isImage = %s", f.File.URL(), f.File.FileName, strconv.FormatBool(base.IsImageFormat(f.File.FileName)))
 
-		row.AppendChildren(
+		row.AppendChild(
 			VCol(
 				VCard(
 					h.Div(
@@ -359,7 +359,7 @@ func fileChips(f *media_library.MediaLibrary) h.HTMLComponent {
 	if f.File.FileSizes["original"] != 0 {
 		text = fmt.Sprintf("%s %s", text, base.ByteCountSI(f.File.FileSizes["original"]))
 	}
-	g.AppendChildren(
+	g.AppendChild(
 		VChip(h.Text(text)).Size(SizeSmall),
 	)
 	// if len(f.File.Sizes) == 0 {

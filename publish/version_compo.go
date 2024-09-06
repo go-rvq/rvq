@@ -68,9 +68,9 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 					Go()).
 				Class(v.W100)
 			if status, ok = obj.(StatusInterface); ok {
-				versionSwitch.AppendChildren(statusChip(status.EmbedStatus().Status, msgr).Class("mx-2"))
+				versionSwitch.AppendChild(statusChip(status.EmbedStatus().Status, msgr).Class("mx-2"))
 			}
-			versionSwitch.AppendChildren(v.VSpacer())
+			versionSwitch.AppendChild(v.VSpacer())
 			versionSwitch.AppendIcon("mdi-chevron-down")
 
 			div.AppendChildren(versionSwitch)
@@ -254,7 +254,12 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 
 		queries := ctx.Queries()
 		queries.Set("select_id", p.PrimarySlug())
-		onChange := web.Plaid().URL(ctx.R.URL.Path).Queries(queries).EventFunc(actions.UpdateListingDialog).Go()
+		onChange := web.Plaid().
+			URL(ctx.R.URL.Path).
+			Queries(queries).
+			EventFunc(actions.UpdateListingDialog).
+			Query(presets.ParamPortalID, ctx.R.FormValue(presets.ParamPortalID)).
+			Go()
 
 		return h.Td().Children(
 			h.Div().Class("d-inline-flex align-center").Children(
