@@ -65,6 +65,7 @@ func PT(req *http.Request, module ModuleKey, prefix string, key string, args ...
 		if builder != nil {
 			builder.putMissingVal(module, fieldKey, key)
 		}
+		val = defaultVal
 	}
 
 	return strings.NewReplacer(args...).Replace(val.(string))
