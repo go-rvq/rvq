@@ -14,7 +14,8 @@ func MenuBtn() h.HTMLComponent {
 		Density("compact").
 		Children(
 			VIcon("mdi-menu"),
-		).Attr("@click.menu", "locals.menu = !locals.menu")
+		).
+		Attr("@click.menu", "locals.menu = !locals.menu")
 }
 
 func FullScreenBtn() h.HTMLComponent {
@@ -59,16 +60,23 @@ type ContentComponentBuilderOverlay struct {
 }
 
 type ContentComponentBuilder struct {
+	Obj             any
+	Context         *web.EventContext
 	Title           string
 	TopLeftActions  h.HTMLComponents
 	TopRightActions h.HTMLComponents
-	Tabs            h.HTMLComponents
+	Tabs            []TabComponentFunc
+	PreBody         h.HTMLComponents
+	PostBody        h.HTMLComponents
 	PrimaryAction   h.HTMLComponent
 	BottomActions   h.HTMLComponents
+	TopBar          h.HTMLComponent
+	BottomBar       h.HTMLComponent
 	Overlay         *ContentComponentBuilderOverlay
 	Menu            h.HTMLComponents
 	Body            h.HTMLComponent
 	Scope           *web.ScopeBuilder
+	MainPortals     h.HTMLComponents
 }
 
 func (b *ContentComponentBuilder) scoped(comp h.HTMLComponent) h.HTMLComponent {
@@ -79,12 +87,23 @@ func (b *ContentComponentBuilder) scoped(comp h.HTMLComponent) h.HTMLComponent {
 	return b.Scope
 }
 
+func (b *ContentComponentBuilder) build(comp h.HTMLComponent) h.HTMLComponent {
+	comp = b.scoped(comp)
+	if len(b.MainPortals) > 0 {
+		comp = append(b.MainPortals, comp)
+	}
+	return comp
+}
+
+func (b *ContentComponentBuilder) JoinedBody() h.HTMLComponent {
+	return append(b.PreBody, append(h.HTMLComponents{b.Body}, b.PostBody...)...)
+}
+
 func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 	var (
 		header           h.HTMLComponent
 		headerComponents = b.TopLeftActions
 		headerRight      = b.TopRightActions
-		bottomActions    h.HTMLComponent
 	)
 
 	if len(b.Menu) > 0 {
@@ -114,19 +133,134 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 	}
 
 	if len(headerComponents) > 0 {
-		header = VToolbar(headerComponents...).Color("white").Elevation(0).Density(DensityCompact)
+		headerComponents = h.HTMLComponents{VToolbar(headerComponents...).Color("white").Elevation(0).Density(DensityCompact)}
 	}
 
-	headerComponents = append(headerComponents, b.PrimaryAction)
+	if len(headerComponents) > 0 || b.TopBar != nil {
+		header = h.HTMLComponents{
+			headerComponents,
+			b.TopBar,
+			VDivider(),
+		}
+	}
+
+	var bottom h.HTMLComponents
+
+	if b.BottomBar != nil {
+		bottom = append(bottom, b.BottomBar)
+	}
 
 	if len(b.BottomActions) > 0 {
-		bottomActions = VCardActions(b.BottomActions...)
+		bottom = append(bottom, VCardActions(b.BottomActions...))
 	}
 
-	var body h.HTMLComponent = VMain(
-		b.Tabs,
-		b.Body,
+	if len(bottom) > 0 {
+		bottom = append(h.HTMLComponents{VDivider()}, bottom...)
+	}
+
+	body := b.JoinedBody()
+
+	if len(b.Tabs) > 0 {
+		var tabs h.HTMLComponents
+		var contents []h.HTMLComponent
+		for _, panelFunc := range b.Tabs {
+			tab, content := panelFunc(b.Obj, b.Context)
+			if tab != nil {
+				tabs = append(tabs, tab)
+				contents = append(contents, content)
+			}
+		}
+		t := h.HTMLComponents{
+			VTabs(
+				VTab(h.Text(MustGetMessages(b.Context.R).FormTitle)).Value("default"),
+				h.Components(tabs...),
+			).Class("v-tabs--fixed-tabs").Attr("v-model", "locals.tab"),
+
+			VTabsWindow(
+				VTabsWindowItem(
+					body,
+				).Value("default"),
+				h.Components(contents...),
+			).Attr("v-model", "locals.tab"),
+		}
+
+		if b.Scope != nil {
+			b.Scope.AppendInit("{tab: 'default'}")
+		} else {
+			body = web.Scope(t).VSlot("{ locals }").Init(`{tab: 'default'}`)
+		}
+	}
+
+	var (
+		roots = h.HTMLComponents{header}
 	)
+
+	if len(b.Menu) > 0 {
+		layout := VLayout(
+			VNavigationDrawer(b.Menu).
+				// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
+				Class("v-navigation-drawer--temporary").
+				Attr("v-model", "locals.menu").
+				Location(LocationLeft).
+				Floating(true).
+				Temporary(true),
+			body).
+			Width("100%").
+			Height("100%")
+		layout.SetAttr("style", "display: block;")
+		body = VMain(layout)
+	}
+
+	roots = append(roots, VCardText(body).Class("no-padding"))
+
+	roots = append(roots, bottom...)
+
+	card := VCard(roots...).Height("inherit").Width("inherit")
+
+	return b.build(
+		card, // .			Attr("style", "height:inherit,max-height:inherit"), // fix height on fullscreen
+	)
+}
+
+func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
+	topActions := append(b.TopLeftActions, b.TopRightActions...)
+
+	if b.PrimaryAction != nil {
+		topActions = append(topActions, b.PrimaryAction)
+	}
+
+	if len(b.Menu) > 0 {
+		topActions = append(topActions, MenuBtn())
+	}
+
+	b.Context.WithContextValue(CtxActionsComponent, topActions)
+
+	body := b.JoinedBody()
+
+	if len(b.Tabs) > 0 {
+		var tabs h.HTMLComponents
+		var contents []h.HTMLComponent
+		for _, panelFunc := range b.Tabs {
+			tab, content := panelFunc(b.Obj, b.Context)
+			if tab != nil {
+				tabs = append(tabs, tab)
+				contents = append(contents, content)
+			}
+		}
+		body = web.Scope(
+			VTabs(
+				VTab(h.Text(MustGetMessages(b.Context.R).FormTitle)).Value("default"),
+				h.Components(tabs...),
+			).Class("v-tabs--fixed-tabs").Attr("v-model", "locals.tab"),
+
+			VTabsWindow(
+				VTabsWindowItem(
+					body,
+				).Value("default"),
+				h.Components(contents...),
+			).Attr("v-model", "locals.tab"),
+		).VSlot("{ locals }").Init(`{tab: 'default'}`)
+	}
 
 	if len(b.Menu) > 0 {
 		body = h.HTMLComponents{
@@ -142,32 +276,10 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		}
 	}
 
-	return b.scoped(
-		VCard(
-			header,
-			VCardText(body),
-			bottomActions,
-		).
-			Attr("style", "height:inherit"), // fix height on fullscreen
-	)
-}
-
-func (b *ContentComponentBuilder) BuildPage(ctx *web.EventContext) (comp h.HTMLComponent) {
-	topActions := append(b.TopLeftActions, b.TopRightActions...)
-
-	if b.PrimaryAction != nil {
-		topActions = append(topActions, b.PrimaryAction)
-	}
-
-	if len(b.Menu) > 0 {
-		topActions = append(h.HTMLComponents{MenuBtn()}, topActions...)
-	}
-	ctx.WithContextValue(CtxActionsComponent, topActions)
-	return b.scoped(
+	return b.build(
 		VLayout(
 			VMain(
-				b.Tabs,
-				b.Body,
+				body,
 			),
 		))
 }

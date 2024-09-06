@@ -60,7 +60,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	msgr := MustGetMessages(ctx.R)
 	portalID := GetPortalID(ctx.R)
 
-	var tabsAndActionsBar h.HTMLComponent
+	var actionsBar h.HTMLComponent
 	{
 		filterTabs := b.filterTabs(lcb.portals, ctx, inDialog)
 
@@ -70,7 +70,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 		// }
 		// || len(actionsComponent) > 0
 		if filterTabs != nil {
-			tabsAndActionsBar = filterTabs
+			actionsBar = filterTabs
 		}
 		ctx.WithContextValue(CtxActionsComponent, actionsComponent)
 	}
@@ -149,8 +149,8 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 		Scope:           web.Scope().VSlot("{ locals, closer, form }").Init(`{currEditingListItemID: ""}`),
 	}
 
-	if tabsAndActionsBar != nil {
-		cb.Tabs = append(cb.Tabs, tabsAndActionsBar)
+	if actionsBar != nil {
+		cb.PreBody = append(cb.PreBody, actionsBar)
 	}
 
 	if inDialog {
@@ -209,24 +209,27 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 			).Width(100)
 		}
 
-		cb.Body = VCard(
+		cb.TopBar = h.HTMLComponents{
+			VDivider(),
 			VToolbar(
 				searchBoxDefault,
 				filterBar,
 			).Flat(true).Color("surface").AutoHeight(true).Class("pa-2"),
-			VCardText(
-				web.Portal().Name(lcb.portals.Temp()),
-				web.Portal(dataTable).Name(lcb.portals.DataTable()),
-				web.Portal(dataTableAdditions).Name(lcb.portals.DataTableAdditions()),
-			).Class("pa-2"),
-		)
+		}
+
+		cb.BottomBar = VCardActions(web.Portal(dataTableAdditions).Name(lcb.portals.DataTableAdditions()))
+
+		cb.Body = h.HTMLComponents{
+			web.Portal().Name(lcb.portals.Temp()),
+			web.Portal(dataTable).Name(lcb.portals.DataTable()),
+		}
 
 		return cb.BuildOverlay(), nil
 	}
 	return web.Scope(
 		VLayout(
 			VMain(
-				tabsAndActionsBar,
+				actionsBar,
 				VCard(
 					VToolbar(
 						searchBoxDefault,

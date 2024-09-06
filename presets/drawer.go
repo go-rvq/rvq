@@ -115,12 +115,12 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 			comp,
 		).
 			// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-			Class("v-navigation-drawer--temporary").
 			Attr("v-model", "closer.show").
 			Location(p.location).
 			Temporary(true).
 			// Fixed(true).
-			Width(p.width).
+			RawWidth(`closer.fullscreen ? null : `+h.JSONString(p.width)).
+			RawClass(`closer.fullscreen ? 'v-navigation-drawer--fullscreen' : null`).
 			Attr(":height", `"100%"`),
 		true,
 	)

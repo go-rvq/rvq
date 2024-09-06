@@ -13,7 +13,7 @@ func (b *EditingBuilder) doUpdate(
 	silent bool,
 ) (err error) {
 	id := ctx.R.FormValue(ParamID)
-	if id == "" {
+	if id == "" && !b.mb.singleton {
 		return MustGetMessages(ctx.R).ErrEmptyParamID
 	}
 

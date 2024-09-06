@@ -78,6 +78,6 @@ func childRowMenuItemFunc(mb *ModelBuilder) RecordMenuItemFunc {
 			URL(uri).
 			Go()).
 			Attr("@click.middle",
-				fmt.Sprintf("(e) => e.view.window.open(%q, '_blank')", uri))
+				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, uri))
 	}
 }

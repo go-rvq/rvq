@@ -11,6 +11,10 @@ type (
 		PageTitle() string
 	}
 
+	ContextTitler interface {
+		ContextTitle(ctx *web.EventContext) string
+	}
+
 	ModelFormUnmarshallHandler interface {
 		Handler(obj interface{}, ctx *web.EventContext) (err error)
 	}

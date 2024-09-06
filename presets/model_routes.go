@@ -15,7 +15,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 	inPageFunc := mb.listing.GetPageFunc()
 
 	if mb.singleton {
-		inPageFunc = mb.BindPageFunc(mb.editing.singletonPageFunc)
+		inPageFunc = mb.BindPageFunc(mb.editing.defaultPageFunc)
 		if mb.layoutConfig == nil {
 			mb.layoutConfig = &LayoutConfig{}
 		}

@@ -1065,6 +1065,17 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			}
 		}
 
+		scoped := func(comp ...h.HTMLComponent) h.HTMLComponent {
+			scope := GetScope(ctx)
+			if scope != nil {
+				return scope.Children(comp...)
+			}
+			if len(comp) == 1 {
+				return comp[0]
+			}
+			return h.HTMLComponents(comp)
+		}
+
 		pr.Body = VApp(
 			portals,
 
@@ -1107,7 +1118,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 						Permanent(true).
 						Floating(true).
 						Elevation(0),
-					VAppBar(
+					scoped(VAppBar(
 						h.Div(
 							VProgressLinear().
 								Attr(":active", "isFetching").
@@ -1130,8 +1141,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 						).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
 					).
 						Elevation(0),
-					h.Div(breadcrumbs...),
-					innerPr.Body,
+						h.Div(breadcrumbs...),
+						innerPr.Body),
 				).Class(""),
 			),
 		).Attr("id", "vt-app").

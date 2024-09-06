@@ -21,14 +21,18 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 
 	if len(id) > 0 || b.mb.singleton {
 		if err = b.Fetcher(obj, id, ctx); err != nil {
-			return
+			if err == ErrRecordNotFound && b.mb.singleton {
+				err = nil
+			} else {
+				return
+			}
 		}
 	} else {
 		err = ErrRecordNotFound
 		return
 	}
 
-	comp := b.form(obj, ctx).FullComponent()
+	comp := b.form(obj, ctx).Component()
 	mode := GetOverlay(ctx)
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 
@@ -38,19 +42,54 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 			Respond(&r, comp)
 	} else if mode.IsDialog() {
 		b.mb.p.Dialog().
+			SetScrollable(true).
 			SetValidWidth(b.mb.rightDrawerWidth).
 			SetTargetPortal(targetPortal).
 			Respond(&r, comp)
 	} else {
-		r.Body = comp
+		r.Body = VContainer(comp)
 	}
 
 	return
 }
 
+func (b *EditingBuilder) EditBtn(ctx *web.EventContext, id string, edit bool, targetPortal string) *VBtnBuilder {
+	var (
+		queries = ctx.Queries()
+		event   = actions.Create
+	)
+
+	if id != "" {
+		queries.Set(ParamID, id)
+	}
+
+	if GetEditFormUnscoped(ctx) {
+		queries.Set(ParamEditFormUnscoped, "true")
+	}
+
+	if edit {
+		event = actions.Update
+	}
+
+	onClick := web.Plaid().
+		EventFunc(event).
+		Queries(queries).
+		ValidQuery(ParamTargetPortal, targetPortal).
+		URL(b.mb.Info().ListingHrefCtx(ctx))
+
+	return VBtn("").
+		Color("primary").
+		Variant(VariantFlat).
+		Attr(":disabled", "isFetching").
+		Attr(":loading", "isFetching").
+		Attr("@click", onClick.Go()).
+		Icon(true).
+		Density("comfortable").
+		Children(VIcon("mdi-content-save"))
+}
+
 func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 	var (
-		event            = actions.Update
 		disableUpdateBtn bool
 		ctx              = f.b.ctx
 		portalName       = ctx.R.FormValue(ParamTargetPortal)
@@ -59,55 +98,25 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 	f.Portal = portalName
 
 	if f.b.mode == NEW {
-		event = actions.Create
-		f.Title = h.Text(f.b.msgr.CreatingObjectTitle(
+		f.Title = f.b.msgr.CreatingObjectTitle(
 			i18n.T(f.b.ctx.R, ModelsI18nModuleKey, b.mb.label),
 			b.mb.female,
-		))
+		)
 	} else {
 		disableUpdateBtn = !f.b.mb.Info().CanUpdate(f.b.ctx.R, f.Obj)
 
 		editingTitleText := f.b.msgr.EditingObjectTitle(
 			i18n.T(f.b.ctx.R, ModelsI18nModuleKey, b.mb.label),
-			getPageTitle(f.b.obj, f.b.id))
+			b.mb.RecordTitle(f.Obj, ctx))
 		if b.editingTitleFunc != nil {
 			f.Title = b.editingTitleFunc(f.b.obj, editingTitleText, f.b.ctx)
 		} else {
-			f.Title = h.Text(editingTitleText)
+			f.Title = editingTitleText
 		}
 	}
 
-	queries := f.b.ctx.Queries()
-
-	if f.b.id != "" {
-		queries.Set(ParamID, f.b.id)
-	}
-
-	uri := b.mb.Info().ListingHrefCtx(f.b.ctx)
-	onClick := web.Plaid().
-		EventFunc(event).
-		Queries(queries).
-		URL(uri)
-
 	if !disableUpdateBtn {
-		btn := VBtn("").
-			Color("primary").
-			Variant(VariantFlat).
-			Attr(":disabled", "isFetching").
-			Attr(":loading", "isFetching")
-
-		// if overlayType == "" && portalName != "" {
-		// não está funcionando,
-		//	var cb web.Callback
-		//	cb.ReloadPortals = append(cb.ReloadPortals, portalName)
-		//		onClick.Query(ParamPostChangeCallback, cb.Encode())
-		//	}
-
-		btn.Attr("@click", onClick.Go())
-		btn.Icon(true).
-			Density("comfortable").
-			Children(VIcon("mdi-content-save"))
-		f.PrimaryAction = btn
+		f.PrimaryAction = b.EditBtn(f.b.ctx, f.b.id, f.b.mode != NEW, f.Portal)
 	}
 
 	if b.actionsFunc != nil {
@@ -134,10 +143,6 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 	return f
 }
 
-func (b *EditingBuilder) formBuilder(obj interface{}, ctx *web.EventContext) (fb *FormBuilder) {
-	return NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
-}
-
 func (b *EditingBuilder) form(obj interface{}, ctx *web.EventContext) *Form {
-	return b.ConfigureForm(b.formBuilder(obj, ctx).Build())
+	return b.ConfigureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build())
 }

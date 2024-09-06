@@ -93,7 +93,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 			cell.SetAttr("@click.self",
 				onclick.Go()+fmt.Sprintf(`; locals.currEditingListItemID="%s-%s"`, dataTableID, id))
 			cell.SetAttr("@click.middle",
-				fmt.Sprintf("(e) => e.view.window.open(%q, '_blank')", b.mb.Info().DetailingHrefCtx(ctx, id)))
+				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().DetailingHrefCtx(ctx, id)))
 			return cell
 		}
 	}
@@ -141,13 +141,14 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 							),
 						),
 					)
-				qs.Del(web.ExecuteEventPatam)
+				qs.Del(web.ExecuteEventParam)
 				newQuery := newQueryWithFieldToggleOrderBy(qs, field)
 				onclick := web.Plaid().
 					Queries(newQuery)
 				if inDialog {
 					onclick.URL(ctx.R.RequestURI).
-						EventFunc(actions.UpdateListingDialog)
+						EventFunc(actions.UpdateListingDialog).
+						Query(ParamPortalID, ctx.R.FormValue(ParamPortalID))
 				} else {
 					onclick.PushState(true)
 				}
@@ -189,6 +190,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				URL(ctx.R.RequestURI).
 				EventFunc(actions.UpdateListingDialog).
 				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				Query(ParamSelectedIds,
 					web.Var(fmt.Sprintf(`{value: %s, add: $event, remove: !$event}`, h.JSONString(idsOfPage))),
 				).
@@ -200,6 +202,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				URL(ctx.R.RequestURI).
 				EventFunc(actions.UpdateListingDialog).
 				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				Query(ParamSelectedIds,
 					web.Var(fmt.Sprintf(`{value: %s, add: $event, remove: !$event}`, h.JSONString(id))),
 				).
@@ -212,6 +215,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				EventFunc(actions.UpdateListingDialog).
 				MergeQuery(true).
 				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				Query(ParamSelectedIds, "").
 				Go()
 		})
@@ -258,28 +262,28 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				URL(ctx.R.RequestURI).
 				Query("per_page", web.Var("[$event]")).
 				MergeQuery(true).
-				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				EventFunc(actions.UpdateListingDialog).
 				Go())
 			tpb.OnPrevPage(web.Plaid().
 				URL(ctx.R.RequestURI).
 				Query("page", sr.Page-1).
 				MergeQuery(true).
-				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				EventFunc(actions.UpdateListingDialog).
 				Go())
 			tpb.OnNextPage(web.Plaid().
 				URL(ctx.R.RequestURI).
 				Query("page", sr.Page+1).
 				MergeQuery(true).
-				ValidQuery(ParamTargetPortal, targetPortal).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				EventFunc(actions.UpdateListingDialog).
 				Go())
 		}
 
-		datatableAdditions = h.Div(tpb).Class("mt-2")
+		datatableAdditions = tpb
 	} else {
-		datatableAdditions = h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("mt-10 text-center grey--text text--darken-2")
+		datatableAdditions = h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("text-center grey--text text--darken-2")
 	}
 
 	return

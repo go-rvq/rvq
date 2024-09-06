@@ -26,7 +26,7 @@ type FieldContext struct {
 	Label         string
 	Errors        []string
 	ModelInfo     *ModelInfo
-	Nested        *NestedFieldBuilder
+	Nested        Nested
 	Context       context.Context
 	ReadOnly      bool
 	Required      bool
@@ -79,6 +79,13 @@ func (fc *FieldContext) ContextValue(key interface{}) (r interface{}) {
 	return fc.Context.Value(key)
 }
 
+func (fc *FieldContext) Error(err error) *FieldContext {
+	if err != nil {
+		fc.Errors = append(fc.Errors, err.Error())
+	}
+	return fc
+}
+
 type FieldContextSetup func(ctx *FieldContext)
 
 type FieldContextSetups []FieldContextSetup
@@ -95,21 +102,21 @@ func (f FieldContextSetups) Setup(ctx *FieldContext) {
 
 type FieldBuilder struct {
 	NameLabel
-	mode                FieldMode
-	structField         *reflect_utils.IndexableStructField
-	compFunc            FieldComponentFunc
-	setterFunc          FieldSetterFunc
-	context             context.Context
-	rt                  reflect.Type
-	nestedFieldsBuilder *NestedFieldBuilder
-	enabled             func(ctx *FieldContext) bool
-	data                map[any]any
-	Setup               FieldContextSetups
-	ToComponentSetup    FieldContextSetups
-	Validators          FieldValidators
-	ValueFormatters     FieldValueFormatters
-	defaultValuer       func()
-	audited             bool
+	mode             FieldMode
+	structField      *reflect_utils.IndexableStructField
+	compFunc         FieldComponentFunc
+	setterFunc       FieldSetterFunc
+	context          context.Context
+	rt               reflect.Type
+	nested           Nested
+	enabled          func(ctx *FieldContext) bool
+	data             map[any]any
+	Setup            FieldContextSetups
+	ToComponentSetup FieldContextSetups
+	Validators       FieldValidators
+	ValueFormatters  FieldValueFormatters
+	defaultValuer    func()
+	audited          bool
 }
 
 func (b *FieldBuilder) ColumnName() string {

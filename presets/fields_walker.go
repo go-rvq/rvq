@@ -10,6 +10,10 @@ type (
 	FieldWalkState uint8
 
 	FieldWalkHandle func(field *FieldContext) (s FieldWalkState)
+
+	FieldWalker interface {
+		Walk(fctx *FieldContext, handle FieldWalkHandle) (s FieldWalkState)
+	}
 )
 
 const (
@@ -91,7 +95,7 @@ func (b *FieldsBuilder) walkField(info *ModelInfo, obj interface{}, mode FieldMo
 		ModelInfo:    info,
 		Name:         f.name,
 		FormKey:      contextKeyPath,
-		Nested:       f.nestedFieldsBuilder,
+		Nested:       f.nested,
 		Context:      f.context,
 	}
 
@@ -99,8 +103,8 @@ func (b *FieldsBuilder) walkField(info *ModelInfo, obj interface{}, mode FieldMo
 	if s == FieldWalkSkipChildren {
 		s = FieldWalkNext
 	} else if s == FieldWalkNext {
-		if f.nestedFieldsBuilder != nil {
-			s = f.nestedFieldsBuilder.walk(info, obj, mode, contextKeyPath, ctx, handle)
+		if f.nested != nil {
+			s = f.nested.Walk(fctx, handle)
 		}
 	}
 	return

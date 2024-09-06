@@ -23,7 +23,6 @@ type DetailingBuilder struct {
 	pageFunc           web.PageFunc
 	fetcher            FetchFunc
 	tabPanels          []TabComponentFunc
-	sidePanel          ObjectComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
 	editionDisabled    OkHandled
 	SectionsBuilder
@@ -175,18 +174,12 @@ func (b *DetailingBuilder) TabsPanels(vs ...TabComponentFunc) (r *DetailingBuild
 	return b
 }
 
-func (b *DetailingBuilder) SidePanelFunc(v ObjectComponentFunc) (r *DetailingBuilder) {
-	b.sidePanel = v
-	return b
-}
-
 func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
 	id := ctx.Param(ParamID)
 	r.Body = VContainer(h.Text(id))
 
 	obj := b.mb.NewModel()
 	msgr := MustGetMessages(ctx.R)
-	portalID := GetOrNewPortalID(ctx.R)
 
 	if id == "" {
 		err = msgr.ErrEmptyParamID
@@ -201,7 +194,7 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
-	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, id))
+	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 
 	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
 		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
@@ -210,20 +203,11 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 
 	f := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build())
 
-	if f.PrimaryAction != nil {
-		var cb web.Callback
-		cb.ReloadPortals = append(cb.ReloadPortals, detailingContentPortalName+portalID)
-		ctx.WithContextValue(CtxActionsComponent, f.PrimaryAction)
-		f.PrimaryAction = nil
-	}
-
-	if len(f.Menu) > 0 {
-		ctx.WithContextValue(CtxMenuComponent, f.Menu)
-	}
-
 	if len(f.MainPortals) > 0 {
 		AddPortals(ctx, f.MainPortals...)
 	}
+
+	f.MainPortals = nil
 
 	r.Body = f.Component()
 
@@ -254,18 +238,18 @@ func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse
 		return
 	}
 
-	comp := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build()).
-		FullComponent()
+	f := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build()).Component()
 
 	mode := GetOverlay(ctx)
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
 			SetValidPortalName(targetPortal).
-			Respond(&r, comp)
+			Respond(&r, f)
 	} else {
 		b.mb.p.Dialog().
+			SetScrollable(true).
 			SetTargetPortal(targetPortal).
-			Respond(&r, comp)
+			Respond(&r, f)
 	}
 	return
 }
@@ -328,7 +312,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 				Attr(":loading", "isFetching").
 				Attr("@click", onclick.Go()).
 				Attr("@click.middle",
-					fmt.Sprintf("(e) => e.view.window.open(%q, '_blank')", b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
+					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
 				Icon(true).
 				Density("comfortable").
 				Children(VIcon("mdi-pencil")),
@@ -336,11 +320,10 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	}
 
 	f.Tabs = b.tabPanels
-	f.SidePanel = b.sidePanel
 
-	title := h.Div(h.Text(MustGetMessages(ctx.R).DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, f.b.id)))).Class("d-flex")
+	title := MustGetMessages(ctx.R).DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 	if v, ok := GetComponentFromContext(ctx, ctxDetailingAfterTitleComponent); ok {
-		title.AppendChildren(VSpacer(), v)
+		f.TopRightActions = append(f.TopRightActions, v)
 	}
 
 	f.Title = title
@@ -367,14 +350,6 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	}
 
 	return f
-}
-
-func getPageTitle(obj interface{}, id string) string {
-	title := id
-	if pt, ok := obj.(PageTitle); ok {
-		title = pt.PageTitle()
-	}
-	return title
 }
 
 func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse, err error) {

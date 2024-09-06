@@ -86,22 +86,23 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 	formKey := b.fieldContext.FormKey
 	var form h.HTMLComponent
 	if b.value != nil {
-		form = b.fieldContext.Nested.ToComponentForEach(b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
-			return VCard(
-				h.If(!b.fieldContext.ReadOnly,
-					VBtn("").Icon("mdi-delete").Class("float-right ma-2").
-						Attr("@click", web.Plaid().
-							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
-							EventFunc(b.removeListItemRowEvent).
-							Queries(ctx.Queries()).
-							Query(ParamID, ctx.R.FormValue(ParamID)).
-							Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
-							Query(ParamRemoveRowFormKey, formKey).
-							Go()),
-				),
-				content,
-			).Class("mx-0 mb-2 px-4 pb-0 pt-4").Variant(VariantOutlined)
-		})
+		form = b.fieldContext.Nested.FieldsBuilder().
+			ToComponentForEach(b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+				return VCard(
+					h.If(!b.fieldContext.ReadOnly,
+						VBtn("").Icon("mdi-delete").Class("float-right ma-2").
+							Attr("@click", web.Plaid().
+								URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
+								EventFunc(b.removeListItemRowEvent).
+								Queries(ctx.Queries()).
+								Query(ParamID, ctx.R.FormValue(ParamID)).
+								Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
+								Query(ParamRemoveRowFormKey, formKey).
+								Go()),
+					),
+					content,
+				).Class("mx-0 mb-2 px-4 pb-0 pt-4").Variant(VariantOutlined)
+			})
 	}
 
 	isSortStart := ctx.R.FormValue(ParamIsStartSort) == "1" && ctx.R.FormValue(ParamSortSectionFormKey) == formKey
@@ -280,6 +281,7 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			ContextModifiedIndexesBuilder(ctx).SetSorted(sortSectionFormKey, indexes)
 		}
 		me.form(obj, ctx).Respond(&r)
+		r.RunScript += ";console.log(locals)"
 		return
 	}
 }

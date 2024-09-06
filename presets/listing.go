@@ -698,6 +698,7 @@ func (b *ListingBuilder) doListingAction(ctx *web.EventContext) (r web.EventResp
 				URL(ctx.R.RequestURI).
 				EventFunc(actions.UpdateListingDialog).
 				Queries(qs).
+				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 				Go(),
 		)
 	} else {
@@ -756,12 +757,11 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		if inDialog {
 			onclick.URL(ctx.R.RequestURI).
 				EventFunc(actions.UpdateListingDialog).
-				ValidQuery(ParamPortalID, portalID).
-				Query(ParamTargetPortal, portals.Main())
+				ValidQuery(ParamPortalID, portalID)
 		} else {
 			onclick.PushState(true)
 		}
-		tabs.AppendChildren(
+		tabs.AppendChild(
 			VTab(tabContent).
 				Attr("@click", onclick.Go()),
 		)
@@ -928,7 +928,8 @@ func (b *ListingBuilder) selectColumnsBtn(
 		MergeQuery(true)
 	if inDialog {
 		onOK.URL(ctx.R.RequestURI).
-			EventFunc(actions.UpdateListingDialog)
+			EventFunc(actions.UpdateListingDialog).
+			Query(ParamPortalID, ctx.R.FormValue(ParamPortalID))
 	}
 	// add the HTML component of columns setting into toolbar
 	btn = web.Scope(VMenu(
@@ -1012,6 +1013,7 @@ func (b *ListingBuilder) filterBar(
 			Query("page", 1).
 			ClearMergeQuery(web.Var("$event.filterKeys")).
 			EventFunc(actions.UpdateListingDialog).
+			Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
 			Go())
 	}
 	return filter
@@ -1156,26 +1158,34 @@ func (b *ListingBuilder) openListingDialog(ctx *web.EventContext) (r web.EventRe
 	if body, err = lcb.Build(ctx); err != nil {
 		return
 	}
+	body = web.Scope(body).VSlot("{ form, closer }")
 
 	b.mb.p.DialogPortal(targetPortal).
 		SetValidWidth(b.dialogWidth).
 		SetValidHeight(b.dialogHeight).
 		SetContentPortalName(lcb.portals.Main()).
-		Respond(&r, web.Scope(body).VSlot("{ form, closer }"))
+		SetScrollable(true).
+		Respond(&r, body)
 	return
 }
 
 func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
 	lcb := b.listingComponentBuilderCtx(ctx)
 	ctx.R.Form.Set(ParamOverlay, actions.Dialog.String())
+	var dataTable, dataTableAdditions h.HTMLComponent
 
-	var body h.HTMLComponent
-	if body, err = lcb.Build(ctx); err != nil {
+	if dataTable, dataTableAdditions, err = lcb.getTableComponents(ctx); err != nil {
 		return
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: lcb.portals.Main(),
-		Body: body,
-	})
+
+	r.UpdatePortals = append(r.UpdatePortals,
+		&web.PortalUpdate{
+			Name: lcb.portals.DataTable(),
+			Body: dataTable,
+		}, &web.PortalUpdate{
+			Name: lcb.portals.DataTableAdditions(),
+			Body: dataTableAdditions,
+		},
+	)
 	return
 }

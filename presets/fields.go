@@ -11,85 +11,26 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/mpvl/unique"
+
 	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
-type NestedConfig interface {
-	nested()
-}
-
-type DisplayFieldInSorter struct {
-	Field string
-}
-
-func (i *DisplayFieldInSorter) nested() {}
-
-type AddListItemRowEvent struct {
-	Event string
-}
-
-func (*AddListItemRowEvent) nested() {}
-
-type RemoveListItemRowEvent struct {
-	Event string
-}
-
-func (*RemoveListItemRowEvent) nested() {}
-
-type SortListItemsEvent struct {
-	Event string
-}
-
-func (*SortListItemsEvent) nested() {}
-
-func (b *FieldBuilder) Nested(fb *NestedFieldBuilder, cfgs ...NestedConfig) (r *FieldBuilder) {
-	b.nestedFieldsBuilder = fb
+func (b *FieldBuilder) AutoNested(mb *ModelBuilder, fb *FieldsBuilder) (r *FieldBuilder) {
 	switch b.rt.Kind() {
 	case reflect.Slice:
-		var displayFieldInSorter string
-		var addListItemRowEvent string
-		var removeListItemRowEvent string
-		var sortListItemsEvent string
-		for _, cfg := range cfgs {
-			switch t := cfg.(type) {
-			case *DisplayFieldInSorter:
-				displayFieldInSorter = t.Field
-			case *AddListItemRowEvent:
-				addListItemRowEvent = t.Event
-			case *RemoveListItemRowEvent:
-				removeListItemRowEvent = t.Event
-			case *SortListItemsEvent:
-				sortListItemsEvent = t.Event
-			default:
-				panic("unknown nested config")
-			}
-		}
-		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return NewListEditor(field).Value(field.Value()).
-				DisplayFieldInSorter(displayFieldInSorter).
-				AddListItemRowEvent(addListItemRowEvent).
-				RemoveListItemRowEvent(removeListItemRowEvent).
-				SortListItemsEvent(sortListItemsEvent).Component(ctx)
-		})
+		return b.Nested(NestedSlice(mb, fb))
 	default:
-		b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			val := field.Value()
-			if val == nil {
-				t := reflectutils.GetType(field.Obj, field.Name).Elem()
-				val = reflect.New(t).Interface()
-			}
-			modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
-			fieldInfo := b.nestedFieldsBuilder.mb.Info().ChildOf(field.ModelInfo, field.Obj)
-			body := b.nestedFieldsBuilder.toComponentWithFormValueKey(fieldInfo, val, field.Mode, field.FormKey, modifiedIndexes, ctx)
-			return h.Div(
-				h.Label(field.Label).Class("v-label theme--light text-caption"),
-				v.VCard(body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
-			)
-		})
+		return b.Nested(NestedStruct(mb, fb))
 	}
+}
+
+func (b *FieldBuilder) Nested(n Nested) (r *FieldBuilder) {
+	b.nested = n
+	n.Build(b)
 	return b
 }
 
@@ -153,6 +94,25 @@ type FieldsBuilder struct {
 	FieldToComponentSetup        FieldContextSetups
 	BeforeSetObjectFieldsHandler SetObjectFieldsHandlers
 	PostSetObjectFieldsHandler   SetObjectFieldsHandlers
+	beginComponentFuncs          []func(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext) h.HTMLComponent
+	hiddenFields                 []string
+}
+
+func (b *FieldsBuilder) BeginComponent(f func(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext) h.HTMLComponent) *FieldsBuilder {
+	b.beginComponentFuncs = append(b.beginComponentFuncs, f)
+	return b
+}
+
+func (b *FieldsBuilder) HiddenField(f ...string) *FieldsBuilder {
+	b.hiddenFields = append(b.hiddenFields, f...)
+	unique.Sort(unique.StringSlice{&b.hiddenFields})
+	for _, name := range f {
+		b.Field(name).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return h.Input("").Type("hidden").
+				Attr(web.VField(field.FormKey, field.Value())...)
+		})
+	}
+	return b
 }
 
 func (b *FieldsBuilder) SkipFieldVerifier() func(name string) bool {
@@ -254,7 +214,7 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 			}
 		}
 
-		if f.nestedFieldsBuilder != nil {
+		if f.nested != nil {
 			formKey := f.name
 			if parent != nil && parent.FormKey != "" {
 				formKey = fmt.Sprintf("%s.%s", parent.FormKey, f.name)
@@ -286,7 +246,7 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 					prv.Elem().Set(reflect.ValueOf(childToObj))
 					childToObj = prv.Interface()
 				}
-				f.nestedFieldsBuilder.SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
+				f.nested.FieldsBuilder().SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
 				if err := reflectutils.Set(toObj, f.name, childToObj); err != nil {
 					panic(err)
 				}
@@ -443,7 +403,7 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 		// fmt.Printf("childFromObj %#+v\n", childFromObj)
 		// fmt.Printf("childToObj %#+v\n", childToObj)
 		// fmt.Printf("fieldContext %#+v\n", pf)
-		f.nestedFieldsBuilder.SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
+		f.nested.FieldsBuilder().SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
 	})
 }
 
@@ -698,6 +658,17 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 
 	layout := b.CurrentLayout()
 
+	for _, f := range b.beginComponentFuncs {
+		comps = append(comps, f(info, obj, mode, parentFormValueKey, ctx))
+	}
+
+	for _, name := range b.hiddenFields {
+		fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, name, vErr)
+		if fComp != nil {
+			comps = append(comps, fComp)
+		}
+	}
+
 	for _, iv := range layout {
 		var comp h.HTMLComponent
 		switch t := iv.(type) {
@@ -755,7 +726,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {
 	f := b.GetFieldOrDefault(name)
 
-	if f.compFunc == nil && f.nestedFieldsBuilder == nil {
+	if f.compFunc == nil && f.nested == nil {
 		return nil
 	}
 
@@ -791,7 +762,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		FormKey:      contextKeyPath,
 		Label:        label,
 		Errors:       vErr.GetFieldErrors(f.name),
-		Nested:       f.nestedFieldsBuilder,
+		Nested:       f.nested,
 		Context:      f.context,
 		ReadOnly:     disabled,
 	}

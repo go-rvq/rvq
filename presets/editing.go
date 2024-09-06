@@ -1,8 +1,6 @@
 package presets
 
 import (
-	"errors"
-
 	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
@@ -140,13 +138,14 @@ func (b *EditingBuilder) EditingTitleFunc(v EditingTitleComponentFunc) (r *Editi
 
 func (b *EditingBuilder) FetchAndUnmarshal(id string, removeDeletedAndSort bool, ctx *web.EventContext) (obj interface{}, vErr web.ValidationErrors) {
 	obj = b.mb.NewModel()
-	if len(id) > 0 {
-		var err1 error
-		err1 = b.Fetcher(obj, id, ctx)
+	if len(id) > 0 || b.mb.singleton {
+		err1 := b.Fetcher(obj, id, ctx)
 		if err1 != nil {
-			vErr.GlobalError(err1.Error())
-			// b.UpdateOverlayContent(ctx, &r, obj, "", err1)
-			return
+			if !(err1 == ErrRecordNotFound && b.mb.singleton) {
+				vErr.GlobalError(err1.Error())
+				// b.UpdateOverlayContent(ctx, &r, obj, "", err1)
+				return
+			}
 		}
 	}
 
@@ -213,6 +212,9 @@ func (b *EditingBuilder) UpdateOverlayContent(
 	if f.b.overlayMode.IsDrawer() {
 		f.Portal = f.b.overlayMode.PortalName()
 	}
+
+	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
+
 	f.Respond(r)
 }
 
@@ -222,22 +224,26 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 		obj = b.mb.NewModel()
 	)
 
-	if id == "" {
-		err = ErrRecordNotFound
-		return
+	if len(id) > 0 || b.mb.singleton {
+		if err = b.Fetcher(obj, id, ctx); err != nil {
+			if err == ErrRecordNotFound {
+				if b.mb.singleton {
+					err = nil
+				} else {
+					return b.mb.p.DefaultNotFoundPageFunc(ctx)
+				}
+			} else {
+				return
+			}
+		}
+	} else {
+		return b.mb.p.DefaultNotFoundPageFunc(ctx)
 	}
 
 	r.Body = VContainer(h.Text(id))
 
-	if err = b.Fetcher(obj, id, ctx); err != nil {
-		if errors.Is(err, ErrRecordNotFound) {
-			return b.mb.p.DefaultNotFoundPageFunc(ctx)
-		}
-		return
-	}
-
 	msgr := MustGetMessages(ctx.R)
-	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), getPageTitle(obj, id))
+	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 
 	if b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
 		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
@@ -251,15 +257,21 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 		portalName = overlay.PortalName()
 	}
 
-	r.Body = web.Portal().
-		Name(portalName).
-		Loader(
-			web.GET().
-				EventFunc(actions.Edit).
-				URL(b.mb.Info().ListingHrefCtx(ctx)).
-				Query(ParamID, id).
-				Query(ParamOverlay, string(overlay)),
-		)
+	WithScope(ctx, web.Scope())
+
+	// set portal to edit btn
+	ctx.R.Form.Set(ParamTargetPortal, portalName)
+	EditFormUnscoped(ctx, true)
+
+	f := b.form(obj, ctx)
+	comp := f.Component()
+
+	r.Body = VContainer(web.Portal(comp).
+		Name(portalName))
+
+	// /ctx.WithContextValue(CtxActionsComponent, h.HTMLComponents{
+	// .EditBtn(ctx, id, true),
+	// })
 
 	return
 }

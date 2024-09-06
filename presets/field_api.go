@@ -79,3 +79,8 @@ func (f *FieldValueFormatters) AppendFunc(formatters ...FieldValueFormatterFunc)
 		f.Append(formatter)
 	}
 }
+
+func (b *FieldBuilder) Validator(v ...FieldValidator) *FieldBuilder {
+	b.Validators.Append(v...)
+	return b
+}

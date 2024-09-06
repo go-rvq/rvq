@@ -13,6 +13,7 @@ import (
 	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/datafield"
 	"github.com/qor5/x/v3/i18n"
 	"github.com/sunfmin/reflectutils"
 )
@@ -77,22 +78,17 @@ type ModelBuilder struct {
 	ModelBuilderConfigAttributes
 	BeforeFormUnmarshallHandlers ModelFormUnmarshallHandlers
 	PostFormUnmarshallHandlers   ModelFormUnmarshallHandlers
-}
 
-func (mb *ModelBuilder) WriteFieldBuilders() FieldBuilders {
-	return mb.writeFieldBuilders
-}
-
-func (mb *ModelBuilder) ListFieldBuilders() FieldBuilders {
-	return mb.listFieldBuilders
-}
-
-func (mb *ModelBuilder) DetailFieldBuilders() FieldBuilders {
-	return mb.detailFieldBuilders
+	datafield.DataField[*ModelBuilder]
 }
 
 func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOption) (mb *ModelBuilder) {
-	mb = &ModelBuilder{p: p, model: model, primaryField: "ID"}
+	mb = datafield.New(&ModelBuilder{
+		p:            p,
+		model:        model,
+		primaryField: "ID",
+	})
+
 	mb.modelType = reflect.TypeOf(model)
 	if mb.modelType.Kind() != reflect.Ptr {
 		panic(fmt.Sprintf("model %#+v must be pointer", model))
@@ -145,6 +141,18 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 	mb.editing.Creating()
 
 	return
+}
+
+func (mb *ModelBuilder) WriteFieldBuilders() FieldBuilders {
+	return mb.writeFieldBuilders
+}
+
+func (mb *ModelBuilder) ListFieldBuilders() FieldBuilders {
+	return mb.listFieldBuilders
+}
+
+func (mb *ModelBuilder) DetailFieldBuilders() FieldBuilders {
+	return mb.detailFieldBuilders
 }
 
 func (mb *ModelBuilder) Female() bool {
@@ -443,10 +451,13 @@ func (mb *ModelBuilder) DefaultRecordTitle(ctx *web.EventContext, obj any) strin
 }
 
 func (mb *ModelBuilder) RecordTitle(obj any, ctx *web.EventContext) string {
-	if pt, ok := obj.(PageTitle); ok {
-		return pt.PageTitle()
-	} else if s, ok := obj.(fmt.Stringer); ok {
-		return s.String()
+	switch t := obj.(type) {
+	case ContextTitler:
+		return t.ContextTitle(ctx)
+	case PageTitle:
+		return t.PageTitle()
+	case fmt.Stringer:
+		return t.String()
 	}
 
 	return mb.DefaultRecordTitle(ctx, obj)

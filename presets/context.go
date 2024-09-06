@@ -15,6 +15,8 @@ const (
 	CtxPortals
 	ctxDetailingAfterTitleComponent
 	ctxModel
+	ctxScope
+	ctxEditFormUnscoped
 	ParentsModelIDKey
 )
 
@@ -75,4 +77,22 @@ func GetModel(ctx *web.EventContext) (v *ModelBuilder) {
 
 func WithModel(ctx *web.EventContext, model *ModelBuilder) {
 	ctx.WithContextValue(ctxModel, model)
+}
+
+func WithScope(ctx *web.EventContext, scope *web.ScopeBuilder) {
+	ctx.WithContextValue(ctxScope, scope)
+}
+
+func GetScope(ctx *web.EventContext) (scope *web.ScopeBuilder) {
+	scope, _ = ctx.ContextValue(ctxScope).(*web.ScopeBuilder)
+	return
+}
+
+func EditFormUnscoped(ctx *web.EventContext, v bool) {
+	ctx.WithContextValue(ctxEditFormUnscoped, v)
+}
+
+func GetEditFormUnscoped(ctx *web.EventContext) (ok bool) {
+	ok, _ = ctx.ContextValue(ctxEditFormUnscoped).(bool)
+	return
 }

@@ -72,7 +72,7 @@ func (f *FormBuilder) Build() (form *Form) {
 	overlayType := f.overlayMode
 
 	if f.portalName == "" {
-		form.Portal = actions.OverlayMode(overlayType).PortalName()
+		form.Portal = overlayType.PortalName()
 	}
 
 	{
@@ -124,126 +124,76 @@ type Form struct {
 	AutoSave     bool
 	Portal       string
 	PortalLoader *web.VueEventTagBuilder
-	Title,
+	Title        string
 	Notice,
 	Body h.HTMLComponent
-	Tabs      []TabComponentFunc
-	SidePanel ObjectComponentFunc
+	Tabs []TabComponentFunc
+
+	TopLeftActions  h.HTMLComponents
+	TopRightActions h.HTMLComponents
 
 	MainPortals   h.HTMLComponents
 	PrimaryAction h.HTMLComponent
 	Menu          h.HTMLComponents
 	Actions       h.HTMLComponents
+	ScopeDisabled bool
 }
 
 func (f *Form) Component() (comp h.HTMLComponent) {
-	comp = defaultToPage(commonPageConfig{
-		main:      web.Scope(f.Body),
-		tabPanels: f.Tabs,
-		sidePanel: f.SidePanel,
-	}, f.Obj, f.b.ctx)
+	var cb = &ContentComponentBuilder{
+		Obj:     f.Obj,
+		Context: f.b.ctx,
+		Tabs:    f.Tabs,
+		Title:   f.Title,
+		Menu:    f.Menu,
+		Body:    f.Body,
+
+		TopLeftActions:  f.TopLeftActions,
+		TopRightActions: f.TopRightActions,
+		MainPortals:     f.MainPortals,
+
+		Overlay: &ContentComponentBuilderOverlay{
+			Mode: f.b.overlayMode,
+		},
+	}
 
 	var (
-		overlay        = f.b.overlayMode
-		primaryActions []h.HTMLComponent
+		overlay = f.b.overlayMode
 	)
 
+	cb.PreBody = append(cb.PreBody, f.Notice)
+
 	if f.b.ctx.R.FormValue(ParamActionsDisabled) != "true" {
-		if f.PrimaryAction != nil {
-			primaryActions = append(primaryActions, f.PrimaryAction)
-		}
-
-		actionsElements := f.Actions
-
-		if !overlay.Overlayed() && f.PrimaryAction != nil {
-			actionsElements = append(actionsElements, primaryActions...)
-			primaryActions = nil
-		}
-
-		if len(actionsElements) > 0 {
-			comp = h.Components(
-				VCardText(comp),
-				// h.If(!f.AutoSave, VCardActions(actionButtons)),
-				VCardActions(append([]h.HTMLComponent{VSpacer()}, actionsElements...)...),
-			)
-		}
-
-		if overlay.Overlayed() {
-			primaryActions = append(primaryActions, h.If(!f.AutoSave,
-				VBtn("").
-					Variant(VariantFlat).
-					Icon(true).
-					Children(
-						VIcon("mdi-close"),
-					).Attr("@click.stop", "closer.show = false"),
-			))
-		}
+		cb.PrimaryAction = f.PrimaryAction
+		cb.BottomActions = f.Actions
 	}
 
-	if !overlay.Overlayed() {
-		return
-	}
-	// b.RowMenu().listingItemFuncs(ctx)...
-
-	appBarComps := append([]h.HTMLComponent{
-		VToolbarTitle("").Class("pl-2").
-			Children(f.Title),
-		VSpacer(),
-	}, primaryActions...)
-
-	comp = VSheet(
-		VCard(comp).Variant(VariantFlat),
-	).Class("pa-2")
-
-	if len(f.Menu) > 0 {
-		appBarComps = append(h.HTMLComponents{
-			VBtn("").
-				Variant(VariantFlat).
-				Icon(true).
-				Density("compact").
-				Children(
-					VIcon("mdi-menu"),
-				).Attr("@click.menu", "locals.menu = !locals.menu"),
-		}, appBarComps...)
-
-		comp = h.HTMLComponents{
-			VNavigationDrawer(f.Menu).
-				// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-				Class("v-navigation-drawer--temporary").
-				Attr("v-model", "locals.menu").
-				Location(LocationLeft).
-				Temporary(true).
-				// Fixed(true).
-				Attr(":height", `"100%"`),
-			comp,
+	if overlay.Overlayed() {
+		if !f.ScopeDisabled {
+			cb.Scope = web.Scope().Form().Locals().Vars().Closes()
 		}
+		return cb.BuildOverlay()
 	}
-
-	comp = web.Scope(
-		f.Notice,
-		VLayout(
-			h.If(!f.MB.singleton,
-				VAppBar(appBarComps...).Color("white").Elevation(0),
-			),
-			VMain(
-				comp,
-			),
-		).Attr(":height", `"100%"`)).VSlot("{ form, locals, vars, closer }").Init("{menu: false}")
-	return
-}
-
-func (f *Form) FullComponent() (comp h.HTMLComponent) {
-	return append(f.MainPortals, f.Component())
+	if !f.ScopeDisabled {
+		scope := GetScope(f.b.ctx)
+		if scope == nil {
+			scope = web.Scope()
+			cb.Scope = scope
+		}
+		scope.Form().Locals().Vars()
+	}
+	return cb.BuildPage()
 }
 
 func (f *Form) Respond(r *web.EventResponse) {
-	comp := f.FullComponent()
+	comp := f.Component()
 
 	switch f.b.overlayMode {
 	case actions.Dialog:
 		f.MB.p.Dialog().
 			SetTargetPortal(f.Portal).
 			SetContentPortalName(f.Portal+"Content").
+			SetScrollable(true).
 			Respond(r, comp)
 	default:
 		if f.Portal != "" && f.b.overlayMode.IsDrawer() {
@@ -252,6 +202,8 @@ func (f *Form) Respond(r *web.EventResponse) {
 				SetValidWidth(f.MB.rightDrawerWidth)
 
 			d.Respond(r, comp)
+		} else if f.Portal != "" {
+			r.UpdatePortal(f.Portal, comp)
 		} else {
 			r.Body = comp
 		}

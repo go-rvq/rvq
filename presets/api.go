@@ -15,7 +15,7 @@ type (
 	ComponentFunc             func(ctx *web.EventContext) h.HTMLComponent
 	ObjectComponentFunc       func(obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	TabComponentFunc          func(obj interface{}, ctx *web.EventContext) (tab h.HTMLComponent, content h.HTMLComponent)
-	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) h.HTMLComponent
+	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) string
 )
 
 type FieldComponentFunc func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent
