@@ -375,7 +375,8 @@ $border-radius-custom: 4px;
   $table-row-height: 60px !default,
   $table-border-color: variables.$color-grey-300 !default,
   // Chip
-  $chip-border-radius: 4px !default, // can't use $rounded map here
+  $chip-border-radius: 4px !default,
+  // can't use $rounded map here
   // Card
-  $card-item-padding: 16px,
+  $card-item-padding: 16px
 );

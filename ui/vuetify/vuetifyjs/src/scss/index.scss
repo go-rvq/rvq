@@ -1,3 +1,10 @@
+@use "./variables" as variables;
+
 @import "./components/VTable";
 @import "./components/VCard";
 @import "./components/VInput";
+
+:root {
+  --v-shadow-key-umbra-color: 0, 0, 0;
+  --v-shadow-lg-opacity: 0.3;
+}

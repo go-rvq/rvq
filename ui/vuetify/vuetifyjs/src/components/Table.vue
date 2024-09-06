@@ -1,73 +1,66 @@
 <template>
   <v-table>
     <thead>
-    <tr>
-      <th class="text-left">
-        Name
-      </th>
-      <th class="text-left">
-        Calories
-      </th>
-    </tr>
+      <tr>
+        <th class="text-left">Name</th>
+        <th class="text-left">Calories</th>
+      </tr>
     </thead>
     <tbody>
-    <tr
-        v-for="item in desserts"
-        :key="item.name"
-    >
-      <td>{{ item.name }}</td>
-      <td>{{ item.calories }}</td>
-    </tr>
+      <tr v-for="item in desserts" :key="item.name">
+        <td>{{ item.name }}</td>
+        <td>{{ item.calories }}</td>
+      </tr>
     </tbody>
   </v-table>
 </template>
 <script>
 export default {
-  data () {
+  data() {
     return {
       desserts: [
         {
-          name: 'Frozen Yogurt',
+          name: "Frozen Yogurt",
           calories: 159,
         },
         {
-          name: 'Ice cream sandwich',
+          name: "Ice cream sandwich",
           calories: 237,
         },
         {
-          name: 'Eclair',
+          name: "Eclair",
           calories: 262,
         },
         {
-          name: 'Cupcake',
+          name: "Cupcake",
           calories: 305,
         },
         {
-          name: 'Gingerbread',
+          name: "Gingerbread",
           calories: 356,
         },
         {
-          name: 'Jelly bean',
+          name: "Jelly bean",
           calories: 375,
         },
         {
-          name: 'Lollipop',
+          name: "Lollipop",
           calories: 392,
         },
         {
-          name: 'Honeycomb',
+          name: "Honeycomb",
           calories: 408,
         },
         {
-          name: 'Donut',
+          name: "Donut",
           calories: 452,
         },
         {
-          name: 'KitKat',
+          name: "KitKat",
           calories: 518,
         },
       ],
-    }
+    };
   },
-}
+};
 </script>
