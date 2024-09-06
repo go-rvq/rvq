@@ -1,87 +1,72 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
+
+	v "github.com/qor5/x/v3/ui/vuetify"
 
 	h "github.com/theplant/htmlgo"
 )
 
 type VXDatePickerBuilder struct {
-	tag *h.HTMLTagBuilder
+	v.VTagBuilder[*VXDatePickerBuilder]
 }
 
 func VXDatePicker() (r *VXDatePickerBuilder) {
-	r = &VXDatePickerBuilder{
-		tag: h.Tag("vx-datepicker"),
-	}
-	return
+	return v.VTag(&VXDatePickerBuilder{}, "vx-datepicker")
 }
 
 func (b *VXDatePickerBuilder) Value(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":value", h.JSONString(v))
+	b.Attr(":value", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) Label(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":label", h.JSONString(v))
+	b.Attr(":label", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) DialogWidth(v int) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":dialogWidth", h.JSONString(v))
+	b.Attr(":dialogWidth", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) DateFormat(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":dateFormat", h.JSONString(v))
+	b.Attr(":dateFormat", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) TimeFormat(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":timeFormat", h.JSONString(v))
+	b.Attr(":timeFormat", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) ClearText(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":clearText", h.JSONString(v))
+	b.Attr(":clearText", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) OkText(v string) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":okText", h.JSONString(v))
+	b.Attr(":okText", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) Disabled(v bool) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":disabled", h.JSONString(v))
+	b.Attr(":disabled", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) DatePickerProps(v DatePickerProps) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":datePickerProps", h.JSONString(v))
+	b.Attr(":datePickerProps", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) TimePickerProps(v TimePickerProps) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":timePickerProps", h.JSONString(v))
-	return b
-}
-
-func (b *VXDatePickerBuilder) SetAttr(k string, v interface{}) {
-	b.tag.SetAttr(k, v)
-}
-
-func (b *VXDatePickerBuilder) Attr(vs ...interface{}) (r *VXDatePickerBuilder) {
-	b.tag.Attr(vs...)
+	b.Attr(":timePickerProps", h.JSONString(v))
 	return b
 }
 
 func (b *VXDatePickerBuilder) HideDetails(v bool) (r *VXDatePickerBuilder) {
-	b.tag.Attr(":hide-details", fmt.Sprint(v))
+	b.Attr(":hide-details", fmt.Sprint(v))
 	return b
-}
-
-func (b *VXDatePickerBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
 }

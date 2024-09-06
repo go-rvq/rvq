@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v "github.com/qor5/x/v3/ui/vuetify"
+
 	h "github.com/theplant/htmlgo"
 )
 
@@ -78,9 +79,13 @@ func (b *CardBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	return v.VCard(
 		sb,
 		v.VToolbar(
-			v.VToolbarTitle("").Children(b.header...),
+			v.VToolbarTitle("", b.header...),
 			v.VSpacer(),
-		).Flat(true).AppendChildren(b.actions...).Color("white"),
+		).Flat(true).AppendChild(b.actions...).Color("white"),
 		hr,
-	).Variant(b.variant).Class(b.classNames...).AppendChildren(b.children...).MarshalHTML(ctx)
+	).
+		Variant(b.variant).
+		Class(b.classNames...).
+		AppendChild(b.children...).
+		MarshalHTML(ctx)
 }

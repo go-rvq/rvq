@@ -1,377 +1,345 @@
 package vuetify
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/theplant/htmlgo"
 )
 
 type VDataTableBuilder struct {
-	tag *h.HTMLTagBuilder
+	VTagBuilder[*VDataTableBuilder]
 }
 
-func VDataTable(children ...h.HTMLComponent) (r *VDataTableBuilder) {
-	r = &VDataTableBuilder{
-		tag: h.Tag("v-data-table").Children(children...),
-	}
-	return
+func VDataTable(children ...h.HTMLComponent) *VDataTableBuilder {
+	return VTag(&VDataTableBuilder{}, "v-data-table", children...)
 }
 
 func (b *VDataTableBuilder) Width(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":width", h.JSONString(v))
+	b.Attr(":width", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) HeaderProps(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":header-props", h.JSONString(v))
+	b.Attr(":header-props", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) CellProps(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":cell-props", h.JSONString(v))
+	b.Attr(":cell-props", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Mobile(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":mobile", fmt.Sprint(v))
+	b.Attr(":mobile", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Loading(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":loading", h.JSONString(v))
+	b.Attr(":loading", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Headers(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":headers", h.JSONString(v))
+	b.Attr(":headers", h.JSONString(v))
+	return b
+}
+
+func (b *VDataTableBuilder) HeadersVar(v string) (r *VDataTableBuilder) {
+	b.Attr(":headers", v)
 	return b
 }
 
 func (b *VDataTableBuilder) Page(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":page", h.JSONString(v))
+	b.Attr(":page", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ItemsPerPage(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":items-per-page", h.JSONString(v))
+	b.Attr(":items-per-page", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) LoadingText(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("loading-text", v)
+	b.Attr("loading-text", v)
 	return b
 }
 
 func (b *VDataTableBuilder) HideNoData(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":hide-no-data", fmt.Sprint(v))
+	b.Attr(":hide-no-data", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Items(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":items", h.JSONString(v))
+	b.Attr(":items", h.JSONString(v))
+	return b
+}
+
+func (b *VDataTableBuilder) ItemsVar(v string) (r *VDataTableBuilder) {
+	b.Attr(":items", v)
 	return b
 }
 
 func (b *VDataTableBuilder) NoDataText(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("no-data-text", v)
+	b.Attr("no-data-text", v)
 	return b
 }
 
 func (b *VDataTableBuilder) MobileBreakpoint(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":mobile-breakpoint", h.JSONString(v))
+	b.Attr(":mobile-breakpoint", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) RowProps(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":row-props", h.JSONString(v))
+	b.Attr(":row-props", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) HideDefaultBody(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":hide-default-body", fmt.Sprint(v))
+	b.Attr(":hide-default-body", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) HideDefaultFooter(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":hide-default-footer", fmt.Sprint(v))
+	b.Attr(":hide-default-footer", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) HideDefaultHeader(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":hide-default-header", fmt.Sprint(v))
+	b.Attr(":hide-default-header", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Search(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("search", v)
+	b.Attr("search", v)
 	return b
 }
 
 func (b *VDataTableBuilder) ExpandOnClick(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":expand-on-click", fmt.Sprint(v))
+	b.Attr(":expand-on-click", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ShowExpand(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":show-expand", fmt.Sprint(v))
+	b.Attr(":show-expand", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Expanded(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":expanded", h.JSONString(v))
+	b.Attr(":expanded", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) GroupBy(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":group-by", h.JSONString(v))
+	b.Attr(":group-by", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ItemValue(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":item-value", h.JSONString(v))
+	b.Attr(":item-value", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ItemSelectable(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":item-selectable", h.JSONString(v))
+	b.Attr(":item-selectable", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ReturnObject(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":return-object", fmt.Sprint(v))
+	b.Attr(":return-object", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ShowSelect(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":show-select", fmt.Sprint(v))
+	b.Attr(":show-select", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) SelectStrategy(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":select-strategy", h.JSONString(v))
+	b.Attr(":select-strategy", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ModelValue(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":model-value", h.JSONString(v))
+	b.Attr(":model-value", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ValueComparator(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":value-comparator", h.JSONString(v))
+	b.Attr(":value-comparator", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) SortBy(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":sort-by", h.JSONString(v))
+	b.Attr(":sort-by", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) MultiSort(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":multi-sort", fmt.Sprint(v))
+	b.Attr(":multi-sort", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) MustSort(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":must-sort", fmt.Sprint(v))
+	b.Attr(":must-sort", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) CustomKeySort(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":custom-key-sort", h.JSONString(v))
+	b.Attr(":custom-key-sort", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Color(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("color", v)
+	b.Attr("color", v)
 	return b
 }
 
 func (b *VDataTableBuilder) Sticky(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":sticky", fmt.Sprint(v))
+	b.Attr(":sticky", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) DisableSort(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":disable-sort", fmt.Sprint(v))
+	b.Attr(":disable-sort", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) SortAscIcon(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":sort-asc-icon", h.JSONString(v))
+	b.Attr(":sort-asc-icon", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) SortDescIcon(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":sort-desc-icon", h.JSONString(v))
+	b.Attr(":sort-desc-icon", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) FixedHeader(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":fixed-header", fmt.Sprint(v))
+	b.Attr(":fixed-header", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) FixedFooter(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":fixed-footer", fmt.Sprint(v))
+	b.Attr(":fixed-footer", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Height(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":height", h.JSONString(v))
+	b.Attr(":height", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Hover(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":hover", fmt.Sprint(v))
+	b.Attr(":hover", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Density(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":density", h.JSONString(v))
+	b.Attr(":density", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) Tag(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("tag", v)
+	b.Attr("tag", v)
 	return b
 }
 
 func (b *VDataTableBuilder) Theme(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("theme", v)
+	b.Attr("theme", v)
 	return b
 }
 
 func (b *VDataTableBuilder) FilterMode(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":filter-mode", h.JSONString(v))
+	b.Attr(":filter-mode", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) NoFilter(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":no-filter", fmt.Sprint(v))
+	b.Attr(":no-filter", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) CustomFilter(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":custom-filter", h.JSONString(v))
+	b.Attr(":custom-filter", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) CustomKeyFilter(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":custom-key-filter", h.JSONString(v))
+	b.Attr(":custom-key-filter", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) FilterKeys(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":filter-keys", h.JSONString(v))
+	b.Attr(":filter-keys", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) PrevIcon(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("prev-icon", v)
+	b.Attr("prev-icon", v)
 	return b
 }
 
 func (b *VDataTableBuilder) NextIcon(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("next-icon", v)
+	b.Attr("next-icon", v)
 	return b
 }
 
 func (b *VDataTableBuilder) FirstIcon(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("first-icon", v)
+	b.Attr("first-icon", v)
 	return b
 }
 
 func (b *VDataTableBuilder) LastIcon(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("last-icon", v)
+	b.Attr("last-icon", v)
 	return b
 }
 
 func (b *VDataTableBuilder) ItemsPerPageText(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("items-per-page-text", v)
+	b.Attr("items-per-page-text", v)
 	return b
 }
 
 func (b *VDataTableBuilder) PageText(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("page-text", v)
+	b.Attr("page-text", v)
 	return b
 }
 
 func (b *VDataTableBuilder) FirstPageLabel(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("first-page-label", v)
+	b.Attr("first-page-label", v)
 	return b
 }
 
 func (b *VDataTableBuilder) PrevPageLabel(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("prev-page-label", v)
+	b.Attr("prev-page-label", v)
 	return b
 }
 
 func (b *VDataTableBuilder) NextPageLabel(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("next-page-label", v)
+	b.Attr("next-page-label", v)
 	return b
 }
 
 func (b *VDataTableBuilder) LastPageLabel(v string) (r *VDataTableBuilder) {
-	b.tag.Attr("last-page-label", v)
+	b.Attr("last-page-label", v)
 	return b
 }
 
 func (b *VDataTableBuilder) ItemsPerPageOptions(v interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(":items-per-page-options", h.JSONString(v))
+	b.Attr(":items-per-page-options", h.JSONString(v))
 	return b
 }
 
 func (b *VDataTableBuilder) ShowCurrentPage(v bool) (r *VDataTableBuilder) {
-	b.tag.Attr(":show-current-page", fmt.Sprint(v))
-	return b
-}
-
-func (b *VDataTableBuilder) SetAttr(k string, v interface{}) {
-	b.tag.SetAttr(k, v)
-}
-
-func (b *VDataTableBuilder) Attr(vs ...interface{}) (r *VDataTableBuilder) {
-	b.tag.Attr(vs...)
-	return b
-}
-
-func (b *VDataTableBuilder) Children(children ...h.HTMLComponent) (r *VDataTableBuilder) {
-	b.tag.Children(children...)
-	return b
-}
-
-func (b *VDataTableBuilder) AppendChildren(children ...h.HTMLComponent) (r *VDataTableBuilder) {
-	b.tag.AppendChildren(children...)
-	return b
-}
-
-func (b *VDataTableBuilder) PrependChildren(children ...h.HTMLComponent) (r *VDataTableBuilder) {
-	b.tag.PrependChildren(children...)
-	return b
-}
-
-func (b *VDataTableBuilder) Class(names ...string) (r *VDataTableBuilder) {
-	b.tag.Class(names...)
-	return b
-}
-
-func (b *VDataTableBuilder) ClassIf(name string, add bool) (r *VDataTableBuilder) {
-	b.tag.ClassIf(name, add)
+	b.Attr(":show-current-page", fmt.Sprint(v))
 	return b
 }
 
 func (b *VDataTableBuilder) On(name string, value string) (r *VDataTableBuilder) {
-	b.tag.Attr(fmt.Sprintf("v-on:%s", name), value)
+	b.Attr(fmt.Sprintf("v-on:%s", name), value)
 	return b
 }
 
 func (b *VDataTableBuilder) Bind(name string, value string) (r *VDataTableBuilder) {
-	b.tag.Attr(fmt.Sprintf("v-bind:%s", name), value)
+	b.Attr(fmt.Sprintf("v-bind:%s", name), value)
 	return b
-}
-
-func (b *VDataTableBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
 }

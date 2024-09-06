@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	v "github.com/qor5/x/v3/ui/vuetify"
+
 	"github.com/qor5/web/v3"
+
 	h "github.com/theplant/htmlgo"
 )
 
 type VXSelectOneBuilder struct {
-	tag             *h.HTMLTagBuilder
+	v.VTagBuilder[*VXSelectOneBuilder]
 	selectedItem    interface{}
 	items           interface{}
 	searchItemsFunc string
@@ -17,20 +20,7 @@ type VXSelectOneBuilder struct {
 }
 
 func VXSelectOne(children ...h.HTMLComponent) (r *VXSelectOneBuilder) {
-	r = &VXSelectOneBuilder{
-		tag: h.Tag("vx-selectone").Children(children...),
-	}
-	return
-}
-
-func (b *VXSelectOneBuilder) Attr(vs ...interface{}) *VXSelectOneBuilder {
-	b.tag.Attr(vs...)
-	return b
-}
-
-func (b *VXSelectOneBuilder) SetAttr(k string, v interface{}) *VXSelectOneBuilder {
-	b.tag.SetAttr(k, v)
-	return b
+	return v.VTag(&VXSelectOneBuilder{}, "vx-selectone", children...)
 }
 
 func (b *VXSelectOneBuilder) Items(v interface{}) (r *VXSelectOneBuilder) {
@@ -54,32 +44,37 @@ func (b *VXSelectOneBuilder) ItemsSearcher(eb *web.VueEventTagBuilder) (r *VXSel
 }
 
 func (b *VXSelectOneBuilder) ItemText(v string) (r *VXSelectOneBuilder) {
-	b.tag.Attr("item-text", v)
+	b.Attr("item-text", v)
+	return b
+}
+
+func (b *VXSelectOneBuilder) ItemTextExpr(v string) (r *VXSelectOneBuilder) {
+	b.Attr(":item-text", v)
 	return b
 }
 
 func (b *VXSelectOneBuilder) ItemValue(v string) (r *VXSelectOneBuilder) {
-	b.tag.Attr("item-value", v)
+	b.Attr("item-value", v)
 	return b
 }
 
 func (b *VXSelectOneBuilder) Label(v string) (r *VXSelectOneBuilder) {
-	b.tag.Attr("label", v)
+	b.Attr("label", v)
 	return b
 }
 
 func (b *VXSelectOneBuilder) AddItemLabel(v string) (r *VXSelectOneBuilder) {
-	b.tag.Attr("add-item-label", v)
+	b.Attr("add-item-label", v)
 	return b
 }
 
 func (b *VXSelectOneBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	if b.itemsSearcher != nil {
-		b.tag.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json()}`, b.itemsSearcher.String()))
+		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json()}`, b.itemsSearcher.String()))
 	} else if b.searchItemsFunc != "" {
-		b.tag.Attr(":search-items-func", fmt.Sprintf(`function(val){return $plaid().eventFunc("%s").query("keyword", val).json()}`, b.searchItemsFunc))
+		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return $plaid().eventFunc("%s").query("keyword", val).json()}`, b.searchItemsFunc))
 	} else {
-		b.tag.Attr(":items", b.items)
+		b.Attr(":items", b.items)
 	}
 
 	var items []any
@@ -87,6 +82,6 @@ func (b *VXSelectOneBuilder) MarshalHTML(ctx context.Context) (r []byte, err err
 		items = append(items, b.selectedItem)
 	}
 
-	b.tag.Attr(":selected-items", items)
-	return b.tag.MarshalHTML(ctx)
+	b.Attr(":selected-items", items)
+	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
 }

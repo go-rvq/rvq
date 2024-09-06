@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, Ref } from 'vue'
+import {computed, onMounted, ref, Ref} from 'vue'
 
 interface LinkageSelectItem {
   ID: string

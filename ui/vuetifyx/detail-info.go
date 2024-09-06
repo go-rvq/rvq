@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	v "github.com/qor5/x/v3/ui/vuetify"
+
 	h "github.com/theplant/htmlgo"
 )
 
@@ -22,7 +23,7 @@ func DetailInfo(columns ...h.HTMLComponent) (r *DetailInfoBuilder) {
 func (b *DetailInfoBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	row := v.VRow()
 	for _, col := range b.columns {
-		row.AppendChildren(v.VCol(col).Md(true))
+		row.AppendChild(v.VCol(col).Md(true))
 	}
 
 	return v.VContainer(row).Class(b.classes...).MarshalHTML(ctx)
@@ -69,9 +70,12 @@ func (b *DetailFieldBuilder) Icon(v h.HTMLComponent) (r *DetailFieldBuilder) {
 }
 
 func (b *DetailFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	ki := h.Tag("div").Children(
-		h.Tag("label").Text(b.label).Class("blue-grey--text lighten-3").Style(fmt.Sprintf("min-width: %s", b.labelMinWidth)),
-	).Class("d-flex pb-2")
+	ki := h.Tag("div").
+		Children(
+			h.Tag("label").
+				Text(b.label).
+				Class("blue-grey--text lighten-3").Style(fmt.Sprintf("min-width: %s", b.labelMinWidth)),
+		).Class("d-flex pb-2")
 
 	if b.icon != nil {
 		ki.AppendChildren(b.icon)
@@ -117,7 +121,9 @@ func (b *DetailColumnBuilder) MarshalHTML(ctx context.Context) (r []byte, err er
 	detailInfoBody := h.Tag("div")
 	if len(b.header) > 0 {
 		detailInfoBody.AppendChildren(
-			h.Tag("h5").Text(b.header).Class("subtitle-2 pb-2"),
+			h.Tag("h5").
+				Text(b.header).
+				Class("subtitle-2 pb-2"),
 		)
 	}
 	detailInfoBody.AppendChildren(b.children...)
@@ -144,9 +150,12 @@ func (b *OptionalTextBuilder) MarshalHTML(ctx context.Context) (r []byte, err er
 	var body h.HTMLComponent
 
 	if len(b.text) > 0 {
-		body = h.Tag("span").Text(b.text)
+		body = h.Tag("span").
+			Text(b.text)
 	} else {
-		body = h.Tag("span").Class("grey--text lighten-5").Text(b.zeroLabel)
+		body = h.Tag("span").
+			Class("grey--text lighten-5").
+			Text(b.zeroLabel)
 	}
 
 	return body.MarshalHTML(ctx)

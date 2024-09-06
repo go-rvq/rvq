@@ -5,7 +5,7 @@
       <v-list-item
         v-for="element in internalSelectedItems"
         :prepend-avatar="element[itemImage]"
-        :title="element[itemText]"
+        :title="toText(element)"
         animation="300"
       >
         <template v-slot:append>
@@ -35,16 +35,13 @@
       <v-list-item
         v-bind="props"
         :prepend-avatar="item.raw[itemImage]"
-        :title="item.raw[itemText]"
+        :title="toText(item.raw)"
       ></v-list-item>
     </template>
   </v-autocomplete>
 </template>
 <script setup lang="ts">
-import draggable from 'vuedraggable'
-
-import { onMounted, Ref, ref } from 'vue'
-import { aN } from 'vitest/dist/reporters-P7C2ytIv'
+import {onMounted, Ref, ref} from 'vue'
 
 const props = defineProps({
   items: {
@@ -100,6 +97,10 @@ onMounted(() => {
       return props.items.find((item: any) => item[props.itemValue] === id)
     })
   }
+  if (internalSelectedItems.value.length) {
+    setTimeout(() => setValue(), 1)
+  }
+  console.log(typeof props.itemText, props.itemText)
 })
 
 // methods
@@ -135,6 +136,13 @@ const setValue = () => {
   emit('update:modelValue', val)
 }
 
+let toText = (item: any): any => item[props.itemText]
+
+if (typeof toText === 'function') {
+  const tt: any = props.itemText
+  toText = tt as (item: any) => any
+}
+
 let search: any, focused: any
 
 if (props.searchItemsFunc) {
@@ -159,7 +167,7 @@ if (props.searchItemsFunc) {
       })
   }
 
-  search = searchDebounce(doSearch, 800)
+  search = searchDebounce(doSearch, 2000)
   focused = (val: boolean) => {
     if (val) {
       doSearch('')

@@ -54,9 +54,9 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { format, parse } from 'date-fns'
+import {format, parse} from 'date-fns'
 
-import { computed, nextTick, onMounted, Ref, ref, watch } from 'vue'
+import {computed, nextTick, onMounted, Ref, ref} from 'vue'
 
 const DEFAULT_TIME = '00:00:00'
 const DEFAULT_DATE_FORMAT = 'yyyy-MM-dd'

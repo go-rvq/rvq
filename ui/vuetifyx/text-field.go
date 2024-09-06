@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
 
+	"github.com/qor5/web/v3"
 	h "github.com/theplant/htmlgo"
 )
 

@@ -1,14 +1,14 @@
 package vuetify
 
-import h "github.com/theplant/htmlgo"
+import (
+	h "github.com/theplant/htmlgo"
+)
 
-func VTable(children ...h.HTMLComponent) (r *VTableBuilder) {
-	r = &VTableBuilder{
-		tag: h.Tag("v-table").Children(
-			h.Template(
-				children...,
-			).Attr("#default", true),
-		),
-	}
-	return
+func VTable(children ...h.HTMLComponent) *VTableBuilder {
+	return VTag(
+		&VTableBuilder{},
+		"v-table",
+		h.Template(children...).
+			Attr("#default", true),
+	)
 }

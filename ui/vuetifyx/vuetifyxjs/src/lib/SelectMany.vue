@@ -52,8 +52,7 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 
-import { onMounted, Ref, ref } from 'vue'
-import { aN } from 'vitest/dist/reporters-P7C2ytIv'
+import {onMounted, Ref, ref} from 'vue'
 
 const props = defineProps({
   items: {
@@ -109,6 +108,7 @@ onMounted(() => {
       return props.items.find((item: any) => item[props.itemValue] === id)
     })
   }
+  setTimeout(() => setValue(), 1)
 })
 
 // methods

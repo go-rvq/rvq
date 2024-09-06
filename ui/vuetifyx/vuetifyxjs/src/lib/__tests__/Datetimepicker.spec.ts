@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import {expect, it} from 'vitest'
 
 import Datetimepicker from '../Datetimepicker.vue'
-import { mountTemplate } from '@/lib/__tests__/testutils'
-import { nextTick, watch } from 'vue'
-import { flushPromises } from '@vue/test-utils'
+import {mountTemplate} from '@/lib/__tests__/testutils'
+import {nextTick} from 'vue'
+import {flushPromises} from '@vue/test-utils'
 
 it('Datetimepicker modelValue', async () => {
   const wrapper = mountTemplate(Datetimepicker, {

@@ -106,5 +106,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-//replace	github.com/qor5/web => ../web
+replace github.com/qor5/web/v3 => ../web
+
 //replace github.com/theplant/docgo => ../../docgo/

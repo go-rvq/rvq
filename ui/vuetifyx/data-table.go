@@ -6,8 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
+
+	"github.com/qor5/web/v3"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
@@ -300,9 +301,8 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 				td = h.Td(
 					v.VMenu(
 						web.Slot(
-							v.VBtn("").Children(
-								v.VIcon("mdi-dots-horizontal"),
-							).Attr("v-bind", "props").Variant("text").Size("small"),
+							v.VBtn("", v.VIcon("mdi-dots-horizontal")).
+								Attr("v-bind", "props").Variant("text").Size("small"),
 						).Name("activator").Scope("{ props }"),
 
 						v.VList(

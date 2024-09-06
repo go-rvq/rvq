@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import {expect, it} from 'vitest'
 
 import LinkageSelect from '../LinkageSelect.vue'
-import { mountTemplate } from '@/lib/__tests__/testutils'
-import { nextTick, watch } from 'vue'
+import {mountTemplate} from '@/lib/__tests__/testutils'
+import {nextTick} from 'vue'
 
 it('LinkageSelect modelValue', async () => {
   const wrapper = mountTemplate(LinkageSelect, {

@@ -1,4 +1,4 @@
-import { VNode, h } from 'vue'
+import {h, VNode} from 'vue'
 
 export const Core = {
   props: {

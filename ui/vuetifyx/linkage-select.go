@@ -1,20 +1,16 @@
 package vuetifyx
 
 import (
-	"context"
-
+	v "github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
 
 type VXLinkageSelectBuilber struct {
-	tag *h.HTMLTagBuilder
+	v.VTagBuilder[*VXLinkageSelectBuilber]
 }
 
 func VXLinkageSelect() *VXLinkageSelectBuilber {
-	b := &VXLinkageSelectBuilber{
-		tag: h.Tag("vx-linkageselect"),
-	}
-	return b
+	return v.VTag(&VXLinkageSelectBuilber{}, "vx-linkageselect")
 }
 
 type LinkageSelectItem struct {
@@ -24,49 +20,36 @@ type LinkageSelectItem struct {
 }
 
 func (b *VXLinkageSelectBuilber) Items(vs ...[]*LinkageSelectItem) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":items", vs)
+	b.Attr(":items", vs)
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) Labels(vs ...string) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":labels", vs)
+	b.Attr(":labels", vs)
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) ErrorMessages(vs ...[]string) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":error-messages", vs)
+	b.Attr(":error-messages", vs)
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) Disabled(v bool) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":disabled", h.JSONString(v))
+	b.Attr(":disabled", h.JSONString(v))
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) SelectOutOfOrder(v bool) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":select-out-of-order", h.JSONString(v))
+	b.Attr(":select-out-of-order", h.JSONString(v))
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) Chips(v bool) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":chips", h.JSONString(v))
+	b.Attr(":chips", h.JSONString(v))
 	return b
 }
 
 func (b *VXLinkageSelectBuilber) Row(v bool) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(":row", h.JSONString(v))
+	b.Attr(":row", h.JSONString(v))
 	return b
-}
-
-func (b *VXLinkageSelectBuilber) SetAttr(k string, v interface{}) {
-	b.tag.SetAttr(k, v)
-}
-
-func (b *VXLinkageSelectBuilber) Attr(vs ...interface{}) (r *VXLinkageSelectBuilber) {
-	b.tag.Attr(vs...)
-	return b
-}
-
-func (b *VXLinkageSelectBuilber) MarshalHTML(ctx context.Context) ([]byte, error) {
-	return b.tag.MarshalHTML(ctx)
 }

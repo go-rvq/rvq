@@ -1,247 +1,205 @@
 package vuetify
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/theplant/htmlgo"
 )
 
 type VListItemBuilder struct {
-	tag *h.HTMLTagBuilder
+	VTagBuilder[*VListItemBuilder]
 }
 
-func VListItem(children ...h.HTMLComponent) (r *VListItemBuilder) {
-	r = &VListItemBuilder{
-		tag: h.Tag("v-list-item").Children(children...),
-	}
-	return
+func VListItem(children ...h.HTMLComponent) *VListItemBuilder {
+	return VTag(&VListItemBuilder{}, "v-list-item", children...)
 }
 
 func (b *VListItemBuilder) Title(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":title", h.JSONString(v))
+	b.Attr(":title", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Subtitle(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":subtitle", h.JSONString(v))
+	b.Attr(":subtitle", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Active(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":active", fmt.Sprint(v))
+	b.Attr(":active", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) ActiveClass(v string) (r *VListItemBuilder) {
-	b.tag.Attr("active-class", v)
+	b.Attr("active-class", v)
 	return b
 }
 
 func (b *VListItemBuilder) ActiveColor(v string) (r *VListItemBuilder) {
-	b.tag.Attr("active-color", v)
+	b.Attr("active-color", v)
 	return b
 }
 
 func (b *VListItemBuilder) AppendAvatar(v string) (r *VListItemBuilder) {
-	b.tag.Attr("append-avatar", v)
+	b.Attr("append-avatar", v)
 	return b
 }
 
 func (b *VListItemBuilder) AppendIcon(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":append-icon", h.JSONString(v))
+	b.Attr(":append-icon", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) BaseColor(v string) (r *VListItemBuilder) {
-	b.tag.Attr("base-color", v)
+	b.Attr("base-color", v)
 	return b
 }
 
 func (b *VListItemBuilder) Disabled(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":disabled", fmt.Sprint(v))
+	b.Attr(":disabled", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) Link(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":link", fmt.Sprint(v))
+	b.Attr(":link", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) Nav(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":nav", fmt.Sprint(v))
+	b.Attr(":nav", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) PrependAvatar(v string) (r *VListItemBuilder) {
-	b.tag.Attr("prepend-avatar", v)
+	b.Attr("prepend-avatar", v)
 	return b
 }
 
 func (b *VListItemBuilder) PrependIcon(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":prepend-icon", h.JSONString(v))
+	b.Attr(":prepend-icon", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Ripple(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":ripple", h.JSONString(v))
+	b.Attr(":ripple", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Value(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":value", h.JSONString(v))
+	b.Attr(":value", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Slim(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":slim", fmt.Sprint(v))
+	b.Attr(":slim", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) Border(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":border", h.JSONString(v))
+	b.Attr(":border", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Density(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":density", h.JSONString(v))
+	b.Attr(":density", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Height(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":height", h.JSONString(v))
+	b.Attr(":height", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) MaxHeight(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":max-height", h.JSONString(v))
+	b.Attr(":max-height", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) MaxWidth(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":max-width", h.JSONString(v))
+	b.Attr(":max-width", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) MinHeight(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":min-height", h.JSONString(v))
+	b.Attr(":min-height", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) MinWidth(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":min-width", h.JSONString(v))
+	b.Attr(":min-width", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Width(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":width", h.JSONString(v))
+	b.Attr(":width", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Elevation(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":elevation", h.JSONString(v))
+	b.Attr(":elevation", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Rounded(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":rounded", h.JSONString(v))
+	b.Attr(":rounded", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Tile(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":tile", fmt.Sprint(v))
+	b.Attr(":tile", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) Href(v string) (r *VListItemBuilder) {
-	b.tag.Attr("href", v)
+	b.Attr("href", v)
 	return b
 }
 
 func (b *VListItemBuilder) Replace(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":replace", fmt.Sprint(v))
+	b.Attr(":replace", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) Exact(v bool) (r *VListItemBuilder) {
-	b.tag.Attr(":exact", fmt.Sprint(v))
+	b.Attr(":exact", fmt.Sprint(v))
 	return b
 }
 
 func (b *VListItemBuilder) To(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":to", h.JSONString(v))
+	b.Attr(":to", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Tag(v string) (r *VListItemBuilder) {
-	b.tag.Attr("tag", v)
+	b.Attr("tag", v)
 	return b
 }
 
 func (b *VListItemBuilder) Theme(v string) (r *VListItemBuilder) {
-	b.tag.Attr("theme", v)
+	b.Attr("theme", v)
 	return b
 }
 
 func (b *VListItemBuilder) Color(v string) (r *VListItemBuilder) {
-	b.tag.Attr("color", v)
+	b.Attr("color", v)
 	return b
 }
 
 func (b *VListItemBuilder) Variant(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":variant", h.JSONString(v))
+	b.Attr(":variant", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) Lines(v interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(":lines", h.JSONString(v))
-	return b
-}
-
-func (b *VListItemBuilder) SetAttr(k string, v interface{}) {
-	b.tag.SetAttr(k, v)
-}
-
-func (b *VListItemBuilder) Attr(vs ...interface{}) (r *VListItemBuilder) {
-	b.tag.Attr(vs...)
-	return b
-}
-
-func (b *VListItemBuilder) Children(children ...h.HTMLComponent) (r *VListItemBuilder) {
-	b.tag.Children(children...)
-	return b
-}
-
-func (b *VListItemBuilder) AppendChildren(children ...h.HTMLComponent) (r *VListItemBuilder) {
-	b.tag.AppendChildren(children...)
-	return b
-}
-
-func (b *VListItemBuilder) PrependChildren(children ...h.HTMLComponent) (r *VListItemBuilder) {
-	b.tag.PrependChildren(children...)
-	return b
-}
-
-func (b *VListItemBuilder) Class(names ...string) (r *VListItemBuilder) {
-	b.tag.Class(names...)
-	return b
-}
-
-func (b *VListItemBuilder) ClassIf(name string, add bool) (r *VListItemBuilder) {
-	b.tag.ClassIf(name, add)
+	b.Attr(":lines", h.JSONString(v))
 	return b
 }
 
 func (b *VListItemBuilder) On(name string, value string) (r *VListItemBuilder) {
-	b.tag.Attr(fmt.Sprintf("v-on:%s", name), value)
+	b.Attr(fmt.Sprintf("v-on:%s", name), value)
 	return b
 }
 
 func (b *VListItemBuilder) Bind(name string, value string) (r *VListItemBuilder) {
-	b.tag.Attr(fmt.Sprintf("v-bind:%s", name), value)
+	b.Attr(fmt.Sprintf("v-bind:%s", name), value)
 	return b
-}
-
-func (b *VListItemBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
 }

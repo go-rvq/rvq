@@ -3,19 +3,16 @@ package vuetifyx
 import (
 	"context"
 
-	h "github.com/theplant/htmlgo"
+	v "github.com/qor5/x/v3/ui/vuetify"
 )
 
 type VXMessageListenerBuilder struct {
-	tag        *h.HTMLTagBuilder
+	v.VTagBuilder[*VXMessageListenerBuilder]
 	listenFunc string
 }
 
 func VXMessageListener() (r *VXMessageListenerBuilder) {
-	r = &VXMessageListenerBuilder{
-		tag: h.Tag("vx-messagelistener"),
-	}
-	return
+	return v.VTag(&VXMessageListenerBuilder{}, "vx-messagelistener")
 }
 
 func (b *VXMessageListenerBuilder) ListenFunc(v string) (r *VXMessageListenerBuilder) {
@@ -25,8 +22,8 @@ func (b *VXMessageListenerBuilder) ListenFunc(v string) (r *VXMessageListenerBui
 
 func (b *VXMessageListenerBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	if b.listenFunc != "" {
-		b.tag.Attr(":listen-func", b.listenFunc)
+		b.Attr(":listen-func", b.listenFunc)
 	}
 
-	return b.tag.MarshalHTML(ctx)
+	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
 }

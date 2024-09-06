@@ -3,28 +3,23 @@ package vuetifyx
 import (
 	"context"
 
-	"github.com/qor5/x/v3/ui/vuetify"
+	v "github.com/qor5/x/v3/ui/vuetify"
+
 	h "github.com/theplant/htmlgo"
 )
 
 type VXAutocompleteBuilder struct {
-	tag           *h.HTMLTagBuilder
+	v.VTagBuilder[*VXAutocompleteBuilder]
 	selectedItems interface{}
 	items         interface{}
 }
 
-func VXAutocomplete(children ...h.HTMLComponent) (r *VXAutocompleteBuilder) {
-	r = &VXAutocompleteBuilder{
-		tag: h.Tag("vx-autocomplete").Children(children...),
-	}
-	r.Multiple(true).Chips(true).DeletableChips(true).Clearable(true)
-
-	return
-}
-
-func (b *VXAutocompleteBuilder) ErrorMessages(v ...string) (r *VXAutocompleteBuilder) {
-	vuetify.SetErrorMessages(b.tag, v)
-	return b
+func VXAutocomplete(children ...h.HTMLComponent) *VXAutocompleteBuilder {
+	return v.VTag(&VXAutocompleteBuilder{}, "vx-autocomplete", children...).
+		Multiple(true).
+		Chips(true).
+		DeletableChips(true).
+		Clearable(true)
 }
 
 func (b *VXAutocompleteBuilder) SelectedItems(v interface{}) (r *VXAutocompleteBuilder) {
@@ -33,22 +28,22 @@ func (b *VXAutocompleteBuilder) SelectedItems(v interface{}) (r *VXAutocompleteB
 }
 
 func (b *VXAutocompleteBuilder) HasIcon(v bool) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("has-icon", v)
+	b.Attr("has-icon", v)
 	return b
 }
 
 func (b *VXAutocompleteBuilder) Sorting(v bool) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("sorting", v)
+	b.Attr("sorting", v)
 	return b
 }
 
 func (b *VXAutocompleteBuilder) Variant(v string) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("variant", v)
+	b.Attr("variant", v)
 	return b
 }
 
 func (b *VXAutocompleteBuilder) Density(v string) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("density", v)
+	b.Attr("density", v)
 	return b
 }
 
@@ -58,20 +53,20 @@ func (b *VXAutocompleteBuilder) Items(v interface{}) (r *VXAutocompleteBuilder) 
 }
 
 func (b *VXAutocompleteBuilder) ChipColor(v string) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("chip-color", v)
+	b.Attr("chip-color", v)
 	return b
 }
 
 func (b *VXAutocompleteBuilder) ChipTextColor(v string) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("chip-text-color", v)
+	b.Attr("chip-text-color", v)
 	return b
 }
 
 func (b *VXAutocompleteBuilder) SetDataSource(ds *AutocompleteDataSource) (r *VXAutocompleteBuilder) {
-	b.tag.Attr("remote-url", ds.RemoteURL)
-	b.tag.Attr("event-name", ds.EventName)
-	b.tag.Attr("is-paging", ds.IsPaging)
-	b.tag.Attr("has-icon", ds.HasIcon)
+	b.Attr("remote-url", ds.RemoteURL)
+	b.Attr("event-name", ds.EventName)
+	b.Attr("is-paging", ds.IsPaging)
+	b.Attr("has-icon", ds.HasIcon)
 	return b
 }
 
@@ -79,9 +74,9 @@ func (b *VXAutocompleteBuilder) MarshalHTML(ctx context.Context) (r []byte, err 
 	if b.items == nil {
 		b.items = b.selectedItems
 	}
-	b.tag.Attr(":items", b.items)
-	b.tag.Attr(":selected-items", b.selectedItems)
-	return b.tag.MarshalHTML(ctx)
+	b.Attr(":items", b.items)
+	b.Attr(":selected-items", b.selectedItems)
+	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
 }
 
 type AutocompleteDataSource struct {

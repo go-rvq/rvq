@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import {expect, it} from 'vitest'
 
 import Filter from '../Filter/index.vue'
-import { mountTemplate } from '@/lib/__tests__/testutils'
-import { nextTick, ref, watch } from 'vue'
+import {mountTemplate} from '@/lib/__tests__/testutils'
+import {nextTick, ref} from 'vue'
 
 it('Filter modelValue', async () => {
   const internalValue = [

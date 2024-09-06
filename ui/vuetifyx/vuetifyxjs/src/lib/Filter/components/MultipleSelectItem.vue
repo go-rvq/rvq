@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { SelectOption } from '@/lib/Filter/Model'
-import { ref } from 'vue'
+import {ref} from 'vue'
 
 const props = defineProps<{
   modelValue: any

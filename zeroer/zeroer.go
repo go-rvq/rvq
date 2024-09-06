@@ -7,31 +7,33 @@ type Zeroer interface {
 }
 
 func IsZero(value interface{}) bool {
-	return isZero(reflect.ValueOf(value))
+	return IsZeroValue(reflect.ValueOf(value))
 }
 
-func isNil(value reflect.Value) (handled, ok bool) {
+func IsNilValueH(value reflect.Value) (handled, ok bool) {
 	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface,
+		reflect.Slice:
 		return true, value.IsNil()
 	}
 	return
 }
 
-func mustIsNil(value reflect.Value) bool {
+func IsNilValue(value reflect.Value) bool {
 	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface,
+		reflect.Slice:
 		return value.IsNil()
 	}
 	return false
 }
 
-func isZero(value reflect.Value) (ok bool) {
+func IsZeroValue(value reflect.Value) (ok bool) {
 	if !value.IsValid() {
 		return true
 	}
 
-	if _, ok = isNil(value); ok {
+	if IsNilValue(value) {
 		return
 	}
 
@@ -58,7 +60,7 @@ func isZero(value reflect.Value) (ok bool) {
 		if value.Type().Implements(reflect.TypeOf((*Zeroer)(nil)).Elem()) {
 			return value.Interface().(Zeroer).IsZero()
 		}
-		return isZero(value.Elem())
+		return IsZeroValue(value.Elem())
 	case reflect.Slice:
 		return value.Len() == 0
 	case reflect.Struct:

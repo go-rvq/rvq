@@ -11,38 +11,32 @@ import (
 	"strings"
 	"time"
 
+	v "github.com/qor5/x/v3/ui/vuetify"
+
 	"github.com/qor5/web/v3"
 
 	h "github.com/theplant/htmlgo"
 )
 
 type VXFilterBuilder struct {
+	v.VTagBuilder[*VXFilterBuilder]
 	internalValue    FilterData
-	tag              *h.HTMLTagBuilder
 	updateModelValue interface{}
 }
 
 func VXFilter(value FilterData) (r *VXFilterBuilder) {
-	r = &VXFilterBuilder{
+	return v.VTag(&VXFilterBuilder{
 		internalValue: value,
-		tag:           h.Tag("vx-filter"),
-	}
-
-	return
-}
-
-func (b *VXFilterBuilder) Attr(vs ...interface{}) (r *VXFilterBuilder) {
-	b.tag.Attr(vs...)
-	return b
+	}, "vx-filter")
 }
 
 func (b *VXFilterBuilder) Translations(v FilterTranslations) (r *VXFilterBuilder) {
-	b.tag.Attr(":translations", h.JSONString(v))
+	b.Attr(":translations", h.JSONString(v))
 	return b
 }
 
 func (b *VXFilterBuilder) InternalValue(v FilterData) (r *VXFilterBuilder) {
-	b.tag.Attr(":internal-value", v)
+	b.Attr(":internal-value", v)
 	return b
 }
 
@@ -71,7 +65,7 @@ func (b *VXFilterBuilder) MarshalHTML(ctx context.Context) (r []byte, err error)
 
 	b = b.InternalValue(visibleFilterData).Attr("@update:model-value", b.updateModelValue)
 
-	return b.tag.MarshalHTML(ctx)
+	return b.VTagBuilder.MarshalHTML(ctx)
 }
 
 /*

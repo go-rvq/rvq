@@ -30,21 +30,21 @@ const (
 )
 
 func (b *VContainerBuilder) DType(v DType) (r *VContainerBuilder) {
-	b.tag.Attr(fmt.Sprintf(":d-%s", v), fmt.Sprint(true))
+	b.Attr(fmt.Sprintf(":d-%s", v), fmt.Sprint(true))
 	return b
 }
 
 func (b *VContainerBuilder) TextAlign(s SizeType, a AlignType) (r *VContainerBuilder) {
-	b.tag.Attr(fmt.Sprintf(":text-%s-%s", s, a), fmt.Sprint(true))
+	b.Attr(fmt.Sprintf(":text-%s-%s", s, a), fmt.Sprint(true))
 	return b
 }
 
 func (b *VLayoutBuilder) DType(v DType) (r *VLayoutBuilder) {
-	b.tag.Attr(fmt.Sprintf(":d-%s", v), fmt.Sprint(true))
+	b.Attr(fmt.Sprintf(":d-%s", v), fmt.Sprint(true))
 	return b
 }
 
 func (b *VContainerBuilder) GridList(s SizeType) (r *VContainerBuilder) {
-	b.tag.Attr(fmt.Sprintf(":grid-list-%s", s), fmt.Sprint(true))
+	b.Attr(fmt.Sprintf(":grid-list-%s", s), fmt.Sprint(true))
 	return b
 }

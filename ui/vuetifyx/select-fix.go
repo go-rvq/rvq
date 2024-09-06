@@ -3,26 +3,19 @@ package vuetifyx
 import (
 	"context"
 
-	"github.com/qor5/x/v3/ui/vuetify"
+	v "github.com/qor5/x/v3/ui/vuetify"
+
 	h "github.com/theplant/htmlgo"
 )
 
 type VXSelectBuilder struct {
-	tag           *h.HTMLTagBuilder
+	v.VTagBuilder[*VXSelectBuilder]
 	selectedItems interface{}
 	items         interface{}
 }
 
-func VXSelect(children ...h.HTMLComponent) (r *VXSelectBuilder) {
-	r = &VXSelectBuilder{
-		tag: h.Tag("vx-select").Children(children...),
-	}
-	return
-}
-
-func (b *VXSelectBuilder) ErrorMessages(v ...string) (r *VXSelectBuilder) {
-	vuetify.SetErrorMessages(b.tag, v)
-	return b
+func VXSelect(children ...h.HTMLComponent) *VXSelectBuilder {
+	return v.VTag(&VXSelectBuilder{}, "vx-select", children...)
 }
 
 func (b *VXSelectBuilder) Items(v interface{}) (r *VXSelectBuilder) {
@@ -36,7 +29,7 @@ func (b *VXSelectBuilder) SelectedItems(v interface{}) (r *VXSelectBuilder) {
 }
 
 func (b *VXSelectBuilder) FieldName(v string) (r *VXSelectBuilder) {
-	b.tag.Attr("field-name", v)
+	b.Attr("field-name", v)
 	return b
 }
 
@@ -44,8 +37,8 @@ func (b *VXSelectBuilder) MarshalHTML(ctx context.Context) (r []byte, err error)
 	if b.items == nil {
 		b.items = b.selectedItems
 	}
-	b.tag.Attr(":items", b.items)
-	b.tag.Attr(":selected-items", b.selectedItems)
+	b.Attr(":items", b.items)
+	b.Attr(":selected-items", b.selectedItems)
 
-	return b.tag.MarshalHTML(ctx)
+	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
 }
