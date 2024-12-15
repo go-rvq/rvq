@@ -105,7 +105,7 @@ func VuetifyComponentsKitchen(ctx *web.EventContext) (pr web.PageResponse, err e
 
 			VBtn("Submit").
 				OnClick("submit"),
-		).VSlot("{ locals, form }").FormInit(h.JSONString(fv)),
+		).Locals().Form().FormInit(h.JSONString(fv)),
 	)
 	return
 }

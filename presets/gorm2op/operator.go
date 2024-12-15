@@ -5,9 +5,12 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/data"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -17,20 +20,25 @@ var wildcardReg = regexp.MustCompile(`[%_]`)
 
 type (
 	Mode     uint8
-	Preparer func(db *gorm.DB, mode Mode, obj interface{}, id string, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB
-	Deleter  func(db *gorm.DB, obj interface{}, id string, ctx *web.EventContext) (err error)
+	Preparer func(db *gorm.DB, mode Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB
+	Deleter  func(db *gorm.DB, obj interface{}, id model.ID, ctx *web.EventContext) (err error)
 	Creator  func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (err error)
 	Finder   func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (result any, err error)
 )
 
 const (
-	Search Mode = iota
+	Search Mode = 1 << iota
 	Create
 	Fetch
 	FetchTitle
 	Update
 	Delete
+
+	Read  = Search | Fetch
+	Write = Create | Update
 )
+
+var Modes = []Mode{Search, Create, Fetch, FetchTitle, Update, Delete}
 
 func (m Mode) Is(other ...Mode) bool {
 	for _, mode := range other {
@@ -41,38 +49,37 @@ func (m Mode) Is(other ...Mode) bool {
 	return false
 }
 
-var defaultPreparer Preparer = func(db *gorm.DB, mode Mode, obj interface{}, id string, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
+func (m Mode) Has(o Mode) bool {
+	return m&o == o
+}
+
+func (m Mode) Split() (r []Mode) {
+	for _, mode := range Modes {
+		if m.Has(mode) {
+			r = append(r, mode)
+		}
+	}
+	return
+}
+
+var defaultPreparer Preparer = func(db *gorm.DB, mode Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 	return db
 }
 
 func DataOperator(db *gorm.DB) (r *DataOperatorBuilder) {
-	r = &DataOperatorBuilder{db: db, preparer: defaultPreparer}
-	return
+	return NewCallbacks(&DataOperatorBuilder{db: db.Session(&gorm.Session{}), preparer: defaultPreparer})
 }
-
-type Callback func(state *CallbackState) (err error)
 
 type DataOperatorBuilder struct {
-	db         *gorm.DB
-	preparer   Preparer
-	deleter    Deleter
-	creator    Creator
-	updator    Deleter
-	finder     Finder
-	preCreate  []Callback
-	postCreate []Callback
-	preUpdate  []Callback
-	postUpdate []Callback
-}
+	db       *gorm.DB
+	preparer Preparer
+	deleter  Deleter
+	creator  Creator
+	updator  Deleter
+	finder   Finder
 
-func (b *DataOperatorBuilder) PreUpdate(f ...Callback) *DataOperatorBuilder {
-	b.preUpdate = append(b.preUpdate, f...)
-	return b
-}
-
-func (b *DataOperatorBuilder) PostUpdate(f ...Callback) *DataOperatorBuilder {
-	b.postUpdate = append(b.postUpdate, f...)
-	return b
+	CallbacksRegistrator[*DataOperatorBuilder]
+	callbackMergers []CallbackMerger
 }
 
 func (b *DataOperatorBuilder) Updator() Deleter {
@@ -121,11 +128,13 @@ func (b *DataOperatorBuilder) SetFinder(finder Finder) *DataOperatorBuilder {
 }
 
 func (b DataOperatorBuilder) Clone() *DataOperatorBuilder {
+	b.SetDot(&b)
+	b.db = b.db.Session(&gorm.Session{})
 	return &b
 }
 
-func (b DataOperatorBuilder) CloneDataOperator() data.DataOperator {
-	return &b
+func (b *DataOperatorBuilder) CloneDataOperator() data.DataOperator {
+	return b.Clone()
 }
 
 func (b *DataOperatorBuilder) Preparer() Preparer {
@@ -146,16 +155,6 @@ func (b *DataOperatorBuilder) WrapPrepare(f func(old Preparer) Preparer) *DataOp
 	return b
 }
 
-func (b *DataOperatorBuilder) PreCreate(cb ...Callback) *DataOperatorBuilder {
-	b.preCreate = append(b.preCreate, cb...)
-	return b
-}
-
-func (b *DataOperatorBuilder) PostCreate(cb ...Callback) *DataOperatorBuilder {
-	b.postCreate = append(b.postCreate, cb...)
-	return b
-}
-
 func (b *DataOperatorBuilder) dbCopy() *gorm.DB {
 	return b.db.Session(&gorm.Session{})
 }
@@ -167,7 +166,7 @@ func (b DataOperatorBuilder) tx(f func(b *DataOperatorBuilder) error) error {
 	})
 }
 
-func (b *DataOperatorBuilder) Prepare(mode Mode, obj interface{}, id string, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
+func (b *DataOperatorBuilder) Prepare(mode Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 	db := b.dbCopy().Model(obj)
 
 	if params == nil {
@@ -178,13 +177,18 @@ func (b *DataOperatorBuilder) Prepare(mode Mode, obj interface{}, id string, par
 		db = b.preparer(db, mode, obj, id, params, ctx)
 	}
 
+	modelSchema, _ := schema.Parse(obj, &sync.Map{}, db.NamingStrategy)
+	fmt := func(s string) string {
+		return strings.ReplaceAll(s, "#TABLE#", modelSchema.Table)
+	}
+
 	if db.Dialector.Name() == "sqlite" {
 		for _, cond := range params.SQLConditions {
-			db = db.Where(strings.Replace(cond.Query, " ILIKE ", " LIKE ", -1), cond.Args...)
+			db = db.Where(strings.Replace(fmt(cond.Query), " ILIKE ", " LIKE ", -1), cond.Args...)
 		}
 	} else {
 		for _, cond := range params.SQLConditions {
-			db = db.Where(cond.Query, cond.Args...)
+			db = db.Where(fmt(cond.Query), cond.Args...)
 		}
 	}
 	return db
@@ -202,6 +206,7 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 			kw := wildcardReg.ReplaceAllString(params.Keyword, `\$0`)
 			args = append(args, fmt.Sprintf("%%%s%%", kw))
 		}
+
 		params.SQLConditions = append(params.SQLConditions, &presets.SQLCondition{
 			Query: strings.Join(segs, " OR "),
 			Args:  args,
@@ -209,80 +214,83 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 	}
 
 	var (
-		c   int64
-		wh  = b.Prepare(Search, obj, "", params, ctx)
-		cdb = wh.Session(&gorm.Session{}).Count(&c)
+		db = b.Prepare(Search, obj, model.ID{}, params, ctx)
+		do = func(state *CallbackState) (err error) {
+			var (
+				c   int64
+				cdb = state.DB.Count(&c)
+			)
+
+			if err = cdb.Error; err != nil {
+				state.DB = cdb
+				return
+			} else if c == 0 {
+				state.DB = cdb
+				// reset result
+				rv := reflect.ValueOf(obj)
+				rv.Elem().Set(reflect.MakeSlice(rv.Elem().Type(), 0, 0))
+				r = rv.Elem().Interface()
+				return
+			}
+
+			totalCount = int(c)
+
+			if params.PerPage > 0 {
+				db = db.Limit(int(params.PerPage))
+				page := params.Page
+				if page == 0 {
+					page = 1
+				}
+				offset := (page - 1) * params.PerPage
+				db = db.Offset(int(offset))
+			}
+
+			orderBy := params.OrderBy
+
+			if len(orderBy) > 0 {
+				db = db.Order(orderBy)
+			}
+
+			if b.finder != nil {
+				state.Obj, err = b.finder(db, obj, ctx)
+			} else {
+				db = db.Find(state.Obj)
+				err = db.Error
+			}
+
+			state.DB = db
+
+			if err != nil {
+				return
+			}
+
+			r = reflect.ValueOf(obj).Elem().Interface()
+			return
+		}
 	)
 
-	if err = cdb.Error; err != nil {
-		return
-	}
-
-	totalCount = int(c)
-
-	if params.PerPage > 0 {
-		wh = wh.Limit(int(params.PerPage))
-		page := params.Page
-		if page == 0 {
-			page = 1
-		}
-		offset := (page - 1) * params.PerPage
-		wh = wh.Offset(int(offset))
-	}
-
-	orderBy := params.OrderBy
-	if len(orderBy) > 0 {
-		wh = wh.Order(orderBy)
-	}
-
-	if b.finder != nil {
-		obj, err = b.finder(wh, obj, ctx)
-	} else {
-		err = wh.Find(obj).Error
-	}
-
-	if err != nil {
-		return
-	}
-	r = reflect.ValueOf(obj).Elem().Interface()
+	state := b.NewCallbackState(db, obj, ctx)
+	state.SearchParams = params
+	err = b.GetCallbacks(Search, ctx).
+		Build(do).
+		Execute(state)
 	return
 }
 
-func (b *DataOperatorBuilder) primarySluggerWhere(wh *gorm.DB, obj interface{}, id string) *gorm.DB {
-	if id == "" {
-		return wh
-	}
-
-	if slugger, ok := obj.(presets.SlugDecoder); ok {
-		cs := slugger.PrimaryColumnValuesBySlug(id)
-		for key, value := range cs {
-			wh = wh.Where(fmt.Sprintf("%s = ?", key), value)
-		}
-	} else {
-		cond := "id = ?"
-		if tb, ok := obj.(schema.Tabler); ok {
-			cond = fmt.Sprintf(`%q.%s`, tb.TableName(), cond)
-		}
-		wh = wh.Where(cond, id)
-	}
-
-	return wh
+func (b *DataOperatorBuilder) Fetch(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	db := db_utils.ModelIdWhere(b.Prepare(Fetch, obj, id, nil, ctx), obj, id)
+	return b.GetCallbacks(Fetch, ctx).
+		Build(func(state *CallbackState) (err error) {
+			err = state.DB.First(state.Obj).Error
+			if err == gorm.ErrRecordNotFound {
+				err = presets.ErrRecordNotFound
+			}
+			return
+		}).Execute(b.NewCallbackState(db, obj, ctx))
 }
 
-func (b *DataOperatorBuilder) Fetch(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	db := b.primarySluggerWhere(b.Prepare(Fetch, obj, id, nil, ctx), obj, id)
-	db = db.First(obj)
-	if err = db.Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return presets.ErrRecordNotFound
-		}
-		return
-	}
-	return
-}
-
-func (b *DataOperatorBuilder) FetchTitle(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	err = b.primarySluggerWhere(b.Prepare(FetchTitle, obj, id, nil, ctx), obj, id).First(obj).Error
+func (b *DataOperatorBuilder) FetchTitle(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	err = db_utils.ModelIdWhere(b.Prepare(FetchTitle, obj, id, nil, ctx), obj, id).First(obj).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presets.ErrRecordNotFound
@@ -292,8 +300,8 @@ func (b *DataOperatorBuilder) FetchTitle(obj interface{}, id string, ctx *web.Ev
 	return
 }
 
-func (b *DataOperatorBuilder) Save(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	if id == "" {
+func (b *DataOperatorBuilder) Save(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	if id.IsZero() {
 		return b.Create(obj, ctx)
 	}
 	return b.Update(obj, id, ctx)
@@ -306,7 +314,7 @@ func (b *DataOperatorBuilder) Create(obj interface{}, ctx *web.EventContext) (er
 			do func(state *CallbackState) error
 		)
 		if b.creator == nil {
-			db = b.Prepare(Create, obj, "", nil, ctx)
+			db = b.Prepare(Create, obj, model.ID{}, nil, ctx)
 			do = func(state *CallbackState) error {
 				return state.DB.Create(state.Obj).Error
 			}
@@ -315,11 +323,13 @@ func (b *DataOperatorBuilder) Create(obj interface{}, ctx *web.EventContext) (er
 				return b.creator(state.DB, state.Obj, state.Ctx)
 			}
 		}
-		return WithCallbacks(b.preCreate, b.postCreate, b.db, db, obj, ctx, do)
+		return b.GetCallbacks(Create, ctx).
+			Build(do).
+			Execute(b.NewCallbackState(db, obj, ctx))
 	})
 }
 
-func (b *DataOperatorBuilder) Update(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (b *DataOperatorBuilder) Update(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 	return b.tx(func(b *DataOperatorBuilder) (err error) {
 		var (
 			db = b.db.Session(&gorm.Session{})
@@ -327,9 +337,9 @@ func (b *DataOperatorBuilder) Update(obj interface{}, id string, ctx *web.EventC
 		)
 
 		if b.updator == nil {
-			db = b.primarySluggerWhere(b.Prepare(Update, obj, id, nil, ctx), obj, id)
+			db = db_utils.ModelIdWhere(b.Prepare(Update, obj, id, nil, ctx), obj, id)
 			do = func(state *CallbackState) error {
-				return state.DB.Save(state.Obj).Error
+				return state.DB.Select("*").Updates(state.Obj).Error
 			}
 		} else {
 			do = func(state *CallbackState) error {
@@ -337,28 +347,61 @@ func (b *DataOperatorBuilder) Update(obj interface{}, id string, ctx *web.EventC
 			}
 		}
 
-		return WithCallbacks(b.preUpdate, b.postUpdate, b.db, db, obj, ctx, do)
+		return b.GetCallbacks(Update, ctx).
+			Build(do).
+			Execute(b.NewCallbackState(db, obj, ctx))
 	})
 }
 
-func (b *DataOperatorBuilder) Delete(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (b *DataOperatorBuilder) Delete(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 	return b.tx(func(b *DataOperatorBuilder) (err error) {
-		db := b.Prepare(Delete, obj, id, nil, ctx)
+		var (
+			db = b.Prepare(Delete, obj, id, nil, ctx)
+			do = func(state *CallbackState) error {
+				return state.DB.Delete(state.Obj).Error
+			}
+		)
 		if b.deleter != nil {
-			return b.deleter(db, obj, id, ctx)
+			do = func(state *CallbackState) error {
+				return b.deleter(state.DB, state.Obj, id, ctx)
+			}
 		}
-		err = b.primarySluggerWhere(db, obj, id).Delete(obj).Error
-		return
+
+		db = db_utils.ModelIdWhere(db, obj, id)
+		return b.GetCallbacks(Delete, ctx).
+			Build(do).
+			Execute(b.NewCallbackState(db, obj, ctx))
 	})
+}
+
+func (b *DataOperatorBuilder) NewCallbackState(db *gorm.DB, obj any, ctx *web.EventContext) *CallbackState {
+	sharedDB := db.Session(&gorm.Session{})
+	sharedDB.Statement = &gorm.Statement{
+		DB:       sharedDB,
+		ConnPool: db.Statement.ConnPool,
+		Settings: db.Statement.Settings,
+		Context:  db.Statement.Context,
+	}
+
+	return &CallbackState{
+		CommonDB: b.db.Session(&gorm.Session{}),
+		SharedDB: sharedDB,
+		DB:       db,
+		Obj:      obj,
+		Ctx:      ctx,
+		data:     make(map[any]any),
+	}
 }
 
 type CallbackState struct {
+	CommonDB,
 	SharedDB,
 	DB *gorm.DB
-	Obj   interface{}
-	Ctx   *web.EventContext
-	data  map[any]any
-	dones []func() error
+	SearchParams *presets.SearchParams
+	Obj          interface{}
+	Ctx          *web.EventContext
+	data         map[any]any
+	dones        []func() error
 }
 
 func (s *CallbackState) Done(f func() error) *CallbackState {
@@ -371,50 +414,11 @@ func (s *CallbackState) Set(key any, value any) *CallbackState {
 	return s
 }
 
-func (s *CallbackState) Get(key any) (v any, ok bool) {
+func (s *CallbackState) GetOk(key any) (v any, ok bool) {
 	v, ok = s.data[key]
 	return
 }
 
-func WithCallbacks(pre, post []Callback, sharedDB, db *gorm.DB, obj any, ctx *web.EventContext, do func(state *CallbackState) error) (err error) {
-	var (
-		state = &CallbackState{
-			SharedDB: sharedDB,
-			DB:       db,
-			Obj:      obj,
-			Ctx:      ctx,
-			data:     make(map[any]any),
-		}
-	)
-
-	defer func() {
-		var err2 error
-		for _, done := range state.dones {
-			if err2 = done(); err2 != nil {
-				if err == nil {
-					err = err2
-				}
-				break
-			}
-		}
-	}()
-
-	for _, f := range pre {
-		err = f(state)
-		if err != nil {
-			return
-		}
-	}
-
-	if err = do(state); err != nil {
-		return
-	}
-
-	for _, f := range post {
-		err = f(state)
-		if err != nil {
-			return
-		}
-	}
-	return
+func (s *CallbackState) Get(key any) any {
+	return s.data[key]
 }

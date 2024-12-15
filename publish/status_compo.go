@@ -35,7 +35,7 @@ func draftCountFunc(db *gorm.DB) presets.FieldComponentFunc {
 
 func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 
 		var (
 			ok            bool
@@ -45,12 +45,23 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 
 			obj = field.Obj
 		)
+
+		defer func() {
+			if field.Mode.Dot().Is(presets.LIST) {
+				comp = h.Td(comp)
+			} else {
+				comp = h.Div(h.Components(
+					h.Label(field.Label).Class("v-label theme--light text-caption"),
+					h.Div(comp).Class("pt-1"),
+				)).Class("mb-4")
+			}
+		}()
+
 		defer func() {
 			if err != nil {
-				comp = h.Td(h.Text("-"))
+				comp = h.Text("-")
 				return
 			}
-			comp = h.Td(comp)
 		}()
 		if modelSchema, err = schema.Parse(obj, &sync.Map{}, db.NamingStrategy); err != nil {
 			return
@@ -67,6 +78,7 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 			err = errors.New("ErrorModel")
 			return
 		}
+
 		sc, ok := obj.(ScheduleInterface)
 		if !ok {
 			return statusChip(st.EmbedStatus().Status, msgr)
@@ -94,13 +106,14 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 				toStatus = StatusOffline
 			}
 		}
+
 		return liveChips(st.EmbedStatus().Status, toStatus, msgr)
 	}
 }
 
 func StatusListFunc() presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 
 		if s, ok := field.Obj.(StatusInterface); ok {
 			return h.Td(statusChip(s.EmbedStatus().Status, msgr))

@@ -70,7 +70,7 @@ func ParseOpenRightDrawerParams(body []byte) ([]any, error) {
 		return nil, err
 	}
 	if len(resp.UpdatePortals) != 1 {
-		return nil, errors.New("UpdatePortals !=1")
+		return nil, errors.New("updatePortals !=1")
 	}
 	if resp.UpdatePortals[0].Name != "presets_RightDrawerPortalName" {
 		return nil, errors.Errorf("invalid portal name %q", resp.UpdatePortals[0].Name)

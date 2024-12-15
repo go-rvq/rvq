@@ -2,6 +2,7 @@ package base
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -85,4 +86,15 @@ func ByteCountSI(b int) string {
 	}
 	return fmt.Sprintf(format,
 		float64(b)/float64(div), suffix)
+}
+
+func FixDimension(max, width, height int) (h, w int) {
+	currentMax := math.Max(float64(width), float64(height))
+	w, h = width, height
+	if int(currentMax) > max {
+		ratio := float64(max) / currentMax
+		w = int(float64(width) * ratio)
+		h = int(float64(height) * ratio)
+	}
+	return
 }

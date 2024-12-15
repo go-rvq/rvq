@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/perm"
-	"github.com/sunfmin/reflectutils"
 )
 
 type ModelInfo struct {
@@ -41,14 +41,36 @@ func (b *ModelInfo) Slice() (interface{}, int) {
 	return b.slice, b.index
 }
 
-func (b *ModelInfo) GetID(obj interface{}) (id ID, level int, err error) {
-	id.Value, err = reflectutils.Get(obj, "ID")
-	for err == reflectutils.NoSuchFieldError && b.parent != nil {
+func (b *ModelInfo) GetID(obj interface{}) (id ID, err error) {
+	return b.mb.RecordID(obj)
+}
+
+func (b *ModelInfo) LookupID(obj interface{}) (id ID, level int, err error) {
+	if id, err = b.mb.RecordID(obj); err != nil {
+		return
+	}
+
+	if len(id.Schema.PrimaryFields()) == 0 && b.parent != nil {
 		if b.parent != nil {
-			return b.parent.GetID(obj)
+			return b.parent.LookupID(b.parentObj)
 		}
 	}
 	return
+}
+
+func (b *ModelInfo) MustID(obj interface{}) (id ID) {
+	id = b.mb.MustRecordID(obj)
+
+	if id.IsZero() && b.parent != nil {
+		if b.parent != nil {
+			return b.parent.MustID(obj)
+		}
+	}
+	return
+}
+
+func (b *ModelInfo) Schema() model.Schema {
+	return b.mb.Schema()
 }
 
 func (b ModelInfo) ListingHref(parentID ...ID) string {
@@ -57,6 +79,10 @@ func (b ModelInfo) ListingHref(parentID ...ID) string {
 		s = strings.Replace(s, "{parent_"+strconv.Itoa(i)+"_id}", id.String(), 1)
 	}
 	return s
+}
+
+func (b ModelInfo) ListingHrefParts() (r []any) {
+	return append([]any{b.mb.p.prefix}, b.mb.SplitedURI()...)
 }
 
 func (b ModelInfo) ListingHrefCtx(ctx *web.EventContext) string {
@@ -132,10 +158,14 @@ func (b ModelInfo) CanRead(r *http.Request, obj interface{}) bool {
 	return b.Verifier().Do(PermGet).ObjectOn(obj).WithReq(r).IsAllowed() == nil
 }
 
-func (b ModelInfo) CanDelete(r *http.Request) bool {
-	return b.Verifier().Do(PermDelete).WithReq(r).IsAllowed() == nil
+func (b ModelInfo) CanDelete(r *http.Request, obj interface{}) bool {
+	return b.Verifier().Do(PermDelete).ObjectOn(obj).WithReq(r).IsAllowed() == nil
 }
 
 func (b ModelInfo) CanCreate(r *http.Request) bool {
 	return b.Verifier().Do(PermCreate).WithReq(r).IsAllowed() == nil
+}
+
+func (b ModelInfo) CanList(r *http.Request) bool {
+	return b.Verifier().Do(PermList).WithReq(r).IsAllowed() == nil
 }

@@ -1,15 +1,18 @@
 package presets
 
 import (
+	"database/sql"
 	"fmt"
 	"net/url"
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
 	_ "unsafe"
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -114,4 +117,60 @@ func GetFieldStruct(i interface{}, name string) (_ *reflect.StructField) {
 	}
 
 	return
+}
+
+func ToStringContext(ctx *web.EventContext, v any) string {
+	if v == nil || reflectutils.IsNil(v) {
+		return ""
+	}
+
+	switch t := v.(type) {
+	case []rune:
+		return string(t)
+	case []byte:
+		return string(t)
+	case time.Time:
+		return t.Format("2006-01-02 15:04:05")
+	case *time.Time:
+		if t == nil {
+			return ""
+		}
+		return t.Format("2006-01-02 15:04:05")
+	case sql.NullInt32:
+		return fmt.Sprint(t.Int32)
+	case sql.NullInt64:
+		return fmt.Sprint(t.Int64)
+	case sql.NullFloat64:
+		return fmt.Sprint(t.Float64)
+	case sql.Null[uint]:
+		return fmt.Sprint(t.V)
+	case sql.Null[uint8]:
+		return fmt.Sprint(t.V)
+	case sql.Null[uint16]:
+		return fmt.Sprint(t.V)
+	case sql.Null[uint32]:
+		return fmt.Sprint(t.V)
+	case sql.Null[uint64]:
+		return fmt.Sprint(t.V)
+
+	case ContextStringer:
+		return t.ContextString(ctx)
+	}
+	return fmt.Sprint(v)
+}
+
+// HumanizeString humanize separates string based on capitalizd letters
+// e.g. "OrderItem" -> "Order Item, CNNName to CNN Name"
+func HumanizeString(str string) string {
+	var human []rune
+	input := []rune(str)
+	for i, l := range input {
+		if i > 0 && unicode.IsUpper(l) {
+			if (!unicode.IsUpper(input[i-1]) && input[i-1] != ' ') || (i+1 < len(input) && !unicode.IsUpper(input[i+1]) && input[i+1] != ' ' && input[i-1] != ' ') {
+				human = append(human, rune(' '))
+			}
+		}
+		human = append(human, l)
+	}
+	return strings.Title(string(human))
 }

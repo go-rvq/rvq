@@ -5,7 +5,10 @@ import (
 	"reflect"
 
 	"github.com/qor5/admin/v3/reflect_utils"
+	"github.com/qor5/web/v3"
 )
+
+const FieldLocalizedEntries = "Localizations"
 
 type LocaleInterface interface {
 	EmbedLocale() *Locale
@@ -14,6 +17,10 @@ type LocaleInterface interface {
 // Locale embed this struct into GROM-backend models to enable localization feature for your model
 type Locale struct {
 	LocaleCode string `sql:"size:20" gorm:"primaryKey;default:''"`
+}
+
+type ModelLocalizeOptions struct {
+	LocalizeCallback func(ctx *web.EventContext, from, to any) (post func() (err error), err error)
 }
 
 // GetLocale get model's locale

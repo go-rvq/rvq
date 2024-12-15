@@ -55,10 +55,12 @@ func (r *DeletingMenuItemBuilder) Build() RecordMenuItemFunc {
 			id  = rctx.ID
 			mi  = r.modelInfo
 		)
-		msgr := MustGetMessages(ctx.R)
-		if mi.mb.Info().Verifier().Do(PermDelete).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+
+		if !mi.mb.CanDeleteObj(obj, ctx) {
 			return nil
 		}
+
+		msgr := MustGetMessages(ctx.Context())
 
 		onclick := web.Plaid().
 			EventFunc(actions.DeleteConfirmation).

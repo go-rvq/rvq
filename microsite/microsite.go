@@ -15,6 +15,7 @@ import (
 	"github.com/mholt/archiver/v4"
 	"github.com/qor/oss"
 	"github.com/qor5/admin/v3/microsite/utils"
+	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"gorm.io/gorm"
 )
@@ -114,7 +115,7 @@ func builderFromContext(c context.Context) (b *Builder, ok bool) {
 	return
 }
 
-func (this *MicroSite) GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	if len(this.GetFileList()) == 0 {
 		return
 	}
@@ -159,7 +160,7 @@ func (this *MicroSite) GetPublishActions(db *gorm.DB, ctx context.Context, stora
 	return
 }
 
-func (this *MicroSite) GetUnPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	var paths []string
 	for _, v := range this.GetFileList() {
 		paths = append(paths, this.GetPublishedPath(v))

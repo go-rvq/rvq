@@ -34,6 +34,7 @@ type ListingBuilder struct {
 	Searcher        SearchFunc
 	Deleter         DeleteFunc
 	searchColumns   []string
+	itemActions     []*ActionBuilder
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -52,16 +53,21 @@ type ListingBuilder struct {
 	// 3. all data will be returned in one page.
 	disablePagination bool
 
-	orderBy           string
-	orderableFields   []*OrderableField
-	selectableColumns bool
-	conditions        []*SQLCondition
-	dialogWidth       string
-	dialogHeight      string
-	dataTableDensity  string
-	dataListFormatter func(ctx *web.EventContext) func(r any) any
+	orderBy                string
+	orderableFields        []*OrderableField
+	selectableColumns      bool
+	conditions             []*SQLCondition
+	dialogWidth            string
+	dialogHeight           string
+	dataTableDensity       string
+	recordEncoderFactories map[string]RecordEncoderFactory[any]
 	FieldsBuilder
 	RowMenuFields
+
+	CreatingRestrictionField[*ListingBuilder]
+	EditingRestrictionField[*ListingBuilder]
+	DetailingRestrictionField[*ListingBuilder]
+	DeletingRestrictionField[*ListingBuilder]
 }
 
 func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBuilder {
@@ -74,6 +80,18 @@ func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBu
 			lb.searchColumns = append(lb.searchColumns, field.ColumnName())
 		}
 	}
+	lb.CreatingRestriction = NewRestriction(lb, func(r *Restriction[*ListingBuilder]) {
+		r.Insert(mb.CreatingRestriction)
+	})
+	lb.EditingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
+		r.Insert(mb.EditingRestriction)
+	})
+	lb.DetailingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
+		r.Insert(mb.DetailingRestriction)
+	})
+	lb.DeletingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
+		r.Insert(mb.DetailingRestriction)
+	})
 	return lb
 }
 
@@ -215,12 +233,15 @@ func (b *ListingBuilder) DialogHeight(v string) (r *ListingBuilder) {
 	return b
 }
 
-func (b *ListingBuilder) DataListFormatter() func(ctx *web.EventContext) func(r any) any {
-	return b.dataListFormatter
+func (b *ListingBuilder) RecordEncoderFactory(name string) RecordEncoderFactory[any] {
+	return b.recordEncoderFactories[name]
 }
 
-func (b *ListingBuilder) SetDataListFormatter(dataListFormatter func(ctx *web.EventContext) func(r any) any) *ListingBuilder {
-	b.dataListFormatter = dataListFormatter
+func (b *ListingBuilder) SetRecordEncoderFactory(name string, encoderFactory RecordEncoderFactory[any]) *ListingBuilder {
+	if b.recordEncoderFactories == nil {
+		b.recordEncoderFactories = make(map[string]RecordEncoderFactory[any])
+	}
+	b.recordEncoderFactories[name] = encoderFactory
 	return b
 }
 
@@ -229,6 +250,27 @@ func (b *ListingBuilder) GetPageFunc() web.PageFunc {
 		return b.pageFunc
 	}
 	return b.defaultPageFunc
+}
+
+func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuItemFuncs) {
+	fs = b.RowMenu().listingItemFuncs(ctx)
+
+	if len(b.itemActions) > 0 {
+		fs = append(fs, func(rctx *RecordMenuItemContext) h.HTMLComponent {
+			actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(rctx.TempPortal, ctx, b.mb, rctx.ID, rctx.Obj, b.itemActions...)
+			var items h.HTMLComponents
+
+			if len(actionsErrors) > 0 {
+				items = append(items, actionsErrors...)
+			}
+
+			for _, item := range actionsMenus {
+				items = append(items, item)
+			}
+			return items
+		})
+	}
+	return
 }
 
 const (
@@ -247,7 +289,7 @@ func (b *ListingBuilder) TTitle(r *http.Request) string {
 	if b.title != "" {
 		return b.title
 	}
-	return MustGetMessages(r).ListingObjectTitle(i18n.T(r, ModelsI18nModuleKey, b.mb.pluralLabel))
+	return MustGetMessages(r.Context()).ListingObjectTitle(i18n.T(r.Context(), ModelsI18nModuleKey, b.mb.pluralLabel))
 }
 
 func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -271,38 +313,40 @@ func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, er
 	}
 
 	if ctx.R.FormValue(ParamMustResult) == "true" {
-		r.Data = sr.objs
+		r.Data = sr.Records
 		return
 	}
 
-	records := sr.objs
+	if encName := ctx.R.FormValue(ParamListingEncoder); encName != "" {
+		encFacory, ok := b.recordEncoderFactories[encName]
+		if !ok {
+			err = fmt.Errorf("%s: %q not found", ParamListingEncoder, encName)
+			return
+		}
 
-	if b.dataListFormatter != nil {
-		var (
-			formatter        = b.dataListFormatter(ctx)
-			formattedRecords = make([]any, reflect.ValueOf(records).Len())
-		)
+		encodedRecords := make([]any, reflect.ValueOf(sr.Records).Len())
+		enc := encFacory(ctx)
 
-		reflectutils.ForEach(sr.objs, func(i int, v interface{}) {
-			formattedRecords[i] = formatter(v)
+		var i int
+		reflectutils.ForEach(sr.Records, func(v interface{}) {
+			encodedRecords[i] = enc(v)
+			i++
 		})
 
-		records = formattedRecords
+		sr.Records = encodedRecords
 	}
 
-	r.Data = map[string]any{
-		"records":    records,
-		"totalCount": sr.totalCount,
-	}
+	r.Data = &sr
 	return
 }
 
 type SearchResult struct {
-	objs              any
-	totalCount        int
-	orderableFieldMap map[string]string
-	orderBys          []*ColOrderBy
-	Page, PerPage     int64
+	Records           any               `json:"Records,omitempty"`
+	TotalCount        int               `json:"TotalCount,omitempty"`
+	Page              int64             `json:"Page,omitempty"`
+	PerPage           int64             `json:"PerPage,omitempty"`
+	OrderBys          []*ColOrderBy     `json:"OrderBys,omitempty"`
+	orderableFieldMap map[string]string // map[FieldName]DBColumn
 }
 
 func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err error) {
@@ -335,18 +379,18 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 	}
 
 	var orderBySQL string
-	r.orderBys = GetOrderBysFromQuery(qs)
+	r.OrderBys = GetOrderBysFromQuery(qs)
 	// map[FieldName]DBColumn
 	r.orderableFieldMap = make(map[string]string)
 	for _, v := range b.orderableFields {
 		r.orderableFieldMap[v.FieldName] = v.DBColumn
 	}
-	for _, ob := range r.orderBys {
+	for _, ob := range r.OrderBys {
 		dbCol, ok := r.orderableFieldMap[ob.FieldName]
 		if !ok {
 			continue
 		}
-		orderBySQL += fmt.Sprintf("%s %s,", dbCol, ob.OrderBy)
+		orderBySQL += fmt.Sprintf("%s %s,", dbCol, ob.Asc)
 	}
 	// remove the last ","
 	if orderBySQL != "" {
@@ -355,8 +399,8 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 	if orderBySQL == "" {
 		if b.orderBy != "" {
 			orderBySQL = b.orderBy
-		} else {
-			orderBySQL = fmt.Sprintf("%s DESC", b.mb.primaryField)
+		} else if fields := b.mb.Schema().PrimaryFields(); len(fields) > 0 {
+			orderBySQL = fmt.Sprintf("%s DESC", strings.Join(fields.QuotedFullDBNames(), ", "))
 		}
 	}
 
@@ -365,7 +409,7 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 		Keyword:        qs.Get("keyword"),
 		PerPage:        perPage,
 		OrderBy:        orderBySQL,
-		PageQuery:      qs,
+		Query:          web.Query(qs),
 		SQLConditions:  b.conditions,
 	}
 
@@ -393,7 +437,7 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 		return
 	}
 
-	r.objs, r.totalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx)
+	r.Records, r.TotalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx)
 	return
 }
 
@@ -411,7 +455,7 @@ func (b *ListingBuilder) bulkPanel(
 	processedSelectedIds []string,
 	ctx *web.EventContext,
 ) (r h.HTMLComponent) {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 
 	var errComp h.HTMLComponent
 	if vErr, ok := ctx.Flash.(*web.ValidationErrors); ok {
@@ -487,7 +531,7 @@ func (b *ListingBuilder) bulkPanel(
 }
 
 func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContext) (r h.HTMLComponent) {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 
 	var errComp h.HTMLComponent
 	if vErr, ok := ctx.Flash.(*web.ValidationErrors); ok {
@@ -544,6 +588,7 @@ func (b *ListingBuilder) openActionDialog(ctx *web.EventContext) (r web.EventRes
 	}
 
 	b.mb.p.dialog(
+		ctx,
 		&r,
 		b.actionPanel(action, ctx),
 		action.dialogWidth,
@@ -552,7 +597,7 @@ func (b *ListingBuilder) openActionDialog(ctx *web.EventContext) (r web.EventRes
 }
 
 func (b *ListingBuilder) openBulkActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	selected := getSelectedIds(ctx)
 	bulkName := ctx.R.URL.Query().Get(bulkPanelOpenParamName)
 	bulk := getBulkAction(b.bulkActions, bulkName)
@@ -587,6 +632,7 @@ func (b *ListingBuilder) openBulkActionDialog(ctx *web.EventContext) (r web.Even
 	}
 
 	b.mb.p.dialog(
+		ctx,
 		&r,
 		b.bulkPanel(bulk, selected, processedSelectedIds, ctx),
 		bulk.dialogWidth,
@@ -628,14 +674,11 @@ func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventRespons
 	}
 
 	if ctx.Flash != nil {
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.Dialog.ContentPortalName(),
-			Body: b.bulkPanel(bulk, selectedIds, processedSelectedIds, ctx),
-		})
+		r.UpdatePortal(actions.Dialog.ContentPortalName(), b.bulkPanel(bulk, selectedIds, processedSelectedIds, ctx))
 		return
 	}
 
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	ShowMessage(&r, msgr.SuccessfullyUpdated, "")
 	if isInDialogFromQuery(ctx) {
 		qs := ctx.Queries()
@@ -678,14 +721,13 @@ func (b *ListingBuilder) doListingAction(ctx *web.EventContext) (r web.EventResp
 	portalID := ctx.R.FormValue(ParamPortalID)
 
 	if ctx.Flash != nil {
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.Dialog.ContentPortalName() + portalID,
-			Body: b.actionPanel(action, ctx),
-		})
+		r.UpdatePortal(
+			actions.Dialog.ContentPortalName()+portalID,
+			b.actionPanel(action, ctx))
 		return
 	}
 
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	ShowMessage(&r, msgr.SuccessfullyUpdated, "")
 
 	if isInDialogFromQuery(ctx) {
@@ -727,9 +769,13 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		Density(DensityCompact)
 
 	tabsData := b.filterTabsFunc(ctx)
-	for i, tab := range tabsData {
-		if tab.ID == "" {
-			tab.ID = fmt.Sprintf("tab%d", i)
+	var defaultTab *FilterTab
+	for _, tab := range tabsData {
+		if tab.Default {
+			if defaultTab != nil {
+				return VAlert(h.RawHTML("Many filter tabs with <b>Default</b> flag.")).Color("error")
+			}
+			defaultTab = tab
 		}
 	}
 	value := -1
@@ -737,7 +783,7 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 
 	for i, td := range tabsData {
 		// Find selected tab by active_filter_tab=xx in the url query
-		if activeTabValue == td.ID {
+		if activeTabValue != "" && activeTabValue == td.ID {
 			value = i
 		}
 
@@ -747,7 +793,9 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		}
 
 		totalQuery := url.Values{}
-		totalQuery.Set(ActiveFilterTabQueryKey, td.ID)
+		if td.ID != "" {
+			totalQuery.Set(ActiveFilterTabQueryKey, td.ID)
+		}
 		for k, v := range td.Query {
 			totalQuery[k] = v
 		}
@@ -766,6 +814,24 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 				Attr("@click", onclick.Go()),
 		)
 	}
+
+	if value == -1 {
+	loop:
+		for i, td := range tabsData {
+			if td.ID == "" {
+				if len(td.Query) > 0 {
+					for k := range td.Query {
+						if ctx.R.FormValue(k) != td.Query.Get(k) {
+							continue loop
+						}
+					}
+					value = i
+					break loop
+				}
+			}
+		}
+	}
+
 	return tabs.ModelValue(value)
 }
 
@@ -782,7 +848,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 	pageURL *url.URL,
 	ctx *web.EventContext,
 	inDialog bool,
-) (btn h.HTMLComponent, displaySortedFields []*FieldBuilder) {
+) (btn h.HTMLComponent, displaySortedFields FieldBuilders) {
 	var (
 		_, respath         = path.Split(pageURL.Path)
 		displayColumnsName = fmt.Sprintf("%s_display_columns", respath)
@@ -888,7 +954,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 
 	// set the data for displaySortedFields on data table
 	if originalFiledsChanged || (len(sortedColumns) == 0 && len(displayColumns) == 0) {
-		displaySortedFields = b.fields
+		displaySortedFields = b.fields.FieldsFromLayout(b.CurrentLayout(), FieldRenderable())
 	}
 
 	if originalFiledsChanged || len(displayColumns) == 0 {
@@ -917,11 +983,11 @@ func (b *ListingBuilder) selectColumnsBtn(
 	for _, sc := range sortedColumns {
 		selectColumns.SortedColumns = append(selectColumns.SortedColumns, sortedColumn{
 			Name:  sc,
-			Label: i18n.PT(ctx.R, ModelsI18nModuleKey, b.mb.label, b.mb.getLabel(b.Field(sc).NameLabel)),
+			Label: i18n.PT(ctx.Context(), ModelsI18nModuleKey, b.mb.label, b.mb.getLabel(b.Field(sc).NameLabel)),
 		})
 	}
 
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	onOK := web.Plaid().
 		Query(displayColumnsName, web.Var("locals.displayColumns")).
 		Query(sortedColumnsName, web.Var("locals.sortedColumns.map(column => column.name )")).
@@ -957,7 +1023,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 		).Density(DensityCompact),
 	).CloseOnContentClick(false).Width(240).
 		Attr("v-model", "locals.selectColumnsMenu")).
-		VSlot("{ locals }").Init(fmt.Sprintf(`{selectColumnsMenu: false,...%s}`, h.JSONString(selectColumns)))
+		Slot("{ locals }").LocalsInit(fmt.Sprintf(`{selectColumnsMenu: false,...%s}`, h.JSONString(selectColumns)))
 	return
 }
 
@@ -982,7 +1048,8 @@ func (b *ListingBuilder) filterBar(
 	}
 
 	ft := vx.FilterTranslations{}
-	ft.Clear = msgr.FiltersClear
+	ft.ClearAll = msgr.FiltersClear
+	ft.Clear = msgr.Clear
 	ft.Add = msgr.FiltersAdd
 	ft.Apply = msgr.FilterApply
 	for _, d := range fd {
@@ -991,7 +1058,10 @@ func (b *ListingBuilder) filterBar(
 		}
 	}
 
-	ft.Date.To = msgr.FiltersDateTo
+	ft.To = msgr.FiltersTo
+	ft.Month.Year = msgr.Year
+	ft.Month.Month = msgr.Month
+	ft.Month.MonthNames = msgr.MonthNames
 
 	ft.Number.And = msgr.FiltersNumberAnd
 	ft.Number.Equals = msgr.FiltersNumberEquals
@@ -1077,10 +1147,24 @@ func setLocalPerPage(
 	})
 }
 
+type OrderMode bool
+
+const (
+	OrderDesc OrderMode = false
+	OrderAsc  OrderMode = true
+)
+
+func (m OrderMode) String() string {
+	if m {
+		return "ASC"
+	}
+	return "DESC"
+}
+
 type ColOrderBy struct {
 	FieldName string
 	// ASC, DESC
-	OrderBy string
+	Asc OrderMode
 }
 
 // GetOrderBysFromQuery gets order bys from query string.
@@ -1099,7 +1183,7 @@ func GetOrderBysFromQuery(query url.Values) []*ColOrderBy {
 		}
 		r = append(r, &ColOrderBy{
 			FieldName: strings.Join(ss[:ssl-1], "_"),
-			OrderBy:   ss[ssl-1],
+			Asc:       ss[ssl-1] == "ASC",
 		})
 	}
 
@@ -1113,12 +1197,12 @@ func newQueryWithFieldToggleOrderBy(query url.Values, fieldName string) url.Valu
 	for _, oob := range oldOrderBys {
 		if oob.FieldName == fieldName {
 			existed = true
-			if oob.OrderBy == "ASC" {
+			if oob.Asc {
 				newOrderBysQueryValue = append(newOrderBysQueryValue, oob.FieldName+"_DESC")
 			}
 			continue
 		}
-		newOrderBysQueryValue = append(newOrderBysQueryValue, oob.FieldName+"_"+oob.OrderBy)
+		newOrderBysQueryValue = append(newOrderBysQueryValue, oob.FieldName+"_"+oob.Asc.String())
 	}
 	if !existed {
 		newOrderBysQueryValue = append(newOrderBysQueryValue, fieldName+"_ASC")
@@ -1133,7 +1217,7 @@ func newQueryWithFieldToggleOrderBy(query url.Values, fieldName string) url.Valu
 }
 
 func (b *ListingBuilder) openListingDialogForSelection(ctx *web.EventContext) (r web.EventResponse, err error) {
-	lcb := b.listingComponentBuilderCtx(ctx).SetSelection(true)
+	lcb := b.ListingComponentBuilderCtx(ctx).SetSelection(true)
 	ctx.R.Form.Set(ParamOverlay, actions.Dialog.String())
 	var body h.HTMLComponent
 	if body, err = lcb.Build(ctx); err != nil {
@@ -1144,12 +1228,12 @@ func (b *ListingBuilder) openListingDialogForSelection(ctx *web.EventContext) (r
 		SetValidWidth(b.dialogWidth).
 		SetValidHeight(b.dialogHeight).
 		SetContentPortalName(lcb.portals.Main()).
-		Respond(&r, web.Scope(body).VSlot("{ form }"))
+		Respond(ctx, &r, web.Scope(body).Slot("{ form }"))
 	return
 }
 
 func (b *ListingBuilder) openListingDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
-	lcb := b.listingComponentBuilderCtx(ctx)
+	lcb := b.ListingComponentBuilderCtx(ctx)
 	ctx.R.Form.Set(ParamOverlay, actions.Dialog.String())
 
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
@@ -1158,34 +1242,32 @@ func (b *ListingBuilder) openListingDialog(ctx *web.EventContext) (r web.EventRe
 	if body, err = lcb.Build(ctx); err != nil {
 		return
 	}
-	body = web.Scope(body).VSlot("{ form, closer }")
+	body = web.Scope(body).Slot("{ form, closer }")
 
 	b.mb.p.DialogPortal(targetPortal).
 		SetValidWidth(b.dialogWidth).
 		SetValidHeight(b.dialogHeight).
 		SetContentPortalName(lcb.portals.Main()).
 		SetScrollable(true).
-		Respond(&r, body)
+		Respond(ctx, &r, body)
 	return
 }
 
 func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
-	lcb := b.listingComponentBuilderCtx(ctx)
+	lcb := b.ListingComponentBuilderCtx(ctx)
 	ctx.R.Form.Set(ParamOverlay, actions.Dialog.String())
 	var dataTable, dataTableAdditions h.HTMLComponent
 
-	if dataTable, dataTableAdditions, err = lcb.getTableComponents(ctx); err != nil {
+	if dataTable, dataTableAdditions, err = lcb.GetTableComponents(ctx); err != nil {
 		return
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals,
-		&web.PortalUpdate{
-			Name: lcb.portals.DataTable(),
-			Body: dataTable,
-		}, &web.PortalUpdate{
-			Name: lcb.portals.DataTableAdditions(),
-			Body: dataTableAdditions,
-		},
+	r.UpdatePortal(
+		lcb.portals.DataTable(),
+		dataTable,
+	).UpdatePortal(
+		lcb.portals.DataTableAdditions(),
+		dataTableAdditions,
 	)
 	return
 }

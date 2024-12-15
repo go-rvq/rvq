@@ -11,9 +11,31 @@ import (
 	h "github.com/theplant/htmlgo"
 )
 
+type ContextStringer interface {
+	ContextString(ctx *web.EventContext) string
+}
+
+type FlashMessage struct {
+	Text  string `json:"text"`
+	Color string `json:"color"`
+}
+
+type FlashMessages []*FlashMessage
+
+func (m *FlashMessages) Append(message ...*FlashMessage) {
+	*m = append(*m, message...)
+}
+
+func (m FlashMessages) RespondTo(r *web.EventResponse) {
+	for _, msg := range m {
+		ShowMessage(r, msg.Text, msg.Color)
+	}
+}
+
 type (
 	ComponentFunc             func(ctx *web.EventContext) h.HTMLComponent
 	ObjectComponentFunc       func(obj interface{}, ctx *web.EventContext) h.HTMLComponent
+	ModeObjectComponentFunc   func(mode FieldModeStack, obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	TabComponentFunc          func(obj interface{}, ctx *web.EventContext) (tab h.HTMLComponent, content h.HTMLComponent)
 	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) string
 )
@@ -21,8 +43,10 @@ type (
 type FieldComponentFunc func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent
 
 type (
-	ActionComponentFunc func(id string, ctx *web.EventContext) h.HTMLComponent
-	ActionUpdateFunc    func(id string, ctx *web.EventContext) (err error)
+	ActionComponentFunc  func(id string, ctx *web.EventContext) h.HTMLComponent
+	ActionUpdateFunc     func(id string, ctx *web.EventContext) (err error)
+	ActionEnabledFunc    func(id string, ctx *web.EventContext) (ok bool, err error)
+	ActionEnabledObjFunc func(obj any, id string, ctx *web.EventContext) (ok bool, err error)
 )
 
 type (
@@ -50,9 +74,10 @@ type (
 
 type (
 	SearchFunc func(model interface{}, params *SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error)
-	FetchFunc  func(obj interface{}, id string, ctx *web.EventContext) (err error)
-	SaveFunc   func(obj interface{}, id string, ctx *web.EventContext) (err error)
-	DeleteFunc func(obj interface{}, id string, ctx *web.EventContext) (err error)
+	FetchFunc  func(obj interface{}, id ID, ctx *web.EventContext) (err error)
+	SaveFunc   func(obj interface{}, id ID, ctx *web.EventContext) (err error)
+	CreateFunc func(obj interface{}, ctx *web.EventContext) (err error)
+	DeleteFunc func(obj interface{}, id ID, ctx *web.EventContext) (err error)
 )
 
 type SlugDecoder interface {
@@ -71,6 +96,7 @@ type FilterTab struct {
 	// render AdvancedLabel if it is not nil
 	AdvancedLabel h.HTMLComponent
 	Query         url.Values
+	Default       bool
 }
 
 type FilterTabsFunc func(ctx *web.EventContext) []*FilterTab
@@ -87,20 +113,6 @@ type (
 	ModelInstallFunc func(pb *Builder, mb *ModelBuilder) error
 	InstallFunc      func(pb *Builder) error
 )
-
-type ID struct {
-	Model *ModelBuilder
-	Value interface{}
-}
-
-type IDOfField struct {
-	ID    ID
-	Field string
-}
-
-func IDString(s string) ID {
-	return ID{Value: s}
-}
 
 type ModelConfigurer interface {
 	ConfigureModel(mb *ModelBuilder)

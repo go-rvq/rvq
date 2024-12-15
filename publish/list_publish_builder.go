@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/qor/oss"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/theplant/sliceutils"
 	"gorm.io/gorm"
 )
@@ -166,7 +166,7 @@ func (b *ListPublishBuilder) Run(model interface{}) (err error) {
 	var objs []*PublishAction
 	objs = b.publishActionsFunc(b.db, lp, needPublishResults, indexResult)
 
-	err = utils.Transact(b.db, func(tx *gorm.DB) (err1 error) {
+	err = db_utils.Transact(b.db, func(tx *gorm.DB) (err1 error) {
 		if err1 = UploadOrDelete(objs, b.storage); err1 != nil {
 			return
 		}

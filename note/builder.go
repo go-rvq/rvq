@@ -44,8 +44,8 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		m.Detailing().AppendTabsPanelFunc(tabsPanel(db, m))
 	}
 	m.Editing().AppendTabsPanelFunc(tabsPanel(db, m))
-	m.RegisterEventFunc(createNoteEvent, createNoteAction(b, m))
-	m.RegisterEventFunc(updateUserNoteEvent, updateUserNoteAction(b, m))
+	m.RegisterEventHandler(createNoteEvent, createNoteAction(b, m))
+	m.RegisterEventHandler(updateUserNoteEvent, updateUserNoteAction(b, m))
 	m.Listing().Field("Notes").ComponentFunc(noteFunc(db, m))
 	return nil
 }

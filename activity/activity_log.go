@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -49,6 +50,10 @@ type ActivityLog struct {
 
 	ModelLink  string
 	ModelDiffs string `sql:"type:text;"`
+}
+
+func (al *ActivityLog) String() string {
+	return fmt.Sprintf("#%v %s %s #%s by %s at %s", al.ID, al.Action, al.ModelName, al.ModelKeys, al.Creator, al.CreatedAt)
 }
 
 func (al *ActivityLog) SetCreatedAt(t time.Time) {

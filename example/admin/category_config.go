@@ -26,7 +26,7 @@ func configCategory(b *presets.Builder, db *gorm.DB, publisher *publish.Builder)
 		return
 	})
 
-	p.RegisterEventFunc("products_selector", productsSelector(db))
+	p.RegisterEventHandler("products_selector", productsSelector(db))
 
 	eb.Field("Products").
 		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {

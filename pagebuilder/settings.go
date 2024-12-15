@@ -148,7 +148,7 @@ func detailPageEditor(dp *presets.DetailingBuilder, db *gorm.DB) {
 			if category, err = p.GetCategory(db); err != nil {
 				panic(err)
 			}
-			msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+			msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 			return h.Div(
 				h.Div(h.Text(msgr.PageOverView)).Class("text-h4"),
 				detailingRow("Title", h.Text(p.Title)).Attr(web.VAssign("vars", fmt.Sprintf(`{pageTitle:"%s"}`, p.Title))...),
@@ -167,7 +167,7 @@ func detailPageEditor(dp *presets.DetailingBuilder, db *gorm.DB) {
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
 		}
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 		return h.Components(
 			h.Div(h.Text(msgr.PageOverView)).Class("text-h4"),
 			detailingRow("Title",

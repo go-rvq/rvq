@@ -4,9 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
 	v "github.com/qor5/x/v3/ui/vuetify"
@@ -39,8 +40,11 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 			return r, errInvalidObject
 		}
 
-		slug := ctx.Param(presets.ParamID)
-		err = mb.Editing().Fetcher(obj, slug, ctx)
+		var mid model.ID
+		if mid, err = mb.ParseRecordID(ctx.Param(presets.ParamID)); err != nil {
+			return
+		}
+		err = mb.Editing().Fetcher(obj, mid, ctx)
 		if err != nil {
 			return
 		}
@@ -49,11 +53,10 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 		valEndAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledEndAt)
 
 		displayStartAtPicker := EmbedStatus(sc).Status != StatusOnline
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
-		cmsgr := i18n.MustGetModuleMessages(ctx.R, presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: PortalSchedulePublishDialog,
-			Body: web.Scope().VSlot("{locals}").Init("{schedulePublishDialog:true}").Children(
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		cmsgr := i18n.MustGetModuleMessages(ctx.Context(), presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
+		r.UpdatePortal(PortalSchedulePublishDialog,
+			web.Scope().Slot("{locals}").LocalsInit("{schedulePublishDialog:true}").Children(
 				v.VDialog().Attr("v-model", "locals.schedulePublishDialog").MaxWidth(lo.If(displayStartAtPicker, "480px").Else("280px")).Children(
 					v.VCard().Children(
 						v.VCardTitle().Children(
@@ -81,7 +84,7 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 							v.VBtn(cmsgr.Update).Color("primary").Attr(":disabled", "isFetching").Attr(":loading", "isFetching").
 								On("click", web.Plaid().
 									EventFunc(eventSchedulePublish).
-									Query(presets.ParamID, slug).
+									Query(presets.ParamID, mid.String()).
 									URL(mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 									Go(),
 								),
@@ -89,20 +92,22 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 					),
 				),
 			),
-		})
+		)
 		return
 	}
 }
 
 func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
-	return wrapEventFuncWithShowError(func(ctx *web.EventContext) (web.EventResponse, error) {
+	return wrapEventFuncWithShowError(func(ctx *web.EventContext) (_ web.EventResponse, err error) {
 		var r web.EventResponse
+		var mid model.ID
+		if mid, err = mb.ParseRecordID(ctx.Param(presets.ParamID)); err != nil {
+			return
+		}
 
-		slug := ctx.Param(presets.ParamID)
 		obj := mb.NewModel()
-		err := mb.Editing().Fetcher(obj, slug, ctx)
-		if err != nil {
-			return r, err
+		if err = mb.Editing().Fetcher(obj, mid, ctx); err != nil {
+			return
 		}
 
 		sc, ok := obj.(ScheduleInterface)
@@ -113,7 +118,7 @@ func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 			return r, err
 		}
 
-		if err = mb.Editing().Saver(obj, slug, ctx); err != nil {
+		if err = mb.Editing().Saver(obj, mid, ctx); err != nil {
 			return r, err
 		}
 
@@ -159,7 +164,7 @@ func setScheduledTimesFromForm(ctx *web.EventContext, sc ScheduleInterface, db *
 		return nil
 	}
 
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 	now := db.NowFunc()
 
 	if startAt != nil && !startAt.After(now) {
@@ -197,7 +202,8 @@ func setScheduledTimesFromForm(ctx *web.EventContext, sc ScheduleInterface, db *
 		}
 
 		ver := mb.NewModel()
-		err := utils.PrimarySluggerWhere(db, ver, sc.(presets.SlugEncoder).PrimarySlug(), "version").
+		mid := mb.MustRecordID(sc)
+		err := db_utils.ModelIdWhere(db, ver, mid, "Version").
 			Where("scheduled_start_at >= ? AND scheduled_start_at < ?", startAt, startAt.Add(time.Minute)).
 			Order("scheduled_start_at DESC").
 			First(ver).Error

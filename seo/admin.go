@@ -12,6 +12,7 @@ import (
 	"github.com/qor5/admin/v3/media"
 	"github.com/qor5/admin/v3/media/base"
 	"github.com/qor5/admin/v3/media/media_library"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
@@ -52,7 +53,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		ComponentFunc(b.EditingComponentFunc).
 		SetterFunc(EditSetterFunc)
 
-	seoModel := pb.Model(&QorSEOSetting{}).PrimaryField("Name").
+	seoModel := pb.Model(&QorSEOSetting{}).
 		Label("SEO").
 		RightDrawerWidth("1000").
 		LayoutConfig(&presets.LayoutConfig{
@@ -132,7 +133,7 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 
 	// Customize the Saver to trigger the invocation of the `afterSave` hook function (if available)
 	// when updating the global seo.
-	editing.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	editing.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		seoSetting := obj.(*QorSEOSetting)
 		if err = b.db.Updates(obj).Error; err != nil {
 			return err
@@ -151,7 +152,7 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 		editing.Field("Variables").ComponentFunc(
 			func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 				seoSetting := field.Obj.(*QorSEOSetting)
-				msgr := i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
+				msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 				settingVars := b.GetSEO(seoSetting.Name).settingVars
 				var variablesComps h.HTMLComponents
 				if len(settingVars) > 0 {
@@ -159,7 +160,7 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 					for varName := range settingVars {
 						fieldComp := VTextField().
 							Attr(web.VField(fmt.Sprintf("%s.%s", formKeyForVariablesField, varName), seoSetting.Variables[varName])...).
-							Label(i18n.PT(ctx.R, presets.ModelsI18nModuleKey, "Seo Variable", varName))
+							Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName))
 						variablesComps = append(variablesComps, fieldComp)
 					}
 				}
@@ -230,7 +231,7 @@ func EditSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.Event
 func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	var (
 		obj         = field.Obj
-		msgr        = i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
+		msgr        = i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		fieldPrefix string
 		setting     Setting
 		db          = b.db
@@ -285,8 +286,8 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 				),
 			).Flat(true).Attr("v-model", "locals.openCustomizePanel"),
 		).Class("pb-4"),
-	).Init(fmt.Sprintf(`{enabledCustomize: %t, openCustomizePanel: %d}`, setting.EnabledCustomize, openCustomizePanel)).
-		VSlot("{ locals }")
+	).LocalsInit(fmt.Sprintf(`{enabledCustomize: %t, openCustomizePanel: %d}`, setting.EnabledCustomize, openCustomizePanel)).
+		Slot("{ locals }")
 }
 
 func detailingRow(label string, showComp h.HTMLComponent) (r *h.HTMLTagBuilder) {
@@ -298,7 +299,7 @@ func detailingRow(label string, showComp h.HTMLComponent) (r *h.HTMLTagBuilder) 
 
 func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http.Request) h.HTMLComponent {
 	var (
-		msgr = i18n.MustGetModuleMessages(req, I18nSeoKey, Messages_en_US).(*Messages)
+		msgr = i18n.MustGetModuleMessages(req.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		db   = b.db
 	)
 
@@ -307,7 +308,7 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http
 		varComps = append(varComps,
 			VChip(
 				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req, presets.ModelsI18nModuleKey, "Seo Variable", varName)),
+				h.Text(i18n.PT(req.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)),
 			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
 		)
 	}
@@ -377,7 +378,7 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http
 
 func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, req *http.Request) h.HTMLComponent {
 	var (
-		msgr = i18n.MustGetModuleMessages(req, I18nSeoKey, Messages_en_US).(*Messages)
+		msgr = i18n.MustGetModuleMessages(req.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		db   = b.db
 	)
 
@@ -386,7 +387,7 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 		varComps = append(varComps,
 			VChip(
 				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req, presets.ModelsI18nModuleKey, "Seo Variable", varName)),
+				h.Text(i18n.PT(req.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)),
 			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
 		)
 	}
@@ -480,11 +481,11 @@ func (b *Builder) configDetailing(pd *presets.DetailingBuilder) {
 func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	var (
 		obj         = field.Obj
-		msgr        = i18n.MustGetModuleMessages(ctx.R, I18nSeoKey, Messages_en_US).(*Messages)
+		msgr        = i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		fieldPrefix string
 		setting     Setting
 		db          = b.db
-		locale, _   = l10n.IsLocalizableFromContext(ctx.R.Context())
+		locale, _   = l10n.IsLocalizableFromContext(ctx.Context())
 	)
 	seo := b.GetSEO(obj)
 	if seo == nil {
@@ -510,7 +511,7 @@ func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.Even
 	).Class("pb-4")
 }
 
-func (b *Builder) detailSaver(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (b *Builder) detailSaver(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 	if err = EditSetterFunc(
 		obj,
 		&presets.FieldContext{

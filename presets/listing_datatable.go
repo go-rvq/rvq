@@ -6,7 +6,6 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
@@ -23,18 +22,19 @@ func (b *ListingBuilder) SetDataTableDensity(dataTableDensity string) *ListingBu
 
 func (b *ListingBuilder) cellComponentFunc(f *FieldBuilder) vx.CellComponentFunc {
 	return func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent {
-		return f.compFunc(b.mb.GetComponentFuncField(obj, f), ctx)
+		fctx := b.mb.NewFieldContext(ctx, obj, f, FieldModeStack{LIST})
+		return f.ToComponent(fctx)
 	}
 }
 
-func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
+func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 	dataTable h.HTMLComponent,
 	datatableAdditions h.HTMLComponent,
 	err error,
 ) {
 	var (
 		b    = lcb.b
-		msgr = MustGetMessages(ctx.R)
+		msgr = MustGetMessages(ctx.Context())
 		qs   = ctx.R.URL.Query()
 
 		overlayMode = actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
@@ -69,18 +69,26 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				onclick.Go()+`;vars.presetsListingDialog`+portalID+` = false`)
 			return cell
 		}
-	} else if !CallOkHandled(b.mb.editionDisabled, ctx) {
+	} else {
 		reloadCb := b.reloadCallback(ctx).Encode()
 
-		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) (comp h.HTMLComponent) {
+			comp = cell
+
 			onclick := web.Plaid().
 				Query(ParamID, id).
 				URL(ctx.R.RequestURI).
 				Query(ParamPostChangeCallback, reloadCb)
 
 			if b.mb.hasDetailing {
+				if !b.CanDetailObj(obj, ctx) {
+					return
+				}
 				onclick.EventFunc(actions.Detailing)
 			} else {
+				if !b.CanEditObj(obj, ctx) {
+					return
+				}
 				onclick.EventFunc(actions.Edit)
 			}
 
@@ -94,31 +102,31 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 				onclick.Go()+fmt.Sprintf(`; locals.currEditingListItemID="%s-%s"`, dataTableID, id))
 			cell.SetAttr("@click.middle",
 				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().DetailingHrefCtx(ctx, id)))
-			return cell
+			return
 		}
 	}
 
-	displayFields := b.fields
+	var displayFields []*FieldBuilder
 	var selectColumnsBtn h.HTMLComponent
 
 	if b.selectableColumns {
 		selectColumnsBtn, displayFields = b.selectColumnsBtn(ctx.R.URL, ctx, inDialog)
 	} else {
-		displayFields = displayFields.Renderable()
+		displayFields = b.fields.FieldsFromLayout(b.CurrentLayout(), FieldRenderable())
 	}
 
 	recordPortals := make(map[int][]string)
 
-	sDataTable := vx.DataTable(sr.objs).
+	sDataTable := vx.DataTable(sr.Records).
 		SetDensity(b.dataTableDensity).
 		CellWrapperFunc(cellWrapperFunc).
 		HeadCellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, title string, ctx *web.EventContext) h.HTMLComponent {
 			if _, ok := sr.orderableFieldMap[field]; ok {
 				var orderBy string
 				var orderByIdx int
-				for i, ob := range sr.orderBys {
+				for i, ob := range sr.OrderBys {
 					if ob.FieldName == field {
-						orderBy = ob.OrderBy
+						orderBy = ob.Asc.String()
 						orderByIdx = i + 1
 						break
 					}
@@ -164,7 +172,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 
 			return row
 		}).
-		RowMenuItemFuncs(b.RowMenu().listingItemFuncs(ctx).ToRowMenuItemFuncs(tempPortal, func(rctx *RecordMenuItemContext, name string) string {
+		RowMenuItemFuncs(b.RowMenuOfItems(ctx).ToRowMenuItemFuncs(tempPortal, func(rctx *RecordMenuItemContext, name string) string {
 			portalName := tempPortal + "--" + rctx.ID
 			recordPortals[rctx.RecordIndex] = append(recordPortals[rctx.RecordIndex], portalName)
 			return portalName
@@ -230,7 +238,7 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 			Field:        f,
 			Mode:         mode,
 			Name:         f.name,
-			Label:        i18n.PT(ctx.R, ModelsI18nModuleKey, b.mb.label, b.mb.getLabel(f.NameLabel)),
+			Label:        f.RequestLabel(b.mb.Info(), ctx, lcb.b.FieldsBuilder.GetLabel),
 		}
 
 		if f.IsEnabled(fctx) {
@@ -249,9 +257,9 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 		// the pagination component and the no-record message to page.
 		return
 	}
-	if sr.totalCount > 0 {
+	if sr.TotalCount > 0 {
 		tpb := vx.VXTablePagination().
-			Total(int64(sr.totalCount)).
+			Total(int64(sr.TotalCount)).
 			CurrPage(sr.Page).
 			PerPage(sr.PerPage).
 			CustomPerPages([]int64{b.perPage}).
@@ -291,24 +299,21 @@ func (lcb *ListingComponentBuilder) getTableComponents(ctx *web.EventContext) (
 
 func (b *ListingBuilder) reloadList(ctx *web.EventContext) (r web.EventResponse, err error) {
 	var (
-		lcb                = b.listingComponentBuilderCtx(ctx)
+		lcb                = b.ListingComponentBuilderCtx(ctx)
 		dataTable          h.HTMLComponent
 		dataTableAdditions h.HTMLComponent
 	)
 
-	if dataTable, dataTableAdditions, err = lcb.getTableComponents(ctx); err != nil {
+	if dataTable, dataTableAdditions, err = lcb.GetTableComponents(ctx); err != nil {
 		return
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals,
-		&web.PortalUpdate{
-			Name: lcb.portals.DataTable(),
-			Body: dataTable,
-		},
-		&web.PortalUpdate{
-			Name: lcb.portals.DataTableAdditions(),
-			Body: dataTableAdditions,
-		},
+	r.UpdatePortal(
+		lcb.portals.DataTable(),
+		dataTable,
+	).UpdatePortal(
+		lcb.portals.DataTableAdditions(),
+		dataTableAdditions,
 	)
 
 	return
@@ -409,29 +414,31 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		).OpenOnHover(true))
 	}
 
-	if b.newBtnFunc != nil {
-		if btn := b.newBtnFunc(ctx); btn != nil {
-			actionBtns = append(actionBtns, b.newBtnFunc(ctx))
+	if b.CanCreate(ctx) {
+		if b.newBtnFunc != nil {
+			if btn := b.newBtnFunc(ctx); btn != nil {
+				actionBtns = append(actionBtns, b.newBtnFunc(ctx))
+			}
+		} else if b.mb.Info().CanCreate(ctx.R) {
+			mode := OverlayMode(ctx)
+
+			onclick := web.Plaid().
+				EventFunc(actions.New).URL(ctx.R.RequestURI).
+				Query(ParamTargetPortal, lcb.portals.Temp()).
+				Query(ParamOverlay, mode.Up().String()).
+				Query(ParamPostChangeCallback, b.reloadCallback(ctx).Encode())
+
+			actionBtns = append(actionBtns, VBtn("").
+				Color("primary").
+				Variant(VariantFlat).
+				Theme("dark").Class("ml-2").
+				// Size(SizeSmall).
+				Attr("@click", onclick.Go()).
+				Icon(true).
+				Density("comfortable").
+				Children(VIcon("mdi-plus")))
+
 		}
-	} else if b.mb.Info().CanCreate(ctx.R) {
-		mode := OverlayMode(ctx)
-
-		onclick := web.Plaid().
-			EventFunc(actions.New).URL(ctx.R.RequestURI).
-			Query(ParamTargetPortal, lcb.portals.Temp()).
-			Query(ParamOverlay, mode.Up().String()).
-			Query(ParamPostChangeCallback, b.reloadCallback(ctx).Encode())
-
-		actionBtns = append(actionBtns, VBtn("").
-			Color("primary").
-			Variant(VariantFlat).
-			Theme("dark").Class("ml-2").
-			// Size(SizeSmall).
-			Attr("@click", onclick.Go()).
-			Icon(true).
-			Density("comfortable").
-			Children(VIcon("mdi-plus")))
-
 	}
 	return actionBtns
 }

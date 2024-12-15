@@ -17,6 +17,10 @@ const (
 	ctxModel
 	ctxScope
 	ctxEditFormUnscoped
+	ctxFlashMessages
+	ctxActionFormObject
+	CtxRespondDialogHandlers
+	ctxFieldLabels
 	ParentsModelIDKey
 )
 
@@ -95,4 +99,30 @@ func EditFormUnscoped(ctx *web.EventContext, v bool) {
 func GetEditFormUnscoped(ctx *web.EventContext) (ok bool) {
 	ok, _ = ctx.ContextValue(ctxEditFormUnscoped).(bool)
 	return
+}
+
+func WithRespondDialogHandlers(ctx *web.EventContext, f ...func(d *DialogBuilder)) {
+	ctx.WithContextValue(CtxRespondDialogHandlers, append(GetRespondDialogHandlers(ctx), f...))
+}
+
+func GetRespondDialogHandlers(ctx *web.EventContext) (handlers []func(d *DialogBuilder)) {
+	handlers, _ = ctx.ContextValue(CtxRespondDialogHandlers).([]func(d *DialogBuilder))
+	return
+}
+
+func WithFieldLabels(ctx web.ContextValuer, fb *FieldsBuilder, labels map[string]string) {
+	v, _ := ctx.ContextValue(ctxFieldLabels).(map[*FieldsBuilder]map[string]string)
+	if v != nil {
+		v[fb] = labels
+	} else {
+		ctx.WithContextValue(ctxFieldLabels, map[*FieldsBuilder]map[string]string{fb: labels})
+	}
+}
+
+func GetFieldLabels(ctx web.ContextValuer, fb *FieldsBuilder) map[string]string {
+	v, _ := ctx.ContextValue(ctxFieldLabels).(map[*FieldsBuilder]map[string]string)
+	if v != nil {
+		return v[fb]
+	}
+	return nil
 }

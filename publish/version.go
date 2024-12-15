@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"gorm.io/gorm"
 )
 
@@ -18,10 +19,10 @@ func (version *Version) GetNextVersion(t *time.Time) string {
 	return fmt.Sprintf("%s-v%02v", date, 1)
 }
 
-func (version *Version) CreateVersion(db *gorm.DB, paramID string, obj interface{}) (string, error) {
+func (version *Version) CreateVersion(db *gorm.DB, mid model.ID, obj interface{}) (string, error) {
 	date := db.NowFunc().Format("2006-01-02")
 	var count int64
-	if err := utils.PrimarySluggerWhere(db.Unscoped(), obj, paramID, "version").
+	if err := db_utils.ModelIdWhere(db.Unscoped(), obj, mid, "Version").
 		Where("version like ?", date+"%").
 		Order("version DESC").
 		Count(&count).Error; err != nil {

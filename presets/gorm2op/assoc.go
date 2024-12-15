@@ -3,13 +3,19 @@ package gorm2op
 import (
 	"reflect"
 
-	"github.com/qor5/x/v3/zeroer"
+	"github.com/qor5/web/v3/zeroer"
 	"gorm.io/gorm"
 )
 
 type SaveHasManyAssociationBuilder struct {
 	field     string
 	pre, post []Callback
+	updator   func(db *gorm.DB, r any) error
+}
+
+func (b *SaveHasManyAssociationBuilder) Updator(f func(db *gorm.DB, r any) (err error)) *SaveHasManyAssociationBuilder {
+	b.updator = f
+	return b
 }
 
 func SaveHasManyAssociation(field string) *SaveHasManyAssociationBuilder {
@@ -40,7 +46,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 	post := func(state *CallbackState) (err error) {
 		assoc := state.SharedDB.Session(&gorm.Session{}).Model(state.Obj).Association(b.field)
 
-		if v, ok := state.Get(b.field); ok {
+		if v, ok := state.GetOk(b.field); ok {
 			var (
 				items     = reflect.ValueOf(v)
 				all       = make([]any, items.Len())
@@ -63,15 +69,21 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			}
 
 			if len(oldValues) > 0 {
+				up := b.updator
+				if up == nil {
+					up = func(db *gorm.DB, r any) error {
+						return db.Updates(r).Error
+					}
+				}
 				for _, value := range oldValues {
 					db := state.SharedDB.Session(&gorm.Session{}).Model(value)
-					if err = db.Updates(value).Error; err != nil {
+					if err = up(db, value); err != nil {
 						return
 					}
 				}
 			}
 			if len(newValues) > 0 {
-				if err = assoc.Append(newValues); err != nil {
+				if err = assoc.Append(newValues...); err != nil {
 					return
 				}
 			}
@@ -81,12 +93,12 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 	}
 
 	return ob.
-		PreCreate(b.pre...).
-		PreCreate(pre).
-		PostCreate(post).
-		PostCreate(b.post...).
-		PreUpdate(b.pre...).
-		PreUpdate(pre).
-		PostUpdate(post).
-		PostUpdate(b.post...)
+		CreateCallbacks().
+		Pre(b.pre...).Pre(pre).
+		Post(b.post...).Post(post).
+		Dot().
+		UpdateCallbacks().
+		Pre(b.pre...).Pre(pre).
+		Post(b.post...).Post(post).
+		Dot()
 }

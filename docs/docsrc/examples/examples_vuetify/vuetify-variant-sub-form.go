@@ -51,7 +51,7 @@ func VuetifyVariantSubForm(ctx *web.EventContext) (pr web.PageResponse, err erro
 			).Name("subform"),
 
 			VBtn("Submit").OnClick("submit"),
-		).VSlot("{ locals, form }").FormInit(h.JSONString(fv)),
+		).Locals().Form().FormInit(h.JSONString(fv)),
 	)
 	return
 }
@@ -100,7 +100,7 @@ func switchForm(ctx *web.EventContext) (r web.EventResponse, err error) {
 		form = form2(ctx, &fv, &verr)
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
+	r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
 		Name: "subform",
 		Body: form,
 	})

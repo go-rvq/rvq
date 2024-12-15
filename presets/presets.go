@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/datafield"
 	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
@@ -62,6 +64,9 @@ type Builder struct {
 	plugins                               []Plugin
 	ModelConfigurators                    ModelConfigurators
 	ModelSetupFactories                   ModelSetupFactories
+	skipNotFoundHandler                   func(r *http.Request) bool
+
+	datafield.DataField[*Builder]
 }
 
 type AssetFunc func(ctx *web.EventContext)
@@ -84,7 +89,7 @@ const (
 
 func New() *Builder {
 	l, _ := zap.NewDevelopment()
-	r := &Builder{
+	r := datafield.New(&Builder{
 		logger:  l,
 		builder: web.New(),
 		i18nBuilder: i18n.New().
@@ -106,8 +111,11 @@ func New() *Builder {
 		},
 		wrapHandlers:        make(map[string]func(in http.Handler) (out http.Handler)),
 		ModelSetupFactories: DefaultModelSetupFactories,
-	}
-	r.GetWebBuilder().RegisterEventFunc(OpenConfirmDialog, r.openConfirmDialog)
+		skipNotFoundHandler: func(r *http.Request) bool {
+			return false
+		},
+	})
+	r.GetWebBuilder().RegisterEventHandler(OpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
 	r.layoutFunc = r.DefaultLayout
 	r.detailLayoutFunc = r.DefaultLayout
 	return r
@@ -225,7 +233,7 @@ func (b *Builder) BrandProfileSwitchLanguageDisplayFuncFunc(f func(brand, profil
 func (b *Builder) NotificationFunc(contentFunc ComponentFunc, countFunc func(ctx *web.EventContext) int) (r *Builder) {
 	b.notificationCountFunc = countFunc
 	b.notificationContentFunc = contentFunc
-	b.GetWebBuilder().RegisterEventFunc(actions.NotificationCenter, b.notificationCenter)
+	b.GetWebBuilder().RegisterEventHandler(actions.NotificationCenter, web.EventFunc(b.notificationCenter))
 	return b
 }
 
@@ -485,7 +493,7 @@ func (b *Builder) menuItem(ctx *web.EventContext, m *ModelBuilder, isSub bool) (
 
 		h.If(menuIcon != "", web.Slot(VIcon(menuIcon)).Name("prepend")),
 		VListItemTitle(
-			h.Text(i18n.T(ctx.R, ModelsI18nModuleKey, label)),
+			h.Text(i18n.T(ctx.Context(), ModelsI18nModuleKey, label)),
 		),
 	).Class("rounded-lg").
 		Value(label)
@@ -534,7 +542,9 @@ func (b *Builder) isMenuItemActive(ctx *web.EventContext, m *ModelBuilder) bool 
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	mMap := make(map[string]*ModelBuilder)
 	for _, m := range b.models {
-		mMap[m.uriName] = m
+		if !m.notInMenu {
+			mMap[m.uriName] = m
+		}
 	}
 	var (
 		activeMenuItem string
@@ -562,7 +572,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 						VListItemTitle().Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 14px;", menuFontWeight)),
 						// VListItemTitle(h.Text(i18n.T(ctx.R, ModelsI18nModuleKey, v.name))).
 					).Attr("v-bind", "props").
-						Title(i18n.T(ctx.R, ModelsI18nModuleKey, v.name)).
+						Title(i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)).
 						Class("rounded-lg"),
 					// Value(i18n.T(ctx.R, ModelsI18nModuleKey, v.name)),
 				).Attr("v-slot:activator", "{ props }"),
@@ -656,7 +666,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				Attr("v-model:opened", "locals.menuOpened").
 				Attr("v-model:selected", "locals.selection"),
 			// .Attr("v-model:selected", h.JSONString([]string{"Pages"})),
-		).VSlot("{ locals }").Init(
+		).Slot("{ locals }").LocalsInit(
 			fmt.Sprintf(`{ menuOpened:  ["%s"]}`, activeMenuItem),
 			fmt.Sprintf(`{ selection:  ["%s"]}`, selection),
 		))
@@ -668,7 +678,7 @@ func (b *Builder) RunBrandFunc(ctx *web.EventContext) (r h.HTMLComponent) {
 		return b.brandFunc(ctx)
 	}
 
-	return h.H1(i18n.T(ctx.R, ModelsI18nModuleKey, b.brandTitle)).Class("text-h6")
+	return h.H1(i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle)).Class("text-h6")
 }
 
 func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponent) {
@@ -682,7 +692,7 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		return nil
 	}
 	queryName := b.I18n().GetQueryName()
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	if len(supportLanguages) == 1 {
 		return h.Template().Children(
 			h.Div(
@@ -802,8 +812,8 @@ func (b *Builder) RunBrandProfileSwitchLanguageDisplayFunc(brand, profile, switc
 	)
 }
 
-func MustGetMessages(r *http.Request) *Messages {
-	return i18n.MustGetModuleMessages(r, CoreI18nModuleKey, Messages_en_US).(*Messages)
+func MustGetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, CoreI18nModuleKey, Messages_en_US).(*Messages)
 }
 
 const (
@@ -811,6 +821,7 @@ const (
 	DefaultConfirmDialogPortalName = "presets_ConfirmDialogPortalName"
 	ListingDialogPortalName        = "presets_ListingDialogPortalName"
 	FormPortalName                 = "presets_FormPortalName"
+	FlashPortalName                = "flash"
 )
 
 const (
@@ -819,10 +830,11 @@ const (
 	CloseListingDialogVarScript = "vars.presetsListingDialog = false"
 )
 
-func (b *Builder) overlay(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {
+func (b *Builder) Overlay(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {
 	overlayType := actions.OverlayMode(ctx.Param(ParamOverlay))
+
 	if overlayType == actions.Dialog {
-		b.dialog(r, comp, width)
+		b.dialog(ctx, r, comp, width)
 		return
 	} else if overlayType == actions.Content {
 		b.contentDrawer(ctx, r, comp, width)
@@ -835,9 +847,9 @@ func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width 
 	if width == "" {
 		width = b.rightDrawerWidth
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: actions.RightDrawer.PortalName(),
-		Body: VNavigationDrawer(
+	r.UpdatePortal(
+		actions.RightDrawer.PortalName(),
+		VNavigationDrawer(
 			web.GlobalEvents().Attr("@keyup.esc", "vars.presetsRightDrawer = false"),
 			web.Portal(comp).Name(actions.RightDrawer.ContentPortalName()),
 		).
@@ -853,7 +865,7 @@ func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width 
 		// HideOverlay(true).
 		// Floating(true).
 
-	})
+	)
 	r.RunScript = "setTimeout(function(){ vars.presetsRightDrawer = true }, 100)"
 }
 
@@ -866,10 +878,7 @@ func (b *Builder) contentDrawer(ctx *web.EventContext, r *web.EventResponse, com
 	if portalName != "" {
 		p = portalName
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: p,
-		Body: comp,
-	})
+	r.UpdatePortal(p, comp)
 }
 
 // 				Attr("@input", "alert(plaidForm.dirty) && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsDialog = true : vars.presetsDialog = $event").
@@ -914,7 +923,7 @@ func (b *Builder) openConfirmDialog(ctx *web.EventContext) (er web.EventResponse
 		return
 	}
 
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	promptText := msgr.ConfirmDialogPromptText
 	if v := ctx.R.FormValue(ConfirmDialogPromptText); v != "" {
 		promptText = v
@@ -925,9 +934,9 @@ func (b *Builder) openConfirmDialog(ctx *web.EventContext) (er web.EventResponse
 		portal = v
 	}
 
-	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-		Name: portal,
-		Body: web.Scope(VDialog(
+	er.UpdatePortal(
+		portal,
+		web.Scope(VDialog(
 			VCard(
 				VCardTitle(VIcon("warning").Class("red--text mr-4"), h.Text(promptText)),
 				VCardActions(
@@ -946,8 +955,8 @@ func (b *Builder) openConfirmDialog(ctx *web.EventContext) (er web.EventResponse
 			),
 		).MaxWidth("600px").
 			Attr("v-model", "locals.show"),
-		).VSlot("{ locals }").Init("{show: true}"),
-	})
+		).Slot("{ locals }").LocalsInit("{show: true}"),
+	)
 
 	return
 }
@@ -985,7 +994,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		)
 
 		if innerPr, err = in(ctx); err != nil {
-			title := MustGetMessages(ctx.R).Error
+			title := MustGetMessages(ctx.Context()).Error
 			innerPr.PageTitle = title
 			innerPr.Body = VAlert(h.Text(err.Error())).Icon("$error").Color("error").Title(title)
 			err = nil
@@ -1019,13 +1028,13 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			if pr.PageTitle != "" {
 				bc := GetOrInitBreadcrumbs(ctx.R)
 				home := &Breadcrumb{
-					Label: i18n.T(ctx.R, ModelsI18nModuleKey, b.brandTitle),
+					Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
 					URI:   b.prefix + "/",
 				}
 				if pr.PageTitle != home.Label {
 					bc.Prepend(home)
 					bc.Append(&Breadcrumb{Label: pr.PageTitle})
-					breadcrumbs = append(breadcrumbs, bc.Component(i18n.T(ctx.R, ModelsI18nModuleKey, "YouAreHere")))
+					breadcrumbs = append(breadcrumbs, bc.Component(i18n.T(ctx.Context(), ModelsI18nModuleKey, "YouAreHere")))
 				}
 			}
 		}
@@ -1041,6 +1050,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			web.Portal().Name(DeleteConfirmPortalName),
 			web.Portal().Name(DefaultConfirmDialogPortalName),
 			web.Portal().Name(ListingDialogPortalName),
+			web.Portal().Name(FlashPortalName),
 		)
 
 		var menuCloser h.HTMLComponent
@@ -1084,10 +1094,17 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			// ClippedLeft(true),
 
 			h.Template(
-				VSnackbar(h.Text("{{vars.presetsMessage.message}}")).
+				VSnackbar(
+					h.Text("{{vars.presetsMessage.message}}"),
+					web.Slot(
+						VBtn("").
+							Icon("mdi-close").
+							Attr("@click", `vars.presetsMessage.show = false`),
+					).Name("actions"),
+				).
 					Attr("v-model", "vars.presetsMessage.show").
 					Attr(":color", "vars.presetsMessage.color").
-					Timeout(2000).
+					Timeout(15000).
 					Location(LocationTop),
 			).Attr("v-if", "vars.presetsMessage"),
 			VLayout(
@@ -1178,7 +1195,7 @@ func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 			panic(err)
 		}
 
-		pr.PageTitle = fmt.Sprintf("%s - %s", innerPr.PageTitle, i18n.T(ctx.R, ModelsI18nModuleKey, b.brandTitle))
+		pr.PageTitle = fmt.Sprintf("%s - %s", innerPr.PageTitle, i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle))
 		pr.Body = VApp(
 			web.Portal().Name(actions.Dialog.PortalName()),
 			web.Portal().Name(DeleteConfirmPortalName),
@@ -1279,7 +1296,7 @@ func (b *Builder) getHomePageFunc() web.PageFunc {
 }
 
 func (b *Builder) DefaultNotFoundPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	r.Body = h.Div(
 		h.H1("404").Class("mb-2"),
 		h.Text(msgr.NotFoundPageNotice),
@@ -1293,6 +1310,10 @@ func (b *Builder) getNotFoundPageFunc() web.PageFunc {
 		pf = b.notFoundFunc
 	}
 	return pf
+}
+func (b *Builder) SkipNotFoundHandlerFunc(f func(r *http.Request) bool) *Builder {
+	b.skipNotFoundHandler = f
+	return b
 }
 
 func (b *Builder) extraFullPath(ea *extraAsset) string {
@@ -1352,7 +1373,7 @@ func (b *Builder) initMux() {
 	}
 	mux.Handle(
 		homeURL,
-		b.wrap(nil, b.layoutFunc(b.getHomePageFunc(), b.homePageLayoutConfig)),
+		b.Wrap(nil, b.layoutFunc(b.getHomePageFunc(), b.homePageLayoutConfig)),
 	)
 
 	for _, m := range b.models {
@@ -1375,6 +1396,9 @@ func (rw *responseWriterWrapper) WriteHeader(code int) {
 		// default 404 will use http.Error to set Content-Type to text/plain,
 		// So we have to set it to html before WriteHeader
 		rw.ResponseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		// prevent header sent
+		return
 	}
 	rw.ResponseWriter.WriteHeader(code)
 }
@@ -1388,7 +1412,7 @@ func (rw *responseWriterWrapper) Write(b []byte) (int, error) {
 }
 
 func (b *Builder) notFound(handler http.Handler) http.Handler {
-	notFoundHandler := b.wrap(
+	notFoundHandler := b.Wrap(
 		nil,
 		b.layoutFunc(b.getNotFoundPageFunc(), b.notFoundPageLayoutConfig),
 	)
@@ -1396,8 +1420,10 @@ func (b *Builder) notFound(handler http.Handler) http.Handler {
 		capturedResponse := &responseWriterWrapper{w, http.StatusOK}
 		handler.ServeHTTP(capturedResponse, r)
 		if capturedResponse.statusCode == http.StatusNotFound {
-			// If no other handler wrote to the response, assume 404 and write our custom response.
-			notFoundHandler.ServeHTTP(w, r)
+			if !b.skipNotFoundHandler(r) {
+				// If no other handler wrote to the response, assume 404 and write our custom response.
+				notFoundHandler.ServeHTTP(w, r)
+			}
 		}
 		return
 	})
@@ -1407,7 +1433,7 @@ func (b *Builder) AddWrapHandler(key string, f func(in http.Handler) (out http.H
 	b.wrapHandlers[key] = f
 }
 
-func (b *Builder) wrap(m *ModelBuilder, pf web.PageFunc) http.Handler {
+func (b *Builder) Wrap(m *ModelBuilder, pf web.PageFunc) http.Handler {
 	p := b.builder.Page(pf)
 	if m != nil {
 		m.registerDefaultEventFuncs()

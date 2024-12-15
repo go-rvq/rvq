@@ -25,16 +25,18 @@ type FormBuilder struct {
 }
 
 func NewFormBuilder(ctx *web.EventContext, mb *ModelBuilder, fb *FieldsBuilder, obj interface{}) *FormBuilder {
+	rawID := mb.MustRecordID(obj)
+
 	f := &FormBuilder{
 		id:          vx.ObjectID(obj),
 		fb:          fb,
 		ctx:         ctx,
-		msgr:        MustGetMessages(ctx.R),
+		msgr:        MustGetMessages(ctx.Context()),
 		mb:          mb,
 		obj:         obj,
 		overlayMode: GetOverlay(ctx),
 	}
-	if f.id == "" {
+	if rawID.IsZero() {
 		f.mode = NEW
 	} else {
 		f.mode = EDIT
@@ -108,7 +110,7 @@ func (f *FormBuilder) Build() (form *Form) {
 					Timeout(-1).
 					Color(color).
 					Attr("v-model", "locals.show"),
-			).VSlot("{ locals }").Init(`{ show: true }`)
+			).Slot("{ locals }").LocalsInit(`{ show: true }`)
 		}
 	}
 
@@ -137,6 +139,7 @@ type Form struct {
 	Menu          h.HTMLComponents
 	Actions       h.HTMLComponents
 	ScopeDisabled bool
+	Wrap          func(h h.HTMLComponent) h.HTMLComponent
 }
 
 func (f *Form) Component() (comp h.HTMLComponent) {
@@ -157,9 +160,7 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 		},
 	}
 
-	var (
-		overlay = f.b.overlayMode
-	)
+	overlay := f.b.overlayMode
 
 	cb.PreBody = append(cb.PreBody, f.Notice)
 
@@ -170,7 +171,7 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 
 	if overlay.Overlayed() {
 		if !f.ScopeDisabled {
-			cb.Scope = web.Scope().Form().Locals().Vars().Closes()
+			cb.Scope = web.Scope().Form().Locals().Vars().Closer()
 		}
 		return cb.BuildOverlay()
 	}
@@ -186,24 +187,39 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 }
 
 func (f *Form) Respond(r *web.EventResponse) {
+	f.RespondToPortal(f.Portal, r)
+}
+
+func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 	comp := f.Component()
+	oldWrap := f.Wrap
+
+	f.Wrap = func(h h.HTMLComponent) h.HTMLComponent {
+		if oldWrap != nil {
+			h = oldWrap(h)
+		}
+		return web.Scope(h).FormInit()
+	}
 
 	switch f.b.overlayMode {
 	case actions.Dialog:
 		f.MB.p.Dialog().
-			SetTargetPortal(f.Portal).
+			SetTargetPortal(portal).
 			SetContentPortalName(f.Portal+"Content").
 			SetScrollable(true).
-			Respond(r, comp)
+			RootWrap(f.Wrap).
+			Respond(f.b.ctx, r, comp)
 	default:
 		if f.Portal != "" && f.b.overlayMode.IsDrawer() {
 			d := f.MB.p.Drawer(f.b.overlayMode).
-				SetPortalName(f.Portal).
-				SetValidWidth(f.MB.rightDrawerWidth)
+				SetPortalName(portal).
+				SetScrollable(true).
+				SetValidWidth(f.MB.rightDrawerWidth).
+				RootWrap(f.Wrap)
 
 			d.Respond(r, comp)
-		} else if f.Portal != "" {
-			r.UpdatePortal(f.Portal, comp)
+		} else if portal != "" {
+			r.UpdatePortal(portal, comp)
 		} else {
 			r.Body = comp
 		}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ory/ladon"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/gorm2op"
 	"github.com/qor5/web/v3"
@@ -142,7 +143,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	ed.FetchFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	ed.FetchFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
 	})
 
@@ -158,7 +159,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	ed.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	ed.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		r := obj.(*Role)
 		if r.ID != 0 {
 			if err = b.db.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", r.ID).Error; err != nil {
@@ -173,7 +174,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		err = b.db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", id).Error; err != nil {
 				return err

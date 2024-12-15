@@ -10,6 +10,7 @@ import (
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/admin/v3/utils"
+	utils2 "github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
@@ -26,11 +27,11 @@ const (
 	VarCurrentDisplayID = "vars.publish_VarCurrentDisplayID"
 )
 
-func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) web.EventFunc {
+func duplicateVersionAction(mb *presets.ModelBuilder, pb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		slug := ctx.Param(presets.ParamID)
+		mid := mb.MustParseRecordID(ctx.Param(presets.ParamID))
 		obj := mb.NewModel()
-		if err = utils.PrimarySluggerWhere(db, mb.NewModel(), slug).First(obj).Error; err != nil {
+		if err = utils2.ModelIdWhere(pb.db, mb.NewModel(), mid).First(obj).Error; err != nil {
 			return
 		}
 
@@ -40,8 +41,8 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 			return
 		}
 
-		oldVersion := ver.EmbedVersion().Version
-		newVersion, err := ver.CreateVersion(db, slug, mb.NewModel())
+		oldVersion := *ver.EmbedVersion()
+		newVersion, err := ver.CreateVersion(pb.db, mid, mb.NewModel())
 		if err != nil {
 			return
 		}
@@ -49,7 +50,7 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 		if err = reflectutils.Set(obj, "Version", Version{
 			Version:       newVersion, // In fact, it is also set in CreateVersion, just in case
 			VersionName:   newVersion, // In fact, it is also set in CreateVersion, just in case
-			ParentVersion: oldVersion,
+			ParentVersion: oldVersion.Version,
 		}); err != nil {
 			return
 		}
@@ -95,8 +96,7 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 		}
 		err = nil
 
-		slug = obj.(presets.SlugEncoder).PrimarySlug()
-		if err = mb.Editing().Creating().Saver(obj, slug, ctx); err != nil {
+		if err = mb.Editing().Creating().Creator(obj, ctx); err != nil {
 			presets.ShowMessage(&r, err.Error(), "error")
 			return
 		}
@@ -105,7 +105,7 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 			// close dialog and open editing
 			web.AppendRunScripts(&r,
 				presets.CloseListingDialogVarScript,
-				web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, slug).Go(),
+				web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, mid.String()).Go(),
 			)
 			return
 		}
@@ -113,10 +113,10 @@ func duplicateVersionAction(db *gorm.DB, mb *presets.ModelBuilder, _ *Builder) w
 		web.AppendRunScripts(&r,
 			presets.CloseListingDialogVarScript,
 			presets.CloseRightDrawerVarScript,
-			web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, slug).Go(),
+			web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, mid.String()).Go(),
 		)
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 		presets.ShowMessage(&r, msgr.SuccessfullyCreated, "")
 
 		r.RunScript = web.Plaid().ThenScript(r.RunScript).Go()
@@ -153,9 +153,8 @@ func renameVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 			EventFunc(eventRenameVersion).
 			Queries(ctx.Queries()).Go()
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.Dialog.PortalName(),
-			Body: web.Scope(
+		r.UpdatePortal(actions.Dialog.PortalName(),
+			web.Scope(
 				v.VDialog(
 					v.VCard(
 						v.VCardTitle(h.Text("Version")),
@@ -177,8 +176,8 @@ func renameVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 						),
 					),
 				).MaxWidth("420px").Attr("v-model", "locals.renameVersionDialog"),
-			).Init("{renameVersionDialog:true}").VSlot("{locals}"),
-		})
+			).LocalsInit("{renameVersionDialog:true}").Slot("{locals}"),
+		)
 		return
 	}
 }
@@ -190,9 +189,9 @@ func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 			return
 		}
 
-		id := ctx.R.FormValue(presets.ParamID)
+		mid := mb.MustParseRecordID(ctx.R.FormValue(presets.ParamID))
 		obj := mb.NewModel()
-		err = mb.Editing().Fetcher(obj, id, ctx)
+		err = mb.Editing().Fetcher(obj, mid, ctx)
 		if err != nil {
 			return
 		}
@@ -202,7 +201,7 @@ func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 			return
 		}
 
-		if err = mb.Editing().Saver(obj, id, ctx); err != nil {
+		if err = mb.Editing().Saver(obj, mid, ctx); err != nil {
 			return
 		}
 
@@ -221,19 +220,18 @@ func deleteVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		versionName := ctx.R.FormValue("version_name")
 
-		utilMsgr := i18n.MustGetModuleMessages(ctx.R, utils.I18nUtilsKey, Messages_en_US).(*utils.Messages)
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		utilMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, Messages_en_US).(*utils.Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: presets.DeleteConfirmPortalName,
-			Body: utils.DeleteDialog(
+		r.UpdatePortal(presets.DeleteConfirmPortalName,
+			utils.DeleteDialog(
 				msgr.DeleteVersionConfirmationText(versionName),
 				"locals.deleteConfirmation = false;"+web.Plaid().
 					URL(ctx.R.URL.Path).
 					EventFunc(eventDeleteVersion).
 					Queries(ctx.Queries()).Go(),
 				utilMsgr),
-		})
+		)
 		return
 	}
 }
@@ -248,22 +246,22 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 			return r, perm.PermissionDenied
 		}
 
-		slug := ctx.R.FormValue(presets.ParamID)
-		if len(slug) <= 0 {
+		mid := mb.MustParseRecordID(ctx.R.FormValue(presets.ParamID))
+		if mid.IsZero() {
 			return r, errors.New("no delete_id")
 		}
 
-		if err := mb.Listing().Deleter(mb.NewModel(), slug, ctx); err != nil {
+		if err := mb.Listing().Deleter(mb.NewModel(), mid, ctx); err != nil {
 			return r, err
 		}
 
 		currentDisplaySlug := ctx.R.FormValue(paramCurrentDisplaySlug)
-		if slug == currentDisplaySlug {
-			deletedVersion := mb.NewModel().(presets.SlugDecoder).PrimaryColumnValuesBySlug(slug)["version"]
+		if mid.String() == currentDisplaySlug {
+			deletedVersion := mid.GetValue("Version").(string)
 
 			// find the older version first then find the max version
 			version := mb.NewModel()
-			db := utils.PrimarySluggerWhere(db, version, slug, "version").Order("version DESC").WithContext(ctx.R.Context())
+			db := utils2.ModelIdWhere(db, version, mid, "Version").Order(mid.Schema.Table() + ".version DESC").WithContext(ctx.R.Context())
 			err := db.Where("version < ?", deletedVersion).First(version).Error
 			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 				return r, err
@@ -298,7 +296,7 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 		if err != nil {
 			return r, err
 		}
-		if slug == cmp.Or(listQuery.Get("select_id"), listQuery.Get("f_select_id")) {
+		if mid.String() == cmp.Or(listQuery.Get("select_id"), listQuery.Get("f_select_id")) {
 			listQuery.Set("select_id", currentDisplaySlug)
 		}
 

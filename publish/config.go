@@ -11,6 +11,8 @@ const (
 	ListingFieldLive       = "Live"
 
 	VersionsPublishBar = "VersionsPublishBar"
+	FieldOnlineUrl     = "OnlineUrl"
+	FieldStatus        = "Status"
 
 	SlugVersion = "version"
 )

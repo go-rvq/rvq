@@ -51,7 +51,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		}
 		return
 	})
-	user.RegisterEventFunc("eventUnlockUser", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	user.RegisterEventHandler("eventUnlockUser", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := models.User{}
 		if err = db.Where("id = ?", uid).First(&u).Error; err != nil {
@@ -65,7 +65,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return r, nil
 	})
 
-	user.RegisterEventFunc("eventSendResetPasswordEmail", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	user.RegisterEventHandler("eventSendResetPasswordEmail", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := models.User{}
 		if err = db.Where("id = ?", uid).First(&u).Error; err != nil {
@@ -79,7 +79,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return r, nil
 	})
 
-	user.RegisterEventFunc("eventRevokeTOTP", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	user.RegisterEventHandler("eventRevokeTOTP", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := &models.User{}
 		if err = db.Where("id = ?", uid).First(u).Error; err != nil {
@@ -279,6 +279,17 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		}
 	})
 
+	ed.CreatingBuilder().WrapCreateFunc(func(in presets.CreateFunc) presets.CreateFunc {
+		return func(obj interface{}, ctx *web.EventContext) (err error) {
+			u := obj.(*models.User)
+			if u.GetAccountName() == loginInitialUserEmail {
+				return perm.PermissionDenied
+			}
+			u.RegistrationDate = time.Now()
+			return in(obj, ctx)
+		}
+	})
+
 	cl := user.Listing("ID", "Name", "Account", "Status", "Notes").PerPage(10)
 	cl.Field("Account").Label("Email")
 	cl.SearchColumns("users.Name", "Account")
@@ -378,7 +389,7 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 	b := pb.Model(&models.Post{}).
 		URIName("dialog-select-favor-posts").
 		InMenu(false).Use(publisher)
-	lb := b.Listing("ID", "Title", "TitleWithSlug", "HeroImage", "Body").
+	lb := b.Listing("ID", "Title", "TitleWithSlug", "Cover", "Body").
 		SearchColumns("title", "body").
 		PerPage(10).
 		OrderableFields([]*presets.OrderableField{
@@ -487,13 +498,13 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 }
 
 func registerSelectFavorPostEvent(db *gorm.DB, b *presets.Builder) {
-	b.GetWebBuilder().RegisterEventFunc("selectFavorPost", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	b.GetWebBuilder().RegisterEventHandler("selectFavorPost", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		var id uint
 		if v := ctx.R.FormValue("id"); v != "" {
 			iv, _ := strconv.Atoi(v)
 			id = uint(iv)
 		}
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
+		r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
 			Name: "favorPostSelector",
 			Body: favorPostSelector(db, id),
 		})

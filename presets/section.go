@@ -219,7 +219,7 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 	b.editingFB = *b.editingFB.Only(fields...)
 	if b.componentEditFunc == nil {
 		b.EditComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode, b.name, ctx)
+			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(EDIT), b.name, ctx)
 		})
 	}
 	b.Viewing(fields...)
@@ -231,7 +231,7 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 	b.viewingFB = *b.viewingFB.Only(fields...)
 	if b.componentViewFunc == nil {
 		b.ViewComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode, b.name, ctx)
+			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), b.name, ctx)
 		})
 	}
 	return
@@ -395,7 +395,7 @@ func (b *SectionBuilder) viewComponent(field *FieldContext, ctx *web.EventContex
 	return web.Portal(
 		web.Scope(
 			content,
-		).VSlot("{ form }"),
+		).Slot("{ form }"),
 		hiddenComp,
 	).Name(b.FieldPortalName())
 }
@@ -437,11 +437,11 @@ func (b *SectionBuilder) editComponent(obj interface{}, field *FieldContext, ctx
 				).Variant(VariantOutlined).Class("mb-6"),
 			),
 			hiddenComp,
-		).VSlot("{ form }"),
+		).Slot("{ form }"),
 	).Name(b.FieldPortalName())
 }
 
-func (b *SectionBuilder) DefaultSaveFunc(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (b *SectionBuilder) DefaultSaveFunc(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	if tf := reflect.TypeOf(obj).Kind(); tf != reflect.Ptr {
 		return errors.New(fmt.Sprintf("model %#+v must be pointer", obj))
 	}
@@ -455,7 +455,7 @@ func (b *SectionBuilder) DefaultSaveFunc(obj interface{}, id string, ctx *web.Ev
 	return
 }
 
-func (b *SectionBuilder) DefaultListElementSaveFunc(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (b *SectionBuilder) DefaultListElementSaveFunc(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	// Delete or Add row
 	if ctx.Queries().Get(b.SaveBtnKey()) == "" {
 		err = b.father.mb.p.dataOperator.Save(obj, id, ctx)
@@ -569,7 +569,7 @@ func (b *SectionBuilder) listComponent(field *FieldContext, ctx *web.EventContex
 		web.Scope(
 			// element and addBtn have mb-2, so the real effect is mb-6
 			h.Div(rows).Class("mb-4"),
-		).VSlot("{ form }"),
+		).Slot("{ form }"),
 		hiddenComp,
 	).Name(b.FieldPortalName())
 }
@@ -721,18 +721,13 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 			}
 			keyPath := fmt.Sprintf("%s.%s", prefix, f.name)
 
-			var label string
-			if !f.hiddenLabel {
-				label = b.editingFB.getLabel(f.NameLabel)
-			}
-
 			err := f.setterFunc(toObj, &FieldContext{
 				EventContext: ctx,
 				Obj:          toObj,
 				ModelInfo:    info,
 				FormKey:      keyPath,
 				Name:         f.name,
-				Label:        label,
+				Label:        f.RequestLabel(info, ctx, b.editingFB.GetLabel),
 			}, ctx)
 			if err != nil {
 				return err

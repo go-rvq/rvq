@@ -134,7 +134,7 @@ func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 						Density(v.DensityCompact).
 						Class("mt-12").
 						HideDetails(true),
-				).VSlot("{locals:selectLocals}").Init(fmt.Sprintf(`{currLangVal: '%s'}`, currLangVal)),
+				).Slot("{locals:selectLocals}").LocalsInit(fmt.Sprintf(`{currLangVal: '%s'}`, currLangVal)),
 			),
 		).Class(plogin.DefaultViewCommon.WrapperClass).Style(plogin.DefaultViewCommon.WrapperStyle)
 

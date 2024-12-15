@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"net/http"
+	"context"
 
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/x/v3/i18n"
@@ -110,6 +110,6 @@ func getTStatus(msgr *Messages, status string) string {
 	return status
 }
 
-func getTJob(r *http.Request, v string) string {
-	return i18n.PT(r, presets.ModelsI18nModuleKey, "WorkerJob", v)
+func getTJob(ctx context.Context, v string) string {
+	return i18n.PT(ctx, presets.ModelsI18nModuleKey, "WorkerJob", v)
 }

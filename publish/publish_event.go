@@ -1,30 +1,48 @@
 package publish
 
 import (
-	"github.com/qor5/admin/v3/activity"
+	"fmt"
+
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
-	"gorm.io/gorm"
 )
 
-func publishAction(_ *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, ab *activity.Builder, actionName string) web.EventFunc {
-	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		paramID := ctx.Param(presets.ParamID)
+func Publish(mb *presets.ModelBuilder, publisher *Builder, actionName string, ctx *web.EventContext, mid model.ID) (obj any, err error) {
+	obj = mb.NewModel()
+	err = mb.Editing().Fetcher(obj, mid, ctx)
+	if err != nil {
+		return
+	}
+	reqCtx := publisher.WithContextValues(ctx.R.Context())
+	err = publisher.Publish(mb, obj, reqCtx)
+	if err != nil {
+		return
+	}
 
-		obj := mb.NewModel()
-		err = mb.Editing().Fetcher(obj, paramID, ctx)
-		if err != nil {
+	if publisher.ab != nil {
+		if _, exist := publisher.ab.GetModelBuilder(obj); exist {
+			publisher.ab.AddCustomizedRecord(actionName, false, ctx.R.Context(), obj)
+		}
+	}
+
+	return
+}
+
+func publishAction(mb *presets.ModelBuilder, publisher *Builder, actionName string) web.EventFunc {
+	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		var mid model.ID
+		if mid, err = mb.ParseRecordID(ctx.Param(presets.ParamID)); err != nil {
 			return
 		}
-		reqCtx := publisher.WithContextValues(ctx.R.Context())
-		err = publisher.Publish(obj, reqCtx)
-		if err != nil {
+
+		var obj any
+		if obj, err = Publish(mb, publisher, actionName, ctx, mid); err != nil {
 			return
 		}
-		if ab != nil {
-			if _, exist := ab.GetModelBuilder(obj); exist {
-				ab.AddCustomizedRecord(actionName, false, ctx.R.Context(), obj)
-			}
+
+		if status, ok := obj.(StatusInterface); ok {
+			web.AppendRunScripts(&r, fmt.Sprintf("locals.%s = %q", FieldOnlineUrl, status.EmbedStatus().OnlineUrl))
 		}
 
 		if script := ctx.R.FormValue(ParamScriptAfterPublish); script != "" {
@@ -37,26 +55,40 @@ func publishAction(_ *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, ab 
 	}
 }
 
-func unpublishAction(_ *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, ab *activity.Builder, actionName string) web.EventFunc {
+func Unpublish(mb *presets.ModelBuilder, publisher *Builder, actionName string, ctx *web.EventContext, mid model.ID) (obj any, err error) {
+	obj = mb.NewModel()
+
+	if err = mb.Editing().Fetcher(obj, mid, ctx); err != nil {
+		return
+	}
+
+	if obj.(StatusInterface).EmbedStatus().Status != StatusOnline {
+		return
+	}
+
+	reqCtx := publisher.WithContextValues(ctx.R.Context())
+	err = publisher.UnPublish(mb, obj, reqCtx)
+	if err != nil {
+		return
+	}
+	if publisher.ab != nil {
+		if _, exist := publisher.ab.GetModelBuilder(obj); exist {
+			publisher.ab.AddCustomizedRecord(actionName, false, ctx.R.Context(), obj)
+		}
+	}
+	return
+}
+
+func unpublishAction(mb *presets.ModelBuilder, publisher *Builder, actionName string) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		paramID := ctx.Param(presets.ParamID)
-
-		obj := mb.NewModel()
-		err = mb.Editing().Fetcher(obj, paramID, ctx)
-		if err != nil {
+		var mid model.ID
+		if mid, err = mb.ParseRecordID(ctx.Param(presets.ParamID)); err != nil {
 			return
 		}
-		reqCtx := publisher.WithContextValues(ctx.R.Context())
-		err = publisher.UnPublish(obj, reqCtx)
-		if err != nil {
+
+		if _, err = Unpublish(mb, publisher, actionName, ctx, mid); err != nil {
 			return
 		}
-		if ab != nil {
-			if _, exist := ab.GetModelBuilder(obj); exist {
-				ab.AddCustomizedRecord(actionName, false, ctx.R.Context(), obj)
-			}
-		}
-
 		presets.ShowMessage(&r, "success", "")
 		r.Reload = true
 		return

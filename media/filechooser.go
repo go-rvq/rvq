@@ -19,14 +19,14 @@ import (
 
 func fileChooser(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 		field := ctx.R.FormValue("field")
 		cfg := stringToCfg(ctx.R.FormValue("cfg"))
 
 		portalName := mainPortalName(field)
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: portalName,
-			Body: VDialog(
+		r.UpdatePortal(
+			portalName,
+			VDialog(
 				VCard(
 					VToolbar(
 						VBtn("").
@@ -66,7 +66,7 @@ func fileChooser(mb *Builder) web.EventFunc {
 				Transition("dialog-bottom-transition").
 				// Scrollable(true).
 				Attr("v-model", "vars.showFileChooser"),
-		})
+		)
 		r.RunScript = `setTimeout(function(){ vars.showFileChooser = true }, 100)`
 		return
 	}
@@ -76,7 +76,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 	cfg *media_library.MediaBoxConfig,
 ) h.HTMLComponent {
 	db := mb.db
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 
 	keyword := ctx.R.FormValue(searchKeywordName(field))
 
@@ -258,9 +258,13 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 							fileChips(f),
 						),
 					),
-					h.If(mb.deleteIsAllowed(ctx.R, files[i]) == nil,
-						VCardActions(
-							VSpacer(),
+					VCardActions(
+						VBtn(msgr.CopyLink).
+							Variant(VariantText).
+							Attr("@click", fmt.Sprintf(`(e) => e.view.navigator.clipboard.writeText(%q)`, f.File.Url)).
+							Attr("@click.middle", fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, f.File.Url)),
+						VSpacer(),
+						h.If(mb.deleteIsAllowed(ctx.R, files[i]) == nil,
 							VBtn(msgr.Delete).
 								Variant(VariantText).
 								Attr("@click",
@@ -335,7 +339,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 				),
 				VCol().Cols(1),
 			).Fluid(true),
-		).Init(fmt.Sprintf(`{fileChooserUploadingFiles: [], %s}`, strings.Join(initCroppingVars, ", "))).VSlot("{ locals }"),
+		).LocalsInit(fmt.Sprintf(`{fileChooserUploadingFiles: [], %s}`, strings.Join(initCroppingVars, ", "))).Slot("{ locals }"),
 		VOverlay(
 			h.Img("").Attr(":src", "vars.isImage? vars.mediaShow: ''").
 				Style("max-height: 80vh; max-width: 80vw; background: rgba(0, 0, 0, 0.5)"),
@@ -474,10 +478,10 @@ func chooseFile(mb *Builder) web.EventFunc {
 			Height:      m.File.Height,
 		}
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: mediaBoxThumbnailsPortalName(field),
-			Body: mediaBoxThumbnails(ctx, &mediaBox, field, cfg, false, false),
-		})
+		r.UpdatePortal(
+			mediaBoxThumbnailsPortalName(field),
+			mediaBoxThumbnails(ctx, &mediaBox, field, cfg, false, false),
+		)
 		r.RunScript = `vars.showFileChooser = false`
 		return
 	}
@@ -505,8 +509,8 @@ func jumpPage(mb *Builder) web.EventFunc {
 }
 
 func renderFileChooserDialogContent(ctx *web.EventContext, r *web.EventResponse, field string, mb *Builder, cfg *media_library.MediaBoxConfig) {
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: dialogContentPortalName(field),
-		Body: fileChooserDialogContent(mb, field, ctx, cfg),
-	})
+	r.UpdatePortal(
+		dialogContentPortalName(field),
+		fileChooserDialogContent(mb, field, ctx, cfg),
+	)
 }

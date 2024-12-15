@@ -15,6 +15,8 @@ type Drawer struct {
 	portalName        string
 	contentPortalName string
 	safeClose         bool
+	scrollable        bool
+	rootWrap          func(comp h.HTMLComponent) h.HTMLComponent
 }
 
 func (p *Drawer) ContentPortalName() string {
@@ -104,24 +106,44 @@ func (p *Drawer) SetSafeClose(safeClose bool) *Drawer {
 	return p
 }
 
+func (p *Drawer) Scrollable() bool {
+	return p.scrollable
+}
+
+func (p *Drawer) SetScrollable(scrollable bool) *Drawer {
+	p.scrollable = scrollable
+	return p
+}
+
+func (p *Drawer) RootWrap(wrap func(comp h.HTMLComponent) h.HTMLComponent) *Drawer {
+	p.rootWrap = wrap
+	return p
+}
+
 func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 	if p.contentPortalName != "" {
 		comp = web.Portal(comp).Name(p.contentPortalName)
 	}
 
+	drawer := v.VNavigationDrawer(
+		// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
+		comp,
+	).
+		// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
+		Attr("v-model", "closer.show").
+		Location(p.location).
+		Temporary(true).
+		// Fixed(true).
+		RawWidth(`closer.fullscreen ? null : `+h.JSONString(p.width)).
+		RawClass(`closer.fullscreen ? 'v-navigation-drawer--fullscreen' : null`).
+		Attr(":height", `"100%"`)
+
+	if p.scrollable {
+		drawer.Class("v-navigation-drawer--scrollable")
+	}
+
 	d := web.CloserScope(
-		v.VNavigationDrawer(
-			// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
-			comp,
-		).
-			// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-			Attr("v-model", "closer.show").
-			Location(p.location).
-			Temporary(true).
-			// Fixed(true).
-			RawWidth(`closer.fullscreen ? null : `+h.JSONString(p.width)).
-			RawClass(`closer.fullscreen ? 'v-navigation-drawer--fullscreen' : null`).
-			Attr(":height", `"100%"`),
+		drawer,
 		true,
 	)
 
@@ -129,10 +151,13 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 	// HideOverlay(true).
 	// Floating(true).
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: p.portalName,
-		Body: d,
-	})
+	comp = d
+
+	if p.rootWrap != nil {
+		comp = p.rootWrap(comp)
+	}
+
+	r.UpdatePortal(p.portalName, comp)
 }
 
 func (p *Builder) Drawer(drawerMode actions.OverlayMode) *Drawer {

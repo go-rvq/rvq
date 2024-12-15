@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gosimple/unidecode"
 	"github.com/qor5/admin/v3/presets"
+	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
@@ -42,54 +45,80 @@ func (sb *Builder) ModelInstall(b *presets.Builder, mb *presets.ModelBuilder) er
 	if reflectType.Kind() != reflect.Struct {
 		panic("slug: model must be struct")
 	}
-	for i := 0; i < reflectType.NumField(); i++ {
-		if reflectType.Field(i).Type != reflect.TypeOf(Slug("")) {
+
+	mb.RegisterEventFunc(syncEvent, sync)
+
+	_, fields := reflect_utils.UniqueFieldsOfReflectType(reflectType)
+	for _, field := range fields {
+		if field.Type != reflect.TypeOf(Slug("")) {
 			continue
 		}
 
-		fieldName := reflectType.Field(i).Name
+		fieldName := field.Name
 		relatedFieldName := strings.TrimSuffix(fieldName, "WithSlug")
 		if _, ok := reflectType.FieldByName(relatedFieldName); ok {
-			editingBuilder := mb.Editing()
-			if f := editingBuilder.Field(relatedFieldName); f != nil {
+			eb := mb.Editing()
+			eb.WrapPostSetterFunc(func(in presets.SetterFunc) presets.SetterFunc {
+				return func(obj interface{}, ctx *web.EventContext) {
+					if ctx.R.FormValue(fieldName+"_Checkbox") == "true" {
+						v := reflectutils.MustGet(obj, relatedFieldName).(string)
+						reflectutils.Set(obj, fieldName, slug(v))
+					}
+					if in != nil {
+						in(obj, ctx)
+					}
+				}
+			})
+			if f := eb.Field(relatedFieldName); f != nil {
 				f.ComponentFunc(SlugEditingComponentFunc)
 			}
 
-			editingBuilder.Field(fieldName).ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) { return })
-			editingBuilder.Field(fieldName).SetterFunc(SlugEditingSetterFunc)
+			eb.Field(fieldName).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) { return })
+			eb.Field(fieldName).SetterFunc(SlugEditingSetterFunc)
 		}
 	}
 	return nil
 }
 
-func SlugEditingComponentFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nSlugKey, Messages_en_US).(*Messages)
+func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSlugKey, Messages_en_US).(*Messages)
 	slugFieldName := field.Name + "WithSlug"
-	slugLabel := field.Label + " Slug"
-	return VSheet(
-		VTextField().
-			Type("text").
-			Attr(web.VField(field.Name, field.Value(obj))...).
-			Label(field.Label).
-			Attr("v-debounce:input", "300").
-			Attr("@input:debounced", web.Plaid().
-				EventFunc(syncEvent).Query("field_name", field.Name).Query("slug_label", slugLabel).Go()),
+	slugLabel := strings.TrimSpace(strings.TrimSuffix(field.Label, "*")) + " Slug"
+	ckbName := checkBoxName(slugFieldName)
+	return vue.UserComponent().
+		Assign("form", ckbName, true).
+		Scope("checkboxName", vue.Var(strconv.Quote(checkBoxName(slugFieldName)))).
+		Scope("sync").
+		Setup(`({scope, debounce}) => {
+			scope.sync = debounce(function(v) {
+				if (form[scope.checkboxName]) {
+					` + web.Plaid().EventFunc(syncEvent).Query("field_name", field.Name).Query("slug_label", slugLabel).String() + `.go()
+				}
+			}, 300)
+		}`).
+		AppendChild(VSheet(
+			VTextField().
+				Type("text").
+				Attr(web.VField(field.Name, field.Value())...).
+				Label(field.Label).
+				Attr("@update:modelValue", `(e) => sync(e)`),
 
-		VRow(
-			VCol(
-				web.Portal(
-					VTextField().
-						Type("text").
-						Attr(web.VField(slugFieldName, reflectutils.MustGet(obj, slugFieldName).(Slug))...).
-						Label(slugLabel).Name(portalName(slugFieldName)),
-				),
-			).Cols(8),
-			VCol(
-				VCheckbox().Attr(web.VField(checkBoxName(slugFieldName), "")...).Value(true).Label(fmt.Sprintf(msgr.Sync,
-					strings.ToLower(field.Label))),
-			).Cols(4),
-		),
-	)
+			VRow(
+				VCol(
+					web.Portal(
+						VTextField().
+							Type("text").
+							Attr(web.VField(slugFieldName, reflectutils.MustGet(field.Obj, slugFieldName).(Slug))...).
+							Label(slugLabel),
+					).Name(portalName(slugFieldName)),
+				).Cols(8),
+				VCol(
+					VCheckbox().
+						Attr("v-model", fmt.Sprintf("form[%q]", ckbName)).
+						Label(fmt.Sprintf(msgr.Sync, strings.ToLower(field.Label))),
+				).Cols(4),
+			),
+		))
 }
 
 func SlugEditingSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
@@ -112,13 +141,13 @@ func sync(ctx *web.EventContext) (r web.EventResponse, err error) {
 		return
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: portalName(slugFieldName),
-		Body: VTextField().
+	r.UpdatePortal(
+		portalName(slugFieldName),
+		VTextField().
 			Type("text").
 			Attr(web.VField(slugFieldName, slug(ctx.R.FormValue(fieldName)))...).
 			Label(ctx.R.FormValue("slug_label")),
-	})
+	)
 	return
 }
 

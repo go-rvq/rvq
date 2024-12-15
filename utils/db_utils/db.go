@@ -1,4 +1,4 @@
-package utils
+package db_utils
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 func Transact(db *gorm.DB, f func(tx *gorm.DB) error) (err error) {
@@ -31,5 +32,13 @@ func Transact(db *gorm.DB, f func(tx *gorm.DB) error) (err error) {
 	}()
 
 	err = f(tx)
+	return
+}
+
+func FieldsNames(fields []*schema.Field) (names []string) {
+	names = make([]string, len(fields))
+	for i, field := range fields {
+		names[i] = field.Name
+	}
 	return
 }

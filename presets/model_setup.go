@@ -69,7 +69,7 @@ func (defaultModelSetup) InitFields(fb *FieldBuilders) {
 
 func (defaultModelSetup) InitField(f *FieldBuilder) {
 	switch f.name {
-	case "ID", "CreatedAt", "UpdatedAt", "DeletedAt":
+	case "CreatedAt", "UpdatedAt", "DeletedAt":
 		f.SetMode(DETAIL)
 		f.SetAudited(true)
 	}
@@ -77,7 +77,7 @@ func (defaultModelSetup) InitField(f *FieldBuilder) {
 
 func (defaultModelSetup) ConfigureField(f *FieldBuilder) {
 	switch f.name {
-	case "ID", "CreatedAt", "UpdatedAt", "DeletedAt":
+	case "CreatedAt", "UpdatedAt", "DeletedAt":
 		f.DisableZeroRender()
 	}
 }

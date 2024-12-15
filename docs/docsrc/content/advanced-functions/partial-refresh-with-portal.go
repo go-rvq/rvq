@@ -22,7 +22,7 @@ We have covered two. Now let's demonstrate refresh part of the current page:
 	ch.Code(generated.PartialUpdateSample).Language("go"),
 	utils.DemoWithSnippetLocation("Partial Update", examples_web.PartialUpdatePagePath, generated.PartialUpdateSampleLocation),
 	Markdown(`
-~web.Portal().Name("part1")~ Place a placeholder inside you page, and append ~web.PortalUpdate~ to ~er.UpdatePortals~ to update the portal with that name.
+~web.Portal().Name("part1")~ Place a placeholder inside you page, and append ~web.PortalUpdate~ to ~er.updatePortals~ to update the portal with that name.
 Multiple portal can be updated at the same time.
 `),
 	utils.Anchor(H2(""), "Load Portal in separate AJAX request"),

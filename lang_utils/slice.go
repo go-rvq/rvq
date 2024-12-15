@@ -1,4 +1,4 @@
-package utils
+package lang_utils
 
 func GroupBySlice[T comparable, Kt comparable](slices []T, f func(T) Kt) (v [][]T) {
 	indexMap := make(map[Kt]int)
@@ -11,6 +11,14 @@ func GroupBySlice[T comparable, Kt comparable](slices []T, f func(T) Kt) (v [][]
 			indexMap[key] = index
 		}
 		v[index] = append(v[index], s)
+	}
+	return
+}
+
+func Map[T any, R any](s []T, f func(T) R) (ret []R) {
+	ret = make([]R, len(s))
+	for i, v := range s {
+		ret[i] = f(v)
 	}
 	return
 }

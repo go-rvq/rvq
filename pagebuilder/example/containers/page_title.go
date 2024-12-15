@@ -59,7 +59,7 @@ func RegisterPageTitleContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 
 	eb := mb.Editing(
 		"AddTopSpace", "AddBottomSpace", "AnchorID",
-		"HeroImage", "NavigationLink", "NavigationLinkText",
+		"Cover", "NavigationLink", "NavigationLinkText",
 		"HeadingIcon", "Heading", "Text", "Tags",
 	)
 

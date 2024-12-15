@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"reflect"
+
 	"github.com/qor5/web/v3"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
@@ -33,7 +35,37 @@ type (
 
 	RecordMenuItemFunc  func(rctx *RecordMenuItemContext) h.HTMLComponent
 	RecordMenuItemFuncs []RecordMenuItemFunc
+
+	RecordEncoderFactory[T any] func(ctx *web.EventContext) func(r T) any
+
+	ParentUriPart int
 )
+
+func (f RecordEncoderFactory[T]) Any() RecordEncoderFactory[any] {
+	return func(ctx *web.EventContext) func(r any) any {
+		do := f(ctx)
+		return func(r any) any {
+			return do(r.(T))
+		}
+	}
+}
+
+func (f RecordEncoderFactory[T]) EncodeSlice(ctx *web.EventContext, slice any) any {
+	sliceValue := reflect.ValueOf(slice)
+
+	if sliceValue.Kind() != reflect.Slice {
+		sliceValue = reflect.ValueOf([]any{slice})
+	}
+
+	newSlice := reflect.MakeSlice(reflect.TypeOf([]any{}), sliceValue.Len(), sliceValue.Len())
+	encode := f(ctx)
+
+	for i := 0; i < sliceValue.Len(); i++ {
+		newSlice.Index(i).Set(reflect.ValueOf(encode(sliceValue.Index(i).Interface().(T))))
+	}
+
+	return newSlice.Interface()
+}
 
 func (f ModelFormUnmarshallHandlerFunc) Handler(obj interface{}, ctx *web.EventContext) (err error) {
 	return f(obj, ctx)

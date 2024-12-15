@@ -39,7 +39,7 @@ func MultiStatePage(ctx *web.EventContext) (pr web.PageResponse, err error) {
 					),
 				),
 				Button("Update").Attr("@click", web.POST().EventFunc("update5").Go()),
-			).VSlot("{ locals, form }").FormInit(JSONString(multiStateFd)),
+			).Slot("{ locals, form }").FormInit(JSONString(multiStateFd)),
 		).Style("border: 5px solid orange; height: 200px;")
 	}
 

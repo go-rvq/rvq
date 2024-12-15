@@ -8,3 +8,5 @@ coverage.html
 .vscode
 _backup
 docs/docsrc/public
+node_modules
+.pnpm-store

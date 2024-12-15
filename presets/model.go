@@ -1,16 +1,16 @@
 package presets
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/web/v3/datafield"
@@ -28,12 +28,6 @@ type ModelBuilderOption interface {
 	Apply(mb *ModelBuilder)
 }
 
-func WithDataOperator(do DataOperator) ModelBuilderOptionFunc {
-	return func(mb *ModelBuilder) {
-		mb.dataOperator = do
-	}
-}
-
 type ModelBuilder struct {
 	p *Builder
 	writeFieldBuilders,
@@ -42,7 +36,6 @@ type ModelBuilder struct {
 
 	parent              *ModelBuilder
 	model               interface{}
-	primaryField        string
 	modelType           reflect.Type
 	menuGroupName       string
 	notInMenu           bool
@@ -67,12 +60,12 @@ type ModelBuilder struct {
 
 	EventsHub web.EventsHub
 
-	children []*ModelBuilder
-	saveURI  string
+	children         []*ModelBuilder
+	saveURI          string
+	routeSetuper     func(mux *http.ServeMux, uri string)
+	itemRouteSetuper func(mux *http.ServeMux, uri string)
 
-	creationDisabled OkHandled
-	editionDisabled  OkHandled
-	verifierModel    *ModelBuilder
+	verifierModel *ModelBuilder
 
 	detailingParentsIDResolver ParentsModelIDResolver
 	ModelBuilderConfigAttributes
@@ -80,13 +73,18 @@ type ModelBuilder struct {
 	PostFormUnmarshallHandlers   ModelFormUnmarshallHandlers
 
 	datafield.DataField[*ModelBuilder]
+
+	ListingRestrictionField[*ModelBuilder]
+	CreatingRestrictionField[*ModelBuilder]
+	EditingRestrictionField[*ModelBuilder]
+	DetailingRestrictionField[*ModelBuilder]
+	DeletingRestrictionField[*ModelBuilder]
 }
 
 func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOption) (mb *ModelBuilder) {
 	mb = datafield.New(&ModelBuilder{
-		p:            p,
-		model:        model,
-		primaryField: "ID",
+		p:     p,
+		model: model,
 	})
 
 	mb.modelType = reflect.TypeOf(model)
@@ -134,11 +132,36 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 	mb.detailFieldBuilders = fieldBuilders(p.detailFieldDefaults)
 	mb.writeFieldBuilders = fieldBuilders(p.writeFieldDefaults)
 
+	mb.ListingRestriction = NewRestriction(mb, func(r *Restriction[*ModelBuilder]) {
+		r.Handler(OkHandlerFunc(func(ctx *web.EventContext) (_, _ bool) {
+			return !r.dot.Info().CanList(ctx.R), true
+		}))
+	})
+	mb.CreatingRestriction = NewRestriction(mb, func(r *Restriction[*ModelBuilder]) {
+		r.Handler(OkHandlerFunc(func(ctx *web.EventContext) (_, _ bool) {
+			return !r.dot.Info().CanCreate(ctx.R), true
+		}))
+	})
+	mb.EditingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
+		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+			return !r.dot.Info().CanUpdate(ctx.R, obj), true
+		}))
+	})
+	mb.DetailingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
+		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+			return !r.dot.Info().CanRead(ctx.R, obj), true
+		}))
+	})
+	mb.DeletingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
+		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+			return !r.dot.Info().CanDelete(ctx.R, obj), true
+		}))
+	})
+
 	// Be aware the uriName here is still the original struct
 	mb.newListing()
-	mb.newDetailing()
 	mb.newEditing()
-	mb.editing.Creating()
+	mb.newDetailing()
 
 	return
 }
@@ -237,6 +260,14 @@ func (mb *ModelBuilder) CurrentDataOperator() DataOperator {
 	return mb.p.dataOperator
 }
 
+func (mb *ModelBuilder) Schema() (s Schema) {
+	var err error
+	if s, err = mb.CurrentDataOperator().Schema(mb.model); err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func (mb *ModelBuilder) WithDataOperator(h func(dataOperator DataOperator)) bool {
 	if do := mb.CurrentDataOperator(); do != nil {
 		h(do)
@@ -284,24 +315,24 @@ func (mb *ModelBuilder) Searcher(model interface{}, params *SearchParams, ctx *w
 	return mb.CurrentDataOperator().Search(model, params, ctx)
 }
 
-func (mb *ModelBuilder) Fetcher(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (mb *ModelBuilder) Fetcher(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	return mb.CurrentDataOperator().Fetch(obj, id, ctx)
 }
 
-func (mb *ModelBuilder) TitleFetcher(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (mb *ModelBuilder) TitleFetcher(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	return mb.CurrentDataOperator().FetchTitle(obj, id, ctx)
 }
 
-func (mb *ModelBuilder) Saver(obj interface{}, id string, ctx *web.EventContext) (err error) {
+func (mb *ModelBuilder) Saver(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	return mb.CurrentDataOperator().Save(obj, id, ctx)
 }
 
-func (mb *ModelBuilder) Deleter(obj interface{}, id string, ctx *web.EventContext) (err error) {
-	return mb.CurrentDataOperator().Delete(obj, id, ctx)
+func (mb *ModelBuilder) Creator(obj interface{}, ctx *web.EventContext) (err error) {
+	return mb.CurrentDataOperator().Create(obj, ctx)
 }
 
-func (mb *ModelBuilder) RegisterEventFunc(eventFuncId string, ef web.EventFunc) (key string) {
-	return mb.EventsHub.RegisterEventFunc(eventFuncId, ef)
+func (mb *ModelBuilder) Deleter(obj interface{}, id ID, ctx *web.EventContext) (err error) {
+	return mb.CurrentDataOperator().Delete(obj, id, ctx)
 }
 
 func (mb *ModelBuilder) Model() interface{} {
@@ -338,11 +369,6 @@ func (mb *ModelBuilder) DefaultURLQueryFunc(v func(*http.Request) url.Values) (r
 	return mb
 }
 
-func (mb *ModelBuilder) PrimaryField(v string) (r *ModelBuilder) {
-	mb.primaryField = v
-	return mb
-}
-
 func (mb *ModelBuilder) InMenu(v bool) (r *ModelBuilder) {
 	mb.notInMenu = !v
 	return mb
@@ -351,6 +377,10 @@ func (mb *ModelBuilder) InMenu(v bool) (r *ModelBuilder) {
 func (mb *ModelBuilder) MenuIcon(v string) (r *ModelBuilder) {
 	mb.menuIcon = v
 	return mb
+}
+
+func (mb *ModelBuilder) GetMenuIcon() string {
+	return mb.menuIcon
 }
 
 func (mb *ModelBuilder) Label(v string) (r *ModelBuilder) {
@@ -382,13 +412,18 @@ func (mb *ModelBuilder) Singleton(v bool) (r *ModelBuilder) {
 	return mb
 }
 
-func (mb *ModelBuilder) GetComponentFuncField(obj interface{}, field *FieldBuilder) (r *FieldContext) {
+func (mb *ModelBuilder) NewFieldContext(ctx *web.EventContext, obj interface{}, field *FieldBuilder, mode FieldModeStack) (r *FieldContext) {
 	r = &FieldContext{
-		Obj:       obj,
-		ModelInfo: mb.Info(),
-		Name:      field.name,
-		Label:     mb.getLabel(field.NameLabel),
+		Mode:         mode,
+		Field:        field,
+		EventContext: ctx,
+		Obj:          obj,
+		ModelInfo:    mb.Info(),
+		Name:         field.name,
+		Label:        mb.getLabel(field.NameLabel),
 	}
+	field.Setup.Setup(r)
+	field.ToComponentSetup.Setup(r)
 	return
 }
 
@@ -403,7 +438,7 @@ func (mb *ModelBuilder) getLabel(field NameLabel) (r string) {
 		}
 	}
 
-	return humanizeString(field.name)
+	return HumanizeString(field.name)
 }
 
 func (mb *ModelBuilder) SubRoutesSetup(f func(mux *http.ServeMux, baseUri string)) *ModelBuilder {
@@ -411,20 +446,21 @@ func (mb *ModelBuilder) SubRoutesSetup(f func(mux *http.ServeMux, baseUri string
 	return mb
 }
 
-func (mb *ModelBuilder) BindEventFunc(f web.EventFunc) web.EventFunc {
+func (mb *ModelBuilder) BindEventFunc(f web.EventHandler) web.EventHandler {
 	if mb.parent == nil {
 		return f
 	}
-	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	return web.EventFunc(func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		WithModel(ctx, mb)
 		if ctx, err = mb.LoadParentsID(ctx); err != nil {
 			return
 		}
-		if r, err = f(ctx); err != nil {
+		if r, err = f.Handle(ctx); err != nil {
 			ShowMessage(&r, err.Error(), "error")
 			err = nil
 		}
 		return
-	}
+	})
 }
 
 func (mb *ModelBuilder) BindPageFunc(f web.PageFunc) web.PageFunc {
@@ -437,23 +473,24 @@ func (mb *ModelBuilder) BindPageFunc(f web.PageFunc) web.PageFunc {
 	}
 }
 
-func (mb *ModelBuilder) TTitle(r *http.Request) string {
-	return i18n.T(r, ModelsI18nModuleKey, mb.label)
+func (mb *ModelBuilder) TTitle(ctx context.Context) string {
+	return i18n.T(ctx, ModelsI18nModuleKey, mb.label)
 }
 
-func (mb *ModelBuilder) TTheTitle(r *http.Request) string {
-	return MustGetMessages(r).TheTitle(mb.female, mb.TTitle(r))
+func (mb *ModelBuilder) TTheTitle(ctx context.Context) string {
+	return MustGetMessages(ctx).TheTitle(mb.female, mb.TTitle(ctx))
 }
 
 func (mb *ModelBuilder) DefaultRecordTitle(ctx *web.EventContext, obj any) string {
-	idStr := mb.ID(obj).String()
-	return mb.TTitle(ctx.R) + "#" + idStr
+	return mb.TTitle(ctx.Context()) + "#" + mb.MustRecordID(obj).String()
 }
 
 func (mb *ModelBuilder) RecordTitle(obj any, ctx *web.EventContext) string {
 	switch t := obj.(type) {
 	case ContextTitler:
 		return t.ContextTitle(ctx)
+	case ContextStringer:
+		return t.ContextString(ctx)
 	case PageTitle:
 		return t.PageTitle()
 	case fmt.Stringer:
@@ -464,7 +501,7 @@ func (mb *ModelBuilder) RecordTitle(obj any, ctx *web.EventContext) string {
 }
 
 func (mb *ModelBuilder) RecordTitleFetch(obj any, ctx *web.EventContext) (_ string, err error) {
-	if err = mb.TitleFetcher(obj, mb.ID(obj).String(), ctx); err != nil {
+	if err = mb.TitleFetcher(obj, mb.MustRecordID(obj), ctx); err != nil {
 		return
 	}
 	return mb.RecordTitle(obj, ctx), nil
@@ -475,38 +512,45 @@ func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (_ *web.EventContex
 	if parentsID, err = mb.ParseParentsID(ctx.R); err != nil {
 		return
 	}
+	ctx.WithContextValue(ParentsModelIDKey, parentsID)
+	parentsIDPtr := web.GetContextValuer(ctx.R.Context(), ParentsModelIDKey)
+
 	bc := GetOrInitBreadcrumbs(ctx.R)
 	parents := mb.Parents()
+
 	for i, id := range parentsID {
 		bc.Append(&Breadcrumb{
-			Label: i18n.T(ctx.R, ModelsI18nModuleKey, id.Model.pluralLabel),
+			Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, parents[i].pluralLabel),
 			URI:   parents[i].modelInfo.ListingHref(parentsID[:i]...),
 		})
 
 		var (
-			model = id.Model.NewModel()
+			model = parents[i].NewModel()
 			label string
 		)
 
 		id.SetTo(model)
 
-		if label, err = id.Model.RecordTitleFetch(model, ctx); err != nil {
+		parentsIDPtr.Set(parentsID[:i])
+		if label, err = parents[i].RecordTitleFetch(model, ctx); err != nil {
 			return
 		}
 
 		bc.Append(&Breadcrumb{
 			Label: label,
-			URI:   id.Model.Info().DetailingHref(id.Value, parentsID[:i]...),
+			URI:   parents[i].Info().DetailingHref(id.String(), parentsID[:i]...),
 		})
 	}
+
+	parentsIDPtr.Set(parentsID)
 
 	if !mb.singleton && ctx.Param("id") != "" {
 		bc.Append(&Breadcrumb{
 			URI:   mb.Info().ListingHref(parentsID...),
-			Label: i18n.T(ctx.R, ModelsI18nModuleKey, mb.pluralLabel),
+			Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, mb.pluralLabel),
 		})
 	}
-	return ctx.WithContextValue(ParentsModelIDKey, parentsID), nil
+	return ctx, nil
 }
 
 func (mb *ModelBuilder) Children() []*ModelBuilder {
@@ -519,6 +563,25 @@ func (mb *ModelBuilder) URI() string {
 			return fmt.Sprintf("%s/%s", mb.parent.URI(), mb.uriName)
 		}
 		return fmt.Sprintf("%s/{parent_%d_id}/%s", mb.parent.URI(), mb.parent.Depth(), mb.uriName)
+	}
+	return mb.uriName
+}
+
+func (mb *ModelBuilder) SplitedURI() (r []any) {
+	if mb.parent != nil {
+		r = mb.parent.SplitedURI()
+
+		if !mb.parent.singleton {
+			r = append(r, ParentUriPart(mb.parent.Depth()))
+		}
+	}
+	r = append(r, mb.uriName)
+	return
+}
+
+func (mb *ModelBuilder) ID() string {
+	if mb.parent != nil {
+		return mb.parent.ID() + "." + mb.uriName
 	}
 	return mb.uriName
 }
@@ -605,79 +668,99 @@ func (mb *ModelBuilder) ChildOf(parent *ModelBuilder) *ModelBuilder {
 	return mb
 }
 
-func (mb *ModelBuilder) ID(obj interface{}) ID {
-	if obj == nil {
-		return ID{}
-	}
-	return ID{Model: mb, Value: reflectutils.MustGet(obj, mb.primaryField)}
-}
-
-func (mb *ModelBuilder) ParseID(v string) (id ID, err error) {
-	id.Model = mb
-	field, _ := mb.modelType.Elem().FieldByName("ID")
-	switch field.Type.Kind() {
-	case reflect.String:
-		id.Value = v
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		var bsize int
-		switch field.Type.Kind() {
-		case reflect.Uint8:
-			bsize = 8
-		case reflect.Uint16:
-			bsize = 16
-		case reflect.Uint32:
-			bsize = 32
-		case reflect.Uint64:
-			bsize = 64
-		}
-		if id.Value, err = strconv.ParseUint(v, 10, bsize); err != nil {
-			return
-		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		var bsize int
-		switch field.Type.Kind() {
-		case reflect.Int8:
-			bsize = 8
-		case reflect.Int16:
-			bsize = 16
-		case reflect.Int32:
-			bsize = 32
-		case reflect.Int64:
-			bsize = 64
-		}
-
-		if id.Value, err = strconv.ParseInt(v, 10, bsize); err != nil {
-			return
-		}
-	default:
-		err = errors.New(fmt.Sprintf("Unsupported type: %v", field.Type))
+func (mb *ModelBuilder) RecordID(obj interface{}) (id ID, err error) {
+	if id.Schema, err = mb.CurrentDataOperator().Schema(mb.model); err != nil {
 		return
 	}
 
-	id.Value = reflect.ValueOf(id.Value).Convert(field.Type).Interface()
+	id.Fields = id.Schema.PrimaryFields()
+	id.Values = make([]any, len(id.Fields))
+
+	for i, field := range id.Fields {
+		id.Values[i] = reflectutils.MustGet(obj, field.Name())
+	}
+
 	return
 }
 
-func (mb *ModelBuilder) CreationDisabled() OkHandled {
-	return mb.creationDisabled
+func (mb *ModelBuilder) MustRecordID(obj interface{}) ID {
+	id, err := mb.RecordID(obj)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
-func (mb *ModelBuilder) SetCreationDisabled(creationDisabled OkHandled) {
-	mb.creationDisabled = creationDisabled
+func (mb *ModelBuilder) ParseRecordIDTo(dst any, v string) (err error) {
+	var id ID
+	if id, err = mb.ParseRecordID(v); err != nil {
+		return
+	}
+	id.SetTo(dst)
+	return
 }
 
-func (mb *ModelBuilder) EditionDisabled() OkHandled {
-	return mb.editionDisabled
-}
+func (mb *ModelBuilder) ParseRecordID(v string) (id ID, err error) {
+	if v == "" {
+		return
+	}
 
-func (mb *ModelBuilder) SetEditionDisabled(editDisabled OkHandled) {
-	mb.editionDisabled = editDisabled
+	var schema model.Schema
+	if schema, err = mb.CurrentDataOperator().Schema(mb.model); err != nil {
+		return
+	}
+
+	return ParseRecordID(schema, v)
+}
+func (mb *ModelBuilder) MustParseRecordID(v string) (id ID) {
+	var err error
+	id, err = mb.ParseRecordID(v)
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 
 func (mb *ModelBuilder) DetailingParentsIDResolver() ParentsModelIDResolver {
 	return mb.detailingParentsIDResolver
 }
 
-func (mb *ModelBuilder) SetDetailingParentsIDResolver(detailingParentsIDResolver ParentsModelIDResolver) {
+func (mb *ModelBuilder) SetDetailingParentsIDResolver(detailingParentsIDResolver ParentsModelIDResolver) *ModelBuilder {
 	mb.detailingParentsIDResolver = detailingParentsIDResolver
+	return mb
+}
+
+func (mb *ModelBuilder) GetLayoutConfig() *LayoutConfig {
+	return mb.layoutConfig
+}
+
+func (mb *ModelBuilder) FieldBuilders() (r []FieldsBuilderInterface) {
+	r = append(r, mb.listing, mb.editing)
+	if mb.creating != nil {
+		r = append(r, mb.creating)
+	}
+	if mb.detailing != nil {
+		r = append(r, mb.detailing)
+	}
+	return
+}
+
+func (mb *ModelBuilder) RouteSetuper(f func(mux *http.ServeMux, uri string)) *ModelBuilder {
+	mb.routeSetuper = f
+	return mb
+}
+
+func (mb *ModelBuilder) WrapRouteSetuper(f func(old func(mux *http.ServeMux, uri string)) func(mux *http.ServeMux, uri string)) *ModelBuilder {
+	mb.routeSetuper = f(mb.routeSetuper)
+	return mb
+}
+
+func (mb *ModelBuilder) ItemRouteSetuper(f func(mux *http.ServeMux, uri string)) *ModelBuilder {
+	mb.itemRouteSetuper = f
+	return mb
+}
+
+func (mb *ModelBuilder) WrapItemRouteSetuper(f func(old func(mux *http.ServeMux, uri string)) func(mux *http.ServeMux, uri string)) *ModelBuilder {
+	mb.itemRouteSetuper = f(mb.itemRouteSetuper)
+	return mb
 }

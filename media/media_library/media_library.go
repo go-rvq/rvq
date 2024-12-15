@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"math"
 	"path"
 	"strings"
 
@@ -26,15 +25,16 @@ type MediaLibrary struct {
 }
 
 type MediaOption struct {
-	Video        string                      `json:",omitempty"`
-	FileName     string                      `json:",omitempty"`
-	URL          string                      `json:",omitempty"`
-	OriginalURL  string                      `json:",omitempty"`
-	CropOptions  map[string]*base.CropOption `json:",omitempty"`
-	Sizes        map[string]*base.Size       `json:",omitempty"`
-	SelectedType string                      `json:",omitempty"`
-	Description  string                      `json:",omitempty"`
-	Crop         bool
+	Video          string                      `json:",omitempty"`
+	FileName       string                      `json:",omitempty"`
+	URL            string                      `json:",omitempty"`
+	OriginalURL    string                      `json:",omitempty"`
+	OriginalStored bool                        `json:",omitempty"`
+	CropOptions    map[string]*base.CropOption `json:",omitempty"`
+	Sizes          map[string]*base.Size       `json:",omitempty"`
+	SelectedType   string                      `json:",omitempty"`
+	Description    string                      `json:",omitempty"`
+	Crop           bool
 }
 
 func (mediaLibrary *MediaLibrary) ScanMediaOptions(mediaOption MediaOption) error {
@@ -79,19 +79,8 @@ func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*base.Size 
 		return map[string]*base.Size{}
 	}
 
-	width := mediaLibraryStorage.Width
-	height := mediaLibraryStorage.Height
-	max := math.Max(float64(width), float64(height))
-	if int(max) > QorPreviewMaxSize {
-		ratio := float64(QorPreviewMaxSize) / max
-		width = int(float64(width) * ratio)
-		height = int(float64(height) * ratio)
-	}
 	sizes := map[string]*base.Size{
-		QorPreviewSizeName: {
-			Width:  width,
-			Height: height,
-		},
+		QorPreviewSizeName: base.NewSize(mediaLibraryStorage.Width, mediaLibraryStorage.Height, QorPreviewMaxSize),
 	}
 
 	for key, value := range mediaLibraryStorage.Sizes {

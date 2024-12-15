@@ -15,6 +15,7 @@ import (
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/l10n"
 	"github.com/qor5/admin/v3/media"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/note"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
@@ -428,7 +429,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 			vErr = *ve
 		}
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 
 		return vx.VXAutocomplete().Label(msgr.Category).
 			Attr(web.VField(field.Name, p.CategoryID)...).
@@ -463,7 +464,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 		return nil
 	})
 
-	eb.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	eb.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		localeCode, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 		p := obj.(*Page)
 		if p.Slug != "" {
@@ -474,7 +475,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 		}
 		funcName := ctx.R.FormValue(web.EventFuncIDName)
 		if funcName == publish.EventDuplicateVersion {
-			id := ctx.Param(presets.ParamID)
+			// id := ctx.Param(presets.ParamID)
 			var fromPage Page
 			eb.Fetcher(&fromPage, id, ctx)
 			p.SEO = fromPage.SEO
@@ -604,8 +605,8 @@ func (b *Builder) configDetailLayoutFunc(
 			if pb.GetProfileFunc() != nil {
 				profile = pb.GetProfileFunc()(ctx)
 			}
-			utilsMsgr := i18n.MustGetModuleMessages(ctx.R, utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
-			pvMsgr := i18n.MustGetModuleMessages(ctx.R, publish.I18nPublishKey, publish.Messages_en_US).(*publish.Messages)
+			utilsMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
+			pvMsgr := i18n.MustGetModuleMessages(ctx.Context(), publish.I18nPublishKey, publish.Messages_en_US).(*publish.Messages)
 			id := ctx.Param(presets.ParamID)
 
 			if id == "" {
@@ -762,10 +763,18 @@ func (b *Builder) configDetailLayoutFunc(
 						Height(2).
 						Color(pb.GetProgressBarColor()),
 					h.Template(
-						VSnackbar(h.Text("{{vars.presetsMessage.message}}")).
+						VSnackbar(
+							h.Text("{{vars.presetsMessage.message}}"),
+							web.Slot(
+								VBtn("").
+									Icon("mdi-close").
+									Attr("@click", `vars.presetsMessage.show = false`),
+							).Name("actions"),
+						).
 							Attr("v-model", "vars.presetsMessage.show").
 							Attr(":color", "vars.presetsMessage.color").
-							Timeout(1000),
+							Timeout(15000).
+							Location(LocationTop),
 					).Attr("v-if", "vars.presetsMessage"),
 					VMain(
 						VLayout(
@@ -782,7 +791,7 @@ func (b *Builder) configDetailLayoutFunc(
 						).Class("pa-6"),
 					),
 				).Attr("id", "vt-app").Attr(web.VAssign("vars", `{presetsRightDrawer: false, presetsDialog: false, dialogPortalName: false, presetsListingDialog: false, presetsMessage: {show: false, color: "success", message: ""}}`)...),
-			).VSlot(" { locals } ").Init(fmt.Sprintf(`{action: "", commonConfirmDialog: false }`))
+			).Slot(" { locals } ").LocalsInit(fmt.Sprintf(`{action: "", commonConfirmDialog: false }`))
 			return
 		}
 	})
@@ -922,13 +931,12 @@ func selectTemplate(db *gorm.DB) web.EventFunc {
 			web.AppendRunScripts(&er, "vars.showTemplateDialog=false")
 		}()
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 
 		id := ctx.R.FormValue(templateID)
 		if id == templateBlankVal {
-			er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-				Name: selectedTemplatePortal,
-				Body: VRow(
+			er.UpdatePortal(selectedTemplatePortal,
+				VRow(
 					VCol(
 						h.Input("").Type("hidden").Attr(web.VField(templateSelectedID, "")...),
 						VTextField().Readonly(true).Label(msgr.SelectedTemplateLabel).ModelValue(msgr.Blank).Density(DensityCompact).Variant(VariantOutlined),
@@ -938,7 +946,7 @@ func selectTemplate(db *gorm.DB) web.EventFunc {
 							Attr("@click", web.Plaid().Query(templateSelectedID, "").EventFunc(openTemplateDialogEvent).Go()),
 					).Cols(5),
 				),
-			})
+			)
 			return
 		}
 
@@ -947,17 +955,14 @@ func selectTemplate(db *gorm.DB) web.EventFunc {
 			return
 		}
 
-		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-			Name: selectedTemplatePortal,
-			Body: body,
-		})
+		er.UpdatePortal(selectedTemplatePortal, body)
 
 		return
 	}
 }
 
 func getTplPortalComp(ctx *web.EventContext, db *gorm.DB, selectedID string) (h.HTMLComponent, error) {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 	locale, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 
 	name := msgr.Blank
@@ -982,10 +987,9 @@ func getTplPortalComp(ctx *web.EventContext, db *gorm.DB, selectedID string) (h.
 // Unused
 func clearTemplate(_ *gorm.DB) web.EventFunc {
 	return func(ctx *web.EventContext) (er web.EventResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
-		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-			Name: selectedTemplatePortal,
-			Body: VRow(
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
+		er.UpdatePortal(selectedTemplatePortal,
+			VRow(
 				VCol(
 					h.Input("").Type("hidden").Attr(web.VField(templateSelectedID, "")...),
 					VTextField().Readonly(true).Label(msgr.SelectedTemplateLabel).ModelValue(msgr.Blank).Density(DensityCompact).Variant(VariantOutlined),
@@ -995,14 +999,14 @@ func clearTemplate(_ *gorm.DB) web.EventFunc {
 						Attr("@click", web.Plaid().Query(templateSelectedID, "").EventFunc(openTemplateDialogEvent).Go()),
 				).Cols(5),
 			),
-		})
+		)
 		return
 	}
 }
 
 func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 	return func(ctx *web.EventContext) (er web.EventResponse, err error) {
-		gmsgr := presets.MustGetMessages(ctx.R)
+		gmsgr := presets.MustGetMessages(ctx.Context())
 		locale, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 		selectedID := ctx.R.FormValue(templateSelectedID)
 		if selectedID == "" {
@@ -1013,7 +1017,7 @@ func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 		if err := db.Model(&Template{}).Where("locale_code = ?", locale).Find(&tpls).Error; err != nil {
 			panic(err)
 		}
-		msgrPb := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgrPb := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 
 		var tplHTMLComponents []h.HTMLComponent
 		tplHTMLComponents = append(tplHTMLComponents,
@@ -1047,9 +1051,8 @@ func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 			)
 		}
 
-		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-			Name: templateSelectPortal,
-			Body: VDialog(
+		er.UpdatePortal(templateSelectPortal,
+			VDialog(
 				VCard(
 					VCardTitle(
 						h.Text(msgrPb.CreateFromTemplate),
@@ -1073,14 +1076,14 @@ func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 			).MaxWidth("80%").
 				Attr(web.VAssign("vars", `{showTemplateDialog: false}`)...).
 				Attr("v-model", fmt.Sprintf("vars.showTemplateDialog")),
-		})
+		)
 		er.RunScript = `setTimeout(function(){ vars.showTemplateDialog = true }, 100)`
 		return
 	}
 }
 
 func getTplColComponent(ctx *web.EventContext, prefix string, tpl *Template, selectedID string) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 
 	// Avoid layout errors
 	var name string
@@ -1136,7 +1139,7 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 			obj = rctx.Obj
 		)
 		c := obj.(*Container)
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 		return VListItem().PrependIcon("mdi-pencil-outline").Title(msgr.Rename).Attr("@click",
 			web.Plaid().
 				URL(b.ContainerByName(c.ModelName).mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
@@ -1525,8 +1528,8 @@ func (b *ContainerBuilder) configureRelatedOnlinePagesTab() {
 			return nil, nil
 		}
 
-		pmsgr := i18n.MustGetModuleMessages(ctx.R, presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		pmsgr := i18n.MustGetModuleMessages(ctx.Context(), presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 
 		id, err := reflectutils.Get(obj, "id")
 		if err != nil {
@@ -1572,7 +1575,7 @@ func (b *ContainerBuilder) configureRelatedOnlinePagesTab() {
 					VIcon(fmt.Sprintf(`{{itemLocals.%s}}`, statusVar)),
 				).
 					Density(DensityCompact),
-			).VSlot(" { locals : itemLocals }").Init(fmt.Sprintf(`{%s: ""}`, statusVar)),
+			).Slot(" { locals : itemLocals }").LocalsInit(fmt.Sprintf(`{%s: ""}`, statusVar)),
 			)
 
 			tab = VTab(h.Text(msgr.RelatedOnlinePages))
@@ -1716,7 +1719,7 @@ function(e){
 }
 
 func defaultSubPageTitle(ctx *web.EventContext) string {
-	return i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages).PageOverView
+	return i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages).PageOverView
 }
 
 func (b *ContainerBuilder) autoSaveContainer(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -1783,5 +1786,5 @@ func (b *Builder) deviceToggle(ctx *web.EventContext) h.HTMLComponent {
 		VBtnToggle(
 			comps...,
 		).Class("pa-2 rounded-lg ").Attr("v-model", "toggleLocals.activeDevice").Density(DensityCompact),
-	).VSlot("{ locals : toggleLocals}").Init(fmt.Sprintf(`{activeDevice: "%s"}`, ctx.Param(paramsDevice)))
+	).Slot("{ locals : toggleLocals}").LocalsInit(fmt.Sprintf(`{activeDevice: "%s"}`, ctx.Param(paramsDevice)))
 }

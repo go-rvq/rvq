@@ -108,7 +108,7 @@ func (mb *ModelBuilder) EnableActivityInfoTab() *ModelBuilder {
 	editing := mb.presetModel.Editing()
 	editing.AppendTabsPanelFunc(func(obj interface{}, ctx *web.EventContext) (tab h.HTMLComponent, content h.HTMLComponent) {
 		logs := mb.activity.GetCustomizeActivityLogs(obj, mb.activity.getDBFromContext(ctx.R.Context()))
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nActivityKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nActivityKey, Messages_en_US).(*Messages)
 
 		logsvalues := reflect.Indirect(reflect.ValueOf(logs))
 		var panels []h.HTMLComponent

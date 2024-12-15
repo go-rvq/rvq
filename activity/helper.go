@@ -6,12 +6,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"gorm.io/gorm"
 )
 
-func findOldWithSlug(obj interface{}, slug string, db *gorm.DB) (interface{}, bool) {
-	if slug == "" {
+func findOldWithSlug(obj interface{}, id model.ID, db *gorm.DB) (interface{}, bool) {
+	if id.IsZero() {
 		return findOld(obj, db)
 	}
 
@@ -20,16 +22,7 @@ func findOldWithSlug(obj interface{}, slug string, db *gorm.DB) (interface{}, bo
 		old      = reflect.New(objValue.Type()).Interface()
 	)
 
-	if slugger, ok := obj.(presets.SlugDecoder); ok {
-		cs := slugger.PrimaryColumnValuesBySlug(slug)
-		for key, value := range cs {
-			db = db.Where(fmt.Sprintf("%s = ?", key), value)
-		}
-	} else {
-		db = db.Where("id = ?", slug)
-	}
-
-	if db.First(old).Error != nil {
+	if db_utils.ModelIdWhere(db, old, id).First(old).Error != nil {
 		return nil, false
 	}
 

@@ -8,9 +8,11 @@ import (
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
@@ -29,8 +31,8 @@ const (
 )
 
 func registerEventFuncs(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activity.Builder) {
-	mb.RegisterEventFunc(Localize, localizeToConfirmation(db, lb, mb))
-	mb.RegisterEventFunc(DoLocalize, doLocalizeTo(db, mb, lb, ab))
+	mb.RegisterEventHandler(Localize, localizeToConfirmation(db, lb, mb))
+	mb.RegisterEventHandler(DoLocalize, doLocalizeTo(db, mb, lb, ab))
 }
 
 type SelectLocale struct {
@@ -40,95 +42,136 @@ type SelectLocale struct {
 
 func localizeToConfirmation(db *gorm.DB, lb *Builder, mb *presets.ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		presetsMsgr := presets.MustGetMessages(ctx.R)
+		var (
+			presetsMsgr = presets.MustGetMessages(ctx.Context())
+			msgr        = MustGetMessages(ctx.Context())
+			paramID     = ctx.Param(presets.ParamID)
+			mid         = mb.MustParseRecordID(paramID)
+			id          = mid.GetValue("ID")
+			fromLocale  = mid.GetValue("LocaleCode").(string)
+			obj         = mb.NewModelSlice()
+		)
 
-		paramID := ctx.Param(presets.ParamID)
-		cs := mb.NewModel().(presets.SlugDecoder).PrimaryColumnValuesBySlug(paramID)
-		id := cs["id"]
+		if err = db.Session(&gorm.Session{}).
+			Distinct("locale_code").
+			Where("id = ? AND locale_code <> ?", id, fromLocale).
+			Find(obj).Error; err != nil {
+			return
+		}
 
-		fromLocale := lb.GetCorrectLocaleCode(ctx.R)
-
-		obj := mb.NewModelSlice()
-		err = db.Distinct("locale_code").Where("id = ? AND locale_code <> ?", id, fromLocale).Find(obj).Error
 		if err != nil {
 			return
 		}
-		vo := reflect.ValueOf(obj).Elem()
-		var existLocales []string
+		var (
+			vo           = reflect.ValueOf(obj).Elem()
+			existLocales []string
+			chips        []h.HTMLComponent
+		)
+
 		for i := 0; i < vo.Len(); i++ {
-			existLocales = append(existLocales, vo.Index(i).Elem().FieldByName("LocaleCode").String())
+			code := vo.Index(i).Elem().FieldByName("LocaleCode").String()
+			existLocales = append(existLocales, code)
+			chips = append(chips, VChip(h.Text(lb.GetLocale(code).Label())))
 		}
-		toLocales := lb.GetSupportLocaleCodesFromRequest(ctx.R)
-		var selectLocales []SelectLocale
+
+		var (
+			toLocales     = lb.GetSupportLocaleCodesFromRequest(ctx.R)
+			selectLocales []SelectLocale
+		)
+
 		for _, locale := range toLocales {
 			if locale == fromLocale {
 				continue
 			}
 			if !slices.Contains(existLocales, locale) || vo.Len() == 0 {
-				selectLocales = append(selectLocales, SelectLocale{Label: MustGetTranslation(ctx.R, lb.GetLocaleLabel(locale)), Code: locale})
+				selectLocales = append(selectLocales, SelectLocale{Label: MustGetTranslation(ctx.Context(), lb.GetLocaleLabel(locale)), Code: locale})
 			}
 		}
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.Dialog.PortalName(),
-			Body: VDialog(
-				VCard(
-					VCardTitle(h.Text(MustGetTranslation(ctx.R, "Localize"))),
+		attr := web.VField("LocalizeTo", vue.Var("[]"))
 
-					VCardText(
-						h.Div(
-							h.Label(MustGetTranslation(ctx.R, "LocalizeFrom")).Class("v-label v-field-label v-field-label--floating"),
-							// h.Br(),
-							h.Text(MustGetTranslation(ctx.R, lb.GetLocaleLabel(fromLocale))),
-						).Class("v-field v-field--active v-field--appended v-field--dirty v-field--variant-underlined v-theme--light v-locale--is-ltr "),
-						VSelect().
-							Attr(web.VField("localize_to", nil)...).
-							Variant(FieldVariantUnderlined).
-							Label(MustGetTranslation(ctx.R, "LocalizeTo")).
-							Multiple(true).Chips(true).
-							Items(selectLocales).
-							ItemTitle("Label").
-							ItemValue("Code"),
-					).Attr("style", "height: 200px;"),
-
-					VCardActions(
-						VSpacer(),
-						VBtn(presetsMsgr.Cancel).
-							Variant(VariantFlat).
-							Class("ml-2").
-							On("click", "vars.localizeConfirmation = false"),
-
-						VBtn(presetsMsgr.OK).
-							Color("primary").
-							Variant(VariantFlat).
-							Theme(ThemeDark).
-							Attr("@click", web.Plaid().
-								EventFunc(DoLocalize).
-								Query(presets.ParamID, paramID).
-								Query("localize_from", fromLocale).
-								URL(ctx.R.URL.Path).
-								Go()),
+		var cb = &presets.ContentComponentBuilder{
+			Context: ctx,
+			Title:   msgr.Localize,
+			Body: h.HTMLComponents{
+				VContainer(
+					VRow(
+						VCol(
+							vx.VXReadonlyField().
+								Label(msgr.LocalizeFrom).
+								Value(lb.GetLocaleLabel(fromLocale)),
+						).Class("px-0 py-0"),
 					),
-				),
-			).MaxWidth("600px").
-				Attr("v-model", "vars.localizeConfirmation").
-				Attr(web.VAssign("vars", `{localizeConfirmation: false}`)...),
-		})
+					h.If(len(existLocales) > 0,
+						VRow(
+							VCol(
+								h.Label(msgr.CurrentLocalizations).Class("v-label theme--light text-caption"),
+								VChipGroup(chips...),
+							).Class("px-0 py-0"),
+						),
+					),
+					VRow(
+						VCol(
+							VSelect().
+								Attr(attr...).
+								Variant(FieldVariantUnderlined).
+								Label(msgr.LocalizeTo).
+								Multiple(true).
+								Chips(true).
+								Items(selectLocales).
+								ItemTitle("Label").
+								HideDetails(true).
+								ItemValue("Code"),
+						).Class("px-0 py-0"),
+					)),
+			},
+			BottomActions: h.HTMLComponents{
+				VSpacer(),
+				VBtn(presetsMsgr.OK).
+					Color("primary").
+					Variant(VariantFlat).
+					Theme(ThemeDark).
+					Attr("@click", web.Plaid().
+						EventFunc(DoLocalize).
+						Query(presets.ParamID, paramID).
+						Query("localize_from", fromLocale).
+						URL(ctx.R.URL.Path).
+						Go()),
+			},
 
-		r.RunScript = "setTimeout(function(){ vars.localizeConfirmation = true }, 100)"
+			Overlay: &presets.ContentComponentBuilderOverlay{
+				Mode: actions.Dialog,
+			},
+		}
+
+		mb.Builder().Dialog().
+			SetScrollable(true).
+			SetTargetPortal(actions.Dialog.PortalName()).
+			Respond(ctx, &r, cb.BuildOverlay())
+
 		return
 	}
 }
 
+type doLocalize struct {
+	LocalizeTo []string
+}
+
 func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activity.Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		fromParamID := ctx.Param(presets.ParamID)
-		cs := mb.NewModel().(presets.SlugDecoder).PrimaryColumnValuesBySlug(fromParamID)
-		fromID := cs["id"]
-		fromVersion := cs["version"]
-		fromLocale := cs["locale_code"]
-		to := make(map[string]struct{})
-		for _, v := range ctx.R.Form["localize_to"] {
+
+		var (
+			mid         = mb.MustParseRecordID(ctx.Param(presets.ParamID))
+			fromID      = mid.GetValue("ID")
+			fromVersion = mid.GetValue("Version")
+			fromLocale  = mid.GetValue("LocaleCode")
+			toForm      doLocalize
+			to          = make(map[string]interface{})
+		)
+
+		ctx.UnmarshalForm(&toForm)
+
+		for _, v := range toForm.LocalizeTo {
 			for _, lc := range lb.GetSupportLocaleCodes() {
 				if v == lc {
 					to[v] = struct{}{}
@@ -136,6 +179,7 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 				}
 			}
 		}
+
 		if len(to) == 0 {
 			web.AppendRunScripts(&r, "vars.localizeConfirmation = false")
 			return
@@ -143,7 +187,7 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 
 		fromObj := mb.NewModel()
 
-		if err = utils.PrimarySluggerWhere(db, mb.NewModel(), fromParamID).First(fromObj).Error; err != nil {
+		if err = db_utils.ModelIdWhere(db, mb.NewModel(), mid).First(fromObj).Error; err != nil {
 			return
 		}
 
@@ -170,13 +214,9 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 
 		for toLocale := range to {
 			toObj := mb.NewModel()
-			fakeToObj := fromObj
-			if err = reflectutils.Set(fakeToObj, "LocaleCode", toLocale); err != nil {
-				return
-			}
+			mid.SetTo(toObj)
 
-			toParamID := fakeToObj.(presets.SlugEncoder).PrimarySlug()
-			if err = utils.SetPrimaryKeys(fromObj, toObj, db, toParamID); err != nil {
+			if err = reflectutils.Set(toObj, "LocaleCode", toLocale); err != nil {
 				return
 			}
 
@@ -195,13 +235,28 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activi
 			newContext = context.WithValue(newContext, FromLocale, fromLocale)
 			ctx.R = ctx.R.WithContext(newContext)
 
-			if err = me.Saver(toObj, toParamID, ctx); err != nil {
+			var done func() error
+
+			if cb, _ := mb.GetData(LocalizeOptions).(*ModelLocalizeOptions); cb != nil {
+				if done, err = cb.LocalizeCallback(ctx, fromObj, toObj); err != nil {
+					return
+				}
+			}
+
+			if err = me.CreatingBuilder().Creator(toObj, ctx); err != nil {
 				return
 			}
+
+			if done != nil {
+				if err = done(); err != nil {
+					return
+				}
+			}
+
 			toObjs = append(toObjs, toObj)
 		}
 
-		presets.ShowMessage(&r, MustGetTranslation(ctx.R, "SuccessfullyLocalized"), "")
+		presets.ShowMessage(&r, MustGetTranslation(ctx.Context(), "SuccessfullyLocalized"), "")
 
 		// refresh current page
 		r.Reload = true

@@ -80,7 +80,7 @@ func menuItems(ctx *web.EventContext) (r web.EventResponse, err error) {
 			).Name("activator").Scope("{ props: activatorProps }"),
 			web.Scope(
 				web.Portal().Loader(web.POST().EventFunc("addItemForm")).Name("addItemForm").Visible("true"),
-			).VSlot("locals, form }").FormInit(s),
+			).Locals().Form().FormInit(s),
 		).Width("500"),
 	)
 
@@ -138,7 +138,7 @@ func reloadAB(ctx *web.EventContext) (r web.EventResponse, err error) {
 }
 
 func updateCD(ctx *web.EventContext) (r web.EventResponse, err error) {
-	r.UpdatePortals = append(r.UpdatePortals,
+	r.updatePortals = append(r.updatePortals,
 		&web.PortalUpdate{
 			Name: "portalC",
 			Body: Text(fmt.Sprint(time.Now().UnixNano())),

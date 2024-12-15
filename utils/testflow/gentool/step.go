@@ -106,7 +106,7 @@ var validators = []NamedValidator{
 	},
 }
 
-var assertIgnoreRegexp = regexp.MustCompile(`^\**\w+\.(Body|UpdatePortals\[\d+\]\.Body|UpdatePortals\[\d+\]\.AfterLoaded)$`)
+var assertIgnoreRegexp = regexp.MustCompile(`^\**\w+\.(Body|updatePortals\[\d+\]\.Body|updatePortals\[\d+\]\.AfterLoaded)$`)
 
 func generateLines(body string) ([]string, error) {
 	body = strings.TrimSpace(body)

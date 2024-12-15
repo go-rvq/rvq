@@ -55,7 +55,7 @@ func PresetsModelBuilderExtensions(b *presets.Builder, db *gorm.DB) (
 		return
 	})
 
-	mb.RegisterEventFunc("changeName", changeNameEventFunc(mb))
+	mb.RegisterEventHandler("changeName", changeNameEventFunc(mb))
 
 	return
 }

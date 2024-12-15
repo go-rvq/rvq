@@ -34,9 +34,13 @@ func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 		return
 	}
 
-	var mediaFile FileInterface
+	var (
+		mediaFile    FileInterface
+		saveOriginal bool
+	)
 	if fileHeader := media.GetFileHeader(); fileHeader != nil {
 		mediaFile, err = media.GetFileHeader().Open()
+		saveOriginal = true
 	} else {
 		mediaFile, err = media.Retrieve(media.URL("original"))
 	}
@@ -66,7 +70,7 @@ func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 		}
 
 		mediaFile.Seek(0, 0)
-		if handler.Handle(media, mediaFile, option) == nil {
+		if handler.Handle(media, mediaFile, option, saveOriginal) == nil {
 			handled = true
 		}
 	}
@@ -80,30 +84,32 @@ func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 	return true, nil
 }
 
-func SaveUploadAndCropImage(db *gorm.DB, obj interface{}) (err error) {
-	db = db.Model(obj).Save(obj)
-	err = db.Error
-	if err != nil {
-		return
-	}
-
-	updateColumns := map[string]interface{}{}
-
-	for _, field := range db.Statement.Schema.Fields {
-		ok, err := cropField(field, db)
+func SaveUploadAndCropImage(db *gorm.DB, obj interface{}) error {
+	return db.Transaction(func(db *gorm.DB) (err error) {
+		db = db.Model(obj).Save(obj)
+		err = db.Error
 		if err != nil {
-			return err
+			return
 		}
-		if ok {
-			updateColumns[field.DBName] = field.ReflectValueOf(db.Statement.Context, db.Statement.ReflectValue).Addr().Interface()
-		}
-	}
 
-	if len(updateColumns) == 0 {
+		updateColumns := map[string]interface{}{}
+
+		for _, field := range db.Statement.Schema.Fields {
+			ok, err := cropField(field, db)
+			if err != nil {
+				return err
+			}
+			if ok {
+				updateColumns[field.DBName] = field.ReflectValueOf(db.Statement.Context, db.Statement.ReflectValue).Addr().Interface()
+			}
+		}
+
+		if len(updateColumns) == 0 {
+			return
+		}
+
+		err = db.UpdateColumns(updateColumns).Error
+
 		return
-	}
-
-	err = db.UpdateColumns(updateColumns).Error
-
-	return
+	})
 }

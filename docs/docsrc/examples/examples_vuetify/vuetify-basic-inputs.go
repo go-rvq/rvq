@@ -92,14 +92,14 @@ func VuetifyBasicInputs(ctx *web.EventContext) (pr web.PageResponse, err error) 
 			VBtn("Update").OnClick("update").Color("primary"),
 			h.P().Text("The following button will update a portal with a hidden field, if you click this button, and then click the above update button, you will find additional value posted to server"),
 			VBtn("Add Portal Hidden Value").OnClick("addPortal"),
-		).VSlot("{ locals, form }").FormInit(h.JSONString(s)),
+		).Locals().Form().FormInit(h.JSONString(s)),
 	)
 
 	return
 }
 
 func addPortal(ctx *web.EventContext) (r web.EventResponse, err error) {
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
+	r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
 		Name: "Portal1",
 		Body: h.Input("").Type("hidden").
 			Attr(":value", "form.PortalAddedValue = 'this is my portal added hidden value'"),

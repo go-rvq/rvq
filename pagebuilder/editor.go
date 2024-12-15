@@ -239,12 +239,11 @@ func (b *Builder) renderEditContainer(ctx *web.EventContext) (r h.HTMLComponent,
 				).Class("d-flex  pa-6 align-center justify-space-between"),
 				VDivider(),
 				h.Div(
-
-					builder.Editing().ToComponent(builder.Info(), element, presets.FieldModeStack{presets.EDIT}, ctx),
+					builder.Editing().ToComponent(element, presets.FieldModeStack{presets.EDIT}, ctx),
 				).Class("pa-6"),
 			),
 		),
-	).VSlot("{ form }")
+	).Slot("{ form }")
 	return
 }
 

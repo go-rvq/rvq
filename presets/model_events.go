@@ -1,6 +1,9 @@
 package presets
 
-import "github.com/qor5/admin/v3/presets/actions"
+import (
+	"github.com/qor5/admin/v3/presets/actions"
+	"github.com/qor5/web/v3"
+)
 
 func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.New, mb.editing.formNew)
@@ -14,7 +17,7 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.OpenBulkActionDialog, mb.listing.openBulkActionDialog)
 	mb.RegisterEventFunc(actions.OpenActionDialog, mb.listing.openActionDialog)
 
-	mb.RegisterEventFunc(actions.Action, mb.detailing.formDrawerAction)
+	mb.RegisterEventFunc(actions.Action, mb.detailing.formAction)
 	mb.RegisterEventFunc(actions.DoAction, mb.detailing.doAction)
 	mb.RegisterEventFunc(actions.Detailing, mb.detailing.detailing)
 	// mb.RegisterEventFunc(actions.DetailingContent, mb.detailing.detailingContent)
@@ -35,4 +38,19 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.AddRowEvent, addListItemRow(mb))
 	mb.RegisterEventFunc(actions.RemoveRowEvent, removeListItemRow(mb))
 	mb.RegisterEventFunc(actions.SortEvent, sortListItems(mb))
+}
+
+func (mb *ModelBuilder) RegisterEventFunc(id string, f web.EventFunc) string {
+	return mb.RegisterEventHandler(id, web.EventFunc(func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		WithModel(ctx, mb)
+		if r, err = f(ctx); err != nil {
+			r.UpdatePortal(FlashPortalName, RenderFlash(err, ""))
+			err = nil
+		}
+		return
+	}))
+}
+
+func (mb *ModelBuilder) RegisterEventHandler(eventFuncId string, ef web.EventHandler) (key string) {
+	return mb.EventsHub.RegisterEventHandler(eventFuncId, ef)
 }

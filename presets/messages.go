@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type TimeFormatMessages struct {
@@ -55,7 +56,7 @@ type Messages struct {
 	FiltersDateDays                            string
 	FiltersDateMonths                          string
 	FiltersDateAnd                             string
-	FiltersDateTo                              string
+	FiltersTo                                  string
 	FiltersNumberEquals                        string
 	FiltersNumberBetween                       string
 	FiltersNumberGreaterThan                   string
@@ -65,6 +66,9 @@ type Messages struct {
 	FiltersStringContains                      string
 	FiltersMultipleSelectIn                    string
 	FiltersMultipleSelectNotIn                 string
+	Month                                      string
+	MonthNames                                 [time.December + 1]string
+	Year                                       string
 	PaginationRowsPerPage                      string
 	ListingNoRecordToShow                      string
 	ListingSelectedCountNotice                 string
@@ -165,7 +169,7 @@ var Messages_en_US = &Messages{
 	FiltersDateDays:                   "days",
 	FiltersDateMonths:                 "months",
 	FiltersDateAnd:                    "and",
-	FiltersDateTo:                     "to",
+	FiltersTo:                         "to",
 	FiltersNumberEquals:               "is equal to",
 	FiltersNumberBetween:              "between",
 	FiltersNumberGreaterThan:          "is greater than",
@@ -175,11 +179,17 @@ var Messages_en_US = &Messages{
 	FiltersStringContains:             "contains",
 	FiltersMultipleSelectIn:           "in",
 	FiltersMultipleSelectNotIn:        "not in",
-	PaginationRowsPerPage:             "Rows per page: ",
-	ListingNoRecordToShow:             "No records to show",
-	ListingSelectedCountNotice:        "{count} records are selected. ",
-	ListingClearSelection:             "clear selection",
-	BulkActionNoAvailableRecords:      "None of the selected records can be executed with this action.",
+	Month:                             "Month",
+	MonthNames: [time.December + 1]string{
+		"", "January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December",
+	},
+	Year:                                       "Year",
+	PaginationRowsPerPage:                      "Rows per page: ",
+	ListingNoRecordToShow:                      "No records to show",
+	ListingSelectedCountNotice:                 "{count} records are selected. ",
+	ListingClearSelection:                      "clear selection",
+	BulkActionNoAvailableRecords:               "None of the selected records can be executed with this action.",
 	BulkActionSelectedIdsProcessNoticeTemplate: "Partially selected records cannot be executed with this action: {ids}.",
 	ConfirmDialogPromptText:                    "Are you sure?",
 	Language:                                   "Language",
@@ -222,7 +232,7 @@ var Messages_zh_CN = &Messages{
 	FiltersDateDays:                "天",
 	FiltersDateMonths:              "月",
 	FiltersDateAnd:                 "和",
-	FiltersDateTo:                  "至",
+	FiltersTo:                      "至",
 	FiltersNumberEquals:            "等于",
 	FiltersNumberBetween:           "之间",
 	FiltersNumberGreaterThan:       "大于",
@@ -274,7 +284,7 @@ var Messages_ja_JP = &Messages{
 	FiltersDateDays:                "日間",
 	FiltersDateMonths:              "月数",
 	FiltersDateAnd:                 "＆",
-	FiltersDateTo:                  "から",
+	FiltersTo:                      "から",
 	FiltersNumberEquals:            "と同等",
 	FiltersNumberBetween:           "間",
 	FiltersNumberGreaterThan:       "より大きい",

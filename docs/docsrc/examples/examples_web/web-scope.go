@@ -48,8 +48,8 @@ if (locals.btnLabel == "Add") {
 			).Class("mx-auto").
 				Attr("max-width", "300").
 				Attr("tile", ""),
-		).Init(`{ selectedItem: 0, btnLabel:"Add", items: [{text: "A", icon: "mdi-clock"}]}`).
-			VSlot("{ locals }"),
+		).LocalsInit(`{ selectedItem: 0, btnLabel:"Add", items: [{text: "A", icon: "mdi-clock"}]}`).
+			Slot("{ locals }"),
 	)
 	return
 }
@@ -113,11 +113,11 @@ func WebScopeUseForm(ctx *web.EventContext) (pr web.PageResponse, err error) {
 
 										Button("Send").Style(`background: orange;`).Attr("@click", web.POST().EventFunc("updateValue").Go()),
 									).Style(`background: orange;`),
-								).VSlot("{ form, locals }").FormInit(struct{ RawMaterialName string }{RawMaterialName: rawMaterialName}),
+								).Slot("{ form, locals }").FormInit(struct{ RawMaterialName string }{RawMaterialName: rawMaterialName}),
 
 								Button("Send").Style(`background: brown;`).Attr("@click", web.POST().EventFunc("updateValue").Go()),
 							).Style(`background: brown;`),
-						).VSlot("{ form, locals }"),
+						).Slot("{ form, locals }"),
 
 						Div(
 							Label("Country ID"),
@@ -139,13 +139,13 @@ func WebScopeUseForm(ctx *web.EventContext) (pr web.PageResponse, err error) {
 
 								Button("Send").Style(`background: red;`).Attr("@click", web.POST().EventFunc("updateValue").Go()),
 							).Style(`background: red;`),
-						).VSlot("{ form, locals }").FormInit(struct{ CountryName string }{CountryName: countryName}),
+						).Slot("{ form, locals }").FormInit(struct{ CountryName string }{CountryName: countryName}),
 
 						Div(
 							Button("Send").Style(`background: grey;`).Attr("@click", web.POST().EventFunc("updateValue").Go())),
 					).Style(`background: grey;`)),
 			).Style(`width:600px;`),
-		).VSlot("{ locals, form }").FormInit("{ProductName: 'Product1', MaterialID: '55', MaterialName: 'Material1', RawMaterialID: '77', RawMaterialName: 'RawMaterial1', CountryID: '88', CountryName: 'Country1'}"),
+		).Slot("{ locals, form }").FormInit("{ProductName: 'Product1', MaterialID: '55', MaterialName: 'Material1', RawMaterialID: '77', RawMaterialName: 'RawMaterial1', CountryID: '88', CountryName: 'Country1'}"),
 	)
 
 	return

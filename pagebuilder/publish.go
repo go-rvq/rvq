@@ -9,6 +9,7 @@ import (
 
 	"github.com/qor/oss"
 	"github.com/qor5/admin/v3/l10n"
+	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"gorm.io/gorm"
 )
@@ -26,7 +27,7 @@ func builderFromContext(c context.Context) (b *ModelBuilder, ok bool) {
 	return
 }
 
-func (p *Page) GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Page) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	var b *ModelBuilder
 	var ok bool
 	if b, ok = builderFromContext(ctx); !ok || b == nil {
@@ -76,7 +77,7 @@ func (p *Page) GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.S
 	return
 }
 
-func (p *Page) GetUnPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Page) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.OnlineUrl,
 		IsDelete: true,

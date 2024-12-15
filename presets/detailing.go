@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
@@ -24,15 +24,24 @@ type DetailingBuilder struct {
 	fetcher            FetchFunc
 	tabPanels          []TabComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
-	editionDisabled    OkHandled
+
 	SectionsBuilder
 	RowMenuFields
+
+	EditingRestrictionField[*DetailingBuilder]
+	DeletingRestrictionField[*DetailingBuilder]
 }
 
 func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder {
-	db := &DetailingBuilder{mb: mb, SectionsBuilder: sb}
-	db.RowMenuFields.init(mb)
-	return db
+	d := &DetailingBuilder{mb: mb, SectionsBuilder: sb}
+	d.RowMenuFields.init(mb)
+	d.EditingRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
+		r.Insert(mb.EditingRestriction)
+	})
+	d.DeletingRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
+		r.Insert(mb.DetailingRestriction)
+	})
+	return d
 }
 
 func (mb *ModelBuilder) newDetailing() (r *DetailingBuilder) {
@@ -100,6 +109,8 @@ func (mb *ModelBuilder) SetDetailingBuilder(dt *DetailingBuilder) *ModelBuilder 
 }
 
 func (b DetailingBuilder) Clone() *DetailingBuilder {
+	b.EditingRestriction = b.EditingRestriction.Clone(&b)
+	b.DeletingRestriction = b.DeletingRestriction.Clone(&b)
 	return &b
 }
 
@@ -179,14 +190,19 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	r.Body = VContainer(h.Text(id))
 
 	obj := b.mb.NewModel()
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 
 	if id == "" {
 		err = msgr.ErrEmptyParamID
 		return
 	}
 
-	err = b.GetFetchFunc()(obj, id, ctx)
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(id); err != nil {
+		return
+	}
+
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		if errors.Is(err, ErrRecordNotFound) {
 			return b.mb.p.DefaultNotFoundPageFunc(ctx)
@@ -194,14 +210,18 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
-	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
+	r.PageTitle = msgr.DetailingObjectTitle(
+		i18n.T(ctx.Context(), ModelsI18nModuleKey, b.mb.label),
+		b.mb.RecordTitle(obj, ctx))
 
 	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
 		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
 		return
 	}
 
-	f := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build())
+	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
+	form.mode = DETAIL
+	f := b.configureForm(form.Build())
 
 	if len(f.MainPortals) > 0 {
 		AddPortals(ctx, f.MainPortals...)
@@ -222,15 +242,18 @@ func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse
 
 	id := ctx.Param(ParamID)
 	obj := b.mb.NewModel()
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 
 	if id == "" {
 		err = msgr.ErrEmptyParamID
 		return
 	}
-
-	if err = b.GetFetchFunc()(obj, id, ctx); err != nil {
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(id); err != nil {
+		return
+	}
+	if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
 		return
 	}
 
@@ -238,18 +261,21 @@ func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse
 		return
 	}
 
-	f := b.configureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build()).Component()
+	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
+	form.mode = DETAIL
+	f := b.configureForm(form.Build()).Component()
 
 	mode := GetOverlay(ctx)
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
 			SetValidPortalName(targetPortal).
+			SetScrollable(true).
 			Respond(&r, f)
 	} else {
 		b.mb.p.Dialog().
 			SetScrollable(true).
 			SetTargetPortal(targetPortal).
-			Respond(&r, f)
+			Respond(ctx, &r, f)
 	}
 	return
 }
@@ -271,7 +297,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 	f.Portal = portalName
 
-	if b.CanEditObj(ctx, obj) {
+	if b.EditingRestriction.CanObj(obj, ctx) {
 		var cb web.Callback
 		cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
 
@@ -302,7 +328,9 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 			ValidQuery(ParamOverlay, editMode.String()).
 			ValidQuery(ParamPostChangeCallback, cb.String())
 
-		f.MainPortals = append(f.MainPortals, web.Portal().Name(editPortal))
+		f.MainPortals = append(f.MainPortals,
+			web.Portal().
+				Name(editPortal))
 
 		f.PrimaryAction = h.HTMLComponents{
 			VBtn("").
@@ -321,23 +349,38 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 	f.Tabs = b.tabPanels
 
-	title := MustGetMessages(ctx.R).DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 	if v, ok := GetComponentFromContext(ctx, ctxDetailingAfterTitleComponent); ok {
 		f.TopRightActions = append(f.TopRightActions, v)
 	}
 
-	f.Title = title
+	f.Title = MustGetMessages(ctx.Context()).DetailingObjectTitle(
+		i18n.T(ctx.Context(), ModelsI18nModuleKey, b.mb.label),
+		b.mb.RecordTitle(obj, ctx))
 	sharedPortal := ctx.UID()
 	f.MainPortals = append(f.MainPortals, web.Portal().Name(sharedPortal))
 
 	var menus h.HTMLComponents
-	b.RowMenu().listingItemFuncs(ctx).ForEachRowMenuItemFunc(sharedPortal, func(rctx *RecordMenuItemContext, name string) string {
-		name = sharedPortal + "--" + name
-		f.MainPortals = append(f.MainPortals, web.Portal().Name(name))
-		return name
-	}, func(i int, m vx.RowMenuItemFunc) {
-		menus = append(menus, m(0, f.Obj, f.b.id, ctx))
-	})
+	b.RowMenu().listingItemFuncs(ctx).
+		ForEachRowMenuItemFunc(sharedPortal, func(rctx *RecordMenuItemContext, name string) string {
+			name = sharedPortal + "--" + name
+			f.MainPortals = append(f.MainPortals, web.Portal().Name(name))
+			return name
+		}, func(i int, m vx.RowMenuItemFunc) {
+			menus = append(menus, m(0, f.Obj, f.b.id, ctx))
+		})
+
+	actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, b.actions...)
+
+	if len(actionsErrors) > 0 {
+		f.Body = append(actionsErrors, f.Body)
+	}
+
+	if len(actionsMenus) > 0 {
+		menus = append(menus, VDivider())
+		for _, menuItem := range actionsMenus {
+			menus = append(menus, menuItem)
+		}
+	}
 
 	if len(menus) > 0 {
 		f.Menu = append(
@@ -353,66 +396,67 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 }
 
 func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse, err error) {
-	action := getAction(b.actions, ctx.R.FormValue(ParamAction))
-	if action == nil {
-		panic("action required")
+	var (
+		action *ActionBuilder
+		id     string
+	)
+	if id, action, err = b.parseRequestAction(ctx); err != nil {
+		return
 	}
-	id := ctx.R.FormValue(ParamID)
+
 	if err := action.updateFunc(id, ctx); err != nil || ctx.Flash != nil {
 		if ctx.Flash == nil {
 			ctx.Flash = err
 		}
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.RightDrawer.PortalName(),
-			Body: b.actionForm(action, ctx),
-		})
+		b.mb.p.Overlay(ctx, &r, b.actionForm(action, id, ctx), "")
 		return r, nil
 	}
 
 	r.PushState = web.Location(url.Values{})
-	r.RunScript = actions.RightDrawer.CloseScript()
-
+	r.RunScript = "closer.show = false"
+	GetFlashMessages(ctx).RespondTo(&r)
 	return
 }
 
-func (b *DetailingBuilder) formDrawerAction(ctx *web.EventContext) (r web.EventResponse, err error) {
-	action := getAction(b.actions, ctx.R.FormValue(ParamAction))
+func (b *DetailingBuilder) formAction(ctx *web.EventContext) (r web.EventResponse, err error) {
+	var (
+		action *ActionBuilder
+		id     string
+	)
+	if id, action, err = b.parseRequestAction(ctx); err != nil {
+		return
+	}
+	b.mb.p.Overlay(ctx, &r, b.actionForm(action, id, ctx), "")
+	return
+}
+
+func (b *DetailingBuilder) parseRequestAction(ctx *web.EventContext) (id string, action *ActionBuilder, err error) {
+	action = getAction(b.actions, ctx.R.FormValue(ParamAction))
 	if action == nil {
-		panic("action required")
+		err = errors.New("action required")
+		return
+	}
+	id = ctx.R.FormValue(ParamID)
+	if id == "" {
+		err = errors.New("id required")
+		return
 	}
 
-	b.mb.p.rightDrawer(&r, b.actionForm(action, ctx), "")
+	var enabled bool
+	if enabled, err = action.IsEnabled(id, ctx); err != nil {
+		return
+	}
+	if !enabled {
+		err = errors.New("action disabled")
+		return
+	}
 	return
 }
 
-func (b *DetailingBuilder) actionForm(action *ActionBuilder, ctx *web.EventContext) h.HTMLComponent {
-	msgr := MustGetMessages(ctx.R)
-
-	id := ctx.R.FormValue(ParamID)
-	if id == "" {
-		panic("id required")
-	}
-
-	return VContainer(
-		VCard(
-			VCardText(
-				action.compFunc(id, ctx),
-			),
-			VCardActions(
-				VSpacer(),
-				VBtn(msgr.Update).
-					Theme("dark").
-					Color(ColorPrimary).
-					Attr("@click", web.Plaid().
-						EventFunc(actions.DoAction).
-						Query(ParamID, id).
-						Query(ParamAction, ctx.R.FormValue(ParamAction)).
-						URL(b.mb.Info().DetailingHref(id)).
-						Go()),
-			),
-		).Flat(true),
-	).Fluid(true)
+func (b *DetailingBuilder) actionForm(action *ActionBuilder, id string, ctx *web.EventContext) h.HTMLComponent {
+	comp := action.Form(b.mb, id, actions.OverlayMode(ctx.Param(ParamOverlay)), ctx)
+	return web.Scope(comp).FormInit()
 }
 
 // EditDetailField EventFunc: click detail field component edit button
@@ -422,7 +466,12 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 	f := b.Section(key)
 
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -430,14 +479,11 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 		f.setter(obj, ctx)
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.editComponent(obj, &FieldContext{
-			EventContext: ctx,
-			FormKey:      f.name,
-			Name:         f.name,
-		}, ctx),
-	})
+	r.UpdatePortal(f.FieldPortalName(), f.editComponent(obj, &FieldContext{
+		EventContext: ctx,
+		FormKey:      f.name,
+		Name:         f.name,
+	}, ctx))
 	return r, nil
 }
 
@@ -448,7 +494,13 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 	f := b.Section(key)
 
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -456,21 +508,20 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 		f.setter(obj, ctx)
 	}
 
-	err = f.saver(obj, ctx.Queries().Get(ParamID), ctx)
+	err = f.saver(obj, mid, ctx)
 	if err != nil {
 		ShowMessage(&r, err.Error(), "warning")
 		return r, nil
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.viewComponent(&FieldContext{
+	r.UpdatePortal(
+		f.FieldPortalName(),
+		f.viewComponent(&FieldContext{
 			EventContext: ctx,
 			Obj:          obj,
 			FormKey:      f.name,
 			Name:         f.name,
-		}, ctx),
-	})
+		}, ctx))
 	return r, nil
 }
 
@@ -496,8 +547,12 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 		}
 	}
 
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -505,14 +560,13 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 		f.setter(obj, ctx)
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.listComponent(&FieldContext{
+	r.UpdatePortal(
+		f.FieldPortalName(),
+		f.listComponent(&FieldContext{
 			EventContext: ctx,
 			Obj:          obj,
 			Mode:         FieldModeStack{DETAIL},
-		}, ctx, int(deleteIndex), int(index), -1),
-	})
+		}, ctx, int(deleteIndex), int(index), -1))
 
 	return
 }
@@ -532,8 +586,12 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 		return
 	}
 
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -541,20 +599,19 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 		f.setter(obj, ctx)
 	}
 
-	err = f.saver(obj, ctx.Queries().Get(ParamID), ctx)
+	err = f.saver(obj, mid, ctx)
 	if err != nil {
 		ShowMessage(&r, err.Error(), "warning")
 		return r, nil
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.listComponent(&FieldContext{
+	r.UpdatePortal(
+		f.FieldPortalName(),
+		f.listComponent(&FieldContext{
 			EventContext: ctx,
 			Obj:          obj,
 			Mode:         FieldModeStack{DETAIL},
-		}, ctx, -1, -1, int(index)),
-	})
+		}, ctx, -1, -1, int(index)))
 
 	return
 }
@@ -574,8 +631,13 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 		return
 	}
 
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -603,20 +665,18 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 		return
 	}
 
-	err = f.saver(obj, ctx.Queries().Get(ParamID), ctx)
+	err = f.saver(obj, mid, ctx)
 	if err != nil {
 		ShowMessage(&r, err.Error(), "warning")
 		return r, nil
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.listComponent(&FieldContext{
+	r.UpdatePortal(f.FieldPortalName(),
+		f.listComponent(&FieldContext{
 			EventContext: ctx,
 			Obj:          obj,
 			Mode:         FieldModeStack{DETAIL},
-		}, ctx, int(index), -1, -1),
-	})
+		}, ctx, int(index), -1, -1))
 
 	return
 }
@@ -626,8 +686,13 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 	fieldName := ctx.Queries().Get(SectionFieldName)
 	f := b.Section(fieldName)
 
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, ctx.Queries().Get(ParamID), ctx)
+	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		return
 	}
@@ -654,43 +719,22 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 		return
 	}
 
-	if err = f.saver(obj, ctx.Queries().Get(ParamID), ctx); err != nil {
+	if err = f.saver(obj, mid, ctx); err != nil {
 		ShowMessage(&r, err.Error(), "warning")
 		return r, nil
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: f.FieldPortalName(),
-		Body: f.listComponent(&FieldContext{
+	r.UpdatePortal(f.FieldPortalName(),
+		f.listComponent(&FieldContext{
 			EventContext: ctx,
 			Obj:          obj,
 			Mode:         FieldModeStack{DETAIL},
-		}, ctx, -1, listLen, -1),
-	})
+		}, ctx, -1, listLen, -1))
 
 	return
 }
 
-func (mb *DetailingBuilder) EditionDisabled() OkHandled {
-	return mb.editionDisabled
-}
-
-func (mb *DetailingBuilder) SetEditionDisabled(editDisabled OkHandled) *DetailingBuilder {
-	mb.editionDisabled = editDisabled
-	return mb
-}
-
-func (mb *DetailingBuilder) CanEdit(ctx *web.EventContext) bool {
-	if mb.editionDisabled == nil {
-		return !CallOkHandled(mb.mb.editionDisabled, ctx)
-	}
-	return !CallOkHandled(mb.editionDisabled, ctx)
-}
-
-func (mb *DetailingBuilder) CanEditObj(ctx *web.EventContext, obj interface{}) bool {
-	if !mb.CanEdit(ctx) {
-		return false
-	}
-
-	return mb.mb.Info().CanUpdate(ctx.R, obj)
+func (b *DetailingBuilder) HiddenField(f ...string) *DetailingBuilder {
+	b.FieldsBuilder.HiddenField(f...)
+	return b
 }

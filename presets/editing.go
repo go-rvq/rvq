@@ -13,7 +13,9 @@ type EditingBuilder struct {
 	mb               *ModelBuilder
 	Fetcher          FetchFunc
 	Setter           SetterFunc
+	PostSetter       SetterFunc
 	Saver            SaveFunc
+	Creator          CreateFunc
 	Validators       Validators
 	tabPanels        []TabComponentFunc
 	hiddenFuncs      []ObjectComponentFunc
@@ -22,13 +24,19 @@ type EditingBuilder struct {
 	editingTitleFunc EditingTitleComponentFunc
 	onChangeAction   OnChangeActionFunc
 	pageFunc         web.PageFunc
-	editionDisabled  OkHandled
 	FieldsBuilder
+	preComponents  []ModeObjectComponentFunc
+	postComponents []ModeObjectComponentFunc
+
+	EditingRestrictionField[*EditingBuilder]
 }
 
 func NewEditingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *EditingBuilder {
-	eb := &EditingBuilder{mb: mb, FieldsBuilder: fieldsBuilder}
-	return eb
+	e := &EditingBuilder{mb: mb, FieldsBuilder: fieldsBuilder}
+	e.EditingRestriction = NewObjRestriction(e, func(r *ObjRestriction[*EditingBuilder]) {
+		r.Insert(mb.EditingRestriction)
+	})
+	return e
 }
 
 func (mb *ModelBuilder) newEditing() (r *EditingBuilder) {
@@ -36,7 +44,16 @@ func (mb *ModelBuilder) newEditing() (r *EditingBuilder) {
 
 	mb.editing.FetchFunc(mb.Fetcher)
 	mb.editing.SaveFunc(mb.Saver)
+	mb.editing.CreateFunc(mb.Creator)
 	return
+}
+
+func (mb *ModelBuilder) WithEditingBuilders(do func(e *EditingBuilder)) *ModelBuilder {
+	if mb.creating != nil {
+		do(mb.creating)
+	}
+	do(mb.editing)
+	return mb
 }
 
 // string / []string / *FieldsSection
@@ -59,19 +76,29 @@ func (b *EditingBuilder) ModelBuilder() *ModelBuilder {
 }
 
 // string / []string / *FieldsSection
-func (b *EditingBuilder) Only(vs ...interface{}) (r *EditingBuilder) {
-	r = b
-	r.FieldsBuilder = *r.FieldsBuilder.Only(vs...)
-	return
+func (b *EditingBuilder) Only(vs ...interface{}) *EditingBuilder {
+	b.FieldsBuilder = *b.FieldsBuilder.Only(vs...)
+	return b
 }
 
-func (b *EditingBuilder) Except(vs ...string) (r *EditingBuilder) {
-	r = b
-	r.FieldsBuilder = *r.FieldsBuilder.Except(vs...)
-	return
+// string / []string / *FieldsSection
+func (b *EditingBuilder) Prepend(vs ...interface{}) *EditingBuilder {
+	b.FieldsBuilder = *b.FieldsBuilder.Prepend(vs...)
+	return b
 }
 
-func (b *EditingBuilder) FetchFunc(v FetchFunc) (r *EditingBuilder) {
+// string / []string / *FieldsSection
+func (b *EditingBuilder) Append(vs ...interface{}) *EditingBuilder {
+	b.FieldsBuilder = *b.FieldsBuilder.Append(vs...)
+	return b
+}
+
+func (b *EditingBuilder) Except(vs ...string) *EditingBuilder {
+	b.FieldsBuilder = *b.FieldsBuilder.Except(vs...)
+	return b
+}
+
+func (b *EditingBuilder) FetchFunc(v FetchFunc) *EditingBuilder {
 	b.Fetcher = v
 	return b
 }
@@ -91,13 +118,18 @@ func (b *EditingBuilder) WrapSaveFunc(w func(in SaveFunc) SaveFunc) (r *EditingB
 	return b
 }
 
-func (b *EditingBuilder) SetterFunc(v SetterFunc) (r *EditingBuilder) {
-	b.Setter = v
+func (b *EditingBuilder) CreateFunc(v CreateFunc) (r *EditingBuilder) {
+	b.Creator = v
 	return b
 }
 
-func (b *EditingBuilder) OnChangeActionFunc(v OnChangeActionFunc) (r *EditingBuilder) {
-	b.onChangeAction = v
+func (b *EditingBuilder) WrapCreateFunc(w func(in CreateFunc) CreateFunc) (r *EditingBuilder) {
+	b.Creator = w(b.Creator)
+	return b
+}
+
+func (b *EditingBuilder) SetterFunc(v SetterFunc) (r *EditingBuilder) {
+	b.Setter = v
 	return b
 }
 
@@ -106,6 +138,20 @@ func (b *EditingBuilder) WrapSetterFunc(w func(in SetterFunc) SetterFunc) (r *Ed
 	return b
 }
 
+func (b *EditingBuilder) PostSetterFunc(v SetterFunc) (r *EditingBuilder) {
+	b.PostSetter = v
+	return b
+}
+
+func (b *EditingBuilder) WrapPostSetterFunc(w func(in SetterFunc) SetterFunc) (r *EditingBuilder) {
+	b.PostSetter = w(b.PostSetter)
+	return b
+}
+
+func (b *EditingBuilder) OnChangeActionFunc(v OnChangeActionFunc) (r *EditingBuilder) {
+	b.onChangeAction = v
+	return b
+}
 func (b *EditingBuilder) AppendTabsPanelFunc(v TabComponentFunc) (r *EditingBuilder) {
 	b.tabPanels = append(b.tabPanels, v)
 	return b
@@ -136,9 +182,9 @@ func (b *EditingBuilder) EditingTitleFunc(v EditingTitleComponentFunc) (r *Editi
 	return b
 }
 
-func (b *EditingBuilder) FetchAndUnmarshal(id string, removeDeletedAndSort bool, ctx *web.EventContext) (obj interface{}, vErr web.ValidationErrors) {
+func (b *EditingBuilder) FetchAndUnmarshal(id ID, removeDeletedAndSort bool, ctx *web.EventContext) (obj interface{}, vErr web.ValidationErrors) {
 	obj = b.mb.NewModel()
-	if len(id) > 0 || b.mb.singleton {
+	if !id.IsZero() || b.mb.singleton {
 		err1 := b.Fetcher(obj, id, ctx)
 		if err1 != nil {
 			if !(err1 == ErrRecordNotFound && b.mb.singleton) {
@@ -160,31 +206,45 @@ func (b *EditingBuilder) RunSetterFunc(ctx *web.EventContext, removeDeletedAndSo
 
 	vErr = b.Unmarshal(toObj, b.mb.Info(), removeDeletedAndSort, ctx)
 
+	if b.PostSetter != nil {
+		b.PostSetter(toObj, ctx)
+	}
+
 	return
 }
 
-func (mb *EditingBuilder) EditionDisabled() OkHandled {
-	return mb.editionDisabled
+func (b *EditingBuilder) PreComponent(f ModeObjectComponentFunc) *EditingBuilder {
+	b.preComponents = append(b.preComponents, f)
+	return b
 }
 
-func (mb *EditingBuilder) SetEditionDisabled(editDisabled OkHandled) *EditingBuilder {
-	mb.editionDisabled = editDisabled
-	return mb
+func (b *EditingBuilder) PostComponent(f ModeObjectComponentFunc) *EditingBuilder {
+	b.postComponents = append(b.postComponents, f)
+	return b
 }
 
-func (mb *EditingBuilder) CanEdit(ctx *web.EventContext) bool {
-	if mb.editionDisabled == nil {
-		return !CallOkHandled(mb.mb.editionDisabled, ctx)
+func (b *EditingBuilder) ToComponent(obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
+	var (
+		comp h.HTMLComponents
+		add  = func(c h.HTMLComponent) {
+			if comps, ok := c.(h.HTMLComponents); ok {
+				comp = append(comp, comps...)
+			} else {
+				comp = append(comp, c)
+			}
+		}
+	)
+
+	for _, f := range b.preComponents {
+		add(f(mode, obj, ctx))
 	}
-	return !CallOkHandled(mb.editionDisabled, ctx)
-}
 
-func (mb *EditingBuilder) CanEditObj(ctx *web.EventContext, obj interface{}) bool {
-	if !mb.CanEdit(ctx) {
-		return false
+	add(b.FieldsBuilder.ToComponent(b.mb.Info(), obj, mode, ctx))
+
+	for _, f := range b.postComponents {
+		add(f(mode, obj, ctx))
 	}
-
-	return mb.mb.Info().CanUpdate(ctx.R, obj)
+	return comp
 }
 
 func (b *EditingBuilder) UpdateOverlayContent(
@@ -209,23 +269,19 @@ func (b *EditingBuilder) UpdateOverlayContent(
 	}
 
 	f := b.form(obj, ctx)
-	if f.b.overlayMode.IsDrawer() {
-		f.Portal = f.b.overlayMode.PortalName()
-	}
-
 	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
 
 	f.Respond(r)
 }
 
 func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	var (
-		id  = ctx.R.PathValue(ParamID)
-		obj = b.mb.NewModel()
-	)
-
-	if len(id) > 0 || b.mb.singleton {
-		if err = b.Fetcher(obj, id, ctx); err != nil {
+	var obj = b.mb.NewModel()
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+	if !mid.IsZero() || b.mb.singleton {
+		if err = b.Fetcher(obj, mid, ctx); err != nil {
 			if err == ErrRecordNotFound {
 				if b.mb.singleton {
 					err = nil
@@ -240,9 +296,7 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 		return b.mb.p.DefaultNotFoundPageFunc(ctx)
 	}
 
-	r.Body = VContainer(h.Text(id))
-
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 
 	if b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
@@ -285,5 +339,10 @@ func (b *EditingBuilder) GetPageFunc() web.PageFunc {
 
 func (b *EditingBuilder) SetPageFunc(pageFunc web.PageFunc) *EditingBuilder {
 	b.pageFunc = pageFunc
+	return b
+}
+
+func (b *EditingBuilder) HiddenField(f ...string) *EditingBuilder {
+	b.FieldsBuilder.HiddenField(f...)
 	return b
 }

@@ -1,83 +1,22 @@
 package presets
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
+	"strings"
+
+	"github.com/qor5/admin/v3/model"
 )
 
-func (id ID) String() string {
-	if id.Value == nil {
-		return ""
-	}
-	s := fmt.Sprint(id.Value)
-	if s == "0" {
-		s = ""
-	}
-	return s
-}
-
-func (id ID) IsZero() bool {
-	if id.Value != nil {
-		if z, ok := id.Value.(interface {
-			IsZero() bool
-		}); ok {
-			return z.IsZero()
-		}
-		if s := id.String(); len(s) > 0 && s != "0" {
-			return false
-		}
-	}
-	return true
-}
-
-func (id ID) Of(field string) IDOfField {
-	return IDOfField{id, field}
-}
-func (f ID) SetTo(obj interface{}) {
-	f.Of("ID").SetTo(obj)
-}
-
-func (f IDOfField) SetTo(obj interface{}) {
-	field := reflect.ValueOf(obj).Elem().FieldByName(f.Field)
-	if field.Kind() == reflect.Pointer {
-		field.Set(reflect.New(field.Type().Elem()))
-		field = field.Elem()
-	}
-	field.Set(reflect.ValueOf(f.ID.Value))
-}
-
-type IDSlice []ID
-
-func (ids IDSlice) Len() int {
-	return len(ids)
-}
-
-func (ids IDSlice) Last() ID {
-	return ids[len(ids)-1]
-}
-
-func (ids IDSlice) LastValue() any {
-	return ids.Last().Value
-}
-
-func (ids *IDSlice) Pop() ID {
-	v := (*ids)[len((*ids))-1]
-	*ids = (*ids)[:len(*ids)-1]
-	return v
-}
-
-func (ids *IDSlice) PopValue() any {
-	return ids.Pop().Value
-}
-
-func (ids IDSlice) Values() (values []any) {
-	values = make([]any, len(ids))
-	for i, id := range ids {
-		values[i] = id.Value
-	}
-	return
-}
+type (
+	ID      = model.ID
+	IDSlice = model.IDSlice
+	Schema  = model.Schema
+)
 
 func ParentsModelID(r *http.Request) IDSlice {
 	if v := r.Context().Value(ParentsModelIDKey); v != nil {
@@ -93,10 +32,9 @@ func (mb *ModelBuilder) ParseParentsID(r *http.Request) (ids IDSlice, err error)
 
 		for i, p := range parents {
 			s = r.PathValue(fmt.Sprintf("parent_%d_id", i))
-			if ids[i], err = p.ParseID(s); err != nil {
+			if ids[i], err = p.ParseRecordID(s); err != nil {
 				return
 			}
-			ids[i].Model = p
 		}
 	}
 	return
@@ -113,4 +51,116 @@ func ResolveParentsModelID(resolver ParentsModelIDResolver, r *http.Request) (id
 		resolver = DefaultParentsModelIDResolver
 	}
 	return resolver(r)
+}
+
+func ParseRecordID(s Schema, v string) (id ID, err error) {
+	if v == "" {
+		return
+	}
+	id.Schema = s
+
+	var (
+		fields model.Fields
+		parts  []string
+	)
+
+	if sd, _ := s.Model().(SlugDecoder); sd != nil {
+		for fieldName, value := range sd.PrimaryColumnValuesBySlug(v) {
+			f := id.Schema.FieldsByName(fieldName)[0]
+			fields = append(fields, f)
+			parts = append(parts, value)
+		}
+	} else {
+		parts = strings.Split(v, "_")
+		fields = s.PrimaryFields()
+	}
+
+	if len(fields) != len(parts) {
+		err = fmt.Errorf("expected %d slug parts, got %d", len(fields), len(parts))
+		return
+	}
+
+	id.Fields = fields
+
+	modelType := reflect.TypeOf(s.Model())
+
+	for i, v := range parts {
+		var (
+			field, _ = modelType.Elem().FieldByName(fields[i].Name())
+			av       any
+		)
+
+		switch field.Type.Kind() {
+		case reflect.String:
+			av = v
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			bsize := strconv.IntSize
+			switch field.Type.Kind() {
+			case reflect.Uint8:
+				bsize = 8
+			case reflect.Uint16:
+				bsize = 16
+			case reflect.Uint32:
+				bsize = 32
+			case reflect.Uint64:
+				bsize = 64
+			}
+			var i uint64
+			if i, err = strconv.ParseUint(v, 10, bsize); err != nil {
+				return
+			}
+			switch bsize {
+			case 8:
+				av = uint8(i)
+			case 16:
+				av = uint16(i)
+			case 32:
+				av = uint32(i)
+			case 64:
+				av = i
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			bsize := strconv.IntSize
+			switch field.Type.Kind() {
+			case reflect.Int8:
+				bsize = 8
+			case reflect.Int16:
+				bsize = 16
+			case reflect.Int32:
+				bsize = 32
+			case reflect.Int64:
+				bsize = 64
+			}
+
+			var i int64
+
+			if i, err = strconv.ParseInt(v, 10, bsize); err != nil {
+				return
+			}
+
+			switch bsize {
+			case 8:
+				av = int8(i)
+			case 16:
+				av = int16(i)
+			case 32:
+				av = int32(i)
+			case 64:
+				av = i
+			}
+		default:
+			fv := reflect.New(field.Type).Interface()
+			if s, _ := fv.(sql.Scanner); s != nil {
+				if err = s.Scan(v); err != nil {
+					return
+				}
+				av = s
+			} else {
+				err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", field.Type, field.Name))
+				return
+			}
+		}
+		id.Values = append(id.Values, av)
+	}
+	return
 }

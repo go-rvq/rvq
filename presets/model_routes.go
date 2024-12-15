@@ -21,34 +21,37 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		}
 		mb.layoutConfig.SearchBoxInvisible = true
 	}
+
 	mux.Handle(
 		routePath,
-		mb.p.wrap(mb, mb.p.layoutFunc(mb.BindPageFunc(inPageFunc), mb.layoutConfig)),
+		mb.p.Wrap(mb, mb.p.layoutFunc(mb.BindPageFunc(inPageFunc), mb.layoutConfig)),
 	)
 
 	if routesDebug {
 		log.Printf("mounted url: %s\n", routePath)
 	}
 
+	var itemRoutePath = routePath
+
 	if !mb.singleton {
-		routePath += "/{id}"
+		itemRoutePath += "/{id}"
 	}
 
 	if mb.hasDetailing {
 		mux.Handle(
-			routePath,
-			mb.p.wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.detailing.GetPageFunc()), mb.layoutConfig)),
+			itemRoutePath,
+			mb.p.Wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.detailing.GetPageFunc()), mb.layoutConfig)),
 		)
 		if routesDebug {
-			log.Printf("mounted url: %s\n", routePath)
+			log.Printf("mounted url: %s\n", itemRoutePath)
 		}
 	}
 
 	{
-		routePath := routePath + "/edit"
+		routePath := itemRoutePath + "/edit"
 		mux.Handle(
 			routePath,
-			mb.p.wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
+			mb.p.Wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
 		)
 
 		if routesDebug {
@@ -61,6 +64,14 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 	}
 
 	if mb.subRoutesSetup != nil {
-		mb.subRoutesSetup(mux, routePath)
+		mb.subRoutesSetup(mux, itemRoutePath)
+	}
+
+	if mb.routeSetuper != nil {
+		mb.routeSetuper(mux, routePath)
+	}
+
+	if mb.itemRouteSetuper != nil {
+		mb.itemRouteSetuper(mux, itemRoutePath)
 	}
 }

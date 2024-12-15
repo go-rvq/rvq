@@ -119,9 +119,9 @@ func PresetsListingCustomizationFields(b *presets.Builder, db *gorm.DB) (
 
 	ce = mb.Editing("Name", "CompanyID")
 
-	mb.RegisterEventFunc("updateCompanyList", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	mb.RegisterEventHandler("updateCompanyList", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		companyID := ctx.ParamAsInt(presets.ParamOverlayUpdateID)
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
+		r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
 			Name: "companyListPortal",
 			Body: companyList(ctx, db, companyID),
 		})

@@ -19,7 +19,7 @@ func VuetifySnackBars(ctx *web.EventContext) (pr web.PageResponse, err error) {
 }
 
 func showSnackBar(ctx *web.EventContext) (er web.EventResponse, err error) {
-	er.UpdatePortals = append(er.UpdatePortals,
+	er.updatePortals = append(er.updatePortals,
 		&web.PortalUpdate{
 			Name: "snackbar",
 			Body: snackbar("top", "red"),
@@ -41,7 +41,7 @@ func snackbar(pos string, color string) *web.ScopeBuilder {
 						Children(VIcon("mdi-close")),
 				).Name("actions"),
 			),
-	).VSlot("{ locals }").Init(`{ show: true }`)
+	).Slot("{ locals }").LocalsInit(`{ show: true }`)
 }
 
 var VuetifySnackBarsPB = web.Page(VuetifySnackBars).

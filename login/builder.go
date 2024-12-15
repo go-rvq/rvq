@@ -37,10 +37,10 @@ func registerChangePasswordEvents(b *login.Builder, pb *presets.Builder) {
 
 	showVar := "showChangePasswordDialog"
 	pb.GetWebBuilder().RegisterEventFunc(OpenChangePasswordDialogEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: actions.Dialog.PortalName(),
-			Body: changePasswordDialog(vh, ctx, showVar, defaultChangePasswordDialogContent(vh, pb)(ctx)),
-		})
+		r.UpdatePortal(
+			actions.Dialog.PortalName(),
+			changePasswordDialog(vh, ctx, showVar, defaultChangePasswordDialogContent(vh, pb)(ctx)),
+		)
 
 		web.AppendRunScripts(&r, fmt.Sprintf(`
 (function(){
@@ -61,7 +61,7 @@ document.getElementsByTagName("head")[0].appendChild(tag);
 		confirmPassword := ctx.R.FormValue("confirm_password")
 		otp := ctx.R.FormValue("otp")
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, login.I18nLoginKey, login.Messages_en_US).(*login.Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), login.I18nLoginKey, login.Messages_en_US).(*login.Messages)
 		err = b.ChangePassword(ctx.R, oldPassword, password, confirmPassword, otp)
 		if err != nil {
 			msg := msgr.ErrorSystemError

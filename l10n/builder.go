@@ -7,13 +7,18 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"reflect"
 	"slices"
 	"time"
 
 	"github.com/qor5/admin/v3/activity"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/qor5/admin/v3/presets/actions"
+	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
+	v "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	. "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
@@ -26,16 +31,67 @@ type Builder struct {
 	db *gorm.DB
 	ab *activity.Builder
 	// models                               []*presets.ModelBuilder
-	locales                              []*loc
-	getSupportLocaleCodesFromRequestFunc func(R *http.Request) []string
-	cookieName                           string
-	queryName                            string
+	locales                                          Locales
+	getSupportLocaleCodesFromRequestFunc             func(R *http.Request) []string
+	cookieName                                       string
+	queryName                                        string
+	defaultLocaleCode                                string
+	disableDeletionForDefaultInternationalizedRecord bool
 }
 
-type loc struct {
+func (b *Builder) DisableDeletionForDefaultInternationalizedRecord() bool {
+	return b.disableDeletionForDefaultInternationalizedRecord
+}
+
+func (b *Builder) SetDisableDeletionForDefaultInternationalizedRecord(disableDeletionForDefaultInternationalizedRecord bool) *Builder {
+	b.disableDeletionForDefaultInternationalizedRecord = disableDeletionForDefaultInternationalizedRecord
+	return b
+}
+
+type LocaleInfo struct {
 	code  string
 	path  string
 	label string
+}
+
+func (l *LocaleInfo) String() string {
+	return l.code
+}
+
+func (l *LocaleInfo) Code() string {
+	return l.code
+}
+
+func (l *LocaleInfo) Path() string {
+	return l.path
+}
+
+func (l *LocaleInfo) Label() string {
+	return l.label
+}
+
+func (l *LocaleInfo) Export() *PublicLocaleInfo {
+	return &PublicLocaleInfo{
+		Code:  l.code,
+		Label: l.label,
+		Path:  l.path,
+	}
+}
+
+type PublicLocaleInfo struct {
+	Code  string
+	Path  string
+	Label string
+}
+
+type Locales []*LocaleInfo
+
+func (s Locales) Exported() (r []*PublicLocaleInfo) {
+	r = make([]*PublicLocaleInfo, len(s))
+	for i, info := range s {
+		r[i] = info.Export()
+	}
+	return
 }
 
 func New(db *gorm.DB) *Builder {
@@ -45,6 +101,23 @@ func New(db *gorm.DB) *Builder {
 		queryName:  "locale",
 	}
 	return b
+}
+
+func (b *Builder) DefaultLocaleCode(localeCode string) *Builder {
+	b.defaultLocaleCode = localeCode
+	return b
+}
+
+func (b *Builder) GetDefaultLocaleCode() string {
+	return b.defaultLocaleCode
+}
+
+func (b *Builder) GetDefaultLocale() *LocaleInfo {
+	return b.GetLocale(b.defaultLocaleCode)
+}
+
+func (b *Builder) SupportedLocales() Locales {
+	return b.locales
 }
 
 func (b *Builder) IsTurnedOn() bool {
@@ -65,13 +138,13 @@ func (b *Builder) Activity(v *activity.Builder) (r *Builder) {
 }
 
 func (b *Builder) RegisterLocales(localeCode, localePath, localeLabel string) (r *Builder) {
-	if slices.ContainsFunc(b.locales, func(l *loc) bool {
+	if slices.ContainsFunc(b.locales, func(l *LocaleInfo) bool {
 		return l.code == localeCode
 	}) {
 		return b
 	}
 
-	b.locales = append(b.locales, &loc{
+	b.locales = append(b.locales, &LocaleInfo{
 		code:  localeCode,
 		path:  path.Join("/", localePath),
 		label: localeLabel,
@@ -79,16 +152,31 @@ func (b *Builder) RegisterLocales(localeCode, localePath, localeLabel string) (r
 	return b
 }
 
-func (b *Builder) GetLocalePath(localeCode string) string {
-	if b == nil {
-		return ""
+func (b *Builder) UnRegisterLocales(localeCode ...string) (r *Builder) {
+	var newLocales Locales
+
+loop:
+	for _, locale := range b.locales {
+		for _, s := range localeCode {
+			if locale.code == s {
+				continue loop
+			}
+		}
+
+		newLocales = append(newLocales, locale)
 	}
+
+	b.locales = newLocales
+	return b
+}
+
+func (b *Builder) GetLocale(localeCode string) *LocaleInfo {
 	for _, l := range b.locales {
 		if l.code == localeCode {
-			return l.path
+			return l
 		}
 	}
-	return ""
+	return nil
 }
 
 type contextKeyType int
@@ -111,11 +199,11 @@ func LocalePathFromContext(m interface{}, ctx context.Context) (localePath strin
 	}
 
 	if locale, ok := IsLocalizableFromContext(ctx); ok {
-		localePath = l10nBuilder.GetLocalePath(locale)
+		localePath = l10nBuilder.GetLocale(locale).path
 	}
 
 	if localeCode, err := reflectutils.Get(m, "LocaleCode"); err == nil {
-		localePath = l10nBuilder.GetLocalePath(localeCode.(string))
+		localePath = l10nBuilder.GetLocale(localeCode.(string)).path
 	}
 
 	return
@@ -182,7 +270,11 @@ func (b *Builder) GetCorrectLocaleCode(r *http.Request) string {
 
 type l10nContextKey int
 
-const LocaleCode l10nContextKey = iota
+const (
+	LocaleCode l10nContextKey = iota
+	SkipLocaleCode
+	LocalizeOptions
+)
 
 func (b *Builder) EnsureLocale(in http.Handler) (out http.Handler) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +300,8 @@ func (b *Builder) EnsureLocale(in http.Handler) (out http.Handler) {
 }
 
 func (b *Builder) Install(pb *presets.Builder) error {
+	pb.SetData(BuilderKey, b)
+
 	db := b.db
 
 	pb.FieldDefaults(presets.LIST).
@@ -234,6 +328,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		RegisterForModule(language.English, I18nLocalizeKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nLocalizeKey, Messages_zh_CN).
 		RegisterForModule(language.Japanese, I18nLocalizeKey, Messages_ja_JP)
+
 	return nil
 }
 
@@ -259,26 +354,32 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	_ = obj.(presets.SlugDecoder)
 	_ = obj.(LocaleInterface)
 
-	m.Listing().Field("Locale")
-	m.Editing().Field("Locale")
+	for _, fbs := range m.FieldBuilders() {
+		fbs.Field("Locale")
+		fbs.Field("LocaleCode").SetDisabled(true)
+	}
 
-	m.Listing().WrapSearchFunc(func(searcher presets.SearchFunc) presets.SearchFunc {
+	listing := m.Listing()
+	listing.WrapSearchFunc(func(searcher presets.SearchFunc) presets.SearchFunc {
 		return func(model interface{}, params *presets.SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error) {
-			if localeCode := ctx.R.Context().Value(LocaleCode); localeCode != nil {
-				con := presets.SQLCondition{
-					Query: "locale_code = ?",
-					Args:  []interface{}{localeCode},
+			if skip, _ := params.ContextValue(SkipLocaleCode).(bool); !skip {
+				if localeCode := web.GetContexValue(LocaleCode, params.Context, ctx.Context()); localeCode != nil {
+					con := presets.SQLCondition{
+						Query: "#TABLE#.locale_code = ?",
+						Args:  []interface{}{localeCode},
+					}
+					params.SQLConditions = append(params.SQLConditions, &con)
 				}
-				params.SQLConditions = append(params.SQLConditions, &con)
 			}
 
 			return searcher(model, params, ctx)
 		}
 	})
 
-	m.Editing().WrapSetterFunc(func(setter presets.SetterFunc) presets.SetterFunc {
+	setter := func(setter presets.SetterFunc) presets.SetterFunc {
 		return func(obj interface{}, ctx *web.EventContext) {
-			if ctx.Param(presets.ParamID) == "" {
+			id := ctx.Param(presets.ParamID)
+			if id == "" {
 				if localeCode := ctx.R.Context().Value(LocaleCode); localeCode != nil {
 					if err := reflectutils.Set(obj, "LocaleCode", localeCode); err != nil {
 						return
@@ -289,22 +390,54 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 				setter(obj, ctx)
 			}
 		}
-	})
+	}
+
+	ed := m.Editing().
+		WrapPostSetterFunc(setter)
+
+	if ed.HasCreatingBuilder() {
+		ed.CreatingBuilder().WrapPostSetterFunc(setter)
+	}
 
 	m.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+			if b.disableDeletionForDefaultInternationalizedRecord {
+				var (
+					countDB = db_utils.ModelIdWhere(
+						db.Session(&gorm.Session{}).
+							Where(id.Schema.
+								FieldByName("LocaleCode").
+								QuotedFullDBName()+" NOT IN (?)",
+								b.GetDefaultLocaleCode()),
+						m.NewModel(),
+						id,
+						"LocaleCode",
+					)
+
+					count int64
+				)
+
+				if err = countDB.Count(&count).Error; err != nil {
+					return
+				}
+
+				if count > 0 {
+					return errors.New(MustGetMessages(ctx.Context()).ErrDeleteInternationalizedRecord)
+				}
+			}
+
 			if err = in(obj, id, ctx); err != nil {
 				return
 			}
-			locale := obj.(presets.SlugDecoder).PrimaryColumnValuesBySlug(id)["locale_code"]
+			locale := id.GetValue("LocaleCode").(string)
 			locale = fmt.Sprintf("%s(del:%d)", locale, time.Now().UnixMilli())
 
 			var withoutKeys []string
 			if ctx.R.URL.Query().Get("all_versions") == "true" {
-				withoutKeys = append(withoutKeys, "version")
+				withoutKeys = append(withoutKeys, "Version")
 			}
 
-			if err = utils.PrimarySluggerWhere(db.Unscoped(), obj, id, withoutKeys...).Update("locale_code", locale).Error; err != nil {
+			if err = db_utils.ModelIdWhere(db.Unscoped(), obj, id, withoutKeys...).Update("locale_code", locale).Error; err != nil {
 				return
 			}
 			return
@@ -313,6 +446,88 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 
 	rmb := m.Listing().RowMenu()
 	rmb.RowMenuItem("Localize").ComponentFunc(localizeRowMenuItemFunc(m.Info(), "", url.Values{}))
+
+	m.Listing().ItemAction(
+		m.Detailing().
+			Action(FieldLocalizedEntries).
+			Icon("mdi-translate").
+			SetI18nLabel(func(ctx web.ContextValuer) string {
+				return MustGetMessages(ctx.Context()).Localizations
+			}).
+			ComponentFunc(func(id string, ctx *web.EventContext) HTMLComponent {
+				obj := m.NewModel()
+				mid := m.MustParseRecordID(id)
+				err := m.Fetcher(obj, mid, ctx)
+				if err != nil {
+					return v.VAlert(Text("Fetcher object failed: " + err.Error())).Color("error").Icon("$error")
+				}
+
+				db := db.Session(&gorm.Session{})
+				slice := m.NewModelSlice()
+
+				if err = db_utils.ModelIdWhere(db, nil, mid, "LocaleCode").
+					Where(mid.Schema.Table()+".locale_code != ?", mid.GetValue("LocaleCode")).
+					Find(slice).Error; err != nil {
+					return v.VAlert(Text("Find entries failed: " + err.Error())).Color("error").Icon("$error")
+				}
+
+				type record struct {
+					ID          string
+					LocaleCode  string
+					LocaleLabel string
+					Title       string
+				}
+
+				var records []*record
+
+				reflectutils.ForEach(reflect.ValueOf(slice).Elem().Interface(), func(item interface{}) {
+					var localeCode = item.(LocaleInterface).EmbedLocale().LocaleCode
+					records = append(records, &record{
+						ID:          item.(presets.SlugEncoder).PrimarySlug(),
+						Title:       m.RecordTitle(item, ctx),
+						LocaleCode:  localeCode,
+						LocaleLabel: b.GetLocaleLabel(localeCode),
+					})
+				})
+
+				portalName := "_" + ctx.UID()
+				indexUrl := m.Info().ListingHrefCtx(ctx)
+
+				msgs := MustGetMessages(ctx.Context())
+
+				return vue.UserComponent(
+					web.Portal().Name(portalName),
+					v.VDataTable(
+						web.Slot(
+							RawHTML(`{{ value }}`),
+							v.VBtn("").
+								Icon("mdi-eye").
+								Attr("@click",
+									web.Plaid().
+										EventFunc(actions.Detailing).
+										URL(indexUrl).
+										Query(presets.ParamOverlay, actions.Dialog).
+										Query(presets.ParamTargetPortal, portalName).
+										Query(presets.ParamID, web.Var(`item.ID`)).Go(),
+								).
+								Attr("@click.middle", fmt.Sprintf(`(e) => e.view.window.open("%s/"+item.ID, "_blank")`, indexUrl)),
+						).Name("item.actions").Scope("{ item, value }"),
+					).Items(records).Headers([]any{
+						map[string]any{
+							"title": msgs.Location,
+							"key":   "LocaleLabel",
+						},
+						map[string]any{
+							"title": "",
+							"key":   "Title",
+						},
+						map[string]any{
+							"title": msgs.Actions,
+							"key":   "actions",
+						},
+					}),
+				)
+			}))
 
 	registerEventFuncs(db, m, b, ab)
 

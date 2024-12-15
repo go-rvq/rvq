@@ -3,6 +3,7 @@ package reflect_utils
 import (
 	"go/ast"
 	"reflect"
+	"strings"
 )
 
 func GetStruct(t reflect.Type) interface{} {
@@ -21,6 +22,18 @@ type (
 
 	IndexableStructFields []*IndexableStructField
 )
+
+func (f *IndexableStructField) String() string {
+	return strings.Join(f.Names, "/")
+}
+
+func (f IndexableStructFields) String() string {
+	var names []string
+	for _, field := range f {
+		names = append(names, field.String())
+	}
+	return "[" + strings.Join(names, ", ") + "]"
+}
 
 func (f IndexableStructFields) Len() int {
 	return len(f)
@@ -43,6 +56,18 @@ func (f IndexableStructFields) Uniquefy() (r IndexableStructFields) {
 		}
 		names[field.Name] = nil
 		r = append(r, field)
+	}
+	return
+}
+
+func (f IndexableStructFields) Only(names ...string) (s IndexableStructFields) {
+	for _, f := range f {
+		for _, name := range names {
+			if f.Name == name {
+				s = append(s, f)
+				break
+			}
+		}
 	}
 	return
 }

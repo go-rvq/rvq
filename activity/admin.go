@@ -60,7 +60,7 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 
 	listing.FilterDataFunc(func(ctx *web.EventContext) vuetifyx.FilterData {
 		var (
-			msgr      = i18n.MustGetModuleMessages(ctx.R, I18nActivityKey, Messages_en_US).(*Messages)
+			msgr      = i18n.MustGetModuleMessages(ctx.Context(), I18nActivityKey, Messages_en_US).(*Messages)
 			contextDB = ab.getDBFromContext(ctx.R.Context())
 		)
 
@@ -128,7 +128,7 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 	})
 
 	listing.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nActivityKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nActivityKey, Messages_en_US).(*Messages)
 		return []*presets.FilterTab{
 			{
 				Label: msgr.ActionAll,
@@ -153,7 +153,7 @@ func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelB
 		func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
 			var (
 				record = field.Obj.(ActivityLogInterface)
-				msgr   = i18n.MustGetModuleMessages(ctx.R, I18nActivityKey, Messages_en_US).(*Messages)
+				msgr   = i18n.MustGetModuleMessages(ctx.Context(), I18nActivityKey, Messages_en_US).(*Messages)
 			)
 
 			var detailElems []h.HTMLComponent
@@ -228,7 +228,7 @@ func DiffComponent(diffstr string, req *http.Request) h.HTMLComponent {
 		}
 	}
 	var diffsElems []h.HTMLComponent
-	msgr := i18n.MustGetModuleMessages(req, I18nActivityKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(req.Context(), I18nActivityKey, Messages_en_US).(*Messages)
 
 	if len(newdiffs) > 0 {
 		var elems []h.HTMLComponent

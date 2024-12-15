@@ -138,7 +138,7 @@ func (b *Builder) eventActionJobCreate(ctx *web.EventContext) (r web.EventRespon
 func (b *Builder) eventActionJobInputParams(ctx *web.EventContext) (r web.EventResponse, err error) {
 	var (
 		jobName = ctx.R.FormValue("jobName")
-		msgr    = presets.MustGetMessages(ctx.R)
+		msgr    = presets.MustGetMessages(ctx.Context())
 		config  = actionJobs[jobName]
 	)
 
@@ -146,9 +146,9 @@ func (b *Builder) eventActionJobInputParams(ctx *web.EventContext) (r web.EventR
 		return r, fmt.Errorf("job %s not found", jobName)
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: "presets_DialogPortalName",
-		Body: web.Scope(
+	r.UpdatePortal(
+		"presets_DialogPortalName",
+		web.Scope(
 			VDialog(
 				VCard(
 					VCardTitle(
@@ -178,8 +178,8 @@ func (b *Builder) eventActionJobInputParams(ctx *web.EventContext) (r web.EventR
 				)).
 				Attr("v-model", "vars.presetsDialog").
 				Width("600").Persistent(true),
-		).VSlot("{ form }"),
-	})
+		).Slot("{ form }"),
+	)
 	r.RunScript = "setTimeout(function(){vars.presetsDialog = true; }, 100)"
 	return
 }
@@ -195,9 +195,9 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 		return r, fmt.Errorf("job %s not found", jobName)
 	}
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: "presets_DialogPortalName",
-		Body: web.Scope(
+	r.UpdatePortal(
+		"presets_DialogPortalName",
+		web.Scope(
 			VDialog(
 				VAppBar(
 					VToolbarTitle(config.shortname).Class("pl-2"),
@@ -219,13 +219,13 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 									Query("jobID", jobID).
 									Query("jobName", jobName),
 							).AutoReloadInterval("loaderLocals.actionJobProgressingInterval"),
-						).VSlot("{ locals: loaderLocals }").Init(fmt.Sprintf("{actionJobProgressingInterval: %d}", config.progressingInterval)),
+						).Slot("{ locals: loaderLocals }").LocalsInit(fmt.Sprintf("{actionJobProgressingInterval: %d}", config.progressingInterval)),
 					),
 				).Tile(true).Attr("style", "box-shadow: none;")).
 				Attr("v-model", "vars.presetsDialog").
 				Width("600").Persistent(true),
-		).VSlot("{ form }"),
-	})
+		).Slot("{ form }"),
+	)
 	r.RunScript = "setTimeout(function(){vars.presetsDialog = true; }, 100)"
 	return
 }

@@ -31,7 +31,7 @@ func PartialReloadPage(ctx *web.EventContext) (pr web.PageResponse, err error) {
 		web.Scope(
 			web.Portal().Loader(web.POST().EventFunc("autoReload")).AutoReloadInterval("locals.interval"),
 			Button("stop").Attr("@click", "locals.interval = 0"),
-		).Init(`{interval: 2000}`).VSlot("{ locals, form }"),
+		).LocalsInit(`{interval: 2000}`).Slot("{ locals, form }"),
 
 		H1("Load Data Only"),
 		web.Scope(
@@ -41,7 +41,7 @@ func PartialReloadPage(ctx *web.EventContext) (pr web.PageResponse, err error) {
 				).Attr("v-for", "item in locals.items"),
 			),
 			Button("Fetch Data").Attr("@click", web.GET().EventFunc("loadData").ThenScript(`locals.items = r.data`).Go()),
-		).VSlot("{ locals, form }").FormInit("{ items: []}"),
+		).Slot("{ locals, form }").FormInit("{ items: []}"),
 
 		H1("Partial Load and Reload"),
 		Div(

@@ -9,9 +9,12 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/ui/redactor"
 	v "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/samber/lo"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
+
+const PluginImageInsert = "imageinsert"
 
 // how to add more plugins from https://imperavi.com/redactor/plugins/
 // 1. add {{plugin}}.min.js to redactor dir
@@ -21,20 +24,21 @@ import (
 // 1. load plugin jss,css to PluginsJS,PluginsCSS
 // 2. add plugin names in Plugins array
 var (
-	Plugins    = []string{"alignment", "table", "video", "imageinsert"}
+	Plugins    = []string{"alignment", "fontcolor", PluginImageInsert, "table", "video"}
 	PluginsJS  [][]byte
 	PluginsCSS [][]byte
 )
 
 type RichEditorBuilder struct {
-	db          *gorm.DB
-	name        string
-	value       string
-	label       string
-	placeholder string
-	plugins     []string
-	setPlugins  bool
-	rawConfig   interface{}
+	db            *gorm.DB
+	name          string
+	value         string
+	label         string
+	placeholder   string
+	plugins       []string
+	setPlugins    bool
+	rawConfig     interface{}
+	imageDisabled bool
 }
 
 func RichEditor(db *gorm.DB, name string) (r *RichEditorBuilder) {
@@ -69,11 +73,27 @@ func (b *RichEditorBuilder) RawConfig(v interface{}) (r *RichEditorBuilder) {
 	return b
 }
 
+func (b *RichEditorBuilder) ImageDisabled() bool {
+	return b.imageDisabled
+}
+
+func (b *RichEditorBuilder) SetImageDisabled(imageDisabled bool) *RichEditorBuilder {
+	b.imageDisabled = imageDisabled
+	return b
+}
+
 func (b *RichEditorBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 	p := Plugins
 	if b.setPlugins {
 		p = b.plugins
 	}
+
+	if b.imageDisabled {
+		p = lo.Filter(p, func(item string, index int) bool {
+			return item != PluginImageInsert
+		})
+	}
+
 	redactorB := redactor.New().Placeholder(b.placeholder).Attr(web.VField(b.name, b.value)...)
 	if b.rawConfig != nil {
 		redactorB.RawConfig(b.rawConfig)
@@ -84,12 +104,14 @@ func (b *RichEditorBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 		v.VSheet(
 			h.Label(b.label).Class("v-label theme--light"),
 			redactorB,
-			h.Div(
-				media.QMediaBox(b.db).FieldName(fmt.Sprintf("%s_richeditor_medialibrary", b.name)).
-					Value(&media_library.MediaBox{}).Config(&media_library.MediaBoxConfig{
-					AllowType: "image",
-				}),
-			).Class("hidden-screen-only"),
+			h.If(!b.imageDisabled,
+				h.Div(
+					media.QMediaBox(b.db).FieldName(fmt.Sprintf("%s_richeditor_medialibrary", b.name)).
+						Value(&media_library.MediaBox{}).Config(&media_library.MediaBoxConfig{
+						AllowType: "image",
+					}),
+				).Class("hidden-screen-only"),
+			),
 		).Class("pb-4").Rounded(true).Attr("data-type", "redactor").Attr("style", "position: relative; z-index:1;"),
 	)
 	return r.MarshalHTML(ctx)

@@ -31,7 +31,7 @@ func tabsPanel(db *gorm.DB, mb *presets.ModelBuilder) presets.TabComponentFunc {
 
 		notesSection := getNotesTab(ctx, db, tn, id)
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nNoteKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nNoteKey, Messages_en_US).(*Messages)
 
 		userID, _ := GetUserData(ctx)
 		count := GetUnreadNotesCount(db, userID, tn, id)

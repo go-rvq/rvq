@@ -14,8 +14,6 @@ import (
 
 	"github.com/sunfmin/reflectutils"
 
-	"github.com/qor5/admin/v3/utils"
-
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
 	"github.com/qor5/admin/v3/activity"
@@ -62,7 +60,7 @@ func (b *ModelBuilder) showSortedContainerDrawer(ctx *web.EventContext) (r web.E
 	if body, err = b.renderContainersSortedList(ctx); err != nil {
 		return
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{Name: pageBuilderLayerContainerPortal, Body: body})
+	r.UpdatePortal(pageBuilderLayerContainerPortal, body)
 	return
 }
 
@@ -71,8 +69,8 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 		cons                        []*Container
 		status                      = ctx.R.FormValue(paramStatus)
 		isReadonly                  = status != publish.StatusDraft
-		msgr                        = i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
-		activityMsgr                = i18n.MustGetModuleMessages(ctx.R, activity.I18nActivityKey, activity.Messages_en_US).(*activity.Messages)
+		msgr                        = i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
+		activityMsgr                = i18n.MustGetModuleMessages(ctx.Context(), activity.I18nActivityKey, activity.Messages_en_US).(*activity.Messages)
 		pageID, pageVersion, locale = b.getPrimaryColumnValuesBySlug(ctx)
 	)
 	wc := map[string]interface{}{
@@ -95,7 +93,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 		if c.Hidden {
 			vicon = "mdi-eye-off"
 		}
-		displayName := i18n.T(ctx.R, presets.ModelsI18nModuleKey, c.DisplayName)
+		displayName := i18n.T(ctx.Context(), presets.ModelsI18nModuleKey, c.DisplayName)
 
 		sorterData.Items = append(sorterData.Items,
 			ContainerSorterItem{
@@ -174,7 +172,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 															URL(fmt.Sprintf("%s/editors", b.builder.prefix)).
 															EventFunc(RenameContainerEvent).Query(paramStatus, status).Query(paramContainerID, web.Var("element.param_id")).Go()),
 													VListItemTitle(h.Text("{{element.display_name}}")).Attr(":style", "[element.shared ? {'color':'green'}:{}]").Attr("v-if", "!element.editShow"),
-												).VSlot("{form}").FormInit("{ DisplayName:element.display_name }"),
+												).Form().FormInit("{ DisplayName:element.display_name }"),
 											),
 										),
 										web.Slot(
@@ -214,7 +212,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 				),
 			),
 		).Class("pa-4 pt-2"),
-	).Init(h.JSONString(sorterData)).VSlot("{ locals:sortLocals,form }")
+	).LocalsInit(h.JSONString(sorterData)).Slot("{ locals:sortLocals,form }")
 	return
 }
 
@@ -343,9 +341,8 @@ func (b *ModelBuilder) deleteContainerConfirmation(ctx *web.EventContext) (r web
 		containerName = ctx.R.FormValue(paramContainerName)
 	)
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: presets.DeleteConfirmPortalName,
-		Body: web.Scope(
+	r.UpdatePortal(presets.DeleteConfirmPortalName,
+		web.Scope(
 			VDialog(
 				VCard(
 					VCardTitle(h.Text(fmt.Sprintf("Are you sure you want to delete %s?", containerName))),
@@ -368,8 +365,8 @@ func (b *ModelBuilder) deleteContainerConfirmation(ctx *web.EventContext) (r web
 				),
 			).MaxWidth("600px").
 				Attr("v-model", "locals.deleteConfirmation"),
-		).VSlot(`{ locals  }`).Init(`{deleteConfirmation: true}`),
-	})
+		).Slot(`{ locals  }`).LocalsInit(`{deleteConfirmation: true}`),
+	)
 
 	return
 }
@@ -398,9 +395,8 @@ func (b *ModelBuilder) renameContainerDialog(ctx *web.EventContext) (r web.Event
 	if ctx.R.FormValue("portal") == "presets" {
 		portalName = actions.Dialog.PortalName()
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: portalName,
-		Body: web.Scope(
+	r.UpdatePortal(portalName,
+		web.Scope(
 			VDialog(
 				VCard(
 					VCardTitle(h.Text("Rename")),
@@ -423,15 +419,15 @@ func (b *ModelBuilder) renameContainerDialog(ctx *web.EventContext) (r web.Event
 				),
 			).MaxWidth("400px").
 				Attr("v-model", "locals.renameDialog"),
-		).Init("{renameDialog:true}").VSlot("{locals}"),
-	})
+		).LocalsInit("{renameDialog:true}").Slot("{locals}"),
+	)
 	return
 }
 
 func (b *ModelBuilder) renderContainersList(ctx *web.EventContext) (component h.HTMLComponent) {
 	var (
 		isReadonly   = ctx.Param(paramStatus) != publish.StatusDraft
-		msgr         = i18n.MustGetModuleMessages(ctx.R, I18nPageBuilderKey, Messages_en_US).(*Messages)
+		msgr         = i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
 		_, _, locale = b.getPrimaryColumnValuesBySlug(ctx)
 	)
 	var (
@@ -463,7 +459,7 @@ func (b *ModelBuilder) renderContainersList(ctx *web.EventContext) (component h.
 			if cover == "" {
 				cover = path.Join(b.builder.prefix, b.builder.imagesPrefix, strings.ReplaceAll(builder.name, " ", "")+".png")
 			}
-			containerName := i18n.T(ctx.R, presets.ModelsI18nModuleKey, builder.name)
+			containerName := i18n.T(ctx.Context(), presets.ModelsI18nModuleKey, builder.name)
 			listItems = append(listItems, VListItem(
 				VListItemTitle(h.Text(containerName)),
 				VListItemSubtitle(VImg().Src(cover).Height(100)),
@@ -509,7 +505,7 @@ func (b *ModelBuilder) renderContainersList(ctx *web.EventContext) (component h.
 			if cover == "" {
 				cover = path.Join(b.builder.prefix, b.builder.imagesPrefix, strings.ReplaceAll(c.name, " ", "")+".png")
 			}
-			containerName := i18n.T(ctx.R, presets.ModelsI18nModuleKey, c.name)
+			containerName := i18n.T(ctx.Context(), presets.ModelsI18nModuleKey, c.name)
 			listItems = append(listItems, VListItem(
 				h.Div(
 					VListItemTitle(h.Text(containerName)),
@@ -581,7 +577,7 @@ func (b *ModelBuilder) reloadRenderPageOrTemplate(ctx *web.EventContext) (r web.
 	if body, err = b.renderPageOrTemplate(ctx, obj, true); err != nil {
 		return
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{Name: editorPreviewContentPortal, Body: body.(*h.HTMLTagBuilder).Attr(web.VAssign("vars", "{el:$}")...)})
+	r.UpdatePortal(editorPreviewContentPortal, body.(*h.HTMLTagBuilder).Attr(web.VAssign("vars", "{el:$}")...))
 	return
 }
 
@@ -961,7 +957,7 @@ func (b *ModelBuilder) renderContainers(ctx *web.EventContext, pageID int, pageV
 		if err != nil {
 			return
 		}
-		displayName := i18n.T(ctx.R, presets.ModelsI18nModuleKey, ec.container.DisplayName)
+		displayName := i18n.T(ctx.Context(), presets.ModelsI18nModuleKey, ec.container.DisplayName)
 		input := RenderInput{
 			IsEditor:    isEditor,
 			IsReadonly:  isReadonly,

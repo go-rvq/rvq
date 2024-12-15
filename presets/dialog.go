@@ -16,6 +16,7 @@ type DialogBuilder struct {
 	contentPortalName string
 	scrollabled       bool
 	wrap              func(comp *v.VDialogBuilder)
+	rootWrap          func(comp h.HTMLComponent) h.HTMLComponent
 }
 
 func Dialog(portalName string) *DialogBuilder {
@@ -107,12 +108,17 @@ func (p *DialogBuilder) Wrap(wrap func(comp *v.VDialogBuilder)) *DialogBuilder {
 	return p
 }
 
+func (p *DialogBuilder) RootWrap(wrap func(comp h.HTMLComponent) h.HTMLComponent) *DialogBuilder {
+	p.rootWrap = wrap
+	return p
+}
+
 func (p *DialogBuilder) SetScrollable(s bool) *DialogBuilder {
 	p.scrollabled = s
 	return p
 }
 
-func (p *DialogBuilder) Respond(r *web.EventResponse, comp h.HTMLComponent) {
+func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 	if fvc := FirstValidComponent(comp); fvc != nil {
 		switch t := fvc.(type) {
 		case *v.VCardBuilder:
@@ -148,20 +154,28 @@ func (p *DialogBuilder) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 		p.wrap(d)
 	}
 
-	comp = d
+	comp = web.CloserScope(d, true)
 
-	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-		Name: p.targetPortal,
-		Body: web.CloserScope(comp, true),
-	})
+	if p.rootWrap != nil {
+		comp = p.rootWrap(comp)
+	}
+
+	return comp
 }
 
-func (b *Builder) dialog(r *web.EventResponse, comp h.HTMLComponent, width string) {
+func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent) {
+	for _, f := range GetRespondDialogHandlers(ctx) {
+		f(p)
+	}
+	r.UpdatePortal(p.targetPortal, p.Component(comp))
+}
+
+func (b *Builder) dialog(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {
 	p := b.Dialog()
 	if width != "" {
 		p.SetWidth(width)
 	}
-	p.Respond(r, comp)
+	p.Respond(ctx, r, comp)
 }
 
 func (b *Builder) Dialog() *DialogBuilder {

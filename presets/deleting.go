@@ -19,14 +19,32 @@ func (b *ListingBuilder) WrapDeleteFunc(w func(in DeleteFunc) DeleteFunc) (r *Li
 }
 
 func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, err1 error) {
-	if !b.mb.Info().CanDelete(ctx.R) {
+	pk := ctx.R.FormValue(ParamID)
+
+	if pk == "" {
+		ShowMessage(&r, MustGetMessages(ctx.Context()).ErrEmptyParamID.Error(), "warning")
+		return
+	}
+
+	var (
+		obj = b.mb.NewModel()
+		id  ID
+	)
+
+	if id, err1 = b.mb.ParseRecordID(pk); err1 != nil {
+		ShowMessage(&r, err1.Error(), "warning")
+		err1 = nil
+		return
+	}
+
+	id.SetTo(obj)
+
+	if !b.DeletingRestriction.CanObj(obj, ctx) {
 		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
 		return
 	}
 
-	id := ctx.R.FormValue(ParamID)
-	obj := b.mb.NewModel()
-	if len(id) > 0 {
+	if len(pk) > 0 {
 		err := b.Deleter(obj, id, ctx)
 		if err != nil {
 			ShowMessage(&r, err.Error(), "warning")
@@ -34,32 +52,32 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 		}
 	}
 
-	ShowMessage(&r, MustGetMessages(ctx.R).SuccessfullyDeleted, "")
+	ShowMessage(&r, MustGetMessages(ctx.Context()).SuccessfullyDeleted, "")
 
 	web.AppendRunScripts(&r, "closer.show = false")
 
 	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
 		cb := web.DecodeCallback(postSaveConfig)
-		web.AppendRunScripts(&r, web.ApplyChangeEvent(cb.Script(), web.Deleted, id))
+		web.AppendRunScripts(&r, web.ApplyChangeEvent(cb.Script(), web.Deleted, pk))
 		r.ReloadPortals = append(r.ReloadPortals, cb.ReloadPortals...)
 	}
 	return
 }
 
 func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventResponse, err error) {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	id := ctx.R.FormValue(ParamID)
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 
 	var (
 		obj           = b.mb.NewModel()
-		modelTitle    = b.mb.TTitle(ctx.R)
-		theModelTitle = b.mb.TTheTitle(ctx.R)
+		modelTitle    = b.mb.TTitle(ctx.Context())
+		theModelTitle = b.mb.TTheTitle(ctx.Context())
 		title         string
 		ido           ID
 	)
 
-	if ido, err = b.mb.ParseID(id); err != nil {
+	if ido, err = b.mb.ParseRecordID(id); err != nil {
 		return
 	}
 
@@ -73,7 +91,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 		Wrap(func(comp *VDialogBuilder) {
 			comp.MaxWidth("600px")
 		}).
-		Respond(&r, VCard(
+		Respond(ctx, &r, VCard(
 			VCardTitle(h.Text(msgr.DeleteConfirmationText(modelTitle, theModelTitle, title))),
 			VCardActions(
 				VSpacer(),

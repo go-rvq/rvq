@@ -7,6 +7,7 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/perm"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	h "github.com/theplant/htmlgo"
 )
 
 func (mb *ModelBuilder) SetCreatingBuilder(b *EditingBuilder) {
@@ -23,7 +24,7 @@ func (b *EditingBuilder) Creating(vs ...interface{}) (r *EditingBuilder) {
 			mb:         b.mb,
 			Fetcher:    b.Fetcher,
 			Setter:     b.Setter,
-			Saver:      b.Saver,
+			Creator:    b.Creator,
 			Validators: append(Validators{}, b.Validators...),
 		}
 	}
@@ -45,14 +46,14 @@ func (b *EditingBuilder) Creating(vs ...interface{}) (r *EditingBuilder) {
 		fb = *fb.Only(vs...)
 	}
 
-	b.mb.creating.FieldsBuilder = fb
+	r.FieldsBuilder = fb
 	return r
 }
 
 func (b *EditingBuilder) defaultCreate(ctx *web.EventContext) (r web.EventResponse, err error) {
 	uErr := b.doCreate(ctx, &r, false)
 	if uErr == nil {
-		msgr := MustGetMessages(ctx.R)
+		msgr := MustGetMessages(ctx.Context())
 		ShowMessage(&r, msgr.SuccessfullyCreated, "")
 	}
 	return r, nil
@@ -94,7 +95,7 @@ func (b *EditingBuilder) doCreate(
 		}
 	}
 
-	err1 := b.Saver(obj, "", ctx)
+	err1 := b.Creator(obj, ctx)
 	if err1 != nil {
 		b.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
@@ -130,18 +131,32 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 	}
 
 	obj := b.mb.NewModel()
-	f := b.form(obj, ctx)
-	if f.b.overlayMode.IsDrawer() {
-		f.Portal = f.b.overlayMode.PortalName()
+	respondTargetPortal := ctx.R.FormValue(ParamTargetPortal)
+	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+	if overlay.IsDrawer() {
+		respondTargetPortal = overlay.PortalName()
 	}
-	f.Respond(&r)
+	targetPortal := respondTargetPortal + "-new"
+	ctx.R.Form.Set(ParamTargetPortal, targetPortal)
+
+	f := b.form(obj, ctx)
+	f.Portal = targetPortal
+	f.Wrap = func(c h.HTMLComponent) h.HTMLComponent {
+		return web.Scope(web.Portal(c).
+			Name(targetPortal)).FormInit()
+	}
+
+	f.RespondToPortal(respondTargetPortal, &r)
 	return
 }
 
+func (b *EditingBuilder) HasCreatingBuilder() bool {
+	return b.mb.creating != nil
+}
+
 func (b *EditingBuilder) CreatingBuilder() (c *EditingBuilder) {
-	c = b
 	if b.mb.creating != nil {
-		c = b.mb.creating
+		return b.mb.creating
 	}
-	return c
+	return b
 }

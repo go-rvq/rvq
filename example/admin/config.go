@@ -255,9 +255,9 @@ func NewConfig(db *gorm.DB) Config {
 	pageBuilder := example.ConfigPageBuilder(db, "/page_builder", ``, b.I18n())
 	pageBuilder.
 		Media(mediab).
+		Publisher(publisher).
 		L10n(l10nBuilder).
 		Activity(ab).
-		Publisher(publisher).
 		SEO(seoBuilder).
 		WrapPageInstall(func(in presets.ModelInstallFunc) presets.ModelInstallFunc {
 			return func(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
@@ -301,7 +301,7 @@ func NewConfig(db *gorm.DB) Config {
 
 	configListModel(b, ab)
 
-	b.GetWebBuilder().RegisterEventFunc(noteMarkAllAsRead, markAllAsRead(db))
+	b.GetWebBuilder().RegisterEventHandler(noteMarkAllAsRead, markAllAsRead(db))
 
 	if err := db.AutoMigrate(&UserUnreadNote{}); err != nil {
 		panic(err)
@@ -517,7 +517,7 @@ func configPost(
 		nb,
 	)
 
-	mListing := m.Listing("ID", "Title", "TitleWithSlug", "HeroImage", "Body").
+	mListing := m.Listing("ID", "Title", "TitleWithSlug", "Cover", "Body").
 		SearchColumns("title", "body").
 		PerPage(10)
 
@@ -592,8 +592,8 @@ func configPost(
 		}
 	})
 
-	ed := m.Editing("StatusBar", "ScheduleBar", "Title", "TitleWithSlug", "Seo", "HeroImage", "Body", "BodyImage")
-	ed.Field("HeroImage").
+	ed := m.Editing("StatusBar", "ScheduleBar", "Title", "TitleWithSlug", "Seo", "Cover", "Body", "BodyImage")
+	ed.Field("Cover").
 		WithContextValue(
 			media.MediaBoxConfig,
 			&media_library.MediaBoxConfig{

@@ -8,7 +8,7 @@ import (
 	"image/draw"
 	"image/gif"
 	_ "image/jpeg"
-	"io/ioutil"
+	"io"
 	"math"
 
 	"github.com/disintegration/imaging"
@@ -22,7 +22,7 @@ var (
 // MediaHandler media library handler interface, defined which files could be handled, and the handler
 type MediaHandler interface {
 	CouldHandle(media Media) bool
-	Handle(media Media, file FileInterface, option *Option) error
+	Handle(media Media, file FileInterface, option *Option, saveOriginal bool) error
 }
 
 // RegisterMediaHandler register Media library handler
@@ -99,19 +99,25 @@ func resizeImageTo(img image.Image, size *Size, format imaging.Format) image.Ima
 	}
 }
 
-func (imageHandler) Handle(media Media, file FileInterface, option *Option) (err error) {
-	fileBytes, err := ioutil.ReadAll(file)
+func (imageHandler) Handle(media Media, file FileInterface, option *Option, saveOriginal bool) (err error) {
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return
 	}
+
 	fileSizes := media.GetFileSizes()
 	originalFileSize := len(fileBytes)
 	fileSizes["original"] = originalFileSize
 	file.Seek(0, 0)
-	err = media.Store(media.URL("original"), option, file)
+
+	if saveOriginal {
+		err = media.Store(media.URL("original"), option, file)
+	}
+
 	if err != nil {
 		return
 	}
+
 	file.Seek(0, 0)
 
 	format, err := GetImageFormat(media.URL())

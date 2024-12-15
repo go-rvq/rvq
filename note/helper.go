@@ -32,7 +32,7 @@ func GetUserData(ctx *web.EventContext) (userID uint, creator string) {
 }
 
 func getNotesTab(ctx *web.EventContext, db *gorm.DB, resourceType string, resourceId string) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nNoteKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nNoteKey, Messages_en_US).(*Messages)
 
 	c := h.Div(
 		web.Scope(
@@ -42,7 +42,7 @@ func getNotesTab(ctx *web.EventContext, db *gorm.DB, resourceType string, resour
 			),
 			VCardActions(h.Components(
 				VSpacer(),
-				VBtn(presets.MustGetMessages(ctx.R).Create).
+				VBtn(presets.MustGetMessages(ctx.Context()).Create).
 					Color("primary").
 					Attr("@click", web.Plaid().
 						EventFunc(createNoteEvent).
@@ -53,7 +53,7 @@ func getNotesTab(ctx *web.EventContext, db *gorm.DB, resourceType string, resour
 						Go(),
 					),
 			)),
-		).VSlot("{form}"),
+		).Slot("{form}"),
 	)
 
 	var notes []QorNote

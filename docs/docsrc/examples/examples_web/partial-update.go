@@ -35,7 +35,7 @@ type formData struct {
 var fd formData
 
 func edit1(ctx *web.EventContext) (er web.EventResponse, err error) {
-	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
+	er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
 		Name: "part1",
 		Body: Div(
 			web.Scope(
@@ -53,7 +53,7 @@ func edit1(ctx *web.EventContext) (er web.EventResponse, err error) {
 				),
 				Button("Update").
 					Attr("@click", web.POST().EventFunc("reload2").Go()),
-			).VSlot("{ locals, form }").FormInit(JSONString(fd)),
+			).Slot("{ locals, form }").FormInit(JSONString(fd)),
 		),
 	})
 	return

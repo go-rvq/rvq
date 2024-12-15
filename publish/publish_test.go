@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"github.com/theplant/sliceutils"
 	"github.com/theplant/testenv"
@@ -47,7 +48,7 @@ func (p *Product) getListContent() string {
 	return fmt.Sprintf("list page  %s", p.Code)
 }
 
-func (p *Product) GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Product) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.getUrl(),
 		Content:  p.getContent(),
@@ -79,7 +80,7 @@ func (p *Product) GetPublishActions(db *gorm.DB, ctx context.Context, storage os
 	return
 }
 
-func (p *Product) GetUnPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Product) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.OnlineUrl,
 		IsDelete: true,
@@ -111,7 +112,7 @@ func (p *ProductWithoutVersion) getUrl() string {
 	return fmt.Sprintf("test/product_no_version/%s/index.html", p.Code)
 }
 
-func (p *ProductWithoutVersion) GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.getUrl(),
 		Content:  p.getContent(),
@@ -129,7 +130,7 @@ func (p *ProductWithoutVersion) GetPublishActions(db *gorm.DB, ctx context.Conte
 	return
 }
 
-func (p *ProductWithoutVersion) GetUnPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *ProductWithoutVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.OnlineUrl,
 		IsDelete: true,

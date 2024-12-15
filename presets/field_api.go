@@ -14,6 +14,14 @@ type (
 	}
 
 	FieldSetupers []FieldSetuper
+
+	FieldStringer interface {
+		FieldString(field *FieldContext) string
+	}
+
+	FieldsBuilderInterface interface {
+		Field(name string) *FieldBuilder
+	}
 )
 
 func (s FieldSetupers) InitField(f *FieldBuilder) {

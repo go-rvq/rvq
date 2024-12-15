@@ -33,6 +33,7 @@ const (
 	ParamPostChangeCallback = "presets_post_change_callback"
 	ParamActionsDisabled    = "actions_disabled"
 	ParamMustResult         = "must_result"
+	ParamListingEncoder     = "presets_listingEncoder"
 
 	// list editor
 	ParamAddRowFormKey      = "listEditor_AddRowFormKey"

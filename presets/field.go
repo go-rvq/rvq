@@ -2,54 +2,54 @@ package presets
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"reflect"
-	"time"
 
 	"github.com/iancoleman/strcase"
 	"github.com/qor5/admin/v3/reflect_utils"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/datafield"
+	"github.com/qor5/web/v3/zeroer"
 	"github.com/qor5/x/v3/i18n"
-	"github.com/qor5/x/v3/zeroer"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
 type FieldContext struct {
-	Mode          FieldModeStack
-	Field         *FieldBuilder
-	EventContext  *web.EventContext
-	Obj           interface{}
-	Name          string
-	FormKey       string
-	Label         string
-	Errors        []string
-	ModelInfo     *ModelInfo
-	Nested        Nested
-	Context       context.Context
-	ReadOnly      bool
-	Required      bool
-	Disabled      bool
-	ValueOverride interface{}
+	Mode              FieldModeStack
+	Field             *FieldBuilder
+	EventContext      *web.EventContext
+	Obj               interface{}
+	Name              string
+	FormKey           string
+	Label             string
+	Errors            []string
+	ModelInfo         *ModelInfo
+	Nested            Nested
+	Context           context.Context
+	ReadOnly          bool
+	Required          bool
+	Disabled          bool
+	ValueOverride     interface{}
+	ComponentHandlers []func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent
+}
+
+func (fc *FieldContext) ComponentHandler(f ...func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent) *FieldContext {
+	fc.ComponentHandlers = append(fc.ComponentHandlers, f...)
+	return fc
 }
 
 func (fc *FieldContext) StringValue() (r string) {
-	val := fc.Value()
-	switch vt := val.(type) {
-	case []rune:
-		return string(vt)
-	case []byte:
-		return string(vt)
-	case time.Time:
-		return vt.Format("2006-01-02 15:04:05")
-	case *time.Time:
-		if vt == nil {
-			return ""
-		}
-		return vt.Format("2006-01-02 15:04:05")
+	v := fc.Value()
+
+	if v == nil {
+		return ""
 	}
-	return fmt.Sprint(val)
+
+	if s, _ := v.(FieldStringer); s != nil {
+		return s.FieldString(fc)
+	}
+
+	return ToStringContext(fc.EventContext, v)
 }
 
 func (fc *FieldContext) RawValue() (r interface{}) {
@@ -109,14 +109,20 @@ type FieldBuilder struct {
 	context          context.Context
 	rt               reflect.Type
 	nested           Nested
+	disabled         bool
 	enabled          func(ctx *FieldContext) bool
-	data             map[any]any
 	Setup            FieldContextSetups
 	ToComponentSetup FieldContextSetups
 	Validators       FieldValidators
 	ValueFormatters  FieldValueFormatters
 	defaultValuer    func()
 	audited          bool
+
+	datafield.DataField[*FieldBuilder]
+}
+
+func (b *FieldBuilder) String() string {
+	return b.name
 }
 
 func (b *FieldBuilder) ColumnName() string {
@@ -136,27 +142,13 @@ func (b *FieldBuilder) StructField() *reflect_utils.IndexableStructField {
 	return b.structField
 }
 
-func (b *FieldBuilder) SetData(key, value any) *FieldBuilder {
-	if b.data == nil {
-		b.data = make(map[any]any)
-	}
-	b.data[key] = value
-	return b
-}
-
-func (b *FieldBuilder) GetData(key any) any {
-	if b.data == nil {
-		return nil
-	}
-	return b.data[key]
-}
-
 func (b *FieldBuilder) Enabled() func(ctx *FieldContext) bool {
 	return b.enabled
 }
 
-func (b *FieldBuilder) SetEnabled(enabled func(ctx *FieldContext) bool) {
+func (b *FieldBuilder) SetEnabled(enabled func(ctx *FieldContext) bool) *FieldBuilder {
 	b.enabled = enabled
+	return b
 }
 
 func (b *FieldBuilder) WrapEnabled(do func(old func(ctx *FieldContext) bool) func(ctx *FieldContext) bool) *FieldBuilder {
@@ -175,6 +167,15 @@ func (b *FieldBuilder) IsEnabled(ctx *FieldContext) bool {
 		return b.enabled(ctx)
 	}
 	return true
+}
+
+func (b *FieldBuilder) SetDisabled(v bool) *FieldBuilder {
+	b.disabled = v
+	return b
+}
+
+func (b *FieldBuilder) Disabled() bool {
+	return b.disabled
 }
 
 func (b *FieldBuilder) GetCompFunc() FieldComponentFunc {
@@ -205,14 +206,7 @@ func (b FieldBuilder) Clone() *FieldBuilder {
 	b.ToComponentSetup = append(FieldContextSetups{}, b.ToComponentSetup...)
 	b.ValueFormatters = append(FieldValueFormatters{}, b.ValueFormatters...)
 	b.Validators = append(FieldValidators{}, b.Validators...)
-
-	if b.data != nil {
-		data := make(map[any]any, len(b.data))
-		for k, v := range b.data {
-			data[k] = v
-		}
-		b.data = data
-	}
+	b.DataField = b.DataField.Clone()
 	return &b
 }
 
@@ -256,7 +250,7 @@ func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *Fi
 	return b
 }
 
-func (b *FieldBuilder) RequestLabel(fb *FieldsBuilder, info *ModelInfo, r *http.Request) string {
+func (b *FieldBuilder) RequestLabel(info *ModelInfo, ctx web.ContextValuer, fallback ...func(ctx web.ContextValuer, nameLabel NameLabel) string) string {
 	if b.hiddenLabel {
 		return ""
 	}
@@ -264,24 +258,46 @@ func (b *FieldBuilder) RequestLabel(fb *FieldsBuilder, info *ModelInfo, r *http.
 	var label = b.labelKey
 	if label == "" {
 		if b.i18nLabel != nil {
-			return b.i18nLabel(r)
+			return b.i18nLabel(ctx)
 		}
 
-		msgr := MustGetMessages(r)
+		msgr := MustGetMessages(ctx.Context())
 		if label = msgr.CommonFieldLabels.Get(b.name); label != "" {
 			return label
 		}
 
-		label = fb.getLabel(b.NameLabel)
+		for _, f := range fallback {
+			label = f(ctx, b.NameLabel)
+			break
+		}
 	}
 
 	if info != nil {
-		return i18n.PT(r, ModelsI18nModuleKey, info.Label(), label)
+		return i18n.PTFk(ctx.Context(), ModelsI18nModuleKey, func() string {
+			return info.Label() + b.name
+		}, label)
 	}
 	return label
 }
 
+func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {
+	comp = b.compFunc(ctx, ctx.EventContext)
+	for _, f := range ctx.ComponentHandlers {
+		comp = f(ctx, comp)
+	}
+	return
+}
+
 type FieldBuilders []*FieldBuilder
+
+func (b FieldBuilders) Get(name string) *FieldBuilder {
+	for _, fb := range b {
+		if fb.name == name {
+			return fb
+		}
+	}
+	return nil
+}
 
 func (b FieldBuilders) Len() int {
 	return len(b)
@@ -300,15 +316,6 @@ func (b FieldBuilders) HasMode(mode FieldMode, cb ...func(fb *FieldBuilder) bool
 		return true
 	})
 	return
-}
-
-func (b FieldBuilders) Filter(f func(fb *FieldBuilder) bool) (ret FieldBuilders) {
-	for _, fb := range b {
-		if f(fb) {
-			ret = append(ret, fb)
-		}
-	}
-	return ret
 }
 
 func (b FieldBuilders) FirstFilter(f func(fb *FieldBuilder) bool) *FieldBuilder {
@@ -334,20 +341,68 @@ func (b FieldBuilders) Last() *FieldBuilder {
 	return b[len(b)-1]
 }
 
-func (b FieldBuilders) Renderable() (r FieldBuilders) {
-	for _, fb := range b {
-		if fb.compFunc != nil {
-			r = append(r, fb)
-		}
-	}
-	return r
-}
-
 func (b FieldBuilders) EachHavesComponent(cb func(fb *FieldBuilder) bool) {
 	for _, fb := range b {
 		if fb.compFunc != nil {
 			if !cb(fb) {
 				break
+			}
+		}
+	}
+}
+
+func (b FieldBuilders) FieldsFromLayout(layout []interface{}, filter ...FieldFilter) (res FieldBuilders) {
+	for _, f := range b.FieldsGenFromLayout(layout, filter...) {
+		res = append(res, f)
+	}
+	return
+}
+
+func (b FieldBuilders) FieldsGenFromLayout(layout []interface{}, filter ...FieldFilter) func(func(int, *FieldBuilder) bool) {
+	accept := FieldFilters(filter).Accept
+
+	return func(yield_ func(int, *FieldBuilder) bool) {
+		var (
+			i     int
+			yield = func(f *FieldBuilder) bool {
+				if !accept(f) {
+					return true
+				}
+				if !yield_(i, f) {
+					return false
+				}
+				i++
+				return true
+			}
+		)
+		for _, iv := range layout {
+			switch t := iv.(type) {
+			case string:
+				if f := b.Get(t); f != nil {
+					if !yield(f) {
+						return
+					}
+				}
+			case []string:
+				for _, n := range t {
+					if f := b.Get(n); f != nil {
+						if !yield(f) {
+							return
+						}
+					}
+				}
+			case *FieldsSection:
+				for _, row := range t.Rows {
+					for _, n := range row {
+						if f := b.Get(n); f != nil {
+							if !yield(f) {
+								return
+							}
+						}
+					}
+				}
+			default:
+				panic("unknown fields layout, must be string/[]string/*FieldsSection")
 			}
 		}
 	}

@@ -35,8 +35,8 @@ func ShortCutSample(ctx *web.EventContext) (pr web.PageResponse, err error) {
 				),
 			).Class("mt-10"),
 			web.GlobalEvents().Attr(":filter", `(event, handler, eventName) => locals.shortCutEnabled == true`).Attr("@keydown.enter", clickEvent),
-		).Init(`{ shortCutEnabled: true, count: 0 }`).
-			VSlot("{ locals, form }"),
+		).LocalsInit(`{ shortCutEnabled: true, count: 0 }`).
+			Slot("{ locals, form }"),
 	)
 	return
 }

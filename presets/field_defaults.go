@@ -1,25 +1,17 @@
 package presets
 
 import (
+	"database/sql"
 	"fmt"
+	"mime/multipart"
 	"path/filepath"
 	"reflect"
 	"time"
 
 	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/qor5/x/v3/ui/vuetifyx"
-	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
+	"github.com/qor5/web/v3/datafield"
+	"github.com/shopspring/decimal"
 )
-
-type FieldDefaultBuilder struct {
-	valType    reflect.Type
-	compFunc   FieldComponentFunc
-	setterFunc FieldSetterFunc
-}
 
 type FieldMode uint8
 
@@ -61,7 +53,7 @@ func (f FieldMode) Split() (modes []FieldMode) {
 }
 
 const (
-	NONE FieldMode = iota << 1
+	NONE FieldMode = 1 << iota
 	LIST
 	DETAIL
 	NEW
@@ -85,9 +77,20 @@ func (s FieldModeStack) DotStack() FieldModeStack {
 	return FieldModeStack{s.Dot()}
 }
 
-func NewFieldDefault(t reflect.Type) (r *FieldDefaultBuilder) {
-	r = &FieldDefaultBuilder{valType: t}
-	return
+func (s FieldModeStack) Push(m FieldMode) FieldModeStack {
+	return append(s, m)
+}
+
+type FieldDefaultBuilder struct {
+	valType    reflect.Type
+	compFunc   FieldComponentFunc
+	setterFunc FieldSetterFunc
+
+	datafield.DataField[*FieldDefaultBuilder]
+}
+
+func NewFieldDefault(t reflect.Type) *FieldDefaultBuilder {
+	return datafield.New(&FieldDefaultBuilder{valType: t})
 }
 
 func (b *FieldDefaultBuilder) ComponentFunc(v FieldComponentFunc) (r *FieldDefaultBuilder) {
@@ -103,7 +106,9 @@ func (b *FieldDefaultBuilder) SetterFunc(v FieldSetterFunc) (r *FieldDefaultBuil
 var numberVals = []interface{}{
 	int(0), int8(0), int16(0), int32(0), int64(0),
 	uint(0), uint8(8), uint16(0), uint32(0), uint64(0),
-	float32(0.0), float64(0.0),
+	float32(0.0), float64(0.0), decimal.Decimal{},
+	sql.NullInt32{}, sql.NullInt64{}, sql.NullFloat64{},
+	sql.Null[uint]{}, sql.Null[uint8]{}, sql.Null[uint16]{}, sql.Null[uint32]{}, sql.Null[uint64]{},
 }
 
 var stringVals = []interface{}{
@@ -121,6 +126,7 @@ type FieldDefaults struct {
 	mode             FieldMode
 	fieldTypes       []*FieldDefaultBuilder
 	excludesPatterns []string
+	disablesPatterns []string
 }
 
 func NewFieldDefaults(t FieldMode) (r *FieldDefaults) {
@@ -138,6 +144,11 @@ func (b *FieldDefaults) FieldType(v interface{}) (r *FieldDefaultBuilder) {
 
 func (b *FieldDefaults) Exclude(patterns ...string) (r *FieldDefaults) {
 	b.excludesPatterns = patterns
+	return b
+}
+
+func (b *FieldDefaults) Disable(patterns ...string) (r *FieldDefaults) {
+	b.disablesPatterns = patterns
 	return b
 }
 
@@ -167,6 +178,7 @@ func (b *FieldDefaults) NewFieldBuilders(fields reflect_utils.IndexableStructFie
 			},
 			mode:        ALL,
 			structField: f,
+			disabled:    hasMatched(b.disablesPatterns, f.Name),
 		}
 		validCount++
 	}
@@ -183,6 +195,8 @@ func (b *FieldDefaults) SetupFields(fbs FieldBuilders, setupers ...FieldSetuper)
 			if f.setterFunc == nil {
 				f.SetterFunc(ft.setterFunc)
 			}
+
+			f.DataField.SetMapData(ft.Data().Clone())
 		}
 		withFt = func(f *FieldBuilder, rt reflect.Type) {
 			if ft := b.fieldTypeByType(rt); ft != nil {
@@ -241,172 +255,79 @@ func (b *FieldDefaults) fieldTypeByTypeOrCreate(tv reflect.Type) (r *FieldDefaul
 	r = NewFieldDefault(tv)
 
 	if b.mode == LIST {
-		r.ComponentFunc(cfTextTd)
+		r.ComponentFunc(TDStringComponentFunc)
 	} else {
-		r.ComponentFunc(cfTextField)
+		r.ComponentFunc(TextFieldComponentFunc)
 	}
 	b.fieldTypes = append(b.fieldTypes, r)
 	return
 }
 
-func cfTextTd(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return h.Td(h.Text(field.StringValue()))
-}
-
-func cfCheckbox(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VCheckbox().
-		Attr(web.VField(field.FormKey, field.Value().(bool))...).
-		Label(field.Label).
-		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
-}
-
-func cfNumber(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VTextField().
-		Type("number").
-		Variant(FieldVariantUnderlined).
-		Attr(web.VField(field.FormKey, field.StringValue())...).
-		Label(field.Label).
-		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
-}
-
-func cfTime(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
-	val := ""
-	if v := field.Value(); v != nil {
-		switch vt := v.(type) {
-		case time.Time:
-			val = vt.Format("2006-01-02 15:04")
-		case *time.Time:
-			val = vt.Format("2006-01-02 15:04")
-		default:
-			panic(fmt.Sprintf("unknown time type: %T\n", v))
-		}
-	}
-	return vuetifyx.VXDateTimePicker().
-		Label(field.Label).
-		Attr(web.VField(field.FormKey, val)...).
-		Value(val).
-		TimePickerProps(vuetifyx.TimePickerProps{
-			Format:     "24hr",
-			Scrollable: true,
-		}).
-		DialogWidth(640).
-		ClearText(msgr.Clear).
-		OkText(msgr.OK)
-}
-
-func cfTimeReadonly(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
-	val := ""
-	if v := field.Value(); v != nil {
-		switch vt := v.(type) {
-		case time.Time:
-			val = vt.Format(msgr.TimeFormats.DateTime)
-		case *time.Time:
-			val = vt.Format(msgr.TimeFormats.DateTime)
-		default:
-			panic(fmt.Sprintf("unknown time type: %T\n", v))
-		}
-	}
-	return vuetifyx.VXReadonlyField().
-		Label(field.Label).
-		Value(val)
-}
-
-func cfTimeSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
-	v := ctx.R.Form.Get(field.FormKey)
-	if v == "" {
-		return reflectutils.Set(obj, field.Name, nil)
-	}
-	t, err := time.ParseInLocation("2006-01-02 15:04", v, time.Local)
-	if err != nil {
-		return err
-	}
-	return reflectutils.Set(obj, field.Name, t)
-}
-
-func cfTextField(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return VTextField().
-		Type("text").
-		Variant(FieldVariantUnderlined).
-		Attr(web.VField(field.FormKey, field.StringValue())...).
-		Label(field.Label).
-		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
-}
-
-func CFReadonlyText(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return vuetifyx.VXReadonlyField().
-		Label(field.Label).
-		Value(field.StringValue())
-}
-
-func cfReadonlyCheckbox(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	return vuetifyx.VXReadonlyField().
-		Label(field.Label).
-		Value(field.Value()).
-		Checkbox(true)
-}
-
 func (b *FieldDefaults) builtInFieldTypes() {
 	if b.mode == LIST {
 		b.FieldType(true).
-			ComponentFunc(cfTextTd)
+			ComponentFunc(TDReadonlyBoolComponentFunc)
 
 		for _, v := range numberVals {
 			b.FieldType(v).
-				ComponentFunc(cfTextTd)
+				ComponentFunc(TDStringComponentFunc)
 		}
 
 		for _, v := range stringVals {
 			b.FieldType(v).
-				ComponentFunc(cfTextTd)
+				ComponentFunc(TDStringComponentFunc)
 		}
 		return
 	}
 
 	if b.mode == DETAIL {
 		b.FieldType(true).
-			ComponentFunc(cfReadonlyCheckbox)
+			ComponentFunc(CheckboxReadonlyComponentFunc)
 
 		for _, v := range numberVals {
 			b.FieldType(v).
-				ComponentFunc(CFReadonlyText)
+				ComponentFunc(ReadonlyTextComponentFunc)
 		}
 
 		for _, v := range stringVals {
 			b.FieldType(v).
-				ComponentFunc(CFReadonlyText)
+				ComponentFunc(ReadonlyTextComponentFunc)
 		}
 
 		for _, v := range timeVals {
 			b.FieldType(v).
-				ComponentFunc(cfTimeReadonly)
+				ComponentFunc(TimeReadonlyComponentFunc)
 		}
 		return
 	}
 
 	b.FieldType(true).
-		ComponentFunc(cfCheckbox)
+		ComponentFunc(CheckboxComponentFunc)
 
 	for _, v := range numberVals {
 		b.FieldType(v).
-			ComponentFunc(cfNumber)
+			ComponentFunc(NumberComponentFunc)
 	}
 
 	for _, v := range stringVals {
 		b.FieldType(v).
-			ComponentFunc(cfTextField)
+			ComponentFunc(TextFieldComponentFunc)
 	}
 
 	for _, v := range timeVals {
 		b.FieldType(v).
-			ComponentFunc(cfTime).
-			SetterFunc(cfTimeSetter)
+			ComponentFunc(TimeComponentFunc).
+			SetterFunc(TimeComponentFuncSetter)
 	}
 
-	b.Exclude("ID")
+	b.FieldType([]*multipart.FileHeader{}).
+		ComponentFunc(FileFieldComponentFunc)
+	b.FieldType(&multipart.FileHeader{}).
+		ComponentFunc(FileFieldComponentFunc)
+
+	b.FieldType(rune(0)).
+		ComponentFunc(RuneFieldComponentFunc)
+
+	b.Disable("ID")
 	return
 }

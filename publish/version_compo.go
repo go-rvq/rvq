@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 
+	"github.com/qor5/web/v3/vue"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 
@@ -41,15 +43,18 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			versionSwitch  *v.VChipBuilder
 			publishBtn     h.HTMLComponent
 		)
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
-		utilsMsgr := i18n.MustGetModuleMessages(ctx.R, utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		utilsMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
 
 		primarySlugger, ok = obj.(presets.SlugEncoder)
 		if !ok {
 			panic("obj should be SlugEncoder")
 		}
 
-		div := h.Div().Class("w-100 d-inline-flex")
+		var (
+			tempPortal = field.Name + "Portal"
+			div        = h.Div(web.Portal().Name(tempPortal)).Class("w-100 d-inline-flex")
+		)
 
 		if !config.Top {
 			div.Class("pb-4")
@@ -63,6 +68,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 				On("click", web.Plaid().EventFunc(actions.OpenListingDialog).
 					URL(b.Info().PresetsPrefix()+"/"+field.ModelInfo.URI()+"-version-list-dialog").
 					Query("select_id", primarySlugger.PrimarySlug()).
+					Query(presets.ParamTargetPortal, tempPortal).
 					BeforeScript(fmt.Sprintf("%s ||= ''", VarCurrentDisplayID)).
 					ThenScript(fmt.Sprintf("%s = %q", VarCurrentDisplayID, primarySlugger.PrimarySlug())).
 					Go()).
@@ -80,6 +86,13 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 		}
 
 		if status, ok = obj.(StatusInterface); ok {
+			gotoPublishedURL := v.VBtn("").
+				Variant(v.VariantFlat).
+				Icon("mdi-open-in-new").
+				Height(40).
+				Attr("v-if", `locals.`+FieldOnlineUrl).
+				Attr("@click", `(e) => e.view.window.open(locals.`+FieldOnlineUrl+`, "_blank")`)
+
 			switch status.EmbedStatus().Status {
 			case StatusDraft, StatusOffline:
 				publishEvent := fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventPublish)
@@ -89,6 +102,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 				publishBtn = h.Div(
 					v.VBtn(msgr.Publish).Attr("@click", publishEvent).Rounded("0").
 						Class("rounded-s ml-2").Variant(v.VariantFlat).Color(v.ColorPrimary).Height(40),
+					gotoPublishedURL,
 				)
 			case StatusOnline:
 				unPublishEvent := fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventUnpublish)
@@ -104,15 +118,18 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 						Class("ml-2").Variant(v.VariantFlat).Color(v.ColorError).Height(40),
 					v.VBtn(msgr.Republish).Attr("@click", rePublishEvent).
 						Class("ml-2").Variant(v.VariantFlat).Color(v.ColorPrimary).Height(40),
+					gotoPublishedURL,
 				).Class("d-inline-flex")
 			}
 			div.AppendChildren(publishBtn)
+
 			// Publish/Unpublish/Republish ConfirmDialog
 			div.AppendChildren(
 				utils.ConfirmDialog(msgr.Areyousure, web.Plaid().EventFunc(web.Var("locals.action")).
 					Query(presets.ParamID, primarySlugger.PrimarySlug()).Go(),
 					utilsMsgr),
 			)
+
 			// Publish/Unpublish/Republish CustomDialog
 			if config.UnPublishEvent != nil || config.RePublishEvent != nil || config.PublishEvent != nil {
 				div.AppendChildren(web.Portal().Name(PortalPublishCustomDialog))
@@ -140,13 +157,17 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			div.AppendChildren(web.Portal().Name(PortalSchedulePublishDialog))
 		}
 
-		return web.Scope(div).VSlot(" { locals } ").Init(fmt.Sprintf(`{action: "", commonConfirmDialog: false }`))
+		var onlineUrl string
+		if status != nil {
+			onlineUrl = status.EmbedStatus().OnlineUrl
+		}
+		return vue.UserComponent(div).Scope("locals", vue.Var(`{action: "", commonConfirmDialog: false, `+FieldOnlineUrl+`: `+strconv.Quote(onlineUrl)+` }`))
 	}
 }
 
 func DefaultVersionBar(db *gorm.DB) presets.ObjectComponentFunc {
 	return func(obj interface{}, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 		res := h.Div().Class("d-inline-flex align-center")
 
 		slugEncoderIf := obj.(presets.SlugEncoder)
@@ -300,8 +321,8 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	}).Label("Unread Notes")
 
 	lb.Field("Option").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
-		pmsgr := presets.MustGetMessages(ctx.R)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		pmsgr := presets.MustGetMessages(ctx.Context())
 
 		obj := field.Obj
 		id := obj.(presets.SlugEncoder).PrimarySlug()
@@ -373,7 +394,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	})
 
 	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
 		id := ctx.R.FormValue("select_id")
 		if id == "" {
 			id = ctx.R.FormValue("f_select_id")

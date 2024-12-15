@@ -5,6 +5,7 @@ type Messages struct {
 	CropImage                   string
 	ChooseFile                  string
 	Delete                      string
+	CopyLink                    string
 	ChooseAFile                 string
 	Search                      string
 	UploadFiles                 string
@@ -27,6 +28,7 @@ var Messages_en_US = &Messages{
 	ChooseFile:                  "Choose File",
 	Delete:                      "Delete",
 	ChooseAFile:                 "Choose a File",
+	CopyLink:                    "Copy Link",
 	Search:                      "Search",
 	UploadFiles:                 "Upload files",
 	Cropping:                    "Cropping",

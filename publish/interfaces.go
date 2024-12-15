@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/model"
+	"github.com/qor5/admin/v3/presets"
 	"gorm.io/gorm"
 )
 
@@ -59,11 +61,11 @@ type Version struct {
 // @snippet_end
 
 type PublishInterface interface {
-	GetPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
+	GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
 }
 
 type UnPublishInterface interface {
-	GetUnPublishActions(db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
+	GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
 }
 
 type AfterPublishInterface interface {
@@ -88,7 +90,7 @@ func EmbedStatus(v any) *Status {
 
 type VersionInterface interface {
 	EmbedVersion() *Version
-	CreateVersion(db *gorm.DB, paramID string, obj interface{}) (string, error)
+	CreateVersion(db *gorm.DB, mid model.ID, obj interface{}) (string, error)
 }
 
 func (s *Version) EmbedVersion() *Version {

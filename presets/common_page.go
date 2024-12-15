@@ -17,7 +17,7 @@ type commonPageConfig struct {
 // TODO set common component which in editingBuilder or DetailingBuilder
 // TODO defaultToPage build a common page
 func defaultToPage(config commonPageConfig, obj interface{}, ctx *web.EventContext) h.HTMLComponent {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 
 	var asideContent = config.main
 
@@ -44,7 +44,7 @@ func defaultToPage(config commonPageConfig, obj interface{}, ctx *web.EventConte
 					).Value("default"),
 					h.Components(contents...),
 				).Attr("v-model", "locals.tab"),
-			).VSlot("{ locals }").Init(`{tab: 'default'}`)
+			).Slot("{ locals }").LocalsInit(`{tab: 'default'}`)
 		}
 	}
 

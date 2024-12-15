@@ -1,11 +1,8 @@
 package presets
 
 import (
-	"reflect"
-
 	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -30,8 +27,7 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 	b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		val := field.Value()
 		if val == nil {
-			t := reflectutils.GetType(field.Obj, field.Name).Elem()
-			val = reflect.New(t).Interface()
+			val = n.Model().NewModel()
 		}
 		modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
 		fieldInfo := n.mb.Info().ChildOf(field.ModelInfo, field.Obj)
@@ -44,5 +40,10 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 }
 
 func (n *NestedStructBuilder) Walk(fctx *FieldContext, handle FieldWalkHandle) (s FieldWalkState) {
-	return n.fb.walk(fctx.ModelInfo, fctx.Obj, fctx.Mode, fctx.FormKey, fctx.EventContext, handle)
+	fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj)
+	obj := fctx.Value()
+	if obj == nil {
+		obj = n.Model().NewModel()
+	}
+	return n.fb.walk(fieldInfo, obj, fctx.Mode, fctx.FormKey, fctx.EventContext, handle)
 }

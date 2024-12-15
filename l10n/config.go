@@ -18,6 +18,7 @@ const (
 	WrapHandlerKey  = "l10nWrapHandlerKey"
 	MenuTopItemFunc = "l10nMenuTopItemFunc"
 	SlugLocaleCode  = "locale_code"
+	BuilderKey      = "l10nBuilderKey"
 )
 
 func localeListFunc(db *gorm.DB, lb *Builder) presets.FieldComponentFunc {
@@ -49,12 +50,12 @@ func localeListFunc(db *gorm.DB, lb *Builder) presets.FieldComponentFunc {
 		}
 
 		var chips []h.HTMLComponent
-		chips = append(chips, VChip(h.Text(MustGetTranslation(ctx.R, lb.GetLocaleLabel(fromLocale)))).Color("success").Variant(VariantFlat).Label(true).Size(SizeSmall))
+		chips = append(chips, VChip(h.Text(MustGetTranslation(ctx.Context(), lb.GetLocaleLabel(fromLocale)))).Color("success").Variant(VariantFlat).Label(true).Size(SizeSmall))
 
 		for _, locale := range otherLocales {
 			chips = append(chips,
 				VChip(
-					h.Text(MustGetTranslation(ctx.R, lb.GetLocaleLabel(locale))),
+					h.Text(MustGetTranslation(ctx.Context(), lb.GetLocaleLabel(locale))),
 				).
 					Label(true).
 					Size(SizeSmall),
@@ -85,10 +86,16 @@ func runSwitchLocaleFunc(lb *Builder) func(ctx *web.EventContext) (r h.HTMLCompo
 						VListItem(
 							web.Slot(
 								// icon was language
-								VIcon("mdi-translate").Size(SizeSmall).Class("ml-1").Attr("style", "margin-right: 16px"),
+								VIcon("mdi-translate").Size(SizeSmall).
+									Class("ml-1").
+									Attr("style", "margin-right: 16px"),
 							).Name("prepend"),
 							VListItemTitle(
-								h.Div(h.Text(fmt.Sprintf("%s%s %s", MustGetTranslation(ctx.R, "Location"), MustGetTranslation(ctx.R, "Colon"), MustGetTranslation(ctx.R, lb.GetLocaleLabel(supportLocales[0]))))).Role("button"),
+								h.Div(h.Text(fmt.Sprintf("%s%s %s",
+									MustGetTranslation(ctx.Context(), "Location"),
+									MustGetTranslation(ctx.Context(), "Colon"),
+									MustGetTranslation(ctx.Context(),
+										lb.GetLocaleLabel(supportLocales[0]))))).Role("button"),
 							),
 						).Class("pa-0").Density(DensityCompact),
 					).Class("pa-0 ma-n4 mt-n6"),
@@ -104,7 +111,7 @@ func runSwitchLocaleFunc(lb *Builder) func(ctx *web.EventContext) (r h.HTMLCompo
 				h.Div(
 					VListItem(
 						VListItemTitle(
-							h.Div(h.Text(MustGetTranslation(ctx.R, lb.GetLocaleLabel(contry)))),
+							h.Div(h.Text(MustGetTranslation(ctx.Context(), lb.GetLocaleLabel(contry)))),
 						),
 					).Attr("@click", web.Plaid().Query(localeQueryName, contry).Go()),
 				),
@@ -121,7 +128,10 @@ func runSwitchLocaleFunc(lb *Builder) func(ctx *web.EventContext) (r h.HTMLCompo
 								VIcon("mdi-translate").Size(SizeSmall).Class("ml-1"),
 							).Name("prepend"),
 							VListItemTitle(
-								h.Text(fmt.Sprintf("%s%s %s", MustGetTranslation(ctx.R, "Location"), MustGetTranslation(ctx.R, "Colon"), MustGetTranslation(ctx.R, lb.GetLocaleLabel(locale)))),
+								h.Text(fmt.Sprintf("%s%s %s",
+									MustGetTranslation(ctx.Context(), "Location"),
+									MustGetTranslation(ctx.Context(), "Colon"),
+									MustGetTranslation(ctx.Context(), lb.GetLocaleLabel(locale)))),
 							),
 							web.Slot(
 								// icon was arrow_drop_down
@@ -155,7 +165,7 @@ func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams 
 				// icon was language
 				VIcon("mdi-translate"),
 			).Name("prepend"),
-			VListItemTitle(h.Text(MustGetTranslation(ctx.R, "Localize"))),
+			VListItemTitle(h.Text(MustGetTranslation(ctx.Context(), "Localize"))),
 		).Attr("@click", web.Plaid().
 			EventFunc(Localize).
 			Queries(editExtraParams).

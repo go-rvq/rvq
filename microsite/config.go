@@ -59,10 +59,10 @@ func (mib *Builder) Install(b *presets.Builder) error {
 
 			vuetify.VFileInput().Chips(true).ErrorMessages(field.Errors...).Label(field.Label).Attr("accept", ".rar,.zip,.7z,.tar").Clearable(false).
 				Attr("v-model", "locals.file").On("change", fmt.Sprintf("form.%s = $event.target.files[0]", field.Name)),
-		).Init(fmt.Sprintf(`{ file: new File([""], "%v", {
+		).LocalsInit(fmt.Sprintf(`{ file: new File([""], "%v", {
                   lastModified: 0,
                 }) , change: false}`, this.GetPackage().FileName)).
-			VSlot("{ locals }")
+			Slot("{ locals }")
 	}).
 		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 			if ctx.R.FormValue("PackageChanged") != "true" {

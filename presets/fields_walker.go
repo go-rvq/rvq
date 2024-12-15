@@ -33,12 +33,15 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 		fieldsChan = make(chan string)
 	)
 
-	if info != nil && !info.mb.singleton && !mode.Dot().Is(LIST, DETAIL) {
-		id, _, _ := info.GetID(obj)
-		if id.IsZero() {
-			mode = append(mode, NEW)
-		} else {
-			mode = append(mode, EDIT)
+	// if not is embedded
+	if len(info.Schema().PrimaryFields()) > 0 {
+		if info != nil && !info.mb.singleton && !mode.Dot().Is(LIST, DETAIL) {
+			id, _, _ := info.LookupID(obj)
+			if id.IsZero() {
+				mode = append(mode, NEW)
+			} else {
+				mode = append(mode, EDIT)
+			}
 		}
 	}
 

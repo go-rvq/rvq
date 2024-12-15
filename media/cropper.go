@@ -28,7 +28,7 @@ func getParams(ctx *web.EventContext) (field string, id int, thumb string, cfg *
 func loadImageCropper(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		db := mb.db
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 		field, id, thumb, cfg := getParams(ctx)
 
 		var m media_library.MediaLibrary
@@ -66,9 +66,9 @@ func loadImageCropper(mb *Builder) web.EventFunc {
 			})
 		}
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: cropperPortalName(field),
-			Body: web.Scope(
+		r.UpdatePortal(
+			cropperPortalName(field),
+			web.Scope(
 				VDialog(
 					VCard(
 						VToolbar(
@@ -92,8 +92,8 @@ func loadImageCropper(mb *Builder) web.EventFunc {
 				).ModelValue(true).
 					Scrollable(true).
 					MaxWidth("800px"),
-			).Init(`{cropping: false}`).VSlot("{ locals }"),
-		})
+			).LocalsInit(`{cropping: false}`).Slot("{ locals }"),
+		)
 		return
 	}
 }
@@ -153,10 +153,10 @@ func cropImage(mb *Builder) web.EventFunc {
 			}
 		}
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: mediaBoxThumbnailsPortalName(field),
-			Body: mediaBoxThumbnails(ctx, mb, field, cfg, false, false),
-		})
+		r.UpdatePortal(
+			mediaBoxThumbnailsPortalName(field),
+			mediaBoxThumbnails(ctx, mb, field, cfg, false, false),
+		)
 		return
 	}
 }

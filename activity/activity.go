@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 
@@ -203,7 +204,7 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 	})
 
 	editing.WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
-		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 			if mb.skip&Update != 0 && mb.skip&Create != 0 {
 				return in(obj, id, ctx)
 			}
@@ -213,11 +214,11 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 				return err
 			}
 
-			if (!ok || id == "") && mb.skip&Create == 0 {
+			if (!ok || id.IsZero()) && mb.skip&Create == 0 {
 				return mb.AddRecords(ActivityCreate, ctx.R.Context(), obj)
 			}
 
-			if ok && id != "" && mb.skip&Update == 0 {
+			if ok && id.IsZero() && mb.skip&Update == 0 {
 				return mb.AddEditRecordWithOld(ab.getCreatorFromContext(ctx.R.Context()), old, obj, ab.getDBFromContext(ctx.R.Context()))
 			}
 
@@ -225,8 +226,20 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 		}
 	})
 
+	editing.CreatingBuilder().WrapCreateFunc(func(in presets.CreateFunc) presets.CreateFunc {
+		return func(obj interface{}, ctx *web.EventContext) (err error) {
+			if mb.skip&Create != 0 {
+				return in(obj, ctx)
+			}
+			if err = in(obj, ctx); err != nil {
+				return err
+			}
+			return mb.AddRecords(ActivityCreate, ctx.R.Context(), obj)
+		}
+	})
+
 	presetModel.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 			if mb.skip&Delete != 0 {
 				return in(obj, id, ctx)
 			}

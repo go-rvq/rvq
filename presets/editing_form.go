@@ -17,10 +17,13 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 	}
 
 	obj := b.mb.NewModel()
-	id := ctx.R.Form.Get(ParamID)
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
 
-	if len(id) > 0 || b.mb.singleton {
-		if err = b.Fetcher(obj, id, ctx); err != nil {
+	if !mid.IsZero() || b.mb.singleton {
+		if err = b.Fetcher(obj, mid, ctx); err != nil {
 			if err == ErrRecordNotFound && b.mb.singleton {
 				err = nil
 			} else {
@@ -32,9 +35,17 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 		return
 	}
 
-	comp := b.form(obj, ctx).Component()
-	mode := GetOverlay(ctx)
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
+	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+	if overlay.IsDrawer() {
+		targetPortal = overlay.PortalName()
+	}
+
+	f := b.form(obj, ctx)
+	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
+
+	comp := f.Component()
+	mode := GetOverlay(ctx)
 
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
@@ -45,7 +56,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 			SetScrollable(true).
 			SetValidWidth(b.mb.rightDrawerWidth).
 			SetTargetPortal(targetPortal).
-			Respond(&r, comp)
+			Respond(ctx, &r, comp)
 	} else {
 		r.Body = VContainer(comp)
 	}
@@ -53,7 +64,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 	return
 }
 
-func (b *EditingBuilder) EditBtn(ctx *web.EventContext, id string, edit bool, targetPortal string) *VBtnBuilder {
+func (b *EditingBuilder) SaveBtn(ctx *web.EventContext, id string, edit bool, targetPortal string) h.HTMLComponent {
 	var (
 		queries = ctx.Queries()
 		event   = actions.Create
@@ -71,13 +82,18 @@ func (b *EditingBuilder) EditBtn(ctx *web.EventContext, id string, edit bool, ta
 		event = actions.Update
 	}
 
+	if targetPortal != "" {
+		queries.Del(ParamTargetPortal)
+	}
+
 	onClick := web.Plaid().
 		EventFunc(event).
 		Queries(queries).
+		Method("POST").
 		ValidQuery(ParamTargetPortal, targetPortal).
 		URL(b.mb.Info().ListingHrefCtx(ctx))
 
-	return VBtn("").
+	return web.Scope(VBtn("").
 		Color("primary").
 		Variant(VariantFlat).
 		Attr(":disabled", "isFetching").
@@ -85,7 +101,7 @@ func (b *EditingBuilder) EditBtn(ctx *web.EventContext, id string, edit bool, ta
 		Attr("@click", onClick.Go()).
 		Icon(true).
 		Density("comfortable").
-		Children(VIcon("mdi-content-save"))
+		Children(VIcon("mdi-content-save"))).Form()
 }
 
 func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
@@ -99,14 +115,14 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 
 	if f.b.mode == NEW {
 		f.Title = f.b.msgr.CreatingObjectTitle(
-			i18n.T(f.b.ctx.R, ModelsI18nModuleKey, b.mb.label),
+			i18n.T(f.b.ctx.Context(), ModelsI18nModuleKey, b.mb.label),
 			b.mb.female,
 		)
 	} else {
 		disableUpdateBtn = !f.b.mb.Info().CanUpdate(f.b.ctx.R, f.Obj)
 
 		editingTitleText := f.b.msgr.EditingObjectTitle(
-			i18n.T(f.b.ctx.R, ModelsI18nModuleKey, b.mb.label),
+			i18n.T(f.b.ctx.Context(), ModelsI18nModuleKey, b.mb.label),
 			b.mb.RecordTitle(f.Obj, ctx))
 		if b.editingTitleFunc != nil {
 			f.Title = b.editingTitleFunc(f.b.obj, editingTitleText, f.b.ctx)
@@ -116,7 +132,7 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 	}
 
 	if !disableUpdateBtn {
-		f.PrimaryAction = b.EditBtn(f.b.ctx, f.b.id, f.b.mode != NEW, f.Portal)
+		f.PrimaryAction = b.SaveBtn(f.b.ctx, f.b.id, f.b.mode != NEW, f.Portal)
 	}
 
 	if b.actionsFunc != nil {

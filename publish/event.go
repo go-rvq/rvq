@@ -1,7 +1,6 @@
 package publish
 
 import (
-	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/presets"
 	"gorm.io/gorm"
 )
@@ -28,20 +27,20 @@ const (
 	ParamScriptAfterPublish = "publish_param_script_after_publish"
 )
 
-func registerEventFuncsForResource(db *gorm.DB, mb *presets.ModelBuilder, publisher *Builder, ab *activity.Builder) {
-	mb.RegisterEventFunc(EventPublish, publishAction(db, mb, publisher, ab, ActivityPublish))
-	mb.RegisterEventFunc(EventRepublish, publishAction(db, mb, publisher, ab, ActivityRepublish))
-	mb.RegisterEventFunc(EventUnpublish, unpublishAction(db, mb, publisher, ab, ActivityUnPublish))
+func registerEventFuncsForResource(mb *presets.ModelBuilder, publisher *Builder) {
+	mb.RegisterEventHandler(EventPublish, publishAction(mb, publisher, ActivityPublish))
+	mb.RegisterEventHandler(EventRepublish, publishAction(mb, publisher, ActivityRepublish))
+	mb.RegisterEventHandler(EventUnpublish, unpublishAction(mb, publisher, ActivityUnPublish))
 
-	mb.RegisterEventFunc(EventDuplicateVersion, duplicateVersionAction(db, mb, publisher))
-	mb.RegisterEventFunc(eventSelectVersion, selectVersion(mb))
-	mb.RegisterEventFunc(eventSchedulePublishDialog, schedulePublishDialog(db, mb))
-	mb.RegisterEventFunc(eventSchedulePublish, schedulePublish(db, mb))
+	mb.RegisterEventHandler(EventDuplicateVersion, duplicateVersionAction(mb, publisher))
+	mb.RegisterEventHandler(eventSelectVersion, selectVersion(mb))
+	mb.RegisterEventHandler(eventSchedulePublishDialog, schedulePublishDialog(publisher.db, mb))
+	mb.RegisterEventHandler(eventSchedulePublish, schedulePublish(publisher.db, mb))
 }
 
 func registerEventFuncsForVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.DB) {
-	mb.RegisterEventFunc(eventRenameVersionDialog, renameVersionDialog(mb))
-	mb.RegisterEventFunc(eventRenameVersion, renameVersion(mb))
-	mb.RegisterEventFunc(eventDeleteVersionDialog, deleteVersionDialog(mb))
-	mb.RegisterEventFunc(eventDeleteVersion, deleteVersion(mb, pm, db))
+	mb.RegisterEventHandler(eventRenameVersionDialog, renameVersionDialog(mb))
+	mb.RegisterEventHandler(eventRenameVersion, renameVersion(mb))
+	mb.RegisterEventHandler(eventDeleteVersionDialog, deleteVersionDialog(mb))
+	mb.RegisterEventHandler(eventDeleteVersion, deleteVersion(mb, pm, db))
 }

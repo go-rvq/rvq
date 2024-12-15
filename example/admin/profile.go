@@ -90,7 +90,7 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 
 	eb := m.Editing("Info", "Actions", "Sessions")
 
-	m.RegisterEventFunc(signOutAllSessionEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	m.RegisterEventHandler(signOutAllSessionEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
 
 		u := getCurrentUser(ctx.R)

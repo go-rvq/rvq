@@ -20,17 +20,17 @@ const (
 	doDeleteEvent           = "mediaLibrary_DoDelete"
 )
 
-func registerEventFuncs(hub web.EventFuncHub, p *presets.Builder, b *Builder) {
+func registerEventFuncs(hub web.EventHandlerHub, p *presets.Builder, b *Builder) {
 	mb := presets.NewModelBuilder(p, &media_library.MediaLibrary{})
-	hub.RegisterEventFunc(openFileChooserEvent, fileChooser(b))
-	hub.RegisterEventFunc(deleteFileEvent, deleteFileField())
-	hub.RegisterEventFunc(cropImageEvent, cropImage(b))
-	hub.RegisterEventFunc(loadImageCropperEvent, loadImageCropper(b))
-	hub.RegisterEventFunc(imageSearchEvent, searchFile(b))
-	hub.RegisterEventFunc(imageJumpPageEvent, jumpPage(b))
-	hub.RegisterEventFunc(uploadFileEvent, uploadFile(b))
-	hub.RegisterEventFunc(chooseFileEvent, chooseFile(b))
-	hub.RegisterEventFunc(updateDescriptionEvent, updateDescription(b))
-	hub.RegisterEventFunc(deleteConfirmationEvent, deleteConfirmation(mb))
-	hub.RegisterEventFunc(doDeleteEvent, doDelete(b))
+	hub.RegisterEventHandler(openFileChooserEvent, fileChooser(b))
+	hub.RegisterEventHandler(deleteFileEvent, deleteFileField())
+	hub.RegisterEventHandler(cropImageEvent, cropImage(b))
+	hub.RegisterEventHandler(loadImageCropperEvent, loadImageCropper(b))
+	hub.RegisterEventHandler(imageSearchEvent, searchFile(b))
+	hub.RegisterEventHandler(imageJumpPageEvent, jumpPage(b))
+	hub.RegisterEventHandler(uploadFileEvent, uploadFile(b))
+	hub.RegisterEventHandler(chooseFileEvent, chooseFile(b))
+	hub.RegisterEventHandler(updateDescriptionEvent, updateDescription(b))
+	hub.RegisterEventHandler(deleteConfirmationEvent, deleteConfirmation(mb))
+	hub.RegisterEventHandler(doDeleteEvent, doDelete(b))
 }

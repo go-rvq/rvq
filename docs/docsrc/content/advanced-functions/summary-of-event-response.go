@@ -23,7 +23,7 @@ The behaviour of ~web.EventFunc~ is controlled by it's return type ~web.EventRes
 - ~RedirectURL~ is to change the browser url without AJAX, reload the whole page html includes it's
   head script, css assets
 - ~ReloadPortals~ is for reload the portal that uses ~web.Portal().EventFunc("related")~
-- ~UpdatePortals~ update the portal specified by the name ~web.Portal().Name("hello")~, ~pu.AfterLoaded~
+- ~updatePortals~ update the portal specified by the name ~web.Portal().Name("hello")~, ~pu.AfterLoaded~
   set the javascript function that execute after the portal is updated, for example:
   ~VarsScript: "setTimeout(function(){ comp.vars.drawer2 = true }, 100)"~
 - ~Data~ is for any AJAX call that want pure JSON, you can set ~er.Data = myobj~ to any object that

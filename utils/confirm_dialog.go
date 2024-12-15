@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"net/http"
+	"context"
 
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
@@ -20,8 +20,8 @@ func Install(b *presets.Builder) {
 		RegisterForModule(language.Japanese, I18nUtilsKey, Messages_ja_JP)
 }
 
-func MustGetMessages(r *http.Request) *Messages {
-	return i18n.MustGetModuleMessages(r, I18nUtilsKey, Messages_en_US).(*Messages)
+func MustGetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, I18nUtilsKey, Messages_en_US).(*Messages)
 }
 
 func ConfirmDialog(msg string, okAction string, msgr *Messages) h.HTMLComponent {
@@ -67,7 +67,7 @@ func DeleteDialog(msg string, okAction string, msgr *Messages) h.HTMLComponent {
 			),
 		).MaxWidth("600px").
 			Attr("v-model", "locals.deleteConfirmation"),
-	).VSlot(" { locals }").Init(`{deleteConfirmation: true}`)
+	).Slot(" { locals }").LocalsInit(`{deleteConfirmation: true}`)
 }
 
 const CloseCustomDialog = "locals.customConfirmationDialog = false"
@@ -100,5 +100,5 @@ func CustomDialog(title h.HTMLComponent, content h.HTMLComponent, okAction strin
 			Vcard,
 		).MaxWidth("600px").
 			Attr("v-model", "locals.customConfirmationDialog"),
-	).VSlot(" { locals }").Init(`{ customConfirmationDialog: true }`)
+	).Slot(" { locals }").LocalsInit(`{ customConfirmationDialog: true }`)
 }

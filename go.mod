@@ -1,6 +1,6 @@
 module github.com/qor5/admin/v3
 
-go 1.22.3
+go 1.23
 
 require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
@@ -28,6 +28,7 @@ require (
 	github.com/qor5/web/v3 v3.0.4
 	github.com/qor5/x/v3 v3.0.5
 	github.com/samber/lo v1.39.0
+	github.com/shopspring/decimal v1.3.1
 	github.com/shurcooL/sanitized_anchor_name v1.0.0
 	github.com/stretchr/testify v1.9.0
 	github.com/sunfmin/reflectutils v1.0.4
@@ -50,6 +51,7 @@ require (
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gorm v1.25.10
+	gorm.io/hints v1.1.2
 )
 
 require (

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/qor5/admin/v3/activity"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
@@ -160,7 +161,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	lb := mb.Listing("ID", "Job", "Status", "CreatedAt")
 	lb.RowMenu().Empty()
 	lb.FilterDataFunc(func(ctx *web.EventContext) vuetifyx.FilterData {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 		return []*vuetifyx.FilterItem{
 			{
 				Key:          "status",
@@ -180,7 +181,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		}
 	})
 	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 		return []*presets.FilterTab{
 			{
 				Label: msgr.FilterTabAll,
@@ -206,10 +207,10 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	})
 	lb.Field("Job").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		qorJob := field.Obj.(*QorJob)
-		return Td(Text(getTJob(ctx.R, qorJob.Job)))
+		return Td(Text(getTJob(ctx.Context(), qorJob.Job)))
 	})
 	lb.Field("Status").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 		qorJob := field.Obj.(*QorJob)
 		return Td(Text(getTStatus(msgr, qorJob.Status)))
 	})
@@ -217,7 +218,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	eb := mb.Editing("Job", "Args")
 
 	eb.Validators.AppendFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 		qorJob := obj.(*QorJob)
 		if qorJob.Job == "" {
 			err.FieldError("Job", msgr.PleaseSelectJob)
@@ -254,7 +255,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return web.Portal(b.jobEditingContent(ctx, qorJob.Job, qorJob.Args)).Name("worker_jobEditingContent")
 	})
 
-	eb.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	eb.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		qorJob := obj.(*QorJob)
 		if qorJob.Job == "" {
 			return errors.New("job is required")
@@ -270,7 +271,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	})
 
 	mb.Detailing("DetailingPage").Field("DetailingPage").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 
 		qorJob := field.Obj.(*QorJob)
 		inst, err := getModelQorJobInstance(b.db, qorJob.ID)
@@ -288,7 +289,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 				if err != nil {
 					return Text(err.Error())
 				}
-				body := jb.rmb.Editing().ToComponent(jb.rmb.Info(), args, field.Mode.DotStack(), ctx)
+				body := jb.rmb.Editing().ToComponent(args, field.Mode.DotStack(), ctx)
 				scheduledJobDetailing = []HTMLComponent{
 					body,
 					If(editIsAllowed(ctx.R, qorJob.Job) == nil,
@@ -322,7 +323,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		}
 
 		return Div(
-			Div(Text(getTJob(ctx.R, qorJob.Job))).Class("mb-3 text-h6 font-weight-regular"),
+			Div(Text(getTJob(ctx.Context(), qorJob.Job))).Class("mb-3 text-h6 font-weight-regular"),
 			If(inst.Status == JobStatusScheduled,
 				scheduledJobDetailing...,
 			).Else(
@@ -334,7 +335,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 							Query("job", qorJob.Job),
 						).
 						AutoReloadInterval("loaderLocals.worker_updateJobProgressingInterval"),
-				).VSlot(" { locals : loaderLocals }").Init("{worker_updateJobProgressingInterval: 2000}"),
+				).Slot(" { locals : loaderLocals }").LocalsInit("{worker_updateJobProgressingInterval: 2000}"),
 			),
 			web.Portal().Name("worker_snackbar"),
 		)
@@ -451,22 +452,21 @@ func (b *Builder) createJob(ctx *web.EventContext, qorJob *QorJob) (j *QorJob, e
 
 func (b *Builder) eventSelectJob(ctx *web.EventContext) (er web.EventResponse, err error) {
 	job := ctx.R.FormValue("jobName")
-	er.UpdatePortals = append(er.UpdatePortals,
-		&web.PortalUpdate{
-			Name: "worker_jobEditingContent",
-			Body: b.jobEditingContent(ctx, job, nil),
-		},
-		&web.PortalUpdate{
-			Name: "worker_jobSelectList",
-			Body: b.jobSelectList(ctx, job),
-		},
-	)
+	er.
+		UpdatePortal(
+			"worker_jobEditingContent",
+			b.jobEditingContent(ctx, job, nil),
+		).
+		UpdatePortal(
+			"worker_jobSelectList",
+			b.jobSelectList(ctx, job),
+		)
 
 	return
 }
 
 func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, err error) {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 
 	qorJobID := uint(ctx.ParamAsInt("jobID"))
 	qorJobName := ctx.R.FormValue("job")
@@ -488,12 +488,10 @@ func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, er
 		if !ok {
 			return er, err
 		}
-		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-			Name: "worker_snackbar",
-			Body: VSnackbar().ModelValue(true).Timeout(3000).Color("warning").Children(
+		er.UpdatePortal("worker_snackbar",
+			VSnackbar().ModelValue(true).Timeout(3000).Color("warning").Children(
 				Text(msgr.NoticeJobCannotBeAborted),
-			),
-		})
+			))
 	}
 
 	er.Reload = true
@@ -579,7 +577,7 @@ func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, er
 }
 
 func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, err error) {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 
 	qorJobID := uint(ctx.ParamAsInt("jobID"))
 	qorJobName := ctx.R.FormValue("job")
@@ -615,12 +613,10 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 		if !ok {
 			return er, err
 		}
-		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
-			Name: "worker_snackbar",
-			Body: VSnackbar().ModelValue(true).Timeout(3000).Color("warning").Children(
+		er.UpdatePortal("worker_snackbar",
+			VSnackbar().ModelValue(true).Timeout(3000).Color("warning").Children(
 				Text(msgr.NoticeJobCannotBeAborted),
-			),
-		})
+			))
 		er.Reload = true
 		return er, nil
 	}
@@ -657,7 +653,7 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 }
 
 func (b *Builder) eventUpdateJobProgressing(ctx *web.EventContext) (er web.EventResponse, err error) {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nWorkerKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
 
 	qorJobID := uint(ctx.ParamAsInt("jobID"))
 	qorJobName := ctx.R.FormValue("job")
@@ -730,12 +726,7 @@ func (b *Builder) eventLoadHiddenLogs(ctx *web.EventContext) (er web.EventRespon
     margin: 0;
     margin-bottom: 4px;`).Children(Text(logs[i].Log)))
 	}
-	er.UpdatePortals = append(er.UpdatePortals,
-		&web.PortalUpdate{
-			Name: "worker_hiddenLogs",
-			Body: Div(logLines...),
-		},
-	)
+	er.UpdatePortal("worker_hiddenLogs", Div(logLines...))
 	return er, nil
 }
 
@@ -851,7 +842,7 @@ func (b *Builder) jobSelectList(
 		if !jb.global {
 			continue
 		}
-		label := getTJob(ctx.R, jb.name)
+		label := getTJob(ctx.Context(), jb.name)
 		if editIsAllowed(ctx.R, jb.name) == nil {
 			items = append(items,
 				VListItem(
@@ -879,7 +870,7 @@ func (b *Builder) jobSelectList(
 						Go(),
 				),
 			).Class("mb-3"),
-			Div(Text(getTJob(ctx.R, job))).Class("mb-3 text-h6").Style("font-weight: inherit"),
+			Div(Text(getTJob(ctx.Context(), job))).Class("mb-3 text-h6").Style("font-weight: inherit"),
 		),
 	)
 }
@@ -904,5 +895,5 @@ func (b *Builder) jobEditingContent(
 	if jb.rmb == nil {
 		return Template()
 	}
-	return jb.rmb.Editing().ToComponent(jb.rmb.Info(), argsObj, presets.FieldModeStack{presets.EDIT}, ctx)
+	return jb.rmb.Editing().ToComponent(argsObj, presets.FieldModeStack{presets.EDIT}, ctx)
 }

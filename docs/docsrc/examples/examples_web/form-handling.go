@@ -96,7 +96,7 @@ World`
 						FieldValue("name", "azuma").
 						Go()),
 				),
-			).VSlot("{ form, locals }"),
+			).Slot("{ form, locals }"),
 			web.Scope(
 				Fieldset(
 					Legend("Nested Form 2"),
@@ -111,7 +111,7 @@ World`
 						EventFunc("checkvalue").
 						Go()),
 				),
-			).VSlot("{ form, locals }"),
+			).Slot("{ form, locals }"),
 			Div(
 				Fieldset(
 					Legend("Radio"),
@@ -176,7 +176,7 @@ World`
 			Div(
 				Button("Submit").Attr("@click", web.POST().EventFunc("checkvalue").Go()),
 			),
-		).VSlot("{ locals, form }"),
+		).Slot("{ locals, form }"),
 	)
 	return
 }

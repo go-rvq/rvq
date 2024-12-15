@@ -24,7 +24,7 @@ func (b *ListingBuilder) listingComponentBuilder(
 	return NewListingComponentBuilder(b, portals)
 }
 
-func (b *ListingBuilder) listingComponentBuilderCtx(
+func (b *ListingBuilder) ListingComponentBuilderCtx(
 	ctx *web.EventContext,
 ) *ListingComponentBuilder {
 	ctx.R.Form.Set(ParamPortalID, GetOrNewPortalID(ctx.R))
@@ -34,7 +34,7 @@ func (b *ListingBuilder) listingComponentBuilderCtx(
 func (b *ListingBuilder) listingComponent(
 	ctx *web.EventContext,
 ) (h.HTMLComponent, error) {
-	return b.listingComponentBuilderCtx(ctx).Build(ctx)
+	return b.ListingComponentBuilderCtx(ctx).Build(ctx)
 }
 
 func (lcb *ListingComponentBuilder) Portals() *ListingPortals {
@@ -57,7 +57,7 @@ func (lcb *ListingComponentBuilder) SetSelection(selection bool) *ListingCompone
 func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLComponent, err error) {
 	b := lcb.b
 	inDialog := IsInDialog(ctx)
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	portalID := GetPortalID(ctx.R)
 
 	var actionsBar h.HTMLComponent
@@ -81,52 +81,55 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 		fd.SetByQueryString(ctx.R.URL.RawQuery)
 		filterBar = b.filterBar(ctx, msgr, fd, inDialog)
 	}
-	searchBoxDefault := VResponsive(
-		web.Scope(
-			VRow(
-				VCol(
-					VTextField(
-						web.Slot(VIcon("mdi-magnify")).Name("append-inner"),
-					).Density(DensityCompact).
-						Variant(FieldVariantOutlined).
-						Label(msgr.Search).
-						Flat(true).
-						Clearable(true).
-						HideDetails(true).
-						SingleLine(true).
-						ModelValue(ctx.R.URL.Query().Get("keyword")).
-						Attr("@keyup.enter", web.Plaid().
-							ClearMergeQuery("page").
-							Query("keyword", web.Var("[$event.target.value]")).
-							MergeQuery(true).
-							PushState(true).
-							Go()).
-						Attr("@click:clear", web.Plaid().
-							Query("keyword", "").
-							PushState(true).
-							Go()),
+	var searchBoxDefault h.HTMLComponent
+	if b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible {
+		searchBoxDefault = VResponsive(
+			web.Scope(
+				VRow(
+					VCol(
+						VTextField(
+							web.Slot(VIcon("mdi-magnify")).Name("append-inner"),
+						).Density(DensityCompact).
+							Variant(FieldVariantOutlined).
+							Label(msgr.Search).
+							Flat(true).
+							Clearable(true).
+							HideDetails(true).
+							SingleLine(true).
+							ModelValue(ctx.R.URL.Query().Get("keyword")).
+							Attr("@keyup.enter", web.Plaid().
+								ClearMergeQuery("page").
+								Query("keyword", web.Var("[$event.target.value]")).
+								MergeQuery(true).
+								PushState(true).
+								Go()).
+							Attr("@click:clear", web.Plaid().
+								Query("keyword", "").
+								PushState(true).
+								Go()),
+					),
+					VCol(
+						VBtn("").
+							Theme("dark").
+							// Size(SizeSmall).
+							Attr("@click", web.Plaid().
+								PushState(true).
+								Go()).
+							Icon(true).
+							Density("comfortable").
+							Children(VIcon("mdi-reload")),
+					).Attr("style", "flex-grow: 0;padding-left:0"),
 				),
-				VCol(
-					VBtn("").
-						Theme("dark").
-						// Size(SizeSmall).
-						Attr("@click", web.Plaid().
-							PushState(true).
-							Go()).
-						Icon(true).
-						Density("comfortable").
-						Children(VIcon("mdi-reload")),
-				).Attr("style", "flex-grow: 0;padding-left:0"),
-			),
-		).VSlot("{ locals }").Init(`{isFocus: false}`),
-	)
+			).Slot("{ locals }").LocalsInit(`{isFocus: false}`),
+		)
+	}
 
 	var (
 		dataTable          h.HTMLComponent
 		dataTableAdditions h.HTMLComponent
 	)
 
-	if dataTable, dataTableAdditions, err = lcb.getTableComponents(ctx); err != nil {
+	if dataTable, dataTableAdditions, err = lcb.GetTableComponents(ctx); err != nil {
 		return
 	}
 
@@ -146,7 +149,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 			Mode: actions.Dialog,
 		},
 		TopRightActions: GetActionsComponent(ctx),
-		Scope:           web.Scope().VSlot("{ locals, closer, form }").Init(`{currEditingListItemID: ""}`),
+		Scope:           web.Scope().Slot("{ locals, closer, form }").LocalsInit(`{currEditingListItemID: ""}`),
 	}
 
 	if actionsBar != nil {
@@ -156,7 +159,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	if inDialog {
 		cb.Title = b.title
 		if cb.Title == "" {
-			cb.Title = msgr.ListingObjectTitle(i18n.T(ctx.R, ModelsI18nModuleKey, b.mb.pluralLabel))
+			cb.Title = msgr.ListingObjectTitle(i18n.T(ctx.Context(), ModelsI18nModuleKey, b.mb.pluralLabel))
 		}
 
 		if b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible {
@@ -205,7 +208,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 								Children(VIcon("mdi-reload")),
 						).Attr("style", "flex-grow: 0;padding-left:0"),
 					),
-				).VSlot("{ locals }").Init(`{isFocus: false}`),
+				).Slot("{ locals }").LocalsInit(`{isFocus: false}`),
 			).Width(100)
 		}
 
@@ -244,5 +247,5 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 				),
 			),
 		),
-	).VSlot("{ locals }").Init(`{currEditingListItemID: ""}`), nil
+	).Slot("{ locals }").LocalsInit(`{currEditingListItemID: ""}`), nil
 }

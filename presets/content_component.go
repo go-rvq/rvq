@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"fmt"
+
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	. "github.com/qor5/x/v3/ui/vuetify"
@@ -77,6 +79,7 @@ type ContentComponentBuilder struct {
 	Body            h.HTMLComponent
 	Scope           *web.ScopeBuilder
 	MainPortals     h.HTMLComponents
+	Notices         h.HTMLComponents
 }
 
 func (b *ContentComponentBuilder) scoped(comp h.HTMLComponent) h.HTMLComponent {
@@ -96,7 +99,16 @@ func (b *ContentComponentBuilder) build(comp h.HTMLComponent) h.HTMLComponent {
 }
 
 func (b *ContentComponentBuilder) JoinedBody() h.HTMLComponent {
-	return append(b.PreBody, append(h.HTMLComponents{b.Body}, b.PostBody...)...)
+	comps := append(b.Notices, b.PreBody...)
+	if b.Body != nil {
+		comps = append(comps, b.Body)
+	}
+
+	comps = append(comps, b.PostBody...)
+	if len(comps) == 0 {
+		return nil
+	}
+	return comps
 }
 
 func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
@@ -119,7 +131,9 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		headerRight = append(headerRight, b.PrimaryAction)
 	}
 
-	if !b.Overlay.FullscreenDisabled {
+	body := b.JoinedBody()
+
+	if body != nil && !b.Overlay.FullscreenDisabled {
 		headerRight = append(headerRight, FullScreenBtn())
 	}
 
@@ -158,8 +172,6 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		bottom = append(h.HTMLComponents{VDivider()}, bottom...)
 	}
 
-	body := b.JoinedBody()
-
 	if len(b.Tabs) > 0 {
 		var tabs h.HTMLComponents
 		var contents []h.HTMLComponent
@@ -172,7 +184,7 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		}
 		t := h.HTMLComponents{
 			VTabs(
-				VTab(h.Text(MustGetMessages(b.Context.R).FormTitle)).Value("default"),
+				VTab(h.Text(MustGetMessages(b.Context.Context()).FormTitle)).Value("default"),
 				h.Components(tabs...),
 			).Class("v-tabs--fixed-tabs").Attr("v-model", "locals.tab"),
 
@@ -187,13 +199,11 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		if b.Scope != nil {
 			b.Scope.AppendInit("{tab: 'default'}")
 		} else {
-			body = web.Scope(t).VSlot("{ locals }").Init(`{tab: 'default'}`)
+			body = web.Scope(t).Slot("{ locals }").LocalsInit(`{tab: 'default'}`)
 		}
 	}
 
-	var (
-		roots = h.HTMLComponents{header}
-	)
+	roots := h.HTMLComponents{header}
 
 	if len(b.Menu) > 0 {
 		layout := VLayout(
@@ -204,14 +214,16 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 				Location(LocationLeft).
 				Floating(true).
 				Temporary(true),
-			body).
+			h.Div(body).Attr("style", `width:inherit;height:inherit;overflow:auto`)).
 			Width("100%").
 			Height("100%")
 		layout.SetAttr("style", "display: block;")
 		body = VMain(layout)
 	}
 
-	roots = append(roots, VCardText(body).Class("no-padding"))
+	if body != nil {
+		roots = append(roots, VCardText(body))
+	}
 
 	roots = append(roots, bottom...)
 
@@ -249,7 +261,7 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 		}
 		body = web.Scope(
 			VTabs(
-				VTab(h.Text(MustGetMessages(b.Context.R).FormTitle)).Value("default"),
+				VTab(h.Text(MustGetMessages(b.Context.Context()).FormTitle)).Value("default"),
 				h.Components(tabs...),
 			).Class("v-tabs--fixed-tabs").Attr("v-model", "locals.tab"),
 
@@ -259,7 +271,7 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 				).Value("default"),
 				h.Components(contents...),
 			).Attr("v-model", "locals.tab"),
-		).VSlot("{ locals }").Init(`{tab: 'default'}`)
+		).Slot("{ locals }").LocalsInit(`{tab: 'default'}`)
 	}
 
 	if len(b.Menu) > 0 {
@@ -282,4 +294,33 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 				body,
 			),
 		))
+}
+
+func (b *ContentComponentBuilder) Notice(v any) *ContentComponentBuilder {
+	var (
+		color, text string
+	)
+	switch t := v.(type) {
+	case *web.ValidationErrors:
+		gErr := t.GetGlobalError()
+		if len(gErr) > 0 {
+			text = gErr
+			color = "error"
+		}
+	case error:
+		color = "error"
+		text = t.Error()
+	case string:
+		text = t
+	case h.HTMLComponent:
+		b.Notices = append(b.Notices, t)
+		return b
+	default:
+		text = fmt.Sprintf("%v", t)
+	}
+
+	if text != "" {
+		b.Notices = append(b.Notices, RenderFlash(text, color))
+	}
+	return b
 }

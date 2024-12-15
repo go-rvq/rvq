@@ -75,7 +75,7 @@ func HelloVuetifyMenu(ctx *web.EventContext) (pr web.PageResponse, err error) {
 			).CloseOnContentClick(false).
 				Location("end").
 				Attr("v-model", "locals.myMenuShow"),
-		).VSlot("{ locals, form }").Init("{ myMenuShow: false }").FormInit(JSONString(fv)),
+		).Locals().Form().LocalsInit("{ myMenuShow: false }").FormInit(JSONString(fv)),
 	)
 
 	return
@@ -92,7 +92,7 @@ func favoredIcon() HTMLComponent {
 
 func toggleFavored(ctx *web.EventContext) (er web.EventResponse, err error) {
 	globalFavored = !globalFavored
-	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
+	er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
 		Name: favoredIconPortalName,
 		Body: favoredIcon(),
 	})

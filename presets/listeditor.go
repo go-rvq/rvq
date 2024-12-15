@@ -82,7 +82,7 @@ func (b *ListEditorBuilder) SortListItemsEvent(v string) (r *ListEditorBuilder) 
 }
 
 func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
-	msgr := MustGetMessages(ctx.R)
+	msgr := MustGetMessages(ctx.Context())
 	formKey := b.fieldContext.FormKey
 	var form h.HTMLComponent
 	if b.value != nil {
@@ -95,8 +95,6 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 								URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 								EventFunc(b.removeListItemRowEvent).
 								Queries(ctx.Queries()).
-								Query(ParamID, ctx.R.FormValue(ParamID)).
-								Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
 								Query(ParamRemoveRowFormKey, formKey).
 								Go()),
 					),
@@ -194,27 +192,33 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 						Attr("@click", web.Plaid().
 							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 							EventFunc(b.addListItemRowEvent).
-							Queries(ctx.Queries()).
-							Query(ParamID, ctx.R.FormValue(ParamID)).
-							Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
-							Query(ParamAddRowFormKey, b.fieldContext.FormKey).
+							Queries(web.Query(ctx.Queries()).
+								Set(ParamID, ctx.R.FormValue(ParamID)).
+								Set(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
+								SetValid(ParamTargetPortal, ctx.R.FormValue(ParamTargetPortal)).
+								Set(ParamAddRowFormKey, b.fieldContext.FormKey).
+								URLValues()).
 							Go(),
 						),
 				),
 			).Attr("v-show", h.JSONString(!isSortStart)).
 				Class("mt-1 mb-4"),
-		).Init(h.JSONString(sorterData)).VSlot("{ locals }"),
+		).LocalsInit(h.JSONString(sorterData)).Slot("{ locals }"),
 	)
 }
 
 func addListItemRow(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		var mid ID
+		if mid, err = mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
+			return
+		}
+
 		me := mb.Editing()
-		id := ctx.R.FormValue(ParamID)
-		if id == "" {
+		if mid.IsZero() {
 			me = me.CreatingBuilder()
 		}
-		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
+		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
 		formKey := ctx.R.FormValue(ParamAddRowFormKey)
 		t := reflectutils.GetType(obj, formKey+"[0]")
 		if t.Kind() == reflect.Ptr {
@@ -224,7 +228,9 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 		if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
 			return
 		}
-		me.form(obj, ctx).Respond(&r)
+
+		f := me.form(obj, ctx)
+		f.Respond(&r)
 		return
 	}
 }
@@ -232,11 +238,14 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		me := mb.Editing()
-		id := ctx.R.FormValue(ParamID)
-		if id == "" {
+		var mid ID
+		if mid, err = mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
+			return
+		}
+		if mid.IsZero() {
 			me = me.CreatingBuilder()
 		}
-		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
+		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
 
 		formKey := ctx.R.FormValue(ParamRemoveRowFormKey)
 		lb := strings.LastIndex(formKey, "[")
@@ -249,8 +258,8 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 			return
 		}
 		ContextModifiedIndexesBuilder(ctx).AppendDeleted(sliceField, index)
-		me.form(obj, ctx).Respond(&r)
-		r.RunScript = fmt.Sprintf(`form["%s"]=null;`, formKey)
+		f := me.form(obj, ctx)
+		f.Respond(&r)
 		return
 	}
 }
@@ -258,11 +267,11 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 func sortListItems(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		me := mb.Editing()
-		id := ctx.R.FormValue(ParamID)
-		if id == "" {
-			me = me.CreatingBuilder()
+		var mid ID
+		if mid, err = mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
+			return
 		}
-		obj, _ := me.FetchAndUnmarshal(id, false, ctx)
+		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
 		sortSectionFormKey := ctx.R.FormValue(ParamSortSectionFormKey)
 
 		isStartSort := ctx.R.FormValue(ParamIsStartSort)
@@ -280,8 +289,8 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			}
 			ContextModifiedIndexesBuilder(ctx).SetSorted(sortSectionFormKey, indexes)
 		}
-		me.form(obj, ctx).Respond(&r)
-		r.RunScript += ";console.log(locals)"
+		f := me.form(obj, ctx)
+		f.Respond(&r)
 		return
 	}
 }

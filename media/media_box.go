@@ -217,16 +217,16 @@ func fileThumb(filename string) h.HTMLComponent {
 
 func deleteConfirmation(mb *presets.ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
 		field := ctx.R.FormValue("field")
 		id := ctx.R.FormValue("id")
 		cfg := ctx.R.FormValue("cfg")
 
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: deleteConfirmPortalName(field),
-			Body: VDialog(
+		r.UpdatePortal(
+			deleteConfirmPortalName(field),
+			VDialog(
 				VCard(
-					VCardTitle(h.Text(msgr.DeleteConfirmationText(mb.TTitle(ctx.R), mb.TTheTitle(ctx.R), id))),
+					VCardTitle(h.Text(msgr.DeleteConfirmationText(mb.TTitle(ctx.Context()), mb.TTheTitle(ctx.Context()), id))),
 					VCardActions(
 						VSpacer(),
 						VBtn(msgr.Cancel).
@@ -249,7 +249,7 @@ func deleteConfirmation(mb *presets.ModelBuilder) web.EventFunc {
 			).MaxWidth("600px").
 				Attr("v-model", "vars.mediaLibrary_deleteConfirmation").
 				Attr(web.VAssign("vars", `{mediaLibrary_deleteConfirmation: false}`)...),
-		})
+		)
 
 		r.RunScript = "setTimeout(function(){ vars.mediaLibrary_deleteConfirmation = true }, 100)"
 		return
@@ -301,7 +301,7 @@ func doDelete(mb *Builder) web.EventFunc {
 }
 
 func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox, field string, cfg *media_library.MediaBoxConfig, disabled, readonly bool) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 	c := VContainer().Fluid(true)
 	if cfg.BackgroundColor != "" {
 		c.Attr("style", fmt.Sprintf("background-color: %s;", cfg.BackgroundColor))
@@ -420,10 +420,10 @@ func deleteFileField() web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
 		cfg := stringToCfg(ctx.R.FormValue("cfg"))
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: mediaBoxThumbnailsPortalName(field),
-			Body: mediaBoxThumbnails(ctx, &media_library.MediaBox{}, field, cfg, false, false),
-		})
+		r.UpdatePortal(
+			mediaBoxThumbnailsPortalName(field),
+			mediaBoxThumbnails(ctx, &media_library.MediaBox{}, field, cfg, false, false),
+		)
 
 		return
 	}

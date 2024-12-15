@@ -36,14 +36,11 @@ func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 		db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", rt, ri).Count(&total)
 		db.Model(&userNote).UpdateColumn("Number", total)
 
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nNoteKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nNoteKey, Messages_en_US).(*Messages)
 		presets.ShowMessage(&r, msgr.SuccessfullyCreated, "")
 
 		notesSection := getNotesTab(ctx, db, rt, ri)
-		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
-			Name: "notes-section",
-			Body: notesSection,
-		})
+		r.UpdatePortal("notes-section", notesSection)
 
 		if b.afterCreateFunc != nil {
 			if err = b.afterCreateFunc(db); err != nil {

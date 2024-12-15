@@ -12,20 +12,23 @@ func (b *EditingBuilder) doUpdate(
 	// will not close drawer/dialog
 	silent bool,
 ) (err error) {
-	id := ctx.R.FormValue(ParamID)
-	if id == "" && !b.mb.singleton {
-		return MustGetMessages(ctx.R).ErrEmptyParamID
+	var mid ID
+	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+	if mid.IsZero() && !b.mb.singleton {
+		return MustGetMessages(ctx.Context()).ErrEmptyParamID
 	}
 
 	usingB := b
 
-	obj, vErr := usingB.FetchAndUnmarshal(id, true, ctx)
+	obj, vErr := usingB.FetchAndUnmarshal(mid, true, ctx)
 	if vErr.HaveErrors() {
 		usingB.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
 	}
 
-	if !b.CanEditObj(ctx, obj) {
+	if !b.CanEditObj(obj, ctx) {
 		b.UpdateOverlayContent(ctx, r, obj, "", perm.PermissionDenied)
 		return perm.PermissionDenied
 	}
@@ -45,7 +48,7 @@ func (b *EditingBuilder) doUpdate(
 		return &vErr
 	}
 
-	err1 := usingB.Saver(obj, id, ctx)
+	err1 := usingB.Saver(obj, mid, ctx)
 	if err1 != nil {
 		usingB.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
@@ -56,7 +59,7 @@ func (b *EditingBuilder) doUpdate(
 
 	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
 		cb := web.DecodeCallback(postSaveConfig)
-		web.AppendRunScripts(r, web.ApplyChangeEvent(cb.Script(), web.Updated, id))
+		web.AppendRunScripts(r, web.ApplyChangeEvent(cb.Script(), web.Updated, mid.String()))
 		r.ReloadPortals = append(r.ReloadPortals, cb.ReloadPortals...)
 	}
 
@@ -71,7 +74,7 @@ func (b *EditingBuilder) doUpdate(
 func (b *EditingBuilder) defaultUpdate(ctx *web.EventContext) (r web.EventResponse, err error) {
 	uErr := b.doUpdate(ctx, &r, false)
 	if uErr == nil {
-		msgr := MustGetMessages(ctx.R)
+		msgr := MustGetMessages(ctx.Context())
 		ShowMessage(&r, msgr.SuccessfullyUpdated, "")
 	}
 	return r, nil

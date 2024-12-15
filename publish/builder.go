@@ -13,6 +13,7 @@ import (
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/utils"
+	utils2 "github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
 	"github.com/sunfmin/reflectutils"
 	"github.com/theplant/htmlgo"
@@ -50,74 +51,96 @@ func (b *Builder) AfterInstall(f func()) *Builder {
 }
 
 func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) error {
-	db := b.db
-	ab := b.ab
-
 	obj := m.NewModel()
 	_ = obj.(presets.SlugEncoder)
 	_ = obj.(presets.SlugDecoder)
 
+	var withVersion bool
+
 	if model, ok := obj.(VersionInterface); ok {
+		withVersion = true
 		if schedulePublishModel, ok := model.(ScheduleInterface); ok {
-			VersionPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
+			VersionPublishModels[m.Info().URI()] = &Model{
+				Record:  reflect.ValueOf(schedulePublishModel).Elem().Interface(),
+				Builder: m,
+			}
 		}
 
-		b.configVersionAndPublish(pb, m, db)
+		b.configVersionAndPublish(pb, m)
 	} else {
 		if schedulePublishModel, ok := obj.(ScheduleInterface); ok {
-			NonVersionPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
+			NonVersionPublishModels[m.Info().URI()] = &Model{
+				Record:  reflect.ValueOf(schedulePublishModel).Elem().Interface(),
+				Builder: m,
+			}
 		}
 	}
 
 	if model, ok := obj.(ListInterface); ok {
 		if schedulePublishModel, ok := model.(ScheduleInterface); ok {
-			ListPublishModels[m.Info().URI()] = reflect.ValueOf(schedulePublishModel).Elem().Interface()
-		}
-	}
-
-	if _, ok := obj.(StatusInterface); ok {
-		if m.HasDetailing() {
-			detailFields := m.Detailing().GetSections()
-			for _, detailField := range detailFields {
-				wrapper := func(in presets.ObjectBoolFunc) presets.ObjectBoolFunc {
-					return func(obj interface{}, ctx *web.EventContext) bool {
-						return in(obj, ctx) && EmbedStatus(obj).Status == StatusDraft
-					}
-				}
-				detailField.WrapComponentEditBtnFunc(wrapper)
-				detailField.WrapComponentHoverFunc(wrapper)
+			ListPublishModels[m.Info().URI()] = &Model{
+				Record:  reflect.ValueOf(schedulePublishModel).Elem().Interface(),
+				Builder: m,
 			}
 		}
 	}
 
-	registerEventFuncsForResource(db, m, b, ab)
+	if _, ok := obj.(StatusInterface); ok {
+		if !withVersion {
+			b.configVersionAndPublish(pb, m)
+		}
+		detailFields := m.Detailing().GetSections()
+		for _, detailField := range detailFields {
+			wrapper := func(in presets.ObjectBoolFunc) presets.ObjectBoolFunc {
+				return func(obj interface{}, ctx *web.EventContext) bool {
+					return in(obj, ctx) && EmbedStatus(obj).Status == StatusDraft
+				}
+			}
+			detailField.WrapComponentEditBtnFunc(wrapper)
+			detailField.WrapComponentHoverFunc(wrapper)
+		}
+	}
+
+	registerEventFuncsForResource(m, b)
 	return nil
 }
 
-func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelBuilder, db *gorm.DB) {
-	ed := m.Editing()
-	creating := ed.Creating().Except(VersionsPublishBar)
+func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelBuilder) {
+	ed := m.Editing().HiddenField(FieldOnlineUrl)
+	creating := ed.Creating().HiddenField(FieldOnlineUrl).Except(VersionsPublishBar, FieldStatus)
 	detailing := m.Detailing()
 
-	fb := detailing.GetField(VersionsPublishBar)
-	if fb != nil && fb.GetCompFunc() == nil {
-		fb.ComponentFunc(DefaultVersionComponentFunc(m))
-	}
+	detailing.HiddenField(FieldOnlineUrl).Field(VersionsPublishBar).ComponentFunc(DefaultVersionComponentFunc(m))
+	listing := m.Listing()
 
-	m.Listing().WrapSearchFunc(makeSearchFunc(m, db))
-	m.Listing().RowMenu().RowMenuItem("Delete").ComponentFunc(func(rctx *presets.RecordMenuItemContext) htmlgo.HTMLComponent {
-		// DeleteRowMenu should be disabled when using the version interface
-		return nil
+	listing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
+		return func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
+			if obj, err = Unpublish(m, b, ActivityUnPublish, ctx, id); err != nil {
+				return
+			}
+			return in(obj, id, ctx)
+		}
 	})
 
-	setter := makeSetVersionSetterFunc(db)
-	ed.WrapSetterFunc(setter)
-	creating.WrapSetterFunc(setter)
+	if _, ok := m.Model().(VersionInterface); ok {
+		panic("test deletion only by version")
 
-	m.Listing().Field(ListingFieldDraftCount).ComponentFunc(draftCountFunc(db))
-	m.Listing().Field(ListingFieldLive).ComponentFunc(liveFunc(db))
+		listing.WrapSearchFunc(makeSearchFunc(m, b.db))
+		listing.RowMenu().RowMenuItem("Delete").ComponentFunc(func(rctx *presets.RecordMenuItemContext) htmlgo.HTMLComponent {
+			// DeleteRowMenu should be disabled when using the version interface
+			return nil
+		})
 
-	configureVersionListDialog(db, pb, m)
+		setter := makeSetVersionSetterFunc(b.db)
+		ed.WrapPostSetterFunc(setter)
+		creating.WrapPostSetterFunc(setter)
+		configureVersionListDialog(b.db, pb, m)
+	}
+
+	listing.Field(ListingFieldDraftCount).ComponentFunc(draftCountFunc(b.db))
+	listing.Field(ListingFieldLive).ComponentFunc(liveFunc(b.db))
+
+	detailing.Field(ListingFieldLive).ComponentFunc(liveFunc(b.db))
 }
 
 func makeSearchFunc(mb *presets.ModelBuilder, db *gorm.DB) func(searcher presets.SearchFunc) presets.SearchFunc {
@@ -234,12 +257,23 @@ func (b *Builder) WithContextValues(ctx context.Context) context.Context {
 }
 
 // 幂等
-func (b *Builder) Publish(record interface{}, ctx context.Context) (err error) {
-	err = utils.Transact(b.db, func(tx *gorm.DB) (err error) {
+func (b *Builder) Publish(mb *presets.ModelBuilder, record interface{}, ctx context.Context) (err error) {
+	err = utils2.Transact(b.db, func(tx *gorm.DB) (err error) {
+		if cb, ok := mb.GetData(ModelPublishCallbackKey).(ModelPublishCallback); ok {
+			var done func(err error) error
+			if done, err = cb(tx, ctx, record); err != nil {
+				return
+			}
+			if done != nil {
+				defer func() {
+					err = done(err)
+				}()
+			}
+		}
 		// publish content
 		if r, ok := record.(PublishInterface); ok {
 			var objs []*PublishAction
-			objs, err = r.GetPublishActions(b.db, ctx, b.storage)
+			objs, err = r.GetPublishActions(mb, b.db, ctx, b.storage)
 			if err != nil {
 				return
 			}
@@ -301,12 +335,24 @@ func (b *Builder) Publish(record interface{}, ctx context.Context) (err error) {
 	return
 }
 
-func (b *Builder) UnPublish(record interface{}, ctx context.Context) (err error) {
-	err = utils.Transact(b.db, func(tx *gorm.DB) (err error) {
+func (b *Builder) UnPublish(mb *presets.ModelBuilder, record interface{}, ctx context.Context) (err error) {
+	err = utils2.Transact(b.db, func(tx *gorm.DB) (err error) {
+		if cb, ok := mb.GetData(ModelUnpublishCallbackKey).(ModelUnpublishCallback); ok {
+			var done func(err error) error
+			if done, err = cb(tx, ctx, record); err != nil {
+				return
+			}
+			if done != nil {
+				defer func() {
+					err = done(err)
+				}()
+			}
+		}
+
 		// unpublish content
 		if r, ok := record.(UnPublishInterface); ok {
 			var objs []*PublishAction
-			objs, err = r.GetUnPublishActions(b.db, ctx, b.storage)
+			objs, err = r.GetUnPublishActions(mb, b.db, ctx, b.storage)
 			if err != nil {
 				return
 			}

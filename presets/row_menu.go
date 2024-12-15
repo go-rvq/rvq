@@ -87,10 +87,13 @@ func (b *RowMenuBuilder) RowMenuItem(name string) *RowMenuItemBuilder {
 	b.defaultListings = append(b.defaultListings, name)
 
 	b.mb.RegisterEventFunc(ib.eventID, func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		id := ctx.R.FormValue(ParamID)
+		var mid ID
+		if mid, err = b.mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
+			return
+		}
 		if ib.permAction != "" {
 			obj := b.mb.NewModel()
-			err = b.mb.editing.Fetcher(obj, id, ctx)
+			err = b.mb.editing.Fetcher(obj, mid, ctx)
 			if err != nil {
 				return r, err
 			}
@@ -102,7 +105,7 @@ func (b *RowMenuBuilder) RowMenuItem(name string) *RowMenuItemBuilder {
 		if ib.clickF == nil {
 			return r, nil
 		}
-		return ib.clickF(ctx, id)
+		return ib.clickF(ctx, mid.String())
 	})
 
 	return ib
@@ -150,7 +153,7 @@ func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) RecordMenuIte
 				VIcon(b.icon),
 			).Name("prepend"),
 
-			VListItemTitle(h.Text(i18n.PT(ctx.R, ModelsI18nModuleKey, strcase.ToCamel(b.rmb.mb.label+" RowMenuItem"), b.name))),
+			VListItemTitle(h.Text(i18n.PT(ctx.Context(), ModelsI18nModuleKey, strcase.ToCamel(b.rmb.mb.label+" RowMenuItem"), b.name))),
 		).Attr("@click", web.Plaid().
 			EventFunc(b.eventID).
 			Query(ParamID, id).

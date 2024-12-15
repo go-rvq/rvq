@@ -2,6 +2,7 @@ package base
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"image"
 	"io"
 	"strings"
@@ -52,6 +53,22 @@ type Size struct {
 	Sm int
 	// v-col col
 	Cols int
+}
+
+func NewSize(width int, height int, fix ...int) *Size {
+	if len(fix) > 0 {
+		width, height = FixDimension(fix[0], width, height)
+	}
+	return &Size{Width: width, Height: height}
+}
+
+func (s *Size) FixDimension(max int) *Size {
+	s.Width, s.Height = FixDimension(max, s.Width, s.Height)
+	return s
+}
+
+func (s *Size) String() string {
+	return fmt.Sprintf("%dx%d", s.Width, s.Height)
 }
 
 // URLTemplater is a interface to return url template

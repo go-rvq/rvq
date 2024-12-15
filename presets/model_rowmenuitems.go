@@ -27,7 +27,7 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 			id  = rctx.ID
 		)
 
-		msgr := MustGetMessages(ctx.R)
+		msgr := MustGetMessages(ctx.Context())
 		if mi.mb.Info().Verifier().Do(PermUpdate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
 			return nil
 		}
@@ -65,8 +65,8 @@ func childRowMenuItemFunc(mb *ModelBuilder) RecordMenuItemFunc {
 			return nil
 		}
 
-		title := i18n.PT(ctx.Ctx.R, ModelsI18nModuleKey, mb.parent.label, humanizeString(label))
-		uri := mi.ListingHref(append(ParentsModelID(ctx.Ctx.R), ID{Value: ctx.ID})...)
+		title := i18n.PT(ctx.Ctx.Context(), ModelsI18nModuleKey, mb.parent.label, HumanizeString(label))
+		uri := mi.ListingHref(append(ParentsModelID(ctx.Ctx.R), mb.parent.MustParseRecordID(ctx.ID))...)
 		return VListItem(
 			web.Slot(
 				VIcon(mi.mb.menuIcon),

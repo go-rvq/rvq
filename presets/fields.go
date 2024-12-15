@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/mpvl/unique"
+	"github.com/qor5/admin/v3/model"
 
 	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
@@ -38,7 +38,7 @@ type NameLabel struct {
 	name        string
 	label       string
 	labelKey    string
-	i18nLabel   func(r *http.Request) string
+	i18nLabel   func(ctx web.ContextValuer) string
 	hiddenLabel bool
 }
 
@@ -66,11 +66,11 @@ func (n *NameLabel) SetLabelKey(labelKey string) {
 	n.labelKey = labelKey
 }
 
-func (n *NameLabel) I18nLabel() func(r *http.Request) string {
+func (n *NameLabel) I18nLabel() func(ctx web.ContextValuer) string {
 	return n.i18nLabel
 }
 
-func (n *NameLabel) SetI18nLabel(i18nLabel func(r *http.Request) string) {
+func (n *NameLabel) SetI18nLabel(i18nLabel func(ctx web.ContextValuer) string) {
 	n.i18nLabel = i18nLabel
 }
 
@@ -82,12 +82,14 @@ func (n *NameLabel) SetHiddenLabel(hiddenLabel bool) {
 	n.hiddenLabel = hiddenLabel
 }
 
+type FieldLabelsFunc func(b *FieldsBuilder, ctx web.ContextValuer) map[string]string
+
 type FieldsBuilder struct {
-	builder     *Builder
-	model       interface{}
-	defaults    *FieldDefaults
-	fieldLabels []string
-	fields      FieldBuilders
+	builder                    *Builder
+	model                      interface{}
+	defaults                   *FieldDefaults
+	fieldLabelsFromContextFunc FieldLabelsFunc
+	fields                     FieldBuilders
 	// string / []string / *FieldsSection
 	fieldsLayout                 []interface{}
 	skipFieldVerifier            func(name string) bool
@@ -267,7 +269,7 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 
 		var label string
 		if !f.hiddenLabel {
-			label = b.getLabel(f.NameLabel)
+			label = b.GetLabel(ctx, f.NameLabel)
 		}
 
 		fctx := &FieldContext{
@@ -431,39 +433,42 @@ func (b *FieldsBuilder) Field(name string) (r *FieldBuilder) {
 	return
 }
 
-func (b *FieldsBuilder) Labels(vs ...string) (r *FieldsBuilder) {
-	b.fieldLabels = append(b.fieldLabels, vs...)
+func (b *FieldsBuilder) FieldLabelsFromContextFunc(f FieldLabelsFunc) (r *FieldsBuilder) {
+	b.fieldLabelsFromContextFunc = f
 	return b
 }
 
-// humanizeString humanize separates string based on capitalizd letters
-// e.g. "OrderItem" -> "Order Item, CNNName to CNN Name"
-func humanizeString(str string) string {
-	var human []rune
-	input := []rune(str)
-	for i, l := range input {
-		if i > 0 && unicode.IsUpper(l) {
-			if (!unicode.IsUpper(input[i-1]) && input[i-1] != ' ') || (i+1 < len(input) && !unicode.IsUpper(input[i+1]) && input[i+1] != ' ' && input[i-1] != ' ') {
-				human = append(human, rune(' '))
-			}
-		}
-		human = append(human, l)
+func (b *FieldsBuilder) WrapFieldLabelsFromContextFunc(f func(old FieldLabelsFunc) FieldLabelsFunc) (r *FieldsBuilder) {
+	if b.fieldLabelsFromContextFunc != nil {
+		b.fieldLabelsFromContextFunc = f(b.fieldLabelsFromContextFunc)
+	} else {
+		b.fieldLabelsFromContextFunc = f(func(b *FieldsBuilder, ctx web.ContextValuer) map[string]string {
+			return nil
+		})
 	}
-	return strings.Title(string(human))
+	return b
 }
 
-func (b *FieldsBuilder) getLabel(field NameLabel) (r string) {
+func (b *FieldsBuilder) GetFieldLabelsFromContext(ctx web.ContextValuer) (labels map[string]string) {
+	if labels = GetFieldLabels(ctx, b); labels == nil {
+		if b.fieldLabelsFromContextFunc != nil {
+			labels = b.fieldLabelsFromContextFunc(b, ctx)
+		}
+		WithFieldLabels(ctx, b, labels)
+	}
+	return
+}
+
+func (b *FieldsBuilder) GetLabel(ctx web.ContextValuer, field NameLabel) (s string) {
 	if len(field.label) > 0 {
 		return field.label
 	}
 
-	for i := 0; i < len(b.fieldLabels)-1; i = i + 2 {
-		if b.fieldLabels[i] == field.name {
-			return b.fieldLabels[i+1]
-		}
+	if s, ok := b.GetFieldLabelsFromContext(ctx)[field.name]; ok {
+		return s
 	}
 
-	return humanizeString(field.name)
+	return HumanizeString(field.name)
 }
 
 func (b *FieldsBuilder) GetFieldOrDefault(name string) (r *FieldBuilder) {
@@ -518,6 +523,10 @@ func (b *FieldsBuilder) Prepend(names ...any) (r *FieldsBuilder) {
 	return b.Only(append(names, b.fieldsLayout...)...)
 }
 
+func (b *FieldsBuilder) Append(names ...any) (r *FieldsBuilder) {
+	return b.Only(append(b.fieldsLayout, names...)...)
+}
+
 func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
 	if len(vs) == 0 {
 		return b
@@ -526,13 +535,20 @@ func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
 	r = b.Clone()
 
 	r.fieldsLayout = vs
-	var newFields []*FieldBuilder
+	var (
+		newFields []*FieldBuilder
+		exists    = make(map[string]any)
+	)
 	for _, fn := range r.getFieldNamesFromLayout() {
-		field := b.GetField(fn)
-		if field != nil {
-			newFields = append(newFields, field)
+		if _, ok := exists[fn]; !ok {
+			exists[fn] = nil
+			field := b.GetField(fn)
+			if field != nil {
+				newFields = append(newFields, field)
+			}
 		}
 	}
+
 	r.fields = newFields
 	return
 }
@@ -587,6 +603,7 @@ func (b *FieldsBuilder) Except(patterns ...string) (r *FieldsBuilder) {
 	}
 
 	r = b.Clone()
+	r.fields = nil
 
 	for _, f := range b.fields {
 		if hasMatched(patterns, f.name) {
@@ -637,7 +654,10 @@ func (b *FieldsBuilder) toComponentWithModifiedIndexes(info *ModelInfo, obj inte
 }
 
 func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) h.HTMLComponent {
-	var comps []h.HTMLComponent
+	var (
+		comps   []h.HTMLComponent
+		okNames = make(map[string]any)
+	)
 
 	if parentFormValueKey == "" {
 		comps = append(comps, modifiedIndexes.ToFormHidden())
@@ -648,15 +668,14 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 		vErr = &web.ValidationErrors{}
 	}
 
-	if !mode.Dot().Is(LIST, DETAIL) {
-		if id, _, _ := info.GetID(obj); id.IsZero() {
+	// changes mode if not is embedded
+	if model.HasPrimaryFields(info.Schema()) && !mode.Dot().Is(LIST, DETAIL) {
+		if id, _, _ := info.LookupID(obj); id.IsZero() {
 			mode = append(mode, NEW)
-		} else {
-			mode = append(mode, EDIT)
 		}
+	} else {
+		mode = append(mode, EDIT)
 	}
-
-	layout := b.CurrentLayout()
 
 	for _, f := range b.beginComponentFuncs {
 		comps = append(comps, f(info, obj, mode, parentFormValueKey, ctx))
@@ -669,14 +688,25 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 		}
 	}
 
+	layout := b.CurrentLayout()
+
 	for _, iv := range layout {
 		var comp h.HTMLComponent
 		switch t := iv.(type) {
 		case string:
+			if _, ok := okNames[t]; ok {
+				continue
+			}
+			okNames[t] = nil
+
 			comp = b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, t, vErr)
 		case []string:
 			colsComp := make([]h.HTMLComponent, 0, len(t))
 			for _, n := range t {
+				if _, ok := okNames[n]; ok {
+					continue
+				}
+				okNames[n] = nil
 				fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, n, vErr)
 				if fComp == nil {
 					continue
@@ -691,6 +721,11 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 			for _, row := range t.Rows {
 				colsComp := make([]h.HTMLComponent, 0, len(row))
 				for _, n := range row {
+					if _, ok := okNames[n]; ok {
+						continue
+					}
+					okNames[n] = nil
+
 					fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, n, vErr)
 					if fComp == nil {
 						continue
@@ -726,7 +761,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {
 	f := b.GetFieldOrDefault(name)
 
-	if f.compFunc == nil && f.nested == nil {
+	if f.disabled || (f.compFunc == nil && f.nested == nil) {
 		return nil
 	}
 
@@ -735,7 +770,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 	}
 
 	var (
-		label          = f.RequestLabel(b, info, ctx.R)
+		label          = f.RequestLabel(info, ctx, b.GetLabel)
 		contextKeyPath = f.name
 		disabled       bool
 	)
@@ -761,7 +796,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		Name:         f.name,
 		FormKey:      contextKeyPath,
 		Label:        label,
-		Errors:       vErr.GetFieldErrors(f.name),
+		Errors:       vErr.GetFieldErrors(contextKeyPath),
 		Nested:       f.nested,
 		Context:      f.context,
 		ReadOnly:     disabled,
@@ -775,7 +810,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		return nil
 	}
 
-	return f.compFunc(fctx, ctx)
+	return f.ToComponent(fctx)
 }
 
 type RowFunc func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent
