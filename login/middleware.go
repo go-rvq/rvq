@@ -37,7 +37,6 @@ func MockCurrentUser(user any) func(next http.Handler) http.Handler {
 		})
 	}
 }
-
 func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) http.Handler {
 	mustLogin := true
 	autoRedirectToHomePage := true
@@ -71,6 +70,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				next.ServeHTTP(w, r)
 				return
 			}
+
 			if _, ok := whiteList[r.URL.Path]; ok {
 				next.ServeHTTP(w, r)
 				return
@@ -87,7 +87,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				if r.Method == http.MethodGet {
 					b.setContinueURL(w, r)
 				}
-				if path == b.loginPageURL {
+				if path == b.loginPageURL || !b.requireForRequest(r) {
 					next.ServeHTTP(w, r)
 				} else {
 					http.Redirect(w, r, b.loginPageURL, http.StatusFound)

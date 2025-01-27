@@ -200,7 +200,12 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 			if item == nil {
 				continue
 			}
-			opMenuItems = append(opMenuItems, item)
+
+			if comps, ok := item.(h.HTMLComponents); ok {
+				opMenuItems = append(opMenuItems, comps...)
+			} else {
+				opMenuItems = append(opMenuItems, item)
+			}
 		}
 		if len(opMenuItems) > 0 {
 			objRowMenusMap[id] = opMenuItems
@@ -270,7 +275,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 						HideDetails(true).
 						Attr("v-model", "itemLocals.inputValue").
 						Attr("@update:model-value", onChange+";locals.selected_count+=($event?1:-1);"),
-				).VSlot("{ locals: itemLocals }").Init(fmt.Sprintf(`{ inputValue :"%v"} `, inputValue)),
+				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ inputValue :"%v"} `, inputValue)),
 			).Class("pr-0"))
 		}
 
@@ -307,7 +312,8 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 
 						v.VList(
 							rowMenus...,
-						).Elevation(8),
+						).Density("compact").
+							Attr("slim", true),
 					),
 				).Style("width: 64px;").Class("pl-0")
 			} else {
@@ -391,7 +397,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 						HideDetails(true).
 						Attr("v-model", "itemLocals.allInputValue").
 						Attr("@update:model-value", onChange),
-				).VSlot("{ locals: itemLocals }").Init(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue)),
+				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue)),
 			).Style("width: 48px;").Class("pr-0"))
 		}
 
@@ -491,7 +497,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 			Class("bg-grey-lighten-3 text-center pt-2 pb-2").
 			Attr("v-show", "locals.selected_count > 0"),
 		vtable,
-	).VSlot("{ locals }").Init(fmt.Sprintf(` { selected_count : %v , loadmore : false }`, len(selected)))
+	).Slot("{ locals }").LocalsInit(fmt.Sprintf(` { selected_count : %v , loadmore : false }`, len(selected)))
 
 	if inPlaceLoadMore {
 		initContextLocalsMap[loadMoreVarName] = false

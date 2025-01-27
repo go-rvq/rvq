@@ -29,4 +29,5 @@ export interface FilterItem {
   options?: SelectOption[]
   translations?: IndependentTranslations
   linkageSelectData?: linkageSelectData
+  config?: any
 }

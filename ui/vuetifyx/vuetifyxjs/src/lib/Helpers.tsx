@@ -1,4 +1,4 @@
-import {h, VNode} from 'vue'
+import { h, VNode } from 'vue'
 
 export const Core = {
   props: {
@@ -28,7 +28,7 @@ export const slotTemplates = (slots: Slots): VNode[] => {
     if (!Object.getOwnPropertyDescriptor(slots, name)) {
       continue
     }
-    templates.push(h('<template slot = {name} > {slots[name]} < /template>'))
+    templates.push(h('<template slot={name}>{slots[name]}</template>'))
   }
   return templates
 }

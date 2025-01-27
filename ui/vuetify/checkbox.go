@@ -175,7 +175,7 @@ func (b *VCheckboxBuilder) FalseValue(v interface{}) (r *VCheckboxBuilder) {
 }
 
 func (b *VCheckboxBuilder) Value(v interface{}) (r *VCheckboxBuilder) {
-	b.Attr(":value", h.JSONString(v))
+	b.Attr(":model-value", h.JSONString(v))
 	return b
 }
 

@@ -2,8 +2,7 @@ import { App } from 'vue'
 
 import Datepicker from '@/lib/Datepicker.vue'
 import Datetimepicker from '@/lib/Datetimepicker.vue'
-import SelectMany from '@/lib/SelectMany.vue'
-import SelectOne from '@/lib/SelectOne.vue'
+import Monthpicker from '@/lib/Monthpicker.vue'
 import LinkageSelect from '@/lib/LinkageSelect.vue'
 import Autocomplete from '@/lib/Autocomplete.vue'
 import TextDatepicker from '@/lib/TextDatepicker.vue'
@@ -14,13 +13,17 @@ import draggable from 'vuedraggable'
 import SendVariables from '@/lib/SendVariables.vue'
 import MessageListener from '@/lib/MessageListener.vue'
 import DragListener from '@/lib/DragListener.vue'
+import AdvancedSelect from '@/lib/AdvancedSelect.vue'
+import TreeDataTable from '@/lib/TreeDataTable.vue'
+import TreeRows from '@/lib/TreeRows.vue'
+import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
 const vuetifyx = {
   install: (app: App) => {
     app.component('vx-datepicker', Datepicker)
     app.component('vx-datetimepicker', Datetimepicker)
-    app.component('vx-selectmany', SelectMany)
-    app.component('vx-selectone', SelectOne)
+    app.component('vx-monthpicker', Monthpicker)
+    app.component('vx-advanced-select', AdvancedSelect)
     app.component('vx-linkageselect', LinkageSelect)
     app.component('vx-filter', Filter)
     app.component('vx-autocomplete', Autocomplete)
@@ -31,6 +34,9 @@ const vuetifyx = {
     app.component('vx-send-variables', SendVariables)
     app.component('vx-messagelistener', MessageListener)
     app.component('vx-drag-listener', DragListener)
+    app.component('vx-tree-rows', TreeRows)
+    app.component('vx-tree-data-table', TreeDataTable)
+    app.component('vx-editorjs', EditorJS)
   }
 }
 declare const window: any

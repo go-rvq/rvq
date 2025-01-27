@@ -2,8 +2,8 @@ package i18n
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -35,24 +35,28 @@ func (d *DynaBuilder) Language(lang string) (r *DynaBuilder) {
 	return d
 }
 
-func T(req *http.Request, module ModuleKey, key string, args ...string) (r string) {
-	return PT(req, module, "", key, args...)
+func T(ctx context.Context, module ModuleKey, key string, args ...string) (r string) {
+	return PT(ctx, module, "", key, args...)
 }
 
-func PT(req *http.Request, module ModuleKey, prefix string, key string, args ...string) (r string) {
+func PT(ctx context.Context, module ModuleKey, prefix string, key string, args ...string) (r string) {
+	return PTFk(ctx, module, func() string { return strcase.ToCamel(prefix + " " + key) }, key, args...)
+}
+
+func PTFk(ctx context.Context, module ModuleKey, fFieldKey func() string, key string, args ...string) (r string) {
 	defaultVal := strings.NewReplacer(args...).Replace(key)
-	msgr := MustGetModuleMessages(req, module, nil)
+	msgr := MustGetModuleMessages(ctx, module, nil)
 	if msgr == nil {
 		return defaultVal
 	}
 
 	var builder *DynaBuilder
-	b := req.Context().Value(dynaBuilderKey)
+	b := ctx.Value(dynaBuilderKey)
 	if b != nil {
 		builder = b.(*DynaBuilder)
 	}
 
-	fieldKey := strcase.ToCamel(prefix + " " + key)
+	fieldKey := fFieldKey()
 	val, err := reflectutils.Get(msgr, fieldKey)
 	if err != nil {
 		if builder != nil {
@@ -107,13 +111,15 @@ func (d *DynaBuilder) PrettyMissingKeys() string {
 	buf := new(bytes.Buffer)
 	for module, missing := range d.missing {
 
-		buf.WriteString(fmt.Sprintf("For module %s, ", module))
+		buf.WriteString(fmt.Sprintf("\nFor module %s, ", module))
 		buf.WriteString("Missing the following translations\nCopy these to your Messages struct definition\n============================\n\n")
+
 		for _, kv := range missing.missingKeys {
 			_, _ = fmt.Fprintf(buf, "%s string\n", kv.key)
 		}
+
 		buf.WriteString("\n")
-		buf.WriteString(fmt.Sprintf("Copy these to your Messages struct values for language: `%s`\n\n", d.lang))
+		buf.WriteString(fmt.Sprintf("\nCopy these to your Messages struct values for language: `%s`\n\n", d.lang))
 		for _, kv := range missing.missingKeys {
 			_, _ = fmt.Fprintf(buf, "%s: %#+v,\n", kv.key, kv.val)
 		}

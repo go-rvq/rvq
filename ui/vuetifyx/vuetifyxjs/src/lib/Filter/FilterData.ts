@@ -42,6 +42,28 @@ function pushDateItem(segs: any, op: any) {
   pushKeyVal(segs, op.key, '', op.valueIs)
 }
 
+function pushMonthRangeItem(segs: any, op: any) {
+  const mod = op.modifier || constants.ModifierBetween
+
+  if (mod === constants.ModifierBetween) {
+    if (op.valueFrom) {
+      pushKeyVal(segs, op.key, 'gte', op.valueFrom)
+    }
+    if (op.valueTo) {
+      pushKeyVal(segs, op.key, 'lte', op.valueTo)
+    }
+    return
+  }
+}
+
+function pushMonthItem(segs: any, op: any) {
+  if (!op.valueIs) {
+    return
+  }
+
+  pushKeyVal(segs, op.key, '', op.valueIs)
+}
+
 function pushNumberItem(segs: any, op: any) {
   const mod = op.modifier || 'equals'
 
@@ -140,6 +162,12 @@ export function filterData(data: any): any {
       }
       if (op.itemType === 'DateItem') {
         pushDateItem(r, op)
+      }
+      if (op.itemType === 'MonthRangeItem') {
+        pushMonthRangeItem(r, op)
+      }
+      if (op.itemType === 'MonthItem') {
+        pushMonthItem(r, op)
       }
       if (op.itemType === 'NumberItem') {
         pushNumberItem(r, op)

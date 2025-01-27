@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ScrollIframe from '@/lib/ScrollIframe.vue'
-import {ref} from 'vue'
+import { ref } from 'vue'
 
 const srcdoc = ref(`
 <!DOCTYPE html>

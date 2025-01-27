@@ -58,7 +58,7 @@ func (b *PickerBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 		).Attr("v-model", fmt.Sprintf("locals.%s", menuLocal)).
 			CloseOnContentClick(false).
 			MaxWidth(290),
-	).Init(fmt.Sprintf(`{%s: %s, %s: false}`, valueLocal, h.JSONString(b.value), menuLocal)).
-		VSlot("{ locals }").
+	).LocalsInit(fmt.Sprintf(`{%s: %s, %s: false}`, valueLocal, h.JSONString(b.value), menuLocal)).
+		Slot("{ locals }").
 		MarshalHTML(ctx)
 }

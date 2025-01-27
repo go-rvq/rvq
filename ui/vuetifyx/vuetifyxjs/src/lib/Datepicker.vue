@@ -57,9 +57,9 @@
 </template>
 
 <script lang="ts" setup>
-import {format, parse} from 'date-fns'
+import { format, parse } from 'date-fns'
 
-import {computed, nextTick, onMounted, Ref, ref} from 'vue'
+import { computed, nextTick, onMounted, Ref, ref } from 'vue'
 
 const props = defineProps({
   modelValue: {

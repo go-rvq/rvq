@@ -1,8 +1,8 @@
-import {expect, it} from 'vitest'
+import { expect, it } from 'vitest'
 
 import SelectMany from '../SelectMany.vue'
-import {mountTemplate} from '@/lib/__tests__/testutils'
-import {nextTick} from 'vue'
+import { mountTemplate } from '@/lib/__tests__/testutils'
+import { nextTick } from 'vue'
 
 it('SelectMany modelValue', async () => {
   const wrapper = mountTemplate(SelectMany, {

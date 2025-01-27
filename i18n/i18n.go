@@ -89,8 +89,27 @@ func (b *Builder) RegisterForModule(lang language.Tag, module ModuleKey, msg Mes
 	return b
 }
 
-func MustGetModuleMessages(r *http.Request, module ModuleKey, defaultMessages Messages) Messages {
-	v := r.Context().Value(moduleMessagesKey)
+func (b *Builder) RegisterForModules(lang language.Tag, args ...any) (r *Builder) {
+	c := b.moduleMessages[lang]
+	if c == nil {
+		c = context.TODO()
+	}
+
+	if len(args)%2 != 0 {
+		panic("invalid number of arguments")
+	}
+
+	for len(args) > 0 {
+		c = context.WithValue(c, args[0], args[1])
+		args = args[2:]
+	}
+
+	b.moduleMessages[lang] = c
+	return b
+}
+
+func MustGetModuleMessages(ctx context.Context, module ModuleKey, defaultMessages Messages) Messages {
+	v := ctx.Value(moduleMessagesKey)
 	if v == nil {
 		return defaultMessages
 	}

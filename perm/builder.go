@@ -208,7 +208,6 @@ func (b *Builder) loopLoadDBPolicies(db *gorm.DB, duration time.Duration) {
 	b.LoadDBPoliciesToMemory(db, nil)
 
 	fmt.Println("load db policies to memory")
-	return
 
 	for next := range time.Tick(duration) {
 		b.LoadDBPoliciesToMemory(db, &now)

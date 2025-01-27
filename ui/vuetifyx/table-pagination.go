@@ -3,7 +3,9 @@ package vuetifyx
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
+	"strings"
 
 	v "github.com/qor5/x/v3/ui/vuetify"
 
@@ -18,18 +20,36 @@ type VXTablePaginationBuilder struct {
 	customPerPages  []int64
 	noPerPagePart   bool
 	onSelectPerPage interface{}
+	onSelectPage    interface{}
 	onPrevPage      interface{}
 	onNextPage      interface{}
-
-	perPageText string
+	pageInfoText    string
+	pageText        string
+	ofPageText      string
+	perPageText     string
 }
 
 func VXTablePagination() *VXTablePaginationBuilder {
 	return &VXTablePaginationBuilder{}
 }
 
+func (tpb *VXTablePaginationBuilder) PageInfoText(v string) *VXTablePaginationBuilder {
+	tpb.pageInfoText = v
+	return tpb
+}
+
 func (tpb *VXTablePaginationBuilder) PerPageText(v string) *VXTablePaginationBuilder {
 	tpb.perPageText = v
+	return tpb
+}
+
+func (tpb *VXTablePaginationBuilder) PageText(v string) *VXTablePaginationBuilder {
+	tpb.pageText = v
+	return tpb
+}
+
+func (tpb *VXTablePaginationBuilder) OfPageText(v string) *VXTablePaginationBuilder {
+	tpb.ofPageText = v
 	return tpb
 }
 
@@ -63,6 +83,11 @@ func (tpb *VXTablePaginationBuilder) OnSelectPerPage(v interface{}) *VXTablePagi
 	return tpb
 }
 
+func (tpb *VXTablePaginationBuilder) OnSelectPage(v interface{}) *VXTablePaginationBuilder {
+	tpb.onSelectPage = v
+	return tpb
+}
+
 func (tpb *VXTablePaginationBuilder) OnPrevPage(v interface{}) *VXTablePaginationBuilder {
 	tpb.onPrevPage = v
 	return tpb
@@ -78,6 +103,13 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 		tpb.OnSelectPerPage(web.Plaid().
 			PushState(true).
 			Query("per_page", web.Var("[$event]")).
+			MergeQuery(true).
+			Go())
+	}
+	if tpb.onSelectPage == nil {
+		tpb.OnSelectPage(web.Plaid().
+			PushState(true).
+			Query("page", web.Var("[$event.target.value]")).
 			MergeQuery(true).
 			Go())
 	}
@@ -100,10 +132,10 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 	{
 		perPagesM := map[int64]struct{}{
 			10:  {},
-			15:  {},
 			20:  {},
 			50:  {},
 			100: {},
+			500: {},
 		}
 		if tpb.perPage > 0 {
 			perPagesM[tpb.perPage] = struct{}{}
@@ -130,6 +162,8 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 		currPageEnd = tpb.total
 	}
 
+	totalPages := int(math.Ceil(float64(tpb.total) / float64(tpb.perPage)))
+
 	canNext := false
 	canPrev := false
 	if tpb.currPage*tpb.perPage < tpb.total {
@@ -151,6 +185,29 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 	if tpb.perPageText != "" {
 		rowsPerPageText = tpb.perPageText
 	}
+
+	pageInfoText := "{currPageStart}-{currPageEnd} of {total}"
+	if tpb.pageInfoText != "" {
+		pageInfoText = tpb.pageInfoText
+	}
+
+	pageText := "Page:"
+	if tpb.pageText != "" {
+		pageText = tpb.pageText
+	}
+
+	ofPageText := "of {totalPages}"
+	if tpb.ofPageText != "" {
+		ofPageText = tpb.ofPageText
+	}
+	ofPageText = strings.ReplaceAll(ofPageText, "{total}", fmt.Sprint(totalPages))
+
+	pageInfoText = strings.NewReplacer(
+		"{currPageStart}", fmt.Sprint(currPageStart),
+		"{currPageEnd}", fmt.Sprint(currPageEnd),
+		"{total}", fmt.Sprint(tpb.total),
+	).Replace(pageInfoText)
+
 	return h.Div(
 		v.VRow().Justify("end").Align("center").Class("ma-0").
 			Children(
@@ -162,11 +219,24 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 						v.VSelect().Items(sItems).Variant("underlined").ModelValue(fmt.Sprint(tpb.perPage)).
 							HideDetails(true).Density("compact").Attr("style", "margin-top: -8px").
 							Attr("@update:model-value", tpb.onSelectPerPage),
-					).Style("width: 64px;").Class("ml-6"),
+					).Style("width: 64px;").Class("ml-3"),
 				),
 				h.Div(
-					h.Text(fmt.Sprintf("%d-%d of %d", currPageStart, currPageEnd, tpb.total)),
-				).Class("ml-6"),
+					h.Text(pageInfoText),
+				).Class("ml-3"),
+				h.If(totalPages > 1,
+					h.Div(
+						h.Text(pageText),
+					).Class("ml-6"),
+					h.Div(
+						v.VTextField().Variant("underlined").ModelValue(fmt.Sprint(tpb.currPage)).
+							HideDetails(true).Density("compact").Attr("style", "margin-top: -8px").
+							Attr("@keyup.enter", tpb.onSelectPage),
+					).Style("width: 40px;").Class("ml-3"),
+					h.Div(
+						h.Text(ofPageText),
+					).Class("ml-3"),
+				),
 				h.Div(
 					h.Span("").Style(prevIconStyle).Children(
 						v.VBtn("").Variant("text").Icon("mdi-chevron-left").Size(32).Disabled(!canPrev).

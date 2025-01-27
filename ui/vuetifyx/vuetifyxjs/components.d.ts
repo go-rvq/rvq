@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AdvancedSelect: typeof import('./src/lib/AdvancedSelect.vue')['default']
     Autocomplete: typeof import('./src/lib/Autocomplete.vue')['default']
     AutoCompleteExample: typeof import('./src/demo/components/AutoCompleteExample.vue')['default']
     DateItem: typeof import('./src/lib/Filter/components/DateItem.vue')['default']
@@ -19,6 +20,7 @@ declare module 'vue' {
     DefaultNavigatorExample: typeof import('./src/demo/components/DefaultNavigatorExample.vue')['default']
     DragListener: typeof import('./src/lib/DragListener.vue')['default']
     DragListenerExample: typeof import('./src/demo/components/DragListenerExample.vue')['default']
+    EditorJS: typeof import('./src/lib/EditorJS/EditorJS.vue')['default']
     Filter: typeof import('./src/lib/Filter/index.vue')['default']
     FilterButton: typeof import('./src/lib/Filter/components/FilterButton.vue')['default']
     FilterButtonBody: typeof import('./src/lib/Filter/components/FilterButtonBody.vue')['default']
@@ -29,19 +31,23 @@ declare module 'vue' {
     LinkageSelectExample: typeof import('./src/demo/components/LinkageSelectExample.vue')['default']
     LinkageSelectItem: typeof import('./src/lib/Filter/components/LinkageSelectItem.vue')['default']
     MessageListener: typeof import('./src/lib/MessageListener.vue')['default']
+    MonthItem: typeof import('./src/lib/Filter/components/MonthItem.vue')['default']
+    Monthpicker: typeof import('./src/lib/Monthpicker.vue')['default']
+    MonthRangeItem: typeof import('./src/lib/Filter/components/MonthRangeItem.vue')['default']
     MultipleSelectItem: typeof import('./src/lib/Filter/components/MultipleSelectItem.vue')['default']
     NumberItem: typeof import('./src/lib/Filter/components/NumberItem.vue')['default']
     RestoreScrollListener: typeof import('./src/lib/RestoreScrollListener.vue')['default']
     ScrollIframe: typeof import('./src/lib/ScrollIframe.vue')['default']
     ScrollIframeExample: typeof import('./src/demo/components/ScrollIframeExample.vue')['default']
     SelectItem: typeof import('./src/lib/Filter/components/SelectItem.vue')['default']
-    SelectMany: typeof import('./src/lib/SelectMany.vue')['default']
-    SelectManyExample: typeof import('./src/demo/components/SelectManyExample.vue')['default']
-    SelectOne: typeof import('./src/lib/SelectOne.vue')['default']
     SendVariables: typeof import('./src/lib/SendVariables.vue')['default']
     SendVariablesExample: typeof import('./src/demo/components/SendVariablesExample.vue')['default']
     StringItem: typeof import('./src/lib/Filter/components/StringItem.vue')['default']
     TextDatepicker: typeof import('./src/lib/TextDatepicker.vue')['default']
     TextDatepickerExample: typeof import('./src/demo/components/TextDatepickerExample.vue')['default']
+    TreeDataTable: typeof import('./src/lib/TreeDataTable.vue')['default']
+    TreeDataTableExample: typeof import('./src/demo/components/TreeDataTableExample.vue')['default']
+    TreeRows: typeof import('./src/lib/TreeRows.vue')['default']
+    Videojs: typeof import('./src/lib/EditorJS/Videojs.vue')['default']
   }
 }

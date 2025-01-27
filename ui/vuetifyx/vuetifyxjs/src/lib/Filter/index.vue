@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {encodeFilterData, filterData} from '@/lib/Filter/FilterData'
-import {FilterItem} from '@/lib/Filter/Model'
+import { computed, ref } from 'vue'
+import { encodeFilterData, filterData } from '@/lib/Filter/FilterData'
+import { FilterItem } from '@/lib/Filter/Model'
 import ItemFilter from '@/lib/Filter/components/ItemFilter.vue'
 import DatetimeRangeItem from '@/lib/Filter/components/DatetimeRangeItem.vue'
 import DateRangeItem from '@/lib/Filter/components/DateRangeItem.vue'
@@ -11,6 +11,8 @@ import StringItem from '@/lib/Filter/components/StringItem.vue'
 import LinkageSelectItem from '@/lib/Filter/components/LinkageSelectItem.vue'
 import MultipleSelectItem from '@/lib/Filter/components/MultipleSelectItem.vue'
 import SelectItem from '@/lib/Filter/components/SelectItem.vue'
+import MonthRangeItem from '@/lib/Filter/components/MonthRangeItem.vue'
+import MonthItem from '@/lib/Filter/components/MonthItem.vue'
 
 const props = defineProps({
   internalValue: { type: Array<any>, required: true },
@@ -20,8 +22,9 @@ const props = defineProps({
     type: Object,
     default: () => {
       return {
-        date: {
-          to: 'to'
+        month: {
+          year: 'Year',
+          month: 'Month'
         },
         number: {
           equals: 'is equal to',
@@ -38,9 +41,11 @@ const props = defineProps({
           in: 'in',
           notIn: 'not in'
         },
-        clear: 'Clear Filters',
+        clearAll: 'Clear Filters',
+        clear: 'Clear',
         add: 'Add Filters',
-        apply: 'Apply'
+        apply: 'Apply',
+        to: 'to'
       }
     }
   } as any
@@ -51,7 +56,9 @@ const t = props.translations
 const itemTypes: any = {
   DatetimeRangeItem,
   DateRangeItem,
+  MonthRangeItem,
   DateItem,
+  MonthItem,
   NumberItem,
   StringItem,
   LinkageSelectItem,
@@ -60,9 +67,11 @@ const itemTypes: any = {
 }
 
 const trans: any = {
-  DatetimeRangeItem: t.date,
-  DateRangeItem: t.date,
-  DateItem: t.date,
+  DatetimeRangeItem: { to: t.to },
+  DateRangeItem: { to: t.to },
+  MonthRangeItem: { to: t.to, clear: t.clear, apply: t.apply, ...t.month },
+  MonthItem: { clear: t.clear, apply: t.apply, ...t.month },
+  DateItem: { to: t.to },
   NumberItem: t.number,
   StringItem: t.string,
   SelectItem: {},
@@ -135,6 +144,7 @@ const filtersGetFunc = (f: (item: FilterItem) => boolean, isFoldedItem: boolean)
           isFoldedItem: isFoldedItem,
           translations: props.translations,
           compTranslations: trans[op.itemType],
+          config: op.config,
           index: i
         }
       })
@@ -180,7 +190,7 @@ const foldedFilters = computed(() => {
       class="my-1"
     >
       <v-icon size="small" icon="mdi-close"></v-icon>
-      {{ t.clear }}
+      {{ t.clearAll }}
     </v-btn>
     <v-menu v-if="foldedFilters.length > 0" :close-on-content-click="false" class="rounded-lg">
       <template v-slot:activator="{ props }">

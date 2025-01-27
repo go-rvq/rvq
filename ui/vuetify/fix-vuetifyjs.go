@@ -22,6 +22,14 @@ func JSComponentsPack() web.ComponentsPack {
 	if err != nil {
 		panic(err)
 	}
+	v2, err := assetsbox.ReadFile("dist/vuetify-labs.min.js")
+	if err != nil {
+		panic(err)
+	}
+
+	v = append(v, ';')
+	v = append(v, v2...)
+
 	return web.ComponentsPack(v)
 }
 
@@ -32,6 +40,11 @@ func cssComponentsPack() web.ComponentsPack {
 		v, err = vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/index.css")
 	} else {
 		v, err = assetsbox.ReadFile("dist/vuetify.min.css")
+		v2, err := assetsbox.ReadFile("dist/vuetify-labs.min.css")
+		if err != nil {
+			panic(err)
+		}
+		v = append(v, v2...)
 	}
 	if err != nil {
 		panic(err)

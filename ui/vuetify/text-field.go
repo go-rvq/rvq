@@ -34,6 +34,11 @@ func (b *VTextFieldBuilder) Autofocus(v bool) (r *VTextFieldBuilder) {
 	return b
 }
 
+func (b *VTextFieldBuilder) MaxLength(v interface{}) (r *VTextFieldBuilder) {
+	b.Attr(":maxlength", fmt.Sprint(v))
+	return b
+}
+
 func (b *VTextFieldBuilder) Prefix(v string) (r *VTextFieldBuilder) {
 	b.Attr("prefix", v)
 	return b

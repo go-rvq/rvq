@@ -10,7 +10,8 @@ const showValueComputed = computed(() => {
   if (props.op.selected) {
     switch (props.op.itemType) {
       case 'DatetimeRangeItem':
-      case 'DateRangeItem': {
+      case 'DateRangeItem':
+      case 'MonthRangeItem': {
         const mod = props.op.modifier || constants.ModifierBetween
 
         if (mod === constants.ModifierBetween) {
@@ -28,7 +29,8 @@ const showValueComputed = computed(() => {
         }
         break
       }
-      case 'DateItem': {
+      case 'DateItem':
+      case 'MonthItem': {
         showValue = props.op.valueIs
         break
       }

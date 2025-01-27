@@ -1,14 +1,14 @@
 <template>
   <div class="icon" :class="[`icon--${name}`, `icon--${size}`]">
-    <component :is="icon"/>
+    <component :is="icon" />
   </div>
 </template>
 
 <script setup lang="ts">
-import {defineAsyncComponent} from "vue";
+import { defineAsyncComponent } from "vue";
 
 const props = defineProps({
-  name: {type: String},
+  name: { type: String },
   size: {
     default: "normal",
   },
@@ -20,7 +20,7 @@ const props = defineProps({
   },
 });
 const icon = defineAsyncComponent(
-    () => import(`@/lib/icons/${props.name}.svg`),
+  () => import(`@/lib/icons/${props.name}.svg`),
 );
 </script>
 

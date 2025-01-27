@@ -13,6 +13,7 @@ type VXReadonlyFieldBuilder struct {
 	value    interface{}
 	children h.HTMLComponents
 	checkbox bool
+	icon     string
 }
 
 func VXReadonlyField(children ...h.HTMLComponent) *VXReadonlyFieldBuilder {
@@ -43,6 +44,11 @@ func (b *VXReadonlyFieldBuilder) Checkbox(v bool) *VXReadonlyFieldBuilder {
 	return b
 }
 
+func (b *VXReadonlyFieldBuilder) Icon(v string) *VXReadonlyFieldBuilder {
+	b.icon = v
+	return b
+}
+
 func (b *VXReadonlyFieldBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 	var vComp h.HTMLComponent
 	if b.children != nil {
@@ -54,7 +60,9 @@ func (b *VXReadonlyFieldBuilder) MarshalHTML(ctx context.Context) ([]byte, error
 				Ripple(false).
 				HideDetails(true).
 				Class("my-0 py-0")
-		} else {
+		} else if b.icon != "" {
+			vComp = vuetify.VIcon(b.icon)
+		} else if b.value != nil {
 			vComp = h.Text(fmt.Sprint(b.value))
 		}
 	}

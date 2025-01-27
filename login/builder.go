@@ -135,6 +135,8 @@ type Builder struct {
 	sessionSecureEnabled bool
 	// key is provider
 	oauthIdentifiers map[string]OAuthIdentifier
+
+	requireForRequest func(r *http.Request) bool
 }
 
 func New() *Builder {
@@ -179,6 +181,9 @@ func New() *Builder {
 			Issuer: "QOR5",
 		},
 		oauthIdentifiers: make(map[string]OAuthIdentifier),
+		requireForRequest: func(r *http.Request) bool {
+			return true
+		},
 	}
 
 	i18nB := i18n.New()
@@ -454,6 +459,11 @@ func (b *Builder) TOTP(enable bool, config ...TOTPConfig) (r *Builder) {
 
 func (b *Builder) NoForgetPasswordLink(v bool) (r *Builder) {
 	b.noForgetPasswordLink = v
+	return b
+}
+
+func (b *Builder) WrapRequireForRequest(f func(in func(r *http.Request) bool) func(r *http.Request) bool) (r *Builder) {
+	b.requireForRequest = f(b.requireForRequest)
 	return b
 }
 

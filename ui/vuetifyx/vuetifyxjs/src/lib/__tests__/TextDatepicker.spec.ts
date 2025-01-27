@@ -1,8 +1,8 @@
-import {expect, it} from 'vitest'
+import { expect, it } from 'vitest'
 
 import TextDatepicker from '../TextDatepicker.vue'
-import {mountTemplate} from '@/lib/__tests__/testutils'
-import {nextTick} from 'vue'
+import { mountTemplate } from '@/lib/__tests__/testutils'
+import { nextTick } from 'vue'
 
 it('Datetimepicker modelValue', async () => {
   const wrapper = mountTemplate(TextDatepicker, {

@@ -1,0 +1,37 @@
+<template>
+  <v-app>
+    <v-main>
+      <GoPlaidScope>
+        <UserComponent :assign="[[form, {'TbPesoID':2, name:'hello'}]]" :scope="{form:form}" :setup="(v) => ">
+          <template v-slot="{form}">
+          <v-container>
+            <v-btn @click="() => {form.TbPesoID = 1}">Alterar</v-btn>
+            <v-btn @click="() => {form.TbPesoID = ''}">Limpar</v-btn>
+              <AdvancedSelected many v-model="form.TbPesoID" :items="items" @change="changed" />
+          </v-container>
+            <h1 v-if="form.TbPesoID">Title</h1>
+          </template>
+        </UserComponent>
+      </GoPlaidScope>
+    </v-main>
+  </v-app>
+</template>
+
+<script setup lang="ts">
+
+import {default as AdvancedSelected, ChangeEvent} from '@/lib/AdvancedSelect.vue'
+import { inject, reactive } from 'vue'
+
+const form = inject<object>('form', reactive({ __name: 'form' }))
+
+const value = reactive([2])
+
+const items = [{ id: 1, text: 'One' }, { id: 2, text: 'Two' }]
+
+console.log('form', form)
+
+const changed = (e:ChangeEvent) => {
+  console.log('changed: ', e.items.map(v => v.text), form.TbPesoID)
+}
+
+</script>

@@ -1,6 +1,7 @@
 package vuetify
 
 import (
+	"github.com/qor5/web/v3"
 	"github.com/qor5/web/v3/tag"
 	h "github.com/theplant/htmlgo"
 )
@@ -36,4 +37,8 @@ func (t *VTagBuilder[T]) RawHeight(v interface{}) T {
 
 func (t *VTagBuilder[T]) RawClass(v interface{}) T {
 	return t.Attr(":class", v)
+}
+
+func (t *VTagBuilder[T]) FormField(formKey string, v interface{}) T {
+	return t.Attr(web.VField(formKey, v)...)
 }

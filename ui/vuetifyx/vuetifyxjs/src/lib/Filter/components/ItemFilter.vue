@@ -11,6 +11,7 @@ const props = defineProps<{
   compTranslations: any
   internalValue: any
   index: number
+  config: any
 }>()
 const value = ref({ ...props.modelValue })
 const menu = ref(false)
@@ -53,7 +54,12 @@ const clear = (e: any) => {
     </template>
     <v-card class="pa-3 bg-white">
       <div>{{ modelValue.translations?.filterBy }}</div>
-      <component v-model="value" :is="itemComp" :translations="compTranslations"></component>
+      <component
+        v-model="value"
+        :is="itemComp"
+        :translations="compTranslations"
+        :config="config"
+      ></component>
       <div>
         <v-btn class="mt-5 float-right" color="primary" rounded @click="clickDone">{{
           translations.apply

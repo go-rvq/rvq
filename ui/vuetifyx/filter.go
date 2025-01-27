@@ -95,13 +95,17 @@ func (b *VXFilterBuilder) MarshalHTML(ctx context.Context) (r []byte, err error)
 		},
 */
 type FilterTranslations struct {
-	Clear string `json:"clear,omitempty"`
-	Add   string `json:"add,omitempty"`
-	Apply string `json:"apply,omitempty"`
+	Clear    string `json:"clear,omitempty"`
+	ClearAll string `json:"clearAll,omitempty"`
+	Add      string `json:"add,omitempty"`
+	Apply    string `json:"apply,omitempty"`
+	To       string `json:"to,omitempty"`
 
-	Date struct {
-		To string `json:"to,omitempty"`
-	} `json:"date,omitempty"`
+	Month struct {
+		Month      string                    `json:"month,omitempty"`
+		Year       string                    `json:"year,omitempty"`
+		MonthNames [time.December + 1]string `json:"monthNames,omitempty"`
+	} `json:"month,omitempty"`
 
 	Number struct {
 		Equals      string `json:"equals,omitempty"`
@@ -131,6 +135,8 @@ type FilterItemType string
 const (
 	ItemTypeDatetimeRange  FilterItemType = "DatetimeRangeItem"
 	ItemTypeDateRange      FilterItemType = "DateRangeItem"
+	ItemTypeMonthRange     FilterItemType = "MonthRangeItem"
+	ItemTypeMonth          FilterItemType = "MonthItem"
 	ItemTypeDate           FilterItemType = "DateItem"
 	ItemTypeSelect         FilterItemType = "SelectItem"
 	ItemTypeMultipleSelect FilterItemType = "MultipleSelectItem"
@@ -185,6 +191,7 @@ type FilterItem struct {
 	Invisible              bool                          `json:"invisible,omitempty"`
 	AutocompleteDataSource *AutocompleteDataSource       `json:"autocompleteDataSource,omitempty"`
 	Translations           FilterIndependentTranslations `json:"translations,omitempty"`
+	Config                 any                           `json:"config,omitempty"`
 }
 
 func (fd FilterData) Clone() (r FilterData) {
@@ -306,9 +313,27 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 					if err != nil {
 						continue
 					}
+				} else if it.ItemType == ItemTypeMonth || it.ItemType == ItemTypeMonthRange {
+					var err error
+					ival, err = time.ParseInLocation("2006-01", val, time.Local)
+					if err != nil {
+						continue
+					}
 				}
 
-				if it.ItemType == ItemTypeDate {
+				if it.ItemType == ItemTypeMonth {
+					conds = append(conds, sqlcToCond(sqlc, "gte"), sqlcToCond(sqlc, "lt"))
+					sqlArgs = append(sqlArgs, ival, ival.(time.Time).AddDate(0, 1, 0))
+				} else if it.ItemType == ItemTypeMonthRange {
+					if mod == "gte" {
+						conds = append(conds, sqlcToCond(sqlc, "gte"))
+						sqlArgs = append(sqlArgs, ival)
+					}
+					if mod == "lte" {
+						conds = append(conds, sqlcToCond(sqlc, "lt"))
+						sqlArgs = append(sqlArgs, ival.(time.Time).AddDate(0, 1, 0))
+					}
+				} else if it.ItemType == ItemTypeDate {
 					conds = append(conds, sqlcToCond(sqlc, "gte"), sqlcToCond(sqlc, "lt"))
 					sqlArgs = append(sqlArgs, ival, ival.(time.Time).Add(24*time.Hour))
 				} else if it.ItemType == ItemTypeDateRange {

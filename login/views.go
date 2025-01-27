@@ -19,7 +19,7 @@ import (
 func defaultLoginPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		// i18n start
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 		i18nBuilder := vh.I18n()
 		var languagesHTML []HTMLComponent
 		languages := i18nBuilder.GetSupportLanguages()
@@ -136,7 +136,7 @@ function onSubmit(token) {
 
 func defaultForgetPasswordPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		wIn := vh.GetWrongForgetPasswordInputFlash(ctx.W, ctx.R)
 		secondsToResend := vh.GetSecondsToRedoFlash(ctx.W, ctx.R)
@@ -231,7 +231,7 @@ function onSubmit(token) {
 
 func defaultResetPasswordLinkSentPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		a := ctx.R.URL.Query().Get("a")
 
@@ -250,7 +250,7 @@ func defaultResetPasswordLinkSentPage(vh *ViewHelper) web.PageFunc {
 
 func defaultResetPasswordPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		wIn := vh.GetWrongResetPasswordInputFlash(ctx.W, ctx.R)
 
@@ -333,7 +333,7 @@ func defaultResetPasswordPage(vh *ViewHelper) web.PageFunc {
 
 func defaultChangePasswordPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		wIn := vh.GetWrongChangePasswordInputFlash(ctx.W, ctx.R)
 
@@ -379,7 +379,7 @@ func defaultChangePasswordPage(vh *ViewHelper) web.PageFunc {
 
 func defaultTOTPSetupPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		user := GetCurrentUser(ctx.R)
 		u := user.(UserPasser)
@@ -449,7 +449,7 @@ func defaultTOTPSetupPage(vh *ViewHelper) web.PageFunc {
 
 func defaultTOTPValidatePage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nLoginKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
 		r.PageTitle = msgr.TOTPValidatePageTitle
 		r.Body = Div(
