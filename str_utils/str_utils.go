@@ -3,6 +3,10 @@ package str_utils
 import (
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 // HumanizeString humanize separates string based on capitalizd letters
@@ -24,8 +28,13 @@ func HumanizeString(str string) string {
 // NamifyString Joins string parts based on special separeted chars
 // e.g. "order_item-data" -> "OrderItemData"
 func NamifyString(s string) string {
-	var human []rune
-	var toUpper bool
+	s = RemoveAccents(s)
+
+	var (
+		human   []rune
+		toUpper bool
+	)
+
 	s = "_" + s
 	for _, c := range s {
 		if c == '_' || c == '-' {
@@ -74,4 +83,13 @@ loop:
 	}
 
 	return
+}
+
+func RemoveAccents(s string) string {
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	output, _, e := transform.String(t, s)
+	if e != nil {
+		panic(e)
+	}
+	return output
 }

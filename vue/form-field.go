@@ -2,6 +2,7 @@ package vue
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/qor5/web/v3/tag"
@@ -41,9 +42,18 @@ func (b *FormFieldBuilder) Field() h.HTMLComponent {
 	return (*tag.Children(b.Template()))[0]
 }
 
-func (b *FormFieldBuilder) Value(fieldName string, value ...any) *FormFieldBuilder {
-	if len(value) > 0 {
-		b.Assign("form", fieldName, value)
+func (b *FormFieldBuilder) Value(fieldName string, value any) *FormFieldBuilder {
+	q := strconv.Quote(fieldName)
+
+	b.Assign("form", fieldName, value).
+		Scope("fieldValue").
+		Setup(`({scope, computed}) => {
+	scope.fieldValue = {
+		value: computed({
+			get: () => form[` + q + `],		
+			set: (newValue) => form[` + q + `] = newValue
+		})
 	}
+}`)
 	return b
 }

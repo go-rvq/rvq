@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/qor5/web/v3/js"
 	"github.com/qor5/web/v3/tag"
 	h "github.com/theplant/htmlgo"
 )
@@ -24,7 +25,7 @@ func (a *UserComponentAssigner) Set(key string, value any) *UserComponentAssigne
 type UserComponentBuilder struct {
 	scopeNames  []string
 	scopeValues [][]any
-	setupFunc   string
+	setupFuncs  js.RawSlice
 	onUmount    string
 	onMounted   string
 	assign      map[Var]*UserComponentAssigner
@@ -46,7 +47,7 @@ func (b *UserComponentBuilder) ScopeVar(name string, value string) *UserComponen
 }
 
 func (b *UserComponentBuilder) Setup(s string) *UserComponentBuilder {
-	b.setupFunc = s
+	b.setupFuncs = append(b.setupFuncs, s)
 	return b
 }
 
@@ -138,8 +139,8 @@ func (b *UserComponentBuilder) MarshalHTML(ctx context.Context) ([]byte, error) 
 		comp.Attr(":assign", "["+strings.Join(assign, ", ")+"]")
 	}
 
-	if b.setupFunc != "" {
-		comp.Attr(":setup", b.setupFunc)
+	if len(b.setupFuncs) > 0 {
+		comp.Attr(":setup", b.setupFuncs.String())
 	}
 
 	if b.onMounted != "" {
