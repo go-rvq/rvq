@@ -100,7 +100,9 @@ func (b *VTextFieldBuilder) HideSpinButtons(v bool) (r *VTextFieldBuilder) {
 }
 
 func (b *VTextFieldBuilder) Hint(v string) (r *VTextFieldBuilder) {
-	b.Attr("hint", v)
+	if v != "" {
+		b.Attr("hint", v)
+	}
 	return b
 }
 
