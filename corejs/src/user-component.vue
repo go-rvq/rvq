@@ -31,8 +31,8 @@ const props = defineProps({
     default: () => []
   },
   setup: {
-    type: Function,
-    default: () => {}
+    type: Array<Function>,
+    default: []
   }
 })
 
@@ -65,11 +65,11 @@ const arg = {
 }
 
 if (props.setup) {
-  const func = () => {
-    const f = props.setup
-    f({ ...arg, func })
+  const func = (f: Function) => {
+    f({ ...arg, func: () => func(f) })
   }
-  func()
+
+  props.setup.forEach(func)
 }
 
 onMounted(() => {
