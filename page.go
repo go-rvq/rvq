@@ -74,7 +74,7 @@ func (p *PageBuilder) MergeHub(hub *EventsHub) (r *PageBuilder) {
 }
 
 func (p *PageBuilder) render(
-	w http.ResponseWriter,
+	w ResponseWriter,
 	r *http.Request,
 	c context.Context,
 	head *PageInjector,
@@ -99,6 +99,10 @@ func (p *PageBuilder) render(
 		panic(err)
 	}
 
+	if w.Writed() {
+		return
+	}
+
 	pager = &pr
 
 	if pager.Body == nil {
@@ -115,18 +119,22 @@ func (p *PageBuilder) render(
 	return
 }
 
-func (p *PageBuilder) index(w http.ResponseWriter, r *http.Request) {
-	var err error
+func (p *PageBuilder) index(w ResponseWriter, r *http.Request) {
+	var (
+		err     error
+		inj     = &PageInjector{}
+		ctx     = new(EventContext)
+		c       = WrapEventContext(r.Context(), ctx)
+		_, body = p.render(w, r, c, inj, false)
+	)
 
-	inj := &PageInjector{}
-
-	ctx := new(EventContext)
-	c := WrapEventContext(r.Context(), ctx)
-	_, body := p.render(w, r, c, inj, false)
+	if body == "" || w.Writed() {
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err = fmt.Fprintln(w, body)
-	if err != nil {
+
+	if _, err = fmt.Fprintln(w, body); err != nil {
 		panic(err)
 	}
 }
@@ -147,7 +155,7 @@ func (p *PageBuilder) parseForm(r *http.Request) *multipart.Form {
 
 const EventFuncIDName = "__execute_event__"
 
-func (p *PageBuilder) executeEvent(w http.ResponseWriter, r *http.Request) {
+func (p *PageBuilder) executeEvent(w ResponseWriter, r *http.Request) {
 	ctx := new(EventContext)
 	ctx.R = r
 	ctx.W = w
@@ -185,8 +193,11 @@ func (p *PageBuilder) executeEvent(w http.ResponseWriter, r *http.Request) {
 
 	if er.Reload {
 		pr, body := p.render(w, r, c, &PageInjector{}, true)
+		if w.Writed() {
+			return
+		}
 		er.Body = h.RawHTML(body)
-		if len(er.PageTitle) == 0 {
+		if len(er.PageTitle) == 0 && pr != nil {
 			er.PageTitle = pr.PageTitle
 		}
 	}
@@ -204,12 +215,13 @@ func (p *PageBuilder) executeEvent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func reload(ctx *EventContext) (r EventResponse, err error) {
+func reload(*EventContext) (r EventResponse, err error) {
 	r.Reload = true
 	return
 }
 
-func (p *PageBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (p *PageBuilder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	w := WrapResponseWriter(rw)
 	if strings.Index(r.URL.String(), EventFuncIDName) >= 0 {
 		p.executeEvent(w, r)
 		return

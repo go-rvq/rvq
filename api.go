@@ -232,7 +232,7 @@ type RequestContext interface {
 
 type EventContext struct {
 	R        *http.Request
-	W        http.ResponseWriter
+	W        ResponseWriter
 	Injector *PageInjector
 	Flash    interface{} // pass value from actions to index
 	i        int64
