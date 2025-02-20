@@ -1,7 +1,7 @@
 <template>
   <template v-if="raw">
     <component :is="current" v-if="current">
-      <slot :form="form" :locals="locals"></slot>
+      <slot :form="form" :locals="locals" :goPlaidPortal="dot"></slot>
     </component>
   </template>
   <template v-else>
@@ -12,7 +12,7 @@
       ref="portal"
     >
       <component :is="current" v-if="current">
-        <slot :form="form" :locals="locals"></slot>
+        <slot :form="form" :locals="locals" :goPlaidPortal="dot"></slot>
       </component>
     </div>
   </template>
@@ -39,6 +39,7 @@ import type { Builder } from '@/builder'
 declare let window: any
 window.__goplaid = window.__goplaid ?? {}
 window.__goplaid.portals = window.__goplaid.portals ?? {}
+window.__goplaid.index = window.__goplaid.index ?? 0
 
 const portal = ref()
 
@@ -58,8 +59,9 @@ const props = defineProps<{
 
 const current = shallowRef<DefineComponent | null>(null)
 const autoReloadIntervalID = ref<number>(0)
-
 const slots = useSlots()
+
+const name = props.portalName || 'anonymous$' + window.__goplaid.index++
 
 let locals = inject<object>('locals', {})
 
@@ -80,8 +82,8 @@ if (props.form !== undefined) {
 provide('form', form)
 
 const dot = reactive({
-  $parent: inject('$portal', null),
-  name: props.portalName,
+  $parent: inject('portal', null),
+  name: name,
   form: form,
   locals: locals,
   value: portal
@@ -116,7 +118,6 @@ const reload = () => {
     return
   }
   ef.loadPortalBody(true)
-    .form(form)
     .go()
     .then((r: EventResponse) => {
       updatePortalTemplate(r.body)
@@ -124,13 +125,10 @@ const reload = () => {
 }
 
 onMounted(() => {
-  const pn = props.portalName
-  if (pn) {
-    window.__goplaid.portals[pn] = {
-      portalName: props.portalName,
-      updatePortalTemplate,
-      reload
-    }
+  window.__goplaid.portals[name] = {
+    portalName: name,
+    updatePortalTemplate,
+    reload
   }
   reload()
 })
@@ -158,9 +156,7 @@ onUpdated(() => {
 })
 
 onBeforeUnmount(() => {
-  if (props.portalName) {
-    delete window.__goplaid.portals[props.portalName]
-  }
+  delete window.__goplaid.portals[name]
   if (autoReloadIntervalID.value && autoReloadIntervalID.value > 0) {
     clearInterval(autoReloadIntervalID.value)
   }
