@@ -6,7 +6,12 @@
       v-html="label"
       :style="errorMessages.length ? 'color: rgb(var(--v-theme-error));opacity: inherit;' : ''"
     ></label>
-    <v-card v-if="internalSelectedItems.length > 0" variant="flat" class="mb-2 vx-advanced-select">
+    <v-card
+      :color="errorMessages.length ? 'error' : ''"
+      v-if="internalSelectedItems.length > 0"
+      variant="flat"
+      class="mb-2 vx-advanced-select"
+    >
       <v-chip-group v-if="chips">
         <v-chip v-for="item in internalSelectedItems">
           {{ item[itemText] }}
@@ -85,10 +90,10 @@
     </v-autocomplete>
 
     <div
-      class="v-messages"
-      v-if="errorMessages.length"
+      class="v-messages mb-3"
+      v-if="!selecting && errorMessages.length"
       aria-live="polite"
-      style="opacity: 1; color: rgb(var(--v-theme-error)); padding-left: 25px"
+      style="opacity: 1; color: rgb(var(--v-theme-error))"
     >
       <div style="height: 5px; border-top: 1px solid rgb(var(--v-theme-error))"></div>
       <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">

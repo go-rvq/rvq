@@ -38,19 +38,3 @@ func (b *VXTreeDataTableBuilder) SettingsTitle(v string) *VXTreeDataTableBuilder
 func (b *VXTreeDataTableBuilder) SettingsColumnsTitle(v string) *VXTreeDataTableBuilder {
 	return b.Attr("settings-columns-title", v)
 }
-
-type VDataTableHeader struct {
-	Title    string            `json:"title,omitempty"`
-	Value    any               `json:":value,omitempty"`
-	Key      string            `json:"key,omitempty"`
-	Align    string            `json:"align,omitempty"`
-	Children VDataTableHeaders `json:"children,omitempty"`
-
-	Width       string                 `json:"width,omitempty"`
-	Index       int                    `json:"index,omitempty"`
-	Sortable    bool                   `json:"sortable"`
-	HeaderProps map[string]interface{} `json:"headerProps,omitempty"`
-	CellProps   map[string]interface{} `json:"cellProps,omitempty"`
-}
-
-type VDataTableHeaders []VDataTableHeader

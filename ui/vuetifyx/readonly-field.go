@@ -14,6 +14,7 @@ type VXReadonlyFieldBuilder struct {
 	children h.HTMLComponents
 	checkbox bool
 	icon     string
+	color    string
 }
 
 func VXReadonlyField(children ...h.HTMLComponent) *VXReadonlyFieldBuilder {
@@ -49,21 +50,39 @@ func (b *VXReadonlyFieldBuilder) Icon(v string) *VXReadonlyFieldBuilder {
 	return b
 }
 
+func (b *VXReadonlyFieldBuilder) Color(v string) *VXReadonlyFieldBuilder {
+	b.color = v
+	return b
+}
+
 func (b *VXReadonlyFieldBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 	var vComp h.HTMLComponent
 	if b.children != nil {
 		vComp = b.children
 	} else {
 		if b.checkbox {
-			vComp = vuetify.VCheckbox().Value(b.value).
+			ck := vuetify.VCheckbox().Value(b.value).
 				Readonly(true).
 				Ripple(false).
 				HideDetails(true).
 				Class("my-0 py-0")
+			vComp = ck
+
+			if b.color != "" {
+				ck.Color(b.color)
+			}
 		} else if b.icon != "" {
-			vComp = vuetify.VIcon(b.icon)
+			i := vuetify.VIcon(b.icon)
+			vComp = i
+			if b.color != "" {
+				i.Color(b.color)
+			}
 		} else if b.value != nil {
-			vComp = h.Text(fmt.Sprint(b.value))
+			if b.color != "" {
+				vComp = h.Span(fmt.Sprint(b.value)).Class("text-" + b.color)
+			} else {
+				vComp = h.Text(fmt.Sprint(b.value))
+			}
 		}
 	}
 
