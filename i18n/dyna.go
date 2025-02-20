@@ -11,8 +11,9 @@ import (
 )
 
 type kv struct {
-	key string
-	val string
+	key        string
+	val        string
+	allowEmpty bool
 }
 
 type moduleMissing struct {
@@ -75,7 +76,7 @@ func PTFk(ctx context.Context, module ModuleKey, fFieldKey func() string, key st
 	return strings.NewReplacer(args...).Replace(val.(string))
 }
 
-func (d *DynaBuilder) putMissingKey(module ModuleKey, key, val string) {
+func (d *DynaBuilder) putMissingKey(module ModuleKey, key, val string, allowEmpty ...bool) {
 	if d.missing[module] == nil {
 		d.missing[module] = &moduleMissing{}
 	}
@@ -86,7 +87,11 @@ func (d *DynaBuilder) putMissingKey(module ModuleKey, key, val string) {
 			return
 		}
 	}
-	mm.missingKeys = append(mm.missingKeys, kv{key, val})
+	var ae bool
+	for _, ae = range allowEmpty {
+	}
+
+	mm.missingKeys = append(mm.missingKeys, kv{key, val, ae})
 }
 
 func (d *DynaBuilder) putMissingVal(module ModuleKey, key, val string) {
@@ -100,7 +105,7 @@ func (d *DynaBuilder) putMissingVal(module ModuleKey, key, val string) {
 			return
 		}
 	}
-	mm.missingVals = append(mm.missingVals, kv{key, val})
+	mm.missingVals = append(mm.missingVals, kv{key, val, true})
 }
 
 func (d *DynaBuilder) HaveMissingKeys() bool {
@@ -121,7 +126,9 @@ func (d *DynaBuilder) PrettyMissingKeys() string {
 		buf.WriteString("\n")
 		buf.WriteString(fmt.Sprintf("\nCopy these to your Messages struct values for language: `%s`\n\n", d.lang))
 		for _, kv := range missing.missingKeys {
-			_, _ = fmt.Fprintf(buf, "%s: %#+v,\n", kv.key, kv.val)
+			if !kv.allowEmpty {
+				_, _ = fmt.Fprintf(buf, "%s: %#+v,\n", kv.key, kv.val)
+			}
 		}
 
 		for _, kv := range missing.missingVals {

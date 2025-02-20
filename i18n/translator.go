@@ -76,7 +76,40 @@ func (f Fallback) Fallback(ctx context.Context, key string, args ...string) (str
 	return f(ctx, key, args...)
 }
 
-func ModuleTranslator(module ModuleKey, fFieldKey func(key string) string) Translator {
+func ModuleTranslator(module ModuleKey, allowEmpty bool, fFieldKey func(key string) string) Translator {
+	fb := func(ctx context.Context, key string, args ...string) (v string, ok bool) {
+		b, _ := ctx.Value(dynaBuilderKey).(*DynaBuilder)
+		if b != nil {
+			msgr := MustGetModuleMessages(ctx, module, nil)
+			fk := fFieldKey(key)
+			_, err := reflectutils.Get(msgr, fk)
+			if err != nil {
+				b.putMissingKey(module, fk, "", true)
+			}
+		}
+
+		return
+	}
+
+	if !allowEmpty {
+		fb = func(ctx context.Context, key string, args ...string) (v string, ok bool) {
+			b, _ := ctx.Value(dynaBuilderKey).(*DynaBuilder)
+			if b != nil {
+				msgr := MustGetModuleMessages(ctx, module, nil)
+				fk := fFieldKey(key)
+				val, err := reflectutils.Get(msgr, fk)
+				if err != nil {
+					b.putMissingKey(module, fk, key)
+				} else if val.(string) == "" {
+					b.putMissingVal(module, fk, key)
+				}
+			}
+
+			key = str_utils.HumanizeString(key)
+			return strings.NewReplacer(args...).Replace(key), true
+		}
+	}
+
 	return TranslatorWithFallback(
 		func(ctx context.Context, key string, args ...string) (v string, ok bool) {
 			msgr := MustGetModuleMessages(ctx, module, nil)
@@ -96,27 +129,18 @@ func ModuleTranslator(module ModuleKey, fFieldKey func(key string) string) Trans
 			}
 			return
 		},
-		func(ctx context.Context, key string, args ...string) (v string, ok bool) {
-			b, _ := ctx.Value(dynaBuilderKey).(*DynaBuilder)
-			if b != nil {
-				msgr := MustGetModuleMessages(ctx, module, nil)
-				fk := fFieldKey(key)
-				val, err := reflectutils.Get(msgr, fk)
-				if err != nil {
-					b.putMissingKey(module, fk, key)
-				} else if val.(string) == "" {
-					b.putMissingVal(module, fk, key)
-				}
-			}
-
-			key = str_utils.HumanizeString(key)
-			return strings.NewReplacer(args...).Replace(key), true
-		},
+		fb,
 	)
 
 }
 
-func Translate(t Translator, ctx context.Context, key string, args ...string) (s string) {
+func Translate(t Translator, ctx context.Context, key string, args ...string) string {
+	return TranslateD(t, func() string {
+		return str_utils.HumanizeString(strings.NewReplacer(args...).Replace(key))
+	}, ctx, key, args...)
+}
+
+func TranslateD(t Translator, defaul func() string, ctx context.Context, key string, args ...string) (s string) {
 	var ok bool
 	if s, ok = t.Translate(ctx, key, args...); ok {
 		return
@@ -127,7 +151,12 @@ func Translate(t Translator, ctx context.Context, key string, args ...string) (s
 			return
 		}
 	}
-	return str_utils.HumanizeString(strings.NewReplacer(args...).Replace(key))
+
+	if defaul != nil {
+		s = defaul()
+	}
+
+	return
 }
 
 func TranslateHandler(t Translator, ctx context.Context) func(key string, args ...string) string {
