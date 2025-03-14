@@ -1009,7 +1009,16 @@ func (b *Builder) logout(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, b.loginPageURL, http.StatusFound)
+	var redirectTo = b.loginPageURL
+	if redirectToParam := r.URL.Query().Get("redirect_to"); redirectToParam != "" {
+		if redirectToParam == "REFERER" {
+			redirectTo = r.Header.Get("Referer")
+		} else {
+			redirectTo = redirectToParam
+		}
+	}
+
+	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
 
 // beginAuth is for url "/auth/{provider}"

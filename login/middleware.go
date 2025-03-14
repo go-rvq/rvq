@@ -37,6 +37,57 @@ func MockCurrentUser(user any) func(next http.Handler) http.Handler {
 		})
 	}
 }
+
+func (b *Builder) ParseClaims(r *http.Request) (*UserClaims, error) {
+	return parseUserClaimsFromCookie(r, b.authCookieName, b.secret)
+}
+
+func (b *Builder) ParseRequestUser(r *http.Request) (user any, err, userStateErr error) {
+	var claims *UserClaims
+	if claims, err = b.ParseClaims(r); err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil || userStateErr != nil {
+			user = nil
+		}
+	}()
+
+	var secureSalt string
+	if b.userModel != nil {
+		if user, err = b.findUserByID(claims.UserID); err != nil {
+			if err == ErrUserNotFound {
+				err = nil
+				return
+			}
+			return
+		}
+
+		if claims.Provider == "" {
+			if user.(UserPasser).GetPasswordUpdatedAt() != claims.PassUpdatedAt {
+				userStateErr = ErrPasswordChanged
+				return
+			}
+			if user.(UserPasser).GetLocked() {
+				userStateErr = ErrUserLocked
+				return
+			}
+		} else {
+			user.(OAuthUser).SetAvatar(claims.AvatarURL)
+		}
+
+		if b.sessionSecureEnabled {
+			secureSalt = user.(SessionSecurer).GetSecure()
+			if _, err = parseBaseClaimsFromCookie(r, b.authSecureCookieName, b.secret+secureSalt); err != nil {
+				return
+			}
+		}
+	}
+
+	return
+}
+
 func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) http.Handler {
 	mustLogin := true
 	autoRedirectToHomePage := true
@@ -78,7 +129,8 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 			path := strings.TrimRight(r.URL.Path, "/")
 
-			claims, err := parseUserClaimsFromCookie(r, b.authCookieName, b.secret)
+			claims, err := b.ParseClaims(r)
+
 			if err != nil {
 				if !mustLogin {
 					next.ServeHTTP(w, r)
