@@ -88,7 +88,7 @@ func ByteCountSI(b int) string {
 		float64(b)/float64(div), suffix)
 }
 
-func FixDimension(max, width, height int) (h, w int) {
+func FixDimension(max, width, height int) (w, h int) {
 	currentMax := math.Max(float64(width), float64(height))
 	w, h = width, height
 	if int(currentMax) > max {

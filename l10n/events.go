@@ -2,10 +2,12 @@ package l10n
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"slices"
+	"sort"
 
-	"github.com/qor5/admin/v3/activity"
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/admin/v3/utils/db_utils"
@@ -13,6 +15,7 @@ import (
 	"github.com/qor5/web/v3/vue"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/samber/lo"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
@@ -30,9 +33,9 @@ const (
 	LocalizeTo   = "Localize To"
 )
 
-func registerEventFuncs(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activity.Builder) {
+func registerEventFuncs(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder) {
 	mb.RegisterEventHandler(Localize, localizeToConfirmation(db, lb, mb))
-	mb.RegisterEventHandler(DoLocalize, doLocalizeTo(db, mb, lb, ab))
+	mb.RegisterEventHandler(DoLocalize, doLocalizeTo(db, mb, lb))
 }
 
 type SelectLocale struct {
@@ -157,103 +160,140 @@ type doLocalize struct {
 	LocalizeTo []string
 }
 
-func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ab *activity.Builder) web.EventFunc {
-	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+func DoLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *web.EventContext, mid model.ID, localizeTo []string) (localizedTo []string, err error) {
+	var (
+		fromID        = mid.GetValue("ID")
+		fromVersion   = mid.GetValue("Version")
+		fromLocale    = mid.GetValue("LocaleCode")
+		fromObj       = mb.NewModel()
+		to            = make(map[string]interface{})
+		existsLocales []string
+	)
 
+	if err = db.Session(&gorm.Session{}).Model(fromObj).
+		Distinct("locale_code").
+		Select("locale_code").
+		Where("id = ? AND locale_code <> ?", fromID, fromLocale).
+		Pluck("locale_code", &existsLocales).Error; err != nil {
+		return
+	}
+
+	localizeTo = lo.Filter(localizeTo, func(item string, index int) bool {
+		return !slices.Contains(existsLocales, item)
+	})
+
+	for _, v := range localizeTo {
+		for _, lc := range lb.GetSupportLocaleCodes() {
+			if v == lc {
+				to[v] = struct{}{}
+				break
+			}
+		}
+	}
+
+	if len(to) == 0 {
+		return
+	}
+
+	if err = db_utils.ModelIdWhere(db, mb.NewModel(), mid).First(fromObj).Error; err != nil {
+		return
+	}
+
+	var (
+		toObjs []interface{}
+		ab     = lb.ab
+	)
+
+	defer func(fromObj interface{}) {
+		if ab == nil {
+			return
+		}
+		if _, ok := ab.GetModelBuilder(fromObj); !ok {
+			return
+		}
+		if len(toObjs) > 0 {
+			if err = ab.AddCustomizedRecord(LocalizeFrom, false, ctx.R.Context(), fromObj); err != nil {
+				return
+			}
+			for _, toObj := range toObjs {
+				if err = ab.AddCustomizedRecord(LocalizeTo, false, ctx.R.Context(), toObj); err != nil {
+					return
+				}
+			}
+		}
+	}(reflect.Indirect(reflect.ValueOf(fromObj)).Interface())
+	me := mb.Editing()
+
+	for toLocale := range to {
+		localizedTo = append(localizedTo, toLocale)
+	}
+
+	sort.Strings(localizedTo)
+
+	for _, toLocale := range localizedTo {
+		toObj := mb.NewModel()
+		mid.SetTo(toObj)
+
+		if err = reflectutils.Set(toObj, "LocaleCode", toLocale); err != nil {
+			return
+		}
+
+		me.SetObjectFields(mb.Info(), fromObj, toObj, &presets.FieldContext{
+			Obj:       fromObj,
+			ModelInfo: mb.Info(),
+		}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
+
+		if vErr := me.Validators.Validate(toObj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {
+			err = errors.New(vErr.Error())
+			return
+		}
+
+		newContext := context.WithValue(ctx.R.Context(), FromID, fromID)
+		newContext = context.WithValue(newContext, FromVersion, fromVersion)
+		newContext = context.WithValue(newContext, FromLocale, fromLocale)
+		ctx.R = ctx.R.WithContext(newContext)
+
+		var done func() error
+
+		if cb, _ := mb.GetData(LocalizeOptions).(*ModelLocalizeOptions); cb != nil {
+			if done, err = cb.LocalizeCallback(ctx, fromObj, toObj); err != nil {
+				return
+			}
+		}
+
+		if err = me.CreatingBuilder().Creator(toObj, ctx); err != nil {
+			return
+		}
+
+		if done != nil {
+			if err = done(); err != nil {
+				return
+			}
+		}
+
+		toObjs = append(toObjs, toObj)
+	}
+
+	return
+}
+
+func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder) web.EventFunc {
+	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		var (
 			mid         = mb.MustParseRecordID(ctx.Param(presets.ParamID))
-			fromID      = mid.GetValue("ID")
-			fromVersion = mid.GetValue("Version")
-			fromLocale  = mid.GetValue("LocaleCode")
 			toForm      doLocalize
-			to          = make(map[string]interface{})
+			localizedTo []string
 		)
 
 		ctx.UnmarshalForm(&toForm)
 
-		for _, v := range toForm.LocalizeTo {
-			for _, lc := range lb.GetSupportLocaleCodes() {
-				if v == lc {
-					to[v] = struct{}{}
-					break
-				}
-			}
+		if localizedTo, err = DoLocalizeTo(db, mb, lb, ctx, mid, toForm.LocalizeTo); err != nil {
+			return
 		}
 
-		if len(to) == 0 {
+		if len(localizedTo) == 0 {
 			web.AppendRunScripts(&r, "vars.localizeConfirmation = false")
 			return
-		}
-
-		fromObj := mb.NewModel()
-
-		if err = db_utils.ModelIdWhere(db, mb.NewModel(), mid).First(fromObj).Error; err != nil {
-			return
-		}
-
-		var toObjs []interface{}
-		defer func(fromObj interface{}) {
-			if ab == nil {
-				return
-			}
-			if _, ok := ab.GetModelBuilder(fromObj); !ok {
-				return
-			}
-			if len(toObjs) > 0 {
-				if err = ab.AddCustomizedRecord(LocalizeFrom, false, ctx.R.Context(), fromObj); err != nil {
-					return
-				}
-				for _, toObj := range toObjs {
-					if err = ab.AddCustomizedRecord(LocalizeTo, false, ctx.R.Context(), toObj); err != nil {
-						return
-					}
-				}
-			}
-		}(reflect.Indirect(reflect.ValueOf(fromObj)).Interface())
-		me := mb.Editing()
-
-		for toLocale := range to {
-			toObj := mb.NewModel()
-			mid.SetTo(toObj)
-
-			if err = reflectutils.Set(toObj, "LocaleCode", toLocale); err != nil {
-				return
-			}
-
-			me.SetObjectFields(fromObj, toObj, &presets.FieldContext{
-				Obj:       fromObj,
-				ModelInfo: mb.Info(),
-			}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
-
-			if vErr := me.Validators.Validate(toObj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {
-				presets.ShowMessage(&r, vErr.Error(), "error")
-				return
-			}
-
-			newContext := context.WithValue(ctx.R.Context(), FromID, fromID)
-			newContext = context.WithValue(newContext, FromVersion, fromVersion)
-			newContext = context.WithValue(newContext, FromLocale, fromLocale)
-			ctx.R = ctx.R.WithContext(newContext)
-
-			var done func() error
-
-			if cb, _ := mb.GetData(LocalizeOptions).(*ModelLocalizeOptions); cb != nil {
-				if done, err = cb.LocalizeCallback(ctx, fromObj, toObj); err != nil {
-					return
-				}
-			}
-
-			if err = me.CreatingBuilder().Creator(toObj, ctx); err != nil {
-				return
-			}
-
-			if done != nil {
-				if err = done(); err != nil {
-					return
-				}
-			}
-
-			toObjs = append(toObjs, toObj)
 		}
 
 		presets.ShowMessage(&r, MustGetTranslation(ctx.Context(), "SuccessfullyLocalized"), "")

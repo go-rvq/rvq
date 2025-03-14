@@ -9,7 +9,6 @@ import (
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	v "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	"github.com/samber/lo"
@@ -53,8 +52,8 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 		valEndAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledEndAt)
 
 		displayStartAtPicker := EmbedStatus(sc).Status != StatusOnline
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
-		cmsgr := i18n.MustGetModuleMessages(ctx.Context(), presets.CoreI18nModuleKey, Messages_en_US).(*presets.Messages)
+		msgr := GetMessages(ctx.Context())
+		cmsgr := presets.MustGetMessages(ctx.Context())
 		r.UpdatePortal(PortalSchedulePublishDialog,
 			web.Scope().Slot("{locals}").LocalsInit("{schedulePublishDialog:true}").Children(
 				v.VDialog().Attr("v-model", "locals.schedulePublishDialog").MaxWidth(lo.If(displayStartAtPicker, "480px").Else("280px")).Children(
@@ -164,7 +163,7 @@ func setScheduledTimesFromForm(ctx *web.EventContext, sc ScheduleInterface, db *
 		return nil
 	}
 
-	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+	msgr := GetMessages(ctx.Context())
 	now := db.NowFunc()
 
 	if startAt != nil && !startAt.After(now) {

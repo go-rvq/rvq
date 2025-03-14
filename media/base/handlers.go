@@ -22,7 +22,7 @@ var (
 // MediaHandler media library handler interface, defined which files could be handled, and the handler
 type MediaHandler interface {
 	CouldHandle(media Media) bool
-	Handle(media Media, file FileInterface, option *Option, saveOriginal bool) error
+	Handle(defaulConfig *Config, media Media, file FileInterface, option *Option, saveOriginal bool) error
 }
 
 // RegisterMediaHandler register Media library handler
@@ -99,7 +99,25 @@ func resizeImageTo(img image.Image, size *Size, format imaging.Format) image.Ima
 	}
 }
 
-func (imageHandler) Handle(media Media, file FileInterface, option *Option, saveOriginal bool) (err error) {
+func storeOrSymlink(media Media, file FileInterface, option *Option, target, name string) (err error) {
+	var dstUrl string
+	if name == "" {
+		dstUrl = media.URL()
+	} else {
+		dstUrl = media.URL(name)
+	}
+
+	if ms, _ := media.(MediaSymlinker); ms != nil {
+		if err = ms.Symlink(media.URL(target), dstUrl, option); err == nil || err != ErrSymlinkNotSupported {
+			return
+		}
+	}
+
+	file.Seek(0, 0)
+	return media.Store(dstUrl, option, file)
+}
+
+func (imageHandler) Handle(defaulConfig *Config, media Media, file FileInterface, option *Option, saveOriginal bool) (err error) {
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return
@@ -139,18 +157,58 @@ func (imageHandler) Handle(media Media, file FileInterface, option *Option, save
 		return
 	}
 
-	SetWeightHeight(media, img.Bounds().Dx(), img.Bounds().Dy())
+	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+	SetWeightHeight(media, w, h)
+
+	var originalOption *image.Rectangle
+
+	if saveOriginal && defaulConfig.OriginalMaxWidth > 0 && (w > defaulConfig.OriginalMaxWidth || h > defaulConfig.OriginalMaxHeight) {
+		s := NewSize(w, h).RescaleToMax(defaulConfig.OriginalMaxWidth, defaulConfig.OriginalMaxHeight)
+
+		originalOption = &image.Rectangle{
+			Min: image.Point{X: 0, Y: 0},
+			Max: image.Point{X: s.Width, Y: s.Height},
+		}
+		var buffer bytes.Buffer
+		img = imaging.Resize(img, s.Width, s.Height, imaging.CatmullRom)
+		imaging.Encode(&buffer, img, *format)
+		originalFileSize = buffer.Len()
+		fileSizes["original"] = originalFileSize
+		r := bytes.NewReader(buffer.Bytes())
+		media.Store(media.URL("original"), option, r)
+		r.Seek(0, 0)
+		file.Close()
+
+		file = &FileBytes{r}
+
+		w, h = img.Bounds().Dx(), img.Bounds().Dy()
+		SetWeightHeight(media, w, h)
+	}
+
+	ms, _ := media.(MediaSymlinker)
+
 	// Save cropped default image
 	if cropOption := media.GetCropOption(DefaultSizeKey); cropOption != nil {
 		var buffer bytes.Buffer
+		if ms != nil && originalOption != nil && cropOption.Dx() == originalOption.Dx() && cropOption.Dy() == originalOption.Dy() {
+			if err = ms.Symlink(media.URL("original"), media.URL(), option); err == nil {
+				goto ok
+			} else if err != ErrSymlinkNotSupported {
+				return
+			}
+		}
 		imaging.Encode(&buffer, imaging.Crop(img, *cropOption), *format)
 		fileSizes[DefaultSizeKey] = buffer.Len()
 		media.Store(media.URL(), option, &buffer)
+	ok:
 	} else {
-		file.Seek(0, 0)
+		if saveOriginal {
+			if err = storeOrSymlink(media, file, option, "original", ""); err != nil {
+				return
+			}
+		}
 		// Save default image
 		fileSizes[DefaultSizeKey] = originalFileSize
-		media.Store(media.URL(), option, file)
 	}
 
 	// save sizes image

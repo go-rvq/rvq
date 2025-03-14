@@ -12,9 +12,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3control"
-	"github.com/qor/oss"
-	"github.com/qor/oss/filesystem"
-	"github.com/qor/oss/s3"
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/example/models"
 	"github.com/qor5/admin/v3/l10n"

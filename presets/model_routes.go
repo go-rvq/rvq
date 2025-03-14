@@ -47,15 +47,17 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		}
 	}
 
-	{
-		routePath := itemRoutePath + "/edit"
-		mux.Handle(
-			routePath,
-			mb.p.Wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
-		)
+	if !mb.editingDisabled {
+		{
+			routePath := itemRoutePath + "/edit"
+			mux.Handle(
+				routePath,
+				mb.p.Wrap(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
+			)
 
-		if routesDebug {
-			log.Printf("mounted url: %s\n", routePath)
+			if routesDebug {
+				log.Printf("mounted url: %s\n", routePath)
+			}
 		}
 	}
 
@@ -71,7 +73,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		mb.routeSetuper(mux, routePath)
 	}
 
-	if mb.itemRouteSetuper != nil {
-		mb.itemRouteSetuper(mux, itemRoutePath)
+	for _, f := range mb.itemRouteSetuper {
+		f(mux, itemRoutePath)
 	}
 }

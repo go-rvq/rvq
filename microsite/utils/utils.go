@@ -8,10 +8,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 )
 
-func Upload(storage oss.StorageInterface, path string, reader io.Reader) (err error) {
+func Upload(Storage storage.Storage, path string, reader io.Reader) (err error) {
 	timeBegin := time.Now()
 	defer func() {
 		timeFinish := time.Now()
@@ -22,7 +22,7 @@ func Upload(storage oss.StorageInterface, path string, reader io.Reader) (err er
 			log.Printf("upload: %s, time_spent_ms: %s \n", path, fmt.Sprintf("%f", float64(timeFinish.Sub(timeBegin))/float64(time.Millisecond)))
 		}
 	}()
-	_, err = storage.Put(path, reader)
+	_, err = Storage.Put(path, reader)
 	if err != nil {
 		err = errors.New(fmt.Sprintf("upload error: %v, path: %v", err, path))
 		return
@@ -30,7 +30,7 @@ func Upload(storage oss.StorageInterface, path string, reader io.Reader) (err er
 	return
 }
 
-func DeleteObjects(storage oss.StorageInterface, paths []string) (err error) {
+func DeleteObjects(Storage storage.Storage, paths []string) (err error) {
 	timeBegin := time.Now()
 	defer func() {
 		timeFinish := time.Now()
@@ -42,7 +42,7 @@ func DeleteObjects(storage oss.StorageInterface, paths []string) (err error) {
 		}
 	}()
 
-	if storage, ok := storage.(DeleteObjectsInterface); ok {
+	if storage, ok := Storage.(DeleteObjectsInterface); ok {
 		length := len(paths)
 		i := 0
 		for i < length {
@@ -64,7 +64,7 @@ func DeleteObjects(storage oss.StorageInterface, paths []string) (err error) {
 	}
 
 	for _, v := range paths {
-		err = storage.Delete(v)
+		err = Storage.Delete(v)
 		if err != nil {
 			err = errors.New(fmt.Sprintf("delete error: %v, path: %v", err, v))
 			return
@@ -74,7 +74,7 @@ func DeleteObjects(storage oss.StorageInterface, paths []string) (err error) {
 	return
 }
 
-func Copy(storage oss.StorageInterface, from, to string) (err error) {
+func Copy(Storage storage.Storage, from, to string) (err error) {
 	timeBegin := time.Now()
 	defer func() {
 		timeFinish := time.Now()
@@ -86,11 +86,11 @@ func Copy(storage oss.StorageInterface, from, to string) (err error) {
 		}
 	}()
 
-	if storage, ok := storage.(GetBucketInterface); ok {
+	if storage, ok := Storage.(GetBucketInterface); ok {
 		from = path.Join(storage.GetBucket(), from)
 	}
 
-	err = storage.(CopyInterface).Copy(from, to)
+	err = Storage.(CopyInterface).Copy(from, to)
 	if err != nil {
 		err = errors.New(fmt.Sprintf("copy error: %v, from: %v, to: %v", err, from, to))
 	}

@@ -35,6 +35,18 @@ type BreadcrumbsBuilder struct {
 	items []*Breadcrumb
 }
 
+func (b *BreadcrumbsBuilder) Items() []*Breadcrumb {
+	return b.items
+}
+
+func (b *BreadcrumbsBuilder) Labels() (s []string) {
+	s = make([]string, len(b.items))
+	for i, item := range b.items {
+		s[i] = item.Label
+	}
+	return
+}
+
 func (b *BreadcrumbsBuilder) Append(item ...*Breadcrumb) {
 	b.items = append(b.items, item...)
 }
@@ -59,5 +71,5 @@ func (b *BreadcrumbsBuilder) Component(youAreHere string) h.HTMLComponent {
 		i += 2
 	}
 	children[i] = VBreadcrumbsItem(h.Text(b.items[len(b.items)-1].Label)).Active(true)
-	return VBreadcrumbs(children...)
+	return VBreadcrumbs(children...).Style("padding:0")
 }

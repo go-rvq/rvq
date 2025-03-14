@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"github.com/theplant/sliceutils"
@@ -48,7 +48,7 @@ func (p *Product) getListContent() string {
 	return fmt.Sprintf("list page  %s", p.Code)
 }
 
-func (p *Product) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Product) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.getUrl(),
 		Content:  p.getContent(),
@@ -80,7 +80,7 @@ func (p *Product) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx c
 	return
 }
 
-func (p *Product) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Product) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.OnlineUrl,
 		IsDelete: true,
@@ -112,7 +112,7 @@ func (p *ProductWithoutVersion) getUrl() string {
 	return fmt.Sprintf("test/product_no_version/%s/index.html", p.Code)
 }
 
-func (p *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.getUrl(),
 		Content:  p.getContent(),
@@ -130,7 +130,7 @@ func (p *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *
 	return
 }
 
-func (p *ProductWithoutVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *ProductWithoutVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      p.OnlineUrl,
 		IsDelete: true,
@@ -170,7 +170,7 @@ func (x SliceProductWithoutVersion) Less(i, j int) bool { return x[i].Name < x[j
 func (x SliceProductWithoutVersion) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
 
 type MockStorage struct {
-	oss.StorageInterface
+	storage.Storage
 	Objects map[string]string
 }
 
@@ -191,7 +191,7 @@ func (m *MockStorage) Get(path string) (f *os.File, err error) {
 	return
 }
 
-func (m *MockStorage) Put(path string, r io.Reader) (*oss.Object, error) {
+func (m *MockStorage) Put(path string, r io.Reader) (*storage.Object, error) {
 	fmt.Println("Calling mock s3 client - Put: ", path)
 	b, err := io.ReadAll(r)
 	if err != nil {
@@ -202,7 +202,7 @@ func (m *MockStorage) Put(path string, r io.Reader) (*oss.Object, error) {
 	}
 	m.Objects[path] = string(b)
 
-	return &oss.Object{}, nil
+	return &storage.Object{}, nil
 }
 
 func (m *MockStorage) Delete(path string) error {
@@ -228,7 +228,7 @@ func TestMain(m *testing.M) {
 func TestPublishVersionContentToS3(t *testing.T) {
 	db := TestDB
 	db.AutoMigrate(&Product{})
-	storage := &MockStorage{}
+	Storage := &MockStorage{}
 
 	productV1 := Product{
 		Model:   gorm.Model{ID: 1},
@@ -247,7 +247,7 @@ func TestPublishVersionContentToS3(t *testing.T) {
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV1)
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV2)
 
-	p := publish.New(db, storage)
+	p := publish.New(db, Storage)
 	// publish v1
 	skipListTrueContext := context.WithValue(context.Background(), "skip_list", true)
 	skipListFalseContext := context.WithValue(context.Background(), "skip_list", false)
@@ -255,18 +255,18 @@ func TestPublishVersionContentToS3(t *testing.T) {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV1, publish.StatusOnline, productV1.getUrl())
-	assertUploadFile(t, productV1.getContent(), productV1.getUrl(), storage)
-	// assertUploadFile(t, productV1.getListContent(), productV1.getListUrl(), storage)
+	assertUploadFile(t, productV1.getContent(), productV1.getUrl(), Storage)
+	// assertUploadFile(t, productV1.getListContent(), productV1.getListUrl(), Storage)
 
 	// publish v2
 	if err := p.Publish(&productV2, skipListFalseContext); err != nil {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV2, publish.StatusOnline, productV2.getUrl())
-	assertUploadFile(t, productV2.getContent(), productV2.getUrl(), storage)
-	assertUploadFile(t, productV2.getListContent(), productV2.getListUrl(), storage)
+	assertUploadFile(t, productV2.getContent(), productV2.getUrl(), Storage)
+	assertUploadFile(t, productV2.getListContent(), productV2.getListUrl(), Storage)
 	// if delete v1 file
-	assertContentDeleted(t, productV1.getUrl(), storage)
+	assertContentDeleted(t, productV1.getUrl(), Storage)
 	// if update v1 status to offline
 	assertUpdateStatus(t, db, &productV1, publish.StatusOffline, productV1.getUrl())
 
@@ -275,8 +275,8 @@ func TestPublishVersionContentToS3(t *testing.T) {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV2, publish.StatusOffline, productV2.getUrl())
-	assertContentDeleted(t, productV2.getUrl(), storage)
-	assertContentDeleted(t, productV2.getListUrl(), storage)
+	assertContentDeleted(t, productV2.getUrl(), Storage)
+	assertContentDeleted(t, productV2.getListUrl(), Storage)
 }
 
 func TestPublishList(t *testing.T) {
@@ -492,11 +492,11 @@ func assertUpdateStatus(t *testing.T, db *gorm.DB, p *Product, assertStatus stri
 	return
 }
 
-func assertContentDeleted(t *testing.T, url string, storage oss.StorageInterface) {
+func assertContentDeleted(t *testing.T, url string, Storage storage.Storage) {
 	t.Helper()
 
 	t.Helper()
-	_, err := storage.Get(url)
+	_, err := Storage.Get(url)
 	if err == nil {
 		t.Errorf("content for %s should be deleted", url)
 	}
@@ -519,9 +519,9 @@ func assertNoVersionUpdateStatus(t *testing.T, db *gorm.DB, p *ProductWithoutVer
 	return
 }
 
-func assertUploadFile(t *testing.T, content string, url string, storage oss.StorageInterface) {
+func assertUploadFile(t *testing.T, content string, url string, Storage storage.Storage) {
 	t.Helper()
-	f, err := storage.Get(url)
+	f, err := Storage.Get(url)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -120,6 +120,13 @@ func (id ID) WithField(fieldName string, value any) ID {
 	return id
 }
 
+func (id ID) Clone() ID {
+	values := make([]any, len(id.Values))
+	copy(values, id.Values)
+	id.Values = values
+	return id
+}
+
 type IDSlice []ID
 
 func (s IDSlice) Len() int {

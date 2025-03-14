@@ -1,6 +1,7 @@
 package activity
 
 type Messages struct {
+	ActivityLogs string
 	Activities   string
 	ActionAll    string
 	ActionView   string
@@ -34,6 +35,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ActivityLogs: "Activity Logs",
 	Activities:   "Activities",
 	ActionAll:    "All",
 	ActionView:   "View",

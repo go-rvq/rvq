@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"gorm.io/gorm"
 )
 
@@ -14,7 +14,7 @@ const (
 	listPublishJobNamePrefix     = "list-publisher"
 )
 
-func RunPublisher(db *gorm.DB, storage oss.StorageInterface, publisher *Builder) {
+func RunPublisher(db *gorm.DB, Storage storage.Storage, publisher *Builder) {
 	{ // schedule publisher
 		scheduleP := NewSchedulePublishBuilder(publisher)
 
@@ -36,7 +36,7 @@ func RunPublisher(db *gorm.DB, storage oss.StorageInterface, publisher *Builder)
 	}
 
 	{ // list publisher
-		listP := NewListPublishBuilder(db, storage)
+		listP := NewListPublishBuilder(db, Storage)
 		for name, model := range ListPublishModels {
 			go RunJob(listPublishJobNamePrefix+"-"+name, time.Minute, time.Minute*5, func() {
 				if err := listP.Run(model); err != nil {

@@ -6,17 +6,16 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/qor/oss"
-	"github.com/qor/oss/filesystem"
 	"github.com/qor5/admin/v3/media/base"
+	"github.com/qor5/admin/v3/media/storage"
 )
 
 var (
 	// URLTemplate default URL template
 	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
 	// Storage the storage used to save medias
-	Storage oss.StorageInterface = filesystem.New("public")
-	_       base.Media           = &OSS{}
+	Storage storage.Storage = storage.NewFileSystem("public")
+	_       base.Media      = &OSS{}
 )
 
 // OSS common storage interface
@@ -57,6 +56,20 @@ var DefaultStoreHandler = func(oss OSS, path string, option *base.Option, reader
 // Store save reader's content with path
 func (o OSS) Store(path string, option *base.Option, reader io.Reader) error {
 	return DefaultStoreHandler(o, path, option, reader)
+}
+
+// DefaultSymlinkHandler used to store reader with default Storage
+var DefaultSymlinkHandler = func(oss OSS, target string, name string, option *base.Option) (err error) {
+	sl, _ := Storage.(storage.Symlinker)
+	if sl != nil {
+		return sl.Symlink(target, name)
+	}
+	return base.ErrSymlinkNotSupported
+}
+
+// Symlink create symbolic link content with path
+func (o OSS) Symlink(target string, name string, option *base.Option) (err error) {
+	return DefaultSymlinkHandler(o, target, name, option)
 }
 
 // DefaultRetrieveHandler used to retrieve file

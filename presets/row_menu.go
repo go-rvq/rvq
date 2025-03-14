@@ -5,7 +5,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
@@ -148,12 +147,13 @@ func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) RecordMenuIte
 		if b.permAction != "" && b.rmb.mb.Info().Verifier().Do(b.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
 			return nil
 		}
+
 		return VListItem(
 			web.Slot(
 				VIcon(b.icon),
 			).Name("prepend"),
 
-			VListItemTitle(h.Text(i18n.PT(ctx.Context(), ModelsI18nModuleKey, strcase.ToCamel(b.rmb.mb.label+" RowMenuItem"), b.name))),
+			VListItemTitle(h.Text(b.rmb.mb.TFormat(ctx.Context(), "%sRowMenuItem%s", b.name))),
 		).Attr("@click", web.Plaid().
 			EventFunc(b.eventID).
 			Query(ParamID, id).

@@ -1,6 +1,7 @@
 package media
 
 import (
+	"github.com/qor5/admin/v3/media/base"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/x/v3/perm"
 	"gorm.io/gorm"
@@ -10,6 +11,8 @@ type Builder struct {
 	db                  *gorm.DB
 	permVerifier        *perm.Verifier
 	mediaLibraryPerPage int
+
+	base.WithConfigField
 }
 
 func New(db *gorm.DB) *Builder {

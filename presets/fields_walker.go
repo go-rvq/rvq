@@ -9,10 +9,15 @@ import (
 type (
 	FieldWalkState uint8
 
+	FieldWalkHandleOptions struct {
+		SkipNestedNil bool
+		Handler       FieldWalkHandle
+	}
+
 	FieldWalkHandle func(field *FieldContext) (s FieldWalkState)
 
 	FieldWalker interface {
-		Walk(fctx *FieldContext, handle FieldWalkHandle) (s FieldWalkState)
+		Walk(fctx *FieldContext, opts *FieldWalkHandleOptions) (s FieldWalkState)
 	}
 )
 
@@ -24,10 +29,14 @@ const (
 )
 
 func (b *FieldsBuilder) Walk(info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext, handle FieldWalkHandle) {
-	b.walk(info, obj, mode, "", ctx, handle)
+	b.walk(info, obj, mode, "", ctx, &FieldWalkHandleOptions{Handler: handle})
 }
 
-func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, handle FieldWalkHandle) (s FieldWalkState) {
+func (b *FieldsBuilder) WalkO(info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext, opts *FieldWalkHandleOptions) {
+	b.walk(info, obj, mode, "", ctx, opts)
+}
+
+func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, opts *FieldWalkHandleOptions) (s FieldWalkState) {
 	var (
 		layout     = b.CurrentLayout()
 		fieldsChan = make(chan string)
@@ -70,7 +79,7 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 	}()
 
 	for fieldName := range fieldsChan {
-		s = b.walkField(info, obj, mode, parentFormValueKey, ctx, fieldName, handle)
+		s = b.walkField(info, obj, mode, parentFormValueKey, ctx, fieldName, opts)
 		if s == FieldWalkStop {
 			return s
 		} else if s == FieldWalkSkipSiblings {
@@ -80,7 +89,7 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 	return
 }
 
-func (b *FieldsBuilder) walkField(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, name string, handle FieldWalkHandle) (s FieldWalkState) {
+func (b *FieldsBuilder) walkField(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, name string, opts *FieldWalkHandleOptions) (s FieldWalkState) {
 	var (
 		f              = b.GetFieldOrDefault(name)
 		contextKeyPath = f.name
@@ -102,12 +111,12 @@ func (b *FieldsBuilder) walkField(info *ModelInfo, obj interface{}, mode FieldMo
 		Context:      f.context,
 	}
 
-	s = handle(fctx)
+	s = opts.Handler(fctx)
 	if s == FieldWalkSkipChildren {
 		s = FieldWalkNext
 	} else if s == FieldWalkNext {
 		if f.nested != nil {
-			s = f.nested.Walk(fctx, handle)
+			s = f.nested.Walk(fctx, opts)
 		}
 	}
 	return

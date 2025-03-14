@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	EventPublish   = "publish_EventPublish"
-	EventRepublish = "publish_EventRepublish"
-	EventUnpublish = "publish_EventUnpublish"
+	EventPublish            = "publish_EventPublish"
+	EventRepublish          = "publish_EventRepublish"
+	EventPublishOrRepublish = "publish_EventRepublishOrRepublish"
+	EventUnpublish          = "publish_EventUnpublish"
 
 	EventDuplicateVersion      = "publish_EventDuplicateVersion"
 	eventSelectVersion         = "publish_eventSelectVersion"
@@ -20,9 +21,10 @@ const (
 	eventDeleteVersionDialog = "publish_eventDeleteVersionDialog"
 	eventDeleteVersion       = "publish_eventDeleteVersion"
 
-	ActivityPublish   = "Publish"
-	ActivityRepublish = "Republish"
-	ActivityUnPublish = "UnPublish"
+	ActivityPublish            = "Publish"
+	ActivityRepublish          = "Republish"
+	ActivityPublishOrRepublish = "PublishOrRepublish"
+	ActivityUnPublish          = "UnPublish"
 
 	ParamScriptAfterPublish = "publish_param_script_after_publish"
 )
@@ -30,6 +32,7 @@ const (
 func registerEventFuncsForResource(mb *presets.ModelBuilder, publisher *Builder) {
 	mb.RegisterEventHandler(EventPublish, publishAction(mb, publisher, ActivityPublish))
 	mb.RegisterEventHandler(EventRepublish, publishAction(mb, publisher, ActivityRepublish))
+	mb.RegisterEventHandler(EventPublishOrRepublish, publishAction(mb, publisher, ActivityPublishOrRepublish))
 	mb.RegisterEventHandler(EventUnpublish, unpublishAction(mb, publisher, ActivityUnPublish))
 
 	mb.RegisterEventHandler(EventDuplicateVersion, duplicateVersionAction(mb, publisher))

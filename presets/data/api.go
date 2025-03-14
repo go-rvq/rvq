@@ -95,10 +95,34 @@ func (p *SearchParams) WhereModelID(id model.ID, withoutKeys ...string) *SearchP
 	}
 
 	if len(q) > 0 {
-		p.Where(strings.Join(q, " AND"), v...)
+		p.Where(strings.Join(q, " AND "), v...)
 	}
 
 	return p
+}
+
+func (p *SearchParams) WhereModelIDs(ids model.IDSlice, withoutKeys ...string) *SearchParams {
+	var (
+		allq []string
+		args []any
+	)
+
+	for _, mid := range ids {
+		var (
+			q []string
+		)
+
+		for i, field := range mid.Fields {
+			if !slices.Contains(withoutKeys, field.Name()) {
+				q = append(q, fmt.Sprintf("%s = ?", field.QuotedFullDBName()))
+				args = append(args, mid.Values[i])
+			}
+		}
+
+		allq = append(allq, "("+strings.Join(q, " AND ")+")")
+	}
+
+	return p.Where("( "+strings.Join(allq, " OR ")+" )", args...)
 }
 
 type SQLCondition struct {

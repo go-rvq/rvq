@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/qor/oss/s3"
+import "github.com/qor5/admin/v3/media/storage/s3"
 
 func NewClient(client *s3.Client) S3Client {
 	return S3Client{client}

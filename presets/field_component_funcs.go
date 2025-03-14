@@ -7,8 +7,9 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/web/v3/zeroer"
 	"github.com/qor5/x/v3/i18n"
+	"github.com/qor5/x/v3/ui/editorjs"
 	. "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/qor5/x/v3/ui/vuetifyx"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
@@ -36,12 +37,10 @@ func CheckboxComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 }
 
 func CheckboxReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	comp := vuetifyx.VXReadonlyField().
-		Label(field.Label)
-	if !zeroer.IsZero(field.Value()) {
-		comp.Icon("mdi-check")
+	if zeroer.IsZero(field.Value()) {
+		return nil
 	}
-	return comp
+	return FormFieldComponentWrapper(VChip(h.Text(field.Label)).PrependIcon("mdi-check"))
 }
 
 func SwitchComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
@@ -58,6 +57,7 @@ func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompone
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
+		Hint(field.Hint()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -75,11 +75,11 @@ func TimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCompone
 			panic(fmt.Sprintf("unknown time type: %T\n", v))
 		}
 	}
-	return vuetifyx.VXDateTimePicker().
+	return vx.VXDateTimePicker().
 		Label(field.Label).
 		Attr(web.VField(field.FormKey, val)...).
 		Value(val).
-		TimePickerProps(vuetifyx.TimePickerProps{
+		TimePickerProps(vx.TimePickerProps{
 			Format:     "24hr",
 			Scrollable: true,
 		}).
@@ -111,7 +111,7 @@ func TimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTM
 
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := t.Format(msgr.TimeFormats.DateTime)
-	return vuetifyx.VXReadonlyField().
+	return vx.VXReadonlyField().
 		Label(field.Label).
 		Value(val)
 }
@@ -134,6 +134,7 @@ func TextFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
+		Hint(field.Hint()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -144,6 +145,7 @@ func LongTextFieldComponentFunc(field *FieldContext, _ *web.EventContext) *VText
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
+		Hint(field.Hint()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -164,7 +166,7 @@ func RuneFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 }
 
 func ReadonlyTextComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return vuetifyx.VXReadonlyField().
+	return vx.VXReadonlyField().
 		Label(field.Label).
 		Value(field.StringValue())
 }
@@ -174,6 +176,63 @@ func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, "")...).
 		Label(field.Label).
+		Hint(field.Hint()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
+}
+
+func EditorJSComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
+	if mode := field.Mode.Dot(); mode.HasAny(EDIT, NEW) {
+		return EditorJSComponentWriteFunc(field, nil)
+	} else if mode.Has(LIST) {
+		s, _ := field.Value().(string)
+		var (
+			comp h.HTMLComponent
+			err  error
+		)
+		if s, err = editorjs.Htmlify(s); err != nil {
+			comp = h.Div(h.RawHTML(err.Error())).Class("text-error")
+		} else {
+			comp = h.RawHTML(s)
+		}
+		return h.Td(comp)
+	}
+	return EditorJSComponentReadFunc(field, nil)
+}
+
+func EditorJSComponentReadFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
+	v := field.Value()
+	if v == nil {
+		return nil
+	}
+
+	s, _ := v.(string)
+
+	var (
+		comp h.HTMLComponent
+		err  error
+	)
+
+	if len(s) > 0 && s[0] == '<' {
+		comp = h.RawHTML(s)
+	} else if s, err = editorjs.Htmlify(s); err != nil {
+		comp = h.Div(h.RawHTML(err.Error())).Class("text-error")
+	} else {
+		comp = h.RawHTML(s)
+	}
+
+	return h.HTMLComponents{
+		h.Div(
+			h.Label(field.Label),
+		),
+		VCard(
+			VCardText(comp).Class("editorjs-body"),
+		).MaxHeight(700).Class("overflow-auto"),
+	}
+}
+
+func EditorJSComponentWriteFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
+	s, _ := field.Value().(string)
+	_, err := editorjs.Parse([]byte(s))
+	return vx.EditorJS().Label(field.Label).FormField(field.FormKey, field.Value().(string)).Errors(err)
 }

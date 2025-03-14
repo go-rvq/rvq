@@ -4,7 +4,6 @@ import (
 	"embed"
 	"testing"
 
-	"github.com/qor/oss/filesystem"
 	"github.com/qor5/admin/v3/media/base"
 	"github.com/qor5/admin/v3/media/media_library"
 	"github.com/qor5/admin/v3/media/oss"

@@ -60,9 +60,9 @@ func (sb *Builder) ModelInstall(b *presets.Builder, mb *presets.ModelBuilder) er
 			eb := mb.Editing()
 			eb.WrapPostSetterFunc(func(in presets.SetterFunc) presets.SetterFunc {
 				return func(obj interface{}, ctx *web.EventContext) {
-					if ctx.R.FormValue(fieldName+"_Checkbox") == "true" {
+					if ctx.R.FormValue(fieldName+"SlugSync") == "true" {
 						v := reflectutils.MustGet(obj, relatedFieldName).(string)
-						reflectutils.Set(obj, fieldName, slug(v))
+						reflectutils.Set(obj, fieldName, Slugify(v))
 					}
 					if in != nil {
 						in(obj, ctx)
@@ -85,8 +85,15 @@ func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext
 	slugFieldName := field.Name + "WithSlug"
 	slugLabel := strings.TrimSpace(strings.TrimSuffix(field.Label, "*")) + " Slug"
 	ckbName := checkBoxName(slugFieldName)
+
+	sync := true
+
+	if field.Mode.Dot().Is(presets.EDIT) {
+		sync = false
+	}
+
 	return vue.UserComponent().
-		Assign("form", ckbName, true).
+		Assign("form", ckbName, sync).
 		Scope("checkboxName", vue.Var(strconv.Quote(checkBoxName(slugFieldName)))).
 		Scope("sync").
 		Setup(`({scope, debounce}) => {
@@ -145,7 +152,7 @@ func sync(ctx *web.EventContext) (r web.EventResponse, err error) {
 		portalName(slugFieldName),
 		VTextField().
 			Type("text").
-			Attr(web.VField(slugFieldName, slug(ctx.R.FormValue(fieldName)))...).
+			Attr(web.VField(slugFieldName, Slugify(ctx.R.FormValue(fieldName)))...).
 			Label(ctx.R.FormValue("slug_label")),
 	)
 	return
@@ -156,7 +163,7 @@ var (
 	regexpMultipleDashes     = regexp.MustCompile("-+")
 )
 
-func slug(value string) string {
+func Slugify(value string) string {
 	value = strings.TrimSpace(value)
 	value = unidecode.Unidecode(value)
 	value = strings.ToLower(value)
@@ -171,5 +178,5 @@ func portalName(field string) string {
 }
 
 func checkBoxName(field string) string {
-	return fmt.Sprintf("%s_Checkbox", field)
+	return fmt.Sprintf("%sSlugSync", field)
 }

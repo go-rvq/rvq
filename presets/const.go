@@ -31,6 +31,7 @@ const (
 	ParamTargetPortal       = "target_portal"
 	ParamEditFormUnscoped   = "presets_edit_form_unscoped"
 	ParamPostChangeCallback = "presets_post_change_callback"
+	ParamPostDeleteCallback = "presets_post_delete_callback"
 	ParamActionsDisabled    = "actions_disabled"
 	ParamMustResult         = "must_result"
 	ParamListingEncoder     = "presets_listingEncoder"

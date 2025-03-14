@@ -264,7 +264,11 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 				return
 			}
 
-			r = reflect.ValueOf(obj).Elem().Interface()
+			if state.Return != nil {
+				r = state.Obj
+			} else {
+				r = reflect.ValueOf(obj).Elem().Interface()
+			}
 			return
 		}
 	)
@@ -398,6 +402,7 @@ type CallbackState struct {
 	SharedDB,
 	DB *gorm.DB
 	SearchParams *presets.SearchParams
+	Return       any
 	Obj          interface{}
 	Ctx          *web.EventContext
 	data         map[any]any

@@ -43,7 +43,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			versionSwitch  *v.VChipBuilder
 			publishBtn     h.HTMLComponent
 		)
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 		utilsMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
 
 		primarySlugger, ok = obj.(presets.SlugEncoder)
@@ -74,7 +74,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 					Go()).
 				Class(v.W100)
 			if status, ok = obj.(StatusInterface); ok {
-				versionSwitch.AppendChild(statusChip(status.EmbedStatus().Status, msgr).Class("mx-2"))
+				versionSwitch.AppendChild(LiveChipsFormBuilder.Status(status.EmbedStatus().Status, msgr).Class("mx-2"))
 			}
 			versionSwitch.AppendChild(v.VSpacer())
 			versionSwitch.AppendIcon("mdi-chevron-down")
@@ -123,14 +123,14 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			}
 			div.AppendChildren(publishBtn)
 
-			// Publish/Unpublish/Republish ConfirmDialog
+			// Publish/UnPublish/Republish ConfirmDialog
 			div.AppendChildren(
 				utils.ConfirmDialog(msgr.Areyousure, web.Plaid().EventFunc(web.Var("locals.action")).
 					Query(presets.ParamID, primarySlugger.PrimarySlug()).Go(),
 					utilsMsgr),
 			)
 
-			// Publish/Unpublish/Republish CustomDialog
+			// Publish/UnPublish/Republish CustomDialog
 			if config.UnPublishEvent != nil || config.RePublishEvent != nil || config.PublishEvent != nil {
 				div.AppendChildren(web.Portal().Name(PortalPublishCustomDialog))
 			}
@@ -167,7 +167,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 
 func DefaultVersionBar(db *gorm.DB) presets.ObjectComponentFunc {
 	return func(obj interface{}, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 		res := h.Div().Class("d-inline-flex align-center")
 
 		slugEncoderIf := obj.(presets.SlugEncoder)
@@ -289,7 +289,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 			),
 		)
 	})
-	lb.Field("State").ComponentFunc(StatusListFunc())
+	lb.Field("State").ComponentFunc(StatusListFunc(&LiveChipsListBuilder))
 	lb.Field("StartAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		p := field.Obj.(ScheduleInterface)
 
@@ -321,7 +321,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	}).Label("Unread Notes")
 
 	lb.Field("Option").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 		pmsgr := presets.MustGetMessages(ctx.Context())
 
 		obj := field.Obj
@@ -394,7 +394,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 	})
 
 	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 		id := ctx.R.FormValue("select_id")
 		if id == "" {
 			id = ctx.R.FormValue("f_select_id")

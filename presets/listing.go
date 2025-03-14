@@ -12,7 +12,6 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
@@ -61,6 +60,8 @@ type ListingBuilder struct {
 	dialogHeight           string
 	dataTableDensity       string
 	recordEncoderFactories map[string]RecordEncoderFactory[any]
+	configureComponent     func(lcb *ListingComponentBuilder)
+
 	FieldsBuilder
 	RowMenuFields
 
@@ -273,6 +274,15 @@ func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuIte
 	return
 }
 
+func (b *ListingBuilder) ConfigureComponent() func(lcb *ListingComponentBuilder) {
+	return b.configureComponent
+}
+
+func (b *ListingBuilder) SetConfigureComponent(configureComponent func(lcb *ListingComponentBuilder)) *ListingBuilder {
+	b.configureComponent = configureComponent
+	return b
+}
+
 const (
 	bulkPanelOpenParamName   = "bulkOpen"
 	actionPanelOpenParamName = "actionOpen"
@@ -289,7 +299,7 @@ func (b *ListingBuilder) TTitle(r *http.Request) string {
 	if b.title != "" {
 		return b.title
 	}
-	return MustGetMessages(r.Context()).ListingObjectTitle(i18n.T(r.Context(), ModelsI18nModuleKey, b.mb.pluralLabel))
+	return MustGetMessages(r.Context()).ListingObjectTitle(b.mb.TTitlePlural(r.Context()))
 }
 
 func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -505,6 +515,24 @@ func (b *ListingBuilder) bulkPanel(
 	if isInDialogFromQuery(ctx) {
 		onOK.URL(ctx.R.RequestURI)
 	}
+
+	var err error
+	r, err = bulk.compFunc(selectedIds, ctx)
+
+	if err != nil {
+		return VCard(
+			VCardTitle(
+				h.Text(bulk.NameLabel.label),
+			),
+			VCardText(
+				VAlert(h.RawHTML(err.Error())).
+					Type(ColorError).
+					Variant(VariantTonal).
+					Density(DensityCompact),
+			),
+		)
+	}
+
 	return VCard(
 		VCardTitle(
 			h.Text(bulk.NameLabel.label),
@@ -512,7 +540,7 @@ func (b *ListingBuilder) bulkPanel(
 		VCardText(
 			errComp,
 			processSelectedIdsNotice,
-			bulk.compFunc(selectedIds, ctx),
+			r,
 		),
 		VCardActions(
 			VSpacer(),
@@ -586,13 +614,7 @@ func (b *ListingBuilder) openActionDialog(ctx *web.EventContext) (r web.EventRes
 		err = errors.New("cannot find requested action")
 		return
 	}
-
-	b.mb.p.dialog(
-		ctx,
-		&r,
-		b.actionPanel(action, ctx),
-		action.dialogWidth,
-	)
+	err = action.View(b.mb, "", ctx, &r)
 	return
 }
 
@@ -631,12 +653,7 @@ func (b *ListingBuilder) openBulkActionDialog(ctx *web.EventContext) (r web.Even
 		processedSelectedIds = selected
 	}
 
-	b.mb.p.dialog(
-		ctx,
-		&r,
-		b.bulkPanel(bulk, selected, processedSelectedIds, ctx),
-		bulk.dialogWidth,
-	)
+	err = bulk.View(b.mb, processedSelectedIds, ctx, &r)
 	return
 }
 
@@ -662,7 +679,7 @@ func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventRespons
 	}
 
 	if err1 == nil {
-		err1 = bulk.updateFunc(processedSelectedIds, ctx)
+		err1 = bulk.Do(processedSelectedIds, ctx)
 	}
 
 	if err1 != nil {
@@ -670,6 +687,11 @@ func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventRespons
 			vErr := &web.ValidationErrors{}
 			vErr.GlobalError(err1.Error())
 			ctx.Flash = vErr
+
+			if err1 = bulk.View(b.mb, processedSelectedIds, ctx, &r); err1 != nil {
+				ShowMessage(&r, err1.Error(), "warning")
+			}
+			return
 		}
 	}
 
@@ -980,10 +1002,11 @@ func (b *ListingBuilder) selectColumnsBtn(
 	selectColumns := selectColumns{
 		DisplayColumns: displayColumns,
 	}
+
 	for _, sc := range sortedColumns {
 		selectColumns.SortedColumns = append(selectColumns.SortedColumns, sortedColumn{
 			Name:  sc,
-			Label: i18n.PT(ctx.Context(), ModelsI18nModuleKey, b.mb.label, b.mb.getLabel(b.Field(sc).NameLabel)),
+			Label: b.FieldsBuilder.GetField(sc).ContextLabel(b.mb.Info(), ctx),
 		})
 	}
 
@@ -1052,6 +1075,7 @@ func (b *ListingBuilder) filterBar(
 	ft.Clear = msgr.Clear
 	ft.Add = msgr.FiltersAdd
 	ft.Apply = msgr.FilterApply
+
 	for _, d := range fd {
 		d.Translations = vx.FilterIndependentTranslations{
 			FilterBy: msgr.FilterBy(d.Label),
@@ -1075,7 +1099,7 @@ func (b *ListingBuilder) filterBar(
 	ft.MultipleSelect.In = msgr.FiltersMultipleSelectIn
 	ft.MultipleSelect.NotIn = msgr.FiltersMultipleSelectNotIn
 
-	filter := vx.VXFilter(fd).Translations(ft)
+	filter := vx.VXFilter(fd).Translations(ft).Attr("v-model:visibility", "filterBarVisible.value")
 	if inDialog {
 		filter.UpdateModelValue(web.Plaid().
 			URL(ctx.R.RequestURI).

@@ -219,7 +219,7 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 	b.editingFB = *b.editingFB.Only(fields...)
 	if b.componentEditFunc == nil {
 		b.EditComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(EDIT), b.name, ctx)
+			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(EDIT), &FieldContext{FormKey: b.name}, ctx)
 		})
 	}
 	b.Viewing(fields...)
@@ -231,7 +231,7 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 	b.viewingFB = *b.viewingFB.Only(fields...)
 	if b.componentViewFunc == nil {
 		b.ViewComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), b.name, ctx)
+			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), &FieldContext{FormKey: b.name}, ctx)
 		})
 	}
 	return
@@ -719,16 +719,9 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 			if f.setterFunc == nil {
 				continue
 			}
-			keyPath := fmt.Sprintf("%s.%s", prefix, f.name)
 
-			err := f.setterFunc(toObj, &FieldContext{
-				EventContext: ctx,
-				Obj:          toObj,
-				ModelInfo:    info,
-				FormKey:      keyPath,
-				Name:         f.name,
-				Label:        f.RequestLabel(info, ctx, b.editingFB.GetLabel),
-			}, ctx)
+			fctx := f.NewContext(info, ctx, &FieldContext{FormKey: prefix}, toObj)
+			err := f.setterFunc(toObj, fctx, ctx)
 			if err != nil {
 				return err
 			}

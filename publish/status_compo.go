@@ -12,11 +12,10 @@ import (
 
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
 )
 
-func draftCountFunc(db *gorm.DB) presets.FieldComponentFunc {
+func DraftCountComponentFunc(db *gorm.DB) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var (
 			count int64
@@ -33,9 +32,19 @@ func draftCountFunc(db *gorm.DB) presets.FieldComponentFunc {
 	}
 }
 
-func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
+func LiveComponentFunc(db *gorm.DB, b *LiveChipsBuilder) presets.FieldComponentFunc {
+	return presets.ReadOnlyFieldComponentFuncWrapper(LiveFieldComponentFunc(db, b))
+}
+
+func LiveFieldComponentFunc(db *gorm.DB, b *LiveChipsBuilder) presets.FieldComponentFunc {
+	return LiveFieldComponentFuncBuilder(db, func(status string, toStatus string, msgr *Messages) h.HTMLComponent {
+		return b.Auto(status, toStatus, msgr)
+	})
+}
+
+func LiveFieldComponentFuncBuilder(db *gorm.DB, build func(status string, toStatus string, msgr *Messages) h.HTMLComponent) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 
 		var (
 			ok            bool
@@ -45,17 +54,6 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 
 			obj = field.Obj
 		)
-
-		defer func() {
-			if field.Mode.Dot().Is(presets.LIST) {
-				comp = h.Td(comp)
-			} else {
-				comp = h.Div(h.Components(
-					h.Label(field.Label).Class("v-label theme--light text-caption"),
-					h.Div(comp).Class("pt-1"),
-				)).Class("mb-4")
-			}
-		}()
 
 		defer func() {
 			if err != nil {
@@ -81,7 +79,7 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 
 		sc, ok := obj.(ScheduleInterface)
 		if !ok {
-			return statusChip(st.EmbedStatus().Status, msgr)
+			return build(st.EmbedStatus().Status, "", msgr)
 		}
 
 		var (
@@ -107,48 +105,123 @@ func liveFunc(db *gorm.DB) presets.FieldComponentFunc {
 			}
 		}
 
-		return liveChips(st.EmbedStatus().Status, toStatus, msgr)
+		return build(st.EmbedStatus().Status, toStatus, msgr)
 	}
 }
 
-func StatusListFunc() presets.FieldComponentFunc {
+func StatusListFunc(b *LiveChipsBuilder) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 
 		if s, ok := field.Obj.(StatusInterface); ok {
-			return h.Td(statusChip(s.EmbedStatus().Status, msgr))
+			return h.Td(b.Status(s.EmbedStatus().Status, msgr))
 		}
 		return nil
 	}
 }
 
-func liveChip(status string, isScheduled bool, msgr *Messages) *VChipBuilder {
-	label, color := GetStatusLabelColor(status, msgr)
-	chip := VChip(
-		h.If(status == StatusOnline,
-			VIcon("mdi-radiobox-marked").Size(SizeSmall).Class("mr-1"),
-		),
-		h.Span(label),
-		h.If(isScheduled, VIcon("mdi-menu-right").Size(SizeSmall).Class("ml-1")),
-	).Color(color).Density(DensityCompact).Tile(true).Class("px-1")
+type LiveChipsBuilder struct {
+	WithLabel bool
+	WithBg    bool
+}
+
+var (
+	LiveChipsFormBuilder = LiveChipsBuilder{WithLabel: true, WithBg: true}
+	LiveChipsListBuilder LiveChipsBuilder
+)
+
+func (b *LiveChipsBuilder) LiveIcons(status string, isScheduled bool, msgr *Messages) (comps h.HTMLComponents) {
+	var (
+		label, color = GetStatusLabelColor(status, msgr)
+		i            = VIcon("mdi-radiobox-marked").Title(label).Color(color)
+	)
+
+	comps = h.HTMLComponents{i}
+
+	if isScheduled {
+		i := VIcon("mdi-menu-right")
+		if b.WithLabel {
+			i.Class("ml-1")
+		}
+		if b.WithBg {
+			i.Size(SizeSmall)
+		}
+		comps = append(comps, i)
+	}
+
+	return
+}
+
+func (b *LiveChipsBuilder) Live(status string, isScheduled bool, msgr *Messages) *VChipBuilder {
+	var (
+		label, color = GetStatusLabelColor(status, msgr)
+		comps        h.HTMLComponents
+	)
+
+	if status == StatusOnline {
+		i := VIcon("mdi-radiobox-marked")
+		if b.WithBg {
+			i.Size(SizeSmall)
+		}
+		if b.WithLabel {
+			i.Class("mr-1")
+		}
+		comps = append(comps, i)
+	}
+
+	if b.WithLabel {
+		comps = append(comps, h.Span(label))
+	}
+
+	if isScheduled {
+		i := VIcon("mdi-menu-right")
+		if b.WithLabel {
+			i.Class("ml-1")
+		}
+		if b.WithBg {
+			i.Size(SizeSmall)
+		}
+		comps = append(comps, i)
+	}
+
+	chip := VChip(comps...).Color(color).Density(DensityCompact).Tile(true).Class("px-1")
+
 	if !isScheduled {
 		return chip
 	}
+
 	return chip.Class("rounded-s-lg")
 }
 
-func statusChip(status string, msgr *Messages) *VChipBuilder {
-	return liveChip(status, false, msgr).Class("rounded")
+func (b *LiveChipsBuilder) Status(status string, msgr *Messages) *VChipBuilder {
+	return b.Live(status, false, msgr).Class("rounded")
 }
 
-func liveChips(status string, toStatus string, msgr *Messages) h.HTMLComponent {
+func (b *LiveChipsBuilder) Lives(status string, toStatus string, msgr *Messages) h.HTMLComponent {
 	if toStatus != "" {
 		return h.Components(
-			liveChip(status, true, msgr).Class("rounded-s"),
-			liveChip(toStatus, false, msgr).Class("rounded-e"),
+			b.Live(status, true, msgr).Class("rounded-s"),
+			b.Live(toStatus, false, msgr).Class("rounded-e"),
 		)
 	}
-	return statusChip(status, msgr)
+	return b.Status(status, msgr).Class("rounded")
+}
+
+func (b *LiveChipsBuilder) LivesIcon(status string, toStatus string, msgr *Messages) h.HTMLComponents {
+	if toStatus != "" {
+		return append(
+			b.LiveIcons(status, true, msgr),
+			b.LiveIcons(toStatus, false, msgr)...,
+		)
+	}
+	return b.LiveIcons(status, false, msgr)
+}
+
+func (b *LiveChipsBuilder) Auto(status string, toStatus string, msgr *Messages) h.HTMLComponent {
+	if b.WithBg {
+		return b.Lives(status, toStatus, msgr)
+	}
+	return b.LivesIcon(status, toStatus, msgr)
 }
 
 func GetStatusLabelColor(status string, msgr *Messages) (label, color string) {
@@ -156,7 +229,7 @@ func GetStatusLabelColor(status string, msgr *Messages) (label, color string) {
 	case StatusOnline:
 		return msgr.StatusOnline, ColorSuccess
 	case StatusOffline:
-		return msgr.StatusOffline, ColorSecondary
+		return msgr.StatusOffline, "#9E9E9E"
 	case StatusDraft:
 		return msgr.StatusDraft, ColorWarning
 	default:

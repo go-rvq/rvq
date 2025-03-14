@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"github.com/theplant/sliceutils"
@@ -45,7 +45,7 @@ func (this *ListModel) PrimaryColumnValuesBySlug(slug string) map[string]string 
 	}
 }
 
-func (this *ListModel) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *ListModel) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      this.getPublishUrl(),
 		Content:  this.getPublishContent(),
@@ -63,7 +63,7 @@ func (this *ListModel) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 	return
 }
 
-func (this *ListModel) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *ListModel) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
 		Url:      this.OnlineUrl,
 		IsDelete: true,

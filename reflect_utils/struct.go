@@ -86,6 +86,27 @@ func UniqueFieldsOfReflectType(ityp reflect.Type) (dotFields, result IndexableSt
 }
 
 func FieldsOfReflectType(ityp reflect.Type) (dotFields, fields IndexableStructFields) {
+	FieldsOfReflectTypeCB(
+		ityp,
+		func(field *IndexableStructField) {
+			dotFields = append(dotFields, field)
+		},
+		func(field *IndexableStructField) {
+			fields = append(fields, field)
+		},
+	)
+	return
+}
+
+func FieldsOfReflectTypeCB(ityp reflect.Type, appendDotField, appendField func(*IndexableStructField)) {
+	if appendDotField == nil {
+		appendDotField = func(dotField *IndexableStructField) {}
+	}
+
+	if appendField == nil {
+		appendField = func(dotField *IndexableStructField) {}
+	}
+
 	ityp = indirectType(ityp)
 
 	var walk func(typ reflect.Type, path []int, name []string)
@@ -104,9 +125,9 @@ func FieldsOfReflectType(ityp reflect.Type) (dotFields, fields IndexableStructFi
 			if field.Anonymous {
 				walk(field.Type, path, name)
 			} else if field.Name == "_" {
-				dotFields = append(dotFields, &IndexableStructField{field, path, name})
+				appendDotField(&IndexableStructField{field, path, name})
 			} else if ast.IsExported(field.Name) {
-				fields = append(fields, &IndexableStructField{field, path, name})
+				appendField(&IndexableStructField{field, path, name})
 				if field.Anonymous {
 					walk(field.Type, path, name)
 				}
@@ -115,5 +136,4 @@ func FieldsOfReflectType(ityp reflect.Type) (dotFields, fields IndexableStructFi
 	}
 
 	walk(ityp, nil, nil)
-	return
 }

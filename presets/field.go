@@ -15,6 +15,7 @@ import (
 )
 
 type FieldContext struct {
+	Parent            *FieldContext
 	Mode              FieldModeStack
 	Field             *FieldBuilder
 	EventContext      *web.EventContext
@@ -22,6 +23,7 @@ type FieldContext struct {
 	Name              string
 	FormKey           string
 	Label             string
+	Hint              func() string
 	Errors            []string
 	ModelInfo         *ModelInfo
 	Nested            Nested
@@ -83,6 +85,11 @@ func (fc *FieldContext) Error(err error) *FieldContext {
 	if err != nil {
 		fc.Errors = append(fc.Errors, err.Error())
 	}
+	return fc
+}
+
+func (fc *FieldContext) AddError(err string) *FieldContext {
+	fc.Errors = append(fc.Errors, err)
 	return fc
 }
 
@@ -250,34 +257,61 @@ func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *Fi
 	return b
 }
 
-func (b *FieldBuilder) RequestLabel(info *ModelInfo, ctx web.ContextValuer, fallback ...func(ctx web.ContextValuer, nameLabel NameLabel) string) string {
+func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx web.ContextValuer, fallback ...func(ctx web.ContextValuer, nameLabel NameLabel) string) (label string) {
 	if b.hiddenLabel {
 		return ""
 	}
 
-	var label = b.labelKey
+	label = b.labelKey
+
 	if label == "" {
 		if b.i18nLabel != nil {
 			return b.i18nLabel(ctx)
 		}
 
-		msgr := MustGetMessages(ctx.Context())
-		if label = msgr.CommonFieldLabels.Get(b.name); label != "" {
-			return label
+		for _, f := range fallback {
+			if label = f(ctx, b.NameLabel); label != "" {
+				return label
+			}
 		}
 
-		for _, f := range fallback {
-			label = f(ctx, b.NameLabel)
-			break
-		}
+		label = b.name
 	}
 
 	if info != nil {
-		return i18n.PTFk(ctx.Context(), ModelsI18nModuleKey, func() string {
-			return info.Label() + b.name
-		}, label)
+		label = i18n.Translate(info.mb.FieldTranslator(), ctx.Context(), label)
+	} else {
+		msgr := MustGetMessages(ctx.Context())
+		label = msgr.Common.Get(label)
 	}
+
+	if label == "" {
+		label = HumanizeString(b.name)
+	}
+
 	return label
+}
+
+func (b *FieldBuilder) DefaultContextLabel(ctx web.ContextValuer) string {
+	return b.ContextLabel(nil, ctx)
+}
+
+func (b *FieldBuilder) ContextHint(info *ModelInfo, ctx web.ContextValuer) string {
+	if info != nil {
+		return i18n.TranslateD(info.mb.FieldHintTranslator(), nil, ctx.Context(), b.name+"_Hint")
+	}
+
+	msgr := MustGetMessages(ctx.Context())
+	return msgr.Common.Get(b.name)
+}
+
+func (b *FieldBuilder) DefaultContextHint(ctx web.ContextValuer) string {
+	return b.ContextHint(nil, ctx)
+}
+
+func (b *FieldBuilder) SetupFunc(fc FieldContextSetup) *FieldBuilder {
+	b.Setup.Add(fc)
+	return b
 }
 
 func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {

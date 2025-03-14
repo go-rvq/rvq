@@ -7,7 +7,6 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
@@ -53,11 +52,6 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 }
 
 func childRowMenuItemFunc(mb *ModelBuilder) RecordMenuItemFunc {
-	label := mb.label
-	if !mb.singleton {
-		label = mb.pluralLabel
-	}
-
 	return func(ctx *RecordMenuItemContext) h.HTMLComponent {
 		mi := mb.modelInfo
 
@@ -65,7 +59,7 @@ func childRowMenuItemFunc(mb *ModelBuilder) RecordMenuItemFunc {
 			return nil
 		}
 
-		title := i18n.PT(ctx.Ctx.Context(), ModelsI18nModuleKey, mb.parent.label, HumanizeString(label))
+		title := mb.TTitlePlural(ctx.Ctx.Context())
 		uri := mi.ListingHref(append(ParentsModelID(ctx.Ctx.R), mb.parent.MustParseRecordID(ctx.ID))...)
 		return VListItem(
 			web.Slot(

@@ -1,11 +1,23 @@
 package media
 
+import (
+	"context"
+
+	"github.com/qor5/x/v3/i18n"
+)
+
+func GetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+}
+
 type Messages struct {
 	Crop                        string
 	CropImage                   string
 	ChooseFile                  string
 	Delete                      string
 	CopyLink                    string
+	LinkCopied                  string
+	Download                    string
 	ChooseAFile                 string
 	Search                      string
 	UploadFiles                 string
@@ -19,7 +31,8 @@ type Messages struct {
 	Images                      string
 	Videos                      string
 	Files                       string
-	SampleArgsText              func(id string) string
+	MediaLibrary                string
+	MediaLibraries              string
 }
 
 var Messages_en_US = &Messages{
@@ -29,6 +42,8 @@ var Messages_en_US = &Messages{
 	Delete:                      "Delete",
 	ChooseAFile:                 "Choose a File",
 	CopyLink:                    "Copy Link",
+	LinkCopied:                  "Link Copied!",
+	Download:                    "Download",
 	Search:                      "Search",
 	UploadFiles:                 "Upload files",
 	Cropping:                    "Cropping",

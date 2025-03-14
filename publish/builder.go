@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/iancoleman/strcase"
-	"github.com/qor/oss"
 	"github.com/qor5/admin/v3/activity"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/utils"
 	utils2 "github.com/qor5/admin/v3/utils/db_utils"
@@ -24,7 +24,7 @@ import (
 
 type Builder struct {
 	db      *gorm.DB
-	storage oss.StorageInterface
+	storage storage.Storage
 	// models            []*presets.ModelBuilder
 	ab                *activity.Builder
 	ctxValueProviders []ContextValueFunc
@@ -33,7 +33,7 @@ type Builder struct {
 
 type ContextValueFunc func(ctx context.Context) context.Context
 
-func New(db *gorm.DB, storage oss.StorageInterface) *Builder {
+func New(db *gorm.DB, storage storage.Storage) *Builder {
 	return &Builder{
 		db:      db,
 		storage: storage,
@@ -115,7 +115,7 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 
 	listing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
 		return func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
-			if obj, err = Unpublish(m, b, ActivityUnPublish, ctx, id); err != nil {
+			if obj, err = UnPublish.Execute(m, b, ActivityUnPublish, ctx, id); err != nil {
 				return
 			}
 			return in(obj, id, ctx)
@@ -137,10 +137,9 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 		configureVersionListDialog(b.db, pb, m)
 	}
 
-	listing.Field(ListingFieldDraftCount).ComponentFunc(draftCountFunc(b.db))
-	listing.Field(ListingFieldLive).ComponentFunc(liveFunc(b.db))
-
-	detailing.Field(ListingFieldLive).ComponentFunc(liveFunc(b.db))
+	listing.Field(ListingFieldDraftCount).ComponentFunc(DraftCountComponentFunc(b.db))
+	listing.Field(ListingFieldLive).ComponentFunc(LiveComponentFunc(b.db, &LiveChipsListBuilder))
+	detailing.Field(ListingFieldLive).ComponentFunc(LiveComponentFunc(b.db, &LiveChipsFormBuilder))
 }
 
 func makeSearchFunc(mb *presets.ModelBuilder, db *gorm.DB) func(searcher presets.SearchFunc) presets.SearchFunc {
@@ -230,7 +229,7 @@ func makeSetVersionSetterFunc(db *gorm.DB) func(presets.SetterFunc) presets.Sett
 func (b *Builder) Install(pb *presets.Builder) error {
 	pb.FieldDefaults(presets.LIST).
 		FieldType(Status{}).
-		ComponentFunc(StatusListFunc())
+		ComponentFunc(StatusListFunc(&LiveChipsListBuilder))
 
 	pb.I18n().
 		RegisterForModule(language.English, I18nPublishKey, Messages_en_US).
@@ -391,14 +390,14 @@ func (b *Builder) UnPublish(mb *presets.ModelBuilder, record interface{}, ctx co
 	return
 }
 
-func UploadOrDelete(objs []*PublishAction, storage oss.StorageInterface) (err error) {
+func UploadOrDelete(objs []*PublishAction, Storage storage.Storage) (err error) {
 	for _, obj := range objs {
 		if obj.IsDelete {
 			fmt.Printf("deleting %s \n", obj.Url)
-			err = storage.Delete(obj.Url)
+			err = Storage.Delete(obj.Url)
 		} else {
 			fmt.Printf("uploading %s \n", obj.Url)
-			_, err = storage.Put(obj.Url, strings.NewReader(obj.Content))
+			_, err = Storage.Put(obj.Url, strings.NewReader(obj.Content))
 		}
 		if err != nil {
 			return

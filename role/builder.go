@@ -94,7 +94,9 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		)
 	}
 
-	b.roleMb = pb.Model(&Role{})
+	b.roleMb = pb.Model(&Role{}, presets.ModelConfig().
+		SetModuleKey(I18nRoleKey)).
+		MenuIcon("mdi-account-key")
 
 	ed := b.roleMb.Editing(
 		"Name",
@@ -190,7 +192,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	})
 
 	if b.AfterInstallFunc != nil {
-		return b.AfterInstallFunc(pb, b.roleMb)
+		return b.AfterInstallFunc(b.roleMb)
 	}
 
 	return nil

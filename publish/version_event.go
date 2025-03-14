@@ -116,7 +116,7 @@ func duplicateVersionAction(mb *presets.ModelBuilder, pb *Builder) web.EventFunc
 			web.Plaid().EventFunc(actions.Detailing).Query(presets.ParamID, mid.String()).Go(),
 		)
 
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 		presets.ShowMessage(&r, msgr.SuccessfullyCreated, "")
 
 		r.RunScript = web.Plaid().ThenScript(r.RunScript).Go()
@@ -221,7 +221,7 @@ func deleteVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 		versionName := ctx.R.FormValue("version_name")
 
 		utilMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, Messages_en_US).(*utils.Messages)
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPublishKey, Messages_en_US).(*Messages)
+		msgr := GetMessages(ctx.Context())
 
 		r.UpdatePortal(presets.DeleteConfirmPortalName,
 			utils.DeleteDialog(

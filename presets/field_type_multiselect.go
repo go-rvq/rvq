@@ -71,12 +71,11 @@ func MultiSelectReadComponentFunc(field *FieldContext, _ *web.EventContext) h.HT
 	}
 
 	if field.Label != "" {
-		comp = append(comp, h.Label(field.Label))
+		comp = append(comp, VLabel(h.Text(field.Label)))
 	}
 
-	for _, label := range cfg.KeyLabels(field, keys) {
-		comp = append(comp, VChip(h.RawHTML(label)))
-	}
+	comp = append(comp, h.Div(h.Text(strings.Join(cfg.KeyLabels(field, keys), cfg.ToStringSep))).Class("pt-1 mb-3"))
+
 	return comp
 }
 

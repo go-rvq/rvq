@@ -32,10 +32,14 @@ func (ab *Builder) Install(b *presets.Builder) error {
 	}
 	mb := b.Model(ab.logModel).MenuIcon("mdi-book-edit")
 
-	return ab.logModelInstall(b, mb)
+	return ab.logModelInstall(mb)
 }
 
-func (ab *Builder) defaultLogModelInstall(b *presets.Builder, mb *presets.ModelBuilder) error {
+func (ab *Builder) defaultLogModelInstall(mb *presets.ModelBuilder) error {
+	if mb.ModuleKey() == "" {
+		mb.SetModuleKey(I18nActivityKey)
+	}
+
 	var (
 		listing   = mb.Listing("CreatedAt", "Creator", "Action", "ModelKeys", "ModelLabel", "ModelName")
 		detailing = mb.Detailing("ModelDiffs")

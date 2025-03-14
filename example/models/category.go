@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"gorm.io/gorm"
@@ -38,11 +38,11 @@ func (c *Category) PrimaryColumnValuesBySlug(slug string) map[string]string {
 	}
 }
 
-func (c *Category) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (c *Category) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 
-func (c *Category) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (c *Category) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 

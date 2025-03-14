@@ -37,7 +37,7 @@ func (bimgImageHandler) CouldHandle(media base.Media) bool {
 }
 
 // Crop & Resize
-func (bimgImageHandler) Handle(m base.Media, file base.FileInterface, option *base.Option, saveOriginal bool) (err error) {
+func (bimgImageHandler) Handle(defaulConfig *base.Config, m base.Media, file base.FileInterface, option *base.Option, saveOriginal bool) (err error) {
 	buffer := new(bytes.Buffer)
 	if _, err := io.Copy(buffer, file); err != nil {
 		return err

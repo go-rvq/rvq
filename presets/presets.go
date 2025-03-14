@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -481,10 +480,8 @@ func (b *Builder) menuItem(ctx *web.EventContext, m *ModelBuilder, isSub bool) (
 	if m.defaultURLQueryFunc != nil {
 		href = fmt.Sprintf("%s?%s", href, m.defaultURLQueryFunc(ctx.R).Encode())
 	}
-	label := m.pluralLabel
-	if !m.singleton {
-		label = m.pluralLabel
-	}
+
+	label := m.TPageLabel(ctx.Context())
 
 	item := VListItem(
 		// VRow(
@@ -493,7 +490,7 @@ func (b *Builder) menuItem(ctx *web.EventContext, m *ModelBuilder, isSub bool) (
 
 		h.If(menuIcon != "", web.Slot(VIcon(menuIcon)).Name("prepend")),
 		VListItemTitle(
-			h.Text(i18n.T(ctx.Context(), ModelsI18nModuleKey, label)),
+			h.Text(label),
 		),
 	).Class("rounded-lg").
 		Value(label)
@@ -812,10 +809,6 @@ func (b *Builder) RunBrandProfileSwitchLanguageDisplayFunc(brand, profile, switc
 	)
 }
 
-func MustGetMessages(ctx context.Context) *Messages {
-	return i18n.MustGetModuleMessages(ctx, CoreI18nModuleKey, Messages_en_US).(*Messages)
-}
-
 const (
 	NotificationCenterPortalName   = "notification-center"
 	DefaultConfirmDialogPortalName = "presets_ConfirmDialogPortalName"
@@ -1000,6 +993,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			err = nil
 			breadCrumbDisabled = true
 			titleDisabled = true
+		} else if w, _ := ctx.W.(interface{ Writed() bool }); w != nil && w.Writed() {
+			return
 		}
 
 		var profile h.HTMLComponent
@@ -1032,9 +1027,10 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 					URI:   b.prefix + "/",
 				}
 				if pr.PageTitle != home.Label {
+					msgr := MustGetMessages(ctx.Context())
 					bc.Prepend(home)
 					bc.Append(&Breadcrumb{Label: pr.PageTitle})
-					breadcrumbs = append(breadcrumbs, bc.Component(i18n.T(ctx.Context(), ModelsI18nModuleKey, "YouAreHere")))
+					breadcrumbs = append(breadcrumbs, bc.Component(msgr.YouAreHere))
 				}
 			}
 		}
@@ -1086,12 +1082,21 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			return h.HTMLComponents(comp)
 		}
 
+		msg := MustGetMessages(ctx.Context())
+
 		pr.Body = VApp(
 			portals,
 
 			// App(true).
 			// Fixed(true),
 			// ClippedLeft(true),
+
+			VSnackbar(
+				h.Text(msg.CopiedToClipboard),
+			).
+				Attr("v-model", "copiedToClipboard.value").
+				Attr("color", "info").
+				Location(LocationTop),
 
 			h.Template(
 				VSnackbar(
@@ -1104,64 +1109,64 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				).
 					Attr("v-model", "vars.presetsMessage.show").
 					Attr(":color", "vars.presetsMessage.color").
-					Timeout(15000).
+					Timeout(3000).
 					Location(LocationTop),
 			).Attr("v-if", "vars.presetsMessage"),
-			VLayout(
-				VMain(
-					VNavigationDrawer(
-						// b.RunBrandProfileSwitchLanguageDisplayFunc(b.RunBrandFunc(ctx), profile, b.RunSwitchLanguageFunc(ctx), ctx),
-						// b.RunBrandFunc(ctx),
-						// profile,
-						VLayout(
-							VMain(
-								toolbar,
-								VCard(
-									menu,
-								).Variant(VariantText),
-							),
-							// VDivider(),
-							profile,
-						).Class("ma-2 border-sm rounded-lg elevation-0"),
-						// ).Class("ma-2").
-						// 	Style("height: calc(100% - 20px); border: 1px solid grey"),
-					).
-						Width(320).
-						// App(true).
-						// Clipped(true).
-						// Fixed(true).
-						Attr("v-model", "vars.navDrawer").
-						// Attr("style", "border-right: 1px solid grey ").
-						Permanent(true).
-						Floating(true).
-						Elevation(0),
-					scoped(VAppBar(
-						h.Div(
-							VProgressLinear().
-								Attr(":active", "isFetching").
-								Class("ml-4").
-								Attr("style", "position: fixed; z-index: 99;").
-								Indeterminate(true).
-								Height(2).
-								Color(b.progressBarColor),
-							VAppBarNavIcon().
-								Density("compact").
-								Class("mr-2").
-								Attr("v-if", "!vars.navDrawer").
-								On("click.stop", "vars.navDrawer = !vars.navDrawer"),
 
-							h.If(!titleDisabled, h.Div(
-								VToolbarTitle(innerPr.PageTitle), // Class("text-h6 font-weight-regular"),
-							).Class("mr-auto")),
-							GetActionsComponent(ctx),
-							menuCloser,
-						).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
-					).
-						Elevation(0),
-						h.Div(breadcrumbs...),
-						innerPr.Body),
-				).Class(""),
-			),
+			VNavigationDrawer(
+				// b.RunBrandProfileSwitchLanguageDisplayFunc(b.RunBrandFunc(ctx), profile, b.RunSwitchLanguageFunc(ctx), ctx),
+				// b.RunBrandFunc(ctx),
+				// profile,
+				VLayout(
+					VMain(
+						toolbar,
+						VCard(
+							menu,
+						).Variant(VariantText),
+					),
+					// VDivider(),
+					profile,
+				).Class("ma-2 border-sm rounded-lg elevation-0"),
+				// ).Class("ma-2").
+				// 	Style("height: calc(100% - 20px); border: 1px solid grey"),
+			).
+				Width(320).
+				// App(true).
+				// Clipped(true).
+				// Fixed(true).
+				Attr("v-model", "vars.navDrawer").
+				// Attr("style", "border-right: 1px solid grey ").
+				Permanent(true).
+				Floating(true).
+				Elevation(0),
+
+			VMain(
+				scoped(VAppBar(
+					h.Div(
+						VProgressLinear().
+							Attr(":active", "isFetching").
+							Class("ml-4").
+							Attr("style", "position: fixed; z-index: 99;").
+							Indeterminate(true).
+							Height(2).
+							Color(b.progressBarColor),
+						VAppBarNavIcon().
+							Density("compact").
+							Class("mr-2").
+							Attr("v-if", "!vars.navDrawer").
+							On("click.stop", "vars.navDrawer = !vars.navDrawer"),
+
+						h.If(!titleDisabled, h.Div(
+							VToolbarTitle(innerPr.PageTitle), // Class("text-h6 font-weight-regular"),
+						).Class("mr-auto")),
+						GetActionsComponent(ctx),
+						menuCloser,
+					).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
+				).
+					Elevation(0),
+					h.If(len(breadcrumbs) > 0, VContainer(breadcrumbs...).Fluid(true).Style("padding-top:0;padding-bottom:0")),
+					innerPr.Body),
+			).Class("v-main__page_content"),
 		).Attr("id", "vt-app").
 			Attr(web.VAssign("vars", `{
 presetsRightDrawer: false, 
@@ -1252,6 +1257,14 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 				}
 				.vx-list-item--active:hover {
 					background-color: inherit!important;
+				}
+
+				#app > .go-plaid-portal > .v-application > v-application__wrap > .v-main.v-main__page_content  {
+					
+				}
+
+				.v-card-text__content-component > .v-main__content-component {
+					
 				}
 			</style>
 		`, "{{prefix}}", b.prefix, -1))
@@ -1385,41 +1398,15 @@ func (b *Builder) initMux() {
 	b.handler = b.notFound(mux)
 }
 
-type responseWriterWrapper struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (rw *responseWriterWrapper) WriteHeader(code int) {
-	rw.statusCode = code
-	if code == http.StatusNotFound {
-		// default 404 will use http.Error to set Content-Type to text/plain,
-		// So we have to set it to html before WriteHeader
-		rw.ResponseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		// prevent header sent
-		return
-	}
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (rw *responseWriterWrapper) Write(b []byte) (int, error) {
-	// don't write content, because we use customized page body
-	if rw.statusCode == http.StatusNotFound {
-		return 0, nil
-	}
-	return rw.ResponseWriter.Write(b)
-}
-
 func (b *Builder) notFound(handler http.Handler) http.Handler {
 	notFoundHandler := b.Wrap(
 		nil,
 		b.layoutFunc(b.getNotFoundPageFunc(), b.notFoundPageLayoutConfig),
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedResponse := &responseWriterWrapper{w, http.StatusOK}
+		capturedResponse := &wrapedResponseWriter{web.WrapResponseWriter(w)}
 		handler.ServeHTTP(capturedResponse, r)
-		if capturedResponse.statusCode == http.StatusNotFound {
+		if capturedResponse.StatusCode() == http.StatusNotFound {
 			if !b.skipNotFoundHandler(r) {
 				// If no other handler wrote to the response, assume 404 and write our custom response.
 				notFoundHandler.ServeHTTP(w, r)

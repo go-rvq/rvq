@@ -3,7 +3,6 @@ package presets
 import (
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	h "github.com/theplant/htmlgo"
 
@@ -58,7 +57,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 			SetTargetPortal(targetPortal).
 			Respond(ctx, &r, comp)
 	} else {
-		r.Body = VContainer(comp)
+		r.Body = comp
 	}
 
 	return
@@ -115,14 +114,14 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 
 	if f.b.mode == NEW {
 		f.Title = f.b.msgr.CreatingObjectTitle(
-			i18n.T(f.b.ctx.Context(), ModelsI18nModuleKey, b.mb.label),
+			b.mb.TTitle(ctx.Context()),
 			b.mb.female,
 		)
 	} else {
 		disableUpdateBtn = !f.b.mb.Info().CanUpdate(f.b.ctx.R, f.Obj)
 
 		editingTitleText := f.b.msgr.EditingObjectTitle(
-			i18n.T(f.b.ctx.Context(), ModelsI18nModuleKey, b.mb.label),
+			b.mb.TTitle(ctx.Context()),
 			b.mb.RecordTitle(f.Obj, ctx))
 		if b.editingTitleFunc != nil {
 			f.Title = b.editingTitleFunc(f.b.obj, editingTitleText, f.b.ctx)

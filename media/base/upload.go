@@ -11,7 +11,7 @@ import (
 // set MediaLibraryURL to change the default url /system/{{class}}/{{primary_key}}/{{column}}.{{extension}}
 var MediaLibraryURL = ""
 
-func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
+func cropField(config *Config, field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 	if !field.ReflectValueOf(db.Statement.Context, db.Statement.ReflectValue).CanAddr() {
 		return
 	}
@@ -70,7 +70,7 @@ func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 		}
 
 		mediaFile.Seek(0, 0)
-		if handler.Handle(media, mediaFile, option, saveOriginal) == nil {
+		if handler.Handle(config, media, mediaFile, option, saveOriginal) == nil {
 			handled = true
 		}
 	}
@@ -84,7 +84,7 @@ func cropField(field *schema.Field, db *gorm.DB) (cropped bool, err error) {
 	return true, nil
 }
 
-func SaveUploadAndCropImage(db *gorm.DB, obj interface{}) error {
+func SaveUploadAndCropImage(config *Config, db *gorm.DB, obj interface{}) error {
 	return db.Transaction(func(db *gorm.DB) (err error) {
 		db = db.Model(obj).Save(obj)
 		err = db.Error
@@ -95,7 +95,7 @@ func SaveUploadAndCropImage(db *gorm.DB, obj interface{}) error {
 		updateColumns := map[string]interface{}{}
 
 		for _, field := range db.Statement.Schema.Fields {
-			ok, err := cropField(field, db)
+			ok, err := cropField(config, field, db)
 			if err != nil {
 				return err
 			}

@@ -1,11 +1,18 @@
 package presets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/qor5/x/v3/i18n"
 )
+
+func MustGetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, CoreI18nModuleKey, DefaultMessages).(*Messages)
+}
 
 type TimeFormatMessages struct {
 	Date     string
@@ -19,6 +26,15 @@ func (m StrMap) Get(key string) string {
 	return m[key]
 }
 
+func (m StrMap) Set(pair ...string) {
+	if len(pair)%2 != 0 {
+		panic("pairs must have pairs")
+	}
+	for i := 0; i < len(pair); i += 2 {
+		m[pair[i]] = pair[i+1]
+	}
+}
+
 type Messages struct {
 	SuccessfullyUpdated string
 	SuccessfullyCreated string
@@ -27,8 +43,10 @@ type Messages struct {
 	TheFemaleTitle      string
 	TheMaleTitle        string
 
+	YouAreHere                                 string
 	New                                        string
 	Update                                     string
+	Execute                                    string
 	Delete                                     string
 	Edit                                       string
 	FormTitle                                  string
@@ -70,6 +88,9 @@ type Messages struct {
 	MonthNames                                 [time.December + 1]string
 	Year                                       string
 	PaginationRowsPerPage                      string
+	PaginationPageInfo                         string
+	PaginationPage                             string
+	PaginationOfPage                           string
 	ListingNoRecordToShow                      string
 	ListingSelectedCountNotice                 string
 	ListingClearSelection                      string
@@ -81,15 +102,19 @@ type Messages struct {
 	NotFoundPageNotice                         string
 	AddRow                                     string
 
+	BulkActionConfirmationTextTemplate string
+
 	TimeFormats TimeFormatMessages
 
-	CommonFieldLabels StrMap
+	Common StrMap
 
 	Error           string
 	ErrEmptyParamID error
+
+	CopiedToClipboard string
 }
 
-func (msgr *Messages) TheTitle(female bool, title string) string {
+func (msgr *Messages) TheTitle(female bool, title string, args ...string) string {
 	if female {
 		return fmt.Sprintf(msgr.TheFemaleTitle, title)
 	}
@@ -135,13 +160,20 @@ func (msgr *Messages) FilterBy(filter string) string {
 		Replace(msgr.FilterByTemplate)
 }
 
+func (msgr *Messages) BulkActionConfirmationText(action string) string {
+	return strings.NewReplacer("{Action}", action).
+		Replace(msgr.BulkActionConfirmationTextTemplate)
+}
+
 var Messages_en_US = &Messages{
+	YouAreHere:                        "You Are Here",
 	SuccessfullyUpdated:               "Successfully Updated",
 	SuccessfullyCreated:               "Successfully Created",
 	SuccessfullyDeleted:               "Successfully Deleted",
 	Search:                            "Search",
 	New:                               "New",
 	Update:                            "Update",
+	Execute:                           "Execute",
 	Delete:                            "Delete",
 	Edit:                              "Edit",
 	FormTitle:                         "Form",
@@ -197,9 +229,14 @@ var Messages_en_US = &Messages{
 	NotFoundPageNotice:                         "Sorry, the requested page cannot be found. Please check the URL.",
 	AddRow:                                     "Add Row",
 
-	Error:           "ERROR",
-	ErrEmptyParamID: errors.New("Empty param ID"),
+	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> below records?",
+
+	Error:             "ERROR",
+	ErrEmptyParamID:   errors.New("Empty param ID"),
+	CopiedToClipboard: "Copied to clipboard",
 }
+
+var DefaultMessages = Messages_en_US
 
 var Messages_zh_CN = &Messages{
 	SuccessfullyUpdated:            "成功更新了",

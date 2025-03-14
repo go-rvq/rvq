@@ -31,7 +31,17 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 		}
 		modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
 		fieldInfo := n.mb.Info().ChildOf(field.ModelInfo, field.Obj)
-		body := n.fb.toComponentWithFormValueKey(fieldInfo, val, field.Mode, field.FormKey, modifiedIndexes, ctx)
+		body := n.fb.toComponentWithFormValueKey(fieldInfo, val, field.Mode, field, modifiedIndexes, ctx)
+		if body == nil {
+			return nil
+		}
+
+		switch t := body.(type) {
+		case h.HTMLComponents:
+			if len(t) == 0 {
+				return nil
+			}
+		}
 		return h.Div(
 			h.Label(field.Label).Class("v-label theme--light text-caption"),
 			v.VCard(body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
@@ -39,11 +49,14 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 	})
 }
 
-func (n *NestedStructBuilder) Walk(fctx *FieldContext, handle FieldWalkHandle) (s FieldWalkState) {
+func (n *NestedStructBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOptions) (s FieldWalkState) {
 	fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj)
 	obj := fctx.Value()
 	if obj == nil {
+		if opts.SkipNestedNil {
+			return
+		}
 		obj = n.Model().NewModel()
 	}
-	return n.fb.walk(fieldInfo, obj, fctx.Mode, fctx.FormKey, fctx.EventContext, handle)
+	return n.fb.walk(fieldInfo, obj, fctx.Mode, fctx.FormKey, fctx.EventContext, opts)
 }

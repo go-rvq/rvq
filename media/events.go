@@ -22,7 +22,7 @@ const (
 
 func registerEventFuncs(hub web.EventHandlerHub, p *presets.Builder, b *Builder) {
 	mb := presets.NewModelBuilder(p, &media_library.MediaLibrary{})
-	hub.RegisterEventHandler(openFileChooserEvent, fileChooser(b))
+	hub.RegisterEventHandler(openFileChooserEvent, fileChooser(p, b))
 	hub.RegisterEventHandler(deleteFileEvent, deleteFileField())
 	hub.RegisterEventHandler(cropImageEvent, cropImage(b))
 	hub.RegisterEventHandler(loadImageCropperEvent, loadImageCropper(b))

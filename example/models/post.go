@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor/oss"
 	"github.com/qor5/admin/v3/media/media_library"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
 	"github.com/qor5/admin/v3/seo"
@@ -49,11 +49,11 @@ func (p *Post) PrimaryColumnValuesBySlug(slug string) map[string]string {
 	}
 }
 
-func (p *Post) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Post) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 
-func (p *Post) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (p *Post) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 

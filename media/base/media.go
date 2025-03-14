@@ -1,6 +1,7 @@
 package base
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"image"
@@ -38,10 +39,25 @@ type Media interface {
 	String() string
 }
 
+// MediaSymlinker is an Media interface including methods to create symbolic link.
+type MediaSymlinker interface {
+	// Symlink create symbolic link from name to target.
+	// If symbolic link creation isn't supported, return ErrSymlinkNotSupported.
+	Symlink(target string, name string, option *Option) (err error)
+}
+
 // FileInterface media file interface
 type FileInterface interface {
 	io.ReadSeeker
 	io.Closer
+}
+
+type FileBytes struct {
+	*bytes.Reader
+}
+
+func (fb *FileBytes) Close() error {
+	return nil
 }
 
 // Size is a struct, used for `GetSizes` method, it will return a slice of Size, media library will crop images automatically based on it
@@ -65,6 +81,16 @@ func NewSize(width int, height int, fix ...int) *Size {
 func (s *Size) FixDimension(max int) *Size {
 	s.Width, s.Height = FixDimension(max, s.Width, s.Height)
 	return s
+}
+
+func (s *Size) RescaleToMax(maxWidth, maxHeight int) (s2 *Size) {
+	s2 = NewSize(s.Width, s.Height, maxWidth)
+	if s.Height > maxHeight {
+		ratio := float64(maxHeight) / float64(s.Height)
+		s2.Width = int(float64(s.Width) * ratio)
+		s2.Height = int(float64(s.Height) * ratio)
+	}
+	return
 }
 
 func (s *Size) String() string {

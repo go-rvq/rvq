@@ -3,13 +3,14 @@ package presets
 import (
 	"errors"
 	"fmt"
-	"net/url"
+	"net/http"
+	"path"
 	"reflect"
 	"strconv"
 
+	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
@@ -210,9 +211,7 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
-	r.PageTitle = msgr.DetailingObjectTitle(
-		i18n.T(ctx.Context(), ModelsI18nModuleKey, b.mb.label),
-		b.mb.RecordTitle(obj, ctx))
+	r.PageTitle = b.mb.RecordTitle(obj, ctx)
 
 	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
 		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
@@ -234,7 +233,50 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	return
 }
 
-func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse, err error) {
+func (b *DetailingBuilder) BuildPage(builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
+	return b.mb.BindPageFunc(func(ctx *web.EventContext) (r web.PageResponse, err error) {
+		id := ctx.Param(ParamID)
+
+		obj := b.mb.NewModel()
+		msgr := MustGetMessages(ctx.Context())
+
+		if id == "" {
+			err = msgr.ErrEmptyParamID
+			return
+		}
+
+		var mid ID
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+
+		err = b.GetFetchFunc()(obj, mid, ctx)
+		if err != nil {
+			if errors.Is(err, ErrRecordNotFound) {
+				return b.mb.p.DefaultNotFoundPageFunc(ctx)
+			}
+			return
+		}
+
+		r.PageTitle = b.mb.RecordTitle(obj, ctx)
+
+		if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
+			r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
+			return
+		}
+
+		err = builder(ctx, obj, mid, &r)
+		return
+	})
+}
+
+func (d *DetailingBuilder) ItemRouterPageBuilder(subUri string, handler func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) {
+	d.mb.ItemRouteSetuper(func(mux *http.ServeMux, uri string) {
+		mux.Handle(path.Join(uri, subUri), d.mb.p.Wrap(d.mb, d.mb.p.GetDetailLayoutFunc()(d.BuildPage(handler), d.mb.GetLayoutConfig())))
+	})
+}
+
+func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
 	if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
 		err = perm.PermissionDenied
 		return
@@ -278,6 +320,56 @@ func (b *DetailingBuilder) detailing(ctx *web.EventContext) (r web.EventResponse
 			Respond(ctx, &r, f)
 	}
 	return
+}
+
+func (b *DetailingBuilder) EventBuilder(builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.EventResponse) (comp h.HTMLComponent, err error)) web.EventFunc {
+	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
+			err = perm.PermissionDenied
+			return
+		}
+
+		id := ctx.Param(ParamID)
+		obj := b.mb.NewModel()
+		msgr := MustGetMessages(ctx.Context())
+
+		if id == "" {
+			err = msgr.ErrEmptyParamID
+			return
+		}
+		var mid ID
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+		if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
+			return
+		}
+
+		if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
+			return
+		}
+
+		var comp h.HTMLComponent
+		if comp, err = builder(ctx, obj, mid, &r); err != nil {
+			return
+		}
+
+		if comp == nil {
+			return
+		}
+
+		targetPortal := ctx.R.FormValue(ParamTargetPortal)
+
+		if targetPortal == "" {
+			r.Body = comp
+			return
+		}
+
+		r.UpdatePortal(targetPortal, comp)
+
+		return
+	}
+
 }
 
 func (b *DetailingBuilder) configureForm(f *Form) *Form {
@@ -354,7 +446,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	}
 
 	f.Title = MustGetMessages(ctx.Context()).DetailingObjectTitle(
-		i18n.T(ctx.Context(), ModelsI18nModuleKey, b.mb.label),
+		b.mb.TTitle(ctx.Context()),
 		b.mb.RecordTitle(obj, ctx))
 	sharedPortal := ctx.UID()
 	f.MainPortals = append(f.MainPortals, web.Portal().Name(sharedPortal))
@@ -404,18 +496,7 @@ func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse,
 		return
 	}
 
-	if err := action.updateFunc(id, ctx); err != nil || ctx.Flash != nil {
-		if ctx.Flash == nil {
-			ctx.Flash = err
-		}
-
-		b.mb.p.Overlay(ctx, &r, b.actionForm(action, id, ctx), "")
-		return r, nil
-	}
-
-	r.PushState = web.Location(url.Values{})
-	r.RunScript = "closer.show = false"
-	GetFlashMessages(ctx).RespondTo(&r)
+	err = action.Do(b.mb, id, ctx, &r)
 	return
 }
 
@@ -427,7 +508,7 @@ func (b *DetailingBuilder) formAction(ctx *web.EventContext) (r web.EventRespons
 	if id, action, err = b.parseRequestAction(ctx); err != nil {
 		return
 	}
-	b.mb.p.Overlay(ctx, &r, b.actionForm(action, id, ctx), "")
+	err = action.View(b.mb, id, ctx, &r)
 	return
 }
 

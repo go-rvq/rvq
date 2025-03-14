@@ -75,7 +75,7 @@ func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 	})
 }
 
-func (n *NestedSliceBuilder) Walk(fctx *FieldContext, handle FieldWalkHandle) (s FieldWalkState) {
+func (n *NestedSliceBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOptions) (s FieldWalkState) {
 	var (
 		i     int
 		slice = fctx.RawValue()
@@ -84,7 +84,7 @@ func (n *NestedSliceBuilder) Walk(fctx *FieldContext, handle FieldWalkHandle) (s
 		reflectutils.ForEach(slice, func(v interface{}) {
 			defer func() { i++ }()
 			fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj).ItemOf(slice, i)
-			n.fb.walk(fieldInfo, v, fctx.Mode, fmt.Sprintf("%s[%d]", fctx.FormKey, i), fctx.EventContext, handle)
+			n.fb.walk(fieldInfo, v, fctx.Mode, fmt.Sprintf("%s[%d]", fctx.FormKey, i), fctx.EventContext, opts)
 		})
 	}
 	return

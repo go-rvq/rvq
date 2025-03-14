@@ -34,6 +34,8 @@ type Messages struct {
 	DateTimePickerClearText  string
 	DateTimePickerOkText     string
 	PleaseSelectJob          string
+	QorJobs                  string
+	QorJob                   string
 }
 
 var Messages_en_US = &Messages{
@@ -61,6 +63,8 @@ var Messages_en_US = &Messages{
 	DateTimePickerClearText:  "Clear",
 	DateTimePickerOkText:     "OK",
 	PleaseSelectJob:          "Please select job",
+	QorJobs:                  "Jobs",
+	QorJob:                   "Job",
 }
 
 var Messages_zh_CN = &Messages{

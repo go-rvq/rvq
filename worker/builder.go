@@ -140,7 +140,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		RegisterForModule(language.English, I18nWorkerKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nWorkerKey, Messages_zh_CN)
 
-	mb := pb.Model(&QorJob{}).
+	mb := pb.Model(&QorJob{}, presets.ModelConfig().SetModuleKey(I18nWorkerKey)).
 		Label("Workers").
 		URIName("workers").
 		MenuIcon("mdi-briefcase")

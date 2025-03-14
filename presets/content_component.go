@@ -5,6 +5,7 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
@@ -17,7 +18,10 @@ func MenuBtn() h.HTMLComponent {
 		Children(
 			VIcon("mdi-menu"),
 		).
-		Attr("@click.menu", "locals.menu = !locals.menu")
+		Attr("@click.menu", `() => {
+console.log($contentComponent);
+$contentComponent.menu = !$contentComponent.menu
+}`)
 }
 
 func FullScreenBtn() h.HTMLComponent {
@@ -95,7 +99,7 @@ func (b *ContentComponentBuilder) build(comp h.HTMLComponent) h.HTMLComponent {
 	if len(b.MainPortals) > 0 {
 		comp = append(b.MainPortals, comp)
 	}
-	return comp
+	return vue.UserComponent(comp).Scope("$contentComponent", vue.Var(`{menu:false}`))
 }
 
 func (b *ContentComponentBuilder) JoinedBody() h.HTMLComponent {
@@ -203,6 +207,10 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		}
 	}
 
+	if body != nil {
+		body = VContainer(body).Fluid(true)
+	}
+
 	roots := h.HTMLComponents{header}
 
 	if len(b.Menu) > 0 {
@@ -210,24 +218,26 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 			VNavigationDrawer(b.Menu).
 				// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
 				Class("v-navigation-drawer--temporary").
-				Attr("v-model", "locals.menu").
+				Attr("v-model", "$contentComponent.menu").
 				Location(LocationLeft).
 				Floating(true).
 				Temporary(true),
-			h.Div(body).Attr("style", `width:inherit;height:inherit;overflow:auto`)).
+			h.Div(body).Attr("style", `width:inherit;height:inherit;overflow:auto`),
+		).
 			Width("100%").
-			Height("100%")
-		layout.SetAttr("style", "display: block;")
-		body = VMain(layout)
+			Height("100%").
+			Class("v-layout__content-component").
+			SetAttr("style", "display: block;")
+		body = layout
 	}
 
 	if body != nil {
-		roots = append(roots, VCardText(body))
+		roots = append(roots, VCardText(body).Class("v-card-text__content-component").Style("padding: 0"))
 	}
 
 	roots = append(roots, bottom...)
 
-	card := VCard(roots...).Height("inherit").Width("inherit")
+	card := VCard(roots...).Height("inherit").Width("inherit").Class("v-card__content-component")
 
 	return b.build(
 		card, // .			Attr("style", "height:inherit,max-height:inherit"), // fix height on fullscreen
@@ -242,10 +252,12 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 	}
 
 	if len(b.Menu) > 0 {
-		topActions = append(topActions, MenuBtn())
+		b.Context.WithContextValue(CtxMenuComponent, b.Menu)
 	}
 
-	b.Context.WithContextValue(CtxActionsComponent, topActions)
+	if len(topActions) > 0 {
+		b.Context.WithContextValue(CtxActionsComponent, topActions)
+	}
 
 	body := b.JoinedBody()
 
@@ -274,26 +286,23 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 		).Slot("{ locals }").LocalsInit(`{tab: 'default'}`)
 	}
 
-	if len(b.Menu) > 0 {
-		body = h.HTMLComponents{
-			VNavigationDrawer(b.Menu).
-				// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-				Class("v-navigation-drawer--temporary").
-				Attr("v-model", "locals.menu").
-				Location(LocationLeft).
-				Temporary(true).
-				// Fixed(true).
-				Attr(":height", `"100%"`),
-			body,
-		}
-	}
+	return VContainer(b.build(body)).Fluid(true)
+}
 
-	return b.build(
-		VLayout(
-			VMain(
-				body,
-			),
-		))
+func (b *ContentComponentBuilder) Build(p *Builder, r *web.PageResponse) (err error) {
+	if b.Overlay.Mode.Overlayed() {
+		er := &web.EventResponse{}
+		comp := b.BuildOverlay()
+		if b.Overlay.Mode.IsDialog() {
+			p := p.Dialog().SetValidWidth(b.Overlay.Width)
+			p.Respond(b.Context, er, comp)
+		} else {
+		}
+	} else {
+		r.PageTitle = b.Title
+		r.Body = b.BuildPage()
+	}
+	return nil
 }
 
 func (b *ContentComponentBuilder) Notice(v any) *ContentComponentBuilder {

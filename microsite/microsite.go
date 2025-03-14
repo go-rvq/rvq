@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/mholt/archiver/v4"
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/microsite/utils"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"
@@ -115,7 +115,7 @@ func builderFromContext(c context.Context) (b *Builder, ok bool) {
 	return
 }
 
-func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
 	if len(this.GetFileList()) == 0 {
 		return
 	}
@@ -160,7 +160,7 @@ func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 	return
 }
 
-func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
 	var paths []string
 	for _, v := range this.GetFileList() {
 		paths = append(paths, this.GetPublishedPath(v))
@@ -172,7 +172,7 @@ func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB
 	return
 }
 
-func (this *MicroSite) UnArchiveAndPublish(getPath func(string) string, fileName string, f io.Reader, storage oss.StorageInterface) (filesList []string, err error) {
+func (this *MicroSite) UnArchiveAndPublish(getPath func(string) string, fileName string, f io.Reader, storage storage.Storage) (filesList []string, err error) {
 	format, reader, err := archiver.Identify(fileName, f)
 	if err != nil {
 		if err == archiver.ErrNoMatch {

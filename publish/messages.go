@@ -1,14 +1,29 @@
 package publish
 
-import "strings"
+import (
+	"context"
+	"strings"
+
+	"github.com/qor5/x/v3/i18n"
+)
+
+func GetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, I18nPublishKey, DefaultMessages).(*Messages)
+}
 
 type Messages struct {
 	StatusDraft                             string
 	StatusOnline                            string
 	StatusOffline                           string
+	Publication                             string
 	Publish                                 string
+	PublishHelp                             string
+	PublishOrRepublish                      string
+	PublishOrRepublishHelp                  string
 	Unpublish                               string
+	UnpublishHelp                           string
 	Republish                               string
+	RepublishHelp                           string
 	Areyousure                              string
 	ScheduledStartAt                        string
 	ScheduledEndAt                          string
@@ -35,6 +50,8 @@ type Messages struct {
 	NamedVersions                           string
 	RenameVersion                           string
 	DeleteVersionConfirmationTextTemplate   string
+	BulkActionConfirmationTextTemplate      string
+	BulkActionNoRecordsTextTemplate         string
 
 	FilterTabAllVersions   string
 	FilterTabOnlineVersion string
@@ -44,18 +61,77 @@ type Messages struct {
 	Duplicate              string
 }
 
+func (msgr *Messages) Status(status string) string {
+	switch status {
+	case "draft":
+		return msgr.StatusDraft
+	case "online":
+		return msgr.StatusOnline
+	case "offline":
+		return msgr.StatusOffline
+	default:
+		return status
+	}
+}
+
+func (msgr *Messages) ActivityTitle(activity string) string {
+	switch activity {
+	case ActivityPublish:
+		return msgr.Publish
+	case ActivityPublishOrRepublish:
+		return msgr.PublishOrRepublish
+	case ActivityRepublish:
+		return msgr.Republish
+	case ActivityUnPublish:
+		return msgr.Unpublish
+	default:
+		return ""
+	}
+}
+
+func (msgr *Messages) ActivityHelp(activity string) string {
+	switch activity {
+	case ActivityPublish:
+		return msgr.PublishHelp
+	case ActivityPublishOrRepublish:
+		return msgr.PublishOrRepublishHelp
+	case ActivityRepublish:
+		return msgr.RepublishHelp
+	case ActivityUnPublish:
+		return msgr.UnpublishHelp
+	default:
+		return ""
+	}
+}
+
 func (msgr *Messages) DeleteVersionConfirmationText(versionName string) string {
 	return strings.NewReplacer("{VersionName}", versionName).
 		Replace(msgr.DeleteVersionConfirmationTextTemplate)
+}
+
+func (msgr *Messages) BulkActionConfirmationText(action string) string {
+	return strings.NewReplacer("{Action}", action).
+		Replace(msgr.BulkActionConfirmationTextTemplate)
+}
+
+func (msgr *Messages) BulkActionNoRecordsText(action string) string {
+	return strings.NewReplacer("{Action}", action).
+		Replace(msgr.BulkActionNoRecordsTextTemplate)
 }
 
 var Messages_en_US = &Messages{
 	StatusDraft:                             "Draft",
 	StatusOnline:                            "Online",
 	StatusOffline:                           "Offline",
+	Publication:                             "Publication",
 	Publish:                                 "Publish",
-	Unpublish:                               "Unpublish",
+	PublishHelp:                             "Publish only if status is 'draft' or 'offline'",
+	PublishOrRepublish:                      "Publish/Republish",
+	PublishOrRepublishHelp:                  "If status is 'draft' or 'offline', publish then, other else 'republish'",
+	Unpublish:                               "UnPublish",
+	UnpublishHelp:                           "Unpublish if status is 'online'",
 	Republish:                               "Republish",
+	RepublishHelp:                           "Republish if status is 'online'",
 	Areyousure:                              "Are you sure?",
 	ScheduledStartAt:                        "Start at",
 	ScheduledEndAt:                          "End at",
@@ -82,6 +158,8 @@ var Messages_en_US = &Messages{
 	NamedVersions:                           "Named versions",
 	RenameVersion:                           "Rename Version",
 	DeleteVersionConfirmationTextTemplate:   "Are you sure you want to delete version {VersionName} ?",
+	BulkActionConfirmationTextTemplate:      "Are you sure you want to <b>{Action}</b> below records?",
+	BulkActionNoRecordsTextTemplate:         "No records to <b>{Action}</b>.",
 
 	FilterTabAllVersions:   "All Versions",
 	FilterTabOnlineVersion: "Online Versions",
@@ -90,6 +168,8 @@ var Messages_en_US = &Messages{
 	PageOverView:           "Page Overview",
 	Duplicate:              "Duplicate",
 }
+
+var DefaultMessages = Messages_en_US
 
 var Messages_zh_CN = &Messages{
 	StatusDraft:                             "草稿",

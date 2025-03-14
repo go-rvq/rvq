@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
@@ -50,6 +51,8 @@ func (c *ActionFormBuilderHandlers[T]) Prepend(handlers ...ActionFormBuilderHand
 	*c = append(handlers, *c...)
 }
 
+type ActionLinkHandler func(baseModel *ModelBuilder, ctx *web.EventContext, r *web.EventResponse, q url.Values, id string)
+
 type ActionBuilder struct {
 	NameLabel
 
@@ -63,6 +66,7 @@ type ActionBuilder struct {
 	doBtnLabel     func(ctx *web.EventContext) string
 	enabledFunc    ActionEnabledFunc
 	enabledObjFunc ActionEnabledObjFunc
+	linkHandler    ActionLinkHandler
 }
 
 func getAction(actions []*ActionBuilder, name string) *ActionBuilder {
@@ -182,24 +186,59 @@ func (b *ActionBuilder) IsEnabledObj(obj any, id string, ctx *web.EventContext) 
 
 func (b *ActionBuilder) RequestTitle(mb *ModelBuilder, ctx web.ContextValuer) (label string) {
 	label = b.labelKey
-	var prefix string
 	if label == "" {
 		if b.i18nLabel != nil {
 			return b.i18nLabel(ctx)
 		}
 
-		msgr := MustGetMessages(ctx.Context())
-		if label = msgr.CommonFieldLabels.Get(b.name); label != "" {
-			return label
-		}
-
-		if label = b.label; label == "" {
-			prefix = "_Action_"
-			label = b.name
-		}
+		label = b.name
 	}
 
-	return i18n.PT(ctx.Context(), ModelsI18nModuleKey, mb.GetLabel()+prefix, label)
+	return i18n.Translate(mb.ActionTranslator(), ctx.Context(), label)
+}
+
+func (b *ActionBuilder) LinkHandler() ActionLinkHandler {
+	return b.linkHandler
+}
+
+func (b *ActionBuilder) SetLinkHandler(linkHandler ActionLinkHandler) *ActionBuilder {
+	b.linkHandler = linkHandler
+	return b
+}
+
+func (b *ActionBuilder) form(baseModel *ModelBuilder, id string, ctx *web.EventContext) h.HTMLComponent {
+	comp := b.Form(baseModel, id, actions.OverlayMode(ctx.Param(ParamOverlay)), ctx)
+	return web.Scope(comp).FormInit()
+}
+
+func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+	if b.linkHandler != nil {
+		q := ctx.R.URL.Query()
+		q.Del("__execute_event__")
+		q.Del("actionOpen")
+
+		b.linkHandler(baseModel, ctx, r, q, id)
+		return
+	}
+
+	baseModel.p.dialog(ctx, r, b.form(baseModel, id, ctx), b.dialogWidth)
+	return
+}
+
+func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+	if err = b.updateFunc(id, ctx); err != nil || ctx.Flash != nil {
+		if ctx.Flash == nil {
+			ctx.Flash = err
+		}
+
+		baseModel.p.dialog(ctx, r, b.form(baseModel, id, ctx), b.dialogWidth)
+		return
+	}
+
+	r.PushState = web.Location(url.Values{})
+	r.RunScript = "closer.show = false"
+	GetFlashMessages(ctx).RespondTo(r)
+	return nil
 }
 
 func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.OverlayMode, ctx *web.EventContext) h.HTMLComponent {

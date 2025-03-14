@@ -23,8 +23,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 )
+
+var _ storage.Storage = (*Client)(nil)
 
 // Client S3 storage
 type Client struct {
@@ -169,7 +171,7 @@ func (client Client) GetStream(path string) (io.ReadCloser, error) {
 }
 
 // Put store a reader into given path
-func (client Client) Put(urlPath string, reader io.Reader) (*oss.Object, error) {
+func (client Client) Put(urlPath string, reader io.Reader) (*storage.Object, error) {
 	if seeker, ok := reader.(io.ReadSeeker); ok {
 		seeker.Seek(0, 0)
 	}
@@ -197,7 +199,7 @@ func (client Client) Put(urlPath string, reader io.Reader) (*oss.Object, error) 
 	_, err = client.S3.PutObject(context.Background(), params)
 
 	now := time.Now()
-	return &oss.Object{
+	return &storage.Object{
 		Path:             urlPath,
 		Name:             filepath.Base(urlPath),
 		LastModified:     &now,
@@ -237,8 +239,8 @@ func (client Client) DeleteObjects(paths []string) (err error) {
 }
 
 // List list all objects under current path
-func (client Client) List(path string) ([]*oss.Object, error) {
-	var objects []*oss.Object
+func (client Client) List(path string) ([]*storage.Object, error) {
+	var objects []*storage.Object
 	var prefix string
 	var continuationToken *string
 
@@ -257,7 +259,7 @@ func (client Client) List(path string) ([]*oss.Object, error) {
 		}
 
 		for _, content := range listObjectsResponse.Contents {
-			objects = append(objects, &oss.Object{
+			objects = append(objects, &storage.Object{
 				Path:             "/" + client.ToS3Key(*content.Key),
 				Name:             filepath.Base(*content.Key),
 				LastModified:     content.LastModified,

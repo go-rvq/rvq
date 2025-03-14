@@ -56,8 +56,8 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 
 	web.AppendRunScripts(&r, "closer.show = false")
 
-	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
-		cb := web.DecodeCallback(postSaveConfig)
+	if postDeleteConfig := ctx.R.URL.Query().Get(ParamPostDeleteCallback); postDeleteConfig != "" {
+		cb := web.DecodeCallback(postDeleteConfig)
 		web.AppendRunScripts(&r, web.ApplyChangeEvent(cb.Script(), web.Deleted, pk))
 		r.ReloadPortals = append(r.ReloadPortals, cb.ReloadPortals...)
 	}

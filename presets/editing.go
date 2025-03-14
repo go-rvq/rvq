@@ -16,6 +16,11 @@ type EditingBuilder struct {
 	PostSetter       SetterFunc
 	Saver            SaveFunc
 	Creator          CreateFunc
+	New              func(ctx *web.EventContext, obj any) (err error)
+	preValidate      func(ctx *web.EventContext, obj any) (err error)
+	postValidate     func(ctx *web.EventContext, obj any) (err error)
+	preSaveCallback  SaveCallbackFunc
+	postSaveCallback SaveCallbackFunc
 	Validators       Validators
 	tabPanels        []TabComponentFunc
 	hiddenFuncs      []ObjectComponentFunc
@@ -146,6 +151,42 @@ func (b *EditingBuilder) PostSetterFunc(v SetterFunc) (r *EditingBuilder) {
 func (b *EditingBuilder) WrapPostSetterFunc(w func(in SetterFunc) SetterFunc) (r *EditingBuilder) {
 	b.PostSetter = w(b.PostSetter)
 	return b
+}
+
+func (b *EditingBuilder) PreValidate(f func(ctx *web.EventContext, obj any) (err error)) *EditingBuilder {
+	b.preValidate = f
+	return b
+}
+
+func (b *EditingBuilder) WrapPreValidate(f func(old func(ctx *web.EventContext, obj any) (err error)) func(ctx *web.EventContext, obj any) error) *EditingBuilder {
+	return b.PreValidate(f(b.preValidate))
+}
+
+func (b *EditingBuilder) PostValidate(f func(ctx *web.EventContext, obj any) (err error)) *EditingBuilder {
+	b.postValidate = f
+	return b
+}
+
+func (b *EditingBuilder) WrapPostValidate(f func(old func(ctx *web.EventContext, obj any) (err error)) func(ctx *web.EventContext, obj any) error) *EditingBuilder {
+	return b.PostValidate(f(b.preValidate))
+}
+
+func (b *EditingBuilder) PreSaveCallback(f SaveCallbackFunc) *EditingBuilder {
+	b.preSaveCallback = f
+	return b
+}
+
+func (b *EditingBuilder) WrapPreSaveCallback(f func(old SaveCallbackFunc) SaveCallbackFunc) (r *EditingBuilder) {
+	return b.PreSaveCallback(f(b.preSaveCallback))
+}
+
+func (b *EditingBuilder) PostSaveCallback(f SaveCallbackFunc) *EditingBuilder {
+	b.postSaveCallback = f
+	return b
+}
+
+func (b *EditingBuilder) WrapPostSaveCallback(f func(old SaveCallbackFunc) SaveCallbackFunc) (r *EditingBuilder) {
+	return b.PostSaveCallback(f(b.postSaveCallback))
 }
 
 func (b *EditingBuilder) OnChangeActionFunc(v OnChangeActionFunc) (r *EditingBuilder) {
@@ -321,7 +362,7 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 	comp := f.Component()
 
 	r.Body = VContainer(web.Portal(comp).
-		Name(portalName))
+		Name(portalName)).Fluid(true)
 
 	// /ctx.WithContextValue(CtxActionsComponent, h.HTMLComponents{
 	// .EditBtn(ctx, id, true),

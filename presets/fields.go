@@ -166,7 +166,7 @@ func (b *FieldsBuilder) Unmarshal(toObj interface{}, info *ModelInfo, removeDele
 
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R)
 
-	vErr = b.SetObjectFields(fromObj, toObj, &FieldContext{
+	vErr = b.SetObjectFields(info, fromObj, toObj, &FieldContext{
 		EventContext: ctx,
 		Obj:          fromObj,
 		ModelInfo:    info,
@@ -202,13 +202,17 @@ func (b *FieldsBuilder) IsAllowed(r *http.Request, info *ModelInfo, obj interfac
 	return true
 }
 
-func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, parent *FieldContext, removeDeletedAndSort bool, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) (vErr web.ValidationErrors) {
+func (b *FieldsBuilder) SetObjectFields(info *ModelInfo, fromObj interface{}, toObj interface{}, parent *FieldContext, removeDeletedAndSort bool, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) (vErr web.ValidationErrors) {
 	if err := b.BeforeSetObjectFieldsHandler.Handler(fromObj, toObj, parent); err != nil {
 		vErr.FieldError(parent.FormKey, err.Error())
 		return
 	}
 
 	for _, f := range b.fields {
+		if f.disabled {
+			continue
+		}
+
 		info := parent.ModelInfo
 		if info != nil {
 			if !b.IsAllowed(ctx.R, info, toObj, f.name, PermCreate, PermUpdate) {
@@ -217,23 +221,19 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 		}
 
 		if f.nested != nil {
-			formKey := f.name
-			if parent != nil && parent.FormKey != "" {
-				formKey = fmt.Sprintf("%s.%s", parent.FormKey, f.name)
-			}
 			switch f.rt.Kind() {
 			case reflect.Slice:
-				b.setWithChildFromObjs(fromObj, formKey, f, info, modifiedIndexes, toObj, removeDeletedAndSort, ctx)
+				b.setWithChildFromObjs(fromObj, parent, f, info, modifiedIndexes, toObj, removeDeletedAndSort, ctx)
+
+				formKey := f.name
+				if parent != nil && parent.FormKey != "" {
+					formKey = fmt.Sprintf("%s.%s", parent.FormKey, f.name)
+				}
 				b.setToObjNilOrDelete(toObj, formKey, f, modifiedIndexes, removeDeletedAndSort)
 				continue
 			default:
-				pf := &FieldContext{
-					Field:        f,
-					Obj:          fromObj,
-					EventContext: ctx,
-					ModelInfo:    info,
-					FormKey:      formKey,
-				}
+				pf := f.NewContext(info, ctx, parent, fromObj)
+
 				rt := reflectutils.GetType(toObj, f.name)
 				childFromObj := reflectutils.MustGet(fromObj, f.name)
 				if childFromObj == nil {
@@ -248,7 +248,7 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 					prv.Elem().Set(reflect.ValueOf(childToObj))
 					childToObj = prv.Interface()
 				}
-				f.nested.FieldsBuilder().SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
+				f.nested.FieldsBuilder().SetObjectFields(info, childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
 				if err := reflectutils.Set(toObj, f.name, childToObj); err != nil {
 					panic(err)
 				}
@@ -256,31 +256,17 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 			}
 		}
 
+		fctx := f.NewContext(info, ctx, parent, fromObj)
+
 		val, err1 := reflectutils.Get(fromObj, f.name)
 		if err1 != nil {
-			vErr.FieldError(f.name, err1.Error())
-			continue
-		}
-
-		keyPath := f.name
-		if parent != nil && parent.FormKey != "" {
-			keyPath = fmt.Sprintf("%s.%s", parent.FormKey, f.name)
-		}
-
-		var label string
-		if !f.hiddenLabel {
-			label = b.GetLabel(ctx, f.NameLabel)
-		}
-
-		fctx := &FieldContext{
-			Field:         f,
-			Obj:           fromObj,
-			EventContext:  ctx,
-			ModelInfo:     info,
-			FormKey:       keyPath,
-			Name:          f.name,
-			Label:         label,
-			ValueOverride: val,
+			if err1.Error() != "no such field" && err1.Error() != "reflect.Value.Interface: cannot return value obtained from unexported field or method" {
+				vErr.FieldError(f.name, err1.Error())
+			} else {
+				goto set
+			}
+		} else {
+			fctx.ValueOverride = val
 		}
 
 		if err1 = f.ValueFormatters.FormatValue(fctx); err1 != nil {
@@ -290,6 +276,7 @@ func (b *FieldsBuilder) SetObjectFields(fromObj interface{}, toObj interface{}, 
 
 		reflectutils.Set(toObj, f.name, fctx.ValueOverride)
 
+	set:
 		if f.setterFunc == nil {
 			continue
 		}
@@ -351,7 +338,7 @@ func (b *FieldsBuilder) setToObjNilOrDelete(toObj interface{}, formKey string, f
 
 func (b *FieldsBuilder) setWithChildFromObjs(
 	fromObj interface{},
-	formKey string,
+	fieldContext *FieldContext,
 	f *FieldBuilder,
 	info *ModelInfo,
 	modifiedIndexes *ModifiedIndexesBuilder,
@@ -371,19 +358,13 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 			return
 		}
 		// if is deleted, do nothing, later, it will be set to nil
-		if modifiedIndexes.DeletedContains(formKey, i) {
+		if modifiedIndexes.DeletedContains(fieldContext.FormKey, i) {
 			return
 		}
 
 		sliceFieldName := fmt.Sprintf("%s[%d]", f.name, i)
 
-		pf := &FieldContext{
-			Field:        f,
-			EventContext: ctx,
-			Obj:          fromObj,
-			ModelInfo:    info,
-			FormKey:      fmt.Sprintf("%s[%d]", formKey, i),
-		}
+		pf := f.NewContextBuilder(info, ctx, fieldContext, fromObj).Index(i).Build()
 
 		childToObj := reflectutils.MustGet(toObj, sliceFieldName)
 		if childToObj == nil {
@@ -405,7 +386,7 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 		// fmt.Printf("childFromObj %#+v\n", childFromObj)
 		// fmt.Printf("childToObj %#+v\n", childToObj)
 		// fmt.Printf("fieldContext %#+v\n", pf)
-		f.nested.FieldsBuilder().SetObjectFields(childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
+		f.nested.FieldsBuilder().SetObjectFields(info, childFromObj, childToObj, pf, removeDeletedAndSort, modifiedIndexes, ctx)
 	})
 }
 
@@ -457,18 +438,6 @@ func (b *FieldsBuilder) GetFieldLabelsFromContext(ctx web.ContextValuer) (labels
 		WithFieldLabels(ctx, b, labels)
 	}
 	return
-}
-
-func (b *FieldsBuilder) GetLabel(ctx web.ContextValuer, field NameLabel) (s string) {
-	if len(field.label) > 0 {
-		return field.label
-	}
-
-	if s, ok := b.GetFieldLabelsFromContext(ctx)[field.name]; ok {
-		return s
-	}
-
-	return HumanizeString(field.name)
 }
 
 func (b *FieldsBuilder) GetFieldOrDefault(name string) (r *FieldBuilder) {
@@ -645,22 +614,25 @@ func (b *FieldsBuilder) CurrentLayout() (layout []interface{}) {
 }
 
 func (b *FieldsBuilder) ToComponent(info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
-	return b.toComponentWithModifiedIndexes(info, obj, mode, "", ctx)
+	return b.toComponentWithModifiedIndexes(info, obj, mode, nil, ctx)
 }
 
-func (b *FieldsBuilder) toComponentWithModifiedIndexes(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext) h.HTMLComponent {
+func (b *FieldsBuilder) toComponentWithModifiedIndexes(info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
-	return b.toComponentWithFormValueKey(info, obj, mode, parentFormValueKey, modifiedIndexes, ctx)
+	return b.toComponentWithFormValueKey(info, obj, mode, parent, modifiedIndexes, ctx)
 }
 
-func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) h.HTMLComponent {
+func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) h.HTMLComponent {
 	var (
-		comps   []h.HTMLComponent
-		okNames = make(map[string]any)
+		comps     []h.HTMLComponent
+		okNames   = make(map[string]any)
+		parentKey string
 	)
 
-	if parentFormValueKey == "" {
+	if parent == nil {
 		comps = append(comps, modifiedIndexes.ToFormHidden())
+	} else {
+		parentKey = parent.FormKey
 	}
 
 	vErr, _ := ctx.Flash.(*web.ValidationErrors)
@@ -669,20 +641,22 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 	}
 
 	// changes mode if not is embedded
-	if model.HasPrimaryFields(info.Schema()) && !mode.Dot().Is(LIST, DETAIL) {
-		if id, _, _ := info.LookupID(obj); id.IsZero() {
-			mode = append(mode, NEW)
+	if model.HasPrimaryFields(info.Schema()) {
+		if !mode.Dot().Is(LIST, DETAIL) {
+			if id, _, _ := info.LookupID(obj); id.IsZero() {
+				mode = append(mode, NEW)
+			}
 		}
 	} else {
 		mode = append(mode, EDIT)
 	}
 
 	for _, f := range b.beginComponentFuncs {
-		comps = append(comps, f(info, obj, mode, parentFormValueKey, ctx))
+		comps = append(comps, f(info, obj, mode, parentKey, ctx))
 	}
 
 	for _, name := range b.hiddenFields {
-		fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, name, vErr)
+		fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parent, ctx, name, vErr)
 		if fComp != nil {
 			comps = append(comps, fComp)
 		}
@@ -699,7 +673,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 			}
 			okNames[t] = nil
 
-			comp = b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, t, vErr)
+			comp = b.fieldToComponentWithFormValueKey(info, obj, mode, parent, ctx, t, vErr)
 		case []string:
 			colsComp := make([]h.HTMLComponent, 0, len(t))
 			for _, n := range t {
@@ -707,7 +681,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 					continue
 				}
 				okNames[n] = nil
-				fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, n, vErr)
+				fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parent, ctx, n, vErr)
 				if fComp == nil {
 					continue
 				}
@@ -726,7 +700,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 					}
 					okNames[n] = nil
 
-					fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parentFormValueKey, ctx, n, vErr)
+					fComp := b.fieldToComponentWithFormValueKey(info, obj, mode, parent, ctx, n, vErr)
 					if fComp == nil {
 						continue
 					}
@@ -758,7 +732,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 	return h.Components(comps...)
 }
 
-func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parentFormValueKey string, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {
+func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {
 	f := b.GetFieldOrDefault(name)
 
 	if f.disabled || (f.compFunc == nil && f.nested == nil) {
@@ -769,37 +743,16 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(info *ModelInfo, obj in
 		return nil
 	}
 
-	var (
-		label          = f.RequestLabel(info, ctx, b.GetLabel)
-		contextKeyPath = f.name
-		disabled       bool
-	)
-
-	if parentFormValueKey != "" {
-		contextKeyPath = fmt.Sprintf("%s.%s", parentFormValueKey, f.name)
-	}
+	fctx := f.NewContext(info, ctx, parent, obj)
+	fctx.Mode = mode
+	fctx.Errors = vErr.GetFieldErrors(fctx.FormKey)
 
 	if info != nil {
 		if m := mode.Dot(); m == EDIT {
-			disabled = !b.IsAllowed(ctx.R, info, obj, f.name, PermUpdate)
+			fctx.ReadOnly = !b.IsAllowed(ctx.R, info, obj, f.name, PermUpdate)
 		} else if m == NEW {
-			disabled = !b.IsAllowed(ctx.R, info, obj, f.name, PermCreate)
+			fctx.ReadOnly = !b.IsAllowed(ctx.R, info, obj, f.name, PermCreate)
 		}
-	}
-
-	fctx := &FieldContext{
-		Field:        f,
-		Mode:         mode,
-		Obj:          obj,
-		EventContext: ctx,
-		ModelInfo:    info,
-		Name:         f.name,
-		FormKey:      contextKeyPath,
-		Label:        label,
-		Errors:       vErr.GetFieldErrors(contextKeyPath),
-		Nested:       f.nested,
-		Context:      f.context,
-		ReadOnly:     disabled,
 	}
 
 	b.FieldToComponentSetup.Setup(fctx)
@@ -829,8 +782,12 @@ func (b *FieldsBuilder) ToComponentForEach(field *FieldContext, slice interface{
 
 	if field != nil {
 		info = field.ModelInfo
-		parentKeyPath = field.FormKey
+	} else {
+		field = &FieldContext{
+			FormKey: "",
+		}
 	}
+
 	if rowFunc == nil {
 		rowFunc = defaultRowFunc
 	}
@@ -839,10 +796,10 @@ func (b *FieldsBuilder) ToComponentForEach(field *FieldContext, slice interface{
 		if modifiedIndexes.DeletedContains(parentKeyPath, i) {
 			return
 		}
-
-		formKey := fmt.Sprintf("%s[%d]", parentKeyPath, i)
-		comps := b.toComponentWithFormValueKey(info.ItemOf(slice, i), obj, mode, formKey, modifiedIndexes, ctx)
-		r = append(r, rowFunc(obj, formKey, comps, ctx))
+		parent := *field
+		parent.FormKey = fmt.Sprintf("%s[%d]", parent.FormKey, i)
+		comps := b.toComponentWithFormValueKey(info.ItemOf(slice, i), obj, mode, &parent, modifiedIndexes, ctx)
+		r = append(r, rowFunc(obj, parent.FormKey, comps, ctx))
 	})
 
 	return h.Components(r...)

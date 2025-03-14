@@ -1,5 +1,7 @@
 package presets
 
+import "github.com/qor5/x/v3/i18n"
+
 type ModelBuilderConfigAttributes struct {
 	id           string
 	label        string
@@ -7,6 +9,15 @@ type ModelBuilderConfigAttributes struct {
 	uriName      string
 	singleton    bool
 	dataOperator DataOperator
+	moduleKey    i18n.ModuleKey
+}
+
+func (c *ModelBuilderConfigAttributes) ModuleKey() i18n.ModuleKey {
+	return c.moduleKey
+}
+
+func (c *ModelBuilderConfigAttributes) SetModuleKey(moduleKey i18n.ModuleKey) {
+	c.moduleKey = moduleKey
 }
 
 type ModelBuilderConfig struct {
@@ -68,6 +79,15 @@ func (c *ModelBuilderConfig) DataOperator() DataOperator {
 
 func (c *ModelBuilderConfig) SetDataOperator(dataOperator DataOperator) *ModelBuilderConfig {
 	c.dataOperator = dataOperator
+	return c
+}
+
+func (c *ModelBuilderConfig) ModuleKey() i18n.ModuleKey {
+	return c.moduleKey
+}
+
+func (c *ModelBuilderConfig) SetModuleKey(moduleKey i18n.ModuleKey) *ModelBuilderConfig {
+	c.moduleKey = moduleKey
 	return c
 }
 

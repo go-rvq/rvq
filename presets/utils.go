@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"unicode"
 	_ "unsafe"
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/str_utils"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
@@ -159,18 +159,8 @@ func ToStringContext(ctx *web.EventContext, v any) string {
 	return fmt.Sprint(v)
 }
 
-// HumanizeString humanize separates string based on capitalizd letters
-// e.g. "OrderItem" -> "Order Item, CNNName to CNN Name"
-func HumanizeString(str string) string {
-	var human []rune
-	input := []rune(str)
-	for i, l := range input {
-		if i > 0 && unicode.IsUpper(l) {
-			if (!unicode.IsUpper(input[i-1]) && input[i-1] != ' ') || (i+1 < len(input) && !unicode.IsUpper(input[i+1]) && input[i+1] != ' ' && input[i-1] != ' ') {
-				human = append(human, rune(' '))
-			}
-		}
-		human = append(human, l)
-	}
-	return strings.Title(string(human))
-}
+var (
+	HumanizeString = str_utils.HumanizeString
+	NamifyString   = str_utils.NamifyString
+	SplitString    = str_utils.SplitString
+)

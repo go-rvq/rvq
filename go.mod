@@ -5,16 +5,23 @@ go 1.23
 require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/aws/aws-sdk-go v1.53.17
+	github.com/aws/aws-sdk-go-v2 v1.32.4
+	github.com/aws/aws-sdk-go-v2/config v1.28.3
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.44
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.67.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.32.4
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/google/go-cmp v0.6.0
+	github.com/gorilla/css v1.0.1
 	github.com/gosimple/slug v1.14.0
 	github.com/gosimple/unidecode v1.0.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
+	github.com/jinzhu/configor v1.2.1
 	github.com/jinzhu/inflection v1.0.0
 	github.com/lib/pq v1.10.9
 	github.com/manifoldco/promptui v0.9.0
@@ -24,7 +31,6 @@ require (
 	github.com/ory/ladon v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.4.0
-	github.com/qor/oss v0.0.0-20230717083721-c04686f83630
 	github.com/qor5/web/v3 v3.0.4
 	github.com/qor5/x/v3 v3.0.5
 	github.com/samber/lo v1.39.0
@@ -63,6 +69,19 @@ require (
 	github.com/Microsoft/hcsshim v0.12.3 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.6 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.24.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.4 // indirect
+	github.com/aws/smithy-go v1.22.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/blend/go-sdk v1.20220411.3 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
@@ -92,7 +111,6 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.2.2 // indirect

@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor/oss"
 	"github.com/qor5/admin/v3/l10n"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/publish"

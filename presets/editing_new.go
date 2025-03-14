@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"strings"
 
 	"github.com/qor5/admin/v3/presets/actions"
@@ -73,10 +74,39 @@ func (b *EditingBuilder) doCreate(
 		return perm.PermissionDenied
 	}
 
+	resetSaveContext := web.WithContextValue(ctx, CtxSaveContext, context.Background())
+	defer resetSaveContext()
+
+	var done []func(success bool) error
+
+	defer func() {
+		for _, f := range done {
+			if e := f(err == nil); err == nil && e != nil {
+				err = e
+			}
+		}
+	}()
+
 	if vErr := b.RunSetterFunc(ctx, false, obj); vErr.HaveErrors() {
 		b.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
 	}
+
+	if b.preSaveCallback != nil {
+		if d, e := b.preSaveCallback(ctx, obj); e != nil {
+			err = e
+			return
+		} else if d != nil {
+			done = append(done, d)
+		}
+	}
+
+	if b.preValidate != nil {
+		if err = b.preValidate(ctx, obj); err != nil {
+			return
+		}
+	}
+
 	if vErr := b.Validators.Validate(obj, FieldModeStack{NEW}, ctx); vErr.HaveErrors() {
 		b.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
@@ -84,9 +114,12 @@ func (b *EditingBuilder) doCreate(
 
 	{
 		var vErr web.ValidationErrors
-		b.FieldsBuilder.Walk(b.mb.modelInfo, obj, FieldModeStack{NEW}, ctx, func(field *FieldContext) (s FieldWalkState) {
-			vErr.Merge(field.Field.Validators.Validate(field))
-			return s
+		b.FieldsBuilder.WalkO(b.mb.modelInfo, obj, FieldModeStack{NEW}, ctx, &FieldWalkHandleOptions{
+			SkipNestedNil: true,
+			Handler: func(field *FieldContext) (s FieldWalkState) {
+				vErr.Merge(field.Field.Validators.Validate(field))
+				return s
+			},
 		})
 
 		if vErr.HaveErrors() {
@@ -131,6 +164,13 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 	}
 
 	obj := b.mb.NewModel()
+
+	if b.New != nil {
+		if err = b.New(ctx, obj); err != nil {
+			return
+		}
+	}
+
 	respondTargetPortal := ctx.R.FormValue(ParamTargetPortal)
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
 	if overlay.IsDrawer() {

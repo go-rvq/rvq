@@ -22,7 +22,10 @@ func (b *ListingBuilder) SetDataTableDensity(dataTableDensity string) *ListingBu
 
 func (b *ListingBuilder) cellComponentFunc(f *FieldBuilder) vx.CellComponentFunc {
 	return func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent {
-		fctx := b.mb.NewFieldContext(ctx, obj, f, FieldModeStack{LIST})
+		fctx := f.NewContext(b.mb.Info(), ctx, nil, obj)
+		fctx.Mode = FieldModeStack{LIST}
+		f.Setup.Setup(fctx)
+		f.ToComponentSetup.Setup(fctx)
 		return f.ToComponent(fctx)
 	}
 }
@@ -32,19 +35,38 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 	datatableAdditions h.HTMLComponent,
 	err error,
 ) {
-	var (
-		b    = lcb.b
-		msgr = MustGetMessages(ctx.Context())
-		qs   = ctx.R.URL.Query()
-
-		overlayMode = actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-		inDialog    = overlayMode.IsDialog()
-		sr          SearchResult
-	)
-
+	var sr SearchResult
 	if sr, err = lcb.b.search(ctx); err != nil {
 		return
 	}
+
+	overlayMode := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+	inDialog := overlayMode.IsDialog()
+
+	if lcb.tableBuilder == nil {
+		if dataTable, err = lcb.BuildTable(ctx, &sr, overlayMode); err != nil {
+			return
+		}
+	} else {
+		if dataTable, err = lcb.tableBuilder(lcb, ctx, &sr, overlayMode); err != nil {
+			return
+		}
+	}
+
+	datatableAdditions = lcb.BuildTableAdditions(ctx, &sr, inDialog)
+	return
+}
+
+func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *SearchResult, overlayMode actions.OverlayMode) (
+	dataTable h.HTMLComponent,
+	err error,
+) {
+	var (
+		b        = lcb.b
+		msgr     = MustGetMessages(ctx.Context())
+		qs       = ctx.R.URL.Query()
+		inDialog = overlayMode.IsDialog()
+	)
 
 	haveCheckboxes := !lcb.selection && len(b.bulkActions) > 0
 
@@ -233,13 +255,8 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 	mode := FieldModeStack{LIST}
 
 	for _, f := range displayFields {
-		fctx := &FieldContext{
-			EventContext: ctx,
-			Field:        f,
-			Mode:         mode,
-			Name:         f.name,
-			Label:        f.RequestLabel(b.mb.Info(), ctx, lcb.b.FieldsBuilder.GetLabel),
-		}
+		fctx := f.NewContext(b.mb.Info(), ctx, nil, nil)
+		fctx.Mode = mode
 
 		if f.IsEnabled(fctx) {
 			if b.mb.Info().Verifier().Do(PermList).SnakeOn("f_"+f.name).WithReq(ctx.R).IsAllowed() != nil {
@@ -251,19 +268,28 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 				CellComponentFunc(b.cellComponentFunc(f))
 		}
 	}
+	return
+}
 
-	if b.disablePagination {
+func (lcb *ListingComponentBuilder) BuildTableAdditions(ctx *web.EventContext, sr *SearchResult, inDialog bool) (comp h.HTMLComponent) {
+	if lcb.b.disablePagination {
 		// if disable pagination, we don't need to add
 		// the pagination component and the no-record message to page.
 		return
 	}
+
+	msgr := MustGetMessages(ctx.Context())
+
 	if sr.TotalCount > 0 {
 		tpb := vx.VXTablePagination().
 			Total(int64(sr.TotalCount)).
 			CurrPage(sr.Page).
 			PerPage(sr.PerPage).
-			CustomPerPages([]int64{b.perPage}).
-			PerPageText(msgr.PaginationRowsPerPage)
+			CustomPerPages([]int64{lcb.b.perPage}).
+			PerPageText(msgr.PaginationRowsPerPage).
+			PageInfoText(msgr.PaginationPageInfo).
+			PageText(msgr.PaginationPage).
+			OfPageText(msgr.PaginationOfPage)
 
 		if inDialog {
 			tpb.OnSelectPerPage(web.Plaid().
@@ -289,12 +315,9 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 				Go())
 		}
 
-		datatableAdditions = tpb
-	} else {
-		datatableAdditions = h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("text-center grey--text text--darken-2")
+		return tpb
 	}
-
-	return
+	return h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("text-center grey--text text--darken-2")
 }
 
 func (b *ListingBuilder) reloadList(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -334,31 +357,7 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		if b.mb.Info().Verifier().SnakeDo(PermBulkActions, ba.name).WithReq(ctx.R).IsAllowed() != nil {
 			continue
 		}
-
-		var btn h.HTMLComponent
-		if ba.buttonCompFunc != nil {
-			btn = ba.buttonCompFunc(ctx)
-		} else {
-			buttonColor := ba.buttonColor
-			if buttonColor == "" {
-				buttonColor = ColorSecondary
-			}
-			onclick := web.Plaid().EventFunc(actions.OpenBulkActionDialog).
-				Queries(url.Values{bulkPanelOpenParamName: []string{ba.name}}).
-				MergeQuery(true)
-			if inDialog {
-				onclick.URL(ctx.R.RequestURI).
-					Query(ParamOverlay, actions.Dialog)
-			}
-			btn = VBtn(b.mb.getLabel(ba.NameLabel)).
-				Color(buttonColor).
-				Variant(VariantFlat).
-				// Size(SizeSmall).
-				Class("ml-2").
-				Attr("@click", onclick.Go())
-		}
-
-		actionBtns = append(actionBtns, btn)
+		actionBtns = append(actionBtns, ba.Button(lcb.b.mb, ctx))
 	}
 
 	// Render actions
@@ -383,8 +382,9 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 				onclick.URL(ctx.R.RequestURI).
 					Query(ParamOverlay, actions.Dialog)
 			}
-			btn = VBtn(b.mb.getLabel(ba.NameLabel)).
+			btn = VBtn(ba.RequestTitle(lcb.b.mb, ctx)).
 				Color(buttonColor).
+				PrependIcon(ba.icon).
 				Variant(VariantFlat).
 				// Size(SizeSmall).
 				Class("ml-2").

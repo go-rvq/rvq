@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
 	"gorm.io/gorm"
@@ -61,19 +61,19 @@ type Version struct {
 // @snippet_end
 
 type PublishInterface interface {
-	GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
+	GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, Storage storage.Storage) (actions []*PublishAction, err error)
 }
 
 type UnPublishInterface interface {
-	GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (actions []*PublishAction, err error)
+	GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, Storage storage.Storage) (actions []*PublishAction, err error)
 }
 
 type AfterPublishInterface interface {
-	AfterPublish(db *gorm.DB, storage oss.StorageInterface, ctx context.Context) error
+	AfterPublish(db *gorm.DB, Storage storage.Storage, ctx context.Context) error
 }
 
 type AfterUnPublishInterface interface {
-	AfterUnPublish(db *gorm.DB, storage oss.StorageInterface, ctx context.Context) error
+	AfterUnPublish(db *gorm.DB, Storage storage.Storage, ctx context.Context) error
 }
 
 type StatusInterface interface {

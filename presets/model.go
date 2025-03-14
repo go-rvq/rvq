@@ -29,6 +29,8 @@ type ModelBuilderOption interface {
 }
 
 type ModelBuilder struct {
+	ModelBuilderConfigAttributes
+
 	p *Builder
 	writeFieldBuilders,
 	listFieldBuilders,
@@ -41,12 +43,14 @@ type ModelBuilder struct {
 	notInMenu           bool
 	menuIcon            string
 	defaultURLQueryFunc func(*http.Request) url.Values
-	fieldLabels         []string
+	fieldLabels         map[string]func(ctx *web.EventContext) string
+	fieldHints          map[string]func(ctx *web.EventContext) string
 	placeholders        []string
 	listing             *ListingBuilder
 	detailing           *DetailingBuilder
 	editing             *EditingBuilder
 	creating            *EditingBuilder
+	editingDisabled     bool
 	hasDetailing        bool
 	female              bool
 	rightDrawerWidth    string
@@ -63,12 +67,11 @@ type ModelBuilder struct {
 	children         []*ModelBuilder
 	saveURI          string
 	routeSetuper     func(mux *http.ServeMux, uri string)
-	itemRouteSetuper func(mux *http.ServeMux, uri string)
+	itemRouteSetuper []func(mux *http.ServeMux, uri string)
 
 	verifierModel *ModelBuilder
 
-	detailingParentsIDResolver ParentsModelIDResolver
-	ModelBuilderConfigAttributes
+	detailingParentsIDResolver   ParentsModelIDResolver
 	BeforeFormUnmarshallHandlers ModelFormUnmarshallHandlers
 	PostFormUnmarshallHandlers   ModelFormUnmarshallHandlers
 
@@ -164,6 +167,25 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 	mb.newDetailing()
 
 	return
+}
+
+func (mb *ModelBuilder) String() string {
+	var flags []string
+	if mb.singleton {
+		flags = append(flags, "S")
+	} else {
+		flags = append(flags, "*"+mb.pluralLabel)
+	}
+	flags = append(flags, mb.uriName)
+
+	return fmt.Sprintf("%s [%s]", mb.label, strings.Join(flags, ", "))
+}
+
+func (mb *ModelBuilder) I18nModuleKeyOrDefault() i18n.ModuleKey {
+	if mb.moduleKey == "" {
+		return ModelsI18nModuleKey
+	}
+	return mb.moduleKey
 }
 
 func (mb *ModelBuilder) WriteFieldBuilders() FieldBuilders {
@@ -268,7 +290,7 @@ func (mb *ModelBuilder) Schema() (s Schema) {
 	return s
 }
 
-func (mb *ModelBuilder) WithDataOperator(h func(dataOperator DataOperator)) bool {
+func (mb *ModelBuilder) WithDataOperator(h func(do DataOperator)) bool {
 	if do := mb.CurrentDataOperator(); do != nil {
 		h(do)
 		return true
@@ -276,7 +298,7 @@ func (mb *ModelBuilder) WithDataOperator(h func(dataOperator DataOperator)) bool
 	return false
 }
 
-func (mb *ModelBuilder) UpdateDataOperator(h func(dataOperator DataOperator) DataOperator) *ModelBuilder {
+func (mb *ModelBuilder) UpdateDataOperator(h func(do DataOperator) DataOperator) *ModelBuilder {
 	if mb.dataOperator != nil {
 		mb.dataOperator = h(mb.dataOperator)
 	} else {
@@ -393,7 +415,45 @@ func (mb *ModelBuilder) GetLabel() string {
 }
 
 func (mb *ModelBuilder) Labels(vs ...string) (r *ModelBuilder) {
-	mb.fieldLabels = append(mb.fieldLabels, vs...)
+	if mb.fieldLabels == nil {
+		mb.fieldLabels = make(map[string]func(ctx *web.EventContext) string)
+	}
+
+	for i := 0; i < len(vs); i = i + 2 {
+		name, label := vs[i], vs[i+1]
+		mb.fieldLabels[name] = func(*web.EventContext) string {
+			return label
+		}
+	}
+	return mb
+}
+
+func (mb *ModelBuilder) FieldLabelFunc(name string, f func(ctx *web.EventContext) string) (r *ModelBuilder) {
+	if mb.fieldLabels == nil {
+		mb.fieldLabels = make(map[string]func(ctx *web.EventContext) string)
+	}
+	mb.fieldLabels[name] = f
+	return mb
+}
+func (mb *ModelBuilder) Hints(vs ...string) (r *ModelBuilder) {
+	if mb.fieldHints == nil {
+		mb.fieldHints = make(map[string]func(ctx *web.EventContext) string)
+	}
+
+	for i := 0; i < len(vs); i = i + 2 {
+		name, label := vs[i], vs[i+1]
+		mb.fieldHints[name] = func(*web.EventContext) string {
+			return label
+		}
+	}
+	return mb
+}
+
+func (mb *ModelBuilder) FieldHintFunc(name string, f func(ctx *web.EventContext) string) (r *ModelBuilder) {
+	if mb.fieldHints == nil {
+		mb.fieldHints = make(map[string]func(ctx *web.EventContext) string)
+	}
+	mb.fieldHints[name] = f
 	return mb
 }
 
@@ -412,33 +472,20 @@ func (mb *ModelBuilder) Singleton(v bool) (r *ModelBuilder) {
 	return mb
 }
 
-func (mb *ModelBuilder) NewFieldContext(ctx *web.EventContext, obj interface{}, field *FieldBuilder, mode FieldModeStack) (r *FieldContext) {
-	r = &FieldContext{
-		Mode:         mode,
-		Field:        field,
-		EventContext: ctx,
-		Obj:          obj,
-		ModelInfo:    mb.Info(),
-		Name:         field.name,
-		Label:        mb.getLabel(field.NameLabel),
+func (mb *ModelBuilder) FieldLabel(field *FieldBuilder, ctx *web.EventContext) (r string) {
+	if f, _ := mb.fieldLabels[field.name]; f != nil {
+		return f(ctx)
 	}
-	field.Setup.Setup(r)
-	field.ToComponentSetup.Setup(r)
-	return
+
+	return field.ContextLabel(mb.Info(), ctx)
 }
 
-func (mb *ModelBuilder) getLabel(field NameLabel) (r string) {
-	if len(field.label) > 0 {
-		return field.label
+func (mb *ModelBuilder) FieldHint(field *FieldBuilder, ctx *web.EventContext) (r string) {
+	if f, _ := mb.fieldHints[field.name]; f != nil {
+		return f(ctx)
 	}
 
-	for i := 0; i < len(mb.fieldLabels)-1; i = i + 2 {
-		if mb.fieldLabels[i] == field.name {
-			return mb.fieldLabels[i+1]
-		}
-	}
-
-	return HumanizeString(field.name)
+	return field.ContextHint(mb.Info(), ctx)
 }
 
 func (mb *ModelBuilder) SubRoutesSetup(f func(mux *http.ServeMux, baseUri string)) *ModelBuilder {
@@ -473,12 +520,23 @@ func (mb *ModelBuilder) BindPageFunc(f web.PageFunc) web.PageFunc {
 	}
 }
 
-func (mb *ModelBuilder) TTitle(ctx context.Context) string {
-	return i18n.T(ctx, ModelsI18nModuleKey, mb.label)
+func (mb *ModelBuilder) TPageLabel(ctx context.Context, args ...string) (s string) {
+	if mb.singleton {
+		return mb.TTitle(ctx, args...)
+	}
+	return mb.TTitlePlural(ctx, args...)
 }
 
-func (mb *ModelBuilder) TTheTitle(ctx context.Context) string {
-	return MustGetMessages(ctx).TheTitle(mb.female, mb.TTitle(ctx))
+func (mb *ModelBuilder) TTitle(ctx context.Context, args ...string) string {
+	return i18n.Translate(mb.Translator(), ctx, mb.label, args...)
+}
+
+func (mb *ModelBuilder) TTitlePlural(ctx context.Context, args ...string) string {
+	return i18n.Translate(mb.Translator(), ctx, mb.pluralLabel, args...)
+}
+
+func (mb *ModelBuilder) TTheTitle(ctx context.Context, args ...string) string {
+	return MustGetMessages(ctx).TheTitle(mb.female, mb.TTitle(ctx), args...)
 }
 
 func (mb *ModelBuilder) DefaultRecordTitle(ctx *web.EventContext, obj any) string {
@@ -520,7 +578,7 @@ func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (_ *web.EventContex
 
 	for i, id := range parentsID {
 		bc.Append(&Breadcrumb{
-			Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, parents[i].pluralLabel),
+			Label: parents[i].TTitlePlural(ctx.Context()),
 			URI:   parents[i].modelInfo.ListingHref(parentsID[:i]...),
 		})
 
@@ -547,7 +605,7 @@ func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (_ *web.EventContex
 	if !mb.singleton && ctx.Param("id") != "" {
 		bc.Append(&Breadcrumb{
 			URI:   mb.Info().ListingHref(parentsID...),
-			Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, mb.pluralLabel),
+			Label: mb.TTitlePlural(ctx.Context()),
 		})
 	}
 	return ctx, nil
@@ -756,11 +814,15 @@ func (mb *ModelBuilder) WrapRouteSetuper(f func(old func(mux *http.ServeMux, uri
 }
 
 func (mb *ModelBuilder) ItemRouteSetuper(f func(mux *http.ServeMux, uri string)) *ModelBuilder {
-	mb.itemRouteSetuper = f
+	mb.itemRouteSetuper = append(mb.itemRouteSetuper, f)
 	return mb
 }
 
-func (mb *ModelBuilder) WrapItemRouteSetuper(f func(old func(mux *http.ServeMux, uri string)) func(mux *http.ServeMux, uri string)) *ModelBuilder {
-	mb.itemRouteSetuper = f(mb.itemRouteSetuper)
+func (mb *ModelBuilder) EditingDisabled() bool {
+	return mb.editingDisabled
+}
+
+func (mb *ModelBuilder) SetEditingDisabled(editingDisabled bool) *ModelBuilder {
+	mb.editingDisabled = editingDisabled
 	return mb
 }

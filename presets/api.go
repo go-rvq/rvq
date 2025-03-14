@@ -50,10 +50,11 @@ type (
 )
 
 type (
-	BulkActionComponentFunc                  func(selectedIds []string, ctx *web.EventContext) h.HTMLComponent
+	BulkActionComponentFunc                  func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error)
 	BulkActionUpdateFunc                     func(selectedIds []string, ctx *web.EventContext) (err error)
 	BulkActionSelectedIdsProcessorFunc       func(selectedIds []string, ctx *web.EventContext) (processedSelectedIds []string, err error)
 	BulkActionSelectedIdsProcessorNoticeFunc func(selectedIds []string, processedSelectedIds []string, unactionableIds []string) string
+	BulkActionComponentHandler               func(cb *ContentComponentBuilder, ctx *web.EventContext)
 )
 
 type MessagesFunc func(r *http.Request) *Messages
@@ -78,6 +79,8 @@ type (
 	SaveFunc   func(obj interface{}, id ID, ctx *web.EventContext) (err error)
 	CreateFunc func(obj interface{}, ctx *web.EventContext) (err error)
 	DeleteFunc func(obj interface{}, id ID, ctx *web.EventContext) (err error)
+
+	SaveCallbackFunc func(ctx *web.EventContext, obj any) (done func(success bool) error, err error)
 )
 
 type SlugDecoder interface {
@@ -110,7 +113,7 @@ type ModelPlugin interface {
 }
 
 type (
-	ModelInstallFunc func(pb *Builder, mb *ModelBuilder) error
+	ModelInstallFunc func(mb *ModelBuilder) error
 	InstallFunc      func(pb *Builder) error
 )
 

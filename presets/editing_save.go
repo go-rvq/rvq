@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"context"
+
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/perm"
@@ -33,14 +35,45 @@ func (b *EditingBuilder) doUpdate(
 		return perm.PermissionDenied
 	}
 
+	resetSaveContext := web.WithContextValue(ctx, CtxSaveContext, context.Background())
+	defer resetSaveContext()
+
+	var done []func(success bool) error
+
+	defer func() {
+		for _, f := range done {
+			if e := f(err == nil); err == nil && e != nil {
+				err = e
+			}
+		}
+	}()
+
+	if usingB.preSaveCallback != nil {
+		if d, e := usingB.preSaveCallback(ctx, obj); e != nil {
+			err = e
+			return
+		} else if d != nil {
+			done = append(done, d)
+		}
+	}
+
+	if usingB.preValidate != nil {
+		if err = usingB.preValidate(ctx, obj); err != nil {
+			return
+		}
+	}
+
 	if vErr = usingB.Validators.Validate(obj, FieldModeStack{EDIT}, ctx); vErr.HaveErrors() {
 		usingB.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
 	}
 
-	usingB.FieldsBuilder.Walk(usingB.mb.modelInfo, obj, FieldModeStack{EDIT}, ctx, func(field *FieldContext) (s FieldWalkState) {
-		vErr.Merge(field.Field.Validators.Validate(field))
-		return s
+	usingB.FieldsBuilder.WalkO(usingB.mb.modelInfo, obj, FieldModeStack{EDIT}, ctx, &FieldWalkHandleOptions{
+		SkipNestedNil: true,
+		Handler: func(field *FieldContext) (s FieldWalkState) {
+			vErr.Merge(field.Field.Validators.Validate(field))
+			return s
+		},
 	})
 
 	if vErr.HaveErrors() {
@@ -48,10 +81,25 @@ func (b *EditingBuilder) doUpdate(
 		return &vErr
 	}
 
+	if usingB.postValidate != nil {
+		if err = usingB.postValidate(ctx, obj); err != nil {
+			return
+		}
+	}
+
 	err1 := usingB.Saver(obj, mid, ctx)
 	if err1 != nil {
 		usingB.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
+	}
+
+	if usingB.postSaveCallback != nil {
+		if d, e := usingB.postSaveCallback(ctx, obj); e != nil {
+			err = e
+			return
+		} else if d != nil {
+			done = append(done, d)
+		}
 	}
 
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))

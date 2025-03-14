@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"context"
+
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	h "github.com/theplant/htmlgo"
@@ -21,6 +23,7 @@ const (
 	ctxActionFormObject
 	CtxRespondDialogHandlers
 	ctxFieldLabels
+	CtxSaveContext
 	ParentsModelIDKey
 )
 
@@ -125,4 +128,9 @@ func GetFieldLabels(ctx web.ContextValuer, fb *FieldsBuilder) map[string]string 
 		return v[fb]
 	}
 	return nil
+}
+
+func GetSaveContext(ctx *web.EventContext) (v context.Context) {
+	v, _ = ctx.ContextValue(CtxSaveContext).(context.Context)
+	return
 }

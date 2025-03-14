@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/qor/oss"
+	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/utils/db_utils"
 	"github.com/theplant/sliceutils"
 	"gorm.io/gorm"
@@ -15,7 +15,7 @@ import (
 
 type ListPublishBuilder struct {
 	db                 *gorm.DB
-	storage            oss.StorageInterface
+	storage            storage.Storage
 	context            context.Context
 	needNextPageFunc   func(totalNumberPerPage, currentPageNumber, totalNumberOfItems int) bool
 	getOldItemsFunc    func(record interface{}) (result []interface{}, err error)
@@ -23,10 +23,10 @@ type ListPublishBuilder struct {
 	publishActionsFunc func(db *gorm.DB, lp ListPublisher, result []*OnePageItems, indexPage *OnePageItems) (objs []*PublishAction)
 }
 
-func NewListPublishBuilder(db *gorm.DB, storage oss.StorageInterface) *ListPublishBuilder {
+func NewListPublishBuilder(db *gorm.DB, Storage storage.Storage) *ListPublishBuilder {
 	return &ListPublishBuilder{
 		db:      db,
-		storage: storage,
+		storage: Storage,
 		context: context.Background(),
 
 		needNextPageFunc: func(totalNumberPerPage, currentPageNumber, totalNumberOfItems int) bool {

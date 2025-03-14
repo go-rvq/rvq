@@ -21,6 +21,10 @@ type ModelInfo struct {
 	index int
 }
 
+func (b *ModelInfo) Builder() *ModelBuilder {
+	return b.mb
+}
+
 func (b ModelInfo) ChildOf(parent *ModelInfo, obj any) *ModelInfo {
 	b.parent = parent
 	b.parentObj = obj
