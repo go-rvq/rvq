@@ -1,13 +1,18 @@
-DOCKER_CMD ?= docker
+build:
+	../../_env/env.sh build_pj $(shell pwd)
 
-docker_build:
-	$(DOCKER_CMD) build --tag pnpm:latest .
+.PHONY: dist
+dist:
+	../../_env/env.sh docker_build_pj $(shell pwd)
 
-build: docker_build
-	$(DOCKER_CMD) run -it --rm \
-		--user $(shell id -u):$(shell id -g) \
-		-e HOME=/home/node \
-		-v $(HOME)/.cache/pnpm:/home/node/.cache/pnpm \
-		-v .:/home/node/src \
-		-w /home/node/src \
-		pnpm:latest bash -c 'pnpm install && pnpm format && pnpm run build'
+
+.PHONY: dist-clean
+dist-clean:
+	rm -rf dist
+
+.PHONY: clean
+clean:
+	rm -rf node_modules .pnpm-store
+
+dev:
+	../../_env/env.sh pj_pnpm $(shell pwd) run dev

@@ -6,7 +6,7 @@
 
 // Plugins
 import {registerPlugins} from "@/demo/plugins";
-import {vuechart} from "@/lib/vuechart";
+import {ckeditor} from "@/lib/ckeditor.ts";
 
 // Components
 import App from "@/demo/App.vue";
@@ -17,5 +17,5 @@ import {createApp} from "vue";
 const app = createApp(App);
 
 registerPlugins(app);
-app.use(vuechart);
+app.use(ckeditor);
 app.mount("#app");

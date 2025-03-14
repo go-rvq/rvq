@@ -1,4 +1,4 @@
-import { App } from 'vue'
+import {App} from 'vue'
 
 import Datepicker from '@/lib/Datepicker.vue'
 import Datetimepicker from '@/lib/Datetimepicker.vue'
@@ -17,6 +17,8 @@ import AdvancedSelect from '@/lib/AdvancedSelect.vue'
 import TreeDataTable from '@/lib/TreeDataTable.vue'
 import TreeRows from '@/lib/TreeRows.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
+
+import {default as ImageField} from 'vuetify-editable-image-field/src/lib/Input.vue'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -37,6 +39,7 @@ const vuetifyx = {
     app.component('vx-tree-rows', TreeRows)
     app.component('vx-tree-data-table', TreeDataTable)
     app.component('vx-editorjs', EditorJS)
+    app.component('vx-image-field', ImageField)
   }
 }
 declare const window: any

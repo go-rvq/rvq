@@ -105,7 +105,7 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 
-import { isReactive, onMounted, ref, toRaw, watch } from 'vue'
+import {isReactive, onMounted, ref, toRaw, watch} from 'vue'
 
 const props = defineProps({
   items: {
@@ -336,5 +336,3 @@ if (props.searchItemsFunc) {
   }
 }
 </script>
-
-<style scoped></style>

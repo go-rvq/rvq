@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { encodeFilterData, filterData } from '@/lib/Filter/FilterData'
-import { FilterItem } from '@/lib/Filter/Model'
+import {computed, onMounted, ref} from 'vue'
+import {encodeFilterData, filterData} from '@/lib/Filter/FilterData'
+import {FilterItem} from '@/lib/Filter/Model'
 import ItemFilter from '@/lib/Filter/components/ItemFilter.vue'
 import DatetimeRangeItem from '@/lib/Filter/components/DatetimeRangeItem.vue'
 import DateRangeItem from '@/lib/Filter/components/DateRangeItem.vue'
@@ -16,7 +16,6 @@ import MonthItem from '@/lib/Filter/components/MonthItem.vue'
 
 const props = defineProps({
   internalValue: { type: Array<any>, required: true },
-  modelValue: { type: Object },
   replaceWindowLocation: Boolean,
   translations: {
     type: Object,
@@ -50,6 +49,9 @@ const props = defineProps({
     }
   } as any
 })
+
+const model = defineModel()
+const emit = defineEmits(['data'])
 
 const t = props.translations
 
@@ -93,8 +95,6 @@ const getSelectedIndexes = (value: FilterItem[]): number[] => {
 const visible = ref(false)
 const selectedIndexs = ref(getSelectedIndexes(props.internalValue))
 
-const emit = defineEmits(['update:modelValue'])
-
 const clickDone = () => {
   // collect all query keys in the filter, remove them from location search first. then add it by selecting status
   // but keep original search conditions
@@ -107,9 +107,9 @@ const clickDone = () => {
     filterData: filterData(props.internalValue),
     encodedFilterData: encodeFilterData(props.internalValue)
   }
-  emit('update:modelValue', event)
-
+  model.value = event
   visible.value = false
+  emit('data', event.filterData)
 }
 
 const clearAll = (e: any) => {
@@ -160,6 +160,13 @@ const otherSelectedFilters = computed(() => {
 })
 const foldedFilters = computed(() => {
   return filtersGetFunc((item) => item.folded && !item.selected, true)(itemTypes, trans)
+})
+
+onMounted(() => {
+  const data = filterData(props.internalValue)
+  if (data.length) {
+    emit('data', data)
+  }
 })
 </script>
 

@@ -40,4 +40,6 @@ if [ $sourced -eq 0 ]; then
     cd "$DIR"
     "$@"
   fi
+else
+  bash --norc
 fi
