@@ -283,8 +283,14 @@ func (mb *ModelBuilder) CurrentDataOperator() DataOperator {
 }
 
 func (mb *ModelBuilder) Schema() (s Schema) {
-	var err error
-	if s, err = mb.CurrentDataOperator().Schema(mb.model); err != nil {
+	var (
+		err error
+		do  = mb.CurrentDataOperator()
+	)
+	if do == nil {
+		return
+	}
+	if s, err = do.Schema(mb.model); err != nil {
 		panic(err)
 	}
 	return s

@@ -48,6 +48,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
+			SetScrollable(true).
 			SetValidPortalName(targetPortal).
 			Respond(&r, comp)
 	} else if mode.IsDialog() {

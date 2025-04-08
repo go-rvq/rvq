@@ -10,22 +10,12 @@ import (
 )
 
 type Drawer struct {
-	location          string
-	width             string
-	portalName        string
-	contentPortalName string
-	safeClose         bool
-	scrollable        bool
-	rootWrap          func(comp h.HTMLComponent) h.HTMLComponent
-}
-
-func (p *Drawer) ContentPortalName() string {
-	return p.contentPortalName
-}
-
-func (p *Drawer) SetContentPortalName(contentPortalName string) *Drawer {
-	p.contentPortalName = contentPortalName
-	return p
+	location   string
+	width      string
+	portalName string
+	safeClose  bool
+	scrollable bool
+	rootWrap   func(comp h.HTMLComponent) h.HTMLComponent
 }
 
 func NewDrawer(width string, portalName string) *Drawer {
@@ -121,10 +111,6 @@ func (p *Drawer) RootWrap(wrap func(comp h.HTMLComponent) h.HTMLComponent) *Draw
 }
 
 func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
-	if p.contentPortalName != "" {
-		comp = web.Portal(comp).Name(p.contentPortalName)
-	}
-
 	drawer := v.VNavigationDrawer(
 		// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
 		comp,
@@ -140,6 +126,13 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 
 	if p.scrollable {
 		drawer.Class("v-navigation-drawer--scrollable")
+		drawer.Style("position:fixed; top:0; overflow-y:scroll;")
+		switch p.location {
+		case v.LocationLeft:
+			drawer.Style(`left:0`)
+		case v.LocationRight:
+			drawer.Style(`right:0`)
+		}
 	}
 
 	d := web.CloserScope(

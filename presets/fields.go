@@ -260,10 +260,12 @@ func (b *FieldsBuilder) SetObjectFields(info *ModelInfo, fromObj interface{}, to
 
 		val, err1 := reflectutils.Get(fromObj, f.name)
 		if err1 != nil {
-			if err1.Error() != "no such field" && err1.Error() != "reflect.Value.Interface: cannot return value obtained from unexported field or method" {
-				vErr.FieldError(f.name, err1.Error())
-			} else {
+			switch err1.Error() {
+			case "no such field",
+				"reflect: call of reflect.Value.Interface on zero Value",
+				"reflect.Value.Interface: cannot return value obtained from unexported field or method":
 				goto set
+			default:
 			}
 		} else {
 			fctx.ValueOverride = val
@@ -641,7 +643,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(info *ModelInfo, obj interfa
 	}
 
 	// changes mode if not is embedded
-	if model.HasPrimaryFields(info.Schema()) {
+	if s := info.Schema(); s != nil && model.HasPrimaryFields(s) {
 		if !mode.Dot().Is(LIST, DETAIL) {
 			if id, _, _ := info.LookupID(obj); id.IsZero() {
 				mode = append(mode, NEW)

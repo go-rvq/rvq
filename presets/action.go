@@ -235,6 +235,10 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		return
 	}
 
+	if ctx.W.Writed() {
+		return
+	}
+
 	r.PushState = web.Location(url.Values{})
 	r.RunScript = "closer.show = false"
 	GetFlashMessages(ctx).RespondTo(r)
