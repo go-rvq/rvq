@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/qor5/admin/v3/docs/cmd/qor5/admin-template/admin"
+	"github.com/go-rvq/rvq/admin/docs/cmd/qor5/admin-template/admin"
 	"github.com/theplant/osenv"
 )
 

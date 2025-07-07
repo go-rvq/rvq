@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/zeroer"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/zeroer"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )

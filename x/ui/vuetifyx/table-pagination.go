@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	v "github.com/qor5/x/v3/ui/vuetify"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 	h "github.com/theplant/htmlgo"
 )
 

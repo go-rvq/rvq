@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/x/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
 

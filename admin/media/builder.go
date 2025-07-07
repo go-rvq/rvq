@@ -1,9 +1,9 @@
 package media
 
 import (
-	"github.com/qor5/admin/v3/media/base"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/x/v3/perm"
+	"github.com/go-rvq/rvq/admin/media/base"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/gorm"
 )
 

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/qor5/web/v3/multipartestutils"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 )
 
 func TestCases(t *testing.T) {

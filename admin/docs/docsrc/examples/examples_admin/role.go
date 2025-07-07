@@ -1,10 +1,10 @@
 package examples_admin
 
 import (
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/role"
-	"github.com/qor5/x/v3/perm"
-	"github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/role"
+	"github.com/go-rvq/rvq/x/perm"
+	"github.com/go-rvq/rvq/x/ui/vuetify"
 	"gorm.io/gorm"
 )
 

@@ -1,7 +1,7 @@
 package publish
 
 import (
-	"github.com/qor5/x/v3/i18n"
+	"github.com/go-rvq/rvq/x/i18n"
 )
 
 const I18nPublishKey i18n.ModuleKey = "I18nPublishKey"

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/web/v3"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/web"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )

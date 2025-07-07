@@ -4,8 +4,8 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/reflect_utils"
+	"github.com/go-rvq/rvq/web"
 )
 
 const FieldLocalizedEntries = "Localizations"

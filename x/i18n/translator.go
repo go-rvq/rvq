@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/qor5/web/v3/str_utils"
+	"github.com/go-rvq/rvq/web/str_utils"
 	"github.com/sunfmin/reflectutils"
 )
 

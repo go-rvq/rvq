@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/perm"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/perm"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"go.uber.org/zap"
 )
 

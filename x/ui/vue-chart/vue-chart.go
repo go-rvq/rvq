@@ -3,7 +3,7 @@ package vue_chart
 import (
 	_ "embed"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 )
 
 //go:embed vue-chart-js/dist/vue-chart.umd.cjs

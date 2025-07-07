@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor5/admin/v3/media/media_library"
-	"github.com/qor5/admin/v3/media/storage"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/publish"
-	"github.com/qor5/admin/v3/seo"
-	"github.com/qor5/admin/v3/slug"
+	"github.com/go-rvq/rvq/admin/media/media_library"
+	"github.com/go-rvq/rvq/admin/media/storage"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/publish"
+	"github.com/go-rvq/rvq/admin/seo"
+	"github.com/go-rvq/rvq/admin/slug"
 	"gorm.io/gorm"
 )
 

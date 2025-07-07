@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/qor5/admin/v3/example/admin"
-	"github.com/qor5/admin/v3/publish"
+	"github.com/go-rvq/rvq/admin/example/admin"
+	"github.com/go-rvq/rvq/admin/publish"
 )
 
 func main() {

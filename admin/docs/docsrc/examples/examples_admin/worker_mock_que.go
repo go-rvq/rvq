@@ -8,10 +8,10 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/gorm2op"
-	"github.com/qor5/admin/v3/worker"
-	"github.com/qor5/admin/v3/worker/mock"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/worker"
+	"github.com/go-rvq/rvq/admin/worker/mock"
 	"gorm.io/gorm"
 )
 

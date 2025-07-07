@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/qor5/admin/v3/example/admin"
-	"github.com/qor5/admin/v3/pagebuilder"
-	. "github.com/qor5/web/v3/multipartestutils"
+	"github.com/go-rvq/rvq/admin/example/admin"
+	"github.com/go-rvq/rvq/admin/pagebuilder"
+	. "github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/theplant/gofixtures"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"

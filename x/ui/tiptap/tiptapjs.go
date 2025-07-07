@@ -4,7 +4,7 @@ package tiptap
 import (
 	"embed"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 )
 
 //go:embed tiptapjs/dist

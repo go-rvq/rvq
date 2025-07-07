@@ -1,13 +1,13 @@
 package admin
 
 import (
-	"github.com/qor5/admin/v3/example/models"
-	"github.com/qor5/admin/v3/media"
-	"github.com/qor5/admin/v3/media/base"
-	"github.com/qor5/admin/v3/media/media_library"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/gorm2op"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/example/models"
+	"github.com/go-rvq/rvq/admin/media"
+	"github.com/go-rvq/rvq/admin/media/base"
+	"github.com/go-rvq/rvq/admin/media/media_library"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 )
 

@@ -1,7 +1,7 @@
 package note
 
 import (
-	"github.com/qor5/admin/v3/presets"
+	"github.com/go-rvq/rvq/admin/presets"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )

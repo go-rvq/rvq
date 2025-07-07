@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/data"
-	"github.com/qor5/admin/v3/utils/db_utils"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/data"
+	"github.com/go-rvq/rvq/admin/utils/db_utils"
+	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )

@@ -3,10 +3,10 @@ package presets
 import (
 	"fmt"
 
-	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/web/v3"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/web"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 

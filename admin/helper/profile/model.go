@@ -1,7 +1,7 @@
 package profile
 
 import (
-	"github.com/qor5/admin/v3/presets"
+	"github.com/go-rvq/rvq/admin/presets"
 )
 
 func DefaultModelOptions(opts ...presets.ModelBuilderOption) []presets.ModelBuilderOption {

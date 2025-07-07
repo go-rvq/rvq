@@ -1,8 +1,8 @@
 package vuetify
 
 import (
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/tag"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/tag"
 	h "github.com/theplant/htmlgo"
 )
 

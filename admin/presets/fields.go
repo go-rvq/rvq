@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/perm"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/mpvl/unique"
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/perm"
-	v "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )

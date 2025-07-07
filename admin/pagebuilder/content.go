@@ -3,8 +3,8 @@ package pagebuilder
 import (
 	"net/url"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
 )
 
 const (

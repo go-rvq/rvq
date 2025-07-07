@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/qor5/admin/v3/example/admin"
-	"github.com/qor5/web/v3/multipartestutils"
+	"github.com/go-rvq/rvq/admin/example/admin"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 )
 
 func TestOrders(t *testing.T) {

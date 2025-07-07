@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/qor5/admin/v3/docs/docsrc"
-	"github.com/qor5/admin/v3/docs/docsrc/assets"
+	"github.com/go-rvq/rvq/admin/docs/docsrc"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
 	"github.com/theplant/docgo"
 )
 

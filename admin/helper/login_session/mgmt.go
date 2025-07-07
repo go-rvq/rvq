@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/login"
-	. "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/login"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 	"github.com/ua-parser/uap-go/uaparser"
 	"gorm.io/gorm"

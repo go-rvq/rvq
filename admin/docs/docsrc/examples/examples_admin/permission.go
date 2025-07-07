@@ -3,9 +3,9 @@ package examples_admin
 import (
 	"net/http"
 
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/perm"
 	"github.com/ory/ladon"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/x/v3/perm"
 )
 
 func permissionPieces() {

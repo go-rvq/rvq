@@ -3,7 +3,7 @@ package role
 import (
 	"time"
 
-	"github.com/qor5/x/v3/perm"
+	"github.com/go-rvq/rvq/x/perm"
 )
 
 type Role struct {

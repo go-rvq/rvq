@@ -3,9 +3,9 @@ package admin
 import (
 	"net/http"
 
-	"github.com/qor5/admin/v3/activity"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/x/v3/perm"
+	"github.com/go-rvq/rvq/admin/activity"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/gorm"
 )
 

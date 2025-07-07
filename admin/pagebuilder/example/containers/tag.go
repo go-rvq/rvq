@@ -1,10 +1,10 @@
 package containers
 
 import (
-	"github.com/qor5/admin/v3/pagebuilder"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
-	v "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/pagebuilder"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	. "github.com/theplant/htmlgo"
 )
 

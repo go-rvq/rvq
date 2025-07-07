@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
 
 const autocompleteDataSourceEvent = "autocomplete-data-source-event"

@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
 	"github.com/iancoleman/strcase"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

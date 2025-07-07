@@ -3,8 +3,8 @@ package worker
 import (
 	"context"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/x/v3/i18n"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/i18n"
 	"golang.org/x/text/language"
 )
 

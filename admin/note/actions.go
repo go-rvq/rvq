@@ -1,9 +1,9 @@
 package note
 
 import (
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 )
 
 func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {

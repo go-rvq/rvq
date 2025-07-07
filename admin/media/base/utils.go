@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
-	"github.com/qor5/admin/v3/utils"
+	"github.com/go-rvq/rvq/admin/utils"
 )
 
 func GetImageFormat(url string) (*imaging.Format, error) {

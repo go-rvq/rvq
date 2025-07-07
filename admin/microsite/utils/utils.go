@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/qor5/admin/v3/media/storage"
+	"github.com/go-rvq/rvq/admin/media/storage"
 )
 
 func Upload(Storage storage.Storage, path string, reader io.Reader) (err error) {

@@ -3,7 +3,7 @@ package admin
 import (
 	"net/http"
 
-	"github.com/qor5/admin/v3/presets"
+	"github.com/go-rvq/rvq/admin/presets"
 )
 
 func setupRouter(b *presets.Builder) (mux *http.ServeMux) {

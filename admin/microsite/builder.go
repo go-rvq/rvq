@@ -1,7 +1,7 @@
 package microsite
 
 import (
-	"github.com/qor5/admin/v3/publish"
+	"github.com/go-rvq/rvq/admin/publish"
 	"gorm.io/gorm"
 )
 

@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_presets"
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_vuetify"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_presets"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_vuetify"
 )
 
 func Mux(mux *http.ServeMux, prefix string) http.Handler {

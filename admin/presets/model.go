@@ -8,14 +8,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/reflect_utils"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/datafield"
+	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/perm"
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/datafield"
-	"github.com/qor5/x/v3/i18n"
-	"github.com/qor5/x/v3/perm"
 	"github.com/sunfmin/reflectutils"
 )
 

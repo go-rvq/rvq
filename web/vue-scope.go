@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	. "github.com/qor5/web/v3/tag"
+	. "github.com/go-rvq/rvq/web/tag"
 	"github.com/rs/xid"
 	h "github.com/theplant/htmlgo"
 )

@@ -1,8 +1,8 @@
 package presets
 
 import (
-	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/web"
 )
 
 func (mb *ModelBuilder) registerDefaultEventFuncs() {

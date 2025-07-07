@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-rvq/rvq/x/login"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/twitter"
-	"github.com/qor5/x/v3/login"
 	. "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 	"github.com/theplant/testingutils"

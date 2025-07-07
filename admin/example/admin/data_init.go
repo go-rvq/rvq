@@ -3,7 +3,7 @@ package admin
 import (
 	"fmt"
 
-	"github.com/qor5/admin/v3/example/models"
+	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/theplant/gofixtures"
 	"gorm.io/gorm"
 )

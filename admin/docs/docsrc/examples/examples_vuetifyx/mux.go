@@ -3,12 +3,12 @@ package examples_vuetifyx
 import (
 	"net/http"
 
-	"github.com/qor5/admin/v3/docs/docsrc/assets"
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_vuetify"
-	"github.com/qor5/web/v3"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_vuetify"
+	"github.com/go-rvq/rvq/web"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
 
 func Mux(mux *http.ServeMux, prefix string) http.Handler {

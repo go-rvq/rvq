@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/qor5/web/v3/zeroer"
+	"github.com/go-rvq/rvq/web/zeroer"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

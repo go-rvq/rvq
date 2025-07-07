@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 	"github.com/theplant/osenv"
 )
 

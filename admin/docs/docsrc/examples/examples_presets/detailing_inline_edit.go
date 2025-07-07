@@ -1,11 +1,11 @@
 package examples_presets
 
 import (
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/admin/v3/media"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/gorm2op"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/admin/media"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )

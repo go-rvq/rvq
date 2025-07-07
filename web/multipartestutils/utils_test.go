@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/qor5/web/v3/multipartestutils"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 )
 
 func TestCreateMultipartFileHeader(t *testing.T) {

@@ -1,8 +1,8 @@
 package web
 
 import (
-	"github.com/qor5/web/v3/tag"
-	"github.com/qor5/web/v3/vue"
+	"github.com/go-rvq/rvq/web/tag"
+	"github.com/go-rvq/rvq/web/vue"
 	h "github.com/theplant/htmlgo"
 )
 

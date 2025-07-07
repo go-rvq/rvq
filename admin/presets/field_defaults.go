@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/web/v3/datafield"
+	"github.com/go-rvq/rvq/admin/reflect_utils"
+	"github.com/go-rvq/rvq/web/datafield"
 	"github.com/shopspring/decimal"
 )
 

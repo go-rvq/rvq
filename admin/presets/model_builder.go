@@ -1,6 +1,6 @@
 package presets
 
-import "github.com/qor5/x/v3/i18n"
+import "github.com/go-rvq/rvq/x/i18n"
 
 type ModelBuilderConfigAttributes struct {
 	id           string

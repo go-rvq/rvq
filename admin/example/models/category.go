@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-rvq/rvq/admin/media/storage"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/publish"
 	"github.com/lib/pq"
-	"github.com/qor5/admin/v3/media/storage"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/publish"
 	"gorm.io/gorm"
 )
 

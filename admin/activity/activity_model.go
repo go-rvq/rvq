@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
-	"github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )

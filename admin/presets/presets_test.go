@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 )
 
 func TestIsMenuItemActive(t *testing.T) {

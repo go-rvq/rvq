@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/go-rvq/rvq/admin/media/storage/s3"
+	"github.com/go-rvq/rvq/admin/media/storage/tests"
 	"github.com/jinzhu/configor"
-	"github.com/qor5/admin/v3/media/storage/s3"
-	"github.com/qor5/admin/v3/media/storage/tests"
 )
 
 type Config struct {

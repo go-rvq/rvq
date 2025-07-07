@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/l10n"
 	_ "github.com/lib/pq"
-	"github.com/qor5/admin/v3/l10n"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
 )

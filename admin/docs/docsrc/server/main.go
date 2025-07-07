@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/qor5/admin/v3/docs/docsrc"
-	"github.com/qor5/admin/v3/docs/docsrc/assets"
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_admin"
+	"github.com/go-rvq/rvq/admin/docs/docsrc"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
 	"github.com/theplant/docgo"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"

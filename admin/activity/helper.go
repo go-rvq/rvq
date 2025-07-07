@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/utils/db_utils"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/db_utils"
 	"gorm.io/gorm"
 )
 

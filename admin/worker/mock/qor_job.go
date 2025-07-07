@@ -4,7 +4,7 @@
 package mock
 
 import (
-	"github.com/qor5/admin/v3/worker"
+	"github.com/go-rvq/rvq/admin/worker"
 	"sync"
 )
 

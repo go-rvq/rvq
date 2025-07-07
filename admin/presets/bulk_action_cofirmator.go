@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/admin/v3/presets/data"
-	"github.com/qor5/web/v3"
-	v "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/presets/data"
+	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
 

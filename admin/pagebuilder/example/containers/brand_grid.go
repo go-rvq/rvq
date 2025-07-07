@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/qor5/admin/v3/media"
-	"github.com/qor5/admin/v3/media/media_library"
-	"github.com/qor5/admin/v3/pagebuilder"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/media"
+	"github.com/go-rvq/rvq/admin/media/media_library"
+	"github.com/go-rvq/rvq/admin/pagebuilder"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
 	. "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )

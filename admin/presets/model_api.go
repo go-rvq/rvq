@@ -3,8 +3,8 @@ package presets
 import (
 	"reflect"
 
-	"github.com/qor5/web/v3"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/web"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 

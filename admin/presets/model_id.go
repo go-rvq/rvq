@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor5/admin/v3/model"
+	"github.com/go-rvq/rvq/admin/model"
 )
 
 type (

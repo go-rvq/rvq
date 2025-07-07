@@ -1,8 +1,8 @@
 package vue_chart
 
 import (
-	"github.com/qor5/admin/v3/presets"
-	vue_chart "github.com/qor5/x/v3/ui/vue-chart"
+	"github.com/go-rvq/rvq/admin/presets"
+	vue_chart "github.com/go-rvq/rvq/x/ui/vue-chart"
 )
 
 func New() *Buider {

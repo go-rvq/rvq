@@ -3,7 +3,7 @@ package ckeditor5
 import (
 	_ "embed"
 
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/web"
 )
 
 //go:embed ckeditor5-js/dist/vue-chart.umd.cjs

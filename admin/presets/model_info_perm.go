@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/x/v3/perm"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/x/perm"
 )
 
 type ModelPermissioner struct {

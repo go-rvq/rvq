@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qor5/admin/v3/worker"
-	integration "github.com/qor5/admin/v3/worker/integration_test"
+	"github.com/go-rvq/rvq/admin/worker"
+	integration "github.com/go-rvq/rvq/admin/worker/integration_test"
 )
 
 func TestJobSelectList(t *testing.T) {

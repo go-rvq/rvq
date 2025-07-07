@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/pkg/errors"
-	"github.com/qor5/web/v3/multipartestutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

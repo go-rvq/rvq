@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/gocarina/gocsv"
-	"github.com/qor5/admin/v3/example/models"
 	"gorm.io/gorm"
 )
 

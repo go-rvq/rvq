@@ -7,8 +7,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/qor5/admin/v3/worker"
-	"github.com/qor5/admin/v3/worker/mock"
+	"github.com/go-rvq/rvq/admin/worker"
+	"github.com/go-rvq/rvq/admin/worker/mock"
 )
 
 var items []worker.QueJobInterface

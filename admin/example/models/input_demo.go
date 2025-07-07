@@ -3,8 +3,8 @@ package models
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/lib/pq"
-	"github.com/qor5/admin/v3/media/media_library"
 )
 
 type InputDemo struct {

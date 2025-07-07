@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/qor5/x/v3/i18n"
+	"github.com/go-rvq/rvq/x/i18n"
 )
 
 func GetMessages(ctx context.Context) *Messages {

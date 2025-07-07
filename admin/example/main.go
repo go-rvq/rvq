@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/qor5/admin/v3/example/admin"
+	"github.com/go-rvq/rvq/admin/example/admin"
 	"github.com/theplant/osenv"
 )
 

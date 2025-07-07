@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_admin"
-	"github.com/qor5/admin/v3/utils/testflow"
-	"github.com/qor5/web/v3/multipartestutils"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
+	"github.com/go-rvq/rvq/admin/utils/testflow"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/stretchr/testify/assert"
 )
 

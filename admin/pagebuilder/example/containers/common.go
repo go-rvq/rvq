@@ -3,13 +3,13 @@ package containers
 import (
 	"strings"
 
-	"github.com/qor5/admin/v3/media/media_library"
+	"github.com/go-rvq/rvq/admin/media/media_library"
 
 	. "github.com/theplant/htmlgo"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
-	v "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
 const (

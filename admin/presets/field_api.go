@@ -1,6 +1,6 @@
 package presets
 
-import "github.com/qor5/web/v3"
+import "github.com/go-rvq/rvq/web"
 
 type (
 	FieldValidatorFunc func(field *FieldContext) (err web.ValidationErrors)

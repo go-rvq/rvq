@@ -3,8 +3,8 @@ package examples_presets
 import (
 	"fmt"
 
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/admin/v3/presets"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/admin/presets"
 	"gorm.io/gorm"
 )
 

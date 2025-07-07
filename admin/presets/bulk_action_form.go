@@ -3,8 +3,8 @@ package presets
 import (
 	"reflect"
 
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/datafield"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/datafield"
 	h "github.com/theplant/htmlgo"
 )
 

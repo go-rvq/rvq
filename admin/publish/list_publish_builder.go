@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/qor5/admin/v3/media/storage"
-	"github.com/qor5/admin/v3/utils/db_utils"
+	"github.com/go-rvq/rvq/admin/media/storage"
+	"github.com/go-rvq/rvq/admin/utils/db_utils"
 	"github.com/theplant/sliceutils"
 	"gorm.io/gorm"
 )

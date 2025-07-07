@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/qor5/admin/v3/docs/cmd/qor5/admin-template/models"
+	"github.com/go-rvq/rvq/admin/docs/cmd/qor5/admin-template/models"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

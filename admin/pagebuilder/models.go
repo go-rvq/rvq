@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor5/admin/v3/l10n"
-	"github.com/qor5/admin/v3/publish"
-	"github.com/qor5/admin/v3/seo"
+	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/admin/publish"
+	"github.com/go-rvq/rvq/admin/seo"
 	"github.com/sunfmin/reflectutils"
 	"gorm.io/gorm"
 )

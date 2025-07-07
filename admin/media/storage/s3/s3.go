@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/qor5/admin/v3/media/storage"
+	"github.com/go-rvq/rvq/admin/media/storage"
 )
 
 var _ storage.Storage = (*Client)(nil)

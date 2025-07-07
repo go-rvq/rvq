@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/qor5/x/v3/i18n"
+	"github.com/go-rvq/rvq/x/i18n"
 )
 
 var CommonMessagesTranslator i18n.TranslateFunc = func(ctx context.Context, key string, args ...string) (v string, ok bool) {

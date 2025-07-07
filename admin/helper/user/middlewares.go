@@ -3,8 +3,8 @@ package user
 import (
 	"net/http"
 
-	"github.com/qor5/admin/v3/role"
-	"github.com/qor5/x/v3/login"
+	"github.com/go-rvq/rvq/admin/role"
+	"github.com/go-rvq/rvq/x/login"
 	"gorm.io/gorm"
 )
 

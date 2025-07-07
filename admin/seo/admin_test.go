@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/qor5/admin/v3/l10n"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/theplant/testingutils"
 	"gorm.io/gorm"
 )

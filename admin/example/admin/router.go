@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/qor5/admin/v3/example/models"
-	"github.com/qor5/admin/v3/role"
-	"github.com/qor5/x/v3/login"
-	"github.com/qor5/x/v3/sitemap"
+	"github.com/go-rvq/rvq/admin/example/models"
+	"github.com/go-rvq/rvq/admin/role"
+	"github.com/go-rvq/rvq/x/login"
+	"github.com/go-rvq/rvq/x/sitemap"
 	"gorm.io/gorm"
 )
 

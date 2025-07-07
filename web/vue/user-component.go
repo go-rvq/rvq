@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/qor5/web/v3/js"
+	"github.com/go-rvq/rvq/web/js"
 	h "github.com/theplant/htmlgo"
 )
 

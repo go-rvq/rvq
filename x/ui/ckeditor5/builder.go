@@ -1,7 +1,7 @@
 package ckeditor5
 
 import (
-	"github.com/qor5/web/v3/tag"
+	"github.com/go-rvq/rvq/web/tag"
 )
 
 type (

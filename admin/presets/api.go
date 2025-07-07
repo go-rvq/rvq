@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/qor5/admin/v3/presets/data"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/admin/presets/data"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 

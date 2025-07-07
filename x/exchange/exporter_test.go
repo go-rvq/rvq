@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qor5/x/v3/exchange"
+	"github.com/go-rvq/rvq/x/exchange"
 	"github.com/stretchr/testify/assert"
 )
 

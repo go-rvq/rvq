@@ -1,8 +1,8 @@
 package advanced_functions
 
 import (
-	"github.com/qor5/admin/v3/docs/docsrc/generated"
-	"github.com/qor5/admin/v3/docs/docsrc/utils"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
 	. "github.com/theplant/docgo"
 	"github.com/theplant/docgo/ch"
 	. "github.com/theplant/htmlgo"

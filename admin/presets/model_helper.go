@@ -1,6 +1,6 @@
 package presets
 
-import "github.com/qor5/web/v3"
+import "github.com/go-rvq/rvq/web"
 
 const (
 	ToTitleRecordEncoderName = "presets__toTitle"

@@ -22,9 +22,9 @@ goModPath(){
 }
 
 snippetDirs=(
-  $(goModPath github.com/qor5/web/v3)
-  $(goModPath github.com/qor5/x/v3)
-  $(goModPath github.com/qor5/admin/v3)
+  $(goModPath github.com/go-rvq/rvq/web)
+  $(goModPath github.com/go-rvq/rvq/x)
+  $(goModPath github.com/go-rvq/rvq/admin)
 )
 echo "${snippetDirs[@]}"
 rm -rf ./generated/*

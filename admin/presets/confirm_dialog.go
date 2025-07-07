@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/js"
-	"github.com/qor5/web/v3/vue"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/js"
+	"github.com/go-rvq/rvq/web/vue"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 

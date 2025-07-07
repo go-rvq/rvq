@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/qor5/admin/v3/presets/examples"
+	"github.com/go-rvq/rvq/admin/presets/examples"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

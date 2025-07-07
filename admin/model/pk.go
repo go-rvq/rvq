@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/qor5/web/v3/zeroer"
+	"github.com/go-rvq/rvq/web/zeroer"
 )
 
 type ID struct {

@@ -3,10 +3,10 @@ package basics
 import (
 	"path"
 
-	"github.com/qor5/admin/v3/docs/docsrc/examples"
-	"github.com/qor5/admin/v3/docs/docsrc/examples/examples_admin"
-	"github.com/qor5/admin/v3/docs/docsrc/generated"
-	"github.com/qor5/admin/v3/docs/docsrc/utils"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
+	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
 	"github.com/theplant/docgo"
 	"github.com/theplant/docgo/ch"
 	h "github.com/theplant/htmlgo"
@@ -29,7 +29,7 @@ based on the user's preferences.
 ## Getting Started
 To use the i18n package, you first need to import it into your Go application:
 `),
-	ch.Code(`import "github.com/qor5/x/v3/i18n"`).Language("go"),
+	ch.Code(`import "github.com/go-rvq/rvq/x/i18n"`).Language("go"),
 	docgo.Markdown(`
 Next, create a new ~Builder~ instance using the ~New()~ function. 
 If you want to use it with QOR5, use the ~I18n()~ on ~presets.Builder~:

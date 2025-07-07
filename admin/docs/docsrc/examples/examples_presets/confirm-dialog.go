@@ -1,10 +1,10 @@
 package examples_presets
 
 import (
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/admin/v3/presets/gorm2op"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )

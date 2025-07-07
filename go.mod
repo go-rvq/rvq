@@ -1,10 +1,9 @@
-module github.com/qor5/admin/v3
+module github.com/go-rvq/rvq
 
 go 1.24
 
-toolchain go1.24.3
-
 require (
+	github.com/NYTimes/gziphandler v1.1.1
 	github.com/a8m/envsubst v1.4.3
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/aws/aws-sdk-go v1.53.17
@@ -18,8 +17,14 @@ require (
 	github.com/fatih/color v1.17.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
+	github.com/go-playground/form/v4 v4.2.1
+	github.com/go-playground/locales v0.14.1
+	github.com/go-playground/universal-translator v0.18.1
+	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/gosimple/unidecode v1.0.1
 	github.com/hashicorp/go-multierror v1.1.1
@@ -31,16 +36,17 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/markbates/goth v1.80.0
 	github.com/mholt/archiver/v4 v4.0.0-alpha.8
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de
 	github.com/ory/ladon v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.4.0
-	github.com/qor5/web/v3 v3.0.4
-	github.com/qor5/x/v3 v3.0.5
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/rs/xid v1.5.0
 	github.com/samber/lo v1.39.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/shurcooL/sanitized_anchor_name v1.0.0
+	github.com/spf13/cast v1.6.0
 	github.com/stretchr/testify v1.9.0
 	github.com/sunfmin/reflectutils v1.0.4
 	github.com/sunfmin/snippetgo v0.0.2
@@ -48,6 +54,7 @@ require (
 	github.com/theplant/docgo v0.0.16
 	github.com/theplant/gofixtures v1.1.2
 	github.com/theplant/htmlgo v1.0.3
+	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967
 	github.com/theplant/osenv v0.0.1
 	github.com/theplant/sliceutils v0.0.0-20200406042209-89153d988eb1
 	github.com/theplant/testenv v0.0.0-20240513012518-1c94c8c84239
@@ -55,9 +62,10 @@ require (
 	github.com/tnclong/go-que v0.0.0-20240226030728-4e1f3c8ec781
 	github.com/ua-parser/uap-go v0.0.0-20240113215029-33f8e6d47f38
 	github.com/wcharczuk/go-chart/v2 v2.1.1
-	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
+	goji.io/v3 v3.0.0
+	golang.org/x/crypto v0.24.0
 	golang.org/x/text v0.16.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.7
@@ -73,8 +81,8 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.3 // indirect
-	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.6 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.23 // indirect
@@ -110,16 +118,11 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-playground/form/v4 v4.2.1 // indirect
-	github.com/go-playground/locales v0.14.1 // indirect
-	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/context v1.1.2 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
@@ -148,15 +151,15 @@ require (
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450 // indirect
 	github.com/nwaples/rardecode/v2 v2.0.0-beta.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/ory/pagination v0.0.1 // indirect
+	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/qor5/web v1.3.2 // indirect
-	github.com/rs/xid v1.5.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.4 // indirect
@@ -173,6 +176,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
 	go.opentelemetry.io/otel v1.26.0 // indirect
@@ -180,7 +184,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
 	golang.org/x/image v0.17.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
@@ -196,8 +199,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/qor5/web/v3 => ../web
-	github.com/qor5/x/v3 => ../x
-	github.com/theplant/htmlgo v1.0.3 => ./../../theplant/htmlgo
-)
+require github.com/qor5/web v1.2.3 // indirect
+
+replace github.com/theplant/htmlgo v1.0.3 => ./../../theplant/htmlgo
+
+//replace github.com/theplant/docgo => ../../docgo/

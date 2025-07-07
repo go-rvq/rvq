@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-rvq/rvq/web/zeroer"
 	"github.com/iancoleman/strcase"
 	"github.com/ory/ladon"
-	"github.com/qor5/web/v3/zeroer"
 	"github.com/sunfmin/reflectutils"
 )
 

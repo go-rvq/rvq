@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qor5/admin/v3/media/storage"
+	"github.com/go-rvq/rvq/admin/media/storage"
 )
 
 func TestAll(Storage storage.Storage, t *testing.T) {

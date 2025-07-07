@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/utils/testflow"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/pkg/errors"
-	"github.com/qor5/admin/v3/utils/testflow"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/multipartestutils"
 )
 
 type Step struct {

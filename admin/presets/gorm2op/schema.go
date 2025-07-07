@@ -3,7 +3,7 @@ package gorm2op
 import (
 	"strings"
 
-	"github.com/qor5/admin/v3/model"
+	"github.com/go-rvq/rvq/admin/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )

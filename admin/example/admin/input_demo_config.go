@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/qor5/admin/v3/media"
-	"github.com/qor5/admin/v3/media/base"
+	"github.com/go-rvq/rvq/admin/media"
+	"github.com/go-rvq/rvq/admin/media/base"
 
-	"github.com/qor5/admin/v3/example/models"
-	"github.com/qor5/admin/v3/media/media_library"
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
-	. "github.com/qor5/x/v3/ui/vuetify"
-	vx "github.com/qor5/x/v3/ui/vuetifyx"
+	"github.com/go-rvq/rvq/admin/example/models"
+	"github.com/go-rvq/rvq/admin/media/media_library"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )

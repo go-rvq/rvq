@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/qor5/admin/v3/model"
-	"github.com/qor5/admin/v3/reflect_utils"
-	"github.com/qor5/admin/v3/utils/db_utils"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/reflect_utils"
+	"github.com/go-rvq/rvq/admin/utils/db_utils"
 	"gorm.io/gorm"
 )
 

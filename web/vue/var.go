@@ -1,6 +1,6 @@
 package vue
 
-import "github.com/qor5/web/v3/js"
+import "github.com/go-rvq/rvq/web/js"
 
 type Var string
 

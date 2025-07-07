@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qor5/admin/v3/presets/actions"
-	"github.com/qor5/web/v3"
-	"github.com/qor5/web/v3/zeroer"
-	. "github.com/qor5/x/v3/ui/vuetify"
+	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/zeroer"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )

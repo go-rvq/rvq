@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/qor5/admin/v3/presets"
-	"github.com/qor5/web/v3"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
 
-	"github.com/qor5/admin/v3/pagebuilder"
+	"github.com/go-rvq/rvq/admin/pagebuilder"
 	. "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
