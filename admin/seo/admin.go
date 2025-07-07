@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/media"
 	"github.com/go-rvq/rvq/admin/media/base"
@@ -19,7 +20,6 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 )
 

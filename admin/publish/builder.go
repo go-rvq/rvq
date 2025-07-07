@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/media/storage"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/iancoleman/strcase"
 	"github.com/sunfmin/reflectutils"
-	"github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"

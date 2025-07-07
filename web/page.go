@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 var Default = New()

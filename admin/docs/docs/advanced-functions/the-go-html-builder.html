@@ -228,14 +228,14 @@ to generate html page. We think they are:</p>
 <li>not flexible to use helper functions</li>
 </ul>
 
-<p>We like to use standard Go code. the library <a href="https://github.com/theplant/htmlgo" rel="nofollow">htmlgo</a> is just for that.</p>
+<p>We like to use standard Go code. the library <a href="https://github.com/go-rvq/htmlgo" rel="nofollow">htmlgo</a> is just for that.</p>
 
 <p>Although Go can&#39;t do flexible builder syntax like <a href="https://kotlinlang.org/docs/reference/type-safe-builders.html" rel="nofollow">Kotlin</a> does,
 But it can also do quite well.</p>
 
 <p>Consider the following code:</p>
 
-<highlightjs :language='"go"' :code='"import (\n\t\"github.com/go-rvq/rvq/admin/docs/docsrc/examples\"\n\t\"github.com/go-rvq/rvq/web\"\n\t. \"github.com/theplant/htmlgo\"\n)\n\nfunc result(args ...HTMLComponent) HTMLComponent {\n\tvar converted []HTMLComponent\n\tfor _, arg := range args {\n\t\tconverted = append(converted, Div(arg).Class(\"wrapped\"))\n\t}\n\n\treturn HTML(\n\t\tHead(\n\t\t\tTitle(\"XML encoding with Go\"),\n\t\t),\n\t\tBody(\n\t\t\tH1(\"XML encoding with Go\"),\n\t\t\tP().Text(\"this format can be used as an alternative markup to XML\"),\n\t\t\tA().Href(\"http://golang.org\").Text(\"Go\"),\n\t\t\tP(\n\t\t\t\tText(\"this is some\"),\n\t\t\t\tB(\"mixed\"),\n\t\t\t\tText(\"text. For more see the\"),\n\t\t\t\tA().Href(\"http://golang.org\").Text(\"Go\"),\n\t\t\t\tText(\"project\"),\n\t\t\t),\n\t\t\tP().Text(\"some text\"),\n\n\t\t\tP(converted...),\n\t\t),\n\t)\n}\n\nfunc TypeSafeBuilderExample(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = result(H5(\"1\"), B(\"2\"), Strong(\"3\"))\n\treturn\n}\n\nvar TypeSafeBuilderSamplePFPB = web.Page(TypeSafeBuilderExample)\n\nvar TypeSafeBuilderSamplePath = examples.URLPathByFunc(TypeSafeBuilderExample)\n"'></highlightjs>
+<highlightjs :language='"go"' :code='"import (\n\t\"github.com/go-rvq/rvq/admin/docs/docsrc/examples\"\n\t\"github.com/go-rvq/rvq/web\"\n\t. \"github.com/go-rvq/htmlgo\"\n)\n\nfunc result(args ...HTMLComponent) HTMLComponent {\n\tvar converted []HTMLComponent\n\tfor _, arg := range args {\n\t\tconverted = append(converted, Div(arg).Class(\"wrapped\"))\n\t}\n\n\treturn HTML(\n\t\tHead(\n\t\t\tTitle(\"XML encoding with Go\"),\n\t\t),\n\t\tBody(\n\t\t\tH1(\"XML encoding with Go\"),\n\t\t\tP().Text(\"this format can be used as an alternative markup to XML\"),\n\t\t\tA().Href(\"http://golang.org\").Text(\"Go\"),\n\t\t\tP(\n\t\t\t\tText(\"this is some\"),\n\t\t\t\tB(\"mixed\"),\n\t\t\t\tText(\"text. For more see the\"),\n\t\t\t\tA().Href(\"http://golang.org\").Text(\"Go\"),\n\t\t\t\tText(\"project\"),\n\t\t\t),\n\t\t\tP().Text(\"some text\"),\n\n\t\t\tP(converted...),\n\t\t),\n\t)\n}\n\nfunc TypeSafeBuilderExample(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = result(H5(\"1\"), B(\"2\"), Strong(\"3\"))\n\treturn\n}\n\nvar TypeSafeBuilderSamplePFPB = web.Page(TypeSafeBuilderExample)\n\nvar TypeSafeBuilderSamplePath = examples.URLPathByFunc(TypeSafeBuilderExample)\n"'></highlightjs>
 <p>It&#39;s basically assembled what Kotlin can do, Also is legitimate Go code.</p>
 
 <div>

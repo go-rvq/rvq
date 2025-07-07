@@ -164,6 +164,8 @@ github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/o
 github.com/go-playground/locales v0.14.1/go.mod h1:hxrqLVvrK65+Rwrd5Fc6F2O76J/NuW9t0sjnWqG1slY=
 github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJnYK9S473LQFuzCbDbfSFY=
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
+github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715 h1:nqw94ip/nIJV4x6jdBufCqxlQ24H0EdyPvckw2Qrrq4=
+github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715/go.mod h1:TGdXftAyHFOT+mwskYgepb2AjgLLJLNoDaDV4SQShkc=
 github.com/go-sql-driver/mysql v1.7.0 h1:ueSltNNllEqE3qcWBTD0iQd3IpL/6U+mJxLkazJ7YPc=
 github.com/go-sql-driver/mysql v1.7.0/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
@@ -432,6 +434,8 @@ github.com/theplant/docgo v0.0.16 h1:6K6IHfeQ0sx9k7b1h9L6RV2pD0SiN8TAQm1RNLYezgU
 github.com/theplant/docgo v0.0.16/go.mod h1:VDDR3mbqaLRTxa6SfZdFfDAf1QNtY9nr0TQLURWtFLg=
 github.com/theplant/gofixtures v1.1.2 h1:moZsJvcLtpz6deUmsoxb1VUacey3vrG+xJo7ku3diFQ=
 github.com/theplant/gofixtures v1.1.2/go.mod h1:d1zNj4SxUry0gSJc12ODB/kx6SxO09XTGDTWYgIvY4M=
+github.com/theplant/htmlgo v1.0.3 h1:G7/YSf8OrOIRHVQ13avd78T/GV1kDl/jMwpQURrXB0o=
+github.com/theplant/htmlgo v1.0.3/go.mod h1:pCKSFJsoVNkyW+yN2i1Mst+8130NSQzIU7L2IbnuyKg=
 github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967 h1:yPrgtU8bj7Q/XbXgjjmngZtOhsUufBAraruNwxv/eXM=
 github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967/go.mod h1:86iN4EAYaQbx1VTW5uPslTIviRkYH8CzslMC//g+BgY=
 github.com/theplant/osenv v0.0.1 h1:CCuIqyEVHJmqPTJk9xbCkP3C9tGzkHVsZ5E8m2DmZ7c=

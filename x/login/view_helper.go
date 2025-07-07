@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
-	h "github.com/theplant/htmlgo"
 )
 
 type ViewHelper struct {

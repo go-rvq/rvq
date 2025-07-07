@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 )
 
 func (mb *ModelBuilder) SetCreatingBuilder(b *EditingBuilder) {

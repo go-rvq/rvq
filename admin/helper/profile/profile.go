@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/helper/login_session"
 	"github.com/go-rvq/rvq/admin/helper/user"
 	"github.com/go-rvq/rvq/admin/model"
@@ -15,7 +16,6 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

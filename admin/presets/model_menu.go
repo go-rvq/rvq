@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 func (m *ModelBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLComponent) {

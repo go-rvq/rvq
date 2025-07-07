@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/vue"
-	h "github.com/theplant/htmlgo"
 )
 
 type Var = vue.Var

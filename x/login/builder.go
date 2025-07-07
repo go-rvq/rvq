@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/golang-jwt/jwt/v4"
@@ -18,7 +19,6 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )

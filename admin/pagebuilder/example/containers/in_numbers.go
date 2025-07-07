@@ -8,8 +8,8 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/pagebuilder"
-	. "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

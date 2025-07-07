@@ -6,10 +6,10 @@ import (
 	"io"
 	"mime/multipart"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
 	"github.com/go-rvq/rvq/web"
-	. "github.com/theplant/htmlgo"
 )
 
 type MyData struct {

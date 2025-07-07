@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/url"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/pquerna/otp"
-	. "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 )

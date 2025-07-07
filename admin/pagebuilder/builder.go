@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/media"
@@ -30,7 +31,6 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	h "github.com/go-rvq/htmlgo"
 	. "github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
-	h "github.com/theplant/htmlgo"
 	"github.com/theplant/htmltestingutils"
 	"github.com/theplant/testingutils"
 	"goji.io/v3"

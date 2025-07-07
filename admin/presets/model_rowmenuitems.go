@@ -5,10 +5,10 @@ import (
 	"net/url"
 	_ "unsafe"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 func EditDeleteRowMenuItemFuncs(mi *ModelInfo, url string, editExtraParams url.Values) []RecordMenuItemFunc {

@@ -4,10 +4,10 @@ import (
 	"net/url"
 
 	"github.com/go-playground/form"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 type (

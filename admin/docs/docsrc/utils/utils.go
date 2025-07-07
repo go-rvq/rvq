@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/sunfmin/snippetgo/parse"
-	. "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 )
 

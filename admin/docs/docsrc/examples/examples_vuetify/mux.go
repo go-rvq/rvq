@@ -3,6 +3,7 @@ package examples_vuetify
 import (
 	"net/http"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_web"
@@ -10,7 +11,6 @@ import (
 	"github.com/go-rvq/rvq/x/ui/tiptap"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
-	. "github.com/theplant/htmlgo"
 )
 
 type IndexMux struct {

@@ -2,10 +2,10 @@ package examples_web
 
 // @snippet_begin(ShortCutSample)
 import (
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 func ShortCutSample(ctx *web.EventContext) (pr web.PageResponse, err error) {

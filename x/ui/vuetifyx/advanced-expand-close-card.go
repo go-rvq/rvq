@@ -1,8 +1,8 @@
 package vuetifyx
 
 import (
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/tag"
-	h "github.com/theplant/htmlgo"
 )
 
 type (

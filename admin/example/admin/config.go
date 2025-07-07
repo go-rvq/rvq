@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3control"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/go-rvq/rvq/admin/l10n"
@@ -38,7 +39,6 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"

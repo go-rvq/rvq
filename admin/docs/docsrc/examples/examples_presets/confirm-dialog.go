@@ -1,11 +1,11 @@
 package examples_presets
 
 import (
+	"github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
-	"github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

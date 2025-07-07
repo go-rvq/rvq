@@ -8,12 +8,12 @@ import (
 	"reflect"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 )
 

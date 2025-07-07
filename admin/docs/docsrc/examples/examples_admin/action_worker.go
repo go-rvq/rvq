@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

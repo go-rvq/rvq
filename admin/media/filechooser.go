@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 func fileChooser(p *presets.Builder, mb *Builder) web.EventFunc {

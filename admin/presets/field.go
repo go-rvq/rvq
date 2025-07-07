@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/reflect_utils"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
@@ -14,7 +15,6 @@ import (
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/iancoleman/strcase"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 )
 
 func FieldPathIndex(i int) string {

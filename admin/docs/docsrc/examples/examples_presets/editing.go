@@ -6,13 +6,13 @@ import (
 	"io"
 	"net/http"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/admin/richeditor"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

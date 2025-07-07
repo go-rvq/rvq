@@ -1,9 +1,9 @@
 package web
 
 import (
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/tag"
 	"github.com/go-rvq/rvq/web/vue"
-	h "github.com/theplant/htmlgo"
 )
 
 func Unscoped(comp h.HTMLComponent) (r h.HTMLComponent) {

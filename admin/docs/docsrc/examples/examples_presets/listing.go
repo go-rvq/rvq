@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
@@ -14,7 +15,6 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )

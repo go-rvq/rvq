@@ -12,9 +12,9 @@ import (
 	"unsafe"
 
 	"github.com/go-playground/form/v4"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/mpvl/unique"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 )
 
 type ComponentWrappers []func(comp h.HTMLComponent) h.HTMLComponent

@@ -1,11 +1,11 @@
 package examples_web
 
 import (
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	. "github.com/theplant/htmlgo"
 )
 
 // @snippet_begin(WebScopeUseLocalsSample1)

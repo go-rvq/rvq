@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
+	. "github.com/go-rvq/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/samber/lo"
-	. "github.com/theplant/htmlgo"
-	h "github.com/theplant/htmlgo"
 )
 
 // @snippet_begin(EventHandlingURLSample)

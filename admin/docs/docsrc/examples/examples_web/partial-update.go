@@ -4,9 +4,9 @@ package examples_web
 import (
 	"time"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
-	. "github.com/theplant/htmlgo"
 )
 
 func PartialUpdatePage(ctx *web.EventContext) (pr web.PageResponse, err error) {

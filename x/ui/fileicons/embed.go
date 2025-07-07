@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 //go:embed icons

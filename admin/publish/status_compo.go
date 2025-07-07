@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 

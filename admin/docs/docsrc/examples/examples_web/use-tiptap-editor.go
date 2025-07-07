@@ -2,10 +2,10 @@ package examples_web
 
 // @snippet_begin(HelloWorldTipTapSample)
 import (
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/tiptap"
-	. "github.com/theplant/htmlgo"
 	"github.com/yosssi/gohtml"
 )
 

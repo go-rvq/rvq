@@ -3,6 +3,7 @@ package pages
 import (
 	"log"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media"
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/media/media_library"
@@ -10,7 +11,6 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/cropper"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

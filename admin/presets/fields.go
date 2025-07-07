@@ -9,13 +9,13 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/mpvl/unique"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 )
 
 func (b *FieldBuilder) AutoNested(mb *ModelBuilder, fb *FieldsBuilder) (r *FieldBuilder) {

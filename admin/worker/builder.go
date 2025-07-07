@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -21,7 +22,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	rcron "github.com/robfig/cron/v3"
-	. "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

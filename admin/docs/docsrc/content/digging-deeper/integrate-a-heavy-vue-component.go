@@ -10,7 +10,7 @@ import (
 
 var IntegrateAHeavyVueComponent = Doc(
 	Markdown(`
-We can abstract any complicated of server side render component with [htmlgo](https://github.com/theplant/htmlgo).
+We can abstract any complicated of server side render component with [htmlgo](https://github.com/go-rvq/htmlgo).
 But a lots of components in the modern web have done many things on the client side. means there are many logic
 happens before the it interact with server side.
 

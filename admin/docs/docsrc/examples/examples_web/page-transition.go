@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
-	. "github.com/theplant/htmlgo"
 )
 
 var page1Title = "Page 1"

@@ -5,7 +5,7 @@ import (
 
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type VXDatePickerBuilder struct {

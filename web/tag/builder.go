@@ -1,7 +1,7 @@
 package tag
 
 import (
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 func (t *TagBuilder[T]) GetChildren() []h.HTMLComponent {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	. "github.com/theplant/htmlgo"
+	. "github.com/go-rvq/htmlgo"
 )
 
 var DefaultViewCommon = &ViewCommon{

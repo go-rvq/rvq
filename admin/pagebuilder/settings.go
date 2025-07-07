@@ -8,7 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/publish"
 	"github.com/go-rvq/rvq/x/i18n"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 	"gorm.io/gorm"
 
 	"github.com/go-rvq/rvq/admin/l10n"

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	. "github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"github.com/theplant/testingutils"
 )
 

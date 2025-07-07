@@ -3,7 +3,7 @@ package tag
 import (
 	"strings"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 func stringsTrim(vs ...string) (r []string) {

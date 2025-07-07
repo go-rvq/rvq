@@ -2,10 +2,10 @@ package examples_vuetify
 
 // @snippet_begin(VuetifyListSample)
 import (
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	. "github.com/theplant/htmlgo"
 )
 
 type ListItem struct {

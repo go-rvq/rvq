@@ -4,7 +4,7 @@ package tiptap
 import (
 	"context"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type TipTapEditorBuilder struct {

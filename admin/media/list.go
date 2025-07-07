@@ -1,10 +1,10 @@
 package media
 
 import (
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
-	h "github.com/theplant/htmlgo"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	h "github.com/go-rvq/htmlgo"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 const BreadcrumbsKey = "BreadcrumbsKey"

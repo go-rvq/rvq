@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

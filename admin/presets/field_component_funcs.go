@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/web/zeroer"
@@ -12,7 +13,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 )
 
 func TDReadonlyBoolComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {

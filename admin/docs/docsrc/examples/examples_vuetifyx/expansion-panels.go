@@ -1,11 +1,11 @@
 package examples_vuetifyx
 
 import (
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	. "github.com/theplant/htmlgo"
 )
 
 func ExpansionPanelDemo(ctx *web.EventContext) (pr web.PageResponse, err error) {

@@ -4,6 +4,7 @@ package examples_admin
 import (
 	"net/http"
 
+	. "github.com/go-rvq/htmlgo"
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -11,7 +12,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
-	. "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 	"gorm.io/gorm"
 )

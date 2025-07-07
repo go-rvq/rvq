@@ -3,7 +3,7 @@ package web
 import (
 	"fmt"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type FlashMessage struct {

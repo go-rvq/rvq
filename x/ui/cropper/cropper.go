@@ -3,7 +3,7 @@ package cropper
 import (
 	"context"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type CropperBuilder struct {

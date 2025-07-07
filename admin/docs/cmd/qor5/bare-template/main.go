@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
-	. "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 )
 

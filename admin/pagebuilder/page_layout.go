@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
-	h "github.com/theplant/htmlgo"
 )
 
 func DefaultPageLayoutFunc(body h.HTMLComponent, input *PageLayoutInput, ctx *web.EventContext) h.HTMLComponent {

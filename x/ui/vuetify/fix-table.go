@@ -1,7 +1,7 @@
 package vuetify
 
 import (
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 func VTable(children ...h.HTMLComponent) *VTableBuilder {

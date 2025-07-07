@@ -20,6 +20,7 @@ require (
 	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
+	github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715
 	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/golang-jwt/jwt/v4 v4.5.0
@@ -53,7 +54,6 @@ require (
 	github.com/theplant/bimg v1.1.1
 	github.com/theplant/docgo v0.0.16
 	github.com/theplant/gofixtures v1.1.2
-	github.com/theplant/htmlgo v1.0.3
 	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967
 	github.com/theplant/osenv v0.0.1
 	github.com/theplant/sliceutils v0.0.0-20200406042209-89153d988eb1
@@ -199,8 +199,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-require github.com/qor5/web v1.2.3 // indirect
-
-replace github.com/theplant/htmlgo v1.0.3 => ./../../theplant/htmlgo
+require (
+	github.com/qor5/web v1.2.3 // indirect
+	github.com/theplant/htmlgo v1.0.3 // indirect
+)
 
 //replace github.com/theplant/docgo => ../../docgo/

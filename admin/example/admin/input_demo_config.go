@@ -7,13 +7,13 @@ import (
 	"github.com/go-rvq/rvq/admin/media"
 	"github.com/go-rvq/rvq/admin/media/base"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/ahmetb/go-linq/v3"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
 	"gorm.io/gorm"

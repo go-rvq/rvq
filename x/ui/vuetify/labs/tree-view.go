@@ -1,8 +1,8 @@
 package labs
 
 import (
+	h "github.com/go-rvq/htmlgo"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 type VTreeviewBuilder struct {

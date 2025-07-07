@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/js"
 	"github.com/go-rvq/rvq/web/vue"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 )
 
 const (

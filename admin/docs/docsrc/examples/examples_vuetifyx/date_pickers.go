@@ -5,9 +5,9 @@ package examples_vuetifyx
 import (
 	"context"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/web"
-	h "github.com/theplant/htmlgo"
 )
 
 type VXDateBuilder struct {

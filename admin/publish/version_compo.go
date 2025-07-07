@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/vue"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 
 	"github.com/go-rvq/rvq/admin/note"

@@ -3,8 +3,8 @@ package vuetify
 import (
 	"encoding/json"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
-	h "github.com/theplant/htmlgo"
 )
 
 type (

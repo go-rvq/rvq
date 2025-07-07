@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/iancoleman/strcase"
-	h "github.com/theplant/htmlgo"
 )
 
 type RowMenuFields struct {

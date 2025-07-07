@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/example/models"
 	plogin "github.com/go-rvq/rvq/admin/login"
@@ -16,7 +17,6 @@ import (
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/microsoftonline"
-	. "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 	"gorm.io/gorm"
 )

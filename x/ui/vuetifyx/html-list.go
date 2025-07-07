@@ -3,7 +3,7 @@ package vuetifyx
 import (
 	"fmt"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 func HTMLList(tag *h.HTMLTagBuilder, itens ...any) h.HTMLComponent {

@@ -1,6 +1,6 @@
 package web
 
-import h "github.com/theplant/htmlgo"
+import h "github.com/go-rvq/htmlgo"
 
 func NoopLayoutFunc(in PageFunc) PageFunc {
 	return in

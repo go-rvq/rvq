@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"path"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/pagebuilder"
 	"github.com/go-rvq/rvq/admin/pagebuilder/example/containers"
 	"github.com/go-rvq/rvq/admin/richeditor"
 	"github.com/go-rvq/rvq/x/i18n"
-	h "github.com/theplant/htmlgo"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

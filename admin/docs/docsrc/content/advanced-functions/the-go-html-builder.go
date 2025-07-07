@@ -19,7 +19,7 @@ to generate html page. We think they are:
 - yet another tedious syntax to learn
 - not flexible to use helper functions
 
-We like to use standard Go code. the library [htmlgo](https://github.com/theplant/htmlgo) is just for that.
+We like to use standard Go code. the library [htmlgo](https://github.com/go-rvq/htmlgo) is just for that.
 
 Although Go can't do flexible builder syntax like [Kotlin](https://kotlinlang.org/docs/reference/type-safe-builders.html) does,
 But it can also do quite well.

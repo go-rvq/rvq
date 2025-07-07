@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
@@ -15,7 +16,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
-	h "github.com/theplant/htmlgo"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"

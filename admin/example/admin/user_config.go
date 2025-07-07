@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/go-rvq/rvq/admin/note"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -20,7 +21,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

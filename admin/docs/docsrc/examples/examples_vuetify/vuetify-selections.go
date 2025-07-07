@@ -3,11 +3,11 @@ package examples_vuetify
 // @snippet_begin(VuetifyComponentsKitchen)
 
 import (
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
 	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	h "github.com/theplant/htmlgo"
 )
 
 var globalCities = []string{"Tokyo", "Hangzhou", "Shanghai"}

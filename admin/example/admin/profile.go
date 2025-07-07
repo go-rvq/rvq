@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/example/models"
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-rvq/rvq/web"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type VXFilterBuilder struct {

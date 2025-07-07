@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/js"
-	h "github.com/theplant/htmlgo"
 )
 
 type UserComponentAssigner struct {

@@ -3,7 +3,7 @@ package vuetify
 import (
 	"fmt"
 
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 type VExpansionPanelsBuilder struct {

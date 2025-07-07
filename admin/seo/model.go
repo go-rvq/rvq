@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/media/media_library"
-	h "github.com/theplant/htmlgo"
 )
 
 type QorSEOSetting struct {

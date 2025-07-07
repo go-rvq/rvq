@@ -1,10 +1,10 @@
 package containers
 
 import (
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/pagebuilder"
 	"github.com/go-rvq/rvq/web"
-	. "github.com/theplant/htmlgo"
 )
 
 type VideoBanner struct {

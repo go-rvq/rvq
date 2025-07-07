@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/media/media_library"
 
-	. "github.com/theplant/htmlgo"
+	. "github.com/go-rvq/htmlgo"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"

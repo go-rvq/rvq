@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/ui/redactor"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/samber/lo"
-	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
 

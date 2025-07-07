@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
+	. "github.com/go-rvq/htmlgo"
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
-	. "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 )

@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	. "github.com/go-rvq/rvq/web/tag"
 	"github.com/rs/xid"
-	h "github.com/theplant/htmlgo"
 )
 
 type ScopeBuilder struct {

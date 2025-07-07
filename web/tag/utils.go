@@ -1,7 +1,7 @@
 package tag
 
 import (
-	h "github.com/theplant/htmlgo"
+	h "github.com/go-rvq/htmlgo"
 )
 
 func FirstValidComponent(c h.HTMLComponent) h.HTMLComponent {

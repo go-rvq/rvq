@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	. "github.com/theplant/htmlgo"
 )
 
 var DefaultViewCommon = &ViewCommon{

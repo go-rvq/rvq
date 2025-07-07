@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/reflect_utils"
 	"github.com/go-rvq/rvq/web"
@@ -15,7 +16,6 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/gosimple/unidecode"
 	"github.com/sunfmin/reflectutils"
-	h "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
 )
 
