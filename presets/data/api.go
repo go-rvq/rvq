@@ -25,7 +25,7 @@ type DataOperator interface {
 	FetchTitle(obj interface{}, id model.ID, ctx *web.EventContext) (err error)
 	Save(obj interface{}, id model.ID, ctx *web.EventContext) (err error)
 	Create(obj interface{}, ctx *web.EventContext) (err error)
-	Delete(obj interface{}, id model.ID, ctx *web.EventContext) (err error)
+	Delete(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error)
 	CloneDataOperator() DataOperator
 	Schema(model any) (schema model.Schema, err error)
 }
@@ -41,6 +41,7 @@ type SearchParams struct {
 	OrderBy        string
 	Query          web.Query
 	Context        context.Context
+	MustCount      bool
 }
 
 func (p *SearchParams) ContextValue(key interface{}) (value any) {

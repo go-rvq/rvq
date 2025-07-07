@@ -91,7 +91,7 @@ func newPB() Config {
 	pageBuilder.SEO(seoBuilder).Publisher(publisher).L10n(l10nBuilder).Activity(ab)
 
 	l10nBuilder.
-		RegisterLocales("International", "International", "International").
+		RegisterLocale("International", "International", "International").
 		RegisterLocales("China", "China", "China").
 		SupportLocalesFunc(func(R *http.Request) []string {
 			return l10nBuilder.GetSupportLocaleCodes()[:]

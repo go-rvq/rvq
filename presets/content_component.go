@@ -7,6 +7,7 @@ import (
 	"github.com/qor5/web/v3"
 	"github.com/qor5/web/v3/vue"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -55,14 +56,8 @@ func CloseBtn() h.HTMLComponent {
 type ContentComponentBuilderOverlay struct {
 	Mode               actions.OverlayMode
 	Width              string
-	Height             string
-	MaxWidth           string
-	MaxHeight          string
-	MinWidth           string
-	MinHeight          string
 	FullscreenDisabled bool
 	CloseDisabled      bool
-	Scrollable         bool
 }
 
 type ContentComponentBuilder struct {
@@ -84,6 +79,11 @@ type ContentComponentBuilder struct {
 	Scope           *web.ScopeBuilder
 	MainPortals     h.HTMLComponents
 	Notices         h.HTMLComponents
+}
+
+func (b *ContentComponentBuilder) AddMenu(com ...h.HTMLComponent) *ContentComponentBuilder {
+	b.Menu = append(b.Menu, com...)
+	return b
 }
 
 func (b *ContentComponentBuilder) scoped(comp h.HTMLComponent) h.HTMLComponent {
@@ -117,49 +117,57 @@ func (b *ContentComponentBuilder) JoinedBody() h.HTMLComponent {
 
 func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 	var (
-		header           h.HTMLComponent
-		headerComponents = b.TopLeftActions
-		headerRight      = b.TopRightActions
+		headerLeft  = b.TopLeftActions
+		headerRight = b.TopRightActions
+		dialog      bool
+		tag         = vx.VXAdvancedExpandCloseCard("")
+		width       = "500"
 	)
 
-	if len(b.Menu) > 0 {
-		headerComponents = append(h.HTMLComponents{MenuBtn()}, headerComponents...)
+	if b.Overlay != nil {
+		dialog = b.Overlay.Mode.IsDialog()
+		if b.Overlay.Width != "" {
+			width = b.Overlay.Width
+		}
+	}
+
+	tag.SetDensity("compact")
+	tag.Width(width)
+	tag.DialogOrDrawer(dialog)
+
+	if !dialog {
+		tag.Attr("location", "right")
+		tag.Attr("temporary", true)
 	}
 
 	if b.Title != "" {
-		headerComponents = append(headerComponents, VToolbarTitle("").
-			Children(h.Text(b.Title)))
+		tag.SetTitle(b.Title)
 	}
 
 	if b.PrimaryAction != nil {
 		headerRight = append(headerRight, b.PrimaryAction)
 	}
 
+	if len(headerLeft) > 0 {
+		tag.SetSlotPrependToolbar(headerLeft...)
+	}
+
+	if len(headerRight) > 0 {
+		tag.SetSlotAppendToolbar(headerRight...)
+	}
+
 	body := b.JoinedBody()
 
 	if body != nil && !b.Overlay.FullscreenDisabled {
-		headerRight = append(headerRight, FullScreenBtn())
+		tag.Expandable(true)
 	}
 
 	if !b.Overlay.CloseDisabled {
-		headerRight = append(headerRight, CloseBtn())
+		tag.Closable(true)
 	}
 
-	if len(headerComponents) > 0 || len(headerRight) > 0 {
-		headerComponents = append(headerComponents, VSpacer())
-		headerComponents = append(headerComponents, headerRight...)
-	}
-
-	if len(headerComponents) > 0 {
-		headerComponents = h.HTMLComponents{VToolbar(headerComponents...).Color("white").Elevation(0).Density(DensityCompact)}
-	}
-
-	if len(headerComponents) > 0 || b.TopBar != nil {
-		header = h.HTMLComponents{
-			headerComponents,
-			b.TopBar,
-			VDivider(),
-		}
+	if b.TopBar != nil {
+		tag.SetSlotTop(b.TopBar)
 	}
 
 	var bottom h.HTMLComponents
@@ -169,11 +177,7 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 	}
 
 	if len(b.BottomActions) > 0 {
-		bottom = append(bottom, VCardActions(b.BottomActions...))
-	}
-
-	if len(bottom) > 0 {
-		bottom = append(h.HTMLComponents{VDivider()}, bottom...)
+		bottom = append(bottom, b.BottomActions...)
 	}
 
 	if len(b.Tabs) > 0 {
@@ -207,41 +211,23 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 		}
 	}
 
-	if body != nil {
-		body = VContainer(body).Fluid(true)
-	}
-
-	roots := h.HTMLComponents{header}
-
 	if len(b.Menu) > 0 {
-		layout := VLayout(
-			VNavigationDrawer(b.Menu).
-				// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-				Class("v-navigation-drawer--temporary").
-				Attr("v-model", "$contentComponent.menu").
-				Location(LocationLeft).
-				Floating(true).
-				Temporary(true),
-			h.Div(body).Attr("style", `width:inherit;height:inherit;overflow:auto`),
-		).
-			Width("100%").
-			Height("100%").
-			Class("v-layout__content-component").
-			SetAttr("style", "display: block;")
-		body = layout
+		tag.SlotMainMenu(b.Menu)
 	}
 
 	if body != nil {
-		roots = append(roots, VCardText(body).Class("v-card-text__content-component").Style("padding: 0"))
+		tag.SlotBody(body)
 	}
 
-	roots = append(roots, bottom...)
+	if len(b.MainPortals) > 0 {
+		tag.SlotPortals(b.MainPortals...)
+	}
 
-	card := VCard(roots...).Height("inherit").Width("inherit").Class("v-card__content-component")
+	if len(bottom) > 0 {
+		tag.SlotBottom(bottom)
+	}
 
-	return b.build(
-		card, // .			Attr("style", "height:inherit,max-height:inherit"), // fix height on fullscreen
-	)
+	return tag
 }
 
 func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
@@ -252,11 +238,11 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 	}
 
 	if len(b.Menu) > 0 {
-		b.Context.WithContextValue(CtxMenuComponent, b.Menu)
+		WithMenuComponent(b.Context, b.Menu)
 	}
 
 	if len(topActions) > 0 {
-		b.Context.WithContextValue(CtxActionsComponent, topActions)
+		WithActionsComponent(b.Context, topActions...)
 	}
 
 	body := b.JoinedBody()
@@ -289,22 +275,6 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 	return VContainer(b.build(body)).Fluid(true)
 }
 
-func (b *ContentComponentBuilder) Build(p *Builder, r *web.PageResponse) (err error) {
-	if b.Overlay.Mode.Overlayed() {
-		er := &web.EventResponse{}
-		comp := b.BuildOverlay()
-		if b.Overlay.Mode.IsDialog() {
-			p := p.Dialog().SetValidWidth(b.Overlay.Width)
-			p.Respond(b.Context, er, comp)
-		} else {
-		}
-	} else {
-		r.PageTitle = b.Title
-		r.Body = b.BuildPage()
-	}
-	return nil
-}
-
 func (b *ContentComponentBuilder) Notice(v any) *ContentComponentBuilder {
 	var (
 		color, text string
@@ -329,7 +299,7 @@ func (b *ContentComponentBuilder) Notice(v any) *ContentComponentBuilder {
 	}
 
 	if text != "" {
-		b.Notices = append(b.Notices, RenderFlash(text, color))
+		b.Notices = append(b.Notices, VAlert(h.Text(text)).Color(color))
 	}
 	return b
 }

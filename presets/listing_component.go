@@ -132,7 +132,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	// || len(actionsComponent) > 0
 
 	if !inDialog {
-		ctx.WithContextValue(CtxActionsComponent, actionsComponent)
+		WithActionsComponent(ctx, actionsComponent)
 	}
 
 	var filterBar h.HTMLComponent
@@ -262,6 +262,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 								Attr("@keyup.enter", web.Plaid().
 									URL(ctx.R.RequestURI).
 									Query("keyword", web.Var("[$event.target.value]")).
+									Scope(vue.Var("{presetsListing: presetsListing}")).
 									MergeQuery(true).
 									Query(ParamPortalID, portalID).
 									EventFunc(actions.UpdateListingDialog).
@@ -269,6 +270,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 								Attr("@click:clear", web.Plaid().
 									URL(ctx.R.RequestURI).
 									Query("keyword", "").
+									Scope(vue.Var("{presetsListing: presetsListing}")).
 									MergeQuery(true).
 									Query(ParamPortalID, portalID).
 									EventFunc(actions.UpdateListingDialog).
@@ -318,6 +320,8 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 		if lcb.componentWrap != nil {
 			comp = lcb.componentWrap(ctx, comp)
 		}
+
+		comp = vue.UserComponent(comp).ScopeVar("filterBarVisible", "{value: false}")
 
 		return comp, nil
 	}

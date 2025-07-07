@@ -55,7 +55,7 @@ func (b *EditingBuilder) defaultCreate(ctx *web.EventContext) (r web.EventRespon
 	uErr := b.doCreate(ctx, &r, false)
 	if uErr == nil {
 		msgr := MustGetMessages(ctx.Context())
-		ShowMessage(&r, msgr.SuccessfullyCreated, "")
+		ShowMessage(&r, msgr.SuccessfullyCreated, "success")
 	}
 	return r, nil
 }
@@ -66,11 +66,15 @@ func (b *EditingBuilder) doCreate(
 	// will not close drawer/dialog
 	silent bool,
 ) (err error) {
+	if b.mb.creatingDisabled {
+		err = ErrCreateRecordNotAllowed
+		return
+	}
+
 	b = b.CreatingBuilder()
 	obj := b.mb.NewModel()
 
-	if b.mb.Info().Verifier().Do(PermCreate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
-		b.UpdateOverlayContent(ctx, r, obj, "", perm.PermissionDenied)
+	if b.mb.permissioner.ReqCreator(ctx.R).Denied() {
 		return perm.PermissionDenied
 	}
 
@@ -87,7 +91,7 @@ func (b *EditingBuilder) doCreate(
 		}
 	}()
 
-	if vErr := b.RunSetterFunc(ctx, false, obj); vErr.HaveErrors() {
+	if vErr := b.RunSetterFunc(nil, ctx, false, obj); vErr.HaveErrors() {
 		b.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
 	}
@@ -114,7 +118,7 @@ func (b *EditingBuilder) doCreate(
 
 	{
 		var vErr web.ValidationErrors
-		b.FieldsBuilder.WalkO(b.mb.modelInfo, obj, FieldModeStack{NEW}, ctx, &FieldWalkHandleOptions{
+		b.FieldsBuilder.WalkOptions(b.mb.modelInfo, obj, FieldModeStack{NEW}, ctx, &FieldWalkHandleOptions{
 			SkipNestedNil: true,
 			Handler: func(field *FieldContext) (s FieldWalkState) {
 				vErr.Merge(field.Field.Validators.Validate(field))
@@ -128,8 +132,10 @@ func (b *EditingBuilder) doCreate(
 		}
 	}
 
+	restore := RemoveEmptySliceItems(obj, ContextModifiedIndexesBuilder(ctx))
 	err1 := b.Creator(obj, ctx)
 	if err1 != nil {
+		restore()
 		b.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
 	}
@@ -145,10 +151,8 @@ func (b *EditingBuilder) doCreate(
 	}
 
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-	script := "closer.show = false"
-
-	if overlay != "" {
-		web.AppendRunScripts(r, script)
+	if overlay.Overlayed() {
+		web.AppendRunScripts(r, "closer.show = false")
 	} else {
 		r.PushState = web.Location(nil)
 	}
@@ -156,10 +160,15 @@ func (b *EditingBuilder) doCreate(
 }
 
 func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if b.mb.creatingDisabled {
+		err = ErrCreateRecordNotAllowed
+		return
+	}
+
 	b = b.CreatingBuilder()
 
-	if b.mb.Info().Verifier().Do(PermCreate).WithReq(ctx.R).IsAllowed() != nil {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
+	if b.mb.permissioner.ReqCreator(ctx.R).Denied() {
+		err = perm.PermissionDenied
 		return
 	}
 
@@ -176,7 +185,7 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 	if overlay.IsDrawer() {
 		respondTargetPortal = overlay.PortalName()
 	}
-	targetPortal := respondTargetPortal + "-new"
+	targetPortal := respondTargetPortal
 	ctx.R.Form.Set(ParamTargetPortal, targetPortal)
 
 	f := b.form(obj, ctx)

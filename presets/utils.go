@@ -3,7 +3,6 @@ package presets
 import (
 	"database/sql"
 	"fmt"
-	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -27,28 +26,28 @@ func RecoverPrimaryColumnValuesBySlug(dec SlugDecoder, slug string) (r map[strin
 	return r, nil
 }
 
-func ShowMessage(r *web.EventResponse, msg string, color string) {
-	if msg == "" {
-		return
+func ShowMessage(r *web.EventResponse, msg any, color ...string) {
+	var (
+		m       = NewFlashMessage(msg, color...)
+		text    = m.Text
+		textKey = "message"
+	)
+	if len(text) == 0 {
+		if m.HtmlText != "" {
+			textKey = "htmlText"
+			text = m.HtmlText
+		} else {
+			return
+		}
 	}
 
-	if color == "" {
-		color = "success"
+	if m.Color == "" {
+		m.Color = "success"
 	}
 
 	web.AppendRunScripts(r, fmt.Sprintf(
-		`vars.presetsMessage = { show: true, message: %s, color: %s}`,
-		h.JSONString(msg), h.JSONString(color)))
-}
-
-func copyURLWithQueriesRemoved(u *url.URL, qs ...string) *url.URL {
-	newU, _ := url.Parse(u.String())
-	newQuery := newU.Query()
-	for _, k := range qs {
-		newQuery.Del(k)
-	}
-	newU.RawQuery = newQuery.Encode()
-	return newU
+		`vars.presetsMessage = { show: true, %s: %s, color: %s}`,
+		textKey, h.JSONString(text), h.JSONString(m.Color)))
 }
 
 func GetOverlay(ctx *web.EventContext) actions.OverlayMode {

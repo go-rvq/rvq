@@ -515,9 +515,10 @@ func (b *Builder) detailSaver(obj interface{}, id model.ID, ctx *web.EventContex
 	if err = EditSetterFunc(
 		obj,
 		&presets.FieldContext{
-			Mode: presets.FieldModeStack{presets.DETAIL},
-			Obj:  obj,
-			Name: SeoDetailFieldName,
+			ToComponentOptions: &presets.ToComponentOptions{},
+			Mode:               presets.FieldModeStack{presets.DETAIL},
+			Obj:                obj,
+			Name:               SeoDetailFieldName,
 		},
 		ctx); err != nil {
 		return

@@ -24,6 +24,26 @@ func (f FieldMode) Is(m ...FieldMode) bool {
 	return false
 }
 
+func (f FieldMode) IsNew() bool {
+	return f.Is(NEW)
+}
+
+func (f FieldMode) IsEdit() bool {
+	return f.Is(EDIT)
+}
+
+func (f FieldMode) IsDetail() bool {
+	return f.Is(DETAIL)
+}
+
+func (f FieldMode) IsList() bool {
+	return f.Is(LIST)
+}
+
+func (f FieldMode) IsWrite() bool {
+	return f.Is(NEW, EDIT)
+}
+
 func (m FieldMode) Has(f FieldMode) bool {
 	return m&f != 0
 }
@@ -79,6 +99,33 @@ func (s FieldModeStack) DotStack() FieldModeStack {
 
 func (s FieldModeStack) Push(m FieldMode) FieldModeStack {
 	return append(s, m)
+}
+
+func (f FieldModeStack) Is(mode ...FieldMode) bool {
+	if len(f) == 0 {
+		return false
+	}
+	return f.Dot().Is(mode...)
+}
+
+func (f FieldModeStack) IsNew() bool {
+	return f.Is(NEW)
+}
+
+func (f FieldModeStack) IsEdit() bool {
+	return f.Is(EDIT)
+}
+
+func (f FieldModeStack) IsDetail() bool {
+	return f.Is(DETAIL)
+}
+
+func (f FieldModeStack) IsList() bool {
+	return f.Is(LIST)
+}
+
+func (f FieldModeStack) IsWrite() bool {
+	return f.Is(NEW, EDIT)
 }
 
 type FieldDefaultBuilder struct {
@@ -286,12 +333,12 @@ func (b *FieldDefaults) builtInFieldTypes() {
 
 		for _, v := range numberVals {
 			b.FieldType(v).
-				ComponentFunc(ReadonlyTextComponentFunc)
+				ComponentFunc(ReadonlyComponentFunc)
 		}
 
 		for _, v := range stringVals {
 			b.FieldType(v).
-				ComponentFunc(ReadonlyTextComponentFunc)
+				ComponentFunc(ReadonlyComponentFunc)
 		}
 
 		for _, v := range timeVals {

@@ -6,6 +6,7 @@ import (
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
 	v "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -111,40 +112,40 @@ func (p *Drawer) RootWrap(wrap func(comp h.HTMLComponent) h.HTMLComponent) *Draw
 }
 
 func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
-	drawer := v.VNavigationDrawer(
-		// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
-		comp,
-	).
-		// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-		Attr("v-model", "closer.show").
-		Location(p.location).
-		Temporary(true).
-		// Fixed(true).
-		RawWidth(`closer.fullscreen ? null : `+h.JSONString(p.width)).
-		RawClass(`closer.fullscreen ? 'v-navigation-drawer--fullscreen' : null`).
-		Attr(":height", `"100%"`)
+	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
+		ac.SetVModel("closer.show")
+	} else {
+		drawer := v.VNavigationDrawer(
+			// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
+			comp,
+		).
+			// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
+			Attr("v-model", "closer.show").
+			Location(p.location).
+			Temporary(true).
+			// Fixed(true).
+			RawWidth(`closer.fullscreen ? null : `+h.JSONString(p.width)).
+			RawClass(`closer.fullscreen ? 'v-navigation-drawer--fullscreen' : null`).
+			Attr(":height", `"100%"`)
 
-	if p.scrollable {
-		drawer.Class("v-navigation-drawer--scrollable")
-		drawer.Style("position:fixed; top:0; overflow-y:scroll;")
-		switch p.location {
-		case v.LocationLeft:
-			drawer.Style(`left:0`)
-		case v.LocationRight:
-			drawer.Style(`right:0`)
+		if p.scrollable {
+			drawer.Class("v-navigation-drawer--scrollable")
+			drawer.Style("position:fixed; top:0; overflow-y:scroll;")
+			switch p.location {
+			case v.LocationLeft:
+				drawer.Style(`left:0`)
+			case v.LocationRight:
+				drawer.Style(`right:0`)
+			}
 		}
+
+		comp = drawer
 	}
 
-	d := web.CloserScope(
-		drawer,
+	comp = web.CloserScope(
+		comp,
 		true,
 	)
-
-	// Temporary(true),
-	// HideOverlay(true).
-	// Floating(true).
-
-	comp = d
 
 	if p.rootWrap != nil {
 		comp = p.rootWrap(comp)

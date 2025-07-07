@@ -2,8 +2,10 @@ package presets
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/zeroer"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
@@ -76,16 +78,36 @@ func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 }
 
 func (n *NestedSliceBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOptions) (s FieldWalkState) {
+
+	if fctx.Obj == nil {
+		if opts.SkipNestedNil {
+			return
+		}
+	}
+
 	var (
 		i     int
 		slice = fctx.RawValue()
 	)
-	if slice != nil {
-		reflectutils.ForEach(slice, func(v interface{}) {
-			defer func() { i++ }()
-			fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj).ItemOf(slice, i)
-			n.fb.walk(fieldInfo, v, fctx.Mode, fmt.Sprintf("%s[%d]", fctx.FormKey, i), fctx.EventContext, opts)
-		})
+
+	if slice == nil {
+		if opts.InitializeSlices {
+			st := reflectutils.GetType(fctx.Obj, fctx.Name)
+			s := reflect.MakeSlice(st, 1, 1)
+			s.Index(0).Set(reflect.ValueOf(n.mb.Model()))
+			slice = s.Interface()
+		} else {
+			return
+		}
 	}
+
+	reflectutils.ForEach(slice, func(v interface{}) {
+		defer func() { i++ }()
+		if opts.SkipNestedNil && zeroer.IsNil(v) {
+			return
+		}
+		fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj).ItemOf(slice, i)
+		n.fb.walk(fieldInfo, v, fctx.Mode, append(fctx.Path, FieldPathIndex(i)), fmt.Sprintf("%s[%d]", fctx.FormKey, i), fctx.EventContext, opts)
+	})
 	return
 }

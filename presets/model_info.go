@@ -2,14 +2,12 @@ package presets
 
 import (
 	"fmt"
-	"net/http"
 	"path"
 	"strconv"
 	"strings"
 
 	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/perm"
 )
 
 type ModelInfo struct {
@@ -19,157 +17,136 @@ type ModelInfo struct {
 
 	slice interface{}
 	index int
+	p     *ModelPermissioner
 }
 
-func (b *ModelInfo) Builder() *ModelBuilder {
-	return b.mb
+func (i *ModelInfo) Root() *ModelInfo {
+	for i.parent != nil {
+		i = i.parent
+	}
+	return i
 }
 
-func (b ModelInfo) ChildOf(parent *ModelInfo, obj any) *ModelInfo {
-	b.parent = parent
-	b.parentObj = obj
-	return &b
+func (i *ModelInfo) Builder() *ModelBuilder {
+	return i.mb
 }
 
-func (b ModelInfo) ItemOf(slice interface{}, index int) *ModelInfo {
-	b.slice = slice
-	b.index = index
-	return &b
+func (i ModelInfo) ChildOf(parent *ModelInfo, obj any) *ModelInfo {
+	i.parent = parent
+	i.parentObj = obj
+	return &i
 }
 
-func (b *ModelInfo) Parent() (*ModelInfo, interface{}) {
-	return b.parent, b.parentObj
+func (i ModelInfo) ItemOf(slice interface{}, index int) *ModelInfo {
+	i.slice = slice
+	i.index = index
+	return &i
 }
 
-func (b *ModelInfo) Slice() (interface{}, int) {
-	return b.slice, b.index
+func (i *ModelInfo) Parent() (*ModelInfo, interface{}) {
+	return i.parent, i.parentObj
 }
 
-func (b *ModelInfo) GetID(obj interface{}) (id ID, err error) {
-	return b.mb.RecordID(obj)
+func (i *ModelInfo) Slice() (interface{}, int) {
+	return i.slice, i.index
 }
 
-func (b *ModelInfo) LookupID(obj interface{}) (id ID, level int, err error) {
-	if id, err = b.mb.RecordID(obj); err != nil {
+func (i *ModelInfo) GetID(obj interface{}) (id ID, err error) {
+	return i.mb.RecordID(obj)
+}
+
+func (i *ModelInfo) LookupID(obj interface{}) (id ID, level int, err error) {
+	if id, err = i.mb.RecordID(obj); err != nil {
 		return
 	}
 
-	if len(id.Schema.PrimaryFields()) == 0 && b.parent != nil {
-		if b.parent != nil {
-			return b.parent.LookupID(b.parentObj)
+	if len(id.Schema.PrimaryFields()) == 0 && i.parent != nil {
+		if i.parent != nil {
+			return i.parent.LookupID(i.parentObj)
 		}
 	}
 	return
 }
 
-func (b *ModelInfo) MustID(obj interface{}) (id ID) {
-	id = b.mb.MustRecordID(obj)
+func (i *ModelInfo) MustID(obj interface{}) (id ID) {
+	id = i.mb.MustRecordID(obj)
 
-	if id.IsZero() && b.parent != nil {
-		if b.parent != nil {
-			return b.parent.MustID(obj)
+	if id.IsZero() && i.parent != nil {
+		if i.parent != nil {
+			return i.parent.MustID(obj)
 		}
 	}
 	return
 }
 
-func (b *ModelInfo) Schema() model.Schema {
-	return b.mb.Schema()
+func (i *ModelInfo) Schema() model.Schema {
+	return i.mb.Schema()
 }
 
-func (b ModelInfo) ListingHref(parentID ...ID) string {
-	s := b.mb.p.prefix + "/" + b.mb.URI()
+func (i ModelInfo) ListingHref(parentID ...ID) string {
+	s := i.mb.p.prefix + "/" + i.mb.URI()
 	for i, id := range parentID {
 		s = strings.Replace(s, "{parent_"+strconv.Itoa(i)+"_id}", id.String(), 1)
 	}
 	return s
 }
 
-func (b ModelInfo) ListingHrefParts() (r []any) {
-	return append([]any{b.mb.p.prefix}, b.mb.SplitedURI()...)
+func (i ModelInfo) ListingHrefParts() (r []any) {
+	return append([]any{i.mb.p.prefix}, i.mb.SplitedURI()...)
 }
 
-func (b ModelInfo) ListingHrefCtx(ctx *web.EventContext) string {
-	return b.ListingHref(ParentsModelID(ctx.R)...)
+func (i ModelInfo) ListingHrefCtx(ctx *web.EventContext) string {
+	return i.ListingHref(ParentsModelID(ctx.R)...)
 }
 
-func (b ModelInfo) UpdateHref(parentID ...ID) string {
-	s := b.mb.p.prefix + "/" + b.mb.SaveURI()
+func (i ModelInfo) UpdateHref(parentID ...ID) string {
+	s := i.mb.p.prefix + "/" + i.mb.SaveURI()
 	for i, id := range parentID {
 		s = strings.Replace(s, "{parent_"+strconv.Itoa(i)+"_id}", id.String(), 1)
 	}
 	return s
 }
 
-func (b ModelInfo) UpdateHrefCtx(ctx *web.EventContext) string {
-	return b.UpdateHref(ParentsModelID(ctx.R)...)
+func (i ModelInfo) UpdateHrefCtx(ctx *web.EventContext) string {
+	return i.UpdateHref(ParentsModelID(ctx.R)...)
 }
 
-func (b ModelInfo) EditingHref(id any, parentID ...ID) string {
-	return path.Join(b.UpdateHref(parentID...), fmt.Sprint(id), "edit")
+func (i ModelInfo) EditingHref(id any, parentID ...ID) string {
+	return path.Join(i.UpdateHref(parentID...), fmt.Sprint(id), "edit")
 }
 
-func (b ModelInfo) EditingHrefCtx(ctx *web.EventContext, id any) string {
-	return b.EditingHref(id, ParentsModelID(ctx.R)...)
+func (i ModelInfo) EditingHrefCtx(ctx *web.EventContext, id any) string {
+	return i.EditingHref(id, ParentsModelID(ctx.R)...)
 }
 
-func (b ModelInfo) DetailingHref(id any, parentID ...ID) string {
-	s := b.ListingHref(parentID...)
+func (i ModelInfo) DetailingHref(id any, parentID ...ID) string {
+	s := i.ListingHref(parentID...)
 	if id != nil {
 		s = path.Join(s, fmt.Sprint(id))
 	}
 	return s
 }
 
-func (b ModelInfo) DetailingHrefCtx(ctx *web.EventContext, id any) string {
-	return b.DetailingHref(id, ParentsModelID(ctx.R)...)
+func (i ModelInfo) DetailingHrefCtx(ctx *web.EventContext, id any) string {
+	return i.DetailingHref(id, ParentsModelID(ctx.R)...)
 }
 
-func (b ModelInfo) HasDetailing() bool {
-	return b.mb.hasDetailing
+func (i ModelInfo) HasDetailing() bool {
+	return i.mb.hasDetailing
 }
 
-func (b ModelInfo) PresetsPrefix() string {
-	return b.mb.p.prefix
+func (i ModelInfo) PresetsPrefix() string {
+	return i.mb.p.prefix
 }
 
-func (b ModelInfo) URIName() string {
-	return b.mb.uriName
+func (i ModelInfo) URIName() string {
+	return i.mb.uriName
 }
 
-func (b ModelInfo) URI() string {
-	return b.mb.URI()
+func (i ModelInfo) URI() string {
+	return i.mb.URI()
 }
 
-func (b ModelInfo) Label() string {
-	return b.mb.label
-}
-
-func (b ModelInfo) Verifier() *perm.Verifier {
-	mb := b.mb.GetVerifierModel()
-	v := mb.p.verifier.Spawn()
-	if mb.menuGroupName != "" {
-		v.SnakeOn("mg_" + mb.menuGroupName)
-	}
-	return v.SnakeOn(mb.uriName)
-}
-
-func (b ModelInfo) CanUpdate(r *http.Request, obj interface{}) bool {
-	return b.Verifier().Do(PermUpdate).ObjectOn(obj).WithReq(r).IsAllowed() == nil
-}
-
-func (b ModelInfo) CanRead(r *http.Request, obj interface{}) bool {
-	return b.Verifier().Do(PermGet).ObjectOn(obj).WithReq(r).IsAllowed() == nil
-}
-
-func (b ModelInfo) CanDelete(r *http.Request, obj interface{}) bool {
-	return b.Verifier().Do(PermDelete).ObjectOn(obj).WithReq(r).IsAllowed() == nil
-}
-
-func (b ModelInfo) CanCreate(r *http.Request) bool {
-	return b.Verifier().Do(PermCreate).WithReq(r).IsAllowed() == nil
-}
-
-func (b ModelInfo) CanList(r *http.Request) bool {
-	return b.Verifier().Do(PermList).WithReq(r).IsAllowed() == nil
+func (i ModelInfo) Label() string {
+	return i.mb.label
 }

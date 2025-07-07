@@ -2,9 +2,11 @@ package presets
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/iancoleman/strcase"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	h "github.com/theplant/htmlgo"
 )
@@ -72,8 +74,19 @@ type RowMenuItemBuilder struct {
 	eventID    string
 }
 
+func (b *RowMenuBuilder) SetRowMenuItem(name string) *RowMenuItemBuilder {
+	return b.rowMenuItem(true, name)
+}
+
 func (b *RowMenuBuilder) RowMenuItem(name string) *RowMenuItemBuilder {
+	return b.rowMenuItem(false, name)
+}
+
+func (b *RowMenuBuilder) rowMenuItem(set bool, name string) *RowMenuItemBuilder {
 	if v, ok := b.items[strcase.ToSnake(name)]; ok {
+		if set {
+			panic("duplicated item " + strconv.Quote(name))
+		}
 		return v
 	}
 
@@ -91,12 +104,13 @@ func (b *RowMenuBuilder) RowMenuItem(name string) *RowMenuItemBuilder {
 			return
 		}
 		if ib.permAction != "" {
+			if b.mb.permissioner.Actioner(ctx.R, ib.permAction, mid, ParentsModelID(ctx.R)...).Denied() {
+				err = perm.PermissionDenied
+				return
+			}
+
 			obj := b.mb.NewModel()
 			err = b.mb.editing.Fetcher(obj, mid, ctx)
-			if err != nil {
-				return r, err
-			}
-			err = b.mb.Info().Verifier().Do(ib.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed()
 			if err != nil {
 				return r, err
 			}
@@ -140,11 +154,11 @@ func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) RecordMenuIte
 	return func(rctx *RecordMenuItemContext) h.HTMLComponent {
 		var (
 			ctx = rctx.Ctx
-			obj = rctx.Obj
 			id  = rctx.ID
+			mid = b.rmb.mb.MustRecordID(rctx.Obj)
 		)
 
-		if b.permAction != "" && b.rmb.mb.Info().Verifier().Do(b.permAction).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+		if b.permAction != "" && b.rmb.mb.permissioner.Actioner(ctx.R, b.permAction, mid, ParentsModelID(ctx.R)...).Denied() {
 			return nil
 		}
 

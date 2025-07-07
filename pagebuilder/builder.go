@@ -141,12 +141,11 @@ create unique index if not exists uidx_page_builder_demo_containers_model_name_l
 	r.categoryInstall = r.defaultCategoryInstall
 	r.pageInstall = r.defaultPageInstall
 
-	r.ps = presets.New().
+	r.ps = presets.New(i18nB).
 		BrandTitle("Page Builder").
 		DataOperator(gorm2op.DataOperator(db)).
 		URIPrefix(prefix).
-		DetailLayoutFunc(r.pageEditorLayout).
-		SetI18n(i18nB)
+		DetailLayoutFunc(r.pageEditorLayout)
 
 	return r
 }
@@ -669,7 +668,7 @@ func (b *Builder) configDetailLayoutFunc(
 			}
 			tabContent, err = in(ctx)
 			if errors.Is(err, perm.PermissionDenied) {
-				pr.Body = h.Text(perm.PermissionDenied.Error())
+				pr.Body = h.Text(MustGetMessages(ctx.Context()).ErrPermissionDenied.Error())
 				return pr, nil
 			}
 			if err != nil {
@@ -774,6 +773,7 @@ func (b *Builder) configDetailLayoutFunc(
 							Attr("v-model", "vars.presetsMessage.show").
 							Attr(":color", "vars.presetsMessage.color").
 							Timeout(15000).
+							ZIndex(1000000).
 							Location(LocationTop),
 					).Attr("v-if", "vars.presetsMessage"),
 					VMain(
@@ -1588,7 +1588,7 @@ func (b *ContainerBuilder) configureRelatedOnlinePagesTab() {
 							Color(ColorPrimary).
 							Attr("@click",
 								web.Plaid().
-									EventFunc(presets.OpenConfirmDialog).
+									EventFunc(presets.EventOpenConfirmDialog).
 									Query(presets.ConfirmDialogConfirmEvent,
 										web.Plaid().
 											EventFunc(republishRelatedOnlinePagesEvent).

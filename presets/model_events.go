@@ -14,8 +14,10 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.DoDelete, mb.listing.doDelete)
 	mb.RegisterEventFunc(actions.DoBulkAction, mb.listing.doBulkAction)
 	mb.RegisterEventFunc(actions.DoListingAction, mb.listing.doListingAction)
+	mb.RegisterEventFunc(actions.DoListingItemAction, mb.listing.doListingItemAction)
 	mb.RegisterEventFunc(actions.OpenBulkActionDialog, mb.listing.openBulkActionDialog)
 	mb.RegisterEventFunc(actions.OpenActionDialog, mb.listing.openActionDialog)
+	mb.RegisterEventFunc(actions.OpenItemActionDialog, mb.listing.openItemActionDialog)
 
 	mb.RegisterEventFunc(actions.Action, mb.detailing.formAction)
 	mb.RegisterEventFunc(actions.DoAction, mb.detailing.doAction)
@@ -43,11 +45,7 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 func (mb *ModelBuilder) RegisterEventFunc(id string, f web.EventFunc) string {
 	return mb.RegisterEventHandler(id, web.EventFunc(func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		WithModel(ctx, mb)
-		if r, err = f(ctx); err != nil {
-			r.UpdatePortal(FlashPortalName, RenderFlash(err, ""))
-			err = nil
-		}
-		return
+		return f.Handle(ctx)
 	}))
 }
 

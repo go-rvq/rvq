@@ -31,7 +31,7 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 		}
 		modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
 		fieldInfo := n.mb.Info().ChildOf(field.ModelInfo, field.Obj)
-		body := n.fb.toComponentWithFormValueKey(fieldInfo, val, field.Mode, field, modifiedIndexes, ctx)
+		body := n.fb.toComponentWithFormValueKey(field.ToComponentOptions, fieldInfo, val, field.Mode, field, modifiedIndexes, ctx)
 		if body == nil {
 			return nil
 		}
@@ -58,5 +58,5 @@ func (n *NestedStructBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOpti
 		}
 		obj = n.Model().NewModel()
 	}
-	return n.fb.walk(fieldInfo, obj, fctx.Mode, fctx.FormKey, fctx.EventContext, opts)
+	return n.fb.walk(fieldInfo, obj, fctx.Mode, fctx.Path, fctx.FormKey, fctx.EventContext, opts)
 }

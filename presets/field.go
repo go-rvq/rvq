@@ -2,7 +2,9 @@ package presets
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/qor5/admin/v3/reflect_utils"
@@ -10,29 +12,74 @@ import (
 	"github.com/qor5/web/v3/datafield"
 	"github.com/qor5/web/v3/zeroer"
 	"github.com/qor5/x/v3/i18n"
+	v "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
+func FieldPathIndex(i int) string {
+	return fmt.Sprintf("[%d]", i)
+}
+
+type FieldPath []string
+
+func (p *FieldPath) AppendIndex(i int) {
+	*p = append((*p), FieldPathIndex(i))
+}
+
+func (p *FieldPath) Append(v ...string) {
+	*p = append(*p, v...)
+}
+
+func (p FieldPath) NoIndex() (r FieldPath) {
+	for _, s := range p {
+		if s[0] != '[' {
+			r = append(r, s)
+		}
+	}
+	return r
+}
+
+func (p FieldPath) Fqn() string {
+	return strings.Join(p, ".")
+}
+
 type FieldContext struct {
-	Parent            *FieldContext
-	Mode              FieldModeStack
-	Field             *FieldBuilder
-	EventContext      *web.EventContext
-	Obj               interface{}
-	Name              string
-	FormKey           string
-	Label             string
-	Hint              func() string
-	Errors            []string
-	ModelInfo         *ModelInfo
-	Nested            Nested
-	Context           context.Context
-	ReadOnly          bool
-	Required          bool
-	Disabled          bool
-	ValueOverride     interface{}
-	ComponentHandlers []func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent
+	ToComponentOptions *ToComponentOptions
+	Parent             *FieldContext
+	Mode               FieldModeStack
+	Field              *FieldBuilder
+	EventContext       *web.EventContext
+	Obj                interface{}
+	Name               string
+	FormKey            string
+	Path               FieldPath
+	Label              string
+	Hint               func() string
+	Errors             []string
+	SliceErrors        map[int][]string
+	ModelInfo          *ModelInfo
+	Nested             Nested
+	Context            context.Context
+	ReadOnly           bool
+	Required           bool
+	Disabled           bool
+	ValueOverride      interface{}
+	ComponentHandlers  []func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent
+}
+
+func (fc *FieldContext) Root() *FieldContext {
+	for fc.Parent != nil {
+		fc = fc.Parent
+	}
+	return fc
+}
+
+func (fc *FieldContext) ChildFieldFormKey(child string) (s string) {
+	if len(fc.FormKey) == 0 {
+		return child
+	}
+	return fc.FormKey + "." + child
 }
 
 func (fc *FieldContext) ComponentHandler(f ...func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent) *FieldContext {
@@ -124,8 +171,33 @@ type FieldBuilder struct {
 	ValueFormatters  FieldValueFormatters
 	defaultValuer    func()
 	audited          bool
+	hint             bool
 
 	datafield.DataField[*FieldBuilder]
+}
+
+func (n *FieldBuilder) SetLabelKey(labelKey string) *FieldBuilder {
+	n.labelKey = labelKey
+	return n
+}
+
+func (n *FieldBuilder) SetI18nLabel(i18nLabel func(ctx context.Context) string) *FieldBuilder {
+	n.i18nLabel = i18nLabel
+	return n
+}
+
+func (n *FieldBuilder) SetHiddenLabel(hiddenLabel bool) *FieldBuilder {
+	n.hiddenLabel = hiddenLabel
+	return n
+}
+
+func (n *FieldBuilder) SetHint(hint bool) *FieldBuilder {
+	n.hint = hint
+	return n
+}
+
+func (n *FieldBuilder) Hint() bool {
+	return n.hint
 }
 
 func (b *FieldBuilder) String() string {
@@ -155,6 +227,12 @@ func (b *FieldBuilder) Enabled() func(ctx *FieldContext) bool {
 
 func (b *FieldBuilder) SetEnabled(enabled func(ctx *FieldContext) bool) *FieldBuilder {
 	b.enabled = enabled
+	return b
+}
+func (b *FieldBuilder) Enable(v bool) *FieldBuilder {
+	b.enabled = func(*FieldContext) bool {
+		return v
+	}
 	return b
 }
 
@@ -194,17 +272,17 @@ func (b *FieldBuilder) Label(v string) (r *FieldBuilder) {
 	return b
 }
 
-func (b *FieldBuilder) SetHiddenLabel(hiddenLabel bool) *FieldBuilder {
-	b.hiddenLabel = hiddenLabel
-	return b
-}
-
 func (b *FieldBuilder) Audited() bool {
 	return b.audited
 }
 
 func (b *FieldBuilder) SetAudited(audited bool) *FieldBuilder {
 	b.audited = audited
+	return b
+}
+
+func (b *FieldBuilder) SetData(key, value any) *FieldBuilder {
+	b.DataField.SetData(key, value)
 	return b
 }
 
@@ -249,6 +327,10 @@ func (b *FieldBuilder) SetterFunc(v FieldSetterFunc) (r *FieldBuilder) {
 	return b
 }
 
+func (b *FieldBuilder) GetSetterFunc() FieldSetterFunc {
+	return b.setterFunc
+}
+
 func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *FieldBuilder) {
 	if b.context == nil {
 		b.context = context.Background()
@@ -257,7 +339,7 @@ func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *Fi
 	return b
 }
 
-func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx web.ContextValuer, fallback ...func(ctx web.ContextValuer, nameLabel NameLabel) string) (label string) {
+func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx context.Context, fallback ...func(ctx context.Context, nameLabel NameLabel) string) (label string) {
 	if b.hiddenLabel {
 		return ""
 	}
@@ -269,19 +351,28 @@ func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx web.ContextValuer, fall
 			return b.i18nLabel(ctx)
 		}
 
-		for _, f := range fallback {
-			if label = f(ctx, b.NameLabel); label != "" {
-				return label
+		if b.label != "" {
+			for _, f := range fallback {
+				if label = f(ctx, NameLabel{name: label}); label != "" {
+					return label
+				}
 			}
-		}
+			label = b.label
+		} else {
+			for _, f := range fallback {
+				if label = f(ctx, b.NameLabel); label != "" {
+					return label
+				}
+			}
 
-		label = b.name
+			label = b.name
+		}
 	}
 
 	if info != nil {
-		label = i18n.Translate(info.mb.FieldTranslator(), ctx.Context(), label)
+		label = i18n.Translate(info.mb.FieldTranslator(), ctx, label)
 	} else {
-		msgr := MustGetMessages(ctx.Context())
+		msgr := MustGetMessages(ctx)
 		label = msgr.Common.Get(label)
 	}
 
@@ -292,20 +383,20 @@ func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx web.ContextValuer, fall
 	return label
 }
 
-func (b *FieldBuilder) DefaultContextLabel(ctx web.ContextValuer) string {
+func (b *FieldBuilder) DefaultContextLabel(ctx context.Context) string {
 	return b.ContextLabel(nil, ctx)
 }
 
-func (b *FieldBuilder) ContextHint(info *ModelInfo, ctx web.ContextValuer) string {
+func (b *FieldBuilder) ContextHint(info *ModelInfo, ctx context.Context) string {
 	if info != nil {
-		return i18n.TranslateD(info.mb.FieldHintTranslator(), nil, ctx.Context(), b.name+"_Hint")
+		return i18n.TranslateD(info.mb.FieldHintTranslator(), nil, ctx, b.name+"_Hint")
 	}
 
-	msgr := MustGetMessages(ctx.Context())
+	msgr := MustGetMessages(ctx)
 	return msgr.Common.Get(b.name)
 }
 
-func (b *FieldBuilder) DefaultContextHint(ctx web.ContextValuer) string {
+func (b *FieldBuilder) DefaultContextHint(ctx context.Context) string {
 	return b.ContextHint(nil, ctx)
 }
 
@@ -315,11 +406,31 @@ func (b *FieldBuilder) SetupFunc(fc FieldContextSetup) *FieldBuilder {
 }
 
 func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {
+	panics := true
+	defer func() {
+		if panics {
+			if r := recover(); r != nil {
+				comp = FieldComponentWrapper(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+					return v.VAlert().
+						Type(v.TypeError).
+						Density(v.DensityCompact).
+						Variant(v.VariantTonal).
+						Text(fmt.Sprintf("%v", r))
+				})(ctx, ctx.EventContext)
+			}
+		}
+	}()
 	comp = b.compFunc(ctx, ctx.EventContext)
 	for _, f := range ctx.ComponentHandlers {
 		comp = f(ctx, comp)
 	}
+	panics = false
 	return
+}
+
+func (b *FieldBuilder) ContextSetup(f func(ctx *FieldContext)) *FieldBuilder {
+	b.ToComponentSetup = append(b.ToComponentSetup, f)
+	return b
 }
 
 type FieldBuilders []*FieldBuilder

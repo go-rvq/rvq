@@ -56,7 +56,7 @@ func (r *DeletingMenuItemBuilder) Build() RecordMenuItemFunc {
 			mi  = r.modelInfo
 		)
 
-		if !mi.mb.CanDeleteObj(obj, ctx) {
+		if mi.mb.deletingDisabled || !mi.mb.CanDeleteObj(obj, ctx) {
 			return nil
 		}
 

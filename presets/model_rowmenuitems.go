@@ -27,7 +27,7 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 		)
 
 		msgr := MustGetMessages(ctx.Context())
-		if mi.mb.Info().Verifier().Do(PermUpdate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+		if mi.mb.permissioner.ReqObjectUpdater(ctx.R, obj).Denied() {
 			return nil
 		}
 
@@ -53,22 +53,55 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 
 func childRowMenuItemFunc(mb *ModelBuilder) RecordMenuItemFunc {
 	return func(ctx *RecordMenuItemContext) h.HTMLComponent {
-		mi := mb.modelInfo
-
-		if mi.mb.Info().Verifier().Do(PermList).ObjectOn(ctx.Obj).WithReq(ctx.Ctx.R).IsAllowed() != nil {
+		if mb.notInMenu {
 			return nil
 		}
 
-		title := mb.TTitlePlural(ctx.Ctx.Context())
-		uri := mi.ListingHref(append(ParentsModelID(ctx.Ctx.R), mb.parent.MustParseRecordID(ctx.ID))...)
+		var (
+			r         = ctx.Ctx.R
+			mi        = mb.modelInfo
+			parentsID = append(ParentsModelID(ctx.Ctx.R), mb.parent.MustParseRecordID(ctx.ID))
+		)
+
+		if mb.singleton {
+			if mb.hasDetailing {
+				if mb.permissioner.Reader(r, ID{}, parentsID...).Denied() {
+					return nil
+				}
+			} else {
+				if mb.permissioner.Updater(r, ID{}, parentsID...).Denied() {
+					return nil
+				}
+			}
+		} else if mb.permissioner.Lister(ctx.Ctx.R, parentsID...).Denied() {
+			return nil
+		}
+
+		var (
+			event string
+			title = mb.TTitleAuto(ctx.Ctx.Context())
+			uri   = mi.ListingHref(parentsID...)
+		)
+
+		if mb.singleton {
+			if mb.hasDetailing {
+				event = actions.Detailing
+			} else {
+				event = actions.Edit
+			}
+		} else {
+			event = actions.OpenListingDialog
+		}
+
 		return VListItem(
 			web.Slot(
 				VIcon(mi.mb.menuIcon),
 			).Name("prepend"),
 			VListItemTitle(h.Text(title)),
 		).Attr("@click", web.Plaid().
-			EventFunc(actions.OpenListingDialog).
+			EventFunc(event).
 			Query(ParamTargetPortal, ctx.TempPortal).
+			Query(ParamOverlay, actions.Dialog).
 			URL(uri).
 			Go()).
 			Attr("@click.middle",

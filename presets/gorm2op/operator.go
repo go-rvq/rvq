@@ -21,7 +21,8 @@ var wildcardReg = regexp.MustCompile(`[%_]`)
 type (
 	Mode     uint8
 	Preparer func(db *gorm.DB, mode Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB
-	Deleter  func(db *gorm.DB, obj interface{}, id model.ID, ctx *web.EventContext) (err error)
+	Deleter  func(db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error)
+	Updator  func(db *gorm.DB, obj interface{}, id model.ID, ctx *web.EventContext) (err error)
 	Creator  func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (err error)
 	Finder   func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (result any, err error)
 )
@@ -37,6 +38,21 @@ const (
 	Read  = Search | Fetch
 	Write = Create | Update
 )
+
+type deleteAssocEntry struct {
+	db    *gorm.DB
+	query string
+	args  []interface{}
+}
+
+type deleteAssocStack struct {
+	entries []*deleteAssocEntry
+}
+
+func DBCascade(id model.ID, db *gorm.DB) *gorm.DB {
+
+	return nil
+}
 
 var Modes = []Mode{Search, Create, Fetch, FetchTitle, Update, Delete}
 
@@ -67,7 +83,13 @@ var defaultPreparer Preparer = func(db *gorm.DB, mode Mode, obj interface{}, id 
 }
 
 func DataOperator(db *gorm.DB) (r *DataOperatorBuilder) {
-	return NewCallbacks(&DataOperatorBuilder{db: db.Session(&gorm.Session{}), preparer: defaultPreparer})
+	db = db.Session(&gorm.Session{})
+	r = NewCallbacks(&DataOperatorBuilder{
+		db:       db,
+		preparer: defaultPreparer,
+	})
+	db.Callback().Delete()
+	return
 }
 
 type DataOperatorBuilder struct {
@@ -75,18 +97,18 @@ type DataOperatorBuilder struct {
 	preparer Preparer
 	deleter  Deleter
 	creator  Creator
-	updator  Deleter
+	updator  Updator
 	finder   Finder
 
 	CallbacksRegistrator[*DataOperatorBuilder]
 	callbackMergers []CallbackMerger
 }
 
-func (b *DataOperatorBuilder) Updator() Deleter {
+func (b *DataOperatorBuilder) Updator() Updator {
 	return b.updator
 }
 
-func (b *DataOperatorBuilder) SetUpdator(updator Deleter) *DataOperatorBuilder {
+func (b *DataOperatorBuilder) SetUpdator(updator Updator) *DataOperatorBuilder {
 	b.updator = updator
 	return b
 }
@@ -221,6 +243,12 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 				cdb = state.DB.Count(&c)
 			)
 
+			totalCount = int(c)
+
+			if params.MustCount {
+				return
+			}
+
 			if err = cdb.Error; err != nil {
 				state.DB = cdb
 				return
@@ -232,8 +260,6 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 				r = rv.Elem().Interface()
 				return
 			}
-
-			totalCount = int(c)
 
 			if params.PerPage > 0 {
 				db = db.Limit(int(params.PerPage))
@@ -269,13 +295,19 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 			} else {
 				r = reflect.ValueOf(obj).Elem().Interface()
 			}
+
 			return
 		}
 	)
 
 	state := b.NewCallbackState(db, obj, ctx)
 	state.SearchParams = params
-	err = b.GetCallbacks(Search, ctx).
+	cbs := b.GetCallbacks(Search, ctx)
+
+	for _, cbr := range GetContextCallbacks(params.Context) {
+		cbs.Merge(&cbr.search)
+	}
+	err = cbs.
 		Build(do).
 		Execute(state)
 	return
@@ -357,7 +389,7 @@ func (b *DataOperatorBuilder) Update(obj interface{}, id model.ID, ctx *web.Even
 	})
 }
 
-func (b *DataOperatorBuilder) Delete(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+func (b *DataOperatorBuilder) Delete(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 	return b.tx(func(b *DataOperatorBuilder) (err error) {
 		var (
 			db = b.Prepare(Delete, obj, id, nil, ctx)
@@ -367,7 +399,7 @@ func (b *DataOperatorBuilder) Delete(obj interface{}, id model.ID, ctx *web.Even
 		)
 		if b.deleter != nil {
 			do = func(state *CallbackState) error {
-				return b.deleter(state.DB, state.Obj, id, ctx)
+				return b.deleter(state.DB, state.Obj, id, cascade, ctx)
 			}
 		}
 

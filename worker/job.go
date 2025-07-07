@@ -21,6 +21,16 @@ import (
 
 //go:generate moq -pkg mock -out mock/qor_job.go . QorJobInterface
 
+type JobCronConfig struct {
+	Arg  interface{} `json:"arg"`
+	Spec string      `json:"spec"`
+	Once bool        `json:"once"`
+}
+
+func (c *JobCronConfig) Valid() bool {
+	return len(c.Spec) > 0
+}
+
 type JobBuilder struct {
 	b              *Builder
 	name           string
@@ -29,6 +39,9 @@ type JobBuilder struct {
 	h              JobHandler
 	contextHandler func(*web.EventContext) map[string]interface{} // optional
 	global         bool
+	system         bool
+	title          func(ctx *web.EventContext) string
+	cronConfig     JobCronConfig
 }
 
 func newJob(b *Builder, name string) *JobBuilder {
@@ -46,10 +59,42 @@ func newJob(b *Builder, name string) *JobBuilder {
 	}
 }
 
+func (jb *JobBuilder) Title(f func(ctx *web.EventContext) string) *JobBuilder {
+	jb.title = f
+	return jb
+}
+
+func (jb *JobBuilder) GetTitle(ctx *web.EventContext) (t string) {
+	if jb.title != nil {
+		t = jb.title(ctx)
+	} else {
+		t = getTJob(ctx.Context(), jb.name)
+	}
+	return
+}
+
+func (jb *JobBuilder) System(v bool) *JobBuilder {
+	jb.system = v
+	return jb
+}
+
+func (jb *JobBuilder) IsSystem() bool {
+	return jb.system
+}
+
+func (jb *JobBuilder) CronConfig(config JobCronConfig) *JobBuilder {
+	jb.cronConfig = config
+	return jb
+}
+
+func (jb *JobBuilder) GetCronConfig() JobCronConfig {
+	return jb.cronConfig
+}
+
 type JobHandler func(context.Context, QorJobInterface) error
 
 // r should be ptr to struct
-func (jb *JobBuilder) Resource(r interface{}) *JobBuilder {
+func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilder)) *JobBuilder {
 	{
 		v := reflect.TypeOf(r)
 		if v.Kind() != reflect.Ptr {
@@ -65,7 +110,7 @@ func (jb *JobBuilder) Resource(r interface{}) *JobBuilder {
 
 	if _, ok := r.(Scheduler); ok {
 		jb.rmb.Editing().Field("ScheduleTime").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nWorkerKey, Messages_en_US).(*Messages)
+			msgr := i18n.MustGetModuleMessages(ctx.Context(), MessagesKey, Messages_en_US).(*Messages)
 			t := field.Obj.(Scheduler).GetScheduleTime()
 			var v string
 			if t != nil {
@@ -89,6 +134,10 @@ func (jb *JobBuilder) Resource(r interface{}) *JobBuilder {
 			obj.(Scheduler).SetScheduleTime(&t)
 			return nil
 		})
+	}
+
+	for _, f := range do {
+		f(jb.rmb)
 	}
 	return jb
 }
@@ -117,7 +166,7 @@ func (jb *JobBuilder) newResourceObject() interface{} {
 func (jb *JobBuilder) unmarshalForm(ctx *web.EventContext) (args interface{}, vErr web.ValidationErrors) {
 	args = jb.newResourceObject()
 	if args != nil {
-		vErr = jb.rmb.Editing().RunSetterFunc(ctx, false, args)
+		vErr = jb.rmb.Editing().RunSetterFunc(nil, ctx, false, args)
 	}
 
 	return args, vErr
@@ -168,6 +217,7 @@ func (jb *JobBuilder) newJobInstance(
 	r *http.Request,
 	qorJobID uint,
 	qorJobName string,
+	once bool,
 	args interface{},
 	context interface{},
 ) (*QorJobInstance, error) {
@@ -199,6 +249,7 @@ func (jb *JobBuilder) newJobInstance(
 		Context:  ctx,
 		Job:      qorJobName,
 		Status:   JobStatusNew,
+		Once:     once,
 	}
 	if jb.b.getCurrentUserIDFunc != nil {
 		inst.Operator = jb.b.getCurrentUserIDFunc(r)

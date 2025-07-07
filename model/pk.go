@@ -68,15 +68,10 @@ func (id ID) SetTo(obj interface{}) {
 			field.Set(reflect.New(field.Type().Elem()))
 			field = field.Elem()
 			if value.Kind() == reflect.Ptr {
-				if !value.IsNil() {
-					field.Set(value.Elem().Convert(field.Type()))
-				}
-			} else {
-				field.Set(value.Elem().Convert(field.Type()))
+				value = value.Elem()
 			}
-		} else {
-			field.Set(value.Convert(field.Type()))
 		}
+		field.Set(value.Convert(field.Type()))
 	}
 }
 
@@ -157,4 +152,12 @@ func (s IDSlice) Values() (values [][]any) {
 		values[i] = id.Values
 	}
 	return
+}
+
+func (s IDSlice) String() string {
+	var str = make([]string, len(s))
+	for i, id := range s {
+		str[i] = id.String()
+	}
+	return strings.Join(str, ",")
 }

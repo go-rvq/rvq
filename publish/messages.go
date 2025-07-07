@@ -44,6 +44,10 @@ type Messages struct {
 	SwitchedToNewVersion                    string
 	SuccessfullyCreated                     string
 	SuccessfullyRename                      string
+	SuccessfullyPublished                   string
+	SuccessfullyPublishedOrRepublished      string
+	SuccessfullyUnpublished                 string
+	SuccessfullyRepublished                 string
 	OnlineVersion                           string
 	VersionsList                            string
 	AllVersions                             string
@@ -152,6 +156,10 @@ var Messages_en_US = &Messages{
 	SwitchedToNewVersion:                    "Switched To New Version",
 	SuccessfullyCreated:                     "Successfully Created",
 	SuccessfullyRename:                      "Successfully Rename",
+	SuccessfullyPublished:                   "Successfully published",
+	SuccessfullyPublishedOrRepublished:      "Successfully published or republished",
+	SuccessfullyUnpublished:                 "Successfully unpublished",
+	SuccessfullyRepublished:                 "Successfully republished",
 	OnlineVersion:                           "Online Version",
 	VersionsList:                            "Versions List",
 	AllVersions:                             "All versions",
@@ -160,13 +168,12 @@ var Messages_en_US = &Messages{
 	DeleteVersionConfirmationTextTemplate:   "Are you sure you want to delete version {VersionName} ?",
 	BulkActionConfirmationTextTemplate:      "Are you sure you want to <b>{Action}</b> below records?",
 	BulkActionNoRecordsTextTemplate:         "No records to <b>{Action}</b>.",
-
-	FilterTabAllVersions:   "All Versions",
-	FilterTabOnlineVersion: "Online Versions",
-	FilterTabNamedVersions: "Named Versions",
-	Rename:                 "Rename",
-	PageOverView:           "Page Overview",
-	Duplicate:              "Duplicate",
+	FilterTabAllVersions:                    "All Versions",
+	FilterTabOnlineVersion:                  "Online Versions",
+	FilterTabNamedVersions:                  "Named Versions",
+	Rename:                                  "Rename",
+	PageOverView:                            "Page Overview",
+	Duplicate:                               "Duplicate",
 }
 
 var DefaultMessages = Messages_en_US

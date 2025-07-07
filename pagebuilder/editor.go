@@ -87,7 +87,7 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 					Query(presets.ParamID, arr[1]).
 					Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 					Query(presets.ParamOverlay, actions.Content).Go()
-				editContainerDrawer = web.RunScript(fmt.Sprintf(`function(){%s}`, editEvent))
+				editContainerDrawer = web.RunScript(editEvent)
 			}
 
 		}
@@ -99,9 +99,10 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 			ctx.R.Form.Set(paramStatus, p.EmbedStatus().Status)
 		}
 		versionComponent = publish.DefaultVersionComponentFunc(m.editor, publish.VersionComponentConfig{Top: true})(&presets.FieldContext{
-			Obj:          obj,
-			EventContext: ctx,
-			ModelInfo:    m.editor.Info(),
+			ToComponentOptions: &presets.ToComponentOptions{},
+			Obj:                obj,
+			EventContext:       ctx,
+			ModelInfo:          m.editor.Info(),
 		}, ctx)
 		exitHref = m.mb.Info().DetailingHref(ctx.Param(presets.ParamID))
 		pageAppbarContent = h.Components(

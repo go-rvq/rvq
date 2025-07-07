@@ -223,7 +223,7 @@ func (b *EditingBuilder) EditingTitleFunc(v EditingTitleComponentFunc) (r *Editi
 	return b
 }
 
-func (b *EditingBuilder) FetchAndUnmarshal(id ID, removeDeletedAndSort bool, ctx *web.EventContext) (obj interface{}, vErr web.ValidationErrors) {
+func (b *EditingBuilder) FetchAndUnmarshal(opts *FieldsSetterOptions, id ID, removeDeletedAndSort bool, ctx *web.EventContext) (obj interface{}, vErr web.ValidationErrors) {
 	obj = b.mb.NewModel()
 	if !id.IsZero() || b.mb.singleton {
 		err1 := b.Fetcher(obj, id, ctx)
@@ -236,16 +236,16 @@ func (b *EditingBuilder) FetchAndUnmarshal(id ID, removeDeletedAndSort bool, ctx
 		}
 	}
 
-	vErr = b.RunSetterFunc(ctx, removeDeletedAndSort, obj)
+	vErr = b.RunSetterFunc(opts, ctx, removeDeletedAndSort, obj)
 	return
 }
 
-func (b *EditingBuilder) RunSetterFunc(ctx *web.EventContext, removeDeletedAndSort bool, toObj interface{}) (vErr web.ValidationErrors) {
+func (b *EditingBuilder) RunSetterFunc(opts *FieldsSetterOptions, ctx *web.EventContext, removeDeletedAndSort bool, toObj interface{}) (vErr web.ValidationErrors) {
 	if b.Setter != nil {
 		b.Setter(toObj, ctx)
 	}
 
-	vErr = b.Unmarshal(toObj, b.mb.Info(), removeDeletedAndSort, ctx)
+	vErr = b.Unmarshal(opts, toObj, b.mb.Info(), removeDeletedAndSort, ctx)
 
 	if b.PostSetter != nil {
 		b.PostSetter(toObj, ctx)
@@ -264,7 +264,7 @@ func (b *EditingBuilder) PostComponent(f ModeObjectComponentFunc) *EditingBuilde
 	return b
 }
 
-func (b *EditingBuilder) ToComponent(obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
+func (b *EditingBuilder) ToComponent(opts *ToComponentOptions, obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
 	var (
 		comp h.HTMLComponents
 		add  = func(c h.HTMLComponent) {
@@ -280,7 +280,7 @@ func (b *EditingBuilder) ToComponent(obj interface{}, mode FieldModeStack, ctx *
 		add(f(mode, obj, ctx))
 	}
 
-	add(b.FieldsBuilder.ToComponent(b.mb.Info(), obj, mode, ctx))
+	add(b.FieldsBuilder.ToComponent(opts, b.mb.Info(), obj, mode, ctx))
 
 	for _, f := range b.postComponents {
 		add(f(mode, obj, ctx))
@@ -316,33 +316,56 @@ func (b *EditingBuilder) UpdateOverlayContent(
 }
 
 func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	var obj = b.mb.NewModel()
-	var mid ID
-	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+	return b.DefaultPageFuncMode(false, ctx)
+}
+
+func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContext) (r web.PageResponse, err error) {
+	if b.mb.editingDisabled {
+		err = ErrUpdateRecordNotAllowed
 		return
 	}
-	if !mid.IsZero() || b.mb.singleton {
-		if err = b.Fetcher(obj, mid, ctx); err != nil {
-			if err == ErrRecordNotFound {
-				if b.mb.singleton {
-					err = nil
-				} else {
-					return b.mb.p.DefaultNotFoundPageFunc(ctx)
-				}
-			} else {
+
+	var (
+		msgr = MustGetMessages(ctx.Context())
+		obj  = b.mb.NewModel()
+		mid  ID
+	)
+
+	if creating {
+		if b.mb.permissioner.Creator(ctx.R, ParentsModelID(ctx.R)...).Denied() {
+			r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
+			return
+		}
+		r.PageTitle = msgr.CreatingObjectTitle(inflection.Singular(b.mb.label), b.mb.female)
+	} else {
+		if !b.mb.singleton {
+			if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
 				return
 			}
 		}
-	} else {
-		return b.mb.p.DefaultNotFoundPageFunc(ctx)
-	}
 
-	msgr := MustGetMessages(ctx.Context())
-	r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
+		if b.mb.permissioner.Updater(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+			r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
+			return
+		}
 
-	if b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
-		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
-		return
+		if !mid.IsZero() || b.mb.singleton {
+			if err = b.Fetcher(obj, mid, ctx); err != nil {
+				if err == ErrRecordNotFound {
+					if b.mb.singleton {
+						err = nil
+					} else {
+						return b.mb.p.DefaultNotFoundPageFunc(ctx)
+					}
+				} else {
+					return
+				}
+			}
+		} else {
+			return b.mb.p.DefaultNotFoundPageFunc(ctx)
+		}
+
+		r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 	}
 
 	portalName := actions.Edit
@@ -356,10 +379,14 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 
 	// set portal to edit btn
 	ctx.R.Form.Set(ParamTargetPortal, portalName)
-	EditFormUnscoped(ctx, true)
+
+	if !creating {
+		EditFormUnscoped(ctx, true)
+	}
 
 	f := b.form(obj, ctx)
 	comp := f.Component()
+	r.PageTitle = f.Title
 
 	r.Body = VContainer(web.Portal(comp).
 		Name(portalName)).Fluid(true)

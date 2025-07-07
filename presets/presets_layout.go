@@ -1,10 +1,14 @@
 package presets
 
 import (
+	"path"
+
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/x/v3/i18n"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -17,33 +21,28 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			titleDisabled      bool
 			breadCrumbDisabled bool
 			innerPr            web.PageResponse
-
-			menu    = b.CreateMenus(ctx)
-			toolbar = VContainer(
-				VRow(
-					VCol(b.RunBrandFunc(ctx)).Cols(8),
-					VCol(
-						b.RunSwitchLanguageFunc(ctx),
-						// VBtn("").Children(
-						//	languageSwitchIcon,
-						//	VIcon("mdi-menu-down"),
-						// ).Attr("variant", "plain").
-						//	Attr("icon", ""),
-					).Cols(2),
-
-					VCol(
-						VAppBarNavIcon().Attr("icon", "mdi-menu").
-							Class("text-grey-darken-1").
-							Attr("@click", "vars.navDrawer = !vars.navDrawer").Density(DensityCompact),
-					).Cols(2),
-				).Attr("align", "center").Attr("justify", "center"),
-			)
 		)
 
 		innerPr, err = in(ctx)
-		if ctx.W.Writed() {
-			return
+
+		if ctx.W.Writed() || innerPr.RedirectURL != "" {
+			return innerPr, nil
 		}
+
+		// b.RunSwitchLanguageFunc(ctx)
+
+		toolbar := h.Div(
+			b.RunBrandFunc(ctx),
+			h.Div(
+				VBtn("").
+					Icon("mdi-menu").
+					Density(DensityCompact).
+					Variant(VariantText).
+					Attr("@click", "vars.navDrawer = !vars.navDrawer").Density(DensityCompact),
+			).Class(H75),
+		).Class("d-flex ga-1 v-card-text")
+
+		menu := b.CreateMenus(ctx)
 		if err != nil {
 			title := MustGetMessages(ctx.Context()).Error
 			innerPr.PageTitle = title
@@ -55,9 +54,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 
 		var profile h.HTMLComponent
 		if b.profileFunc != nil {
-			profile = VAppBar(
-				b.profileFunc(ctx),
-			).Location("bottom").Class("border-t-sm border-b-0").Elevation(0)
+			profile = b.profileFunc(ctx)
 		}
 
 		// showNotificationCenter := cfg == nil || !cfg.NotificationCenterInvisible
@@ -72,6 +69,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		// _ := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
 
 		pr.PageTitle = innerPr.PageTitle
+		pr.Actions = innerPr.Actions
+		pr.Menu = innerPr.Menu
 
 		var breadcrumbs []h.HTMLComponent
 
@@ -82,13 +81,19 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 					Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
 					URI:   b.prefix + "/",
 				}
-				if pr.PageTitle != home.Label {
+				if path.Clean(ctx.R.URL.Path) != path.Clean(home.URI) {
 					msgr := MustGetMessages(ctx.Context())
 					bc.Prepend(home)
 					bc.Append(&Breadcrumb{Label: pr.PageTitle})
 					breadcrumbs = append(breadcrumbs, bc.Component(msgr.YouAreHere))
 				}
 			}
+		}
+
+		var flash h.HTMLComponent
+		if ctx.Flash != nil {
+			flash = RenderFlash(ctx.Flash)
+			ctx.Flash = nil
 		}
 
 		portals := append(GetPortals(ctx),
@@ -102,12 +107,12 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			web.Portal().Name(DeleteConfirmPortalName),
 			web.Portal().Name(DefaultConfirmDialogPortalName),
 			web.Portal().Name(ListingDialogPortalName),
-			web.Portal().Name(FlashPortalName),
+			web.Portal(flash).Name(FlashPortalName),
 		)
 
 		var menuCloser h.HTMLComponent
 
-		if menu := GetMenuComponent(ctx); menu != nil {
+		if menu := append(pr.Menu, GetMenuComponent(ctx)...); len(menu) > 0 {
 			menuCloser = VBtn("").
 				Variant(VariantFlat).
 				Icon(true).
@@ -117,12 +122,14 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				).Attr("@click.menu", "vars.contentPageMenu = !vars.contentPageMenu")
 
 			innerPr.Body = h.HTMLComponents{
-				VNavigationDrawer(menu).
+				vx.VXNavigationDrawer(menu).
 					// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
 					Attr("v-model", "vars.contentPageMenu").
 					Location(LocationRight).
-					// Fixed(true).
-					Attr(":height", `"100%"`),
+					Temporary(true).
+					Density(DensityCompact).
+					VariantMenu(),
+				// Fixed(true).
 				innerPr.Body,
 			}
 		}
@@ -139,6 +146,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		}
 
 		msg := MustGetMessages(ctx.Context())
+		actions := h.SimplifyItems(append(pr.Actions, GetActionsComponent(ctx)...))
+
+		hasHeader := (!titleDisabled && innerPr.PageTitle != "") || len(actions) > 0 || menuCloser != nil
 
 		pr.Body = VApp(
 			portals,
@@ -154,77 +164,72 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Attr("color", "info").
 				Location(LocationTop),
 
-			h.Template(
-				VSnackbar(
-					h.Text("{{vars.presetsMessage.message}}"),
-					web.Slot(
-						VBtn("").
-							Icon("mdi-close").
-							Attr("@click", `vars.presetsMessage.show = false`),
-					).Name("actions"),
-				).
-					Attr("v-model", "vars.presetsMessage.show").
-					Attr(":color", "vars.presetsMessage.color").
-					Timeout(3000).
-					Location(LocationTop),
-			).Attr("v-if", "vars.presetsMessage"),
+			VSnackbar(
+				h.Text("{{vars.presetsMessage.message||''}}"),
+				h.Div().Attr("v-if", "vars.presetsMessage.htmlMessage").Attr("v-html", "vars.presetsMessage.htmlMessage"),
+				web.Slot(
+					VBtn("").
+						Icon("mdi-close").
+						Attr("@click", `vars.presetsMessage.show = false`),
+				).Name("actions"),
+			).
+				ZIndex(1000000).
+				Attr("v-model", "vars.presetsMessage.show").
+				Attr(":color", "vars.presetsMessage.color").
+				Attr("v-if", "vars.presetsMessage").
+				Timeout(3000).
+				Location(LocationTop),
 
-			VNavigationDrawer(
+			vx.VXNavigationDrawer(
 				// b.RunBrandProfileSwitchLanguageDisplayFunc(b.RunBrandFunc(ctx), profile, b.RunSwitchLanguageFunc(ctx), ctx),
 				// b.RunBrandFunc(ctx),
 				// profile,
-				VLayout(
-					VMain(
-						toolbar,
-						VCard(
-							menu,
-						).Variant(VariantText),
-					),
-					// VDivider(),
-					profile,
-				).Class("ma-2 border-sm rounded-lg elevation-0"),
+				menu,
 				// ).Class("ma-2").
 				// 	Style("height: calc(100% - 20px); border: 1px solid grey"),
 			).
-				Width(320).
-				// App(true).
-				// Clipped(true).
-				// Fixed(true).
+				SlotTop(toolbar).
+				SlotBottom(profile).
+				Width("320").
 				Attr("v-model", "vars.navDrawer").
-				// Attr("style", "border-right: 1px solid grey ").
-				Permanent(true).
-				Floating(true).
-				Elevation(0),
-
+				VariantMenu().
+				ContainerProps(`{permanent:true, floating:true, elevation:0, class:"border-e"}`),
 			VMain(
-				scoped(VAppBar(
-					h.Div(
-						VProgressLinear().
-							Attr(":active", "isFetching").
-							Class("ml-4").
-							Attr("style", "position: fixed; z-index: 99;").
-							Indeterminate(true).
-							Height(2).
-							Color(b.progressBarColor),
-						VAppBarNavIcon().
-							Density("compact").
-							Class("mr-2").
-							Attr("v-if", "!vars.navDrawer").
-							On("click.stop", "vars.navDrawer = !vars.navDrawer"),
+				scoped(
+					h.If(hasHeader,
+						VAppBar(
+							h.Div(
+								VProgressLinear().
+									Attr(":active", "isFetching").
+									Class("ml-4").
+									Attr("style", "position: fixed; z-index: 99;").
+									Indeterminate(true).
+									Height(2).
+									Color(b.progressBarColor),
+								VAppBarNavIcon().
+									Density("compact").
+									Class("mr-2").
+									Attr("v-if", "!vars.navDrawer").
+									On("click.stop", "vars.navDrawer = !vars.navDrawer"),
 
-						h.If(!titleDisabled, h.Div(
-							VToolbarTitle(innerPr.PageTitle), // Class("text-h6 font-weight-regular"),
-						).Class("mr-auto")),
-						GetActionsComponent(ctx),
-						menuCloser,
-					).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
-				).
-					Elevation(0),
+								h.If(!titleDisabled && innerPr.PageTitle != "", h.Div(
+									VToolbarTitle(innerPr.PageTitle), // Class("text-h6 font-weight-regular"),
+								).Class("mr-auto")),
+								actions,
+								menuCloser,
+							).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
+						).Elevation(0),
+					),
 					h.If(len(breadcrumbs) > 0, VContainer(breadcrumbs...).Fluid(true).Style("padding-top:0;padding-bottom:0")),
-					innerPr.Body),
+					innerPr.Body,
+				),
 			).Class("v-main__page_content"),
-		).Attr("id", "vt-app").
-			Attr(web.VAssign("vars", `{
+		).Attr("id", "vt-app")
+
+		pr.Body = innerPr.Wrapers.Wrap(pr.Body)
+
+		pr.Body = vue.UserComponent(pr.Body).
+			AssignMany("vars", `{
 presetsRightDrawer: false, 
 presetsLeftDrawer: false,
 presetsTopDrawer: false,
@@ -235,7 +240,7 @@ presetsDialog: false,
 presetsListingDialog: false,
 navDrawer: true,
 contentPageMenu: false
-}`)...)
+}`)
 
 		return
 	}

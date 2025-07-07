@@ -73,13 +73,22 @@ func (b *FieldContextBuilder) Index(index int) *FieldContextBuilder {
 }
 
 func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
-	keyPath := b.field.name
-	if b.parent != nil && b.parent.FormKey != "" {
-		keyPath = fmt.Sprintf("%s.%s", b.parent.FormKey, keyPath)
+	var (
+		keyPath = b.field.name
+		path    FieldPath
+	)
+	if b.parent != nil {
+		if b.parent.FormKey != "" {
+			keyPath = fmt.Sprintf("%s.%s", b.parent.FormKey, keyPath)
+		}
+		path = b.parent.Path
 	}
 
+	path.Append(b.field.name)
+
 	if b.slice {
-		keyPath = fmt.Sprintf("%s[%d]", keyPath, b.index-1)
+		keyPath = fmt.Sprintf("%s[%d]", keyPath, b.index)
+		path.AppendIndex(b.index)
 	}
 
 	var (
@@ -90,24 +99,26 @@ func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 	if !finfo.Hidden && !finfo.HiddenLabel && !b.field.hiddenLabel {
 		label = finfo.Label
 		if label == "" {
-			label = b.field.ContextLabel(b.info, b.ctx)
+			label = b.field.ContextLabel(b.info, b.ctx.Context())
 		}
 	}
 
 	fctx = &FieldContext{
-		Parent:       b.parent,
-		ModelInfo:    b.info,
-		Obj:          b.obj,
-		Field:        b.field,
-		EventContext: b.ctx,
-		FormKey:      keyPath,
-		Name:         b.field.name,
-		Label:        label,
+		ToComponentOptions: &ToComponentOptions{},
+		Parent:             b.parent,
+		ModelInfo:          b.info,
+		Obj:                b.obj,
+		Field:              b.field,
+		EventContext:       b.ctx,
+		FormKey:            keyPath,
+		Path:               path,
+		Name:               b.field.name,
+		Label:              label,
 		Hint: func() string {
 			if finfo.Hint != "" {
 				return finfo.Hint
 			}
-			return b.field.ContextHint(b.info, b.ctx)
+			return b.field.ContextHint(b.info, b.ctx.Context())
 		},
 		Nested:  b.field.nested,
 		Context: b.field.context,

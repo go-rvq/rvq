@@ -20,11 +20,13 @@ const (
 	ctxScope
 	ctxEditFormUnscoped
 	ctxFlashMessages
-	ctxActionFormObject
+	ctxActionFormContext
+	ctxBulkActionFormContext
 	CtxRespondDialogHandlers
 	ctxFieldLabels
 	CtxSaveContext
 	ParentsModelIDKey
+	CtxEventHandlerWrapperNoFlash
 )
 
 func IsInDialog(ctx *web.EventContext) bool {
@@ -39,9 +41,17 @@ func OverlayMode(ctx *web.EventContext) actions.OverlayMode {
 	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
 }
 
+func WithActionsComponent(ctx *web.EventContext, comp ...h.HTMLComponent) {
+	ctx.WithContextValue(CtxActionsComponent, h.HTMLComponents(comp))
+}
+
 func GetActionsComponent(ctx *web.EventContext) h.HTMLComponents {
 	v, _ := ctx.ContextValue(CtxActionsComponent).(h.HTMLComponents)
 	return v
+}
+
+func WithMenuComponent(ctx *web.EventContext, comp ...h.HTMLComponent) {
+	ctx.WithContextValue(CtxMenuComponent, h.HTMLComponents(comp))
 }
 
 func GetMenuComponent(ctx *web.EventContext) h.HTMLComponents {
@@ -133,4 +143,26 @@ func GetFieldLabels(ctx web.ContextValuer, fb *FieldsBuilder) map[string]string 
 func GetSaveContext(ctx *web.EventContext) (v context.Context) {
 	v, _ = ctx.ContextValue(CtxSaveContext).(context.Context)
 	return
+}
+
+func GetActionFormContext[T any](ctx web.ContextValuer) *ActionFormContext[T] {
+	v, _ := ctx.ContextValue(ctxActionFormContext).(*ActionFormContext[T])
+	return v
+}
+
+func WithActionFormContext[T any](ctx web.ContextValuer, v *ActionFormContext[T]) {
+	ctx.WithContextValue(ctxActionFormContext, v)
+}
+
+func GetBulkActionFormContext[T any](ctx web.ContextValuer) *BulkActionFormContext[T] {
+	v, _ := ctx.ContextValue(ctxBulkActionFormContext).(*BulkActionFormContext[T])
+	return v
+}
+
+func WithBulkActionFormContext[T any](ctx web.ContextValuer, v *BulkActionFormContext[T]) {
+	ctx.WithContextValue(ctxBulkActionFormContext, v)
+}
+
+func WithEventHandlerWrapperNoFlash(ctx *web.EventContext) {
+	ctx.WithContextValue(CtxEventHandlerWrapperNoFlash, true)
 }

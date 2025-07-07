@@ -217,7 +217,19 @@ func publishAction(mb *presets.ModelBuilder, publisher *Builder, actionName stri
 		if script := ctx.R.FormValue(ParamScriptAfterPublish); script != "" {
 			web.AppendRunScripts(&r, script)
 		} else {
-			presets.ShowMessage(&r, "success", "")
+			var (
+				msgr = GetMessages(ctx.Context())
+				msg  = msgr.SuccessfullyPublished
+			)
+
+			switch actionName {
+			case ActivityPublishOrRepublish:
+				msg = msgr.SuccessfullyPublishedOrRepublished
+			case ActivityRepublish:
+				msg = msgr.SuccessfullyRepublished
+			}
+
+			presets.ShowMessage(&r, msg, "")
 			r.Reload = true
 		}
 		return
@@ -234,7 +246,7 @@ func unpublishAction(mb *presets.ModelBuilder, publisher *Builder, actionName st
 		if _, err = UnPublish.Execute(mb, publisher, actionName, ctx, mid); err != nil {
 			return
 		}
-		presets.ShowMessage(&r, "success", "")
+		presets.ShowMessage(&r, GetMessages(ctx.Context()).SuccessfullyUnpublished, "")
 		r.Reload = true
 		return
 	}

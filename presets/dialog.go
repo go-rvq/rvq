@@ -5,6 +5,7 @@ import (
 	"github.com/qor5/web/v3"
 	. "github.com/qor5/web/v3/tag"
 	v "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -80,7 +81,7 @@ func (p *DialogBuilder) SetTargetPortal(portalName string) *DialogBuilder {
 	return p
 }
 
-func (p *DialogBuilder) SetValidPortalName(portalName string) *DialogBuilder {
+func (p *DialogBuilder) SetValidTargetPortalName(portalName string) *DialogBuilder {
 	if portalName != "" {
 		p.targetPortal = portalName
 	}
@@ -164,10 +165,21 @@ func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 }
 
 func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent) {
-	for _, f := range GetRespondDialogHandlers(ctx) {
-		f(p)
+	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
+		ac.SetVModel("closer.show")
+		if acd, ok := ac.(vx.VXAdvancedExpandCloseCardTagger); ok {
+			acd.SetDialogOrDrawer(true)
+			if p.width != "" {
+				acd.SetWidth(p.width)
+			}
+		}
+	} else {
+		for _, f := range GetRespondDialogHandlers(ctx) {
+			f(p)
+		}
+		comp = p.Component(comp)
 	}
-	r.UpdatePortal(p.targetPortal, p.Component(comp))
+	r.UpdatePortal(p.targetPortal, web.CloserScope(comp, true))
 }
 
 func (b *Builder) dialog(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {
@@ -178,13 +190,24 @@ func (b *Builder) dialog(ctx *web.EventContext, r *web.EventResponse, comp h.HTM
 	p.Respond(ctx, r, comp)
 }
 
-func (b *Builder) Dialog() *DialogBuilder {
+func (b *Builder) Dialog(width ...string) *DialogBuilder {
+	w := b.rightDrawerWidth
+	if len(width) > 0 && width[0] != "" {
+		w = width[0]
+	}
 	return Dialog(actions.Dialog.PortalName()).
 		SetContentPortalName(actions.Dialog.ContentPortalName()).
-		SetValidWidth(b.rightDrawerWidth)
+		SetValidWidth(w)
 }
 
-func (b *Builder) DialogPortal(portal string) *DialogBuilder {
-	return Dialog(portal).
-		SetValidWidth(b.rightDrawerWidth)
+func (b *Builder) DialogPortal(portal string, width ...string) *DialogBuilder {
+	w := b.rightDrawerWidth
+	if len(width) > 0 && width[0] != "" {
+		w = width[0]
+	}
+	if portal != "" {
+		return Dialog(portal).
+			SetValidWidth(w)
+	}
+	return b.Dialog(b.rightDrawerWidth).SetValidWidth(w)
 }

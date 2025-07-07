@@ -144,7 +144,7 @@ func (ba *BulkAction) Build() *presets.BulkActionBuilder {
 	l := ba.m.Listing()
 	b := l.BulkAction("Publisher")
 	return b.
-		ButtonCompFunc(func(ctx *web.EventContext) h.HTMLComponent {
+		ButtonCompFunc(func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 			var (
 				msgr = GetMessages(ctx.Context())
 				item = func(e Executor) h.HTMLComponent {
@@ -194,7 +194,7 @@ func (ba *BulkAction) Build() *presets.BulkActionBuilder {
 			}
 			return ba.component(e, selectedIds, ctx)
 		}).
-		UpdateFunc(func(selectedIds []string, ctx *web.EventContext) (err error) {
+		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 			var e Executor
 			if e, err = getExecutor(ctx); err != nil {
 				return

@@ -5,9 +5,20 @@ import (
 
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/x/v3/i18n"
+	"golang.org/x/text/language"
 )
 
-const I18nWorkerKey i18n.ModuleKey = "I18nWorkerKey"
+const MessagesKey i18n.ModuleKey = "presets/admin/i18n"
+
+func ConfigureMessages(b *i18n.Builder) {
+	b.RegisterForModules(language.English, MessagesKey, Messages_pt_BR).
+		RegisterForModules(language.SimplifiedChinese, MessagesKey, Messages_zh_CN).
+		RegisterForModules(language.BrazilianPortuguese, MessagesKey, Messages_pt_BR)
+}
+
+func GetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, MessagesKey, Messages_en_US).(*Messages)
+}
 
 type Messages struct {
 	StatusNew                string
@@ -36,6 +47,8 @@ type Messages struct {
 	PleaseSelectJob          string
 	QorJobs                  string
 	QorJob                   string
+	WorkersJob               string
+	ErrJobRunsOnce           i18n.ErrorString
 }
 
 var Messages_en_US = &Messages{
@@ -65,6 +78,8 @@ var Messages_en_US = &Messages{
 	PleaseSelectJob:          "Please select job",
 	QorJobs:                  "Jobs",
 	QorJob:                   "Job",
+	WorkersJob:               "Job",
+	ErrJobRunsOnce:           "This job runs once",
 }
 
 var Messages_zh_CN = &Messages{
@@ -92,24 +107,56 @@ var Messages_zh_CN = &Messages{
 	DateTimePickerClearText:  "清空",
 	DateTimePickerOkText:     "确定",
 	PleaseSelectJob:          "请选择Job",
+	ErrJobRunsOnce:           "这个工作一次",
 }
 
-func getTStatus(msgr *Messages, status string) string {
+var Messages_pt_BR = &Messages{
+	StatusNew:                "Novas",
+	StatusScheduled:          "Agendada",
+	StatusRunning:            "Executando",
+	StatusCancelled:          "Cancelada",
+	StatusDone:               "Concluída",
+	StatusException:          "Exception",
+	StatusKilled:             "Morta",
+	FilterTabAll:             "Todas",
+	FilterTabRunning:         "Executando",
+	FilterTabScheduled:       "Agendadas",
+	FilterTabDone:            "Encerradas",
+	FilterTabErrors:          "Com Erros",
+	ActionCancelJob:          "Cancelar Tarefa",
+	ActionAbortJob:           "Abortar Tarefa",
+	ActionUpdateJob:          "Atualizar Tarefa",
+	ActionRerunJob:           "Executar Novamente",
+	DetailTitleStatus:        "Situação",
+	DetailTitleLog:           "Registro",
+	NoticeJobCannotBeAborted: "Esta tarefa não pode ser abortada/cancelada/atualizada devido à mudança de status",
+	NoticeJobWontBeExecuted:  "Esta tarefa não será executada porque o código foi excluído/modificado",
+	ScheduleTime:             "Horário de Agendamento",
+	DateTimePickerClearText:  "Limpar",
+	DateTimePickerOkText:     "OK",
+	PleaseSelectJob:          "Por favor selecione uma tarefa",
+	QorJobs:                  "Processos de Sistema",
+	QorJob:                   "Processo de Sistema",
+	WorkersJob:               "Tarefa",
+	ErrJobRunsOnce:           "Esta tarefa só pode ser executada uma única vez",
+}
+
+func (m *Messages) GetStatus(status string) string {
 	switch status {
 	case JobStatusNew:
-		return msgr.StatusNew
+		return m.StatusNew
 	case JobStatusScheduled:
-		return msgr.StatusScheduled
+		return m.StatusScheduled
 	case JobStatusRunning:
-		return msgr.StatusRunning
+		return m.StatusRunning
 	case JobStatusCancelled:
-		return msgr.StatusCancelled
+		return m.StatusCancelled
 	case JobStatusDone:
-		return msgr.StatusDone
+		return m.StatusDone
 	case JobStatusException:
-		return msgr.StatusException
+		return m.StatusException
 	case JobStatusKilled:
-		return msgr.StatusKilled
+		return m.StatusKilled
 	}
 	return status
 }

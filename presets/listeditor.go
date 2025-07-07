@@ -9,6 +9,7 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/zeroer"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
@@ -87,19 +88,29 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 	var form h.HTMLComponent
 	if b.value != nil {
 		form = b.fieldContext.Nested.FieldsBuilder().
-			ToComponentForEach(b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+			ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+				if zeroer.IsNil(obj) {
+					return nil
+				}
 				return VCard(
 					h.If(!b.fieldContext.ReadOnly,
-						VBtn("").Icon("mdi-delete").Class("float-right ma-2").
-							Attr("@click", web.Plaid().
-								URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
-								EventFunc(b.removeListItemRowEvent).
-								Queries(ctx.Queries()).
-								Query(ParamRemoveRowFormKey, formKey).
-								Go()),
+						VToolbar(
+							web.Slot(VBtn("").
+								Color("error").
+								Variant(VariantText).
+								Density(DensityCompact).
+								Icon("mdi-delete").
+								Attr("@click", web.Plaid().
+									URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
+									EventFunc(b.removeListItemRowEvent).
+									Queries(ctx.Queries()).
+									Query(ParamRemoveRowFormKey, formKey).
+									Go()),
+							).Name("append"),
+						).Density(DensityCompact).AutoHeight(true),
 					),
-					content,
-				).Class("mx-0 mb-2 px-4 pb-0 pt-4").Variant(VariantOutlined)
+					VCardText(content),
+				).Variant(VariantOutlined)
 			})
 	}
 
@@ -150,7 +161,9 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 					VSpacer(),
 					h.If(haveSorterIcon,
 						h.If(!isSortStart,
-							VBtn("").Icon("mdi-sort-variant").
+							VBtn("").
+								Variant(VariantText).
+								Icon("mdi-sort-variant").
 								Class("mt-n4").
 								Attr("@click",
 									web.Plaid().
@@ -164,7 +177,9 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 										Go(),
 								),
 						).Else(
-							VBtn("").Icon("mdi-check").
+							VBtn("").
+								Variant(VariantText).
+								Icon("mdi-check").
 								Class("mt-n4").
 								Attr("@click",
 									web.Plaid().
@@ -193,9 +208,6 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 							EventFunc(b.addListItemRowEvent).
 							Queries(web.Query(ctx.Queries()).
-								Set(ParamID, ctx.R.FormValue(ParamID)).
-								Set(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
-								SetValid(ParamTargetPortal, ctx.R.FormValue(ParamTargetPortal)).
 								Set(ParamAddRowFormKey, b.fieldContext.FormKey).
 								URLValues()).
 							Go(),
@@ -218,7 +230,7 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 		if mid.IsZero() {
 			me = me.CreatingBuilder()
 		}
-		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
+		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
 		formKey := ctx.R.FormValue(ParamAddRowFormKey)
 		t := reflectutils.GetType(obj, formKey+"[0]")
 		if t.Kind() == reflect.Ptr {
@@ -229,9 +241,7 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			return
 		}
 
-		f := me.form(obj, ctx)
-		f.Respond(&r)
-		return
+		return me.respondFormEdit(ctx, obj)
 	}
 }
 
@@ -245,8 +255,6 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 		if mid.IsZero() {
 			me = me.CreatingBuilder()
 		}
-		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
-
 		formKey := ctx.R.FormValue(ParamRemoveRowFormKey)
 		lb := strings.LastIndex(formKey, "[")
 		sliceField := formKey[0:lb]
@@ -257,10 +265,12 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 		if err != nil {
 			return
 		}
+
+		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
+
 		ContextModifiedIndexesBuilder(ctx).AppendDeleted(sliceField, index)
-		f := me.form(obj, ctx)
-		f.Respond(&r)
-		return
+
+		return me.respondFormEdit(ctx, obj)
 	}
 }
 
@@ -271,8 +281,9 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 		if mid, err = mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
 			return
 		}
-		obj, _ := me.FetchAndUnmarshal(mid, false, ctx)
+		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
 		sortSectionFormKey := ctx.R.FormValue(ParamSortSectionFormKey)
+		mib := ContextModifiedIndexesBuilder(ctx)
 
 		isStartSort := ctx.R.FormValue(ParamIsStartSort)
 		if isStartSort != "1" {
@@ -287,10 +298,56 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			for _, i := range result {
 				indexes = append(indexes, fmt.Sprint(i.Index))
 			}
-			ContextModifiedIndexesBuilder(ctx).SetSorted(sortSectionFormKey, indexes)
+			mib.SetSorted(sortSectionFormKey, indexes)
 		}
-		f := me.form(obj, ctx)
-		f.Respond(&r)
-		return
+
+		return me.respondFormEdit(ctx, obj)
+	}
+}
+
+func RemoveEmptySliceItems(obj any, mib *ModifiedIndexesBuilder) func() {
+	type State struct {
+		key   string
+		value any
+	}
+
+	var old []State
+
+	for k, m := range mib.deletedValues {
+		slice := reflectutils.MustGet(obj, k)
+		sliceV := reflect.ValueOf(slice)
+		if sliceV.Len() == 0 {
+			continue
+		}
+
+		old = append(old, State{
+			key:   k,
+			value: slice,
+		})
+
+		length := sliceV.Len()
+		newLength := length - len(m)
+		newSlice := reflect.MakeSlice(sliceV.Type(), newLength, newLength)
+
+		for i, j := 0, 0; i < length; i++ {
+			if _, ok := m[i]; ok {
+				continue
+			}
+			newSlice.Index(j).Set(sliceV.Index(i))
+			j++
+		}
+
+		fmt.Println(newSlice.Interface())
+		if err := reflectutils.Set(obj, k, newSlice.Interface()); err != nil {
+			panic(err)
+		}
+	}
+
+	return func() {
+		for _, state := range old {
+			if err := reflectutils.Set(obj, state.key, state.value); err != nil {
+				panic(err)
+			}
+		}
 	}
 }

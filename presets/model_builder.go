@@ -8,6 +8,8 @@ type ModelBuilderConfigAttributes struct {
 	pluralLabel  string
 	uriName      string
 	singleton    bool
+	plural       bool
+	female       bool
 	dataOperator DataOperator
 	moduleKey    i18n.ModuleKey
 }
@@ -68,8 +70,26 @@ func (c *ModelBuilderConfig) Singleton() bool {
 	return c.singleton
 }
 
-func (c *ModelBuilderConfig) SetSingleton(singleton bool) *ModelBuilderConfig {
-	c.singleton = singleton
+func (c *ModelBuilderConfig) SetSingleton(v bool) *ModelBuilderConfig {
+	c.singleton = v
+	return c
+}
+
+func (mb *ModelBuilderConfig) Female() bool {
+	return mb.female
+}
+
+func (c *ModelBuilderConfig) SetFemale(v bool) *ModelBuilderConfig {
+	c.female = v
+	return c
+}
+
+func (c *ModelBuilderConfig) Plural() bool {
+	return c.plural
+}
+
+func (c *ModelBuilderConfig) SetPlural(v bool) *ModelBuilderConfig {
+	c.plural = v
 	return c
 }
 

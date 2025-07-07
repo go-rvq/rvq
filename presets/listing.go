@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
 	vx "github.com/qor5/x/v3/ui/vuetifyx"
@@ -20,20 +22,22 @@ import (
 )
 
 type ListingBuilder struct {
-	mb              *ModelBuilder
-	bulkActions     []*BulkActionBuilder
-	footerActions   []*FooterActionBuilder
-	actions         []*ActionBuilder
-	actionsAsMenu   bool
-	filterDataFunc  FilterDataFunc
-	filterTabsFunc  FilterTabsFunc
-	newBtnFunc      ComponentFunc
-	pageFunc        web.PageFunc
-	cellWrapperFunc vx.CellWrapperFunc
-	Searcher        SearchFunc
-	Deleter         DeleteFunc
-	searchColumns   []string
-	itemActions     []*ActionBuilder
+	mb                 *ModelBuilder
+	bulkActions        []*BulkActionBuilder
+	footerActions      []*FooterActionBuilder
+	actions            []*ActionBuilder
+	actionsAsMenu      bool
+	filterDataFunc     FilterDataFunc
+	filterTabsFunc     FilterTabsFunc
+	newBtnFunc         ComponentFunc
+	pageFunc           web.PageFunc
+	cellWrapperFunc    vx.CellWrapperFunc
+	Searcher           SearchFunc
+	Deleter            DeleteFunc
+	searchColumns      []string
+	itemActions        []*ActionBuilder
+	prependListButtons []func(ctx *web.EventContext) h.HTMLComponents
+	appendListButtons  []func(ctx *web.EventContext) h.HTMLComponents
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -103,7 +107,7 @@ func (mb *ModelBuilder) newListing() (lb *ListingBuilder) {
 
 	rmb := mb.listing.RowMenu()
 	// rmb.RowMenuItem("Edit").ComponentFunc(editRowMenuItemFunc(mb.Info(), "", url.Values{}))
-	rmb.RowMenuItem("Delete").ComponentFunc(NewDeletingMenuItemBuilder(mb.Info()).
+	rmb.SetRowMenuItem("Delete").ComponentFunc(NewDeletingMenuItemBuilder(mb.Info()).
 		SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
 			e.Query(ParamPostChangeCallback, web.CallbackScript(mb.listing.reloadURI(rctx.Ctx)).Encode())
 		}).
@@ -255,10 +259,17 @@ func (b *ListingBuilder) GetPageFunc() web.PageFunc {
 
 func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuItemFuncs) {
 	fs = b.RowMenu().listingItemFuncs(ctx)
+	actions := b.itemActions
 
-	if len(b.itemActions) > 0 {
+	for _, action := range b.mb.detailing.actions {
+		if action.showInList {
+			actions = append(actions, action)
+		}
+	}
+
+	if len(actions) > 0 {
 		fs = append(fs, func(rctx *RecordMenuItemContext) h.HTMLComponent {
-			actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(rctx.TempPortal, ctx, b.mb, rctx.ID, rctx.Obj, b.itemActions...)
+			actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(rctx.TempPortal, ctx, b.mb, rctx.ID, rctx.Obj, actions...)
 			var items h.HTMLComponents
 
 			if len(actionsErrors) > 0 {
@@ -271,7 +282,18 @@ func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuIte
 			return items
 		})
 	}
+
 	return
+}
+
+func (b *ListingBuilder) PrependListAction(f func(ctx *web.EventContext) h.HTMLComponents) *ListingBuilder {
+	b.prependListButtons = append(b.prependListButtons, f)
+	return b
+}
+
+func (b *ListingBuilder) AppendListAction(f func(ctx *web.EventContext) h.HTMLComponents) *ListingBuilder {
+	b.appendListButtons = append(b.appendListButtons, f)
+	return b
 }
 
 func (b *ListingBuilder) ConfigureComponent() func(lcb *ListingComponentBuilder) {
@@ -284,9 +306,8 @@ func (b *ListingBuilder) SetConfigureComponent(configureComponent func(lcb *List
 }
 
 const (
-	bulkPanelOpenParamName   = "bulkOpen"
-	actionPanelOpenParamName = "actionOpen"
-	DeleteConfirmPortalName  = "deleteConfirm"
+	bulkPanelOpenParamName  = "bulkOpen"
+	DeleteConfirmPortalName = "deleteConfirm"
 
 	detailingContentPortalName = "detailingContentPortal"
 	formPortalName             = "formPortal"
@@ -295,27 +316,35 @@ const (
 	SelectedEventConfigParamName = "selectedEventConfig"
 )
 
-func (b *ListingBuilder) TTitle(r *http.Request) string {
+func (b *ListingBuilder) TTitle(ctx context.Context) string {
 	if b.title != "" {
 		return b.title
 	}
-	return MustGetMessages(r.Context()).ListingObjectTitle(b.mb.TTitlePlural(r.Context()))
+	return MustGetMessages(ctx).ListingObjectTitle(b.mb.TTitlePlural(ctx))
 }
 
 func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	if b.mb.Info().Verifier().Do(PermList).WithReq(ctx.R).IsAllowed() != nil {
+	if b.mb.permissioner.ReqLister(ctx.R).Denied() {
 		err = perm.PermissionDenied
 		return
 	}
-	title := b.TTitle(ctx.R)
+	title := b.TTitle(ctx.R.Context())
 	r.PageTitle = title
 
 	r.Body, err = b.listingComponent(ctx)
-
+	r.Wrap(func(comp h.HTMLComponent) h.HTMLComponent {
+		// return comp
+		return b.wrapComp(ctx, comp)
+	})
 	return
 }
 
 func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if b.mb.permissioner.ReqLister(ctx.R).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
 	var sr SearchResult
 
 	if sr, err = b.search(ctx); err != nil {
@@ -558,10 +587,131 @@ func (b *ListingBuilder) bulkPanel(
 	)
 }
 
+func (b *ListingBuilder) openBulkActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
+	msgr := MustGetMessages(ctx.Context())
+	selected := getSelectedIds(ctx)
+	bulkName := ctx.R.URL.Query().Get(bulkPanelOpenParamName)
+	a := getBulkAction(b.bulkActions, bulkName)
+
+	if a == nil {
+		err = errors.New("cannot find requested action")
+		return
+	}
+
+	if a.Verifier(b.mb.permissioner.ReqList(ctx.R)).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
+	if len(selected) == 0 && !a.allowEmpty {
+		ShowMessage(&r, msgr.PleaseSelectRecord, "warning")
+		return
+	}
+
+	// If selectedIdsProcessorFunc is not nil, process the request in it and skip the confirmation dialog
+	var processedSelectedIds []string
+	if a.selectedIdsProcessorFunc != nil {
+		processedSelectedIds, err = a.selectedIdsProcessorFunc(selected, ctx)
+		if err != nil {
+			return
+		}
+		if len(processedSelectedIds) == 0 {
+			if a.selectedIdsProcessorNoticeFunc != nil {
+				ShowMessage(&r, a.selectedIdsProcessorNoticeFunc(selected, processedSelectedIds, selected), "warning")
+			} else {
+				ShowMessage(&r, msgr.BulkActionNoAvailableRecords, "warning")
+			}
+			return
+		}
+	} else {
+		processedSelectedIds = selected
+	}
+
+	err = a.View(b.mb, processedSelectedIds, ctx, &r)
+	return
+}
+
+func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventResponse, err error) {
+	a := getBulkAction(b.bulkActions, ctx.R.FormValue(ParamBulkActionName))
+	if a == nil {
+		panic("bulk required")
+	}
+
+	if a.Verifier(b.mb.permissioner.ReqList(ctx.R)).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
+	selectedIds := getSelectedIds(ctx)
+
+	var err1 error
+	var processedSelectedIds []string
+	if a.selectedIdsProcessorFunc != nil {
+		processedSelectedIds, err1 = a.selectedIdsProcessorFunc(selectedIds, ctx)
+	} else {
+		processedSelectedIds = selectedIds
+	}
+
+	opts := &ListingDoBulkActionOptions{}
+
+	if err1 == nil {
+		reset := ctx.WithData(opts)
+		err1 = a.Do(processedSelectedIds, ctx, &r)
+		reset()
+	}
+
+	if err1 != nil {
+		if _, ok := err1.(*web.ValidationErrors); !ok {
+			vErr := &web.ValidationErrors{}
+			vErr.GlobalError(err1.Error())
+			ctx.Flash = vErr
+
+			err = a.View(b.mb, processedSelectedIds, ctx, &r)
+			return
+		}
+	}
+
+	if ctx.Flash != nil {
+		r.UpdatePortal(actions.Dialog.ContentPortalName(), b.bulkPanel(a, selectedIds, processedSelectedIds, ctx))
+		return
+	}
+
+	web.AppendRunScripts(&r, "closer.show = false")
+
+	if opts.Flash != nil {
+		ctx.Flash = opts.Flash
+	} else {
+		msgr := MustGetMessages(ctx.Context())
+		ctx.Flash = msgr.SuccessfullyUpdated
+	}
+
+	if opts.ListReloadDisabled {
+		return
+	}
+
+	if isInDialogFromQuery(ctx) {
+		qs := ctx.Queries()
+		qs.Del(bulkPanelOpenParamName)
+		qs.Del(ParamBulkActionName)
+		web.AppendRunScripts(&r,
+			web.Plaid().
+				URL(ctx.R.RequestURI).
+				EventFunc(actions.UpdateListingDialog).
+				Queries(qs).
+				Go(),
+		)
+	} else {
+		r.PushState = web.Location(url.Values{bulkPanelOpenParamName: []string{}}).MergeQuery(true)
+	}
+
+	return
+}
+
 func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContext) (r h.HTMLComponent) {
 	msgr := MustGetMessages(ctx.Context())
 
 	var errComp h.HTMLComponent
+
 	if vErr, ok := ctx.Flash.(*web.ValidationErrors); ok {
 		if gErr := vErr.GetGlobalError(); gErr != "" {
 			errComp = VAlert(h.Text(gErr)).
@@ -572,7 +722,7 @@ func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContex
 	}
 
 	onOK := web.Plaid().EventFunc(actions.DoListingAction).
-		Query(ParamListingActionName, action.name).
+		Query(ParamAction, action.name).
 		MergeQuery(true)
 	if isInDialogFromQuery(ctx) {
 		onOK.URL(ctx.R.RequestURI)
@@ -580,7 +730,14 @@ func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContex
 
 	var comp h.HTMLComponent
 	if action.compFunc != nil {
-		comp = action.compFunc("", ctx)
+		var err error
+		if comp, err = action.compFunc("", ctx); err != nil {
+			errComp = VAlert(h.Text(err.Error())).
+				Border("left").
+				Type("error").
+				Elevation(2)
+			return
+		}
 	}
 
 	return VCard(
@@ -607,168 +764,56 @@ func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContex
 	)
 }
 
+func (b *ListingBuilder) openItemActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
+	return b.openActionDialogInternal(b.itemActions, ctx)
+}
+
 func (b *ListingBuilder) openActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
-	actionName := ctx.R.URL.Query().Get(actionPanelOpenParamName)
-	action := getAction(b.actions, actionName)
+	return b.openActionDialogInternal(b.actions, ctx)
+}
+
+func (b *ListingBuilder) openActionDialogInternal(actionList []*ActionBuilder, ctx *web.EventContext) (r web.EventResponse, err error) {
+	actionName := ctx.R.URL.Query().Get(ParamAction)
+	action := getAction(actionList, actionName)
 	if action == nil {
 		err = errors.New("cannot find requested action")
 		return
 	}
-	err = action.View(b.mb, "", ctx, &r)
+
+	if b.mb.permissioner.ReqListActioner(ctx.R, action.name).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
+	r.RunScript = `console.log("action dialog", presetsListing.uri)`
+	err = action.View(b.mb, ctx.R.Form.Get(ParamID), ctx, &r)
 	return
 }
 
-func (b *ListingBuilder) openBulkActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
-	msgr := MustGetMessages(ctx.Context())
-	selected := getSelectedIds(ctx)
-	bulkName := ctx.R.URL.Query().Get(bulkPanelOpenParamName)
-	bulk := getBulkAction(b.bulkActions, bulkName)
-
-	if bulk == nil {
-		err = errors.New("cannot find requested action")
-		return
-	}
-
-	if len(selected) == 0 {
-		ShowMessage(&r, "Please select record", "warning")
-		return
-	}
-
-	// If selectedIdsProcessorFunc is not nil, process the request in it and skip the confirmation dialog
-	var processedSelectedIds []string
-	if bulk.selectedIdsProcessorFunc != nil {
-		processedSelectedIds, err = bulk.selectedIdsProcessorFunc(selected, ctx)
-		if err != nil {
-			return
-		}
-		if len(processedSelectedIds) == 0 {
-			if bulk.selectedIdsProcessorNoticeFunc != nil {
-				ShowMessage(&r, bulk.selectedIdsProcessorNoticeFunc(selected, processedSelectedIds, selected), "warning")
-			} else {
-				ShowMessage(&r, msgr.BulkActionNoAvailableRecords, "warning")
-			}
-			return
-		}
-	} else {
-		processedSelectedIds = selected
-	}
-
-	err = bulk.View(b.mb, processedSelectedIds, ctx, &r)
-	return
-}
-
-func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventResponse, err error) {
-	bulk := getBulkAction(b.bulkActions, ctx.R.FormValue(ParamBulkActionName))
-	if bulk == nil {
-		panic("bulk required")
-	}
-
-	if b.mb.Info().Verifier().SnakeDo(PermBulkActions, bulk.name).WithReq(ctx.R).IsAllowed() != nil {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
-		return
-	}
-
-	selectedIds := getSelectedIds(ctx)
-
-	var err1 error
-	var processedSelectedIds []string
-	if bulk.selectedIdsProcessorFunc != nil {
-		processedSelectedIds, err1 = bulk.selectedIdsProcessorFunc(selectedIds, ctx)
-	} else {
-		processedSelectedIds = selectedIds
-	}
-
-	if err1 == nil {
-		err1 = bulk.Do(processedSelectedIds, ctx)
-	}
-
-	if err1 != nil {
-		if _, ok := err1.(*web.ValidationErrors); !ok {
-			vErr := &web.ValidationErrors{}
-			vErr.GlobalError(err1.Error())
-			ctx.Flash = vErr
-
-			if err1 = bulk.View(b.mb, processedSelectedIds, ctx, &r); err1 != nil {
-				ShowMessage(&r, err1.Error(), "warning")
-			}
-			return
-		}
-	}
-
-	if ctx.Flash != nil {
-		r.UpdatePortal(actions.Dialog.ContentPortalName(), b.bulkPanel(bulk, selectedIds, processedSelectedIds, ctx))
-		return
-	}
-
-	msgr := MustGetMessages(ctx.Context())
-	ShowMessage(&r, msgr.SuccessfullyUpdated, "")
-	if isInDialogFromQuery(ctx) {
-		qs := ctx.Queries()
-		qs.Del(bulkPanelOpenParamName)
-		qs.Del(ParamBulkActionName)
-		web.AppendRunScripts(&r,
-			closeDialogVarScript,
-			web.Plaid().
-				URL(ctx.R.RequestURI).
-				EventFunc(actions.UpdateListingDialog).
-				Queries(qs).
-				Go(),
-		)
-	} else {
-		r.PushState = web.Location(url.Values{bulkPanelOpenParamName: []string{}}).MergeQuery(true)
-	}
-
-	return
+func (b *ListingBuilder) doListingItemAction(ctx *web.EventContext) (r web.EventResponse, err error) {
+	return b.doListingActionInternal(b.itemActions, ctx)
 }
 
 func (b *ListingBuilder) doListingAction(ctx *web.EventContext) (r web.EventResponse, err error) {
-	action := getAction(b.actions, ctx.R.FormValue(ParamListingActionName))
+	return b.doListingActionInternal(b.actions, ctx)
+}
+
+func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ctx *web.EventContext) (r web.EventResponse, err error) {
+	action := getAction(actionList, ctx.R.FormValue(ParamAction))
 	if action == nil {
-		panic("action required")
-	}
-
-	if b.mb.Info().Verifier().SnakeDo(PermDoListingAction, action.name).WithReq(ctx.R).IsAllowed() != nil {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
+		err = errors.New("cannot find requested action")
 		return
 	}
 
-	if err := action.updateFunc("", ctx); err != nil {
-		if _, ok := err.(*web.ValidationErrors); !ok {
-			vErr := &web.ValidationErrors{}
-			vErr.GlobalError(err.Error())
-			ctx.Flash = vErr
-		}
-	}
-
-	portalID := ctx.R.FormValue(ParamPortalID)
-
-	if ctx.Flash != nil {
-		r.UpdatePortal(
-			actions.Dialog.ContentPortalName()+portalID,
-			b.actionPanel(action, ctx))
+	if b.mb.permissioner.ReqListActioner(ctx.R, action.PermName()).Denied() {
+		err = perm.PermissionDenied
 		return
 	}
 
-	msgr := MustGetMessages(ctx.Context())
-	ShowMessage(&r, msgr.SuccessfullyUpdated, "")
-
-	if isInDialogFromQuery(ctx) {
-		qs := ctx.Queries()
-		qs.Del(actionPanelOpenParamName)
-		qs.Del(ParamListingActionName)
-		web.AppendRunScripts(&r,
-			closeDialogVarScript,
-			web.Plaid().
-				URL(ctx.R.RequestURI).
-				EventFunc(actions.UpdateListingDialog).
-				Queries(qs).
-				Query(ParamPortalID, ctx.R.FormValue(ParamPortalID)).
-				Go(),
-		)
-	} else {
-		r.PushState = web.Location(url.Values{actionPanelOpenParamName: []string{}}).MergeQuery(true)
+	var success bool
+	if success, err = action.Do(b.mb, "", ctx, &r); err != nil || !success {
+		return
 	}
-
 	return
 }
 
@@ -881,7 +926,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 	)
 
 	b.fields.EachHavesComponent(func(f *FieldBuilder) bool {
-		if b.mb.Info().Verifier().Do(PermList).SnakeOn("f_"+f.name).WithReq(ctx.R).IsAllowed() == nil {
+		if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
 			originalColumns = append(originalColumns, f.name)
 		}
 		return true
@@ -1006,7 +1051,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 	for _, sc := range sortedColumns {
 		selectColumns.SortedColumns = append(selectColumns.SortedColumns, sortedColumn{
 			Name:  sc,
-			Label: b.FieldsBuilder.GetField(sc).ContextLabel(b.mb.Info(), ctx),
+			Label: b.FieldsBuilder.GetField(sc).ContextLabel(b.mb.Info(), ctx.Context()),
 		})
 	}
 
@@ -1266,15 +1311,36 @@ func (b *ListingBuilder) openListingDialog(ctx *web.EventContext) (r web.EventRe
 	if body, err = lcb.Build(ctx); err != nil {
 		return
 	}
-	body = web.Scope(body).Slot("{ form, closer }")
 
 	b.mb.p.DialogPortal(targetPortal).
 		SetValidWidth(b.dialogWidth).
 		SetValidHeight(b.dialogHeight).
 		SetContentPortalName(lcb.portals.Main()).
 		SetScrollable(true).
-		Respond(ctx, &r, body)
+		Respond(ctx, &r, b.wrapComp(ctx, body))
 	return
+}
+
+func (b *ListingBuilder) wrapComp(ctx *web.EventContext, comp h.HTMLComponent) h.HTMLComponent {
+	plaid := web.POST().NoCache()
+	if IsInDialog(ctx) {
+		plaid.ParseURL(ctx.R.URL.Path + "?" + ctx.R.Form.Encode()).
+			EventFunc(actions.UpdateListingDialog)
+	} else {
+		plaid.EventFunc("__reload__")
+	}
+	return vue.UserComponent(web.Scope(comp).Slot("{ form }")).
+		ScopeVar("parentPresetsListing", "presetsListing").
+		ScopeVar("presetsListing", "{}").
+		Setup(fmt.Sprintf(`({scope}) => {
+	scope.presetsListing.parent = scope.parentPresetsListing;
+	const presetsListing = scope.presetsListing;
+	scope.presetsListing.uri = %q
+	scope.presetsListing.loader = %s
+}`,
+			ctx.R.URL.Path,
+			plaid.String(),
+		))
 }
 
 func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -1293,5 +1359,6 @@ func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.Event
 		lcb.portals.DataTableAdditions(),
 		dataTableAdditions,
 	)
+	r.RunScript = fmt.Sprintf(`presetsListing.loader.parseUrl(%q)`, ctx.R.RequestURI)
 	return
 }

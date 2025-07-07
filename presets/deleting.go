@@ -1,10 +1,14 @@
 package presets
 
 import (
+	"fmt"
+
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -18,7 +22,7 @@ func (b *ListingBuilder) WrapDeleteFunc(w func(in DeleteFunc) DeleteFunc) (r *Li
 	return b
 }
 
-func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, err1 error) {
+func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, err error) {
 	pk := ctx.R.FormValue(ParamID)
 
 	if pk == "" {
@@ -31,28 +35,24 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 		id  ID
 	)
 
-	if id, err1 = b.mb.ParseRecordID(pk); err1 != nil {
-		ShowMessage(&r, err1.Error(), "warning")
-		err1 = nil
+	if id, err = b.mb.ParseRecordID(pk); err != nil {
 		return
 	}
 
 	id.SetTo(obj)
 
 	if !b.DeletingRestriction.CanObj(obj, ctx) {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
+		err = perm.PermissionDenied
 		return
 	}
 
 	if len(pk) > 0 {
-		err := b.Deleter(obj, id, ctx)
-		if err != nil {
-			ShowMessage(&r, err.Error(), "warning")
+		if err = b.Deleter(obj, id, ctx.R.FormValue("cascade") == "true", ctx); err != nil {
 			return
 		}
 	}
 
-	ShowMessage(&r, MustGetMessages(ctx.Context()).SuccessfullyDeleted, "")
+	ShowMessage(&r, MustGetMessages(ctx.Context()).SuccessfullyDeleted)
 
 	web.AppendRunScripts(&r, "closer.show = false")
 
@@ -87,29 +87,44 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 		return
 	}
 
-	Dialog(targetPortal).
-		Wrap(func(comp *VDialogBuilder) {
-			comp.MaxWidth("600px")
-		}).
-		Respond(ctx, &r, VCard(
-			VCardTitle(h.Text(msgr.DeleteConfirmationText(modelTitle, theModelTitle, title))),
-			VCardActions(
-				VSpacer(),
-				VBtn(msgr.Cancel).
-					Variant(VariantFlat).
-					Class("ml-2").
-					On("click", "closer.show = false"),
-
-				VBtn(msgr.Delete).
-					Color(ColorError).
-					Variant(VariantFlat).
-					Theme(ThemeDark).
-					Attr("@click", web.Plaid().
-						EventFunc(actions.DoDelete).
-						Queries(ctx.Queries()).
-						URL(ctx.R.URL.Path).
-						Go()),
-			),
-		))
+	b.mb.p.Dialog().
+		SetTargetPortal(targetPortal).
+		Respond(ctx, &r, vue.UserComponent(
+			vx.VXDialog().
+				Density(DensityCompact).
+				Style("max-width: 500px").
+				SlotBody(
+					VAlert(
+						h.RawHTML(msgr.DeleteConfirmationHtml(modelTitle, theModelTitle, title)),
+					).Type(TypeWarning).
+						Variant(VariantTonal),
+					h.If(false, VSwitch().
+						Attr("v-model", []byte("cascade.value")).
+						Color(ColorWarning).
+						Label("Excluir relacionados").
+						Hint("Exclui automaticamente todas entidades relacionadas").
+						PersistentHint(true),
+					),
+				).
+				ToolbarProps(fmt.Sprintf(`{color:%q}`, ColorError)).
+				SlotBottom(h.HTMLComponents{
+					VSpacer(),
+					VBtn(msgr.Cancel).
+						Variant(VariantFlat).
+						Class("ml-2").
+						On("click", "closer.show = false"),
+					VBtn(msgr.Delete).
+						Color(ColorError).
+						Variant(VariantFlat).
+						Theme(ThemeDark).
+						Attr("@click", web.Plaid().
+							EventFunc(actions.DoDelete).
+							Queries(ctx.Queries()).
+							Query("cascade", web.Var("cascade.value")).
+							URL(ctx.R.URL.Path).
+							Go()),
+				}).
+				Title(msgr.Delete),
+		).ScopeVar("cascade", "{value: false}"))
 	return
 }

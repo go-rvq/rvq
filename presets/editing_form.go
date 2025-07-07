@@ -9,15 +9,56 @@ import (
 	. "github.com/qor5/x/v3/ui/vuetify"
 )
 
+func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any, initForm ...bool) (r web.EventResponse, err error) {
+	targetPortal := ctx.R.FormValue(ParamTargetPortal)
+	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
+	if overlay.IsDrawer() && targetPortal == "" {
+		targetPortal = overlay.PortalName()
+	}
+
+	f := b.form(obj, ctx)
+	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
+
+	comp := f.Component()
+	mode := GetOverlay(ctx)
+
+	for _, v := range initForm {
+		if v {
+			comp = web.Scope(comp).FormInit()
+		}
+	}
+
+	if mode.IsDrawer() {
+		b.mb.p.Drawer(mode).
+			SetScrollable(true).
+			SetValidPortalName(targetPortal).
+			Respond(&r, comp)
+	} else if mode.IsDialog() {
+		b.mb.p.Dialog().
+			SetScrollable(true).
+			SetValidWidth(b.mb.rightDrawerWidth).
+			SetTargetPortal(targetPortal).
+			Respond(ctx, &r, comp)
+	} else {
+		r.Body = comp
+	}
+	return
+}
+
 func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, err error) {
-	if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
-		ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
+	if b.mb.editingDisabled {
+		err = ErrUpdateRecordNotAllowed
 		return
 	}
 
 	obj := b.mb.NewModel()
 	var mid ID
 	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+		return
+	}
+
+	if b.mb.permissioner.Updater(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+		err = perm.PermissionDenied
 		return
 	}
 
@@ -34,34 +75,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 		return
 	}
 
-	targetPortal := ctx.R.FormValue(ParamTargetPortal)
-	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-	if overlay.IsDrawer() {
-		targetPortal = overlay.PortalName()
-	}
-
-	f := b.form(obj, ctx)
-	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
-
-	comp := f.Component()
-	mode := GetOverlay(ctx)
-
-	if mode.IsDrawer() {
-		b.mb.p.Drawer(mode).
-			SetScrollable(true).
-			SetValidPortalName(targetPortal).
-			Respond(&r, comp)
-	} else if mode.IsDialog() {
-		b.mb.p.Dialog().
-			SetScrollable(true).
-			SetValidWidth(b.mb.rightDrawerWidth).
-			SetTargetPortal(targetPortal).
-			Respond(ctx, &r, comp)
-	} else {
-		r.Body = comp
-	}
-
-	return
+	return b.respondFormEdit(ctx, obj, true)
 }
 
 func (b *EditingBuilder) SaveBtn(ctx *web.EventContext, id string, edit bool, targetPortal string) h.HTMLComponent {
@@ -115,15 +129,19 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 
 	if f.b.mode == NEW {
 		f.Title = f.b.msgr.CreatingObjectTitle(
-			b.mb.TTitle(ctx.Context()),
+			b.mb.TTitleAuto(ctx.Context()),
 			b.mb.female,
 		)
 	} else {
-		disableUpdateBtn = !f.b.mb.Info().CanUpdate(f.b.ctx.R, f.Obj)
-
-		editingTitleText := f.b.msgr.EditingObjectTitle(
-			b.mb.TTitle(ctx.Context()),
-			b.mb.RecordTitle(f.Obj, ctx))
+		disableUpdateBtn = f.b.mb.permissioner.ReqObjectUpdater(f.b.ctx.R, f.Obj).Denied()
+		var editingTitleText string
+		if b.mb.singleton {
+			editingTitleText = f.b.msgr.EditingTitle(b.mb.TTitleAuto(ctx.Context()))
+		} else {
+			editingTitleText = f.b.msgr.EditingObjectTitle(
+				b.mb.TTitle(ctx.Context()),
+				b.mb.RecordTitle(f.Obj, ctx))
+		}
 		if b.editingTitleFunc != nil {
 			f.Title = b.editingTitleFunc(f.b.obj, editingTitleText, f.b.ctx)
 		} else {

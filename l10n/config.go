@@ -156,7 +156,7 @@ func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams 
 			obj = rctx.Obj
 			id  = rctx.ID
 		)
-		if mi.Verifier().Do(presets.PermUpdate).ObjectOn(obj).WithReq(ctx.R).IsAllowed() != nil {
+		if mi.Permissioner().ReqObjectUpdater(ctx.R, obj).Denied() {
 			return nil
 		}
 

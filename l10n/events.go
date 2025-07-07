@@ -117,6 +117,7 @@ func localizeToConfirmation(db *gorm.DB, lb *Builder, mb *presets.ModelBuilder) 
 						VCol(
 							VSelect().
 								Attr(attr...).
+								Density(DensityComfortable).
 								Variant(FieldVariantUnderlined).
 								Label(msgr.LocalizeTo).
 								Multiple(true).
@@ -238,9 +239,10 @@ func DoLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *web.E
 			return
 		}
 
-		me.SetObjectFields(mb.Info(), fromObj, toObj, &presets.FieldContext{
-			Obj:       fromObj,
-			ModelInfo: mb.Info(),
+		me.SetObjectFields(&presets.FieldsSetterOptions{SkipPermVerify: true}, fromObj, toObj, &presets.FieldContext{
+			ToComponentOptions: &presets.ToComponentOptions{},
+			Obj:                fromObj,
+			ModelInfo:          mb.Info(),
 		}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
 
 		if vErr := me.Validators.Validate(toObj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {

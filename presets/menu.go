@@ -1,6 +1,9 @@
 package presets
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type Menu []interface{}
 
@@ -47,12 +50,32 @@ func (b *Menu) removeMenuGroupInOrder(mgb *MenuGroupBuilder) {
 }
 
 type MenuGroupBuilder struct {
-	name string
-	icon string
+	title func(ctx context.Context) string
+	name  string
+	icon  string
 	// item can be Slug name, model name
 	// the underlying logic is using Slug name,
 	// so if the Slug name is customized, item must be the Slug name
 	subMenuItems []string
+}
+
+func (b *MenuGroupBuilder) TitleFunc(f func(ctx context.Context) string) *MenuGroupBuilder {
+	b.title = f
+	return b
+}
+
+func (b *MenuGroupBuilder) Title(s string) *MenuGroupBuilder {
+	b.title = func(context.Context) string {
+		return s
+	}
+	return b
+}
+
+func (b *MenuGroupBuilder) TTitle(ctx context.Context) string {
+	if b.title != nil {
+		return b.title(ctx)
+	}
+	return HumanizeString(b.name)
 }
 
 func (b *MenuGroupBuilder) Icon(v string) (r *MenuGroupBuilder) {

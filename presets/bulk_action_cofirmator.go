@@ -2,6 +2,7 @@ package presets
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/qor5/admin/v3/model"
@@ -16,7 +17,7 @@ type (
 	BulkActionConfirmatorConfirmationComponent    func(records any, ctx *web.EventContext) (comp h.HTMLComponent, err error)
 	BulkActionConfirmatorConfirmationTableHandler func(records any, table *v.VDataTableBuilder, ctx *web.EventContext) (comp h.HTMLComponent, err error)
 	BulkActionConfirmatorHelpComponent            func(ctx *web.EventContext) (comp h.HTMLComponent, err error)
-	BulkActionConfirmatorUpdateFunc               func(ctx *web.EventContext, mids model.IDSlice) (err error)
+	BulkActionConfirmatorUpdateFunc               func(ctx *web.EventContext, r *web.EventResponse, mids model.IDSlice) (err error)
 
 	BulkActionCofirmatorBuilder struct {
 		ab                       *BulkActionBuilder
@@ -115,47 +116,61 @@ func (b *BulkActionCofirmatorBuilder) Component(selectedIds []string, ctx *web.E
 		}
 	}
 
-	if len(mids) == 0 {
-		err = errors.New(MustGetMessages(ctx.Context()).ListingNoRecordToShow)
-		return
-	}
-
 	var (
-		records = b.ab.l.mb.NewModelSlice()
-		sp      data.SearchParams
+		records    = b.ab.l.mb.NewModelSlice()
+		sp         data.SearchParams
+		totalCount int
+		comps      h.HTMLComponents
 	)
 
 	sp.Page = -1
-	sp.WhereModelIDs(mids)
 
-	if records, _, err = b.ab.l.Searcher(records, &sp, ctx); err != nil {
+	if len(mids) == 0 {
+		if b.ab.allowEmpty {
+			sp.MustCount = true
+		} else {
+			err = errors.New(MustGetMessages(ctx.Context()).ListingNoRecordToShow)
+			return
+		}
+	} else {
+		sp.WhereModelIDs(mids)
+	}
+
+	if records, totalCount, err = b.ab.l.Searcher(records, &sp, ctx); err != nil {
 		return
 	}
 
 	msgr := MustGetMessages(ctx.Context())
 
-	if reflect.ValueOf(records).Len() == 0 {
+	if sp.MustCount {
+		comps = append(comps, v.VAlert().Type(v.TypeWarning).Text(msgr.ListingSelectedCountNoticeText(totalCount)))
+	} else if reflect.ValueOf(records).Len() == 0 {
 		err = errors.New(msgr.BulkActionNoAvailableRecords)
 		return
-	}
-
-	if b.confirmationComp != nil {
-		comp, err = b.confirmationComp(records, ctx)
-		return
-	}
-
-	table := v.VDataTable(
-		web.Slot(h.Text(`{{index+1}}`)).Name("item.index").Scope("{index}"),
-	)
-
-	comp = table
-
-	if b.confirmationTableHandler != nil {
-		if comp, err = b.confirmationTableHandler(records, table, ctx); err != nil {
+	} else {
+		if b.confirmationComp != nil {
+			comp, err = b.confirmationComp(records, ctx)
 			return
 		}
-	} else {
-		table.Items(records)
+
+		table := v.VDataTable(
+			web.Slot(h.Text(`{{index+1}}`)).
+				Name("item.index").
+				Scope("{index}"),
+		).
+			PageText(msgr.PaginationPage).
+			ItemsPerPageText(msgr.PaginationRowsPerPage).
+			NoDataText(msgr.ListingNoRecordToShow)
+
+		comp = table
+
+		if b.confirmationTableHandler != nil {
+			if comp, err = b.confirmationTableHandler(records, table, ctx); err != nil {
+				return
+			}
+		} else {
+			table.Items(records)
+		}
 	}
 
 	var help h.HTMLComponent
@@ -164,8 +179,6 @@ func (b *BulkActionCofirmatorBuilder) Component(selectedIds []string, ctx *web.E
 			return
 		}
 	}
-
-	var comps h.HTMLComponents
 
 	if b.preComp != nil {
 		var c h.HTMLComponent
@@ -182,7 +195,7 @@ func (b *BulkActionCofirmatorBuilder) Component(selectedIds []string, ctx *web.E
 				Variant(v.VariantTonal).
 				Density(v.DensityCompact),
 		),
-		h.Div(h.RawHTML(msgr.BulkActionConfirmationText(b.ab.RequestTitle(ctx)))).Class("my-3"),
+		h.Div(h.RawHTML(msgr.BulkActionConfirmationText(b.ab.RequestTitle(ctx.Context()), fmt.Sprint(totalCount)))).Class("my-3"),
 		comp,
 	)
 
@@ -203,7 +216,7 @@ func (b *BulkActionCofirmatorBuilder) Component(selectedIds []string, ctx *web.E
 	return
 }
 
-func (b *BulkActionCofirmatorBuilder) Update(selectedIds []string, ctx *web.EventContext) (err error) {
+func (b *BulkActionCofirmatorBuilder) Update(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 	var (
 		mids model.IDSlice
 		msgr = MustGetMessages(ctx.Context())
@@ -215,24 +228,20 @@ func (b *BulkActionCofirmatorBuilder) Update(selectedIds []string, ctx *web.Even
 		}
 	}
 
-	if len(mids) == 0 {
+	if len(mids) == 0 && !b.ab.allowEmpty {
 		err = errors.New(msgr.BulkActionNoAvailableRecords)
 		return
 	}
 
-	if err = b.updator(ctx, mids); err != nil {
-		return
-	}
-
-	return
+	return b.updator(ctx, r, mids)
 }
 
-func (b *BulkActionCofirmatorBuilder) Build() {
-	b.ab.
+func (b *BulkActionCofirmatorBuilder) Build() *BulkActionBuilder {
+	return b.ab.
 		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
 			return b.Component(selectedIds, ctx)
 		}).
-		UpdateFunc(func(selectedIds []string, ctx *web.EventContext) (err error) {
-			return b.Update(selectedIds, ctx)
+		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+			return b.Update(selectedIds, ctx, r)
 		})
 }

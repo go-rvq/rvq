@@ -16,6 +16,13 @@ const (
 	ActionJobResponse    = "worker_action_job_response"
 	ActionJobClose       = "worker_action_job_close"
 	ActionJobProgressing = "worker_action_job_progressing"
+
+	EventSelectJob            = "worker_selectJob"
+	EventAbortJob             = "worker_abortJob"
+	EventRerunJob             = "worker_rerunJob"
+	EventUpdateJob            = "worker_updateJob"
+	EventUpdateJobProgressing = "worker_updateJobProgressing"
+	EventLoadHiddenLogs       = "worker_loadHiddenLogs"
 )
 
 var (

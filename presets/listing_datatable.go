@@ -2,7 +2,6 @@ package presets
 
 import (
 	"fmt"
-	"net/url"
 
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
@@ -99,16 +98,24 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 			onclick := web.Plaid().
 				Query(ParamID, id).
-				URL(ctx.R.RequestURI).
+				URL(b.mb.detailing.mb.Info().ListingHrefCtx(ctx)).
 				Query(ParamPostChangeCallback, reloadCb)
 
-			if b.mb.hasDetailing {
-				if !b.CanDetailObj(obj, ctx) {
+			if b.mb.detailing.mb.hasDetailing {
+				if b.mb.detailingDisabled {
+					return
+				}
+
+				if !b.mb.detailing.mb.CanDetailObj(obj, ctx) {
 					return
 				}
 				onclick.EventFunc(actions.Detailing)
 			} else {
-				if !b.CanEditObj(obj, ctx) {
+				if b.mb.editingDisabled {
+					return
+				}
+
+				if !b.mb.editing.mb.CanEditObj(obj, ctx) {
 					return
 				}
 				onclick.EventFunc(actions.Edit)
@@ -123,7 +130,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 			cell.SetAttr("@click.self",
 				onclick.Go()+fmt.Sprintf(`; locals.currEditingListItemID="%s-%s"`, dataTableID, id))
 			cell.SetAttr("@click.middle",
-				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().DetailingHrefCtx(ctx, id)))
+				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.detailing.mb.Info().DetailingHrefCtx(ctx, id)))
 			return
 		}
 	}
@@ -137,10 +144,17 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		displayFields = b.fields.FieldsFromLayout(b.CurrentLayout(), FieldRenderable())
 	}
 
-	recordPortals := make(map[int][]string)
+	var (
+		recordPortals = make(map[int][]string)
+		density       = b.dataTableDensity
+	)
+
+	if density == "" {
+		density = DensityCompact
+	}
 
 	sDataTable := vx.DataTable(sr.Records).
-		SetDensity(b.dataTableDensity).
+		SetDensity(density).
 		CellWrapperFunc(cellWrapperFunc).
 		HeadCellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, title string, ctx *web.EventContext) h.HTMLComponent {
 			if _, ok := sr.orderableFieldMap[field]; ok {
@@ -259,7 +273,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		fctx.Mode = mode
 
 		if f.IsEnabled(fctx) {
-			if b.mb.Info().Verifier().Do(PermList).SnakeOn("f_"+f.name).WithReq(ctx.R).IsAllowed() != nil {
+			if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
 				continue
 			}
 			f = b.GetFieldOrDefault(f.name) // fill in empty compFunc and setter func with default
@@ -352,46 +366,58 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		actionBtns h.HTMLComponents
 	)
 
+	for _, f := range b.prependListButtons {
+		if c := f(ctx); len(c) > 0 {
+			actionBtns = append(actionBtns, c...)
+		}
+	}
+
 	// Render bulk actions
 	for _, ba := range b.bulkActions {
-		if b.mb.Info().Verifier().SnakeDo(PermBulkActions, ba.name).WithReq(ctx.R).IsAllowed() != nil {
+		if ba.Verifier(b.mb.permissioner.ReqList(ctx.R)).Denied() {
 			continue
 		}
-		actionBtns = append(actionBtns, ba.Button(lcb.b.mb, ctx))
+		actionBtns = append(actionBtns, ba.Button(ctx))
 	}
 
 	// Render actions
-	for _, ba := range b.actions {
-		if b.mb.Info().Verifier().SnakeDo(PermActions, ba.name).WithReq(ctx.R).IsAllowed() != nil {
+	for _, a := range b.actions {
+		if b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied() {
 			continue
 		}
 
-		var btn h.HTMLComponent
-		if ba.buttonCompFunc != nil {
-			btn = ba.buttonCompFunc(ctx)
-		} else {
-			buttonColor := ba.buttonColor
-			if buttonColor == "" {
-				buttonColor = ColorPrimary
-			}
-
-			onclick := web.Plaid().EventFunc(actions.OpenActionDialog).
-				Queries(url.Values{actionPanelOpenParamName: []string{ba.name}}).
+		var (
+			onclick = web.Plaid().EventFunc(actions.OpenActionDialog).
+				Query(ParamTargetPortal, lcb.portals.Temp()).
+				Query(ParamAction, a.name).
+				PreFetch(`(data) => { console.log(presetsListing) }`).
 				MergeQuery(true)
-			if inDialog {
-				onclick.URL(ctx.R.RequestURI).
-					Query(ParamOverlay, actions.Dialog)
-			}
-			btn = VBtn(ba.RequestTitle(lcb.b.mb, ctx)).
-				Color(buttonColor).
-				PrependIcon(ba.icon).
-				Variant(VariantFlat).
-				// Size(SizeSmall).
-				Class("ml-2").
-				Attr("@click", onclick.Go())
+		)
+
+		if inDialog {
+			onclick.URL(ctx.R.URL.Path).
+				Query(ParamOverlay, actions.Dialog)
 		}
 
-		actionBtns = append(actionBtns, btn)
+		actionBtns = append(actionBtns,
+			a.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
+				buttonColor := a.buttonColor
+				if buttonColor == "" {
+					buttonColor = ColorPrimary
+				}
+				return VBtn(a.RequestTitle(lcb.b.mb, ctx.Context())).
+					Color(buttonColor).
+					PrependIcon(a.icon).
+					Variant(VariantFlat).
+					Class("ml-2").
+					Attr("@click", onclick.String())
+			}, onclick, "", nil, ctx))
+	}
+
+	for _, f := range b.appendListButtons {
+		if c := f(ctx); len(c) > 0 {
+			actionBtns = append(actionBtns, c...)
+		}
 	}
 
 	// if len(actionBtns) == 0 {
@@ -414,12 +440,12 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		).OpenOnHover(true))
 	}
 
-	if b.CanCreate(ctx) {
+	if !b.mb.creatingDisabled && b.CanCreate(ctx) {
 		if b.newBtnFunc != nil {
 			if btn := b.newBtnFunc(ctx); btn != nil {
 				actionBtns = append(actionBtns, b.newBtnFunc(ctx))
 			}
-		} else if b.mb.Info().CanCreate(ctx.R) {
+		} else if b.mb.permissioner.ReqCreator(ctx.R).Allowed() {
 			mode := OverlayMode(ctx)
 
 			onclick := web.Plaid().

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/web/v3/zeroer"
 	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/ui/editorjs"
@@ -150,6 +151,13 @@ func LongTextFieldComponentFunc(field *FieldContext, _ *web.EventContext) *VText
 		Disabled(field.ReadOnly)
 }
 
+func (f *FieldBuilder) AsSlice() *FieldBuilder {
+	f.ComponentFunc(WriteSortableTextSliceFieldComponentFuncWraper()).SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
+		return reflectutils.Set(obj, field.Name, ctx.FormSliceValues(field.FormKey))
+	})
+	return f
+}
+
 func RuneFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	if r, ok := field.Value().(rune); ok {
 		if r == 0 {
@@ -160,15 +168,18 @@ func RuneFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 	}
 
 	if field.ReadOnly {
-		return ReadonlyTextComponentFunc(field, nil)
+		return ReadonlyComponentFunc(field, nil)
 	}
 	return TextFieldComponentFunc(field, nil).(*VTextFieldBuilder).MaxLength(1)
 }
 
-func ReadonlyTextComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return vx.VXReadonlyField().
-		Label(field.Label).
-		Value(field.StringValue())
+func ReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
+	if v := field.StringValue(); len(v) > 0 {
+		return vx.VXReadonlyField().
+			Label(field.Label).
+			Value(v)
+	}
+	return nil
 }
 
 func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
@@ -179,6 +190,29 @@ func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Hint(field.Hint()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
+}
+
+func PasswordFieldComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	if field.ReadOnly {
+		v := field.StringValue()
+		if v == "" {
+			return nil
+		}
+		field.ValueOverride = "***"
+		return ReadonlyComponentFunc(field, nil)
+	}
+	return vue.FormField(
+		VTextField().
+			Variant(FieldVariantUnderlined).
+			Label(field.Label).
+			ErrorMessages(field.Errors...).
+			Attr(":append-inner-icon", []byte(`visible.v ? "mdi-eye-off" : "mdi-eye"`)).
+			Attr(`:type`, []byte(`visible.v ? "text" : "password"`)).
+			Attr("v-model", "fieldValue.value").
+			PrependInnerIcon("mdi-lock-outline").
+			Attr(`@click:append-inner`, []byte(`visible.v = !visible.v`)),
+	).Value(field.FormKey, field.Value()).
+		ScopeVar("visible", `{v:false}`)
 }
 
 func EditorJSComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {

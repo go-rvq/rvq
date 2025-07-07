@@ -114,7 +114,7 @@ func (f *FormBuilder) Build() (form *Form) {
 		}
 	}
 
-	form.Body = f.fb.ToComponent(f.mb.Info(), f.obj, FieldModeStack{f.mode}, ctx)
+	form.Body = f.fb.ToComponent(&ToComponentOptions{}, f.mb.Info(), f.obj, FieldModeStack{f.mode}, ctx)
 
 	return
 }
@@ -171,7 +171,7 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 
 	if overlay.Overlayed() {
 		if !f.ScopeDisabled {
-			cb.Scope = web.Scope().Form().Locals().Vars().Closer()
+			cb.Scope = web.Scope().Form().Locals().Vars()
 		}
 		return cb.BuildOverlay()
 	}
@@ -198,7 +198,7 @@ func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 		if oldWrap != nil {
 			h = oldWrap(h)
 		}
-		return web.Scope(h).FormInit()
+		return web.Scope(h).FormInit("{}")
 	}
 
 	switch f.b.overlayMode {

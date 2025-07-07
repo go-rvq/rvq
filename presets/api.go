@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"slices"
@@ -15,43 +16,48 @@ type ContextStringer interface {
 	ContextString(ctx *web.EventContext) string
 }
 
-type FlashMessage struct {
-	Text  string `json:"text"`
-	Color string `json:"color"`
-}
-
-type FlashMessages []*FlashMessage
-
-func (m *FlashMessages) Append(message ...*FlashMessage) {
-	*m = append(*m, message...)
-}
-
-func (m FlashMessages) RespondTo(r *web.EventResponse) {
-	for _, msg := range m {
-		ShowMessage(r, msg.Text, msg.Color)
-	}
-}
-
 type (
+	OnClick struct {
+		Raw     string
+		Builder *web.VueEventTagBuilder
+	}
 	ComponentFunc             func(ctx *web.EventContext) h.HTMLComponent
+	ButtonComponentFunc       func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent
 	ObjectComponentFunc       func(obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	ModeObjectComponentFunc   func(mode FieldModeStack, obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	TabComponentFunc          func(obj interface{}, ctx *web.EventContext) (tab h.HTMLComponent, content h.HTMLComponent)
 	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) string
 )
 
+func (c *OnClick) MarshalJSON() ([]byte, error) {
+	if c.Raw != "" {
+		return json.Marshal(c.Raw)
+	}
+	return json.Marshal(c.Builder.Go())
+}
+
+func (c *OnClick) String() string {
+	if c.Raw != "" {
+		return c.Raw
+	}
+	return c.Builder.Go()
+}
+
 type FieldComponentFunc func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent
 
 type (
-	ActionComponentFunc  func(id string, ctx *web.EventContext) h.HTMLComponent
-	ActionUpdateFunc     func(id string, ctx *web.EventContext) (err error)
-	ActionEnabledFunc    func(id string, ctx *web.EventContext) (ok bool, err error)
-	ActionEnabledObjFunc func(obj any, id string, ctx *web.EventContext) (ok bool, err error)
+	ActionButtomComponentFunc func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent
+	ActionComponentFunc       func(id string, ctx *web.EventContext) (comp h.HTMLComponent, err error)
+	ActionUpdateFunc          func(id string, ctx *web.EventContext) (err error)
+	ActionEnabledFunc         func(id string, ctx *web.EventContext) (ok bool, err error)
+	ActionEnabledObjFunc      func(obj any, id string, ctx *web.EventContext) (ok bool, err error)
+
+	ActionBuildComponentFunc func(id string, ctx *web.EventContext, b *ContentComponentBuilder) (err error)
 )
 
 type (
 	BulkActionComponentFunc                  func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error)
-	BulkActionUpdateFunc                     func(selectedIds []string, ctx *web.EventContext) (err error)
+	BulkActionUpdateFunc                     func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error)
 	BulkActionSelectedIdsProcessorFunc       func(selectedIds []string, ctx *web.EventContext) (processedSelectedIds []string, err error)
 	BulkActionSelectedIdsProcessorNoticeFunc func(selectedIds []string, processedSelectedIds []string, unactionableIds []string) string
 	BulkActionComponentHandler               func(cb *ContentComponentBuilder, ctx *web.EventContext)
@@ -78,7 +84,7 @@ type (
 	FetchFunc  func(obj interface{}, id ID, ctx *web.EventContext) (err error)
 	SaveFunc   func(obj interface{}, id ID, ctx *web.EventContext) (err error)
 	CreateFunc func(obj interface{}, ctx *web.EventContext) (err error)
-	DeleteFunc func(obj interface{}, id ID, ctx *web.EventContext) (err error)
+	DeleteFunc func(obj interface{}, id ID, cascade bool, ctx *web.EventContext) (err error)
 
 	SaveCallbackFunc func(ctx *web.EventContext, obj any) (done func(success bool) error, err error)
 )

@@ -114,11 +114,11 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 	listing := m.Listing()
 
 	listing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id presets.ID, cascade bool, ctx *web.EventContext) (err error) {
 			if obj, err = UnPublish.Execute(m, b, ActivityUnPublish, ctx, id); err != nil {
 				return
 			}
-			return in(obj, id, ctx)
+			return in(obj, id, cascade, ctx)
 		}
 	})
 

@@ -219,7 +219,11 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 	b.editingFB = *b.editingFB.Only(fields...)
 	if b.componentEditFunc == nil {
 		b.EditComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.editingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(EDIT), &FieldContext{FormKey: b.name}, ctx)
+			return b.editingFB.toComponentWithModifiedIndexes(field.ToComponentOptions, field.ModelInfo, field.Obj, field.Mode.Push(EDIT), &FieldContext{
+				ToComponentOptions: &ToComponentOptions{},
+				FormKey:            b.name,
+				Path:               FieldPath{b.name},
+			}, ctx)
 		})
 	}
 	b.Viewing(fields...)
@@ -231,7 +235,11 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 	b.viewingFB = *b.viewingFB.Only(fields...)
 	if b.componentViewFunc == nil {
 		b.ViewComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return b.viewingFB.toComponentWithModifiedIndexes(field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), &FieldContext{FormKey: b.name}, ctx)
+			return b.viewingFB.toComponentWithModifiedIndexes(field.ToComponentOptions, field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), &FieldContext{
+				ToComponentOptions: field.ToComponentOptions,
+				FormKey:            b.name,
+				Path:               FieldPath{b.name},
+			}, ctx)
 		})
 	}
 	return
@@ -610,12 +618,14 @@ func (b *SectionBuilder) showElement(obj any, index int, ctx *web.EventContext) 
 			Go())
 
 	content := b.elementViewFunc(&FieldContext{
-		Mode:         FieldModeStack{DETAIL},
-		EventContext: ctx,
-		Obj:          obj,
-		Name:         b.name,
-		FormKey:      fmt.Sprintf("%s[%b]", b.name, index),
-		Label:        b.label,
+		ToComponentOptions: &ToComponentOptions{},
+		Mode:               FieldModeStack{DETAIL},
+		EventContext:       ctx,
+		Obj:                obj,
+		Name:               b.name,
+		FormKey:            fmt.Sprintf("%s[%b]", b.name, index),
+		Label:              b.label,
+		Path:               FieldPath{b.name, FieldPathIndex(index)},
 	}, ctx)
 
 	return web.Portal(
@@ -650,12 +660,14 @@ func (b *SectionBuilder) editElement(obj any, index, _ int, ctx *web.EventContex
 	contentDiv := h.Div(
 		h.Div(
 			b.elementEditFunc(&FieldContext{
-				EventContext: ctx,
-				Obj:          obj,
-				Mode:         FieldModeStack{EDIT},
-				Name:         fmt.Sprintf("%s[%b]", b.name, index),
-				FormKey:      fmt.Sprintf("%s[%b]", b.name, index),
-				Label:        fmt.Sprintf("%s[%b]", b.label, index),
+				ToComponentOptions: &ToComponentOptions{},
+				EventContext:       ctx,
+				Obj:                obj,
+				Mode:               FieldModeStack{EDIT},
+				Name:               fmt.Sprintf("%s[%b]", b.name, index),
+				FormKey:            fmt.Sprintf("%s[%b]", b.name, index),
+				Label:              fmt.Sprintf("%s[%b]", b.label, index),
+				Path:               FieldPath{b.name, FieldPathIndex(index)},
 			}, ctx),
 		).Class("flex-grow-1"),
 		h.Div(deleteBtn).Class("d-flex pl-3"),
@@ -707,12 +719,13 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 		_ = ctx2.UnmarshalForm(formObj)
 		for _, f := range b.editingFB.fields {
 			name := f.name
-			info := b.father.mb.modelInfo
-			if info != nil {
-				if info.Verifier().Do(PermCreate).ObjectOn(formObj).SnakeOn("f_"+name).WithReq(ctx.R).IsAllowed() != nil && info.Verifier().Do(PermUpdate).ObjectOn(formObj).SnakeOn("f_"+name).WithReq(ctx.R).IsAllowed() != nil {
-					continue
-				}
+			mb := b.father.mb
+			info := mb.modelInfo
+
+			if mb.permissioner.ReqCreator(ctx.R).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() && mb.permissioner.ReqObjectUpdater(ctx.R, formObj).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() {
+				continue
 			}
+
 			if v, err := reflectutils.Get(formObj, f.name); err == nil {
 				reflectutils.Set(toObj, f.name, v)
 			}
@@ -720,7 +733,11 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 				continue
 			}
 
-			fctx := f.NewContext(info, ctx, &FieldContext{FormKey: prefix}, toObj)
+			fctx := f.NewContext(info, ctx, &FieldContext{
+				ToComponentOptions: &ToComponentOptions{},
+				FormKey:            prefix,
+				Path:               FieldPath{f.name},
+			}, toObj)
 			err := f.setterFunc(toObj, fctx, ctx)
 			if err != nil {
 				return err

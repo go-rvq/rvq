@@ -3,8 +3,6 @@ package presets
 import (
 	"errors"
 	"fmt"
-	"net/http"
-	"path"
 	"reflect"
 	"strconv"
 
@@ -25,6 +23,8 @@ type DetailingBuilder struct {
 	fetcher            FetchFunc
 	tabPanels          []TabComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
+	pageHandlers       PageHandlers
+	verifiers          perm.PermVerifiers
 
 	SectionsBuilder
 	RowMenuFields
@@ -58,38 +58,42 @@ func (mb *ModelBuilder) newDetailing() (r *DetailingBuilder) {
 // string / []string / *FieldsSection
 func (mb *ModelBuilder) Detailing(vs ...interface{}) (r *DetailingBuilder) {
 	r = mb.detailing
-	if !mb.hasDetailing && len(vs) == 0 {
-		// put audited fields to end
 
-		var end []any
-		for _, f := range r.fields {
-			if f.audited {
-				end = append(end, f.name)
-			} else {
-				vs = append(vs, f.name)
+	if !mb.hasDetailing {
+		if len(vs) == 0 {
+			// put audited fields to end
+
+			var end []any
+			for _, f := range r.fields {
+				if f.audited {
+					end = append(end, f.name)
+				} else {
+					vs = append(vs, f.name)
+				}
 			}
+
+			vs = append(vs, end...)
 		}
 
-		vs = append(vs, end...)
+		rmb := r.RowMenu()
+
+		rmb.SetRowMenuItem("Delete").ComponentFunc(
+			NewDeletingMenuItemBuilder(mb.Info()).
+				SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
+					cb := web.DecodeCallback(rctx.Ctx.R.FormValue(ParamPostChangeCallback))
+					mode := GetOverlay(rctx.Ctx)
+					if mode.Overlayed() {
+						cb.AddScript("closer.show = false")
+					} else {
+						cb.AddScript(web.Plaid().PushState(true).Location(web.Location(nil).URL(mb.modelInfo.ListingHrefCtx(rctx.Ctx))).Go())
+					}
+					e.ValidQuery(ParamPostChangeCallback, cb.Encode())
+				}).
+				Build(),
+		)
 	}
 
 	mb.hasDetailing = true
-
-	rmb := r.RowMenu()
-	rmb.RowMenuItem("Delete").ComponentFunc(
-		NewDeletingMenuItemBuilder(mb.Info()).
-			SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
-				cb := web.DecodeCallback(rctx.Ctx.R.FormValue(ParamPostChangeCallback))
-				mode := GetOverlay(rctx.Ctx)
-				if mode.Overlayed() {
-					cb.AddScript("closer.show = false")
-				} else {
-					cb.AddScript(web.Plaid().PushState(true).Location(web.Location(nil).URL(mb.modelInfo.ListingHrefCtx(rctx.Ctx))).Go())
-				}
-				e.ValidQuery(ParamPostChangeCallback, cb.Encode())
-			}).
-			Build(),
-	)
 
 	if len(vs) == 0 {
 		return
@@ -186,36 +190,62 @@ func (b *DetailingBuilder) TabsPanels(vs ...TabComponentFunc) (r *DetailingBuild
 	return b
 }
 
+func (b *DetailingBuilder) Verifier(vf ...*perm.PermVerifierBuilder) (r *DetailingBuilder) {
+	b.verifiers.Add(vf...)
+	return b
+}
+
+func (b *DetailingBuilder) GetVerifiers() perm.PermVerifiers {
+	return b.verifiers
+}
+
 func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	id := ctx.Param(ParamID)
-	r.Body = VContainer(h.Text(id))
-
-	obj := b.mb.NewModel()
-	msgr := MustGetMessages(ctx.Context())
-
-	if id == "" {
-		err = msgr.ErrEmptyParamID
+	if b.mb.deletingDisabled {
+		err = ErrReadRecordNotAllowed
 		return
 	}
 
-	var mid ID
-	if mid, err = b.mb.ParseRecordID(id); err != nil {
+	id := ctx.Param(ParamID)
+
+	var (
+		mid  ID
+		obj  = b.mb.NewModel()
+		msgr = MustGetMessages(ctx.Context())
+	)
+
+	if !b.mb.singleton {
+		if id == "" {
+			err = msgr.ErrEmptyParamID
+			return
+		}
+
+		r.Body = VContainer(h.Text(id))
+
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+	}
+
+	if b.mb.permissioner.Reader(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+		r.Body = h.Div(h.Text(MustGetMessages(ctx.Context()).ErrPermissionDenied.Error()))
 		return
 	}
 
 	err = b.GetFetchFunc()(obj, mid, ctx)
 	if err != nil {
 		if errors.Is(err, ErrRecordNotFound) {
+			if b.mb.singleton {
+				return b.mb.editing.CreatingBuilder().DefaultPageFuncMode(true, ctx)
+			}
 			return b.mb.p.DefaultNotFoundPageFunc(ctx)
 		}
 		return
 	}
 
-	r.PageTitle = b.mb.RecordTitle(obj, ctx)
-
-	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
-		r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
-		return
+	if b.mb.singleton {
+		r.PageTitle = b.mb.TTitle(ctx.Context())
+	} else {
+		r.PageTitle = b.mb.RecordTitle(obj, ctx)
 	}
 
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
@@ -233,20 +263,32 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	return
 }
 
-func (b *DetailingBuilder) BuildPage(builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
+func (b *DetailingBuilder) BuildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
+	if vf == nil {
+		vf = perm.PermVerifier()
+	}
 	return b.mb.BindPageFunc(func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		id := ctx.Param(ParamID)
+		var mid ID
 
 		obj := b.mb.NewModel()
 		msgr := MustGetMessages(ctx.Context())
 
-		if id == "" {
-			err = msgr.ErrEmptyParamID
-			return
+		if !b.mb.singleton {
+			id := ctx.Param(ParamID)
+			if id == "" {
+				err = msgr.ErrEmptyParamID
+				return
+			}
+
+			if mid, err = b.mb.ParseRecordID(id); err != nil {
+				return
+			}
 		}
 
-		var mid ID
-		if mid, err = b.mb.ParseRecordID(id); err != nil {
+		v := vf.Build(b.mb.permissioner.Reader(ctx.R, mid, ParentsModelID(ctx.R)...))
+
+		if v.Denied() {
+			r.Body = h.Div(h.Text(MustGetMessages(ctx.Context()).ErrPermissionDenied.Error()))
 			return
 		}
 
@@ -260,25 +302,32 @@ func (b *DetailingBuilder) BuildPage(builder func(ctx *web.EventContext, obj any
 
 		r.PageTitle = b.mb.RecordTitle(obj, ctx)
 
-		if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
-			r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
-			return
-		}
-
 		err = builder(ctx, obj, mid, &r)
 		return
 	})
 }
 
-func (d *DetailingBuilder) ItemRouterPageBuilder(subUri string, handler func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) {
-	d.mb.ItemRouteSetuper(func(mux *http.ServeMux, uri string) {
-		mux.Handle(path.Join(uri, subUri), d.mb.p.Wrap(d.mb, d.mb.p.GetDetailLayoutFunc()(d.BuildPage(handler), d.mb.GetLayoutConfig())))
-	})
+func (d *DetailingBuilder) AddPageFunc(vf *perm.PermVerifierBuilder, pth string, handler func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error), methods ...string) (ph *PageHandler) {
+	if vf != nil {
+		if !vf.Valid() {
+			vf.Path(pth)
+		}
+		d.verifiers.Add(vf)
+	}
+	ph = NewPageHandler(pth, d.mb.p.Wrap(d.mb.p.GetDetailLayoutFunc()(d.BuildPage(vf, handler), d.mb.GetLayoutConfig())), methods...)
+	d.pageHandlers.Add(ph)
+	return
+}
+
+func (d *DetailingBuilder) AddRawPageFunc(path string, f web.PageFunc, methods ...string) (ph *PageHandler) {
+	ph = NewPageHandler(path, d.mb.p.Wrap(f), methods...)
+	d.pageHandlers.Add(ph)
+	return
 }
 
 func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
-	if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
-		err = perm.PermissionDenied
+	if b.mb.deletingDisabled {
+		err = ErrReadRecordNotAllowed
 		return
 	}
 
@@ -287,19 +336,22 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 	msgr := MustGetMessages(ctx.Context())
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 
-	if id == "" {
+	if id == "" && !b.mb.singleton {
 		err = msgr.ErrEmptyParamID
 		return
 	}
+
 	var mid ID
 	if mid, err = b.mb.ParseRecordID(id); err != nil {
 		return
 	}
-	if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
+
+	if b.mb.permissioner.Reader(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+		err = perm.PermissionDenied
 		return
 	}
 
-	if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
+	if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
 		return
 	}
 
@@ -324,11 +376,6 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 
 func (b *DetailingBuilder) EventBuilder(builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.EventResponse) (comp h.HTMLComponent, err error)) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		if b.mb.Info().Verifier().Do(PermGet).WithReq(ctx.R).IsAllowed() != nil {
-			err = perm.PermissionDenied
-			return
-		}
-
 		id := ctx.Param(ParamID)
 		obj := b.mb.NewModel()
 		msgr := MustGetMessages(ctx.Context())
@@ -341,11 +388,13 @@ func (b *DetailingBuilder) EventBuilder(builder func(ctx *web.EventContext, obj 
 		if mid, err = b.mb.ParseRecordID(id); err != nil {
 			return
 		}
-		if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
+
+		if b.mb.permissioner.Reader(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+			err = perm.PermissionDenied
 			return
 		}
 
-		if err = b.mb.Info().Verifier().Do(PermGet).ObjectOn(obj).WithReq(ctx.R).IsAllowed(); err != nil {
+		if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
 			return
 		}
 
@@ -458,7 +507,10 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 			f.MainPortals = append(f.MainPortals, web.Portal().Name(name))
 			return name
 		}, func(i int, m vx.RowMenuItemFunc) {
-			menus = append(menus, m(0, f.Obj, f.b.id, ctx))
+			c := m(0, f.Obj, f.b.id, ctx)
+			if c != nil {
+				menus = append(menus, c)
+			}
 		})
 
 	actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, b.actions...)
@@ -496,7 +548,19 @@ func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse,
 		return
 	}
 
-	err = action.Do(b.mb, id, ctx, &r)
+	var mid ID
+	if !b.mb.singleton {
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+	}
+
+	if b.mb.permissioner.ObjectReadActioner(ctx.R, action.PermName(), mid, ParentsModelID(ctx.R)...).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
+	_, err = action.Do(b.mb, id, ctx, &r)
 	return
 }
 
@@ -508,7 +572,35 @@ func (b *DetailingBuilder) formAction(ctx *web.EventContext) (r web.EventRespons
 	if id, action, err = b.parseRequestAction(ctx); err != nil {
 		return
 	}
+
+	var mid ID
+	if !b.mb.singleton {
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+	}
+
+	if b.mb.permissioner.ObjectReadActioner(ctx.R, action.PermName(), mid, ParentsModelID(ctx.R)...).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
 	err = action.View(b.mb, id, ctx, &r)
+	return
+}
+
+func (b *DetailingBuilder) Fetch(id string, ctx *web.EventContext) (obj any, err error) {
+	obj = b.mb.NewModel()
+	var mid ID
+	if !b.mb.singleton {
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+	}
+
+	if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
+		return
+	}
 	return
 }
 
@@ -518,9 +610,11 @@ func (b *DetailingBuilder) parseRequestAction(ctx *web.EventContext) (id string,
 		err = errors.New("action required")
 		return
 	}
-	id = ctx.R.FormValue(ParamID)
-	if id == "" {
-		err = errors.New("id required")
+
+	if !b.mb.singleton {
+		if id = ctx.R.FormValue(ParamID); id == "" {
+			err = errors.New("id required")
+		}
 		return
 	}
 
@@ -533,11 +627,6 @@ func (b *DetailingBuilder) parseRequestAction(ctx *web.EventContext) (id string,
 		return
 	}
 	return
-}
-
-func (b *DetailingBuilder) actionForm(action *ActionBuilder, id string, ctx *web.EventContext) h.HTMLComponent {
-	comp := action.Form(b.mb, id, actions.OverlayMode(ctx.Param(ParamOverlay)), ctx)
-	return web.Scope(comp).FormInit()
 }
 
 // EditDetailField EventFunc: click detail field component edit button
@@ -561,9 +650,11 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 	}
 
 	r.UpdatePortal(f.FieldPortalName(), f.editComponent(obj, &FieldContext{
-		EventContext: ctx,
-		FormKey:      f.name,
-		Name:         f.name,
+		ToComponentOptions: &ToComponentOptions{},
+		EventContext:       ctx,
+		FormKey:            f.name,
+		Path:               FieldPath{f.name},
+		Name:               f.name,
 	}, ctx))
 	return r, nil
 }
@@ -598,10 +689,12 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 	r.UpdatePortal(
 		f.FieldPortalName(),
 		f.viewComponent(&FieldContext{
-			EventContext: ctx,
-			Obj:          obj,
-			FormKey:      f.name,
-			Name:         f.name,
+			ToComponentOptions: &ToComponentOptions{},
+			EventContext:       ctx,
+			Obj:                obj,
+			FormKey:            f.name,
+			Path:               FieldPath{f.name},
+			Name:               f.name,
 		}, ctx))
 	return r, nil
 }
@@ -644,9 +737,10 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 	r.UpdatePortal(
 		f.FieldPortalName(),
 		f.listComponent(&FieldContext{
-			EventContext: ctx,
-			Obj:          obj,
-			Mode:         FieldModeStack{DETAIL},
+			ToComponentOptions: &ToComponentOptions{},
+			EventContext:       ctx,
+			Obj:                obj,
+			Mode:               FieldModeStack{DETAIL},
 		}, ctx, int(deleteIndex), int(index), -1))
 
 	return
@@ -689,9 +783,10 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 	r.UpdatePortal(
 		f.FieldPortalName(),
 		f.listComponent(&FieldContext{
-			EventContext: ctx,
-			Obj:          obj,
-			Mode:         FieldModeStack{DETAIL},
+			ToComponentOptions: &ToComponentOptions{},
+			EventContext:       ctx,
+			Obj:                obj,
+			Mode:               FieldModeStack{DETAIL},
 		}, ctx, -1, -1, int(index)))
 
 	return
@@ -754,9 +849,10 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 
 	r.UpdatePortal(f.FieldPortalName(),
 		f.listComponent(&FieldContext{
-			EventContext: ctx,
-			Obj:          obj,
-			Mode:         FieldModeStack{DETAIL},
+			ToComponentOptions: &ToComponentOptions{},
+			EventContext:       ctx,
+			Obj:                obj,
+			Mode:               FieldModeStack{DETAIL},
 		}, ctx, int(index), -1, -1))
 
 	return
@@ -807,9 +903,10 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 
 	r.UpdatePortal(f.FieldPortalName(),
 		f.listComponent(&FieldContext{
-			EventContext: ctx,
-			Obj:          obj,
-			Mode:         FieldModeStack{DETAIL},
+			ToComponentOptions: &ToComponentOptions{},
+			EventContext:       ctx,
+			Obj:                obj,
+			Mode:               FieldModeStack{DETAIL},
 		}, ctx, -1, listLen, -1))
 
 	return

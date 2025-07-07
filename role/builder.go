@@ -9,8 +9,10 @@ import (
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/gorm2op"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/vue"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
+	vx "github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 	"gorm.io/gorm"
 )
@@ -60,7 +62,9 @@ func (b *Builder) EditorSubject(v string) *Builder {
 	return b
 }
 
-func (b *Builder) Install(pb *presets.Builder) error {
+func (b *Builder) Install(pb *presets.Builder) (err error) {
+	ConfigureMessages(pb.I18n())
+
 	if b.editorSubject != "" {
 		permB := pb.GetPermission()
 		if permB == nil {
@@ -95,7 +99,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	}
 
 	b.roleMb = pb.Model(&Role{}, presets.ModelConfig().
-		SetModuleKey(I18nRoleKey)).
+		SetModuleKey(MessagesKey)).
 		MenuIcon("mdi-account-key")
 
 	ed := b.roleMb.Editing(
@@ -108,42 +112,25 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	ed.Field("Permissions").AutoNested(policeModel, permFb)
 
 	permFb.Field("Effect").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return VSelect().
-			Variant(FieldVariantUnderlined).
-			Items([]string{perm.Allowed, perm.Denied}).
-			Value(field.StringValue()).
+		p := field.Obj.(*perm.DefaultDBPolicy)
+		msgr := GetMessages(ctx.Context())
+
+		return vue.FormField(vx.VXSelectOne().
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.StringValue())...)
+			ItemText("text").ItemValue("value").
+			Chips(true).
+			Items([]DefaultOptionItem{
+				{Value: perm.Allowed, Text: msgr.Allowed},
+				{Value: perm.Denied, Text: msgr.Denied},
+			}).ErrorMessages(field.Errors...)).Value(field.FormKey, p.Effect).Bind()
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 		p := obj.(*perm.DefaultDBPolicy)
 		p.Effect = ctx.R.FormValue(field.FormKey)
 		return
 	})
-	permFb.Field("Actions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return VAutocomplete().
-			Variant(FieldVariantUnderlined).
-			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.StringValue())...).
-			Multiple(true).
-			Chips(true).
-			ClosableChips(true).
-			Items(b.actions)
-	})
 
-	permFb.Field("Resources").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return VAutocomplete().
-			Variant(FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.StringValue())...).
-			Label(field.Label).
-			Multiple(true).
-			Chips(true).
-			ClosableChips(true).
-			Items(b.resources)
-	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-		p := obj.(*perm.DefaultDBPolicy)
-		p.Resources = ctx.R.Form[field.FormKey]
-		return
-	})
+	permFb.Field("Actions").AsSlice()
+	permFb.Field("Resources").AsSlice()
 
 	ed.FetchFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
@@ -151,10 +138,6 @@ func (b *Builder) Install(pb *presets.Builder) error {
 
 	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(*Role)
-		if u.Name == "" {
-			err.FieldError("Name", "Name is required")
-			return
-		}
 		for _, p := range u.Permissions {
 			p.Subject = u.Name
 		}
@@ -176,7 +159,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return
 	})
 
-	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 		err = b.db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", id).Error; err != nil {
 				return err
@@ -190,6 +173,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 
 		return
 	})
+
+	b.roleMb.Detailing()
 
 	if b.AfterInstallFunc != nil {
 		return b.AfterInstallFunc(b.roleMb)

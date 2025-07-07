@@ -19,5 +19,5 @@ func NewFieldsContextLabelGetter(mi *ModelInfo, fg interface {
 }
 
 func (g *FieldsContextLabelGetter) Get(name string) string {
-	return g.fg.Field(name).ContextLabel(g.mi, g.ctx)
+	return g.fg.Field(name).ContextLabel(g.mi, g.ctx.Context())
 }

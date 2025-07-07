@@ -12,6 +12,7 @@ import (
 	"github.com/qor5/admin/v3/activity"
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
+	"github.com/qor5/web/v3/datafield"
 	"github.com/sunfmin/reflectutils"
 	. "github.com/theplant/htmlgo"
 	"golang.org/x/text/language"
@@ -45,6 +46,7 @@ type LocaleInfo struct {
 	code  string
 	path  string
 	label string
+	datafield.DataField[*LocaleInfo]
 }
 
 func (l *LocaleInfo) String() string {
@@ -134,19 +136,20 @@ func (b *Builder) GetAtivity() *activity.Builder {
 	return b.ab
 }
 
-func (b *Builder) RegisterLocales(localeCode, localePath, localeLabel string) (r *Builder) {
+func (b *Builder) RegisterLocale(localeCode, localePath, localeLabel string) (r *LocaleInfo) {
 	if slices.ContainsFunc(b.locales, func(l *LocaleInfo) bool {
 		return l.code == localeCode
 	}) {
-		return b
+		return b.GetLocale(localeCode)
 	}
 
-	b.locales = append(b.locales, &LocaleInfo{
+	l := datafield.New(&LocaleInfo{
 		code:  localeCode,
 		path:  path.Join("/", localePath),
 		label: localeLabel,
 	})
-	return b
+	b.locales = append(b.locales, l)
+	return l
 }
 
 func (b *Builder) UnRegisterLocales(localeCode ...string) (r *Builder) {

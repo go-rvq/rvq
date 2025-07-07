@@ -239,13 +239,13 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 	})
 
 	presetModel.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 			if mb.skip&Delete != 0 {
-				return in(obj, id, ctx)
+				return in(obj, id, false, ctx)
 			}
 
 			old, ok := findOldWithSlug(obj, id, ab.getDBFromContext(ctx.R.Context()))
-			if err = in(obj, id, ctx); err != nil {
+			if err = in(obj, id, false, ctx); err != nil {
 				return err
 			}
 

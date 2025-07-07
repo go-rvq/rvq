@@ -100,7 +100,7 @@ func (r *ObjRestriction[T]) ObjHandlers() OkObjHandlers {
 	return r.objHandlers
 }
 
-func (r *ObjRestriction[T]) SetObjHandler(objHandlers OkObjHandlers) *ObjRestriction[T] {
+func (r *ObjRestriction[T]) SetObjHandlers(objHandlers OkObjHandlers) *ObjRestriction[T] {
 	r.objHandlers = objHandlers
 	return r
 }

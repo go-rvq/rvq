@@ -12,6 +12,7 @@ type QorJob struct {
 
 	Job    string
 	Status string      `sql:"default:'new'"`
+	Once   bool        `sql:"not null;default:false"`
 	Args   interface{} `sql:"-" gorm:"-"`
 }
 
@@ -34,6 +35,8 @@ type QorJobInstance struct {
 	mutex       sync.Mutex  `sql:"-"`
 	stopRefresh bool        `sql:"-"`
 	inRefresh   bool        `sql:"-"`
+
+	Once bool `sql:"not null;default:false"`
 }
 
 type QorJobLog struct {
@@ -71,4 +74,21 @@ func (schedule *Schedule) SetScheduleTime(t *time.Time) {
 type GoQueError struct {
 	gorm.Model
 	Error string
+}
+
+type CronScheduler interface {
+	GetCronRule() string
+	SetCronRule(v string)
+}
+
+type CronSchedule struct {
+	CronRule string
+}
+
+func (s *CronSchedule) SetCronRule(v string) {
+	s.CronRule = v
+}
+
+func (s *CronSchedule) GetCronRule() string {
+	return s.CronRule
 }

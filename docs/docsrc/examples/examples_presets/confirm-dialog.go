@@ -19,7 +19,7 @@ func PresetsConfirmDialog(b *presets.Builder, db *gorm.DB) (
 ) {
 	_ = []interface{}{
 		// @snippet_begin(OpenConfirmDialog)
-		presets.OpenConfirmDialog,
+		presets.EventOpenConfirmDialog,
 		// @snippet_end
 		// @snippet_begin(ConfirmDialogConfirmEvent)
 		presets.ConfirmDialogConfirmEvent,
@@ -44,7 +44,7 @@ func PresetsConfirmDialog(b *presets.Builder, db *gorm.DB) (
 			vuetify.VBtn("Delete File").
 				Attr("@click",
 					web.Plaid().
-						EventFunc(presets.OpenConfirmDialog).
+						EventFunc(presets.EventOpenConfirmDialog).
 						Query(presets.ConfirmDialogConfirmEvent,
 							`alert("file deleted")`,
 						).

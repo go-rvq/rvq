@@ -2,11 +2,9 @@ package presets
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -17,7 +15,6 @@ import (
 	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/perm"
 	. "github.com/qor5/x/v3/ui/vuetify"
-	"github.com/qor5/x/v3/ui/vuetifyx"
 	h "github.com/theplant/htmlgo"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
@@ -64,6 +61,11 @@ type Builder struct {
 	ModelConfigurators                    ModelConfigurators
 	ModelSetupFactories                   ModelSetupFactories
 	skipNotFoundHandler                   func(r *http.Request) bool
+	muxSetup                              []func(prefix string, r *http.ServeMux)
+	permissions                           *PermMenu
+	pageHandlers                          PageHandlers
+	pages                                 []*PageBuilder
+	verifiers                             perm.PermVerifiers
 
 	datafield.DataField[*Builder]
 }
@@ -82,19 +84,14 @@ const (
 	ModelsI18nModuleKey i18n.ModuleKey = "ModelsI18nModuleKey"
 )
 
-const (
-	OpenConfirmDialog = "presets_ConfirmDialog"
-)
-
-func New() *Builder {
+func New(i18nB *i18n.Builder) *Builder {
 	l, _ := zap.NewDevelopment()
 	r := datafield.New(&Builder{
 		logger:  l,
 		builder: web.New(),
-		i18nBuilder: i18n.New().
+		i18nBuilder: i18nB.
 			RegisterForModule(language.English, CoreI18nModuleKey, Messages_en_US).
-			RegisterForModule(language.SimplifiedChinese, CoreI18nModuleKey, Messages_zh_CN).
-			RegisterForModule(language.Japanese, CoreI18nModuleKey, Messages_ja_JP),
+			RegisterForModule(language.BrazilianPortuguese, CoreI18nModuleKey, Messages_pt_BR),
 		writeFieldDefaults:   NewFieldDefaults(WRITE),
 		listFieldDefaults:    NewFieldDefaults(LIST),
 		detailFieldDefaults:  NewFieldDefaults(DETAIL),
@@ -114,7 +111,7 @@ func New() *Builder {
 			return false
 		},
 	})
-	r.GetWebBuilder().RegisterEventHandler(OpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
+	r.GetWebBuilder().RegisterEventHandler(EventOpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
 	r.layoutFunc = r.DefaultLayout
 	r.detailLayoutFunc = r.DefaultLayout
 	return r
@@ -122,11 +119,6 @@ func New() *Builder {
 
 func (b *Builder) I18n() (r *i18n.Builder) {
 	return b.i18nBuilder
-}
-
-func (b *Builder) SetI18n(v *i18n.Builder) (r *Builder) {
-	b.i18nBuilder = v
-	return b
 }
 
 func (b *Builder) Permission(v *perm.Builder) (r *Builder) {
@@ -325,6 +317,15 @@ func (b *Builder) Model(v interface{}, opts ...ModelBuilderOption) (r *ModelBuil
 	return r
 }
 
+func (b *Builder) GetModelByID(id string) *ModelBuilder {
+	for _, mb := range b.models {
+		if mb.id == id {
+			return mb
+		}
+	}
+	return nil
+}
+
 func (b *Builder) GetModel(typ any) *ModelBuilder {
 	var t reflect.Type
 	switch tp := typ.(type) {
@@ -410,6 +411,15 @@ func (b *Builder) MenuOrder(items ...interface{}) {
 				b.removeMenuGroupInOrder(v)
 			}
 			b.menuOrder = append(b.menuOrder, v)
+			for _, item := range v.subMenuItems {
+				if item[0] == '/' {
+					if p := b.GetPage(item); p != nil {
+						p.menuGroup = v.name
+					}
+				} else if mb := b.GetModelByID(item); mb != nil {
+					mb.menuGroupName = v.name
+				}
+			}
 		default:
 			panic(fmt.Sprintf("unknown menu order item type: %T\n", item))
 		}
@@ -462,104 +472,47 @@ const (
 	subMenuFontWeight = "400"
 )
 
-func (b *Builder) menuItem(ctx *web.EventContext, m *ModelBuilder, isSub bool) (r h.HTMLComponent) {
-	menuIcon := m.menuIcon
-	// fontWeight := subMenuFontWeight
-	if isSub {
-		// menuIcon = ""
-	} else {
-		// fontWeight = menuFontWeight
-		if menuIcon == "" {
-			menuIcon = defaultMenuIcon(m.label)
-		}
-	}
-	href := m.Info().ListingHref(ParentsModelID(ctx.R)...)
-	if m.link != "" {
-		href = m.link
-	}
-	if m.defaultURLQueryFunc != nil {
-		href = fmt.Sprintf("%s?%s", href, m.defaultURLQueryFunc(ctx.R).Encode())
-	}
-
-	label := m.TPageLabel(ctx.Context())
-
-	item := VListItem(
-		// VRow(
-		// 	VCol(h.If(menuIcon != "", VIcon(menuIcon))).Cols(2),
-		// 	VCol(h.Text(i18n.T(ctx.R, ModelsI18nModuleKey, m.label))).Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 16px;", fontWeight))),
-
-		h.If(menuIcon != "", web.Slot(VIcon(menuIcon)).Name("prepend")),
-		VListItemTitle(
-			h.Text(label),
-		),
-	).Class("rounded-lg").
-		Value(label)
-	// .ActiveClass("bg-red")
-	// Attr("color", "primary")
-
-	item.Href(href)
-	if strings.HasPrefix(href, "/") {
-		funcStr := fmt.Sprintf(`(e) => {
-	if (e.metaKey || e.ctrlKey) { return; }
-	e.stopPropagation();
-	e.preventDefault();
-	%s;
-}
-`, web.Plaid().PushStateURL(href).Go())
-		item.Attr("@click", funcStr)
-	}
-	// if b.isMenuItemActive(ctx, m) {
-	//	item = item.Class("v-list-item--active text-primary")
-	// }
-	return item
-}
-
-func (b *Builder) isMenuItemActive(ctx *web.EventContext, m *ModelBuilder) bool {
-	href := m.Info().ListingHref(ParentsModelID(ctx.R)...)
-	if m.link != "" {
-		href = m.link
-	}
-	path := strings.TrimSuffix(ctx.R.URL.Path, "/")
-	if path == "" && href == "/" {
-		return true
-	}
-	if path == href {
-		return true
-	}
-	if href == b.prefix {
-		return false
-	}
-	if href != "/" && strings.HasPrefix(path, href) {
-		return true
-	}
-
-	return false
-}
-
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
-	mMap := make(map[string]*ModelBuilder)
+	var (
+		mMap = make(map[string]*ModelBuilder)
+		pMap = make(map[string]*PageBuilder)
+	)
+
 	for _, m := range b.models {
 		if !m.notInMenu {
-			mMap[m.uriName] = m
+			mMap[m.id] = m
 		}
 	}
+
+	for _, page := range b.pages {
+		if !page.notInMenu {
+			pMap[page.path] = page
+		}
+	}
+
 	var (
 		activeMenuItem string
 		selection      string
+		menus          []h.HTMLComponent
+		inOrderMap     = make(map[string]struct{})
 	)
-	inOrderMap := make(map[string]struct{})
-	var menus []h.HTMLComponent
+
 	for _, om := range b.menuOrder {
 		switch v := om.(type) {
 		case *MenuGroupBuilder:
 			disabled := false
-			if b.verifier.Do(PermList).SnakeOn("mg_"+v.name).WithReq(ctx.R).IsAllowed() != nil {
-				disabled = true
-			}
 			groupIcon := v.icon
 			if groupIcon == "" {
 				groupIcon = defaultMenuIcon(v.name)
 			}
+
+			var title string
+			if v.title != nil {
+				title = v.TTitle(ctx.Context())
+			} else {
+				title = i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)
+			}
+
 			subMenus := []h.HTMLComponent{
 				h.Template(
 					VListItem(
@@ -569,34 +522,46 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 						VListItemTitle().Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 14px;", menuFontWeight)),
 						// VListItemTitle(h.Text(i18n.T(ctx.R, ModelsI18nModuleKey, v.name))).
 					).Attr("v-bind", "props").
-						Title(i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)).
+						Title(title).
 						Class("rounded-lg"),
 					// Value(i18n.T(ctx.R, ModelsI18nModuleKey, v.name)),
 				).Attr("v-slot:activator", "{ props }"),
 			}
+
 			subCount := 0
 			for _, subOm := range v.subMenuItems {
-				m, ok := mMap[subOm]
-				if !ok {
-					m = mMap[inflection.Plural(strcase.ToKebab(subOm))]
-				}
-				if m == nil {
-					continue
-				}
-				m.menuGroupName = v.name
-				if m.notInMenu {
-					continue
-				}
-				if m.Info().Verifier().Do(PermList).WithReq(ctx.R).IsAllowed() != nil {
-					continue
-				}
-				subMenus = append(subMenus, b.menuItem(ctx, m, true))
-				subCount++
-				inOrderMap[m.uriName] = struct{}{}
-				if b.isMenuItemActive(ctx, m) {
-					// activeMenuItem = m.label
-					activeMenuItem = v.name
-					selection = m.label
+				if subOm[0] == '/' {
+					p := pMap[subOm]
+					if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
+						continue
+					}
+					subMenus = append(subMenus, p.menuItem(ctx, true))
+					subCount++
+					inOrderMap[p.path] = struct{}{}
+					if p.isMenuItemActive(ctx) {
+						// activeMenuItem = m.label
+						activeMenuItem = v.name
+						selection = p.path
+					}
+				} else {
+					m, _ := mMap[subOm]
+					if m == nil {
+						continue
+					}
+					if m.notInMenu {
+						continue
+					}
+					if m.permissioner.ReqLister(ctx.R).Denied() {
+						continue
+					}
+					subMenus = append(subMenus, m.menuItem(ctx, true))
+					subCount++
+					inOrderMap[m.id] = struct{}{}
+					if m.isMenuItemActive(ctx) {
+						// activeMenuItem = m.label
+						activeMenuItem = v.name
+						selection = m.label
+					}
 				}
 			}
 			if subCount == 0 {
@@ -610,37 +575,52 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				VListGroup(subMenus...).Value(v.name),
 			)
 		case string:
-			m, ok := mMap[v]
-			if !ok {
-				m = mMap[inflection.Plural(strcase.ToKebab(v))]
-			}
-			if m == nil {
-				continue
-			}
-			if m.Info().Verifier().Do(PermList).WithReq(ctx.R).IsAllowed() != nil {
-				continue
-			}
+			if v[0] == '/' {
+				p := pMap[v]
+				if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
+					continue
+				}
 
-			if m.notInMenu {
-				continue
-			}
-			menuItem := b.menuItem(ctx, m, false)
-			menus = append(menus, menuItem)
-			inOrderMap[m.uriName] = struct{}{}
+				menuItem := p.menuItem(ctx, false)
+				menus = append(menus, menuItem)
+				inOrderMap[p.path] = struct{}{}
 
-			if b.isMenuItemActive(ctx, m) {
-				selection = m.label
+				if p.isMenuItemActive(ctx) {
+					selection = p.path
+				}
+			} else {
+				m, ok := mMap[v]
+				if !ok {
+					m = mMap[inflection.Plural(strcase.ToKebab(v))]
+				}
+				if m == nil {
+					continue
+				}
+				if m.permissioner.ReqLister(ctx.R).Denied() {
+					continue
+				}
+
+				if m.notInMenu {
+					continue
+				}
+				menuItem := m.menuItem(ctx, false)
+				menus = append(menus, menuItem)
+				inOrderMap[m.id] = struct{}{}
+
+				if m.isMenuItemActive(ctx) {
+					selection = m.label
+				}
 			}
 		}
 	}
 
 	for _, m := range b.models {
-		_, ok := inOrderMap[m.uriName]
+		_, ok := inOrderMap[m.id]
 		if ok {
 			continue
 		}
 
-		if m.Info().Verifier().Do(PermList).WithReq(ctx.R).IsAllowed() != nil {
+		if m.permissioner.ReqLister(ctx.R).Denied() {
 			continue
 		}
 
@@ -648,25 +628,41 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 			continue
 		}
 
-		if b.isMenuItemActive(ctx, m) {
+		if m.isMenuItemActive(ctx) {
 			selection = m.label
 		}
-		menus = append(menus, b.menuItem(ctx, m, false))
+		menus = append(menus, m.menuItem(ctx, false))
 	}
 
-	r = h.Div(
-		web.Scope(
-			VList(menus...).Class("main-menu").
-				OpenStrategy("single").
-				Class("primary--text").
-				Density(DensityCompact).
-				Attr("v-model:opened", "locals.menuOpened").
-				Attr("v-model:selected", "locals.selection"),
-			// .Attr("v-model:selected", h.JSONString([]string{"Pages"})),
-		).Slot("{ locals }").LocalsInit(
-			fmt.Sprintf(`{ menuOpened:  ["%s"]}`, activeMenuItem),
-			fmt.Sprintf(`{ selection:  ["%s"]}`, selection),
-		))
+	for _, p := range b.pages {
+		_, ok := inOrderMap[p.path]
+		if ok {
+			continue
+		}
+
+		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
+			continue
+		}
+
+		if p.isMenuItemActive(ctx) {
+			selection = p.path
+		}
+
+		menus = append(menus, p.menuItem(ctx, false))
+	}
+
+	r = web.Scope(
+		VList(menus...).Class("main-menu").
+			OpenStrategy("single").
+			Class("primary--text").
+			Density(DensityCompact).
+			Attr("v-model:opened", "locals.menuOpened").
+			Attr("v-model:selected", "locals.selection"),
+		// .Attr("v-model:selected", h.JSONString([]string{"Pages"})),
+	).Slot("{ locals }").LocalsInit(
+		fmt.Sprintf(`{ menuOpened:  ["%s"]}`, activeMenuItem),
+		fmt.Sprintf(`{ selection:  ["%s"]}`, selection),
+	)
 	return
 }
 
@@ -674,7 +670,6 @@ func (b *Builder) RunBrandFunc(ctx *web.EventContext) (r h.HTMLComponent) {
 	if b.brandFunc != nil {
 		return b.brandFunc(ctx)
 	}
-
 	return h.H1(i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle)).Class("text-h6")
 }
 
@@ -909,51 +904,6 @@ const (
 	ConfirmDialogDialogPortalName = "presets_ConfirmDialog_DialogPortalName"
 )
 
-func (b *Builder) openConfirmDialog(ctx *web.EventContext) (er web.EventResponse, err error) {
-	confirmEvent := ctx.R.FormValue(ConfirmDialogConfirmEvent)
-	if confirmEvent == "" {
-		ShowMessage(&er, "confirm event is empty", "error")
-		return
-	}
-
-	msgr := MustGetMessages(ctx.Context())
-	promptText := msgr.ConfirmDialogPromptText
-	if v := ctx.R.FormValue(ConfirmDialogPromptText); v != "" {
-		promptText = v
-	}
-
-	portal := DefaultConfirmDialogPortalName
-	if v := ctx.R.FormValue(ConfirmDialogDialogPortalName); v != "" {
-		portal = v
-	}
-
-	er.UpdatePortal(
-		portal,
-		web.Scope(VDialog(
-			VCard(
-				VCardTitle(VIcon("warning").Class("red--text mr-4"), h.Text(promptText)),
-				VCardActions(
-					VSpacer(),
-					VBtn(msgr.Cancel).
-						Variant(VariantFlat).
-						Class("ml-2").
-						On("click", "locals.show = false"),
-
-					VBtn(msgr.OK).
-						Color("primary").
-						Variant(VariantFlat).
-						Theme(ThemeDark).
-						Attr("onclick", fmt.Sprintf("%s; locals.show = false", confirmEvent)),
-				),
-			),
-		).MaxWidth("600px").
-			Attr("v-model", "locals.show"),
-		).Slot("{ locals }").LocalsInit("{show: true}"),
-	)
-
-	return
-}
-
 // for pages outside the default presets layout
 func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 	return func(ctx *web.EventContext) (pr web.PageResponse, err error) {
@@ -962,7 +912,7 @@ func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 		var innerPr web.PageResponse
 		innerPr, err = in(ctx)
 		if err == perm.PermissionDenied {
-			pr.Body = h.Text(perm.PermissionDenied.Error())
+			pr.Body = h.Text(MustGetMessages(ctx.Context()).ErrPermissionDenied.Error())
 			return pr, nil
 		}
 		if err != nil {
@@ -986,7 +936,8 @@ func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 					Attr("v-model", "vars.presetsMessage.show").
 					Attr(":color", "vars.presetsMessage.color").
 					Timeout(2000).
-					Location(LocationTop),
+					Location(LocationTop).
+					ZIndex(1000000),
 			).Attr("v-if", "vars.presetsMessage"),
 			VMain(
 				innerPr.Body.(h.HTMLComponent),
@@ -1000,10 +951,15 @@ message: ""}}`)...)
 	}
 }
 
+func (b *Builder) FormatHtmlValue(v string) string {
+	return strings.Replace(strings.Replace(v, "{{prefix}}", b.prefix, -1), "{{exe_mtime}}", web.ExeMTime, -1)
+}
+
 func (b *Builder) InjectAssets(ctx *web.EventContext) {
-	ctx.Injector.HeadHTML(strings.Replace(`
-			<link rel="stylesheet" href="{{prefix}}/vuetify/assets/index.css" async>
-			<script src='{{prefix}}/assets/vue.js'></script>
+	ctx.Injector.HeadHTML(b.FormatHtmlValue(`
+			<link rel="stylesheet" href="{{prefix}}/assets/main.css?{{exe_mtime}}" async>
+			<link rel="stylesheet" href="{{prefix}}/vuetify/assets/index.css?{{exe_mtime}}" async>
+			<script src="{{prefix}}/assets/vue.js?{{exe_mtime}}"></script>
 			<style>
 				[v-cloak] {
 					display: none;
@@ -1025,24 +981,16 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 					line-height: 0;
 				}
 				.vx-list-item--active:hover {
-					background-color: inherit!important;
-				}
-
-				#app > .go-plaid-portal > .v-application > v-application__wrap > .v-main.v-main__page_content  {
-					
-				}
-
-				.v-card-text__content-component > .v-main__content-component {
-					
+					background-color: inherit !important;
 				}
 			</style>
-		`, "{{prefix}}", b.prefix, -1))
+		`))
 
 	b.InjectExtraAssets(ctx)
 
-	ctx.Injector.TailHTML(strings.Replace(`
-			<script src='{{prefix}}/assets/main.js'></script>
-			`, "{{prefix}}", b.prefix, -1))
+	ctx.Injector.TailHTML(b.FormatHtmlValue(`
+			<script src="{{prefix}}/assets/main.js?{{exe_mtime}}"></script>
+			`))
 
 	if b.assetFunc != nil {
 		b.assetFunc(ctx)
@@ -1102,123 +1050,66 @@ func (b *Builder) extraFullPath(ea *extraAsset) string {
 	return b.prefix + "/extra" + ea.path
 }
 
-func (b *Builder) initMux() {
-	if routesDebug {
-		b.logger.Info("initializing mux for", zap.Reflect("models", modelNames(b.models)), zap.String("prefix", b.prefix))
-	}
-
-	mux := http.NewServeMux()
-	ub := b.builder
-
-	mainJSPath := b.prefix + "/assets/main.js"
-	mux.Handle("GET "+mainJSPath,
-		ub.PacksHandler("text/javascript",
-			Vuetify(),
-			JSComponentsPack(),
-			vuetifyx.JSComponentsPack(),
-			web.JSComponentsPack(),
-		),
+func (b *Builder) Build(mux ...*http.ServeMux) {
+	var (
+		mx    *http.ServeMux
+		names = make(map[string]any)
+		mns   = modelNames(b.models)
 	)
 
-	if routesDebug {
-		log.Println("mounted url:", mainJSPath)
+	for _, mx = range mux {
 	}
 
-	vueJSPath := b.prefix + "/assets/vue.js"
-	mux.Handle("GET "+vueJSPath,
-		ub.PacksHandler("text/javascript",
-			web.JSVueComponentsPack(),
-		),
-	)
-
-	HandleMaterialDesignIcons(b.prefix, mux)
-
-	if routesDebug {
-		log.Println("mounted url:", vueJSPath)
+	if mx == nil {
+		mx = http.NewServeMux()
 	}
 
-	for _, ea := range b.extraAssets {
-		fullPath := b.extraFullPath(ea)
-		mux.Handle("GET "+fullPath, ub.PacksHandler(
-			ea.contentType,
-			ea.body,
-		))
-
-		if routesDebug {
-			log.Println("mounted url:", fullPath)
+	for _, mn := range mns {
+		if names[mn] != nil {
+			panic(fmt.Sprintf("Duplicated model name %q", mn))
 		}
+		names[mn] = nil
 	}
 
-	homeURL := b.prefix
-	if homeURL == "" {
-		homeURL = "/{$}"
-	}
-	mux.Handle(
-		homeURL,
-		b.Wrap(nil, b.layoutFunc(b.getHomePageFunc(), b.homePageLayoutConfig)),
-	)
-
-	for _, m := range b.models {
-		m.SetupRoutes(mux)
-	}
-
-	// b.handler = mux
-	// Handle 404
-	b.handler = b.notFound(mux)
-}
-
-func (b *Builder) notFound(handler http.Handler) http.Handler {
-	notFoundHandler := b.Wrap(
-		nil,
-		b.layoutFunc(b.getNotFoundPageFunc(), b.notFoundPageLayoutConfig),
-	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedResponse := &wrapedResponseWriter{web.WrapResponseWriter(w)}
-		handler.ServeHTTP(capturedResponse, r)
-		if capturedResponse.StatusCode() == http.StatusNotFound {
-			if !b.skipNotFoundHandler(r) {
-				// If no other handler wrote to the response, assume 404 and write our custom response.
-				notFoundHandler.ServeHTTP(w, r)
-			}
-		}
-		return
-	})
-}
-
-func (b *Builder) AddWrapHandler(key string, f func(in http.Handler) (out http.Handler)) {
-	b.wrapHandlers[key] = f
-}
-
-func (b *Builder) Wrap(m *ModelBuilder, pf web.PageFunc) http.Handler {
-	p := b.builder.Page(pf)
-	if m != nil {
-		m.registerDefaultEventFuncs()
-		p.MergeHub(&m.EventsHub)
-	}
-
-	handlers := b.I18n().EnsureLanguage(
-		p,
-	)
-	for _, wrapHandler := range b.wrapHandlers {
-		handlers = wrapHandler(handlers)
-	}
-
-	return handlers
-}
-
-func (b *Builder) Build() {
-	mns := modelNames(b.models)
-	if len(slices.Compact(mns)) != len(mns) {
-		panic(fmt.Sprintf("Duplicated model names registered %v", mns))
-	}
-	b.initMux()
+	b.SetupRoutes(mx)
+	b.permissions = b.BuildPermissions()
 }
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	web.ParseRequest(r)
+
 	if b.handler == nil {
 		b.Build()
 	}
 	redirectSlashes(b.handler).ServeHTTP(w, r)
+}
+
+func (b *Builder) Models() []*ModelBuilder {
+	return b.models
+}
+
+func (b *Builder) Permissions() *PermMenu {
+	return b.permissions
+}
+
+func (b *Builder) Verifier(vf ...*perm.PermVerifierBuilder) (r *Builder) {
+	b.verifiers = append(b.verifiers, vf...)
+	return b
+}
+
+func (b *Builder) BindVerifiedPageFunc(vf *perm.PermVerifierBuilder, f web.PageFunc) web.PageFunc {
+	if vf != nil {
+		b.Verifier(vf)
+		old := f
+		f = func(ctx *web.EventContext) (_ web.PageResponse, err error) {
+			if vf.Build(b.verifier.Spawn().WithReq(ctx.R).Do(PermFromRequest(ctx.R))).Denied() {
+				err = perm.PermissionDenied
+				return
+			}
+			return old(ctx)
+		}
+	}
+	return f
 }
 
 func redirectSlashes(next http.Handler) http.Handler {

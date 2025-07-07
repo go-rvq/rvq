@@ -184,12 +184,13 @@ func renameVersionDialog(_ *presets.ModelBuilder) web.EventFunc {
 
 func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		if mb.Info().Verifier().Do(presets.PermUpdate).WithReq(ctx.R).IsAllowed() != nil {
-			presets.ShowMessage(&r, perm.PermissionDenied.Error(), "warning")
+		mid := mb.MustParseRecordID(ctx.R.FormValue(presets.ParamID))
+
+		if mb.Permissioner().Updater(ctx.R, mid, presets.ParentsModelID(ctx.R)...).Denied() {
+			err = perm.PermissionDenied
 			return
 		}
 
-		mid := mb.MustParseRecordID(ctx.R.FormValue(presets.ParamID))
 		obj := mb.NewModel()
 		err = mb.Editing().Fetcher(obj, mid, ctx)
 		if err != nil {
@@ -242,16 +243,16 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 	return wrapEventFuncWithShowError(func(ctx *web.EventContext) (web.EventResponse, error) {
 		var r web.EventResponse
 
-		if mb.Info().Verifier().Do(presets.PermDelete).WithReq(ctx.R).IsAllowed() != nil {
-			return r, perm.PermissionDenied
-		}
-
 		mid := mb.MustParseRecordID(ctx.R.FormValue(presets.ParamID))
 		if mid.IsZero() {
 			return r, errors.New("no delete_id")
 		}
 
-		if err := mb.Listing().Deleter(mb.NewModel(), mid, ctx); err != nil {
+		if mb.Permissioner().Deleter(ctx.R, mid, presets.ParentsModelID(ctx.R)...).Denied() {
+			return r, perm.PermissionDenied
+		}
+
+		if err := mb.Listing().Deleter(mb.NewModel(), mid, false, ctx); err != nil {
 			return r, err
 		}
 

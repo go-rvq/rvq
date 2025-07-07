@@ -1,6 +1,7 @@
 package l10n
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -126,7 +127,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	}
 
 	m.Listing().WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 			if b.disableDeletionForDefaultInternationalizedRecord {
 				var (
 					countDB = db_utils.ModelIdWhere(
@@ -152,7 +153,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 				}
 			}
 
-			if err = in(obj, id, ctx); err != nil {
+			if err = in(obj, id, cascade, ctx); err != nil {
 				return
 			}
 			locale := id.GetValue("LocaleCode").(string)
@@ -184,12 +185,12 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	l := m.Listing()
 	l.Field(FieldLocationLabel).
 		ComponentFunc(presets.ListingFieldComponentFuncWrapper(locationLabelComp)).
-		SetI18nLabel(func(ctx web.ContextValuer) string {
-			return MustGetMessages(ctx.Context()).Location
+		SetI18nLabel(func(ctx context.Context) string {
+			return MustGetMessages(ctx).Location
 		})
 
 	m.Detailing().Field(FieldLocations).
-		ComponentFunc(presets.DetailingFieldComponentFuncWrapper(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		ComponentFunc(presets.FieldComponentWrapper(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 			locations, _ := b.GetModelLocationsI(m, m.MustRecordID(field.Obj))
 			if len(locations) == 0 {
 				return nil
@@ -278,91 +279,91 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 			}
 			return chips
 		})).
-		SetI18nLabel(func(ctx web.ContextValuer) string {
-			return MustGetMessages(ctx.Context()).Localizations
+		SetI18nLabel(func(ctx context.Context) string {
+			return MustGetMessages(ctx).Localizations
 		})
 
-	l.ItemAction(
-		m.Detailing().
-			Action(FieldLocalizedEntries).
-			Icon("mdi-translate").
-			SetI18nLabel(func(ctx web.ContextValuer) string {
-				return MustGetMessages(ctx.Context()).Localizations
-			}).
-			ComponentFunc(func(id string, ctx *web.EventContext) HTMLComponent {
-				obj := m.NewModel()
-				mid := m.MustParseRecordID(id)
-				err := m.Fetcher(obj, mid, ctx)
-				if err != nil {
-					return v.VAlert(Text("Fetcher object failed: " + err.Error())).Color("error").Icon("$error")
-				}
+	m.Detailing().
+		Action(FieldLocalizedEntries).
+		ShowInList().
+		Icon("mdi-translate").
+		SetI18nLabel(func(ctx context.Context) string {
+			return MustGetMessages(ctx).Localizations
+		}).
+		ComponentFunc(func(id string, ctx *web.EventContext) (HTMLComponent, error) {
+			obj := m.NewModel()
+			mid := m.MustParseRecordID(id)
+			err := m.Fetcher(obj, mid, ctx)
+			if err != nil {
+				return nil, errors.New("Fetcher object failed: " + err.Error())
+			}
 
-				db := db.Session(&gorm.Session{})
-				slice := m.NewModelSlice()
+			db := db.Session(&gorm.Session{})
+			slice := m.NewModelSlice()
 
-				if err = db_utils.ModelIdWhere(db, nil, mid, "LocaleCode").
-					Where(mid.Schema.Table()+".locale_code != ?", mid.GetValue("LocaleCode")).
-					Find(slice).Error; err != nil {
-					return v.VAlert(Text("Find entries failed: " + err.Error())).Color("error").Icon("$error")
-				}
+			if err = db_utils.ModelIdWhere(db, nil, mid, "LocaleCode").
+				Where(mid.Schema.Table()+".locale_code != ?", mid.GetValue("LocaleCode")).
+				Find(slice).Error; err != nil {
+				return nil, errors.New("Find entries failed: " + err.Error())
+			}
 
-				type record struct {
-					ID          string
-					LocaleCode  string
-					LocaleLabel string
-					Title       string
-				}
+			type record struct {
+				ID          string
+				LocaleCode  string
+				LocaleLabel string
+				Title       string
+			}
 
-				var records []*record
+			var records []*record
 
-				reflectutils.ForEach(reflect.ValueOf(slice).Elem().Interface(), func(item interface{}) {
-					var localeCode = item.(LocaleInterface).EmbedLocale().LocaleCode
-					records = append(records, &record{
-						ID:          item.(presets.SlugEncoder).PrimarySlug(),
-						Title:       m.RecordTitle(item, ctx),
-						LocaleCode:  localeCode,
-						LocaleLabel: b.GetLocaleLabel(localeCode),
-					})
+			reflectutils.ForEach(reflect.ValueOf(slice).Elem().Interface(), func(item interface{}) {
+				var localeCode = item.(LocaleInterface).EmbedLocale().LocaleCode
+				records = append(records, &record{
+					ID:          item.(presets.SlugEncoder).PrimarySlug(),
+					Title:       m.RecordTitle(item, ctx),
+					LocaleCode:  localeCode,
+					LocaleLabel: b.GetLocaleLabel(localeCode),
 				})
+			})
 
-				portalName := "_" + ctx.UID()
-				indexUrl := m.Info().ListingHrefCtx(ctx)
+			portalName := "_" + ctx.UID()
+			indexUrl := m.Info().ListingHrefCtx(ctx)
 
-				msgs := MustGetMessages(ctx.Context())
+			msgs := MustGetMessages(ctx.Context())
 
-				return vue.UserComponent(
-					web.Portal().Name(portalName),
-					v.VDataTable(
-						web.Slot(
-							RawHTML(`{{ value }}`),
-							v.VBtn("").
-								Icon("mdi-eye").
-								Attr("@click",
-									web.Plaid().
-										EventFunc(actions.Detailing).
-										URL(indexUrl).
-										Query(presets.ParamOverlay, actions.Dialog).
-										Query(presets.ParamTargetPortal, portalName).
-										Query(presets.ParamID, web.Var(`item.ID`)).Go(),
-								).
-								Attr("@click.middle", fmt.Sprintf(`(e) => e.view.window.open("%s/"+item.ID, "_blank")`, indexUrl)),
-						).Name("item.actions").Scope("{ item, value }"),
-					).Items(records).Headers([]any{
-						map[string]any{
-							"title": msgs.Location,
-							"key":   "LocaleLabel",
-						},
-						map[string]any{
-							"title": "",
-							"key":   "Title",
-						},
-						map[string]any{
-							"title": msgs.Actions,
-							"key":   "actions",
-						},
-					}),
-				)
-			}))
+			return vue.UserComponent(
+				web.Portal().Name(portalName),
+				v.VDataTable(
+					web.Slot(
+						RawHTML(`{{ value }}`),
+						v.VBtn("").
+							Icon("mdi-eye").
+							Attr("@click",
+								web.Plaid().
+									EventFunc(actions.Detailing).
+									URL(indexUrl).
+									Query(presets.ParamOverlay, actions.Dialog).
+									Query(presets.ParamTargetPortal, portalName).
+									Query(presets.ParamID, web.Var(`item.ID`)).Go(),
+							).
+							Attr("@click.middle", fmt.Sprintf(`(e) => e.view.window.open("%s/"+item.ID, "_blank")`, indexUrl)),
+					).Name("item.actions").Scope("{ item, value }"),
+				).Items(records).Headers([]any{
+					map[string]any{
+						"title": msgs.Location,
+						"key":   "LocaleLabel",
+					},
+					map[string]any{
+						"title": "",
+						"key":   "Title",
+					},
+					map[string]any{
+						"title": msgs.Actions,
+						"key":   "actions",
+					},
+				}),
+			), nil
+		})
 
 	registerEventFuncs(db, m, b)
 

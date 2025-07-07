@@ -7,19 +7,33 @@ import (
 	"github.com/qor5/x/v3/ui/vuetifyx"
 )
 
+func (b *ListingBuilder) WrapFilterDataFunc(f func(old FilterDataFunc) FilterDataFunc) *ListingBuilder {
+	b.filterDataFunc = f(b.filterDataFunc)
+	return b
+}
+
 func (b *ListingBuilder) FilterDataFunc(v FilterDataFunc) *ListingBuilder {
 	if v == nil {
 		b.filterDataFunc = nil
 		return b
 	}
 
-	b.filterDataFunc = func(ctx *web.EventContext) vuetifyx.FilterData {
+	b.filterDataFunc = func(ctx *web.EventContext) (r vuetifyx.FilterData) {
 		fd := v(ctx)
 		for _, k := range fd {
+			if k == nil {
+				continue
+			}
 			k.Key = "f_" + k.Key
+			r = append(r, k)
 		}
-		return fd
+		return
 	}
+	return b
+}
+
+func (b *ListingBuilder) WrapFilterTabsFunc(f func(old FilterTabsFunc) FilterTabsFunc) *ListingBuilder {
+	b.filterTabsFunc = f(b.filterTabsFunc)
 	return b
 }
 

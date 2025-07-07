@@ -86,12 +86,11 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 		}
 
 		if status, ok = obj.(StatusInterface); ok {
-			gotoPublishedURL := v.VBtn("").
-				Variant(v.VariantFlat).
-				Icon("mdi-open-in-new").
-				Height(40).
+			gotoPublishedURL := h.A(v.VIcon("mdi-open-in-new")).
 				Attr("v-if", `locals.`+FieldOnlineUrl).
-				Attr("@click", `(e) => e.view.window.open(locals.`+FieldOnlineUrl+`, "_blank")`)
+				Attr(":href", `locals.`+FieldOnlineUrl).
+				Attr("target", `_blank`).
+				Class("v-btn v-btn--icon v-theme--light v-btn--density-comfortable v-btn--size-default v-btn--variant-flat")
 
 			switch status.EmbedStatus().Status {
 			case StatusDraft, StatusOffline:
@@ -160,6 +159,9 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 		var onlineUrl string
 		if status != nil {
 			onlineUrl = status.EmbedStatus().OnlineUrl
+		}
+		if pu, _ := obj.(PublicUrlInterface); pu != nil {
+			onlineUrl = pu.GetPublicUrl(b, ctx)
 		}
 		return vue.UserComponent(div).Scope("locals", vue.Var(`{action: "", commonConfirmDialog: false, `+FieldOnlineUrl+`: `+strconv.Quote(onlineUrl)+` }`))
 	}
@@ -329,8 +331,8 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 		versionName := obj.(VersionInterface).EmbedVersion().VersionName
 		status := obj.(StatusInterface).EmbedStatus().Status
 		disable := status == StatusOnline || status == StatusOffline
-		deniedUpdate := mb.Info().Verifier().Do(presets.PermUpdate).WithReq(ctx.R).IsAllowed() != nil
-		deniedDelete := mb.Info().Verifier().Do(presets.PermDelete).WithReq(ctx.R).IsAllowed() != nil
+		deniedUpdate := mb.EditingDisabled() || mb.Permissioner().ReqObjectUpdater(ctx.R, obj).Denied()
+		deniedDelete := mb.DeletingDisabled() || mb.Permissioner().ReqObjectDeleter(ctx.R, obj).Denied()
 		return h.Td().Children(
 			v.VBtn(msgr.Rename).Disabled(disable || deniedUpdate).PrependIcon("mdi-rename-box").Size(v.SizeXSmall).Color(v.ColorPrimary).Variant(v.VariantText).
 				On("click", web.Plaid().

@@ -7,6 +7,7 @@ import (
 	"github.com/qor5/admin/v3/media/storage"
 	"github.com/qor5/admin/v3/model"
 	"github.com/qor5/admin/v3/presets"
+	"github.com/qor5/web/v3"
 	"gorm.io/gorm"
 )
 
@@ -82,6 +83,10 @@ type StatusInterface interface {
 
 func (s *Status) EmbedStatus() *Status {
 	return s
+}
+
+type PublicUrlInterface interface {
+	GetPublicUrl(mb *presets.ModelBuilder, ctx *web.EventContext) string
 }
 
 func EmbedStatus(v any) *Status {

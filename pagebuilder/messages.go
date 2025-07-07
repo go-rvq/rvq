@@ -1,8 +1,16 @@
 package pagebuilder
 
-import "github.com/qor5/x/v3/i18n"
+import (
+	"context"
+
+	"github.com/qor5/x/v3/i18n"
+)
 
 const I18nPageBuilderKey i18n.ModuleKey = "I18nPageBuilderKey"
+
+func MustGetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, I18nPageBuilderKey, Messages_en_US).(*Messages)
+}
 
 type Messages struct {
 	Category                       string
@@ -26,6 +34,7 @@ type Messages struct {
 	FilterTabNamedVersions         string
 	Rename                         string
 	PageOverView                   string
+	ErrPermissionDenied            i18n.ErrorString
 }
 
 var Messages_en_US = &Messages{
@@ -50,6 +59,7 @@ var Messages_en_US = &Messages{
 	FilterTabNamedVersions:         "Named Versions",
 	Rename:                         "Rename",
 	PageOverView:                   "Page Overview",
+	ErrPermissionDenied:            "Permission Denied",
 }
 
 var Messages_zh_CN = &Messages{
@@ -74,6 +84,7 @@ var Messages_zh_CN = &Messages{
 	FilterTabNamedVersions:         "已命名版本",
 	Rename:                         "重命名",
 	PageOverView:                   "页面概览",
+	ErrPermissionDenied:            "沒有權限",
 }
 
 var Messages_ja_JP = &Messages{
@@ -98,4 +109,5 @@ var Messages_ja_JP = &Messages{
 	FilterTabNamedVersions:         "名付け済みバージョン",
 	Rename:                         "名前の変更",
 	PageOverView:                   "ページ概要",
+	ErrPermissionDenied:            "許可が拒否されました",
 }

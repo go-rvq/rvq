@@ -49,45 +49,49 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		if v, ok := state.GetOk(b.field); ok {
 			var (
 				items     = reflect.ValueOf(v)
-				all       = make([]any, items.Len())
-				newValues []any
-				oldValues []any
+				newValues = reflect.MakeSlice(reflect.TypeOf(v), 0, 0)
+				oldValues = reflect.MakeSlice(reflect.TypeOf(v), 0, 0)
 			)
+			reflect.ValueOf(state.Obj).Elem().FieldByName(b.field).Set(reflect.MakeSlice(reflect.TypeOf(v), 0, 0))
 
 			pkFieldName := assoc.Relationship.Schema.PrimaryFields[0].Name
 
 			for i := 0; i < items.Len(); i++ {
 				item := items.Index(i)
-				itemObject := item.Interface()
 
 				if zeroer.IsZero(item.Elem().FieldByName(pkFieldName)) {
-					newValues = append(newValues, itemObject)
+					newValues = reflect.Append(newValues, item)
 				} else {
-					oldValues = append(oldValues, itemObject)
+					oldValues = reflect.Append(oldValues, item)
 				}
-				all[i] = itemObject
 			}
 
-			if len(oldValues) > 0 {
+			if oldValues.Len() > 0 {
 				up := b.updator
 				if up == nil {
 					up = func(db *gorm.DB, r any) error {
 						return db.Updates(r).Error
 					}
 				}
-				for _, value := range oldValues {
-					db := state.SharedDB.Session(&gorm.Session{}).Model(value)
-					if err = up(db, value); err != nil {
+
+				for l, i := oldValues.Len(), 0; i < l; i++ {
+					v := oldValues.Index(i).Interface()
+					db := state.SharedDB.Session(&gorm.Session{}).Model(v)
+					if err = up(db, v); err != nil {
 						return
 					}
 				}
-			}
-			if len(newValues) > 0 {
-				if err = assoc.Append(newValues...); err != nil {
+				if err = assoc.Unscoped().Replace(oldValues.Interface()); err != nil {
 					return
 				}
 			}
-			err = assoc.Unscoped().Replace(all...)
+
+			if newValues.Len() > 0 {
+				db := state.SharedDB.Session(&gorm.Session{}).Model(state.Obj).Association(b.field)
+				if err = db.Append(newValues.Interface()); err != nil {
+					return
+				}
+			}
 		}
 		return
 	}

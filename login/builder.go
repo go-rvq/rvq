@@ -6,7 +6,6 @@ import (
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/admin/v3/presets/actions"
 	"github.com/qor5/web/v3"
-	"github.com/qor5/x/v3/i18n"
 	"github.com/qor5/x/v3/login"
 )
 
@@ -14,11 +13,18 @@ const (
 	OpenChangePasswordDialogEvent = "login_openChangePasswordDialog"
 )
 
-func New(pb *presets.Builder) *login.Builder {
-	r := login.New()
-	r.I18n(pb.I18n())
+type Builder struct {
+	b  *login.Builder
+	vh *login.ViewHelper
+}
 
-	vh := r.ViewHelper()
+func (b *Builder) Builder() *login.Builder {
+	return b.vh.Builder()
+}
+
+func (b *Builder) Install(pb *presets.Builder) (err error) {
+	vh := b.ViewHelper()
+	r := vh.Builder()
 	r.LoginPageFunc(defaultLoginPage(vh, pb))
 	r.ForgetPasswordPageFunc(defaultForgetPasswordPage(vh, pb))
 	r.ResetPasswordLinkSentPageFunc(defaultResetPasswordLinkSentPage(vh, pb))
@@ -28,8 +34,18 @@ func New(pb *presets.Builder) *login.Builder {
 	r.TOTPValidatePageFunc(defaultTOTPValidatePage(vh, pb))
 
 	registerChangePasswordEvents(r, pb)
+	return
+}
 
-	return r
+func (b *Builder) ViewHelper() *login.ViewHelper {
+	return b.vh
+}
+
+func New(b *login.Builder) *Builder {
+	return &Builder{
+		b:  b,
+		vh: b.ViewHelper(),
+	}
 }
 
 func registerChangePasswordEvents(b *login.Builder, pb *presets.Builder) {
@@ -61,8 +77,8 @@ document.getElementsByTagName("head")[0].appendChild(tag);
 		confirmPassword := ctx.R.FormValue("confirm_password")
 		otp := ctx.R.FormValue("otp")
 
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), login.I18nLoginKey, login.Messages_en_US).(*login.Messages)
-		err = b.ChangePassword(ctx.R, oldPassword, password, confirmPassword, otp)
+		msgr := login.GetMessages(ctx.Context())
+		err = b.ChangePasswordT(login.GetCurrentUser(ctx.R).(login.UserPasser), true, ctx.R, oldPassword, password, confirmPassword, otp)
 		if err != nil {
 			msg := msgr.ErrorSystemError
 			var color string
@@ -77,18 +93,6 @@ document.getElementsByTagName("head")[0].appendChild(tag);
 					color = "error"
 				}
 			} else {
-				switch err {
-				case login.ErrWrongPassword:
-					msg = msgr.ErrorIncorrectPassword
-				case login.ErrEmptyPassword:
-					msg = msgr.ErrorPasswordCannotBeEmpty
-				case login.ErrPasswordNotMatch:
-					msg = msgr.ErrorPasswordNotMatch
-				case login.ErrWrongTOTPCode:
-					msg = msgr.ErrorIncorrectTOTPCode
-				case login.ErrTOTPCodeHasBeenUsed:
-					msg = msgr.ErrorTOTPCodeReused
-				}
 				color = "error"
 			}
 

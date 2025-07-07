@@ -24,14 +24,13 @@ func (b *EditingBuilder) doUpdate(
 
 	usingB := b
 
-	obj, vErr := usingB.FetchAndUnmarshal(mid, true, ctx)
+	obj, vErr := usingB.FetchAndUnmarshal(nil, mid, true, ctx)
 	if vErr.HaveErrors() {
 		usingB.UpdateOverlayContent(ctx, r, obj, "", &vErr)
 		return &vErr
 	}
 
 	if !b.CanEditObj(obj, ctx) {
-		b.UpdateOverlayContent(ctx, r, obj, "", perm.PermissionDenied)
 		return perm.PermissionDenied
 	}
 
@@ -68,7 +67,7 @@ func (b *EditingBuilder) doUpdate(
 		return &vErr
 	}
 
-	usingB.FieldsBuilder.WalkO(usingB.mb.modelInfo, obj, FieldModeStack{EDIT}, ctx, &FieldWalkHandleOptions{
+	usingB.FieldsBuilder.WalkOptions(usingB.mb.modelInfo, obj, FieldModeStack{EDIT}, ctx, &FieldWalkHandleOptions{
 		SkipNestedNil: true,
 		Handler: func(field *FieldContext) (s FieldWalkState) {
 			vErr.Merge(field.Field.Validators.Validate(field))
@@ -87,8 +86,10 @@ func (b *EditingBuilder) doUpdate(
 		}
 	}
 
+	restore := RemoveEmptySliceItems(obj, ContextModifiedIndexesBuilder(ctx))
 	err1 := usingB.Saver(obj, mid, ctx)
 	if err1 != nil {
+		restore()
 		usingB.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
 	}
@@ -120,12 +121,10 @@ func (b *EditingBuilder) doUpdate(
 }
 
 func (b *EditingBuilder) defaultUpdate(ctx *web.EventContext) (r web.EventResponse, err error) {
-	uErr := b.doUpdate(ctx, &r, false)
-	if uErr == nil {
-		msgr := MustGetMessages(ctx.Context())
-		ShowMessage(&r, msgr.SuccessfullyUpdated, "")
+	if err = b.doUpdate(ctx, &r, false); err == nil {
+		ctx.Flash = MustGetMessages(ctx.Context()).SuccessfullyUpdated
 	}
-	return r, nil
+	return
 }
 
 func (b *EditingBuilder) SaveOverlayContent(

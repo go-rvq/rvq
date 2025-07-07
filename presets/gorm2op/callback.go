@@ -1,6 +1,8 @@
 package gorm2op
 
 import (
+	"context"
+
 	"github.com/qor5/admin/v3/presets"
 	"github.com/qor5/web/v3"
 )
@@ -118,6 +120,16 @@ func (b *CallbacksRegistrator[T]) WithModeSplitCallbacks(mode Mode, do func(cb *
 	return b.Dot()
 }
 
+func (b *CallbacksRegistrator[T]) WithWriteCallbacks(do func(cb *Callbacks[T])) T {
+	b.EachModeSplitCallbacks(Write, do)
+	return b.Dot()
+}
+
+func (b *CallbacksRegistrator[T]) WithReadCallbacks(do func(cb *Callbacks[T])) T {
+	b.EachModeSplitCallbacks(Read, do)
+	return b.Dot()
+}
+
 func (b *CallbacksRegistrator[T]) SetDot(dot T) T {
 	b.create.dot = dot
 	b.update.dot = dot
@@ -142,9 +154,11 @@ type Callbacks[T any] struct {
 	dot T
 }
 
-func (b *Callbacks[T]) Merge(other *Callbacks[T]) *Callbacks[T] {
-	b.pre = append(b.pre, other.pre...)
-	b.post = append(b.post, other.post...)
+func (b *Callbacks[T]) Merge(other ...*Callbacks[T]) *Callbacks[T] {
+	for _, other := range other {
+		b.pre = append(b.pre, other.pre...)
+		b.post = append(b.post, other.post...)
+	}
 	return b
 }
 
@@ -164,10 +178,10 @@ func (b *Callbacks[T]) Build(do ...Callback) CallbackSlice {
 
 func (b *Callbacks[T]) Clone() *Callbacks[T] {
 	n := *b
-	b.pre = make([]Callback, len(n.pre))
-	b.post = make([]Callback, len(n.post))
+	n.pre = make([]Callback, len(b.pre))
+	n.post = make([]Callback, len(b.post))
 	copy(n.pre, b.pre)
-	copy(b.post, b.post)
+	copy(n.post, b.post)
 	return &n
 }
 
@@ -191,8 +205,7 @@ func (b CallbackSlice) Execute(state *CallbackState) (err error) {
 	}()
 
 	for _, f := range b {
-		err = f(state)
-		if err != nil {
+		if err = f(state); err != nil {
 			return
 		}
 	}
@@ -228,12 +241,17 @@ func NamedCallbacksRegistratorOf(mb *presets.ModelBuilder) (v NamedCallbacksRegi
 	return
 }
 
-func AddCallbacksToContext(ctx *web.EventContext, cb ...*CallbacksRegistrator[*DataOperatorBuilder]) {
-	ctx.WithContextValue(CallbacksKey, append(GetContextCallbacks(ctx), cb...))
+func AddCallbacksToContext(ctx context.Context, cb ...*CallbacksRegistrator[*DataOperatorBuilder]) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, CallbacksKey, append(GetContextCallbacks(ctx), cb...))
 }
 
-func GetContextCallbacks(ctx *web.EventContext) (v []*CallbacksRegistrator[*DataOperatorBuilder]) {
-	v, _ = ctx.ContextValue(CallbacksKey).([]*CallbacksRegistrator[*DataOperatorBuilder])
+func GetContextCallbacks(ctx context.Context) (v []*CallbacksRegistrator[*DataOperatorBuilder]) {
+	if ctx != nil {
+		v, _ = ctx.Value(CallbacksKey).([]*CallbacksRegistrator[*DataOperatorBuilder])
+	}
 	return
 }
 
@@ -241,19 +259,18 @@ func (b *DataOperatorBuilder) GetCallbacks(mode Mode, ctx *web.EventContext) *Ca
 	cbs := []*Callbacks[*DataOperatorBuilder]{
 		b.ModeCallbacks(mode),
 	}
-	cbsCtx := GetContextCallbacks(ctx)
+
+	cbsCtx := GetContextCallbacks(ctx.Context())
 
 	for _, c := range cbsCtx {
 		cbs = append(cbs, c.ModeCallbacks(mode))
 	}
 
-	if len(cbs) == 1 {
-		return cbs[0]
-	}
-
 	cb := cbs[0].Clone()
+
 	for _, c := range cbs[1:] {
 		cb.Merge(c)
 	}
+
 	return cb
 }

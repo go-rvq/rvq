@@ -2,7 +2,6 @@ package presets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -36,12 +35,13 @@ func (m StrMap) Set(pair ...string) {
 }
 
 type Messages struct {
-	SuccessfullyUpdated string
-	SuccessfullyCreated string
-	SuccessfullyDeleted string
-	Search              string
-	TheFemaleTitle      string
-	TheMaleTitle        string
+	SuccessfullyUpdated        string
+	SuccessfullyCreated        string
+	SuccessfullyDeleted        string
+	SuccessfullyExecutedAction string
+	Search                     string
+	TheFemaleTitle             string
+	TheMaleTitle               string
 
 	YouAreHere                                 string
 	New                                        string
@@ -56,6 +56,7 @@ type Messages struct {
 	Create                                     string
 	DeleteConfirmationTextTemplate             string
 	CreatingFemaleObjectTitleTemplate          string
+	EditingTitleTemplate                       string
 	CreatingObjectTitleTemplate                string
 	EditingObjectTitleTemplate                 string
 	ListingObjectTitleTemplate                 string
@@ -96,11 +97,13 @@ type Messages struct {
 	ListingClearSelection                      string
 	BulkActionNoAvailableRecords               string
 	BulkActionSelectedIdsProcessNoticeTemplate string
+	ConfirmDialogPromptTitle                   string
 	ConfirmDialogPromptText                    string
 	Language                                   string
 	Colon                                      string
 	NotFoundPageNotice                         string
 	AddRow                                     string
+	PleaseSelectRecord                         string
 
 	BulkActionConfirmationTextTemplate string
 
@@ -108,8 +111,9 @@ type Messages struct {
 
 	Common StrMap
 
-	Error           string
-	ErrEmptyParamID error
+	Error               string
+	ErrEmptyParamID     i18n.ErrorString
+	ErrPermissionDenied i18n.ErrorString
 
 	CopiedToClipboard string
 }
@@ -124,6 +128,16 @@ func (msgr *Messages) TheTitle(female bool, title string, args ...string) string
 func (msgr *Messages) DeleteConfirmationText(model, theModelTitle, title string) string {
 	return strings.NewReplacer("{model}", model, "{the_model}", theModelTitle, "{title}", title).
 		Replace(msgr.DeleteConfirmationTextTemplate)
+}
+
+func (msgr *Messages) DeleteConfirmationHtml(model, theModelTitle, title string) string {
+	return strings.NewReplacer("{model}", model, "{the_model}", theModelTitle, "{title}", "<b>"+title+"</b>").
+		Replace(msgr.DeleteConfirmationTextTemplate)
+}
+
+func (msgr *Messages) EditingTitle(label string) string {
+	return strings.NewReplacer("{modelName}", label).
+		Replace(msgr.EditingTitleTemplate)
 }
 
 func (msgr *Messages) CreatingObjectTitle(modelName string, female bool) string {
@@ -160,9 +174,14 @@ func (msgr *Messages) FilterBy(filter string) string {
 		Replace(msgr.FilterByTemplate)
 }
 
-func (msgr *Messages) BulkActionConfirmationText(action string) string {
-	return strings.NewReplacer("{Action}", action).
+func (msgr *Messages) BulkActionConfirmationText(action string, count string) string {
+	return strings.NewReplacer("{Action}", action, "{count}", count).
 		Replace(msgr.BulkActionConfirmationTextTemplate)
+}
+
+func (msgr *Messages) ListingSelectedCountNoticeText(count int) string {
+	return strings.NewReplacer("{count}", fmt.Sprint(count)).
+		Replace(msgr.ListingSelectedCountNotice)
 }
 
 var Messages_en_US = &Messages{
@@ -184,6 +203,7 @@ var Messages_en_US = &Messages{
 	DeleteConfirmationTextTemplate:    "Are you sure you want to delete {the_model}: {title}?",
 	CreatingObjectTitleTemplate:       "New {modelName}",
 	CreatingFemaleObjectTitleTemplate: "New {modelName}",
+	EditingTitleTemplate:              "Editing {modelName}",
 	EditingObjectTitleTemplate:        "Editing {modelName} {id}",
 	ListingObjectTitleTemplate:        "Listing {modelName}",
 	DetailingObjectTitleTemplate:      "{modelName} {id}",
@@ -227,118 +247,163 @@ var Messages_en_US = &Messages{
 	Language:                                   "Language",
 	Colon:                                      ":",
 	NotFoundPageNotice:                         "Sorry, the requested page cannot be found. Please check the URL.",
+	PleaseSelectRecord:                         "Please select a record",
 	AddRow:                                     "Add Row",
 
-	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> below records?",
+	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> then {count} records?",
 
 	Error:             "ERROR",
-	ErrEmptyParamID:   errors.New("Empty param ID"),
+	ErrEmptyParamID:   "Empty param ID",
 	CopiedToClipboard: "Copied to clipboard",
 }
 
 var DefaultMessages = Messages_en_US
 
-var Messages_zh_CN = &Messages{
-	SuccessfullyUpdated:            "成功更新了",
-	Search:                         "搜索",
-	New:                            "新建",
-	Update:                         "更新",
-	Delete:                         "删除",
-	Edit:                           "编辑",
-	FormTitle:                      "表单",
-	OK:                             "确定",
-	Cancel:                         "取消",
-	Clear:                          "清空",
-	Create:                         "创建",
-	DeleteConfirmationTextTemplate: "你确定你要删除这个对象吗，对象: {title}?",
-	CreatingObjectTitleTemplate:    "新建{modelName}",
-	EditingObjectTitleTemplate:     "编辑{modelName} {id}",
-	ListingObjectTitleTemplate:     "{modelName}列表",
-	DetailingObjectTitleTemplate:   "{modelName} {id}",
-	FiltersClear:                   "清空筛选器",
-	FiltersAdd:                     "添加筛选器",
-	FilterApply:                    "应用",
-	FilterByTemplate:               "按{filter}筛选",
-	FiltersDateInTheLast:           "过去",
-	FiltersDateEquals:              "等于",
-	FiltersDateBetween:             "之间",
-	FiltersDateIsAfter:             "之后",
-	FiltersDateIsAfterOrOn:         "当天或之后",
-	FiltersDateIsBefore:            "之前",
-	FiltersDateIsBeforeOrOn:        "当天或之前",
-	FiltersDateDays:                "天",
-	FiltersDateMonths:              "月",
-	FiltersDateAnd:                 "和",
-	FiltersTo:                      "至",
-	FiltersNumberEquals:            "等于",
-	FiltersNumberBetween:           "之间",
-	FiltersNumberGreaterThan:       "大于",
-	FiltersNumberLessThan:          "小于",
-	FiltersNumberAnd:               "和",
-	FiltersStringEquals:            "等于",
-	FiltersStringContains:          "包含",
-	FiltersMultipleSelectIn:        "包含",
-	FiltersMultipleSelectNotIn:     "不包含",
-	PaginationRowsPerPage:          "每页: ",
-	ListingNoRecordToShow:          "没有可显示的记录",
-	ListingSelectedCountNotice:     "{count}条记录被选中。",
-	ListingClearSelection:          "清除选择",
-	BulkActionNoAvailableRecords:   "所有选中的记录均无法执行这个操作。",
-	BulkActionSelectedIdsProcessNoticeTemplate: "部分选中的记录无法被执行这个操作: {ids}。",
-	ConfirmDialogPromptText:                    "你确定吗?",
-	Language:                                   "语言",
-	Colon:                                      "：",
-	NotFoundPageNotice:                         "很抱歉，所请求的页面不存在，请检查URL。",
-}
+var Messages_pt_BR = &Messages{
+	YouAreHere:                 "Você está aqui",
+	CopiedToClipboard:          "Copiado para a área de transferência!",
+	TheFemaleTitle:             "A %s",
+	TheMaleTitle:               "O %s",
+	SuccessfullyUpdated:        "Atualizado com Sucesso",
+	SuccessfullyCreated:        "Cadastrado com Sucesso",
+	SuccessfullyDeleted:        "Excluído com Sucesso",
+	SuccessfullyExecutedAction: "Ação executada com Sucesso",
+	Search:                     "Pesquisa",
+	New:                        "Novo",
+	Update:                     "Atualizar",
+	Execute:                    "Executar",
+	Delete:                     "Excluir",
+	Edit:                       "Editar",
+	FormTitle:                  "Formulário",
+	OK:                         "OK",
+	Cancel:                     "Cancelar",
+	Clear:                      "Limpar",
 
-var Messages_ja_JP = &Messages{
-	SuccessfullyUpdated:            "更新に成功しました",
-	Search:                         "検索する",
-	New:                            "新規",
-	Update:                         "更新する",
-	Delete:                         "削除する",
-	Edit:                           "編集する",
-	FormTitle:                      "フォーム",
-	OK:                             "OK",
-	Cancel:                         "キャンセル",
-	Create:                         "新規作成",
-	DeleteConfirmationTextTemplate: ": {title}を削除して本当によろしいですか？",
-	CreatingObjectTitleTemplate:    "{modelName} を作る",
-	EditingObjectTitleTemplate:     "{modelName} {id} を編集する",
-	ListingObjectTitleTemplate:     "リスティング {modelName} ",
-	DetailingObjectTitleTemplate:   "{modelName} {id} ",
-	FiltersClear:                   "フィルターをクリアする",
-	FiltersAdd:                     "フィルターを追加する",
-	FilterApply:                    "適用する",
-	FilterByTemplate:               "{filter} でフィルターする",
-	FiltersDateInTheLast:           "がサイト",
-	FiltersDateEquals:              "と同等",
-	FiltersDateBetween:             "の間",
-	FiltersDateIsAfter:             "が後",
-	FiltersDateIsAfterOrOn:         "が同時または後",
-	FiltersDateIsBefore:            "が前",
-	FiltersDateIsBeforeOrOn:        "が前または同時",
-	FiltersDateDays:                "日間",
-	FiltersDateMonths:              "月数",
-	FiltersDateAnd:                 "＆",
-	FiltersTo:                      "から",
-	FiltersNumberEquals:            "と同等",
-	FiltersNumberBetween:           "間",
-	FiltersNumberGreaterThan:       "より大きい",
-	FiltersNumberLessThan:          "より少ない",
-	FiltersNumberAnd:               "＆",
-	FiltersStringEquals:            "と同等",
-	FiltersStringContains:          "を含む",
-	FiltersMultipleSelectIn:        "中",
-	FiltersMultipleSelectNotIn:     "以外",
-	PaginationRowsPerPage:          "行 / ページ",
-	ListingNoRecordToShow:          "表示できるデータはありません",
-	ListingSelectedCountNotice:     "{count} レコードが選択されています",
-	ListingClearSelection:          "選択をクリア",
-	BulkActionNoAvailableRecords:   "この機能はご利用いただけません",
-	BulkActionSelectedIdsProcessNoticeTemplate: "この一部の機能はご利用いただけません: {ids}",
-	ConfirmDialogPromptText:                    "よろしいですか？",
-	Language:                                   "言語",
+	Create:                                     "Cadastrar",
+	DeleteConfirmationTextTemplate:             "Tem certeza de que deseja excluir {the_model}: {title}?",
+	CreatingFemaleObjectTitleTemplate:          "Nova ‹{modelName}›",
+	CreatingObjectTitleTemplate:                "Novo ‹{modelName}›",
+	EditingTitleTemplate:                       "Editando ‹{modelName}›",
+	EditingObjectTitleTemplate:                 "Editando ‹{modelName}› {id}",
+	ListingObjectTitleTemplate:                 "Listando ‹{modelName}›",
+	DetailingObjectTitleTemplate:               "‹{modelName}› {id}",
+	FiltersClear:                               "Limpar Filtros",
+	FiltersAdd:                                 "Adicionar Filtro",
+	FilterApply:                                "Aplicar",
+	FilterByTemplate:                           "Filtrar por {filter}",
+	FiltersDateInTheLast:                       "está no último",
+	FiltersDateEquals:                          "é igual a",
+	FiltersDateBetween:                         "é entre",
+	FiltersDateIsAfter:                         "é depois",
+	FiltersDateIsAfterOrOn:                     "está depois ou em",
+	FiltersDateIsBefore:                        "é antes",
+	FiltersDateIsBeforeOrOn:                    "está antes ou em",
+	FiltersDateDays:                            "dias",
+	FiltersDateMonths:                          "meses",
+	FiltersDateAnd:                             "e",
+	FiltersTo:                                  "até",
+	FiltersNumberEquals:                        "é igual a",
+	FiltersNumberBetween:                       "entre",
+	FiltersNumberGreaterThan:                   "é maior que",
+	FiltersNumberLessThan:                      "é menor que",
+	FiltersNumberAnd:                           "e",
+	FiltersStringEquals:                        "é igual a",
+	FiltersStringContains:                      "contém",
+	FiltersMultipleSelectIn:                    "em",
+	FiltersMultipleSelectNotIn:                 "fora de de",
+	PaginationRowsPerPage:                      "Registros por página: ",
+	PaginationPageInfo:                         "{currPageStart}-{currPageEnd} de {total}",
+	PaginationPage:                             "Página:",
+	PaginationOfPage:                           "de {total}",
+	ListingNoRecordToShow:                      "Nenhum registro a ser mostrado",
+	ListingSelectedCountNotice:                 "{count} registros selecionados. ",
+	ListingClearSelection:                      "limpar seleção",
+	BulkActionNoAvailableRecords:               "Nenhum dos registros selecionados podem ser executados com esta ação.",
+	BulkActionSelectedIdsProcessNoticeTemplate: "Registros parcialmente selecionados não podem ser executados com esta ação Pesquisar isso no Goo: {ids}.",
+	BulkActionConfirmationTextTemplate:         "Tem certeza que deseja executar a ação <b>{Action}</b> nos {count} registros?",
+	ConfirmDialogPromptText:                    "Tem certeza?",
+	ConfirmDialogPromptTitle:                   "Confirmação",
+	Language:                                   "Idioma",
 	Colon:                                      ":",
-	NotFoundPageNotice:                         "申し訳ありませんが、リクエストされたページは見つかりませんでした。URLを確認してください。",
+	NotFoundPageNotice:                         "Desculpe, a página solicitada não pode ser encontrada. Verifique o URL.",
+	PleaseSelectRecord:                         "Selecione pelo menos um registro.",
+	AddRow:                                     "Adicionar",
+	Error:                                      "Erro",
+	Month:                                      "Mês",
+	Year:                                       "Ano",
+	ErrEmptyParamID:                            "Parâmetro ID não informado",
+	ErrPermissionDenied:                        "Permissão negada",
+
+	TimeFormats: TimeFormatMessages{
+		Time:     "15:04:05Z07:00",
+		Date:     "02/01/2006",
+		DateTime: "02/01/2006 15:04:05 Z07:00",
+	},
+
+	Common: map[string]string{
+		"CreatedAt":           "Cadastro",
+		"UpdatedAt":           "Atualização",
+		"DeletedAt":           "Exclusão",
+		"Title":               "Título",
+		"Status":              "Situação",
+		"Body":                "Corpo",
+		"Cover":               "Destaque",
+		"Type":                "Tipo",
+		"Live":                "Site",
+		"Name":                "Nome",
+		"Summary":             "Sumário",
+		"Page":                "Página",
+		"Multiple Statuses":   "Múltiplas Situações",
+		"Path":                "Caminho",
+		"Enabled":             "Habilitado",
+		"Translate":           "Traduzir",
+		"Publication":         "Publicação",
+		"Description":         "Descrição",
+		"Action":              "Ação",
+		"Actions":             "Ações",
+		"YouAreHere":          "Voçê está aqui",
+		"Size":                "Tamanho",
+		"Position":            "Posição",
+		"Link":                "URL",
+		"LinkQuery":           "Parâmetros da URL",
+		"ID":                  "ID",
+		"Layout":              "Layout",
+		"Galleries":           "Galerias de Imagens",
+		"LayoutConfig":        "Configuração do Layout",
+		"Config":              "Configuração",
+		"TitleWithSlug":       "Endereço",
+		"PageOptions":         "Opções da Página",
+		"Value":               "Valor",
+		"File":                "Arquivo",
+		"LocaleCode":          "Idioma",
+		"L10nTitle":           "Título em Outros Idiomas",
+		"L10nDescription":     "Descrição em Outros Idiomas",
+		"L10nLink":            "Endereço em Outros Idiomas",
+		"Roles":               "Papéis",
+		"PostListing":         "Listagem",
+		"PostListingEnabled":  "Listado",
+		"PostListingDisabled": "Não Listado",
+		"Ext":                 "Extensão",
+		"FileName":            "Nome do arquivo",
+		"Profile":             "Perfil",
+		"OldPassword":         "Senha Atual",
+		"NewPassword":         "Nova Senha",
+		"ConfirmPassword":     "Repita a Nova Senha",
+	},
+
+	MonthNames: [time.December + 1]string{
+		"",
+		"Janeiro",
+		"Fevereiro",
+		"Março",
+		"Abril",
+		"Maio",
+		"Junho",
+		"Julho",
+		"Agosto",
+		"Setembro",
+		"Outubro",
+		"Novembro",
+		"Dezembro",
+	},
 }
