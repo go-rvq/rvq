@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref} from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{
   translations: any
@@ -19,8 +19,6 @@ class Model {
 }
 
 const model = defineModel<Model>()
-
-console.log('model', model.value)
 
 if (!model.value) {
   model.value = new Model()

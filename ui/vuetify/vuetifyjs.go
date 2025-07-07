@@ -33,22 +33,24 @@ func JSComponentsPack() web.ComponentsPack {
 	return web.ComponentsPack(v)
 }
 
-func cssComponentsPack() web.ComponentsPack {
+func CSSComponentsPack() web.ComponentsPack {
 	var v []byte
 	var err error
 	if customizeVuetifyCSS {
 		v, err = vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/index.css")
 	} else {
 		v, err = assetsbox.ReadFile("dist/vuetify.min.css")
-		v2, err := assetsbox.ReadFile("dist/vuetify-labs.min.css")
-		if err != nil {
-			panic(err)
-		}
-		v = append(v, v2...)
+		// v2, err := assetsbox.ReadFile("dist/vuetify-labs.min.css")
+		// if err != nil {
+		//	panic(err)
+		// }
+		// v = append(v, v2...)
 	}
+	v = append(v, ';')
 	if err != nil {
 		panic(err)
 	}
+
 	return web.ComponentsPack(v)
 }
 
@@ -92,7 +94,7 @@ func HandleMaterialDesignIcons(prefix string, mux muxer) {
 	mux.Handle(prefix+"/vuetify/assets/index.css", web.PacksHandler(
 		"text/css",
 		web.ComponentsPack(
-			strings.ReplaceAll(string(cssComponentsPack()), "/vuetify/assets/materialdesignicons", prefix+"/vuetify/assets/materialdesignicons")),
+			strings.ReplaceAll(string(CSSComponentsPack()), "/vuetify/assets/materialdesignicons", prefix+"/vuetify/assets/materialdesignicons")),
 	))
 	mux.Handle(prefix+"/vuetify/assets/materialdesignicons-webfont.eot", web.PacksHandler("application/vnd.ms-fontobject",
 		fontEot()))

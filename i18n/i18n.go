@@ -5,12 +5,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"time"
 
 	"golang.org/x/text/language"
 )
 
 type ModuleKey string
+
+type ErrorString string
+
+func (e ErrorString) Error() string {
+	return string(e)
+}
 
 type Builder struct {
 	supportLanguages                   []language.Tag
@@ -33,6 +40,10 @@ func New() *Builder {
 		queryName:      "lang",
 	}
 	b.matcher = language.NewMatcher(b.supportLanguages)
+
+	b.RegisterForModules(language.English, DefaultKey, Default_en).
+		RegisterForModules(language.BrazilianPortuguese, DefaultKey, Default_pt_BR)
+
 	return b
 }
 
@@ -58,6 +69,28 @@ func (b *Builder) SupportLanguages(vs ...language.Tag) (r *Builder) {
 			b.moduleMessages[l] = context.TODO()
 		}
 	}
+	b.matcher = language.NewMatcher(b.supportLanguages)
+	return b
+}
+
+func (b *Builder) SupportLanguage(vs ...language.Tag) (r *Builder) {
+	var news []language.Tag
+
+	for _, v := range vs {
+		if slices.Contains(b.supportLanguages, v) {
+			continue
+		}
+		news = append(news, v)
+	}
+
+	b.supportLanguages = append(b.supportLanguages, news...)
+
+	for _, l := range news {
+		if b.moduleMessages[l] == nil {
+			b.moduleMessages[l] = context.TODO()
+		}
+	}
+
 	b.matcher = language.NewMatcher(b.supportLanguages)
 	return b
 }
@@ -106,6 +139,14 @@ func (b *Builder) RegisterForModules(lang language.Tag, args ...any) (r *Builder
 
 	b.moduleMessages[lang] = c
 	return b
+}
+
+func (b *Builder) GetModuleMessages(lang language.Tag, module ModuleKey) any {
+	c := b.moduleMessages[lang]
+	if c == nil {
+		return nil
+	}
+	return c.Value(module)
 }
 
 func MustGetModuleMessages(ctx context.Context, module ModuleKey, defaultMessages Messages) Messages {

@@ -3,6 +3,9 @@ module github.com/qor5/x/v3
 go 1.22.2
 
 require (
+	github.com/go-playground/locales v0.14.1
+	github.com/go-playground/universal-translator v0.18.1
+	github.com/gobwas/glob v0.2.3
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -13,6 +16,7 @@ require (
 	github.com/markbates/goth v1.80.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/ory/ladon v1.3.0
+	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.4.0
 	github.com/qor5/web/v3 v3.0.4
 	github.com/spf13/cast v1.6.0
@@ -21,7 +25,7 @@ require (
 	github.com/theplant/htmlgo v1.0.3
 	github.com/theplant/osenv v0.0.1
 	github.com/theplant/testenv v0.0.0-20240513012518-1c94c8c84239
-	github.com/theplant/testingutils v0.0.1
+	github.com/theplant/testingutils v0.0.2
 	golang.org/x/crypto v0.23.0
 	golang.org/x/text v0.15.0
 	gorm.io/driver/postgres v1.5.7
@@ -74,12 +78,12 @@ require (
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/ory/pagination v0.0.1 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rs/xid v1.5.0 // indirect
@@ -106,6 +110,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/qor5/web/v3 => ../web
+replace (
+	github.com/qor5/web/v3 => ../web
+	github.com/theplant/htmlgo v1.0.3 => ./../../theplant/htmlgo
+)
 
 //replace github.com/theplant/docgo => ../../docgo/

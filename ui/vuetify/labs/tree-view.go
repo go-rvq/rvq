@@ -9,7 +9,7 @@ type VTreeviewBuilder struct {
 	v.VTagBuilder[*VTreeviewBuilder]
 }
 
-func Treeview(children ...h.HTMLComponent) *VTreeviewBuilder {
+func VTreeview(children ...h.HTMLComponent) *VTreeviewBuilder {
 	return v.VTag(&VTreeviewBuilder{}, "v-treeview", children...)
 }
 

@@ -15,6 +15,7 @@ type VXAdvancedSelectBuilder struct {
 	searchItemsFunc string
 	itemsSearcher   *web.VueEventTagBuilder
 	many            bool
+	chips           bool
 }
 
 func VXAdvancedSelect(children ...h.HTMLComponent) *VXAdvancedSelectBuilder {
@@ -45,8 +46,17 @@ func (b *VXAdvancedSelectBuilder) Many(v bool) *VXAdvancedSelectBuilder {
 	return b
 }
 
+func (b *VXAdvancedSelectBuilder) Chips(v bool) *VXAdvancedSelectBuilder {
+	b.chips = v
+	return b
+}
+
 func (b *VXAdvancedSelectBuilder) ItemText(v string) *VXAdvancedSelectBuilder {
 	return b.Attr("item-text", v)
+}
+
+func (b *VXAdvancedSelectBuilder) Hint(v string) *VXAdvancedSelectBuilder {
+	return b.Attr("hint", v)
 }
 
 func (b *VXAdvancedSelectBuilder) ItemValue(v string) *VXAdvancedSelectBuilder {
@@ -78,6 +88,10 @@ func (b *VXAdvancedSelectBuilder) MarshalHTML(ctx context.Context) (r []byte, er
 
 	if b.many {
 		b.Attr("many", true)
+	}
+
+	if b.chips {
+		b.Attr("chips", true)
 	}
 
 	return b.GetHTMLTagBuilder().MarshalHTML(ctx)

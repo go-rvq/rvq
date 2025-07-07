@@ -1,5 +1,5 @@
 <template>
-  <v-data-table-virtual :headers="internalHeaders" :items="rows" v-bind="tableProps">
+  <v-data-table-virtual :headers="currentHeaders" :items="rows" v-bind="tableProps">
     <template v-slot:item.$control="{ item, value }">
       <div class="d-inline-flex" style="height: 100%; vertical-align: middle">
         <slot
@@ -19,7 +19,7 @@
         >
           <div style="display: flex; flex-direction: row; align-items: center">
             <v-btn
-              density="comfortable"
+              density="compact"
               variant="text"
               :icon="getControl(item).expanded ? 'mdi-menu-down' : 'mdi-menu-right'"
               size="small"
@@ -44,26 +44,32 @@
         </template>
         <template v-slot:default="{ isActive }">
           <v-card density="compact">
-            <v-toolbar>
+            <v-toolbar density="compact">
               <v-toolbar-title>{{ settingsTitle }}</v-toolbar-title>
               <v-spacer />
-              <v-btn class="ml-auto" icon="mdi-close" flat @click="isActive.value = false"></v-btn>
+              <v-btn
+                density="compact"
+                class="ml-auto"
+                icon="mdi-close"
+                flat
+                @click="isActive.value = false"
+              ></v-btn>
             </v-toolbar>
             <v-divider />
             <v-card-text>
               <slot name="prepend-settings"></slot>
-              <v-list density="compact" v-model:selected="selectedHeaders" select-strategy="leaf">
+              <v-list density="compact" select-strategy="leaf">
                 <v-list-subheader>{{ settingsColumnsTitle }}</v-list-subheader>
                 <v-list-item
-                  v-for="item in headers"
+                  v-for="item in selectableHeaders"
                   density="compact"
                   :key="item.key"
                   :title="item.title"
                   :value="item.key"
                 >
-                  <template v-slot:prepend="{ isSelected }">
+                  <template #prepend>
                     <v-list-item-action start>
-                      <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
+                      <v-checkbox-btn v-model="item.visible"></v-checkbox-btn>
                     </v-list-item-action>
                   </template>
                 </v-list-item>
@@ -83,8 +89,8 @@
                     isActive.value = false
                   }
                 "
-                >{{ settingsOkText }}</v-btn
-              >
+                >{{ settingsOkText }}
+              </v-btn>
             </v-card-actions>
           </v-card>
         </template>
@@ -172,28 +178,39 @@ function initItem(item: any) {
 
 let initialItems = reactive<any[]>([])
 
-const internalHeaders = ref<any[]>([{}])
-
-const selectedHeaders = ref<any[]>([{}])
+const allHeaders = ref<any[]>([{}]),
+  currentHeaders = ref<any[]>([{}]),
+  selectableHeaders = ref<any[]>([{}])
 
 const updateHeaders = (value: any[]) => {
-  const h: any[] = [{ title: '', key: '$control', sortable: false }]
+  const h: any[] = [
+    reactive({ title: '', key: '$control', sortable: false, noSelectable: true, visible: true })
+  ]
   value.forEach((item: any) => {
+    console.log(item, item.visible)
+    if (item.visible === undefined) {
+      item.visible = true
+    }
     h.push(item)
   })
-  h.push({ title: 'Abc', key: '$columns-control', sortable: false, width: '0%' })
-  internalHeaders.value = h
+  h.push(
+    reactive({
+      title: '',
+      key: '$columns-control',
+      sortable: false,
+      width: '0%',
+      noSelectable: true,
+      visible: true
+    })
+  )
+
+  allHeaders.value = h
+  currentHeaders.value = h.filter((v) => v.visible)
+  selectableHeaders.value = h.filter((v) => !v.noSelectable)
 }
 
 const selectionHeadersChange = () => {
-  let h: any[] = []
-  if (Array.isArray(props.headers)) {
-    h = props.headers
-  } else {
-    h = (props.headers as any).value as any[]
-  }
-  const sel = selectedHeaders.value
-  updateHeaders(h.filter((v: any) => (v.key ? sel.indexOf(v.key) != -1 : true)))
+  currentHeaders.value = allHeaders.value.filter((v: any) => v.visible)
 }
 
 const init = () => {
@@ -212,14 +229,15 @@ const init = () => {
   updateRows()
 
   if (props.headers) {
+    let headers: any[] = []
+
     if (Array.isArray(props.headers)) {
-      updateHeaders(props.headers)
+      headers = props.headers as any[]
     } else {
-      updateHeaders((props.headers as any).value as any[])
+      headers = (props.headers as any).value as any[]
     }
-    selectedHeaders.value = internalHeaders.value
-      .filter((v: any) => v.key.substring(0, 1) != '$')
-      .map((v: any) => v.key)
+
+    updateHeaders(headers)
   }
 }
 

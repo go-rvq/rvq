@@ -162,9 +162,10 @@ type FilterItemInTheLastUnit string
 type FilterData []*FilterItem
 
 type SelectItem struct {
-	Text         string `json:"text,omitempty"`
-	Value        string `json:"value,omitempty"`
-	SQLCondition string `json:"-"`
+	Text             string                       `json:"text,omitempty"`
+	Value            string                       `json:"value,omitempty"`
+	SQLCondition     string                       `gorm:"-" json:"-"`
+	SQLConditionFunc func(val, mod string) string `gorm:"-" json:"-"`
 }
 
 type FilterLinkageSelectData struct {
@@ -186,6 +187,7 @@ type FilterItem struct {
 	ValueFrom              string                        `json:"valueFrom,omitempty"`
 	ValueTo                string                        `json:"valueTo,omitempty"`
 	SQLCondition           string                        `json:"-"`
+	SQLConditionFunc       func(val, mod string) string  `json:"-"`
 	Options                []*SelectItem                 `json:"options,omitempty"`
 	LinkageSelectData      FilterLinkageSelectData       `json:"linkageSelectData,omitempty"`
 	Invisible              bool                          `json:"invisible,omitempty"`
@@ -209,7 +211,7 @@ func (fd FilterData) Clone() (r FilterData) {
 	return
 }
 
-func (fd FilterData) getSQLCondition(key string, val string) string {
+func (fd FilterData) getSQLCondition(key string, val, mod string) string {
 	it := fd.getFilterItem(key)
 	if it == nil {
 		return ""
@@ -218,12 +220,19 @@ func (fd FilterData) getSQLCondition(key string, val string) string {
 	// If item type is ItemTypeSelect and value is not nil, we use option's SQLCondition instead of item SQLCondition if option's SQLCondition present.
 	if it.ItemType == ItemTypeSelect && val != "" {
 		for _, option := range it.Options {
-			if option.Value == val && option.SQLCondition != "" {
-				return option.SQLCondition
+			if option.Value == val {
+				if option.SQLCondition != "" {
+					return option.SQLCondition
+				} else if option.SQLConditionFunc != nil {
+					return option.SQLConditionFunc(val, mod)
+				}
 			}
 		}
 	}
 
+	if it.SQLConditionFunc != nil {
+		return it.SQLConditionFunc(val, mod)
+	}
 	return it.SQLCondition
 }
 
@@ -298,7 +307,7 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 				}
 			}
 		} else {
-			sqlc := fd.getSQLCondition(key, v[0])
+			sqlc := fd.getSQLCondition(key, v[0], mod)
 			if len(sqlc) > 0 {
 				var ival interface{} = val
 				if it.ItemType == ItemTypeDatetimeRange {

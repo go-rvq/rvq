@@ -1,30 +1,33 @@
 <template>
-  <div class="vx-advanced-select" :class="'vx-advanced-select__' + (many ? 'many' : 'one')">
+  <div class="vx-advanced-select mb-2" :class="'vx-advanced-select__' + (many ? 'many' : 'one')">
     <label
       v-if="label"
       class="v-label theme--light"
       v-html="label"
       :style="errorMessages.length ? 'color: rgb(var(--v-theme-error));opacity: inherit;' : ''"
     ></label>
+    <p v-if="hint" v-html="hint"></p>
     <v-card
       :color="errorMessages.length ? 'error' : ''"
       v-if="internalSelectedItems.length > 0"
       variant="flat"
       class="mb-2 vx-advanced-select"
     >
-      <v-chip-group v-if="chips">
-        <v-chip v-for="item in internalSelectedItems">
-          {{ item[itemText] }}
-          <template v-slot:append>
-            <v-btn
-              density="compact"
-              variant="text"
-              icon="mdi-delete"
-              @click="removeItem(item[itemValue])"
-            ></v-btn>
-          </template>
-        </v-chip>
-      </v-chip-group>
+      <template v-if="chips">
+        <v-chip-group column>
+          <v-chip v-for="item in internalSelectedItems">
+            {{ item[itemText] }}
+            <template v-slot:append>
+              <v-btn
+                density="compact"
+                variant="text"
+                icon="mdi-delete"
+                @click="removeItem(item[itemValue])"
+              ></v-btn>
+            </template>
+          </v-chip>
+        </v-chip-group>
+      </template>
 
       <v-list v-else density="compact" style="padding: 0">
         <draggable
@@ -89,15 +92,17 @@
       </template>
     </v-autocomplete>
 
-    <div
-      class="v-messages mb-3"
-      v-if="!selecting && errorMessages.length"
-      aria-live="polite"
-      style="opacity: 1; color: rgb(var(--v-theme-error))"
-    >
-      <div style="height: 5px; border-top: 1px solid rgb(var(--v-theme-error))"></div>
-      <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">
-        {{ item }}
+    <div v-if="!hideDetails" class="v-input__details" role="alert" aria-live="polite">
+      <div
+        class="v-messages mb-3"
+        v-if="!selecting && errorMessages.length"
+        aria-live="polite"
+        style="opacity: 1; color: rgb(var(--v-theme-error))"
+      >
+        <div style="height: 5px; border-top: 1px solid rgb(var(--v-theme-error))"></div>
+        <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">
+          {{ item }}
+        </div>
       </div>
     </div>
   </div>
@@ -105,9 +110,13 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 
-import {isReactive, onMounted, ref, toRaw, watch} from 'vue'
+import { isReactive, onMounted, ref, toRaw, watch } from 'vue'
 
 const props = defineProps({
+  hint: {
+    type: String,
+    default: ''
+  },
   items: {
     type: Array<object>,
     default: () => []
@@ -146,6 +155,10 @@ const props = defineProps({
     default: []
   },
   chips: {
+    type: Boolean,
+    default: false
+  },
+  hideDetails: {
     type: Boolean,
     default: false
   },

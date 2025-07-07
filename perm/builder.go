@@ -146,6 +146,10 @@ func (b *Builder) GetSubjectsFunc() SubjectsFunc {
 	return b.subjectsFunc
 }
 
+func (b *Builder) GetSubjects(r *http.Request) []string {
+	return b.subjectsFunc(r)
+}
+
 func (b *Builder) ContextFunc(v ContextFunc) (r *Builder) {
 	b.contextFunc = v
 	return b

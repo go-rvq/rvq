@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {encodeFilterData, filterData} from '@/lib/Filter/FilterData'
-import {FilterItem} from '@/lib/Filter/Model'
+import { computed, onMounted, ref } from 'vue'
+import { encodeFilterData, filterData } from '@/lib/Filter/FilterData'
+import { FilterItem } from '@/lib/Filter/Model'
 import ItemFilter from '@/lib/Filter/components/ItemFilter.vue'
 import DatetimeRangeItem from '@/lib/Filter/components/DatetimeRangeItem.vue'
 import DateRangeItem from '@/lib/Filter/components/DateRangeItem.vue'
@@ -214,7 +214,6 @@ onMounted(() => {
           @change="clickDone"
           @clear="clear"
         ></item-filter>
-        <!--        <item-filter v-for="item in foldedFilters " v-bind="item"></item-filter>-->
       </v-list>
     </v-menu>
   </div>

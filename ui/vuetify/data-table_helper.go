@@ -139,10 +139,22 @@ func DataTableWithHeaderControl[T any](dataTable VTagBuilderGetter[T], comp h.HT
 	const key = "$headerControl$"
 	var (
 		tag  = dataTable.GetVTagBuilder()
+		dst  = tag.GetHTMLTagBuilder()
 		attr = tag.GetAttr(":headers")
-		v    = attr.Get()
 		cfg  DataTableHeaderBasic
 	)
+
+	if attr == nil {
+		for _, c := range tag.GetChildren() {
+			if t, _ := c.(*VDataTableHeadersBuilder); t != nil {
+				attr = t.GetAttr(":headers")
+				dst = t.GetHTMLTagBuilder()
+				break
+			}
+		}
+	}
+
+	v := attr.Value
 
 	for _, cfg = range config {
 	}
@@ -156,7 +168,7 @@ func DataTableWithHeaderControl[T any](dataTable VTagBuilderGetter[T], comp h.HT
 		cfg.Children = t
 	}
 
-	attr.Set(DataTableHeaders(cfg))
-	tag.Children(append(tag.GetChildren(), web.Slot(comp).Name("header."+key).Scope("scope"))...)
+	attr.Value = DataTableHeaders(cfg)
+	dst.AppendChildren(web.Slot(comp).Name("header." + key).Scope("scope"))
 	return tag.Dot()
 }

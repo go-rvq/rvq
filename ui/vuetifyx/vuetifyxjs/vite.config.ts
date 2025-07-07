@@ -1,15 +1,15 @@
 // Plugins
 import Components from 'unplugin-vue-components/vite'
-import {Vuetify3Resolver} from 'unplugin-vue-components/resolvers'
+import { Vuetify3Resolver } from 'unplugin-vue-components/resolvers'
 import Vue from '@vitejs/plugin-vue'
-import Vuetify, {transformAssetUrls} from 'vite-plugin-vuetify'
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
-import {resolve} from 'path'
+import { resolve } from 'path'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 
 // Utilities
-import {defineConfig} from 'vite'
-import {fileURLToPath, URL} from 'node:url'
+import { defineConfig } from 'vite'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -32,7 +32,8 @@ export default defineConfig({
           vuetify: 'Vuetify'
         }
       }
-    }
+    },
+    cssCodeSplit: false,
   },
 
   plugins: [

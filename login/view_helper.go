@@ -7,11 +7,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/qor5/web/v3"
 	"github.com/qor5/x/v3/i18n"
+	h "github.com/theplant/htmlgo"
 )
 
 type ViewHelper struct {
-	b *Builder
+	b               *Builder
+	headerComponent func(ctx *web.EventContext) h.HTMLComponent
+}
+
+func (vh *ViewHelper) Builder() *Builder {
+	return vh.b
+}
+
+func (vh *ViewHelper) HeaderComponentFunc() func(ctx *web.EventContext) h.HTMLComponent {
+	return vh.headerComponent
+}
+
+func (vh *ViewHelper) SetHeaderComponent(f func(ctx *web.EventContext) h.HTMLComponent) *ViewHelper {
+	vh.headerComponent = f
+	return vh
 }
 
 func (vh *ViewHelper) I18n() *i18n.Builder {

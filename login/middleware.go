@@ -2,6 +2,7 @@ package login
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -88,6 +89,116 @@ func (b *Builder) ParseRequestUser(r *http.Request) (user any, err, userStateErr
 	return
 }
 
+func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			claims, err = b.ParseClaims(r)
+
+			user       any
+			secureSalt string
+
+			setMessage = func(msg string) {
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm=%q`, msg))
+				http.Error(w, msg, http.StatusUnauthorized)
+			}
+			errorMessage = func(err error) {
+				setMessage("ERROR: " + err.Error())
+			}
+		)
+
+		if _, ok := b.whiteList[r.URL.Path]; ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if err != nil {
+			if err.Error() == "no token string" {
+				if b.userPassEnabled {
+					if user, pass, ok := r.BasicAuth(); ok {
+						if user, err := b.authUserPass(user, pass); err != nil {
+							errorMessage(err)
+							return
+						} else {
+							u := user.(UserPasser)
+							userID := objectID(user)
+							claims = &UserClaims{
+								UserID:           userID,
+								PassUpdatedAt:    u.GetPasswordUpdatedAt(),
+								RegisteredClaims: b.genBaseSessionClaim(userID, u.GetAccountName() == b.initialUserAccount),
+							}
+
+							if user, err = b.findUserByID(claims.UserID); err != nil {
+								errorMessage(err)
+								return
+							} else if err = b.setSecureCookiesByClaims(w, user, *claims); err != nil {
+								errorMessage(err)
+								return
+							}
+
+							goto ok
+						}
+					}
+				}
+				setMessage("Authentication")
+			} else {
+				errorMessage(err)
+			}
+			return
+		}
+
+		if b.userModel != nil {
+			var err error
+			user, err = b.findUserByID(claims.UserID)
+			if err == nil {
+				if claims.Provider == "" {
+					if user.(UserPasser).GetPasswordUpdatedAt() != claims.PassUpdatedAt {
+						err = ErrPasswordChanged
+					}
+					if user.(UserPasser).GetLocked() {
+						err = ErrUserLocked
+					}
+				}
+			}
+
+			if err != nil {
+				errorMessage(err)
+				return
+			}
+
+			if b.sessionSecureEnabled {
+				secureSalt = user.(SessionSecurer).GetSecure()
+				_, err := parseBaseClaimsFromCookie(r, b.authSecureCookieName, b.secret+secureSalt)
+				if err != nil {
+					errorMessage(err)
+					return
+				}
+			}
+		} else {
+			user = claims
+		}
+
+	ok:
+		if b.autoExtendSession && time.Now().Sub(claims.IssuedAt.Time).Seconds() > float64(b.sessionMaxAge)/10 {
+			oldSessionToken := b.mustGetSessionToken(*claims)
+
+			claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
+			b.setAuthCookiesFromUserClaims(w, claims, secureSalt)
+
+			if b.afterExtendSessionHook != nil {
+				setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(*claims)})
+				if err := b.afterExtendSessionHook(r, user, oldSessionToken); err != nil {
+					errorMessage(err)
+					return
+				}
+			}
+		}
+
+		r = r.WithContext(context.WithValue(r.Context(), UserKey, user))
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) http.Handler {
 	mustLogin := true
 	autoRedirectToHomePage := true
@@ -100,20 +211,20 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 		}
 	}
 
-	whiteList := map[string]struct{}{
-		b.oauthBeginURL:                {},
-		b.oauthCallbackURL:             {},
-		b.oauthCallbackCompleteURL:     {},
-		b.passwordLoginURL:             {},
-		b.forgetPasswordPageURL:        {},
-		b.sendResetPasswordLinkURL:     {},
-		b.resetPasswordLinkSentPageURL: {},
-		b.resetPasswordURL:             {},
-		b.resetPasswordPageURL:         {},
-		b.validateTOTPURL:              {},
-	}
+	b.WhiteList(
+		b.oauthBeginURL,
+		b.oauthCallbackURL,
+		b.oauthCallbackCompleteURL,
+		b.passwordLoginURL,
+		b.forgetPasswordPageURL,
+		b.sendResetPasswordLinkURL,
+		b.resetPasswordLinkSentPageURL,
+		b.resetPasswordURL,
+		b.resetPasswordPageURL,
+		b.validateTOTPURL,
+	)
 
-	staticFileRe := regexp.MustCompile(`\.(css|js|gif|jpg|jpeg|png|ico|svg|ttf|eot|woff|woff2|js\.map)$`)
+	staticFileRe := regexp.MustCompile(`\.(css|js|gif|jpg|jpeg|png|ico|svg|ttf|eot|woff|woff2|map;?)$`)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -122,14 +233,18 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				return
 			}
 
-			if _, ok := whiteList[r.URL.Path]; ok {
+			if _, ok := b.whiteList[r.URL.Path]; ok {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			path := strings.TrimRight(r.URL.Path, "/")
+			var (
+				path        = strings.TrimRight(r.URL.Path, "/")
+				claims, err = b.ParseClaims(r)
 
-			claims, err := b.ParseClaims(r)
+				user       any
+				secureSalt string
+			)
 
 			if err != nil {
 				if !mustLogin {
@@ -147,8 +262,6 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				return
 			}
 
-			var user interface{}
-			var secureSalt string
 			if b.userModel != nil {
 				var err error
 				user, err = b.findUserByID(claims.UserID)
@@ -188,10 +301,10 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 					default:
 						panic(err)
 					}
-					if path == b.LogoutURL {
+					if path == b.logoutURL {
 						next.ServeHTTP(w, r)
 					} else {
-						http.Redirect(w, r, b.LogoutURL, http.StatusFound)
+						http.Redirect(w, r, b.logoutURL, http.StatusFound)
 					}
 					return
 				}
@@ -204,10 +317,10 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 							next.ServeHTTP(w, r)
 							return
 						}
-						if path == b.LogoutURL {
+						if path == b.logoutURL {
 							next.ServeHTTP(w, r)
 						} else {
-							http.Redirect(w, r, b.LogoutURL, http.StatusFound)
+							http.Redirect(w, r, b.logoutURL, http.StatusFound)
 						}
 						return
 					}
@@ -219,7 +332,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 			if b.autoExtendSession && time.Now().Sub(claims.IssuedAt.Time).Seconds() > float64(b.sessionMaxAge)/10 {
 				oldSessionToken := b.mustGetSessionToken(*claims)
 
-				claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID)
+				claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
 				b.setAuthCookiesFromUserClaims(w, claims, secureSalt)
 
 				if b.afterExtendSessionHook != nil {
@@ -230,7 +343,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 							return
 						}
 						setNoticeOrPanic(w, herr)
-						http.Redirect(w, r, b.LogoutURL, http.StatusFound)
+						http.Redirect(w, r, b.logoutURL, http.StatusFound)
 						return
 					}
 				}
@@ -238,7 +351,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 			r = r.WithContext(context.WithValue(r.Context(), UserKey, user))
 
-			if path == b.LogoutURL {
+			if path == b.logoutURL {
 				next.ServeHTTP(w, r)
 				return
 			}

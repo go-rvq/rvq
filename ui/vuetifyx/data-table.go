@@ -273,10 +273,11 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 						TrueValue(id).
 						FalseValue("").
 						HideDetails(true).
+						Attr("style", "min-height: auto").
 						Attr("v-model", "itemLocals.inputValue").
 						Attr("@update:model-value", onChange+";locals.selected_count+=($event?1:-1);"),
 				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ inputValue :"%v"} `, inputValue)),
-			).Class("pr-0"))
+			).Class("pr-0 item-selector"))
 		}
 
 		for _, f := range b.columns {
@@ -314,7 +315,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 							rowMenus...,
 						).Density("compact").
 							Attr("slim", true),
-					),
+					).ZIndex("50000"),
 				).Style("width: 64px;").Class("pl-0")
 			} else {
 				td = h.Td().Style("width: 64px;").Class("pl-0")
@@ -396,6 +397,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 						TrueValue(idsOfPageComma).
 						HideDetails(true).
 						Attr("v-model", "itemLocals.allInputValue").
+						Attr("style", "min-height: auto").
 						Attr("@update:model-value", onChange),
 				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue)),
 			).Style("width: 48px;").Class("pr-0"))

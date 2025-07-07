@@ -2,12 +2,15 @@ package perm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/ory/ladon"
+	"github.com/qor5/web/v3/zeroer"
+	"github.com/sunfmin/reflectutils"
 )
 
 var Verbose = false
@@ -39,6 +42,10 @@ func NewVerifier(module string, b *Builder) (r *Verifier) {
 	return
 }
 
+func (b *Verifier) Module() string {
+	return b.module
+}
+
 func (b *Verifier) Spawn() (r *Verifier) {
 	if b.builder == nil {
 		return b
@@ -59,6 +66,10 @@ func (b *Verifier) Spawn() (r *Verifier) {
 		req:            &ladon.Request{},
 	}
 
+	if b.vr != nil {
+		r.vr.r = b.vr.r
+	}
+
 	return
 }
 
@@ -70,6 +81,18 @@ func (b *Verifier) Do(v string) (r *Verifier) {
 	r = b.Spawn()
 	r.vr.req.Action = v
 	return
+}
+
+func (b *Verifier) Resource() string {
+	return strings.Join(b.vr.resourcesParts, ":") + ":"
+}
+
+func (b *Verifier) ResourceWithModule() string {
+	var m string
+	if b.module != "" {
+		m = b.module
+	}
+	return m + ":" + strings.Join(b.vr.resourcesParts, ":") + ":"
 }
 
 // SnakeDo convert string to snake form.
@@ -101,7 +124,7 @@ func (b *Verifier) SnakeOn(vs ...string) (r *Verifier) {
 		if v == "" {
 			continue
 		}
-		fixed = append(fixed, strcase.ToSnake(v))
+		fixed = append(fixed, strcase.ToSnakeWithIgnore(v, "."))
 	}
 
 	b.On(fixed...)
@@ -112,8 +135,13 @@ func (b *Verifier) ObjectOn(v interface{}) (r *Verifier) {
 	if b.builder == nil || v == nil {
 		return b
 	}
-	b.vr.objs = append(b.vr.objs, v)
-	b.vr.resourcesParts = append(b.vr.resourcesParts, ToPermissionRN(v)...)
+
+	id, err := reflectutils.Get(v, "ID")
+	if err == nil && !zeroer.IsZero(id) {
+		b.vr.objs = append(b.vr.objs, v)
+		b.SnakeOn(fmt.Sprint(id))
+	}
+
 	return b
 }
 
@@ -127,7 +155,7 @@ func (b *Verifier) RemoveOn(length int) (r *Verifier) {
 	return b
 }
 
-func (b *Verifier) WithReq(v *http.Request) (r *Verifier) {
+func (b *Verifier) WithReq(v *http.Request) *Verifier {
 	if b.builder == nil {
 		return b
 	}
@@ -152,12 +180,20 @@ func (b *Verifier) Given(v ladon.Context) (r *Verifier) {
 	return b
 }
 
+func (b *Verifier) Allowed() bool {
+	return b.IsAllowed() == nil
+}
+
+func (b *Verifier) Denied() bool {
+	return b.IsAllowed() != nil
+}
+
 func (b *Verifier) IsAllowed() error {
 	if b.builder == nil {
 		return nil
 	}
 
-	b.vr.req.Resource = ":" + strings.Join(b.vr.resourcesParts, ":") + ":"
+	b.vr.req.Resource = b.Resource()
 
 	if len(b.vr.subjects) == 0 && b.builder.subjectsFunc != nil {
 		b.vr.subjects = b.builder.subjectsFunc(b.vr.r)
@@ -184,7 +220,7 @@ func (b *Verifier) IsAllowed() error {
 
 		err = b.builder.ladon.IsAllowed(context.TODO(), b.vr.req)
 		if Verbose {
-			fmt.Printf("have permission: %+v, req: %#+v\n", err == nil, b.vr.req)
+			fmt.Printf("have permission: %+v, req: {%s}\n", err == nil, RequestToString(b.vr.req))
 		}
 		if err == nil {
 			return nil
@@ -192,4 +228,22 @@ func (b *Verifier) IsAllowed() error {
 	}
 
 	return err
+}
+
+func RequestToString(r *ladon.Request) string {
+	var s []string
+	if r.Resource != "" {
+		s = append(s, fmt.Sprintf("resurce=%q", r.Resource))
+	}
+	if r.Action != "" {
+		s = append(s, fmt.Sprintf("action=%q", r.Action))
+	}
+	if r.Subject != "" {
+		s = append(s, fmt.Sprintf("subject=%q", r.Subject))
+	}
+	if r.Context != nil && len(r.Context) > 0 {
+		b, _ := json.Marshal(r.Context)
+		s = append(s, fmt.Sprintf("context=%v", string(b)))
+	}
+	return strings.Join(s, ", ")
 }

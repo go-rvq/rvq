@@ -16,3 +16,6 @@ clean:
 
 dev:
 	../../_env/env.sh pj_pnpm $(shell pwd) run dev
+
+pkg_add:
+	../../_env/env.sh pj_pnpm $(shell pwd) add PKG_NAME

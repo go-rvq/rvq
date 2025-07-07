@@ -3,7 +3,10 @@ import { FilterItem } from '@/lib/Filter/Model'
 import { computed } from 'vue'
 import * as constants from '@/lib/Filter/Constants'
 
-const props = defineProps<{ op: FilterItem }>()
+const props = defineProps<{
+  op: FilterItem
+  compTranslations: any
+}>()
 const emit = defineEmits(['clear'])
 const showValueComputed = computed(() => {
   let showValue = ''
@@ -100,11 +103,12 @@ const showValueComputed = computed(() => {
         const textsAre = props.op
           .options!.filter((o) => props.op.valuesAre.includes(o.value))
           .map((o) => o.text)
-        if (mod === 'in' && props.op.valuesAre && props.op.valuesAre.length > 0) {
-          showValue = ' in ' + '[ ' + textsAre.join(', ') + ' ]'
-        }
-        if (mod === 'notIn' && props.op.valuesAre && props.op.valuesAre.length > 0) {
-          showValue = ' not in ' + '[ ' + textsAre.join(', ') + ' ]'
+        if (
+          (mod === 'in' || mod === 'notIn') &&
+          props.op.valuesAre &&
+          props.op.valuesAre.length > 0
+        ) {
+          showValue = ` ${props.compTranslations[mod]} [ ${textsAre.join(', ')} ]`
         }
         break
       }

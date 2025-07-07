@@ -50,8 +50,7 @@ func (b *VNavigationDrawerBuilder) ModelValue(v bool) (r *VNavigationDrawerBuild
 }
 
 func (b *VNavigationDrawerBuilder) Permanent(v bool) (r *VNavigationDrawerBuilder) {
-	b.Attr(":permanent", fmt.Sprint(v))
-	return b
+	return b.Attr("permanent", v)
 }
 
 func (b *VNavigationDrawerBuilder) Rail(v bool) (r *VNavigationDrawerBuilder) {

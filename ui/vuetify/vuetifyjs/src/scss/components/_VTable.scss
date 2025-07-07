@@ -12,3 +12,19 @@
   border-radius: vuetify.$border-radius-root;
   overflow: hidden;
 }
+
+.v-table.v-table--density-default {
+  --v-table-header-height: 56px;
+  --v-table-row-height: 52px;
+}
+
+.v-table.v-table--density-comfortable {
+  --v-table-header-height: 48px;
+  --v-table-row-height: 44px;
+}
+
+.v-table.v-table--density-compact {
+  --v-table-header-height: 30px;
+  --v-table-row-height: 28px; /* same line-height */
+  --v-selection-control-size: 21px;
+}

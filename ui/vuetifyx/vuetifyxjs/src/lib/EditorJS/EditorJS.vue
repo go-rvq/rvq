@@ -23,6 +23,14 @@
 .v-input__control {
   display: block;
 }
+
+.vx-input-editorjs :deep(.codex-editor--narrow .ce-toolbar__actions) {
+  right: auto !important;
+  left: -55px;
+}
+.vx-input-editorjs :deep(.codex-editor__redactor) {
+  margin-right: 0;
+}
 </style>
 <script setup>
 import EditorJS from '@editorjs/editorjs'

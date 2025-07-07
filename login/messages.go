@@ -1,8 +1,70 @@
 package login
 
-import "github.com/qor5/x/v3/i18n"
+import (
+	"context"
+
+	"github.com/qor5/x/v3/i18n"
+)
 
 const I18nLoginKey i18n.ModuleKey = "I18nLoginKey"
+
+func GetMessages(ctx context.Context) *Messages {
+	return i18n.MustGetModuleMessages(ctx, I18nLoginKey, Messages_en_US).(*Messages)
+}
+
+func ErrorToMessage(msgr *Messages, err error, defaul string) (msg string) {
+	switch err {
+	case ErrWrongPassword:
+		msg = msgr.ErrorIncorrectPassword
+	case ErrEmptyPassword:
+		msg = msgr.ErrorPasswordCannotBeEmpty
+	case ErrPasswordNotMatch:
+		msg = msgr.ErrorPasswordNotMatch
+	case ErrWrongTOTPCode:
+		msg = msgr.ErrorIncorrectTOTPCode
+	case ErrTOTPCodeHasBeenUsed:
+		msg = msgr.ErrorTOTPCodeReused
+	default:
+		if defaul != "" {
+			msg = defaul
+		} else {
+			msg = msgr.ErrorSystemError
+		}
+	}
+	return
+}
+
+func ErrorToMessageError(msgr *Messages, err error) (r error) {
+	r = err
+	var s string
+	switch err {
+	case ErrUserNotFound:
+		s = msgr.ErrorUserNotFound
+	case ErrPasswordChanged:
+		s = msgr.ErrorPasswordChanged
+	case ErrWrongPassword:
+		s = msgr.ErrorIncorrectPassword
+	case ErrUserLocked:
+		s = msgr.ErrorUserLocked
+	case ErrUserGetLocked:
+		s = msgr.ErrorUserGetLocked
+	case ErrWrongTOTPCode:
+		s = msgr.ErrorIncorrectTOTPCode
+	case ErrTOTPCodeHasBeenUsed:
+		s = msgr.ErrorTOTPCodeReused
+	case ErrEmptyPassword:
+		s = msgr.ErrorPasswordCannotBeEmpty
+	case ErrPasswordNotMatch:
+		s = msgr.ErrorPasswordNotMatch
+	}
+	if s != "" {
+		r = &NoticeError{
+			Level:   NoticeLevel_Error,
+			Message: s,
+		}
+	}
+	return
+}
 
 type Messages struct {
 	// common
@@ -15,6 +77,7 @@ type Messages struct {
 	PasswordLabel       string
 	PasswordPlaceholder string
 	SignInBtn           string
+	SignOutBtn          string
 	ForgetPasswordLink  string
 	// forget password page
 	ForgetPasswordPageTitle        string
@@ -72,6 +135,9 @@ type Messages struct {
 	ErrorIncorrectTOTPCode              string
 	ErrorTOTPCodeReused                 string
 	ErrorIncorrectRecaptchaToken        string
+	ErrorPasswordVeryEasy               string
+	ErrorPasswordChanged                string
+	ErrorUserGetLocked                  string
 	// Warn Messages
 	WarnPasswordHasBeenChanged string
 	// Info Messages
@@ -88,6 +154,7 @@ var Messages_en_US = &Messages{
 	PasswordLabel:                       "Password",
 	PasswordPlaceholder:                 "Password",
 	SignInBtn:                           "Sign In",
+	SignOutBtn:                          "Sign Out",
 	ForgetPasswordLink:                  "Forget your password?",
 	ForgetPasswordPageTitle:             "Forget Your Password?",
 	ForgotMyPasswordTitle:               "I forgot my password",
@@ -138,6 +205,9 @@ var Messages_en_US = &Messages{
 	ErrorIncorrectTOTPCode:              "Incorrect passcode",
 	ErrorTOTPCodeReused:                 "This passcode has been used",
 	ErrorIncorrectRecaptchaToken:        "Incorrect reCAPTCHA token",
+	ErrorPasswordVeryEasy:               "Very easy password",
+	ErrorPasswordChanged:                "Password changed",
+	ErrorUserGetLocked:                  "User get locked",
 	WarnPasswordHasBeenChanged:          "Password has been changed, please sign-in again",
 	InfoPasswordSuccessfullyReset:       "Password successfully reset, please sign-in again",
 	InfoPasswordSuccessfullyChanged:     "Password successfully changed, please sign-in again",
@@ -202,6 +272,9 @@ var Messages_zh_CN = &Messages{
 	ErrorIncorrectTOTPCode:              "passcode错误",
 	ErrorTOTPCodeReused:                 "这个passcode已经被使用过了",
 	ErrorIncorrectRecaptchaToken:        "reCAPTCHA token错误",
+	ErrorPasswordVeryEasy:               "非常簡單的密碼",
+	ErrorPasswordChanged:                "密碼更改",
+	ErrorUserGetLocked:                  "用戶被鎖定",
 	WarnPasswordHasBeenChanged:          "密码被修改了，请重新登录",
 	InfoPasswordSuccessfullyReset:       "密码重置成功，请重新登录",
 	InfoPasswordSuccessfullyChanged:     "密码修改成功，请重新登录",
@@ -266,6 +339,9 @@ var Messages_ja_JP = &Messages{
 	ErrorIncorrectTOTPCode:              "パスコードが間違っています",
 	ErrorTOTPCodeReused:                 "このパスコードは既に利用されています",
 	ErrorIncorrectRecaptchaToken:        "reCAPTCHAトークンが間違っています",
+	ErrorPasswordVeryEasy:               "非常に簡単なパスワード",
+	ErrorPasswordChanged:                "パスワードが変更されました",
+	ErrorUserGetLocked:                  "ユーザーはロックされます",
 	WarnPasswordHasBeenChanged:          "パスワードが変更されました。再度ログインしてください",
 	InfoPasswordSuccessfullyReset:       "パスワードのリセットに成功しました。再度ログインしてください",
 	InfoPasswordSuccessfullyChanged:     "パスワードの変更に成功しました。再度ログインしてください",

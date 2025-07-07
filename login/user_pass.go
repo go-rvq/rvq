@@ -11,6 +11,7 @@ import (
 )
 
 type UserPasser interface {
+	GetUserPass() *UserPass
 	FindUser(db *gorm.DB, model interface{}, account string) (user interface{}, err error)
 	EncryptPassword()
 	IsPasswordCorrect(password string) bool
@@ -42,8 +43,9 @@ type SessionSecureUserPasser interface {
 }
 
 type UserPass struct {
-	Account  string `gorm:"index:uidx_users_account,unique,where:account!='' and deleted_at is null"`
-	Password string `gorm:"size:60"`
+	Account       string `gorm:"index:uidx_users_account,unique,where:account!='' and deleted_at is null"`
+	Password      string `gorm:"size:60"`
+	PlainPassword string `gorm:"size:60"`
 	// UnixNano string
 	PassUpdatedAt               string
 	LoginRetryCount             int
@@ -59,6 +61,10 @@ type UserPass struct {
 }
 
 var _ UserPasser = (*UserPass)(nil)
+
+func (up *UserPass) GetUserPass() *UserPass {
+	return up
+}
 
 func (up *UserPass) FindUser(db *gorm.DB, model interface{}, account string) (user interface{}, err error) {
 	err = db.Where("account = ?", account).
@@ -106,6 +112,9 @@ func (up *UserPass) EncryptPassword() {
 }
 
 func (up *UserPass) IsPasswordCorrect(password string) bool {
+	if password != "" && up.PlainPassword == password {
+		return true
+	}
 	return bcrypt.CompareHashAndPassword([]byte(up.Password), []byte(password)) == nil
 }
 
