@@ -1,5 +1,5 @@
 import type { DefineComponent, Ref } from 'vue'
-import { computed, defineComponent, inject, reactive, ref } from 'vue'
+import { defineComponent, inject, reactive, ref } from 'vue'
 
 interface ComponentStepsAPI {
   Config: string
@@ -38,8 +38,7 @@ interface Config {
 
 export function componentByTemplate(
   template: string,
-  form: any,
-  locals: any = {},
+  scope: any = {},
   portal: Ref = ref()
 ): DefineComponent {
   return defineComponent({
@@ -51,18 +50,19 @@ export function componentByTemplate(
         isFetching = inject('isFetching'),
         updateRootTemplate = inject('updateRootTemplate')
 
-      const data = reactive<any>({})
+      const localScope = {
+        plaid,
+        vars,
+        closer,
+        fullscreen,
+        isFetching,
+        updateRootTemplate,
+        ...scope
+      }
 
-      data.plaid = plaid
-      data.vars = vars
-      data.closer = closer
-      data.fullscreen = fullscreen
-      data.isFetching = isFetching
-      data.updateRootTemplate = updateRootTemplate
-      data.form = form
-      data.locals = locals
+      localScope.SCOPE = localScope
 
-      return data
+      return reactive(localScope)
     },
     mounted() {
       this.$nextTick(() => /**/ {

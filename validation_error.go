@@ -7,17 +7,21 @@ type ValidationErrors struct {
 	fieldErrors  map[string][]string
 }
 
-func (b *ValidationErrors) FieldError(fieldName string, message string) {
+func NewValidationErrors() *ValidationErrors {
+	return &ValidationErrors{}
+}
+
+func (b *ValidationErrors) FieldError(fieldName string, message string) *ValidationErrors {
 	if b.fieldErrors == nil {
 		b.fieldErrors = make(map[string][]string)
 	}
 	b.fieldErrors[fieldName] = append(b.fieldErrors[fieldName], message)
-	return
+	return b
 }
 
-func (b *ValidationErrors) GlobalError(message string) {
+func (b *ValidationErrors) GlobalError(message string) *ValidationErrors {
 	b.globalErrors = append(b.globalErrors, message)
-	return
+	return b
 }
 
 func (b *ValidationErrors) GetFieldErrors(fieldName string) (r []string) {
@@ -26,6 +30,16 @@ func (b *ValidationErrors) GetFieldErrors(fieldName string) (r []string) {
 	}
 
 	r = b.fieldErrors[fieldName]
+	return
+}
+
+func (b *ValidationErrors) GetRemoveFieldErrors(fieldName string) (r []string) {
+	if b.fieldErrors == nil {
+		return
+	}
+
+	r = b.fieldErrors[fieldName]
+	delete(b.fieldErrors, fieldName)
 	return
 }
 
@@ -48,6 +62,14 @@ func (b *ValidationErrors) HaveErrors() bool {
 		return true
 	}
 	return false
+}
+
+func (b *ValidationErrors) HaveGlobalErrors() bool {
+	return len(b.globalErrors) > 0
+}
+
+func (b *ValidationErrors) HaveFieldErrors() bool {
+	return len(b.fieldErrors) > 0
 }
 
 func (b *ValidationErrors) Merge(other ValidationErrors) {

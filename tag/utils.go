@@ -35,3 +35,45 @@ func Simplify(c h.HTMLComponent, cb func(c h.HTMLComponent)) {
 		cb(c)
 	}
 }
+
+type WalkState uint8
+
+const (
+	SkipNext WalkState = iota + 1
+	SkipAll
+)
+
+func WalkS(c h.HTMLComponent, cb func(c h.HTMLComponent) (state WalkState)) (state WalkState) {
+	var items []h.HTMLComponent
+	switch t := c.(type) {
+	case h.HTMLComponents:
+		items = t
+	case interface{ GetChildren() []h.HTMLComponent }:
+		switch cb(c) {
+		case SkipNext:
+			return 0
+		case SkipAll:
+			return SkipAll
+		}
+		items = t.GetChildren()
+	case *h.HTMLTagBuilder:
+		items = t.Childs
+	}
+
+	for _, comp := range items {
+		if comp != nil {
+			state = WalkS(comp, cb)
+			switch state {
+			case SkipNext:
+				return 0
+			case SkipAll:
+				return
+			}
+		}
+	}
+	return
+}
+
+func Walk(c h.HTMLComponent, cb func(c h.HTMLComponent) (state WalkState)) {
+	WalkS(c, cb)
+}

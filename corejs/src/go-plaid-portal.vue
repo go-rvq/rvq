@@ -1,7 +1,7 @@
 <template>
   <template v-if="raw">
     <component :is="current" v-if="current">
-      <slot :form="form" :locals="locals" :goPlaidPortal="dot"></slot>
+      <slot :form="form" :locals="locals" v-bind="internalScope"></slot>
     </component>
   </template>
   <template v-else>
@@ -12,7 +12,7 @@
       ref="portal"
     >
       <component :is="current" v-if="current">
-        <slot :form="form" :locals="locals" :goPlaidPortal="dot"></slot>
+        <slot :form="form" :locals="locals" v-bind="internalScope"></slot>
       </component>
     </div>
   </template>
@@ -54,7 +54,8 @@ const props = defineProps<{
   methods: object | undefined
   data: object | undefined
   autoReloadInterval: string | number
-  raw: boolean
+  raw: boolean,
+  scope: any
 }>()
 
 const current = shallowRef<DefineComponent | null>(null)
@@ -81,27 +82,18 @@ if (props.form !== undefined) {
 }
 provide('form', form)
 
-const dot = reactive({
-  $parent: inject('portal', null),
-  name: name,
-  form: form,
-  locals: locals,
-  value: portal
-})
-
-provide('$portal', dot)
+const internalScope = {form, locals, ... (props.scope ?? {})}
 
 const updatePortalTemplate = (template: string) => {
-  current.value = componentByTemplate(template, form, locals, portal)
+  current.value = componentByTemplate(template, internalScope, portal)
 }
 
 // other reactive properties and methods
 const reload = () => {
   if (slots.default) {
     current.value = componentByTemplate(
-      '<slot :form="form" :locals="locals"></slot>',
-      form,
-      locals,
+      '<slot v-bind="SCOPE"></slot>',
+      internalScope,
       portal
     )
     return

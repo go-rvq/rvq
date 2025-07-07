@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -24,8 +25,8 @@ func (o Object) MarshalJSON() (_ []byte, err error) {
 		out   bytes.Buffer
 		keys  []string
 		write = func(k string) {
-			kb, _ := json.Marshal(k)
-			out.Write(kb)
+			b, _ := json.Marshal(k)
+			out.Write(b)
 			out.WriteRune(':')
 			v := o[k]
 			switch t := v.(type) {
@@ -40,8 +41,8 @@ func (o Object) MarshalJSON() (_ []byte, err error) {
 			case RawSlice:
 				out.WriteString(t.String())
 			default:
-				if vb, err := json.Marshal(v); err == nil {
-					out.Write(vb)
+				if b, err = json.Marshal(v); err == nil {
+					out.Write(b)
 				}
 			}
 		}
@@ -52,6 +53,8 @@ func (o Object) MarshalJSON() (_ []byte, err error) {
 	}
 
 	sort.Strings(keys)
+
+	out.WriteString("{")
 
 	for _, k := range keys[:len(keys)-1] {
 		write(k)
@@ -66,7 +69,58 @@ func (o Object) MarshalJSON() (_ []byte, err error) {
 		return
 	}
 
+	out.WriteString("}")
+
 	return out.Bytes(), nil
+}
+
+func (o Object) String() string {
+	if len(o) == 0 {
+		return "{}"
+	}
+
+	var (
+		out   bytes.Buffer
+		keys  []string
+		write = func(k string) {
+			out.WriteString(strconv.Quote(k))
+			out.WriteString(": ")
+			v := o[k]
+			switch t := v.(type) {
+			case Raw:
+				out.Write([]byte(t))
+			case []byte:
+				out.Write(t)
+			case RawSlice:
+				out.WriteString(t.String())
+			default:
+				if vb, err := json.Marshal(v); err == nil {
+					out.Write(vb)
+				} else {
+					panic(err)
+				}
+			}
+		}
+	)
+
+	for k := range o {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	out.WriteString("{")
+
+	for _, k := range keys[:len(keys)-1] {
+		write(k)
+		out.WriteByte(',')
+	}
+
+	write(keys[len(keys)-1])
+
+	out.WriteString("}")
+
+	return out.String()
 }
 
 type RawSlice []string

@@ -2,6 +2,18 @@ package datafield
 
 type Data map[any]any
 
+func (d Data) GetData(key any) any {
+	return d[key]
+}
+
+func (d *Data) SetData(key any, value any) {
+	if d == nil {
+		*d = Data{key: value}
+	} else {
+		(*d)[key] = value
+	}
+}
+
 func (d Data) Clone() Data {
 	if d == nil {
 		return nil

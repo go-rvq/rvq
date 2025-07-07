@@ -3,6 +3,7 @@
   <slot v-else></slot>
 </template>
 <script setup lang="ts">
+import * as Vue from 'vue'
 import {
   computed,
   inject,
@@ -14,6 +15,7 @@ import {
   provide,
   reactive,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -59,8 +61,10 @@ const arg = {
   computed,
   inject,
   provide,
+  shallowRef,
   scope: props.scope,
   $scope: localScope,
+  Vue,
   window
 }
 

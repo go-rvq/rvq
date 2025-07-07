@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 
+	"github.com/qor5/web/v3/js"
 	h "github.com/theplant/htmlgo"
 )
 
@@ -10,14 +11,26 @@ type PortalBuilder struct {
 	tag    *h.HTMLTagBuilder
 	form   string
 	locals string
+	scope  js.Object
 }
 
 func Portal(children ...h.HTMLComponent) (r *PortalBuilder) {
 	r = &PortalBuilder{
 		tag: h.Tag("go-plaid-portal").Children(children...),
+		scope: js.Object{
+			"presetsListing": js.Raw("presetsListing"),
+			//	"presetsDetailing": js.Raw("presetsDetailing"),
+			//	"presetsCreating":  js.Raw("presetsCreating"),
+			//	"presetsEditing":   js.Raw("presetsEditing"),
+		},
 	}
 	r.Visible("true")
 	return
+}
+
+func (b *PortalBuilder) Scope(name string, value any) *PortalBuilder {
+	b.scope[name] = value
+	return b
 }
 
 func (b *PortalBuilder) Raw(v bool) (r *PortalBuilder) {
@@ -27,6 +40,11 @@ func (b *PortalBuilder) Raw(v bool) (r *PortalBuilder) {
 
 func (b *PortalBuilder) Loader(v *VueEventTagBuilder) (r *PortalBuilder) {
 	b.tag.SetAttr(":loader", v.String())
+	return b
+}
+
+func (b *PortalBuilder) LoaderString(v string) (r *PortalBuilder) {
+	b.tag.SetAttr(":loader", v)
 	return b
 }
 
@@ -84,5 +102,8 @@ func (b *PortalBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	}
 	b.tag.Attr(":form", b.form)
 	b.tag.Attr(":locals", b.locals)
+	if len(b.scope) > 0 {
+		b.tag.Attr(":scope", b.scope.String())
+	}
 	return b.tag.MarshalHTML(ctx)
 }

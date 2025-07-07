@@ -1,14 +1,14 @@
-import type {
-  EventFuncID,
-  EventResponse,
-  Location,
-  PortalUpdate,
-  Queries,
-  QueryValue
-} from './types'
+import type { EventFuncID, EventResponse, Location, PortalUpdate, Queries, QueryValue } from './types'
 import { buildPushState, objectToFormData } from '@/utils'
+import querystring from 'query-string'
 
 declare let window: any
+
+export interface PreFetchData {
+  builder: Builder
+  options: any
+  url: string
+}
 
 export class Builder {
   _eventFuncID: EventFuncID = { id: '__reload__' }
@@ -26,6 +26,8 @@ export class Builder {
   _updateRootTemplate?: any
   _buildPushStateResult?: any
   _parents?: any
+  _preFetch: ((data: PreFetchData) => void)[] = []
+  _noCache?: boolean = false
 
   readonly ignoreErrors = [
     'Failed to fetch', // Chrome
@@ -43,7 +45,11 @@ export class Builder {
 
   runScript = (r: EventResponse) => {
     if (r.runScript) {
-      new Function('vars', 'locals', 'form', 'closer', 'scope', 'plaid', r.runScript).apply(this, [
+      let script = r.runScript
+      if (this._scope) {
+        script = "with(this._scope) {\n"+script+"\n}"
+      }
+      new Function('vars', 'locals', 'form', 'closer', 'scope', 'plaid', script).apply(this, [
         this._vars,
         this._locals,
         this._form,
@@ -60,6 +66,25 @@ export class Builder {
       ])
     }
     return r
+  }
+
+  public parseUrl(url: string):Builder {
+    const data = querystring.parseUrl(url, {
+      arrayFormat: 'comma',
+      parseFragmentIdentifier: true
+    })
+
+    this._url = data.url
+    this._location = {}
+
+    if (data.query.__execute_event__) {
+      this.eventFunc(data.query.__execute_event__ as string)
+      delete data.query.__execute_event__
+    }
+
+    Object.keys(data.query).forEach((key) => this.query(key, data.query[key] as QueryValue))
+
+    return this
   }
 
   public eventFunc(id: string): Builder {
@@ -178,7 +203,9 @@ export class Builder {
   }
 
   public scope(v: any): Builder {
-    this._scope = v
+    if (v) {
+      this._scope = { ...(this._scope ?? {}), ... v}
+    }
     return this
   }
 
@@ -192,6 +219,11 @@ export class Builder {
 
   public popstate(v: boolean): Builder {
     this._popstate = v
+    return this
+  }
+
+  public preFetch(f: (d: PreFetchData) => void): Builder {
+    this._preFetch.push(f)
     return this
   }
 
@@ -209,6 +241,11 @@ export class Builder {
   public parent(index: string, value: any): Builder {
     this._parents = this._parents || {}
     this._parents[index] = value
+    return this
+  }
+
+  public noCache(): Builder {
+    this._noCache = true
     return this
   }
 
@@ -263,7 +300,19 @@ export class Builder {
     }
 
     window.dispatchEvent(new Event('fetchStart'))
-    const fetchURL = this.buildFetchURL()
+    let fetchURL = this.buildFetchURL()
+
+    if (this._preFetch.length) {
+      const data = {
+        builder: this,
+        options: fetchOpts,
+        url: fetchURL
+      }
+      this._preFetch.forEach((f) => {
+        f(data)
+      })
+      fetchURL = data.url
+    }
 
     let er: EventResponse = {}
 
@@ -391,7 +440,7 @@ export class Builder {
   }
 
   private ensurePushStateResult() {
-    if (this._buildPushStateResult) {
+    if (!this._noCache && this._buildPushStateResult) {
       return
     }
 

@@ -12,14 +12,39 @@ import (
 	"unsafe"
 
 	"github.com/go-playground/form/v4"
+	"github.com/mpvl/unique"
 	"github.com/sunfmin/reflectutils"
 	h "github.com/theplant/htmlgo"
 )
 
+type ComponentWrappers []func(comp h.HTMLComponent) h.HTMLComponent
+
+func (w ComponentWrappers) Wrap(comp h.HTMLComponent) h.HTMLComponent {
+	for _, f := range w {
+		comp = f(comp)
+	}
+	return comp
+}
+
 type PageResponse struct {
 	PageTitle   string
-	PageActions []h.HTMLComponent
+	Actions     h.HTMLComponents
+	Menu        h.HTMLComponents
 	Body        h.HTMLComponent
+	Wrapers     ComponentWrappers
+	RedirectURL string
+}
+
+func (pr *PageResponse) AddAction(action ...h.HTMLComponent) {
+	pr.Actions = append(pr.Actions, action...)
+}
+
+func (pr *PageResponse) AddMenuItem(item ...h.HTMLComponent) {
+	pr.Menu = append(pr.Menu, item...)
+}
+
+func (pr *PageResponse) Wrap(f ...func(comp h.HTMLComponent) h.HTMLComponent) {
+	pr.Wrapers = append(pr.Wrapers, f...)
 }
 
 type PortalUpdate struct {
@@ -64,6 +89,10 @@ func (r *EventResponse) DeferedPortal(name string) *EventResponse {
 	}
 	r.deferedPortals[name] = true
 	return r
+}
+
+func (r *EventResponse) AppendRunScript(script string) {
+	r.RunScript += "; " + script
 }
 
 // @snippet_end
@@ -231,11 +260,27 @@ type RequestContext interface {
 }
 
 type EventContext struct {
-	R        *http.Request
-	W        ResponseWriter
-	Injector *PageInjector
-	Flash    interface{} // pass value from actions to index
-	i        int64
+	R         *http.Request
+	W         ResponseWriter
+	Injector  *PageInjector
+	Flash     interface{} // pass value from actions to index
+	i         int64
+	dataStack []any
+}
+
+func (e *EventContext) Data() any {
+	if len(e.dataStack) > 0 {
+		return e.dataStack[len(e.dataStack)-1]
+	}
+	return nil
+}
+
+func (e *EventContext) WithData(v any) (reset func()) {
+	l := len(e.dataStack)
+	e.dataStack = append(e.dataStack, v)
+	return func() {
+		e.dataStack = e.dataStack[:l]
+	}
 }
 
 func (e *EventContext) WithContextValue(key any, value any) {
@@ -300,21 +345,86 @@ type CustoFormTypeDecoder struct {
 
 var FormTypeDecoders []CustoFormTypeDecoder
 
-func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {
+func (ctx *EventContext) FormSliceValues(key string) (r []string) {
+	for _, key := range ctx.FormSliceKeys(key) {
+		for _, sufix := range []string{"", ".__value"} {
+			if v, _ := ctx.R.MultipartForm.Value[key.Key+sufix]; len(v) > 0 {
+				if s := v[0]; s != "" {
+					r = append(r, s)
+				}
+			}
+		}
+	}
+	return
+}
+
+func (ctx *EventContext) FormSliceKeys(key string) (r []struct {
+	Key   string
+	Index int
+}) {
 	mf := ctx.R.MultipartForm
-	if ctx.R.MultipartForm == nil {
+	if mf == nil {
 		return
 	}
 
+	var index []int
+
+loop:
+	for fkey := range mf.Value {
+		if strings.HasPrefix(fkey, key+"[") {
+			var (
+				s   = fkey[len(key)+1:]
+				i   int
+				err error
+			)
+
+			for i := range s {
+				if s[i] >= '0' && s[i] <= '9' {
+					continue
+				}
+				if s[i] != ']' {
+					continue loop
+				}
+				s = s[:i]
+				break
+			}
+
+			if i, err = strconv.Atoi(s); err == nil {
+				index = append(index, i)
+			}
+		}
+	}
+
+	if len(index) > 0 {
+		unique.Sort(unique.IntSlice{&index})
+	}
+
+	for _, i := range index {
+		r = append(r, struct {
+			Key   string
+			Index int
+		}{Key: key + "[" + strconv.Itoa(i) + "]", Index: i})
+	}
+	return
+}
+
+func (ctx *EventContext) UnmarshalFormValues(values url.Values, v interface{}) (err error) {
 	dec := form.NewDecoder()
 
 	for _, decoder := range FormTypeDecoders {
 		dec.RegisterCustomTypeFunc(decoder.Decoder, decoder.Types...)
 	}
 
-	err = dec.Decode(v, mf.Value)
-	if err != nil {
-		// panic(err)
+	return dec.Decode(v, values)
+}
+
+func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {
+	mf := ctx.R.MultipartForm
+	if ctx.R.MultipartForm == nil {
+		return
+	}
+
+	if err = ctx.UnmarshalFormValues(mf.Value, v); err != nil {
 		return
 	}
 

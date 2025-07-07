@@ -24,7 +24,7 @@ export const Root = defineComponent({
     initialTemplate: {
       type: String,
       required: true
-    }
+    },
   },
 
   setup(props, { emit, attrs, expose }) {
@@ -55,7 +55,10 @@ export const Root = defineComponent({
     provide('isFetching', isFetching)
 
     const updateRootTemplate = (template: string) => {
-      current.value = componentByTemplate(template, form, locals)
+      current.value = componentByTemplate(template, {
+        form,
+        locals,
+      })
     }
     provide('updateRootTemplate', updateRootTemplate)
 
@@ -98,8 +101,15 @@ export const plaidPlugin = {
   }
 }
 
+export interface FlashMessages {
+  parent: FlashMessages
+  items: any[]
+}
+
 export function createWebApp(template: string): App<Element> {
-  const app = createApp(Root, { initialTemplate: template })
+  const app = createApp(Root, {
+    initialTemplate: template,
+  })
 
   const copiedToClipboard = ref(false)
   const copyToClipboard = (text: string) => {
@@ -112,7 +122,10 @@ export function createWebApp(template: string): App<Element> {
 
   app.config.globalProperties.copyToClipboard = copyToClipboard
   app.config.globalProperties.copiedToClipboard = copiedToClipboard
-
+  app.config.globalProperties.presetsListing = null
+  app.config.globalProperties.presetsDetailing = null
+  app.config.globalProperties.presetsCreating = null
+  app.config.globalProperties.presetsEditing = null
   app.use(plaidPlugin)
   return app
 }

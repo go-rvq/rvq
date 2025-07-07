@@ -4,12 +4,8 @@ import (
 	h "github.com/theplant/htmlgo"
 )
 
-func (t *TagBuilder[T]) ChildrenPtr() *[]h.HTMLComponent {
-	return Children(t.tag)
-}
-
 func (t *TagBuilder[T]) GetChildren() []h.HTMLComponent {
-	return *t.ChildrenPtr()
+	return t.tag.Childs
 }
 
 func (t *TagBuilder[T]) Children(c ...h.HTMLComponent) T {
@@ -27,12 +23,25 @@ func (t *TagBuilder[T]) PrependChild(c ...h.HTMLComponent) T {
 	return t.dot
 }
 
-func (t *TagBuilder[T]) GetAttr(key string) *Attr {
-	return GetAttr(t.tag, key)
+func (t *TagBuilder[T]) GetAttr(key string) *h.Attr {
+	return t.tag.Attrs.Get(key)
 }
 
 func (t *TagBuilder[T]) RemoveAttr(key ...string) T {
-	RemoveAttr(t.tag, key...)
+	t.tag.Attrs.RemoveMany(key...)
+	return t.dot
+}
+
+func (t *TagBuilder[T]) SetAttr(k string, v interface{}) T {
+	t.tag.SetAttr(k, v)
+	return t.dot
+}
+func (t *TagBuilder[T]) Attr(vs ...interface{}) T {
+	t.tag.Attr(vs...)
+	return t.dot
+}
+func (t *TagBuilder[T]) AttrIf(key, value interface{}, add bool) T {
+	t.tag.AttrIf(key, value, add)
 	return t.dot
 }
 
@@ -48,19 +57,6 @@ func (t *TagBuilder[T]) OmitEndTag() T {
 
 func (t *TagBuilder[T]) Text(v string) T {
 	t.tag.Text(v)
-	return t.dot
-}
-
-func (t *TagBuilder[T]) SetAttr(k string, v interface{}) T {
-	t.tag.SetAttr(k, v)
-	return t.dot
-}
-func (t *TagBuilder[T]) Attr(vs ...interface{}) T {
-	t.tag.Attr(vs...)
-	return t.dot
-}
-func (t *TagBuilder[T]) AttrIf(key, value interface{}, add bool) T {
-	t.tag.AttrIf(key, value, add)
 	return t.dot
 }
 

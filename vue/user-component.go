@@ -5,20 +5,36 @@ import (
 	"strings"
 
 	"github.com/qor5/web/v3/js"
-	"github.com/qor5/web/v3/tag"
 	h "github.com/theplant/htmlgo"
 )
 
 type UserComponentAssigner struct {
 	Dst    Var
-	Values map[string]any
+	Values js.Object
+	Merges []string
+}
+
+func (a *UserComponentAssigner) String() string {
+	var s []string
+	for _, merge := range a.Merges {
+		s = append(s, "..."+merge)
+	}
+	if len(a.Values) > 0 {
+		s = append(s, "..."+a.Values.String())
+	}
+	return "{" + strings.Join(s, ", ") + "}"
 }
 
 func (a *UserComponentAssigner) Set(key string, value any) *UserComponentAssigner {
 	if a.Values == nil {
-		a.Values = make(map[string]any)
+		a.Values = make(js.Object)
 	}
 	a.Values[key] = value
+	return a
+}
+
+func (a *UserComponentAssigner) Merge(value string) *UserComponentAssigner {
+	a.Merges = append(a.Merges, value)
 	return a
 }
 
@@ -34,6 +50,10 @@ type UserComponentBuilder struct {
 
 func UserComponent(children ...h.HTMLComponent) *UserComponentBuilder {
 	return &UserComponentBuilder{HTMLTagBuilder: h.Tag("user-component").Children(h.Tag("template").Children(children...))}
+}
+
+func (b *UserComponentBuilder) GetChildren() []h.HTMLComponent {
+	return b.HTMLTagBuilder.Childs
 }
 
 func (b *UserComponentBuilder) Scope(name string, value ...any) *UserComponentBuilder {
@@ -78,12 +98,17 @@ func (b *UserComponentBuilder) Assign(dst Var, key string, val any) *UserCompone
 	return b
 }
 
+func (b *UserComponentBuilder) AssignMany(dst Var, val string) *UserComponentBuilder {
+	b.Assigner(dst).Merge(val)
+	return b
+}
+
 func (b *UserComponentBuilder) Component() *h.HTMLTagBuilder {
 	return b.HTMLTagBuilder
 }
 
 func (b *UserComponentBuilder) Template() *h.HTMLTagBuilder {
-	return (*tag.Children(b.HTMLTagBuilder))[0].(*h.HTMLTagBuilder)
+	return b.Childs[0].(*h.HTMLTagBuilder)
 }
 
 func (b *UserComponentBuilder) AppendChild(h ...h.HTMLComponent) *UserComponentBuilder {
@@ -121,8 +146,7 @@ func (b *UserComponentBuilder) MarshalHTML(ctx context.Context) ([]byte, error) 
 		comp.Attr(":scope", "{"+strings.Join(scope, ", ")+"}")
 		template.Attr("v-slot", "{"+strings.Join(b.scopeNames, ", ")+"}")
 	} else {
-		children := tag.Children(comp)
-		*children = *tag.Children(template)
+		comp.Childs = template.Childs
 	}
 
 	if len(b.assign) > 0 {
@@ -132,7 +156,8 @@ func (b *UserComponentBuilder) MarshalHTML(ctx context.Context) ([]byte, error) 
 		)
 
 		for _, a := range b.assign {
-			assign[i] = "[" + string(a.Dst) + "," + h.JSONString(a.Values) + "]"
+			v := a.String()
+			assign[i] = "[" + string(a.Dst) + "," + v + "]"
 			i++
 		}
 

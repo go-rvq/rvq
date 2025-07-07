@@ -13,24 +13,27 @@ type FormFieldBuilder struct {
 	*UserComponentBuilder
 }
 
-func FormField(fieldComponent h.HTMLComponent) (b *FormFieldBuilder) {
-	t := fieldComponent.(tag.TagGetter).GetHTMLTagBuilder()
-	comp := UserComponent(fieldComponent)
+func FormField(fieldComponent ...h.HTMLComponent) (b *FormFieldBuilder) {
+	comp := UserComponent(fieldComponent...)
 	b = &FormFieldBuilder{comp}
+	if len(fieldComponent) == 1 {
+		if tg, _ := fieldComponent[0].(tag.TagGetter); tg != nil {
+			t := tg.GetHTMLTagBuilder()
+			assign := t.GetAttr("v-assign")
+			if assign != nil {
+				t.RemoveAttr("v-assign")
 
-	assign := tag.GetAttr(t, "v-assign")
-	if assign != nil {
-		tag.RemoveAttr(t, "v-assign")
-
-		if v, ok := assign.Get().(string); ok {
-			if strings.HasPrefix(v, "[form,") {
-				// remove prefix '[form, ' and ']' sufix
-				v = v[7 : len(v)-1]
-				var vm = map[string]any{}
-				json.Unmarshal([]byte(v), &vm)
-				assigner := b.Assigner("form")
-				for k, v := range vm {
-					assigner.Set(k, v)
+				if v, ok := assign.Value.(string); ok {
+					if strings.HasPrefix(v, "[form,") {
+						// remove prefix '[form, ' and ']' sufix
+						v = v[7 : len(v)-1]
+						var vm = map[string]any{}
+						json.Unmarshal([]byte(v), &vm)
+						assigner := b.Assigner("form")
+						for k, v := range vm {
+							assigner.Set(k, v)
+						}
+					}
 				}
 			}
 		}
@@ -38,8 +41,18 @@ func FormField(fieldComponent h.HTMLComponent) (b *FormFieldBuilder) {
 	return
 }
 
+func (b *FormFieldBuilder) Scope(name string, v ...any) *FormFieldBuilder {
+	b.UserComponentBuilder.Scope(name, v...)
+	return b
+}
+
+func (b *FormFieldBuilder) Setup(s string) *FormFieldBuilder {
+	b.UserComponentBuilder.Setup(s)
+	return b
+}
+
 func (b *FormFieldBuilder) Field() h.HTMLComponent {
-	return (*tag.Children(b.Template()))[0]
+	return b.Template().Childs[0]
 }
 
 func (b *FormFieldBuilder) Value(fieldName string, value any) *FormFieldBuilder {
@@ -56,4 +69,11 @@ func (b *FormFieldBuilder) Value(fieldName string, value any) *FormFieldBuilder 
 	}
 }`)
 	return b
+}
+func (b *FormFieldBuilder) BindTo(comp h.TagGetter) *FormFieldBuilder {
+	comp.GetHTMLTagBuilder().Attr("v-model", `fieldValue.value`)
+	return b
+}
+func (b *FormFieldBuilder) Bind() *FormFieldBuilder {
+	return b.BindTo(b.Field().(h.TagGetter))
 }

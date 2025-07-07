@@ -1,16 +1,38 @@
 <script setup lang="ts">
-import { isProxy, isReactive, isRef, onMounted, ref } from 'vue'
+import * as vue from 'vue'
+import { onBeforeUnmount, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   script: {
     type: Function,
     required: true
-  }
+  },
+  setup: {
+    type: Function,
+  },
+  beforeUnmount: {
+    type: Function,
+  },
+  unmounted: {
+    type: Function,
+  },
 })
+
+declare let window: any
+
+const scope = {...vue, view: window}
+
+props.setup && props.setup(scope)
 
 onMounted(() => {
-  props.script({ isProxy, isReactive, isRef, ref })
+  props.script(vue)
+})
+
+onBeforeUnmount(() => {
+  props.beforeUnmount && props.beforeUnmount(scope)
+})
+
+onUnmounted(() => {
+  props.unmounted && props.unmounted(scope)
 })
 </script>
-
-<template></template>

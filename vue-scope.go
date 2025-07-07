@@ -117,6 +117,7 @@ func (b *ScopeBuilder) Slot(v ...string) (r *ScopeBuilder) {
 		b.slots = make(map[string]any)
 	}
 	for _, v := range v {
+		v = strings.TrimSpace(v)
 		if v[0] == '{' {
 			v = v[1 : len(v)-1]
 		}

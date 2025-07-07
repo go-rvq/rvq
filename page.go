@@ -1,7 +1,9 @@
 package web
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -73,6 +75,77 @@ func (p *PageBuilder) MergeHub(hub *EventsHub) (r *PageBuilder) {
 	return p
 }
 
+func RespondFlashCookie(cookieName, defaultUrl string, oldMessageBytes []byte, ctx *EventContext, r *PageResponse) {
+	msg := NewFlashMessages(ctx.Flash)
+	url := r.RedirectURL
+	if url == "" || url[0] != '/' {
+		url = defaultUrl
+	}
+	b, _ := json.Marshal(msg)
+	if len(b) > 0 && bytes.Compare(oldMessageBytes, b) != 0 {
+		b = append(b, []byte("\r"+url)...)
+		http.SetCookie(ctx.W, &http.Cookie{
+			Name:  cookieName,
+			Value: base64.StdEncoding.EncodeToString(b),
+			Path:  url,
+		})
+	}
+	ctx.Flash = nil
+}
+
+func PageWithFlashCookie(cookieName string, defaultUrl string, pr PageFunc) PageFunc {
+	if defaultUrl == "" {
+		defaultUrl = "/"
+	}
+
+	return func(ctx *EventContext) (r PageResponse, err error) {
+		var messageBytes []byte
+		if cookie, _ := ctx.R.Cookie(cookieName); cookie != nil {
+			var msg FlashMessages
+			messageBytes, _ = base64.StdEncoding.DecodeString(cookie.Value)
+			if len(messageBytes) > 0 {
+				urlIndex := bytes.LastIndexByte(messageBytes, '\r')
+				url := string(messageBytes[urlIndex+1:])
+				messageBytes = messageBytes[:urlIndex]
+				if messageBytes[0] == '[' {
+					if json.Unmarshal(messageBytes, &msg) == nil {
+						ctx.Flash = msg
+					}
+				} else {
+					var m FlashMessage
+					if json.Unmarshal(messageBytes, &m) == nil {
+						msg.Append(&m)
+						ctx.Flash = msg
+					}
+				}
+
+				for _, msg := range msg {
+					if len(msg.HtmlDetail) > 0 {
+						msg.Detail = h.RawHTML(msg.HtmlDetail)
+						msg.HtmlDetail = ""
+					}
+				}
+
+				http.SetCookie(ctx.W, &http.Cookie{
+					Name:   cookieName,
+					Path:   url,
+					MaxAge: -1,
+				})
+			}
+		}
+		if r, err = pr(ctx); err != nil {
+			return
+		}
+
+		if ctx.Flash != nil {
+			RespondFlashCookie(cookieName, defaultUrl, messageBytes, ctx, &r)
+		}
+		return
+	}
+}
+
+const FlashCookieName = "qor5_page_flash"
+
 func (p *PageBuilder) render(
 	w ResponseWriter,
 	r *http.Request,
@@ -85,7 +158,7 @@ func (p *PageBuilder) render(
 	}
 	rf := p.pageRenderFunc
 	if !event {
-		rf = p.b.layoutFunc(p.pageRenderFunc)
+		rf = PageWithFlashCookie(FlashCookieName, "", p.b.layoutFunc(p.pageRenderFunc))
 	}
 
 	ctx := MustGetEventContext(c)
@@ -103,6 +176,11 @@ func (p *PageBuilder) render(
 		return
 	}
 
+	if pr.RedirectURL != "" {
+		http.Redirect(w, r, pr.RedirectURL, http.StatusTemporaryRedirect)
+		return
+	}
+
 	pager = &pr
 
 	if pager.Body == nil {
@@ -115,6 +193,8 @@ func (p *PageBuilder) render(
 		panic(err)
 	}
 	body = string(b)
+
+	pager.Body = nil
 
 	return
 }
@@ -191,6 +271,10 @@ func (p *PageBuilder) executeEvent(w ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	if w.Writed() {
+		return
+	}
+
 	if er.Reload {
 		pr, body := p.render(w, r, c, &PageInjector{}, true)
 		if w.Writed() {
@@ -221,6 +305,8 @@ func reload(*EventContext) (r EventResponse, err error) {
 }
 
 func (p *PageBuilder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	ParseRequest(r)
+
 	w := WrapResponseWriter(rw)
 	if strings.Index(r.URL.String(), EventFuncIDName) >= 0 {
 		p.executeEvent(w, r)
@@ -228,3 +314,5 @@ func (p *PageBuilder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 	p.index(w, r)
 }
+
+var ExeMTime string

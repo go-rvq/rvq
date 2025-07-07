@@ -29,6 +29,13 @@ func IsNilValue(value reflect.Value) (is bool) {
 	return
 }
 
+func IsNil(value any) bool {
+	if value == nil {
+		return true
+	}
+	return IsNilValue(reflect.ValueOf(value))
+}
+
 func IsZero(value any) (ok bool) {
 	if value == nil {
 		return true

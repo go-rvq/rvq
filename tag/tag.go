@@ -47,3 +47,11 @@ func (t *TagBuilder[T]) Dot() T {
 func (t *TagBuilder[T]) MarshalHTML(ctx context.Context) ([]byte, error) {
 	return t.tag.MarshalHTML(ctx)
 }
+
+func UpdatedDot[T TagBuilderGetter[T]](dot T) {
+	dot.GetTagBuilder().dot = dot
+}
+
+func SetTag[T any](t TagBuilderGetter[T], tag *h.HTMLTagBuilder) {
+	t.GetTagBuilder().tag = tag
+}

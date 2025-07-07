@@ -24,3 +24,7 @@ build-format: docker_build
 		pnpm:latest bash -c 'pnpm install && pnpm format && pnpm run build'
 
 	cp vue/* dist
+
+get-vue:
+	wget https://unpkg.com/vue@3/dist/vue.global.js -O vue/vue.global.dev.js
+	wget https://unpkg.com/vue@3/dist/vue.global.prod.js -O vue/vue.global.prod.js
