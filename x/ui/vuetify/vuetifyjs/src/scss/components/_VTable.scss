@@ -1,0 +1,30 @@
+@use "../vuetify" as vuetify;
+@use "../variables" as variables;
+
+.v-table > .v-table__wrapper > table > tbody > tr > th,
+.v-table > .v-table__wrapper > table > thead > tr > th,
+.v-table > .v-table__wrapper > table > tfoot > tr > th {
+  color: var(--v-theme-on-background);
+  background-color: variables.$color-grey-50;
+}
+.v-table > .v-table__wrapper > table {
+  border: vuetify.$table-border;
+  border-radius: vuetify.$border-radius-root;
+  overflow: hidden;
+}
+
+.v-table.v-table--density-default {
+  --v-table-header-height: 56px;
+  --v-table-row-height: 52px;
+}
+
+.v-table.v-table--density-comfortable {
+  --v-table-header-height: 48px;
+  --v-table-row-height: 44px;
+}
+
+.v-table.v-table--density-compact {
+  --v-table-header-height: 30px;
+  --v-table-row-height: 28px; /* same line-height */
+  --v-selection-control-size: 21px;
+}
