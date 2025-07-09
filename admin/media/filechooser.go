@@ -392,7 +392,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 							VPagination().
 								Length(pagesCount).
 								ModelValue(int(currentPageInt)).
-								Attr("@input", web.Plaid().
+								Attr("@update:modelValue", web.Plaid().
 									FieldValue(currentPageName(field), web.Var("$event")).
 									EventFunc(imageJumpPageEvent).
 									Query("field", field).
