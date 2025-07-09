@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	"context"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -42,7 +41,7 @@ func (r *RunScriptBuilder) Setup(s ...string) *RunScriptBuilder {
 	return r
 }
 
-func (r *RunScriptBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (r *RunScriptBuilder) Write(ctx *h.Context) (err error) {
 	var (
 		sb  bytes.Buffer
 		tag = h.Tag("go-plaid-run-script")
@@ -76,5 +75,5 @@ func (r *RunScriptBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 	toString("before-unmount", r.beforeUnmount)
 	toString("unmounted", r.unmounted)
 
-	return tag.MarshalHTML(ctx)
+	return tag.Write(ctx)
 }

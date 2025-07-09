@@ -99,13 +99,13 @@ func defaultLoginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 					).Class("mt-6"),
 					If(isRecaptchaEnabled,
 						// recaptcha response token
-						Input("token").Id("token").Type("hidden"),
+						Input("token").ID("token").Type("hidden"),
 					),
 					DefaultViewCommon.FormSubmitBtn(msgr.SignInBtn).
 						ClassIf("g-recaptcha", isRecaptchaEnabled).
 						AttrIf("data-sitekey", vh.RecaptchaSiteKey(), isRecaptchaEnabled).
 						AttrIf("data-callback", "onSubmit", isRecaptchaEnabled),
-				).Id("login-form").Method(http.MethodPost).Action(vh.PasswordLoginURL()),
+				).ID("login-form").Method(http.MethodPost).Action(vh.PasswordLoginURL()),
 				If(!vh.NoForgetPasswordLink(),
 					Div(
 						A(Text(msgr.ForgetPasswordLink)).Href(vh.ForgetPasswordPageURL()).
@@ -197,7 +197,7 @@ func defaultForgetPasswordPage(vh *login.ViewHelper, pb *presets.Builder) web.Pa
 					),
 					If(isRecaptchaEnabled,
 						// recaptcha response token
-						Input("token").Id("token").Type("hidden"),
+						Input("token").ID("token").Type("hidden"),
 					),
 					DefaultViewCommon.FormSubmitBtn(inactiveBtnTextWithInitSeconds).
 						Attr("id", "disabledBtn").
@@ -208,7 +208,7 @@ func defaultForgetPasswordPage(vh *login.ViewHelper, pb *presets.Builder) web.Pa
 						AttrIf("data-callback", "onSubmit", isRecaptchaEnabled).
 						Attr("id", "submitBtn").
 						ClassIf("d-none", secondsToResend > 0),
-				).Id("forget-form").Method(http.MethodPost).Action(actionURL),
+				).ID("forget-form").Method(http.MethodPost).Action(actionURL),
 			).Class(DefaultViewCommon.WrapperClass).Style(DefaultViewCommon.WrapperStyle),
 		)
 

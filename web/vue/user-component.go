@@ -1,7 +1,6 @@
 package vue
 
 import (
-	"context"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -116,7 +115,7 @@ func (b *UserComponentBuilder) AppendChild(h ...h.HTMLComponent) *UserComponentB
 	return b
 }
 
-func (b *UserComponentBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (b *UserComponentBuilder) Write(ctx *h.Context) (err error) {
 	scopeValues := make([]string, len(b.scopeValues))
 
 	for i, v := range b.scopeValues {
@@ -176,5 +175,5 @@ func (b *UserComponentBuilder) MarshalHTML(ctx context.Context) ([]byte, error) 
 		comp.Attr("@unmount", b.onUmount)
 	}
 
-	return comp.MarshalHTML(ctx)
+	return comp.Write(ctx)
 }

@@ -1,8 +1,6 @@
 package tag
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -44,8 +42,8 @@ func (t *TagBuilder[T]) Dot() T {
 	return t.dot
 }
 
-func (t *TagBuilder[T]) MarshalHTML(ctx context.Context) ([]byte, error) {
-	return t.tag.MarshalHTML(ctx)
+func (t *TagBuilder[T]) Write(ctx *h.Context) (err error) {
+	return t.tag.Write(ctx)
 }
 
 func UpdatedDot[T TagBuilderGetter[T]](dot T) {

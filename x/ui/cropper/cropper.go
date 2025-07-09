@@ -1,8 +1,6 @@
 package cropper
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -100,6 +98,6 @@ func (b *CropperBuilder) ClassIf(name string, add bool) (r *CropperBuilder) {
 	return b
 }
 
-func (b *CropperBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
+func (b *CropperBuilder) Write(ctx *h.Context) (err error) {
+	return b.tag.Write(ctx)
 }

@@ -1,8 +1,6 @@
 package web
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web/js"
 )
@@ -93,7 +91,7 @@ func (b *PortalBuilder) ParentForceUpdateAfterLoaded() (r *PortalBuilder) {
 	return b
 }
 
-func (b *PortalBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *PortalBuilder) Write(ctx *h.Context) (err error) {
 	if b.form == "" {
 		b.form = "form"
 	}
@@ -105,5 +103,5 @@ func (b *PortalBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	if len(b.scope) > 0 {
 		b.tag.Attr(":scope", b.scope.String())
 	}
-	return b.tag.MarshalHTML(ctx)
+	return b.tag.Write(ctx)
 }

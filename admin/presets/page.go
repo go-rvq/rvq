@@ -14,6 +14,7 @@ import (
 
 type PageBuilder struct {
 	path         string
+	fullPath     string
 	methods      []string
 	handler      http.Handler
 	menuGroup    string
@@ -161,14 +162,11 @@ func (b *PageBuilder) PostBuild(ph ...func(ph *PageHandler)) *PageBuilder {
 	return b
 }
 
-func (b *PageBuilder) BuildPagePath() string {
-	if len(b.menuGroup) > 0 {
-		return path.Join("/", b.menuGroup, b.path)
-	}
-	return b.path
+func (b *PageBuilder) FullPath() string {
+	return b.fullPath
 }
 
-func (b *PageBuilder) Build() *PageHandler {
+func (b *PageBuilder) Build(prefix string) *PageHandler {
 	if b.autoPerm {
 		var parts []string
 		if len(b.menuGroup) > 0 {
@@ -182,8 +180,8 @@ func (b *PageBuilder) Build() *PageHandler {
 	if b.verififer != nil && b.titleFunc != nil {
 		b.verififer.Title(b.titleFunc)
 	}
-
-	ph := NewPageHandler(b.BuildPagePath(), b.handler, b.methods...)
+	b.fullPath = path.Join("/", prefix, b.menuGroup, b.path)
+	ph := NewPageHandler(b.fullPath, b.handler, b.methods...)
 	for _, f := range b.postBuild {
 		f(ph)
 	}

@@ -1,8 +1,6 @@
 package redactor
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -75,6 +73,6 @@ func (b *Builder) ClassIf(name string, add bool) (r *Builder) {
 	return b
 }
 
-func (b *Builder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
+func (b *Builder) Write(ctx *h.Context) (err error) {
+	return b.tag.Write(ctx)
 }

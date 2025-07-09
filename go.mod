@@ -20,7 +20,7 @@ require (
 	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
-	github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715
+	github.com/go-rvq/htmlgo v1.0.2
 	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/golang-jwt/jwt/v4 v4.5.0

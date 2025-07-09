@@ -1,7 +1,6 @@
 package media
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -146,7 +145,7 @@ func (b *QMediaBoxBuilder) Config(v *media_library.MediaBoxConfig) (r *QMediaBox
 	return b
 }
 
-func (b *QMediaBoxBuilder) MarshalHTML(c context.Context) (r []byte, err error) {
+func (b *QMediaBoxBuilder) Write(c *h.Context) (err error) {
 	if len(b.fieldName) == 0 {
 		panic("FieldName required")
 	}
@@ -154,7 +153,7 @@ func (b *QMediaBoxBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 		panic("Value required")
 	}
 
-	ctx := web.MustGetEventContext(c)
+	ctx := web.MustGetEventContext(c.Context)
 
 	portalName := mainPortalName(b.fieldName)
 
@@ -170,7 +169,7 @@ func (b *QMediaBoxBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 		).Class("pb-4").
 			Rounded(true).
 			Attr(web.VAssign("vars", `{showFileChooser: false}`)...),
-	).MarshalHTML(c)
+	).Write(c)
 }
 
 func mediaBoxThumb(msgr *Messages, cfg *media_library.MediaBoxConfig,

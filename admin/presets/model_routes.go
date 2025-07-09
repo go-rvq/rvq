@@ -47,13 +47,13 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			log.Printf("mounted url: %s\n", editPath)
 		}
 
-		mb.pages.SetupRoutes(routePath, mux, func(pattern string, ph *PageHandler) {
+		mb.pages.WithPathPrefix(routePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}
 		})
 
-		mb.detailing.pageHandlers.SetupRoutes(routePath, mux, func(pattern string, ph *PageHandler) {
+		mb.detailing.pageHandlers.WithPathPrefix(routePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}
@@ -68,7 +68,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			log.Printf("mounted url: %s\n", routePath)
 		}
 
-		mb.pages.SetupRoutes(itemRoutePath, mux, func(pattern string, ph *PageHandler) {
+		mb.pages.WithPathPrefix(itemRoutePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}
@@ -88,7 +88,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			}
 		}
 
-		mb.detailing.pageHandlers.SetupRoutes(itemRoutePath, mux, func(pattern string, ph *PageHandler) {
+		mb.detailing.pageHandlers.WithPathPrefix(itemRoutePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}

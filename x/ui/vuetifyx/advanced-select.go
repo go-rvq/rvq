@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -75,7 +74,7 @@ func (b *VXAdvancedSelectBuilder) ItemTextExpr(v string) *VXAdvancedSelectBuilde
 	return b.Attr(":item-text", v)
 }
 
-func (b *VXAdvancedSelectBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXAdvancedSelectBuilder) Write(ctx *h.Context) (err error) {
 	if b.itemsSearcher != nil {
 		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json().then(v => v.Records)}`, b.itemsSearcher.String()))
 	} else if b.searchItemsFunc != "" {
@@ -94,5 +93,5 @@ func (b *VXAdvancedSelectBuilder) MarshalHTML(ctx context.Context) (r []byte, er
 		b.Attr("chips", true)
 	}
 
-	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
+	return b.GetHTMLTagBuilder().Write(ctx)
 }

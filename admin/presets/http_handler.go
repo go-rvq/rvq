@@ -40,8 +40,8 @@ func NewPageHandler(path string, handler http.Handler, methods ...string) *PageH
 	return &PageHandler{path: path, handler: handler, methods: methods}
 }
 
-func (h *PageHandler) SetupRoute(prefix string, mux *http.ServeMux, cb ...func(pattern string, ph *PageHandler)) {
-	pth := path.Join(prefix, h.path)
+func (h *PageHandler) SetupRoute(mux *http.ServeMux, cb ...func(pattern string, ph *PageHandler)) {
+	pth := h.path
 	if len(h.methods) == 0 {
 		pattern := pth
 
@@ -74,10 +74,17 @@ func (h *PageHandler) ContainsMethods(methods ...string) (contained []string) {
 
 type PageHandlers []*PageHandler
 
-func (p PageHandlers) SetupRoutes(prefix string, mux *http.ServeMux, cb ...func(pattern string, ph *PageHandler)) {
+func (p PageHandlers) SetupRoutes(mux *http.ServeMux, cb ...func(pattern string, ph *PageHandler)) {
 	for _, h := range p {
-		h.SetupRoute(prefix, mux, cb...)
+		h.SetupRoute(mux, cb...)
 	}
+}
+
+func (p PageHandlers) WithPathPrefix(prefix string) PageHandlers {
+	for _, page := range p {
+		page.path = path.Join("/", prefix, page.path)
+	}
+	return p
 }
 
 func (p *PageHandlers) Add(ph *PageHandler) {

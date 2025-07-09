@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"fmt"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -11,7 +10,6 @@ import (
 
 func (m *PageBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLComponent) {
 	menuIcon := m.menuIcon
-	href := m.pageHandler.path
 	label := m.TTitle(ctx.Context())
 	item := VListItem(
 		// VRow(
@@ -27,17 +25,7 @@ func (m *PageBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLCompo
 	// .ActiveClass("bg-red")
 	// Attr("color", "primary")
 
-	item.Href(href)
-	if strings.HasPrefix(href, "/") {
-		funcStr := fmt.Sprintf(`(e) => {
-	if (e.metaKey || e.ctrlKey) { return; }
-	e.stopPropagation();
-	e.preventDefault();
-	%s;
-}
-`, web.Plaid().PushStateURL(href).Go())
-		item.Attr("@click", funcStr)
-	}
+	item.Href(m.fullPath)
 	// if b.isMenuItemActive(ctx, m) {
 	//	item = item.Class("v-list-item--active text-primary")
 	// }

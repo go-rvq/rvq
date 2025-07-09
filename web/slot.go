@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -28,7 +27,7 @@ func (b *SlotBuilder) Name(v string) (r *SlotBuilder) {
 	return b
 }
 
-func (b *SlotBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *SlotBuilder) Write(ctx *h.Context) (err error) {
 	if len(b.name) == 0 {
 		panic("Slot(...).Name(name) required")
 	}
@@ -39,5 +38,5 @@ func (b *SlotBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 	} else {
 		b.Attr(attrName, b.scope)
 	}
-	return b.TagBuilder.MarshalHTML(ctx)
+	return b.TagBuilder.Write(ctx)
 }

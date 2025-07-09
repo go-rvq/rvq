@@ -1,8 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -33,12 +31,12 @@ func (b *KeyFieldBuilder) Children(comps ...h.HTMLComponent) (r *KeyFieldBuilder
 	return b
 }
 
-func (b *KeyFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *KeyFieldBuilder) Write(ctx *h.Context) (err error) {
 	return h.Div(
 		h.Label(b.label).Class("blue-grey--text lighten-3"),
 		h.Div(b.children...).PrependChildren(b.icon),
 	).Class("px-4 my-4").Style("border-right: 1px solid #E0E0E0").
-		MarshalHTML(ctx)
+		Write(ctx)
 }
 
 type KeyInfoBuilder struct {
@@ -66,8 +64,8 @@ func (b *KeyInfoBuilder) AppendIcon(label string, icon h.HTMLComponent, comp h.H
 	return b
 }
 
-func (b *KeyInfoBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *KeyInfoBuilder) Write(ctx *h.Context) (err error) {
 	return h.Div(b.children...).
 		Class("grey lighten-5 d-flex").
-		MarshalHTML(ctx)
+		Write(ctx)
 }

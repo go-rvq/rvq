@@ -1,8 +1,7 @@
 package vuetifyx
 
 import (
-	"context"
-
+	h "github.com/go-rvq/htmlgo"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
@@ -20,10 +19,10 @@ func (b *VXMessageListenerBuilder) ListenFunc(v string) (r *VXMessageListenerBui
 	return b
 }
 
-func (b *VXMessageListenerBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXMessageListenerBuilder) Write(ctx *h.Context) (err error) {
 	if b.listenFunc != "" {
 		b.Attr(":listen-func", b.listenFunc)
 	}
 
-	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
+	return b.VTagBuilder.Write(ctx)
 }

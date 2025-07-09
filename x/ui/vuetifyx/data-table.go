@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -177,8 +176,8 @@ type primarySlugger interface {
 	PrimarySlug() string
 }
 
-func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) {
-	ctx := web.MustGetEventContext(c)
+func (b *DataTableBuilder) Write(c *h.Context) (err error) {
+	ctx := web.MustGetEventContext(c.Context)
 
 	selected := getSelectedIds(ctx, b.selectionParamName)
 
@@ -509,7 +508,7 @@ func (b *DataTableBuilder) MarshalHTML(c context.Context) (r []byte, err error) 
 	//	table.AppendChildren(web.ObjectAssignTag("vars", initContextLocalsMap))
 	// }
 
-	return table.MarshalHTML(c)
+	return table.Write(c)
 }
 
 func ObjectID(obj interface{}) (id string) {

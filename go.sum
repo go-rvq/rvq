@@ -164,8 +164,8 @@ github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/o
 github.com/go-playground/locales v0.14.1/go.mod h1:hxrqLVvrK65+Rwrd5Fc6F2O76J/NuW9t0sjnWqG1slY=
 github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJnYK9S473LQFuzCbDbfSFY=
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
-github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715 h1:nqw94ip/nIJV4x6jdBufCqxlQ24H0EdyPvckw2Qrrq4=
-github.com/go-rvq/htmlgo v0.0.0-20250707125541-0cf054963715/go.mod h1:TGdXftAyHFOT+mwskYgepb2AjgLLJLNoDaDV4SQShkc=
+github.com/go-rvq/htmlgo v1.0.2 h1:NeRbJxwkMESz7VcTpAjaNx9ei1Au10tjOA0kcaH9ZOY=
+github.com/go-rvq/htmlgo v1.0.2/go.mod h1:TGdXftAyHFOT+mwskYgepb2AjgLLJLNoDaDV4SQShkc=
 github.com/go-sql-driver/mysql v1.7.0 h1:ueSltNNllEqE3qcWBTD0iQd3IpL/6U+mJxLkazJ7YPc=
 github.com/go-sql-driver/mysql v1.7.0/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=

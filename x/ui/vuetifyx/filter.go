@@ -2,7 +2,6 @@ package vuetifyx
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"fmt"
 	"net/url"
@@ -45,7 +44,7 @@ func (b *VXFilterBuilder) UpdateModelValue(v interface{}) (r *VXFilterBuilder) {
 	return b
 }
 
-func (b *VXFilterBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXFilterBuilder) Write(ctx *h.Context) (err error) {
 	var visibleFilterData FilterData
 	for _, v := range b.internalValue {
 		if !v.Invisible {
@@ -65,7 +64,7 @@ func (b *VXFilterBuilder) MarshalHTML(ctx context.Context) (r []byte, err error)
 
 	b = b.InternalValue(visibleFilterData).Attr("@update:model-value", b.updateModelValue)
 
-	return b.VTagBuilder.MarshalHTML(ctx)
+	return b.VTagBuilder.Write(ctx)
 }
 
 /*

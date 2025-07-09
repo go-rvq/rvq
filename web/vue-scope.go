@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -129,7 +128,7 @@ func (b *ScopeBuilder) Slot(v ...string) (r *ScopeBuilder) {
 	return b
 }
 
-func (b *ScopeBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *ScopeBuilder) Write(ctx *h.Context) (err error) {
 	if len(b.observers) > 0 {
 		b.Attr(":observers", h.JSONString(b.observers))
 	}
@@ -157,7 +156,7 @@ func (b *ScopeBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 		b.name = xid.New().String()
 	}
 	b.Attr("scope-name", b.name)
-	return b.TagBuilder.MarshalHTML(ctx)
+	return b.TagBuilder.Write(ctx)
 }
 
 type Observer struct {

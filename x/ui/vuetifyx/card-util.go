@@ -1,8 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
-
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 
 	h "github.com/go-rvq/htmlgo"
@@ -58,7 +56,7 @@ func (b *CardBuilder) Variant(v string) (r *CardBuilder) {
 	return b
 }
 
-func (b *CardBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *CardBuilder) Write(ctx *h.Context) (err error) {
 	var sb h.HTMLComponent
 	var hr h.HTMLComponent
 	if len(b.systemBar) > 0 {
@@ -87,5 +85,5 @@ func (b *CardBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 		Variant(b.variant).
 		Class(b.classNames...).
 		AppendChild(b.children...).
-		MarshalHTML(ctx)
+		Write(ctx)
 }

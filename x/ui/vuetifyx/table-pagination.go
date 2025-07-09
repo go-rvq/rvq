@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -98,7 +97,7 @@ func (tpb *VXTablePaginationBuilder) OnNextPage(v interface{}) *VXTablePaginatio
 	return tpb
 }
 
-func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (tpb *VXTablePaginationBuilder) Write(ctx *h.Context) (err error) {
 	if tpb.onSelectPerPage == nil {
 		tpb.OnSelectPerPage(web.Plaid().
 			PushState(true).
@@ -247,5 +246,5 @@ func (tpb *VXTablePaginationBuilder) MarshalHTML(ctx context.Context) ([]byte, e
 							Attr("@click", tpb.onNextPage),
 					).Class("ml-3"),
 				).Class("ml-6"),
-			)).MarshalHTML(ctx)
+			)).Write(ctx)
 }

@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -55,7 +54,7 @@ func (b *VXReadonlyFieldBuilder) Color(v string) *VXReadonlyFieldBuilder {
 	return b
 }
 
-func (b *VXReadonlyFieldBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (b *VXReadonlyFieldBuilder) Write(ctx *h.Context) (err error) {
 	var vComp h.HTMLComponent
 	if b.children != nil {
 		vComp = b.children
@@ -89,5 +88,5 @@ func (b *VXReadonlyFieldBuilder) MarshalHTML(ctx context.Context) ([]byte, error
 	return h.Div(
 		h.Label(b.label).Class("v-label theme--light text-caption"),
 		h.Div(vComp).Class("pt-1"),
-	).Class("mb-4").MarshalHTML(ctx)
+	).Class("mb-4").Write(ctx)
 }

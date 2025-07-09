@@ -21,7 +21,7 @@ func defaultLayoutFunc(in PageFunc) PageFunc {
 		}
 
 		var body []byte
-		if body, err = r.Body.MarshalHTML(WrapEventContext(ctx.Context(), ctx)); err != nil {
+		if body, err = h.Marshal(r.Body, WrapEventContext(ctx.Context(), ctx)); err != nil {
 			return
 		}
 
@@ -38,7 +38,7 @@ func defaultLayoutFunc(in PageFunc) PageFunc {
 						// innerHTML replaces attributes names to kebab-case, bugging non kebab-case slots names.
 						// 2. The main portal is anonymous to prevent cache.
 						Portal().Raw(true).Content(string(body)),
-					).Id("app").Attr("v-cloak", true),
+					).ID("app").Attr("v-cloak", true),
 					ctx.Injector.GetTailHTMLComponent(),
 				).Class("front"),
 			).Attr(ctx.Injector.HTMLLangAttrs()...),

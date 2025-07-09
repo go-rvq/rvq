@@ -2,8 +2,6 @@ package tiptap
 
 // @snippet_begin(TipTapEditorHTMLComponent)
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -24,8 +22,8 @@ func (b *TipTapEditorBuilder) Attr(vs ...interface{}) (r *TipTapEditorBuilder) {
 	return b
 }
 
-func (b *TipTapEditorBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
+func (b *TipTapEditorBuilder) Write(ctx *h.Context) (err error) {
+	return b.tag.Write(ctx)
 }
 
 // @snippet_end

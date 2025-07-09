@@ -1,8 +1,6 @@
 package seo
 
 import (
-	"context"
-
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -61,6 +59,6 @@ func (b *VSeoBuilder) ClassIf(name string, add bool) (r *VSeoBuilder) {
 	return b
 }
 
-func (b *VSeoBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	return b.tag.MarshalHTML(ctx)
+func (b *VSeoBuilder) Write(ctx *h.Context) (err error) {
+	return b.tag.Write(ctx)
 }

@@ -134,9 +134,8 @@ func TestFileUpload(t *testing.T) {
 
 type DummyComp struct{}
 
-func (dc *DummyComp) MarshalHTML(ctx context.Context) (r []byte, err error) {
-	r = []byte("<div>hello</div>")
-	return
+func (dc *DummyComp) Write(ctx *h.Context) (err error) {
+	return ctx.WriteString("<div>hello</div>")
 }
 
 var eventCases = []struct {

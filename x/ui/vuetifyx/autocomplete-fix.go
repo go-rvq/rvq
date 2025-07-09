@@ -1,8 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
-
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 
 	h "github.com/go-rvq/htmlgo"
@@ -70,13 +68,13 @@ func (b *VXAutocompleteBuilder) SetDataSource(ds *AutocompleteDataSource) (r *VX
 	return b
 }
 
-func (b *VXAutocompleteBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXAutocompleteBuilder) Write(ctx *h.Context) (err error) {
 	if b.items == nil {
 		b.items = b.selectedItems
 	}
 	b.Attr(":items", b.items)
 	b.Attr(":selected-items", b.selectedItems)
-	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
+	return b.GetHTMLTagBuilder().Write(ctx)
 }
 
 type AutocompleteDataSource struct {

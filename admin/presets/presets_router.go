@@ -80,10 +80,10 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 	)
 
 	for _, page := range b.pages {
-		b.pageHandlers.Add(page.Build())
+		b.pageHandlers.Add(page.Build(b.prefix))
 	}
 
-	b.pageHandlers.SetupRoutes(b.prefix, mux, func(pattern string, ph *PageHandler) {
+	b.pageHandlers.SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 		if routesDebug {
 			log.Printf("mounted url: %s\n", pattern)
 		}

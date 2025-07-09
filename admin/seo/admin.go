@@ -1,7 +1,6 @@
 package seo
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -40,9 +39,9 @@ func (mtd *myTd) SetAttr(k string, v interface{}) {
 	mtd.child.SetAttr(k, v)
 }
 
-func (mtd *myTd) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (mtd *myTd) Write(ctx *h.Context) (err error) {
 	mtd.td.Children(mtd.child)
-	return mtd.td.MarshalHTML(ctx)
+	return mtd.td.Write(ctx)
 }
 
 func (b *Builder) Install(pb *presets.Builder) error {

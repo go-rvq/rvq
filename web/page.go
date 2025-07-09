@@ -188,7 +188,7 @@ func (p *PageBuilder) render(
 	}
 
 	// fmt.Println("eventFuncs count: ", len(p.eventFuncs))
-	b, err := pager.Body.MarshalHTML(c)
+	b, err := h.Marshal(pager.Body, c)
 	if err != nil {
 		panic(err)
 	}

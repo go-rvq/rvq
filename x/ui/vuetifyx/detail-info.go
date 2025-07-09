@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -20,13 +19,13 @@ func DetailInfo(columns ...h.HTMLComponent) (r *DetailInfoBuilder) {
 	return
 }
 
-func (b *DetailInfoBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *DetailInfoBuilder) Write(ctx *h.Context) (err error) {
 	row := v.VRow()
 	for _, col := range b.columns {
 		row.AppendChild(v.VCol(col).Md(true))
 	}
 
-	return v.VContainer(row).Class(b.classes...).MarshalHTML(ctx)
+	return v.VContainer(row).Class(b.classes...).Write(ctx)
 }
 
 func (b *DetailInfoBuilder) Class(v ...string) (r *DetailInfoBuilder) {
@@ -69,7 +68,7 @@ func (b *DetailFieldBuilder) Icon(v h.HTMLComponent) (r *DetailFieldBuilder) {
 	return b
 }
 
-func (b *DetailFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *DetailFieldBuilder) Write(ctx *h.Context) (err error) {
 	ki := h.Tag("div").
 		Children(
 			h.Tag("label").
@@ -82,7 +81,7 @@ func (b *DetailFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err err
 	}
 
 	ki.AppendChildren(b.children...)
-	return ki.MarshalHTML(ctx)
+	return ki.Write(ctx)
 }
 
 type DetailColumnBuilder struct {
@@ -117,7 +116,7 @@ func (b *DetailColumnBuilder) AppendIcon(label string, icon h.HTMLComponent, com
 	return b
 }
 
-func (b *DetailColumnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *DetailColumnBuilder) Write(ctx *h.Context) (err error) {
 	detailInfoBody := h.Tag("div")
 	if len(b.header) > 0 {
 		detailInfoBody.AppendChildren(
@@ -128,7 +127,7 @@ func (b *DetailColumnBuilder) MarshalHTML(ctx context.Context) (r []byte, err er
 	}
 	detailInfoBody.AppendChildren(b.children...)
 
-	return detailInfoBody.MarshalHTML(ctx)
+	return detailInfoBody.Write(ctx)
 }
 
 type OptionalTextBuilder struct {
@@ -146,7 +145,7 @@ func (b *OptionalTextBuilder) ZeroLabel(label string) (r *OptionalTextBuilder) {
 	return b
 }
 
-func (b *OptionalTextBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *OptionalTextBuilder) Write(ctx *h.Context) (err error) {
 	var body h.HTMLComponent
 
 	if len(b.text) > 0 {
@@ -158,5 +157,5 @@ func (b *OptionalTextBuilder) MarshalHTML(ctx context.Context) (r []byte, err er
 			Text(b.zeroLabel)
 	}
 
-	return body.MarshalHTML(ctx)
+	return body.Write(ctx)
 }

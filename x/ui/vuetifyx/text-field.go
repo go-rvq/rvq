@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -72,7 +71,7 @@ func (b *VXTextFieldBuilder) Suffix(suffix string) *VXTextFieldBuilder {
 	return b
 }
 
-func (b *VXTextFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXTextFieldBuilder) Write(ctx *h.Context) (err error) {
 	var labelStyle string = "font-size:16px; font-weight:500;"
 	var label h.HTMLComponent
 	if b.label != "" {
@@ -89,7 +88,7 @@ func (b *VXTextFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err err
 		div.AppendChildren(
 			h.Div(h.Span(b.text)),
 		)
-		return div.MarshalHTML(ctx)
+		return div.Write(ctx)
 	}
 
 	var valueType string = "text"
@@ -103,5 +102,5 @@ func (b *VXTextFieldBuilder) MarshalHTML(ctx context.Context) (r []byte, err err
 	return h.Div(
 		label,
 		content,
-	).Class(b.class).MarshalHTML(ctx)
+	).Class(b.class).Write(ctx)
 }

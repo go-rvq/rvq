@@ -1,7 +1,6 @@
 package richeditor
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -82,7 +81,7 @@ func (b *RichEditorBuilder) SetImageDisabled(imageDisabled bool) *RichEditorBuil
 	return b
 }
 
-func (b *RichEditorBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (b *RichEditorBuilder) Write(ctx *h.Context) (err error) {
 	p := Plugins
 	if b.setPlugins {
 		p = b.plugins
@@ -114,5 +113,5 @@ func (b *RichEditorBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 			),
 		).Class("pb-4").Rounded(true).Attr("data-type", "redactor").Attr("style", "position: relative; z-index:1;"),
 	)
-	return r.MarshalHTML(ctx)
+	return r.Write(ctx)
 }

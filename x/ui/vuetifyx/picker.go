@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -36,7 +35,7 @@ func (b *PickerBuilder) FieldName(v string) (r *PickerBuilder) {
 	return b
 }
 
-func (b *PickerBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
+func (b *PickerBuilder) Write(ctx *h.Context) (err error) {
 	menuLocal := fmt.Sprintf("picker_%s_menu", b.fieldName)
 	valueLocal := fmt.Sprintf("picker_%s_value", b.fieldName)
 
@@ -60,5 +59,5 @@ func (b *PickerBuilder) MarshalHTML(ctx context.Context) ([]byte, error) {
 			MaxWidth(290),
 	).LocalsInit(fmt.Sprintf(`{%s: %s, %s: false}`, valueLocal, h.JSONString(b.value), menuLocal)).
 		Slot("{ locals }").
-		MarshalHTML(ctx)
+		Write(ctx)
 }

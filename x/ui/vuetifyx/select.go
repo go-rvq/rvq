@@ -1,7 +1,6 @@
 package vuetifyx
 
 import (
-	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -33,14 +32,14 @@ func (b *VXSelectBuilder) FieldName(v string) (r *VXSelectBuilder) {
 	return b
 }
 
-func (b *VXSelectBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+func (b *VXSelectBuilder) Write(ctx *h.Context) (err error) {
 	if b.items == nil {
 		b.items = b.selectedItems
 	}
 	b.Attr(":items", b.items)
 	b.Attr(":selected-items", b.selectedItems)
 
-	return b.GetHTMLTagBuilder().MarshalHTML(ctx)
+	return b.VTagBuilder.Write(ctx)
 }
 
 func (b *VXSelectBuilder) AppendIcon(v string) (r *VXSelectBuilder) {
