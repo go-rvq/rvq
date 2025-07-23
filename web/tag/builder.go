@@ -23,6 +23,13 @@ func (t *TagBuilder[T]) PrependChild(c ...h.HTMLComponent) T {
 	return t.dot
 }
 
+func (t *TagBuilder[T]) If(v bool, do func(t T)) T {
+	if v {
+		do(t.dot)
+	}
+	return t.dot
+}
+
 func (t *TagBuilder[T]) GetAttr(key string) *h.Attr {
 	return t.tag.Attrs.Get(key)
 }
