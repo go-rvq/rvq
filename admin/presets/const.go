@@ -51,15 +51,18 @@ func PermFromRequest(r *http.Request) string {
 	if method == "" {
 		method = r.Method
 	}
+	return PermFromHttpMethod(method)
+}
+
+func PermFromHttpMethod(method string) string {
 	switch method {
-	case "GET", "HEAD", "OPTIONS":
-		return PermGet
 	case "POST":
 		return PermCreate
 	case "PUT":
 		return PermUpdate
 	case "DELETE":
 		return PermDelete
+	default:
+		return PermGet
 	}
-	return ""
 }

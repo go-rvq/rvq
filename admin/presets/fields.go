@@ -650,6 +650,31 @@ func (b *FieldsBuilder) ToComponent(opts *ToComponentOptions, info *ModelInfo, o
 	return b.toComponentWithModifiedIndexes(opts, info, obj, mode, nil, ctx)
 }
 
+func (b *FieldsBuilder) ToComponentFull(pre, post []ModeObjectComponentFunc, opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
+	var (
+		comp h.HTMLComponents
+		add  = func(c h.HTMLComponent) {
+			if comps, ok := c.(h.HTMLComponents); ok {
+				comp = append(comp, comps...)
+			} else {
+				comp = append(comp, c)
+			}
+		}
+	)
+
+	for _, f := range pre {
+		add(f(mode, obj, ctx))
+	}
+
+	add(b.toComponentWithModifiedIndexes(opts, info, obj, mode, nil, ctx))
+
+	for _, f := range post {
+		add(f(mode, obj, ctx))
+	}
+
+	return comp
+}
+
 func (b *FieldsBuilder) toComponentWithModifiedIndexes(opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
 	return b.toComponentWithFormValueKey(opts, info, obj, mode, parent, modifiedIndexes, ctx)

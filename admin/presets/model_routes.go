@@ -18,6 +18,8 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 	)
 
 	if mb.singleton {
+		mb.itemRoutePath = itemRoutePath
+
 		if mb.layoutConfig == nil {
 			mb.layoutConfig = &LayoutConfig{}
 		}
@@ -47,7 +49,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			log.Printf("mounted url: %s\n", editPath)
 		}
 
-		mb.pages.WithPathPrefix(routePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+		mb.listing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}
@@ -58,7 +60,17 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 				log.Printf("mounted url: %s\n", pattern)
 			}
 		})
+
+		/*
+			mb.detailing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+				if routesDebug {
+					log.Printf("mounted url: %s\n", pattern)
+				}
+			})
+		*/
 	} else {
+		mb.routePath = routePath
+
 		mux.Handle(
 			routePath,
 			mb.p.WrapModel(mb, mb.p.layoutFunc(mb.BindPageFunc(listingPageFunc), mb.layoutConfig)),
@@ -68,15 +80,20 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			log.Printf("mounted url: %s\n", routePath)
 		}
 
-		mb.pages.WithPathPrefix(itemRoutePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+		mb.listing.pages.WithPathPrefix(itemRoutePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}
 		})
-	}
 
-	if !mb.singleton {
+		mb.listing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+			if routesDebug {
+				log.Printf("mounted url: %s\n", pattern)
+			}
+		})
+
 		itemRoutePath += "/{id}"
+		mb.itemRoutePath = itemRoutePath
 
 		if mb.hasDetailing {
 			mux.Handle(
@@ -89,6 +106,12 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		}
 
 		mb.detailing.pageHandlers.WithPathPrefix(itemRoutePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+			if routesDebug {
+				log.Printf("mounted url: %s\n", pattern)
+			}
+		})
+
+		mb.detailing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
 				log.Printf("mounted url: %s\n", pattern)
 			}

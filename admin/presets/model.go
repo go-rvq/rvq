@@ -72,6 +72,8 @@ type ModelBuilder struct {
 	subRoutesSetup      func(mux *http.ServeMux, uri string)
 	listingMenu         Menu
 	detailingMenu       Menu
+	routePath           string
+	itemRoutePath       string
 
 	EventsHub web.EventsHub
 
@@ -559,33 +561,16 @@ func (mb *ModelBuilder) BindEventFunc(f web.EventHandler) web.EventHandler {
 		return f
 	}
 	return web.EventFunc(func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		WithModel(ctx, mb)
-		if ctx, err = mb.LoadParentsID(ctx); err != nil {
+		if err = WithModelAndLoadBreadcrumbsAndParents(ctx, mb); err != nil {
 			return
 		}
 		return f.Handle(ctx)
 	})
 }
 
-func (mb *ModelBuilder) AddPageFunc(vf *perm.PermVerifierBuilder, path string, f web.PageFunc, methods ...string) (ph *PageHandler) {
-	if vf != nil && !vf.Valid() {
-		vf.Path(path)
-	}
-	ph = NewPageHandler(path, mb.p.Wrap(mb.p.layoutFunc(mb.BindVerifiedPageFunc(vf, f), mb.layoutConfig)), methods...)
-	mb.pages.Add(ph)
-	return
-}
-
-func (mb *ModelBuilder) AddRawPageFunc(path string, f web.PageFunc, methods ...string) (ph *PageHandler) {
-	ph = NewPageHandler(path, mb.p.Wrap(f), methods...)
-	mb.pages.Add(ph)
-	return
-}
-
 func (mb *ModelBuilder) BindPageFunc(f web.PageFunc) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		WithModel(ctx, mb)
-		if ctx, err = mb.LoadParentsID(ctx); err != nil {
+		if err = WithModelAndLoadBreadcrumbsAndParents(ctx, mb); err != nil {
 			return
 		}
 		return f(ctx)
@@ -669,48 +654,32 @@ func (mb *ModelBuilder) RecordTitleFetch(obj any, ctx *web.EventContext) (_ stri
 	return mb.RecordTitle(obj, ctx), nil
 }
 
-func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (_ *web.EventContext, err error) {
+func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (err error) {
 	var parentsID IDSlice
 	if parentsID, err = mb.ParseParentsID(ctx.R); err != nil {
 		return
 	}
+
 	ctx.WithContextValue(ParentsModelIDKey, parentsID)
-	parentsIDPtr := web.GetContextValuer(ctx.R.Context(), ParentsModelIDKey)
+	return
+}
 
+func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, err error) {
 	bc := GetOrInitBreadcrumbs(ctx.R)
-	parents := mb.Parents()
+	parentsID := ParentsModelID(ctx.R)
 
-	if root := mb.Root(); root.menuGroupName != "" {
-		bc.Append(&Breadcrumb{
-			Label: mb.p.menuGroups.MenuGroup(root.menuGroupName).TTitle(ctx.Context()),
-		})
-	}
-
-	for i, id := range parentsID {
-		bc.Append(&Breadcrumb{
-			Label: parents[i].TTitlePlural(ctx.Context()),
-			URI:   parents[i].modelInfo.ListingHref(parentsID[:i]...),
-		})
-
-		var (
-			model = parents[i].NewModel()
-			label string
-		)
-
-		id.SetTo(model)
-
-		parentsIDPtr.Set(parentsID[:i])
-		if label, err = parents[i].RecordTitleFetch(model, ctx); err != nil {
+	if len(parentsID) == 0 {
+		if root := mb.Root(); root.menuGroupName != "" {
+			bc.Append(&Breadcrumb{
+				Label: mb.p.menuGroups.MenuGroup(root.menuGroupName).TTitle(ctx.Context()),
+			})
+		}
+	} else {
+		parents := mb.Parents()
+		if records, err = AddModelsTreeToBreadcrumb(true, ctx, parents, parentsID, bc); err != nil {
 			return
 		}
-
-		bc.Append(&Breadcrumb{
-			Label: label,
-			URI:   parents[i].Info().DetailingHref(id.String(), parentsID[:i]...),
-		})
 	}
-
-	parentsIDPtr.Set(parentsID)
 
 	if !mb.singleton {
 		uri := mb.Info().ListingHref(parentsID...)
@@ -721,7 +690,7 @@ func (mb *ModelBuilder) LoadParentsID(ctx *web.EventContext) (_ *web.EventContex
 			})
 		}
 	}
-	return ctx, nil
+	return
 }
 
 func (mb *ModelBuilder) Children() []*ModelBuilder {

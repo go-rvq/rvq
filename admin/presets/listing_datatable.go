@@ -420,6 +420,10 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		}
 	}
 
+	if pages := b.pagesRegistrator.MenuItems(ctx, b.mb.Info().ListingHrefCtx(ctx)); len(pages) > 0 {
+		actionBtns = append(actionBtns, pages...)
+	}
+
 	// if len(actionBtns) == 0 {
 	//	return nil
 	// }

@@ -49,6 +49,7 @@ type Builder struct {
 	vuetifyOptions                        string
 	progressBarColor                      string
 	rightDrawerWidth                      string
+	printButtonDisabled                   bool
 	writeFieldDefaults                    *FieldDefaults
 	listFieldDefaults                     *FieldDefaults
 	detailFieldDefaults                   *FieldDefaults
@@ -64,8 +65,8 @@ type Builder struct {
 	muxSetup                              []func(prefix string, r *http.ServeMux)
 	permissions                           *PermMenu
 	pageHandlers                          PageHandlers
-	pages                                 []*PageBuilder
 	verifiers                             perm.PermVerifiers
+	pagesRegistrator                      *PagesRegistrator
 
 	datafield.DataField[*Builder]
 }
@@ -114,7 +115,28 @@ func New(i18nB *i18n.Builder) *Builder {
 	r.GetWebBuilder().RegisterEventHandler(EventOpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
 	r.layoutFunc = r.DefaultLayout
 	r.detailLayoutFunc = r.DefaultLayout
+	r.pagesRegistrator = NewPagesRegistrator(
+		r,
+		func() string {
+			return r.prefix
+		},
+		func(pf web.PageFunc, do DoPageBuilder) http.Handler {
+			return r.Wrap(pf, do)
+		},
+		RequestPermVerifierFunc(func(*http.Request) *perm.Verifier {
+			return r.verifier
+		}),
+	).LayoutFunc(func(config *LayoutConfig, f func(ctx *web.EventContext) (r web.PageResponse, err error)) web.PageFunc {
+		if config == nil {
+			config = r.homePageLayoutConfig
+		}
+		return r.layoutFunc(f, config)
+	})
 	return r
+}
+
+func (b *Builder) PagesRegistrator() *PagesRegistrator {
+	return b.pagesRegistrator
 }
 
 func (b *Builder) I18n() (r *i18n.Builder) {
@@ -413,8 +435,8 @@ func (b *Builder) MenuOrder(items ...interface{}) {
 			b.menuOrder = append(b.menuOrder, v)
 			for _, item := range v.subMenuItems {
 				if item[0] == '/' {
-					if p := b.GetPage(item); p != nil {
-						p.menuGroup = v.name
+					if p := b.pagesRegistrator.GetHttpPage(item); p != nil {
+						p.MenuGroup(v.name)
 					}
 				} else if mb := b.GetModelByID(item); mb != nil {
 					mb.menuGroupName = v.name
@@ -475,7 +497,7 @@ const (
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	var (
 		mMap = make(map[string]*ModelBuilder)
-		pMap = make(map[string]*PageBuilder)
+		pMap = make(map[string]*HttpPageBuilder)
 	)
 
 	for _, m := range b.models {
@@ -484,7 +506,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		}
 	}
 
-	for _, page := range b.pages {
+	for _, page := range b.pagesRegistrator.httpPages {
 		if !page.notInMenu {
 			pMap[page.path] = page
 		}
@@ -634,7 +656,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		menus = append(menus, m.menuItem(ctx, false))
 	}
 
-	for _, p := range b.pages {
+	for _, p := range b.pagesRegistrator.httpPages {
 		_, ok := inOrderMap[p.path]
 		if ok {
 			continue

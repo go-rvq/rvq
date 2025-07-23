@@ -149,6 +149,9 @@ func (b *EditingBuilder) PostSetterFunc(v SetterFunc) (r *EditingBuilder) {
 }
 
 func (b *EditingBuilder) WrapPostSetterFunc(w func(in SetterFunc) SetterFunc) (r *EditingBuilder) {
+	if b.PostSetter == nil {
+		b.PostSetter = func(any, *web.EventContext) {}
+	}
 	b.PostSetter = w(b.PostSetter)
 	return b
 }

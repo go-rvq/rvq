@@ -178,5 +178,5 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 }
 
 func (b *EditingBuilder) form(obj interface{}, ctx *web.EventContext) *Form {
-	return b.ConfigureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).Build())
+	return b.ConfigureForm(NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj).SetPre(b.preComponents).SetPost(b.postComponents).Build())
 }

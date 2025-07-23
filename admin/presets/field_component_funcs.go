@@ -32,6 +32,11 @@ func TDStringComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 func CheckboxComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return VCheckbox().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
+		Density(DensityCompact).
+		If(len(field.Hint) > 0, func(t *VCheckboxBuilder) {
+			t.Hint(field.Hint).
+				PersistentHint(true)
+		}).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
@@ -47,6 +52,10 @@ func CheckboxReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.H
 func SwitchComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return VSwitch().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
+		If(len(field.Hint) > 0, func(t *VSwitchBuilder) {
+			t.Hint(field.Hint).
+				PersistentHint(true)
+		}).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
@@ -58,7 +67,7 @@ func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompone
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.Hint()).
+		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -135,7 +144,7 @@ func TextFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.Hint()).
+		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -146,7 +155,7 @@ func LongTextFieldComponentFunc(field *FieldContext, _ *web.EventContext) *VText
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.Hint()).
+		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }
@@ -187,7 +196,7 @@ func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, "")...).
 		Label(field.Label).
-		Hint(field.Hint()).
+		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly)
 }

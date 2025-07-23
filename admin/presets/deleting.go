@@ -54,7 +54,7 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 
 	ShowMessage(&r, MustGetMessages(ctx.Context()).SuccessfullyDeleted)
 
-	web.AppendRunScripts(&r, "closer.show = false")
+	web.AppendRunScripts(&r, "closer.show = false; presetsListing?.loader?.go()")
 
 	if postDeleteConfig := ctx.R.URL.Query().Get(ParamPostDeleteCallback); postDeleteConfig != "" {
 		cb := web.DecodeCallback(postDeleteConfig)

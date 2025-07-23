@@ -5,6 +5,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/utils"
 	"github.com/go-rvq/rvq/web"
 )
 
@@ -25,8 +26,11 @@ const (
 	CtxRespondDialogHandlers
 	ctxFieldLabels
 	CtxSaveContext
+	ModelIDKey
 	ParentsModelIDKey
+	parentsRecordKey
 	CtxEventHandlerWrapperNoFlash
+	CtxSkipAutoBreadcrumb
 )
 
 func IsInDialog(ctx *web.EventContext) bool {
@@ -41,36 +45,36 @@ func OverlayMode(ctx *web.EventContext) actions.OverlayMode {
 	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
 }
 
-func WithActionsComponent(ctx *web.EventContext, comp ...h.HTMLComponent) {
+func WithActionsComponent(ctx web.ContextValuer, comp ...h.HTMLComponent) {
 	ctx.WithContextValue(CtxActionsComponent, h.HTMLComponents(comp))
 }
 
-func GetActionsComponent(ctx *web.EventContext) h.HTMLComponents {
+func GetActionsComponent(ctx web.ContextValuer) h.HTMLComponents {
 	v, _ := ctx.ContextValue(CtxActionsComponent).(h.HTMLComponents)
 	return v
 }
 
-func WithMenuComponent(ctx *web.EventContext, comp ...h.HTMLComponent) {
+func WithMenuComponent(ctx web.ContextValuer, comp ...h.HTMLComponent) {
 	ctx.WithContextValue(CtxMenuComponent, h.HTMLComponents(comp))
 }
 
-func GetMenuComponent(ctx *web.EventContext) h.HTMLComponents {
+func GetMenuComponent(ctx web.ContextValuer) h.HTMLComponents {
 	v, _ := ctx.ContextValue(CtxMenuComponent).(h.HTMLComponents)
 	return v
 }
 
-func GetComponentFromContext(ctx *web.EventContext, key presetsCtx) (h.HTMLComponent, bool) {
+func GetComponentFromContext(ctx web.ContextValuer, key presetsCtx) (h.HTMLComponent, bool) {
 	v, ok := ctx.ContextValue(key).(h.HTMLComponent)
 	return v, ok
 }
 
-func GetPortals(ctx *web.EventContext) h.HTMLComponents {
+func GetPortals(ctx web.ContextValuer) h.HTMLComponents {
 	v, _ := ctx.ContextValue(CtxPortals).(h.HTMLComponents)
 	return v
 }
 
-func WithPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
-	vlr := web.GetContextValuer(ctx.R.Context(), CtxPortals)
+func WithPortals(ctx web.ContextValuer, portal ...h.HTMLComponent) {
+	vlr := web.GetContextValuer(ctx.Context(), CtxPortals)
 	if vlr == nil {
 		ctx.WithContextValue(CtxPortals, h.HTMLComponents(portal))
 	} else {
@@ -78,8 +82,8 @@ func WithPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
 	}
 }
 
-func AddPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
-	vlr := web.GetContextValuer(ctx.R.Context(), CtxPortals)
+func AddPortals(ctx web.ContextValuer, portal ...h.HTMLComponent) {
+	vlr := web.GetContextValuer(ctx.Context(), CtxPortals)
 	if vlr == nil {
 		ctx.WithContextValue(CtxPortals, h.HTMLComponents(portal))
 	} else {
@@ -87,38 +91,61 @@ func AddPortals(ctx *web.EventContext, portal ...h.HTMLComponent) {
 	}
 }
 
-func GetModel(ctx *web.EventContext) (v *ModelBuilder) {
+func GetModel(ctx web.ContextValuer) (v *ModelBuilder) {
 	v, _ = ctx.ContextValue(ctxModel).(*ModelBuilder)
 	return
 }
 
-func WithModel(ctx *web.EventContext, model *ModelBuilder) {
+func WithModel(ctx web.ContextValuer, model *ModelBuilder) {
 	ctx.WithContextValue(ctxModel, model)
 }
 
-func WithScope(ctx *web.EventContext, scope *web.ScopeBuilder) {
+func WithParentsRecord(ctx web.ContextValuer, parents []any) {
+	ctx.WithContextValue(parentsRecordKey, parents)
+}
+
+func GetParentsRecord(ctx web.ContextValuer) utils.Anies {
+	v, _ := ctx.ContextValue(parentsRecordKey).([]any)
+	return v
+}
+
+func WithModelAndLoadBreadcrumbsAndParents(ctx *web.EventContext, mb *ModelBuilder) (err error) {
+	if err = mb.LoadParentsID(ctx); err != nil {
+		return
+	}
+	if !IsSkipAutoBreadcrumb(ctx) {
+		var records []any
+		if records, err = mb.LoadBreadCrumbs(ctx); err != nil {
+			return
+		}
+		WithParentsRecord(ctx, records)
+	}
+	return
+}
+
+func WithScope(ctx web.ContextValuer, scope *web.ScopeBuilder) {
 	ctx.WithContextValue(ctxScope, scope)
 }
 
-func GetScope(ctx *web.EventContext) (scope *web.ScopeBuilder) {
+func GetScope(ctx web.ContextValuer) (scope *web.ScopeBuilder) {
 	scope, _ = ctx.ContextValue(ctxScope).(*web.ScopeBuilder)
 	return
 }
 
-func EditFormUnscoped(ctx *web.EventContext, v bool) {
+func EditFormUnscoped(ctx web.ContextValuer, v bool) {
 	ctx.WithContextValue(ctxEditFormUnscoped, v)
 }
 
-func GetEditFormUnscoped(ctx *web.EventContext) (ok bool) {
+func GetEditFormUnscoped(ctx web.ContextValuer) (ok bool) {
 	ok, _ = ctx.ContextValue(ctxEditFormUnscoped).(bool)
 	return
 }
 
-func WithRespondDialogHandlers(ctx *web.EventContext, f ...func(d *DialogBuilder)) {
+func WithRespondDialogHandlers(ctx web.ContextValuer, f ...func(d *DialogBuilder)) {
 	ctx.WithContextValue(CtxRespondDialogHandlers, append(GetRespondDialogHandlers(ctx), f...))
 }
 
-func GetRespondDialogHandlers(ctx *web.EventContext) (handlers []func(d *DialogBuilder)) {
+func GetRespondDialogHandlers(ctx web.ContextValuer) (handlers []func(d *DialogBuilder)) {
 	handlers, _ = ctx.ContextValue(CtxRespondDialogHandlers).([]func(d *DialogBuilder))
 	return
 }
@@ -140,7 +167,7 @@ func GetFieldLabels(ctx web.ContextValuer, fb *FieldsBuilder) map[string]string 
 	return nil
 }
 
-func GetSaveContext(ctx *web.EventContext) (v context.Context) {
+func GetSaveContext(ctx web.ContextValuer) (v context.Context) {
 	v, _ = ctx.ContextValue(CtxSaveContext).(context.Context)
 	return
 }
@@ -163,6 +190,16 @@ func WithBulkActionFormContext[T any](ctx web.ContextValuer, v *BulkActionFormCo
 	ctx.WithContextValue(ctxBulkActionFormContext, v)
 }
 
-func WithEventHandlerWrapperNoFlash(ctx *web.EventContext) {
+func WithEventHandlerWrapperNoFlash(ctx web.ContextValuer) {
 	ctx.WithContextValue(CtxEventHandlerWrapperNoFlash, true)
+}
+
+func IsSkipAutoBreadcrumb(ctx web.ContextValuer) (ok bool) {
+	ok, _ = ctx.ContextValue(CtxSkipAutoBreadcrumb).(bool)
+	return
+}
+
+func WithSkipAutoBreadcrumb(ctx web.ContextValuer) (ok bool) {
+	ctx.WithContextValue(CtxSkipAutoBreadcrumb, true)
+	return
 }

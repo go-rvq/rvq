@@ -22,6 +22,7 @@ type FormBuilder struct {
 	obj         interface{}
 	portalName  string
 	overlayMode actions.OverlayMode
+	pre, post   []ModeObjectComponentFunc
 }
 
 func NewFormBuilder(ctx *web.EventContext, mb *ModelBuilder, fb *FieldsBuilder, obj interface{}) *FormBuilder {
@@ -46,6 +47,16 @@ func NewFormBuilder(ctx *web.EventContext, mb *ModelBuilder, fb *FieldsBuilder, 
 
 func (f *FormBuilder) Mode() FieldMode {
 	return f.mode
+}
+
+func (f *FormBuilder) SetPre(v []ModeObjectComponentFunc) *FormBuilder {
+	f.pre = v
+	return f
+}
+
+func (f *FormBuilder) SetPost(v []ModeObjectComponentFunc) *FormBuilder {
+	f.post = v
+	return f
 }
 
 func (f *FormBuilder) SetMode(mode FieldMode) *FormBuilder {
@@ -114,7 +125,7 @@ func (f *FormBuilder) Build() (form *Form) {
 		}
 	}
 
-	form.Body = f.fb.ToComponent(&ToComponentOptions{}, f.mb.Info(), f.obj, FieldModeStack{f.mode}, ctx)
+	form.Body = f.fb.ToComponentFull(f.pre, f.post, &ToComponentOptions{}, f.mb.Info(), f.obj, FieldModeStack{f.mode}, ctx)
 
 	return
 }

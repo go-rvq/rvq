@@ -66,6 +66,10 @@ type ListingBuilder struct {
 	recordEncoderFactories map[string]RecordEncoderFactory[any]
 	configureComponent     func(lcb *ListingComponentBuilder)
 
+	pages PageHandlers
+
+	pagesRegistrator *PagesRegistrator
+
 	FieldsBuilder
 	RowMenuFields
 
@@ -97,6 +101,7 @@ func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBu
 	lb.DeletingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
 		r.Insert(mb.DetailingRestriction)
 	})
+	lb.setupPagesRegistrator()
 	return lb
 }
 
@@ -282,6 +287,10 @@ func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuIte
 			return items
 		})
 	}
+
+	fs = append(fs, func(rctx *RecordMenuItemContext) h.HTMLComponent {
+		return b.mb.detailing.pagesRegistrator.MenuItems(ctx, b.mb.Info().DetailingHrefCtx(ctx, rctx.ID))
+	})
 
 	return
 }
@@ -785,7 +794,6 @@ func (b *ListingBuilder) openActionDialogInternal(actionList []*ActionBuilder, c
 		return
 	}
 
-	r.RunScript = `console.log("action dialog", presetsListing.uri)`
 	err = action.View(b.mb, ctx.R.Form.Get(ParamID), ctx, &r)
 	return
 }
@@ -827,6 +835,11 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		return
 	}
 
+	tabsData := b.filterTabsFunc(ctx)
+	if len(tabsData) == 0 {
+		return
+	}
+
 	qs := ctx.R.URL.Query()
 
 	tabs := VTabs().
@@ -834,8 +847,6 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		ShowArrows(true).
 		Color("primary").
 		Density(DensityCompact)
-
-	tabsData := b.filterTabsFunc(ctx)
 	var defaultTab *FilterTab
 	for _, tab := range tabsData {
 		if tab.Default {

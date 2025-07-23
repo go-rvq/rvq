@@ -173,8 +173,9 @@ func (p *ModelPermissioner) Lister(r *http.Request, parentID ...ID) *perm.Verifi
 	return p.ListDo(r, PermList, parentID...)
 }
 
-func (p *ModelPermissioner) Default(listing bool) *perm.Verifier {
+func (p *ModelPermissioner) Default() *perm.Verifier {
 	var (
+		listing = !!p.mb.singleton
 		parents []ID
 		id      = ID{
 			Fields: []model.Field{model.SingleField("ID")},
@@ -193,12 +194,4 @@ func (p *ModelPermissioner) Default(listing bool) *perm.Verifier {
 	}
 
 	return p.Verifier(id, parents...)
-}
-
-func (p *ModelPermissioner) DefaultPermResourceName(listing bool) string {
-	return p.Default(listing).Resource()
-}
-
-func (p *ModelPermissioner) PermResourceName(id ID, parentID ...ID) string {
-	return p.Verifier(id, parentID...).Resource()
 }

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-rvq/rvq/x/perm"
 	"github.com/iancoleman/strcase"
 	"github.com/mpvl/unique"
 )
@@ -24,8 +25,9 @@ func (a *ResourcePermActions) Add(action ...*ResourcePermAction) {
 }
 
 type CustomPerm struct {
-	Name  string                           `yaml:",omitempty" json:",omitempty"`
-	Title func(ctx context.Context) string `yaml:"-" json:"-"`
+	Name     string                           `yaml:",omitempty" json:",omitempty"`
+	Title    func(ctx context.Context) string `yaml:"-" json:"-"`
+	Children []*CustomPerm                    `yaml:",omitempty" json:",omitempty"`
 }
 
 type ModelPermObject struct {
@@ -239,7 +241,7 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 
 		p := &ModelPerm{
 			Model: mb,
-			Name:  mb.Permissioner().DefaultPermResourceName(true),
+			Name:  mb.Permissioner().Default().Resource(),
 			Title: func(ctx context.Context) string {
 				return mb.TTitleAuto(ctx)
 			},
@@ -296,15 +298,30 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 
 		for _, verifier := range mb.verifiers {
 			p.Custom = append(p.Custom, &CustomPerm{
-				Name:  verifier.Build(mb.permissioner.Default(true)).Resource(),
+				Name:  verifier.Build(mb.permissioner.Default()).Resource(),
 				Title: verifier.GetTitle(),
 			})
+		}
+
+		mp := make(map[*perm.PermVerifierBuilderNode]*CustomPerm)
+
+		for n := range perm.WalkPermVerififierBuilders(mb.AllVerifiers()) {
+			e := &CustomPerm{
+				Name:  n.Elem.Build(mb.permissioner.Default()).Resource(),
+				Title: n.Elem.GetTitle(),
+			}
+			mp[n] = e
+			if n.Parent == nil {
+				p.Custom = append(p.Custom, e)
+			} else {
+				mp[n.Parent].Children = append(mp[n.Parent].Children, e)
+			}
 		}
 
 		if mb.singleton {
 			for _, verifier := range mb.detailing.verifiers {
 				p.Custom = append(p.Custom, &CustomPerm{
-					Name:  verifier.Build(mb.permissioner.Default(true)).Resource(),
+					Name:  verifier.Build(mb.permissioner.Default()).Resource(),
 					Title: verifier.GetTitle(),
 				})
 			}
@@ -348,7 +365,7 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 
 			for _, verifier := range mb.detailing.verifiers {
 				p.Object.Custom = append(p.Object.Custom, &CustomPerm{
-					Name:  verifier.Build(mb.permissioner.Default(true).On("*")).Resource(),
+					Name:  verifier.Build(mb.permissioner.Default().On("*")).Resource(),
 					Title: verifier.GetTitle(),
 				})
 			}
@@ -401,7 +418,7 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 		delete(menus, "")
 	}
 
-	for _, page := range b.pages {
+	for _, page := range b.pagesRegistrator.httpPages {
 		if page.verififer != nil {
 			b.verifiers.Add(page.GetVerifier())
 		}

@@ -55,7 +55,8 @@ type FieldContext struct {
 	FormKey            string
 	Path               FieldPath
 	Label              string
-	Hint               func() string
+	HintLoader         func() string
+	Hint               string
 	Errors             []string
 	SliceErrors        map[int][]string
 	ModelInfo          *ModelInfo
@@ -111,6 +112,13 @@ func (fc *FieldContext) Value() (r interface{}) {
 		return fc.ValueOverride
 	}
 	return fc.RawValue()
+}
+
+func (fc *FieldContext) LoadHint() *FieldContext {
+	if fc.HintLoader != nil {
+		fc.Hint = fc.HintLoader()
+	}
+	return fc
 }
 
 func (fc *FieldContext) SetContextValue(key, value interface{}) {

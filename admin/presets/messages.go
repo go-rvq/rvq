@@ -34,6 +34,14 @@ func (m StrMap) Set(pair ...string) {
 	}
 }
 
+type PrinterOptionsMessages struct {
+	Title          string
+	Print          string
+	WithHeaders    string
+	WithoutHeaders string
+	Preview        string
+}
+
 type Messages struct {
 	SuccessfullyUpdated        string
 	SuccessfullyCreated        string
@@ -104,8 +112,8 @@ type Messages struct {
 	NotFoundPageNotice                         string
 	AddRow                                     string
 	PleaseSelectRecord                         string
-
-	BulkActionConfirmationTextTemplate string
+	PrinterOptions                             PrinterOptionsMessages
+	BulkActionConfirmationTextTemplate         string
 
 	TimeFormats TimeFormatMessages
 
@@ -333,6 +341,14 @@ var Messages_pt_BR = &Messages{
 	Year:                                       "Ano",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",
+
+	PrinterOptions: PrinterOptionsMessages{
+		Title:          "Opções de Impressão",
+		WithHeaders:    "Com Cabeçalhos",
+		WithoutHeaders: "Sem Cabeçalhos",
+		Preview:        "Previsualização de Impressão",
+		Print:          "Imprimir",
+	},
 
 	TimeFormats: TimeFormatMessages{
 		Time:     "15:04:05Z07:00",

@@ -80,15 +80,13 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 		b.Wrap(b.layoutFunc(b.getHomePageFunc(), b.homePageLayoutConfig)),
 	)
 
-	for _, page := range b.pages {
-		b.pageHandlers.Add(page.Build(b.prefix))
-	}
-
-	b.pageHandlers.SetupRoutes(mux, func(pattern string, ph *PageHandler) {
-		if routesDebug {
-			log.Printf("mounted url: %s\n", pattern)
-		}
-	})
+	b.pagesRegistrator.
+		Build().
+		SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+			if routesDebug {
+				log.Printf("mounted url: %s\n", pattern)
+			}
+		})
 
 	for _, m := range b.models {
 		m.SetupRoutes(mux)
@@ -132,7 +130,7 @@ func (b *Builder) WrapModel(m *ModelBuilder, pf web.PageFunc) http.Handler {
 	})
 }
 
-func (b *Builder) Wrap(pf web.PageFunc, doPage ...func(p *web.PageBuilder)) http.Handler {
+func (b *Builder) Wrap(pf web.PageFunc, doPage ...DoPageBuilder) http.Handler {
 	p := b.builder.Page(pf)
 
 	for _, f := range doPage {

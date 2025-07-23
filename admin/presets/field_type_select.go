@@ -137,7 +137,7 @@ func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.
 		Attr("v-model", "fieldValue.value")
 
 	if field.Field.hint {
-		sel.Hint(field.Hint()).PersistentHint(true)
+		sel.Hint(field.HintLoader()).PersistentHint(true)
 	}
 
 	return vue.FormField(

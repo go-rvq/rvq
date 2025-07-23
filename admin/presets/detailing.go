@@ -24,6 +24,7 @@ type DetailingBuilder struct {
 	tabPanels          []TabComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
 	pageHandlers       PageHandlers
+	pagesRegistrator   *PagesRegistrator
 	verifiers          perm.PermVerifiers
 
 	SectionsBuilder
@@ -42,6 +43,7 @@ func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder
 	d.DeletingRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
 		r.Insert(mb.DetailingRestriction)
 	})
+	d.setupPagesRegistrator()
 	return d
 }
 
@@ -263,7 +265,7 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	return
 }
 
-func (b *DetailingBuilder) BuildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
+func (b *DetailingBuilder) buildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
 	if vf == nil {
 		vf = perm.PermVerifier()
 	}
@@ -314,7 +316,7 @@ func (d *DetailingBuilder) AddPageFunc(vf *perm.PermVerifierBuilder, pth string,
 		}
 		d.verifiers.Add(vf)
 	}
-	ph = NewPageHandler(pth, d.mb.p.Wrap(d.mb.p.GetDetailLayoutFunc()(d.BuildPage(vf, handler), d.mb.GetLayoutConfig())), methods...)
+	ph = NewPageHandler(pth, d.mb.p.Wrap(d.mb.p.GetDetailLayoutFunc()(d.buildPage(vf, handler), d.mb.GetLayoutConfig())), methods...)
 	d.pageHandlers.Add(ph)
 	return
 }
@@ -520,10 +522,19 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	}
 
 	if len(actionsMenus) > 0 {
-		menus = append(menus, VDivider())
+		if len(menus) > 0 {
+			menus = append(menus, VDivider())
+		}
 		for _, menuItem := range actionsMenus {
 			menus = append(menus, menuItem)
 		}
+	}
+
+	if pages := b.pagesRegistrator.MenuItems(ctx, b.mb.Info().DetailingHrefCtx(ctx, f.b.id)); len(pages) > 0 {
+		if len(menus) > 0 {
+			menus = append(menus, VDivider())
+		}
+		menus = append(menus, pages...)
 	}
 
 	if len(menus) > 0 {

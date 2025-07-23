@@ -27,6 +27,8 @@ type (
 	ModeObjectComponentFunc   func(mode FieldModeStack, obj interface{}, ctx *web.EventContext) h.HTMLComponent
 	TabComponentFunc          func(obj interface{}, ctx *web.EventContext) (tab h.HTMLComponent, content h.HTMLComponent)
 	EditingTitleComponentFunc func(obj interface{}, defaultTitle string, ctx *web.EventContext) string
+
+	DoPageBuilder func(p *web.PageBuilder)
 )
 
 func (c *OnClick) MarshalJSON() ([]byte, error) {

@@ -8,7 +8,7 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-func (m *PageBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLComponent) {
+func (m *HttpPageBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLComponent) {
 	menuIcon := m.menuIcon
 	label := m.TTitle(ctx.Context())
 	item := VListItem(
@@ -32,7 +32,7 @@ func (m *PageBuilder) menuItem(ctx *web.EventContext, isSub bool) (r h.HTMLCompo
 	return item
 }
 
-func (m *PageBuilder) isMenuItemActive(ctx *web.EventContext) bool {
+func (m *HttpPageBuilder) isMenuItemActive(ctx *web.EventContext) bool {
 	href := m.pageHandler.path
 
 	path := strings.TrimSuffix(ctx.R.URL.Path, "/")

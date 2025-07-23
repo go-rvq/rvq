@@ -114,7 +114,7 @@ func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 		Path:               path,
 		Name:               b.field.name,
 		Label:              label,
-		Hint: func() string {
+		HintLoader: func() string {
 			if finfo.Hint != "" {
 				return finfo.Hint
 			}
