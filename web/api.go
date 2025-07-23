@@ -99,12 +99,17 @@ func (r *EventResponse) AppendRunScript(script string) {
 
 // @snippet_begin(PageFuncAndEventFuncDefinition)
 type (
-	PageFunc     func(ctx *EventContext) (r PageResponse, err error)
-	EventHandler interface {
+	PageFunc        func(ctx *EventContext) (r PageResponse, err error)
+	PageFuncWrapper func(old PageFunc) PageFunc
+	EventHandler    interface {
 		Handle(ctx *EventContext) (r EventResponse, err error)
 	}
 	EventFunc func(ctx *EventContext) (r EventResponse, err error)
 )
+
+var PageFuncDefaultWrap PageFuncWrapper = func(old PageFunc) PageFunc {
+	return old
+}
 
 func (f EventFunc) Handle(ctx *EventContext) (r EventResponse, err error) {
 	return f(ctx)
