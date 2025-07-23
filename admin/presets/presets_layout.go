@@ -1,11 +1,14 @@
 package presets
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/printer"
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -31,6 +34,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 
 		// b.RunSwitchLanguageFunc(ctx)
 
+		m := MustGetMessages(ctx.Context())
+
 		toolbar := h.Div(
 			b.RunBrandFunc(ctx),
 			h.Div(
@@ -44,9 +49,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 
 		menu := b.CreateMenus(ctx)
 		if err != nil {
-			title := MustGetMessages(ctx.Context()).Error
-			innerPr.PageTitle = title
-			innerPr.Body = VAlert(h.Text(err.Error())).Icon("$error").Color("error").Title(title)
+			innerPr.PageTitle = m.Error
+			innerPr.Body = VAlert(h.Text(err.Error())).Icon("$error").Color("error").Title(m.Error)
 			err = nil
 			breadCrumbDisabled = true
 			titleDisabled = true
@@ -145,8 +149,31 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			return h.HTMLComponents(comp)
 		}
 
-		msg := MustGetMessages(ctx.Context())
 		actions := h.SimplifyItems(append(pr.Actions, GetActionsComponent(ctx)...))
+
+		if !b.printButtonDisabled {
+			actions = append(actions, VMenu(
+				web.Slot(
+					VTooltip(
+						web.Slot(
+							VBtn("").
+								Icon("mdi-printer").
+								Density(DensityComfortable).
+								Class("noprint").
+								Attr("v-bind", "Vue.mergeProps(menu, tooltip)"),
+						).
+							Name("activator").
+							Scope("{props:tooltip}"),
+					).Text(m.PrinterOptions.Title).Location(LocationBottom),
+				).
+					Name("activator").
+					Scope("{props:menu}"),
+				VList(
+					VListItem().Title(m.PrinterOptions.WithHeaders).Attr("@click", `vars.print(vars, ".rvq-page")`),
+					VListItem().Title(m.PrinterOptions.WithoutHeaders).Attr("@click", `vars.print(vars, ".rvq-page-content")`),
+				).Density(DensityCompact),
+			))
+		}
 
 		hasHeader := (!titleDisabled && innerPr.PageTitle != "") || len(actions) > 0 || menuCloser != nil
 
@@ -158,7 +185,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			// ClippedLeft(true),
 
 			VSnackbar(
-				h.Text(msg.CopiedToClipboard),
+				h.Text(m.CopiedToClipboard),
 			).
 				Attr("v-model", "copiedToClipboard.value").
 				Attr("color", "info").
@@ -217,31 +244,79 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 								).Class("mr-auto")),
 								actions,
 								menuCloser,
-							).Class("d-flex align-center mx-2 border-b w-100").Style("height: 48px"),
-						).Elevation(0),
+							).Class("d-flex align-center mx-2 border-b w-100 rvq-page-header").Style("height: 48px"),
+						).Elevation(0).Class("rvq-page__toolbar"),
 					),
-					h.If(len(breadcrumbs) > 0, VContainer(breadcrumbs...).Fluid(true).Style("padding-top:0;padding-bottom:0")),
-					innerPr.Body,
+					h.If(len(breadcrumbs) > 0, VContainer(breadcrumbs...).Class("rvq-page-breadcrumbs").Fluid(true).Style("padding-top:0;padding-bottom:0")),
+					h.Div(innerPr.Body).Class("rvq-page-content"),
 				),
-			).Class("v-main__page_content"),
+			).Class("v-main__page_content").Class("rvq-page"),
+			vx.VXDialog(
+				h.Form(
+					h.Input("options").Type("hidden").Value(h.JSONString(map[string]any{
+						"PrintButton": strings.ReplaceAll(printButton, "{{title}}", m.PrinterOptions.Print),
+					})),
+					h.Input("body").Type("hidden").Attr(":value", "vars.printer.body"),
+				).
+					ID("rvq-printer__form").
+					Attr(":action", fmt.Sprintf("window.location.pathname+%q", printer.PrintPath)).
+					Method("post").
+					Target("rvq-printer__frame"),
+				h.Iframe().
+					Name("rvq-printer__frame").
+					Style("height: 100%; border:none"),
+			).
+				Closable(true).
+				Expandable(true).
+				Title(m.PrinterOptions.Preview).
+				Density(DensityCompact).
+				Attr("height", "90%").
+				Attr("v-model", "vars.printer.show").
+				Attr("@open", `window.setTimeout(() => window.document.getElementById("rvq-printer__form").submit(), 10)`),
 		).Attr("id", "vt-app")
 
 		pr.Body = innerPr.Wrapers.Wrap(pr.Body)
 
 		pr.Body = vue.UserComponent(pr.Body).
 			AssignMany("vars", `{
-presetsRightDrawer: false, 
-presetsLeftDrawer: false,
-presetsTopDrawer: false,
-presetsBottomDrawer: false,
-presetsStartDrawer: false,
-presetsEndDrawer: false,  
-presetsDialog: false, 
-presetsListingDialog: false,
-navDrawer: true,
-contentPageMenu: false
+	presetsRightDrawer: false, 
+	presetsLeftDrawer: false,
+	presetsTopDrawer: false,
+	presetsBottomDrawer: false,
+	presetsStartDrawer: false,
+	presetsEndDrawer: false,  
+	presetsDialog: false, 
+	presetsListingDialog: false,
+	navDrawer: true,
+	contentPageMenu: false,
+	printer: {show:false},
+	print: (vars, selector) => {
+		const d = window.document;
+		let e = d.querySelector(selector),
+			body = [];
+	
+		body[body.length] = e.outerHTML;
+		d.querySelectorAll("link").forEach((e) => {
+			if (e.getAttribute("rel") === "stylesheet") {
+				body[body.length] = e.outerHTML
+			}
+		})
+	
+		d.querySelectorAll("style").forEach((e) => {
+			body[body.length] = e.outerHTML
+		})
+	body[body.length] = "<style>.rvq-page {padding-left:0} .rvq-page__toolbar{left:0 !important;width:100%!important} </style>"
+		vars.printer = {show: true, body: body.join("\n") };
+	}
 }`)
-
 		return
 	}
 }
+
+const printButton = `<div style="position: fixed; right: 20px; top: 20px; z-index:100000000">
+  <button class="v-btn v-btn--elevated v-btn--icon v-theme--light bg-primary v-btn--density-default v-btn--size-default v-btn--variant-elevated"
+          title="{{title}}"
+          type="button" onclick="window.print()"><span class="v-btn__overlay"></span><span class="v-btn__underlay"></span><span
+    class="v-btn__content" data-no-activator=""><i
+    aria-hidden="true" class="mdi-printer mdi v-icon notranslate v-theme--light v-icon--size-default"></i></span></button>
+</div>`

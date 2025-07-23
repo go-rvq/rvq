@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/printer"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
@@ -99,12 +100,12 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 
 	// b.handler = mux
 	// Handle 404
-	b.handler = b.notFound(mux)
+	b.handler = b.middleware(mux)
 }
 
-func (b *Builder) notFound(handler http.Handler) http.Handler {
+func (b *Builder) middleware(handler http.Handler) http.Handler {
 	notFoundHandler := b.Wrap(b.layoutFunc(b.getNotFoundPageFunc(), b.notFoundPageLayoutConfig))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return printer.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedResponse := &wrapedResponseWriter{web.WrapResponseWriter(w)}
 		handler.ServeHTTP(capturedResponse, r)
 		if capturedResponse.StatusCode() == http.StatusNotFound {
@@ -114,7 +115,7 @@ func (b *Builder) notFound(handler http.Handler) http.Handler {
 			}
 		}
 		return
-	})
+	}))
 }
 
 func (b *Builder) AddWrapHandler(key string, f func(in http.Handler) (out http.Handler)) {
