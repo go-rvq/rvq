@@ -19,6 +19,10 @@ func (b *ValidationErrors) FieldError(fieldName string, message string) *Validat
 	return b
 }
 
+func (b *ValidationErrors) FieldErrorf(fieldName string, format string, args ...any) *ValidationErrors {
+	return b.FieldError(fieldName, fmt.Sprintf(format, args...))
+}
+
 func (b *ValidationErrors) GlobalError(message string) *ValidationErrors {
 	b.globalErrors = append(b.globalErrors, message)
 	return b
