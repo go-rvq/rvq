@@ -2,6 +2,9 @@
 import { defineComponent, useModel, useTemplateRef } from 'vue'
 import TempVar from 'vue-temp-var'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
+import type { Density } from 'vuetify/composables/density'
+
+let _: Density
 
 const state = {
   closeChanging: false,
