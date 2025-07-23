@@ -32,6 +32,7 @@ import {
   shallowRef,
   useSlots
 } from 'vue'
+
 import { componentByTemplate } from '@/component-by-template'
 import type { EventResponse } from '@/types'
 import type { Builder } from '@/builder'
@@ -54,7 +55,7 @@ const props = defineProps<{
   methods: object | undefined
   data: object | undefined
   autoReloadInterval: string | number
-  raw: boolean,
+  raw: boolean
   scope: any
 }>()
 
@@ -82,7 +83,7 @@ if (props.form !== undefined) {
 }
 provide('form', form)
 
-const internalScope = {form, locals, ... (props.scope ?? {})}
+const internalScope = { form, locals, ...(props.scope ?? {}) }
 
 const updatePortalTemplate = (template: string) => {
   current.value = componentByTemplate(template, internalScope, portal)
@@ -91,11 +92,7 @@ const updatePortalTemplate = (template: string) => {
 // other reactive properties and methods
 const reload = () => {
   if (slots.default) {
-    current.value = componentByTemplate(
-      '<slot v-bind="SCOPE"></slot>',
-      internalScope,
-      portal
-    )
+    current.value = componentByTemplate('<slot v-bind="SCOPE"></slot>', internalScope, portal)
     return
   }
 

@@ -24,7 +24,7 @@ export const Root = defineComponent({
     initialTemplate: {
       type: String,
       required: true
-    },
+    }
   },
 
   setup(props, { emit, attrs, expose }) {
@@ -57,7 +57,7 @@ export const Root = defineComponent({
     const updateRootTemplate = (template: string) => {
       current.value = componentByTemplate(template, {
         form,
-        locals,
+        locals
       })
     }
     provide('updateRootTemplate', updateRootTemplate)
@@ -108,7 +108,7 @@ export interface FlashMessages {
 
 export function createWebApp(template: string): App<Element> {
   const app = createApp(Root, {
-    initialTemplate: template,
+    initialTemplate: template
   })
 
   const copiedToClipboard = ref(false)

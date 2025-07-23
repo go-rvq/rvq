@@ -8,19 +8,19 @@ const props = defineProps({
     required: true
   },
   setup: {
-    type: Function,
+    type: Function
   },
   beforeUnmount: {
-    type: Function,
+    type: Function
   },
   unmounted: {
-    type: Function,
-  },
+    type: Function
+  }
 })
 
 declare let window: any
 
-const scope = {...vue, view: window}
+const scope = { ...vue, view: window }
 
 props.setup && props.setup(scope)
 

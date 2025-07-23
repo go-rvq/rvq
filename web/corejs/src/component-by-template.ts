@@ -1,5 +1,8 @@
 import type { DefineComponent, Ref } from 'vue'
+import * as Vue from 'vue'
 import { defineComponent, inject, reactive, ref } from 'vue'
+
+declare let window: any
 
 interface ComponentStepsAPI {
   Config: string
@@ -60,6 +63,8 @@ export function componentByTemplate(
         ...scope
       }
 
+      localScope.Vue = Vue
+      localScope.window = window
       localScope.SCOPE = localScope
 
       return reactive(localScope)

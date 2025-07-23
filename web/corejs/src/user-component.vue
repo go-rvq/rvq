@@ -64,8 +64,8 @@ const arg = {
   shallowRef,
   scope: props.scope,
   $scope: localScope,
-  Vue,
-  window
+  window: window,
+  Vue
 }
 
 if (props.setup) {

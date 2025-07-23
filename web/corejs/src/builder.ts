@@ -47,7 +47,7 @@ export class Builder {
     if (r.runScript) {
       let script = r.runScript
       if (this._scope) {
-        script = "with(this._scope) {\n"+script+"\n}"
+        script = 'with(this._scope) {\n' + script + '\n}'
       }
       new Function('vars', 'locals', 'form', 'closer', 'scope', 'plaid', script).apply(this, [
         this._vars,
@@ -68,7 +68,7 @@ export class Builder {
     return r
   }
 
-  public parseUrl(url: string):Builder {
+  public parseUrl(url: string): Builder {
     const data = querystring.parseUrl(url, {
       arrayFormat: 'comma',
       parseFragmentIdentifier: true
@@ -204,7 +204,7 @@ export class Builder {
 
   public scope(v: any): Builder {
     if (v) {
-      this._scope = { ...(this._scope ?? {}), ... v}
+      this._scope = { ...(this._scope ?? {}), ...v }
     }
     return this
   }
