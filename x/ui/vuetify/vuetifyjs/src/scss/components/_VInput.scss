@@ -11,3 +11,12 @@
     padding: 0 8px;
   }
 }
+
+.v-input.v-checkbox {
+  &.v-input--density-compact > .v-input__details {
+    margin-left: 7px;
+  }
+  &.v-input--density-default > .v-input__details {
+    margin-left: 15px;
+  }
+}
