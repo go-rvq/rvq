@@ -8,28 +8,12 @@ else
   sourced=1
 fi
 
-[ "$NVM_DIR" = '' ] && {
-  if [ -e ~/.nvm ]; then
-    export NVM_DIR=~/.nvm
-  else
-    echo "NVM_DIR env is empty. See https://github.com/nvm-sh/nvm for install nvm instructions"
-
-    [ $sourced -eq 1 ] && return  1 || exit 1
-  fi
-}
+DIR=$(realpath "$DIR")
 
 set -e
 
-. "$NVM_DIR/nvm.sh"
-
 node_version=$(grep FROM "$DIR/Dockerfile" | perl -pe 's/^FROM node:(\d+)-.+$/\1/')
-
-nvm ls | grep $node_version >/dev/null || nvm install $node_version
-
-nvm use $node_version >&2
-export NODE_CONTAINER_NAME="node:${node_version}-latest-pnpm"
-
-export PS1="(node `node --version`) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+export NODE_CONTAINER_NAME="rvq_js:${node_version}-latest"
 
 function docker_image_build() {
   ( cd "$DIR" && \
@@ -63,6 +47,31 @@ function build_pj() {
   return $?
 }
 
+function run_container() {
+  set -ex
+  local opt="-it"
+
+  case $1 in
+  "-")
+    opt="-i"
+    ;;
+  esac
+
+  docker run "$opt" --rm \
+        --user root \
+        -e AS_USER=$(id -u):$(id -g) \
+        -e HOME=/home/node \
+        -v .:/home/node/src \
+        -v "$DIR/volumes/pnpm-cache:/home/node/.cache/pnpm" \
+        -v "$DIR/volumes/pnpm-store:/home/node/src/.pnpm-store" \
+        -w /home/node/src \
+        "$NODE_CONTAINER_NAME" "$@"
+
+  local status=$?
+  [ -e .pnpm-store ] && rmdir .pnpm-store
+  return $status
+}
+
 function docker_pj_exec() {
   if [ $# -lt 2 ]; then
     echo "usage: pj_exec PJ_DIR CMD ..." >&2
@@ -73,14 +82,7 @@ function docker_pj_exec() {
 
   shift
 
-  docker run -it --rm \
-      --user $(id -u):$(id -g) \
-      -e HOME=/home/node \
-      -v .:/home/node/src \
-      -v ~/.cache/pnpm:/home/node/.cache/pnpm \
-      -v $(dirname $(pnpm store path)):/home/node/src/.pnpm-store \
-      -w /home/node/src \
-      "$NODE_CONTAINER_NAME" "$@"
+  run_container "$@" || return $?
 
   "$@"
   return $?
@@ -95,16 +97,7 @@ function docker_build_pj() {
   cd "$1" || return 1
   [ -e ./dist ] && rm -vrf ./dist
 
-  docker run -it --rm \
-    --user $(id -u):$(id -g) \
-    -e HOME=/home/node \
-    -v .:/home/node/src \
-    -v ~/.cache/pnpm:/home/node/.cache/pnpm \
-    -v $(dirname $(pnpm store path)):/home/node/src/.pnpm-store \
-    -w /home/node/src \
-    pnpm:latest bash -c 'pnpm install && pnpm format && pnpm run build' || return $?
-
-  [ -e .pnpm-store ] && rmdir .pnpm-store
+  echo 'pnpm install && pnpm format && pnpm run build' | run_container -
   return $?
 }
 
@@ -137,10 +130,4 @@ function pj_pnpm() {
   return $?
 }
 
-if [ $sourced -eq 0 ]; then
-  if [ $# -eq 0 ]; then
-    exec bash --norc
-  else
-    "$@"
-  fi
-fi
+eval "$@"

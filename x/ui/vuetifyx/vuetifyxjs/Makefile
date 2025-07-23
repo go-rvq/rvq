@@ -1,9 +1,6 @@
-build:
-	../../_env/env.sh build_pj $(shell pwd)
-
 .PHONY: dist
 dist:
-	../../_env/env.sh docker_build_pj $(shell pwd)
+	../../../../_dockers/js/env.sh docker_build_pj $(shell pwd)
 
 
 .PHONY: dist-clean
