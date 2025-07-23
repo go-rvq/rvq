@@ -3,6 +3,7 @@ package perm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/ory/ladon"
 	"github.com/sunfmin/reflectutils"
 )
+
+var ErrIsDanied = errors.New("verifier is denied")
 
 var Verbose = false
 
@@ -23,10 +26,25 @@ type verReq struct {
 	resourcesParts []string
 }
 
+type VerifierMode uint8
+
+func (m VerifierMode) Is(o VerifierMode) bool {
+	return m == o
+}
+
+const (
+	VerifierModeDefault VerifierMode = iota
+	VerifierModeAllow
+	VerifierModeDeny
+	VerifierModeMustAllow
+	VerifierModeMustDeny
+)
+
 type Verifier struct {
 	builder *Builder
 	module  string
 	vr      *verReq
+	mode    VerifierMode
 }
 
 func NewVerifier(module string, b *Builder) (r *Verifier) {
@@ -42,6 +60,21 @@ func NewVerifier(module string, b *Builder) (r *Verifier) {
 	return
 }
 
+func (b *Verifier) Deny() *Verifier {
+	b.mode = VerifierModeDeny
+	return b
+}
+
+func (b *Verifier) Allow() *Verifier {
+	b.mode = VerifierModeAllow
+	return b
+}
+
+func (b *Verifier) SetMode(v VerifierMode) *Verifier {
+	b.mode = v
+	return b
+}
+
 func (b *Verifier) Module() string {
 	return b.module
 }
@@ -54,6 +87,7 @@ func (b *Verifier) Spawn() (r *Verifier) {
 	r = &Verifier{
 		module:  b.module,
 		builder: b.builder,
+		mode:    b.mode,
 	}
 
 	resourceParts := []string{b.module}
@@ -189,7 +223,7 @@ func (b *Verifier) Denied() bool {
 }
 
 func (b *Verifier) IsAllowed() error {
-	if b.builder == nil {
+	if b.builder == nil || b.mode >= VerifierModeMustAllow {
 		return nil
 	}
 
@@ -218,10 +252,17 @@ func (b *Verifier) IsAllowed() error {
 	for _, sub := range b.vr.subjects {
 		b.vr.req.Subject = sub
 
-		err = b.builder.ladon.IsAllowed(context.TODO(), b.vr.req)
+		switch b.mode {
+		case VerifierModeDeny:
+			err = ErrIsDanied
+		case VerifierModeDefault:
+			err = b.builder.ladon.IsAllowed(context.TODO(), b.vr.req)
+		}
+
 		if Verbose {
 			fmt.Printf("have permission: %+v, req: {%s}\n", err == nil, RequestToString(b.vr.req))
 		}
+
 		if err == nil {
 			return nil
 		}
