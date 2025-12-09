@@ -80,6 +80,7 @@
       return-object
       variant="underlined"
       density="compact"
+      autocomplete="off"
       :style="autoComplete?.style"
       :class="autoComplete?.class"
     >

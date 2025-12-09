@@ -78,7 +78,7 @@ func (f Fallback) Fallback(ctx context.Context, key string, args ...string) (str
 
 func ModuleTranslator(module ModuleKey, allowEmpty bool, fFieldKey func(key string) string) Translator {
 	fb := func(ctx context.Context, key string, args ...string) (v string, ok bool) {
-		b, _ := ctx.Value(dynaBuilderKey).(*DynaBuilder)
+		b := DynaFromContext(ctx)
 		if b != nil {
 			msgr := MustGetModuleMessages(ctx, module, nil)
 			fk := fFieldKey(key)
@@ -93,7 +93,7 @@ func ModuleTranslator(module ModuleKey, allowEmpty bool, fFieldKey func(key stri
 
 	if !allowEmpty {
 		fb = func(ctx context.Context, key string, args ...string) (v string, ok bool) {
-			b, _ := ctx.Value(dynaBuilderKey).(*DynaBuilder)
+			b := DynaFromContext(ctx)
 			if b != nil {
 				msgr := MustGetModuleMessages(ctx, module, nil)
 				fk := fFieldKey(key)

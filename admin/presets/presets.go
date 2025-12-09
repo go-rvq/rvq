@@ -930,6 +930,13 @@ const (
 func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 	return func(ctx *web.EventContext) (pr web.PageResponse, err error) {
 		b.InjectAssets(ctx)
+		defer func() {
+			lang := ctx.Injector.GetHTMLLang()
+			if len(lang) == 0 {
+				lang = i18n.DynaFromContext(ctx.Context()).GetLanguage()
+				ctx.Injector.HTMLLang(lang)
+			}
+		}()
 
 		var innerPr web.PageResponse
 		innerPr, err = in(ctx)
@@ -1098,7 +1105,7 @@ func (b *Builder) Build(mux ...*http.ServeMux) {
 }
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	web.ParseRequest(r)
+	r = web.ParseRequest(r)
 
 	if b.handler == nil {
 		b.Build()

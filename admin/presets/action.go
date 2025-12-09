@@ -14,7 +14,7 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-type ActionLinkHandler func(baseModel *ModelBuilder, ctx *web.EventContext, r *web.EventResponse, q url.Values, id string)
+type ActionLinkHandler func(baseModel *ModelBuilder, ctx *web.EventContext, q url.Values, id string)
 type ActionOnClickHandler func(ctx *web.EventContext, id string, obj any) string
 
 type ActionType uint8
@@ -257,7 +257,7 @@ func (b *ActionBuilder) form(baseModel *ModelBuilder, id string, ctx *web.EventC
 	return
 }
 
-func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventContext) (err error) {
 	if b.verifier != nil {
 		if b.verifier(ctx).Denied() {
 			return perm.PermissionDenied
@@ -269,7 +269,7 @@ func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventC
 		q.Del("__execute_event__")
 		q.Del("actionOpen")
 
-		b.linkHandler(baseModel, ctx, r, q, id)
+		b.linkHandler(baseModel, ctx, q, id)
 		return
 	}
 
@@ -284,11 +284,11 @@ func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventC
 	}
 	p.Dialog(b.dialogWidth).
 		SetValidTargetPortalName(ctx.R.FormValue(ParamTargetPortal)).
-		Respond(ctx, r, comp)
+		Respond(ctx, ctx.Resp, comp)
 	return
 }
 
-func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventContext, r *web.EventResponse) (success bool, err error) {
+func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventContext) (success bool, err error) {
 	if b.verifier != nil {
 		if b.verifier(ctx).Denied() {
 			return false, perm.PermissionDenied
@@ -355,7 +355,7 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 			if p == nil {
 				p = baseModel.p
 			}
-			p.DialogPortal(ctx.Param(ParamTargetPortal), b.dialogWidth).Respond(ctx, r, comp)
+			p.DialogPortal(ctx.Param(ParamTargetPortal), b.dialogWidth).Respond(ctx, ctx.Resp, comp)
 		}
 		return
 	} else {
@@ -367,34 +367,34 @@ done:
 	switch b.typ {
 	case ActionTypeDetailing:
 		if !IsInDialog(ctx) {
-			r.PushState = web.Location(url.Values{})
+			ctx.Resp.PushState = web.Location(url.Values{})
 		}
-		r.RunScript = "closer.show = false"
+		ctx.Resp.AppendRunScript("closer.show = false; presetsListing?.loader?.go()")
 	case ActionTypePage:
 		data := ctx.Data().(*PageDoActionOptions)
 		if data.ReloadPage {
 			WithEventHandlerWrapperNoFlash(ctx)
-			r.RunScript = "window.location.href = window.location.href"
+			ctx.Resp.AppendRunScript("window.location.href = window.location.href")
 		} else {
 			if !data.AutoReloadDisabled && !IsInDialog(ctx) {
-				r.PushState = web.Location(url.Values{})
+				ctx.Resp.PushState = web.Location(url.Values{})
 			}
-			r.RunScript = "closer.show = false"
+			ctx.Resp.AppendRunScript("closer.show = false")
 		}
 	case ActionTypeList, ActionTypeListItem:
 		data := ctx.Data().(*ListingDoActionOptions)
 
 		if isInDialogFromQuery(ctx) {
-			r.AppendRunScript("closer.show = false")
+			ctx.Resp.AppendRunScript("closer.show = false")
 		}
 
 		if !data.ListReloadDisabled {
-			r.AppendRunScript("presetsListing.loader.go()")
+			ctx.Resp.AppendRunScript("presetsListing?.loader?.go()")
 		}
 	}
 
 	if ctx.Flash != nil {
-		ShowMessage(r, ctx.Flash)
+		ShowMessage(ctx.Resp, ctx.Flash)
 	}
 
 	return

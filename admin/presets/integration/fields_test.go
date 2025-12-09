@@ -186,7 +186,7 @@ func TestFields(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			output := h.MustString(c.toComponentFun(), web.WrapEventContext(context.TODO(), ctx))
+			output := h.MustString(c.toComponentFun(), web.ContextWithEventContext(context.TODO(), ctx))
 			diff := testingutils.PrettyJsonDiff(c.expect, output)
 			if len(diff) > 0 {
 				t.Error(c.name, diff)

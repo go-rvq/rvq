@@ -37,6 +37,7 @@ const (
 	ParamActionsDisabled           = "actions_disabled"
 	ParamMustResult                = "must_result"
 	ParamListingEncoder            = "presets_listingEncoder"
+	ParamRenderBreadcrumbs         = "presets_renderBreadcrumbs"
 
 	// list editor
 	ParamAddRowFormKey      = "listEditor_AddRowFormKey"

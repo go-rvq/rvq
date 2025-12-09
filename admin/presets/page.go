@@ -151,7 +151,8 @@ func (b *PageBuilder) actionForm(ctx *web.EventContext) (r web.EventResponse, er
 	if _, action, err = b.parseRequestAction(ctx); err != nil {
 		return
 	}
-	err = action.View(nil, "", ctx, &r)
+	ctx.Resp = &r
+	err = action.View(nil, "", ctx)
 	return
 }
 
@@ -160,8 +161,8 @@ func (b *PageBuilder) doAction(ctx *web.EventContext) (r web.EventResponse, err 
 	if _, action, err = b.parseRequestAction(ctx); err != nil {
 		return
 	}
-
-	_, err = action.Do(nil, "", ctx, &r)
+	ctx.Resp = &r
+	_, err = action.Do(nil, "", ctx)
 	return
 }
 

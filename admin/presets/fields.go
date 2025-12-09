@@ -2,6 +2,7 @@ package presets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -90,7 +91,7 @@ type FieldsBuilder struct {
 	fieldLabelsFromContextFunc FieldLabelsFunc
 	fields                     FieldBuilders
 	// string / []string / *FieldsSection
-	fieldsLayout                 []interface{}
+	Layout                       FieldsLayout
 	skipFieldVerifier            func(name string) bool
 	FieldToComponentSetup        FieldContextSetups
 	BeforeSetObjectFieldsHandler SetObjectFieldsHandlers
@@ -124,7 +125,276 @@ func (b *FieldsBuilder) SetSkipFieldVerifier(skipFieldVerifier func(name string)
 	b.skipFieldVerifier = skipFieldVerifier
 }
 
+type FieldsLayout []any
+
+type FieldLayoutEntryType uint8
+
+const (
+	FieldLayoutEntryTypeLayout = iota
+	FieldLayoutEntryTypeName
+	FieldLayoutEntryTypeNames
+	FieldLayoutEntryTypeSection
+	FieldLayoutEntryTypeGroup
+)
+
+type FieldLayoutEntry struct {
+	Entry  any
+	IndexI int
+	IndexJ int
+	Type   FieldLayoutEntryType
+}
+
+func (g FieldsLayout) WalkNames(cb func(name string) error) (err error) {
+	for _, iv := range g {
+		switch t := iv.(type) {
+		case string:
+			if err = cb(t); err != nil {
+				return
+			}
+		case []string:
+			for _, n := range t {
+				if err = cb(n); err != nil {
+					return
+				}
+			}
+		case *FieldsSection:
+			for _, row := range t.Rows {
+				for _, n := range row {
+					if err = cb(n); err != nil {
+						return
+					}
+				}
+			}
+		case *FieldsGroup:
+			if err = t.Items.WalkNames(cb); err != nil {
+				return
+			}
+		default:
+			return errors.New("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+		}
+	}
+	return
+}
+
+func (g FieldsLayout) walkNamesPath(pth []*FieldLayoutEntry, cb func(pth []*FieldLayoutEntry, name string) error) (err error) {
+	root := pth[len(pth)-1]
+
+	for i, iv := range g {
+		root.IndexI = i
+
+		switch t := iv.(type) {
+		case string:
+			if err = cb(pth, t); err != nil {
+				return
+			}
+		case []string:
+			e := &FieldLayoutEntry{
+				Entry: t,
+				Type:  FieldLayoutEntryTypeNames,
+			}
+			pth := append(pth, e)
+
+			for i, n := range t {
+				e.IndexI = i
+				if err = cb(pth, n); err != nil {
+					return
+				}
+			}
+		case *FieldsSection:
+			e := &FieldLayoutEntry{
+				Entry: t,
+				Type:  FieldLayoutEntryTypeSection,
+			}
+
+			pth := append(pth, e)
+			for i, row := range t.Rows {
+				e.IndexI = i
+				for j, n := range row {
+					e.IndexJ = j
+					if err = cb(pth, n); err != nil {
+						return
+					}
+				}
+			}
+		case *FieldsGroup:
+			e := &FieldLayoutEntry{
+				Entry: t,
+				Type:  FieldLayoutEntryTypeGroup,
+			}
+			pth := append(pth, e)
+
+			if err = t.Items.walkNamesPath(pth, cb); err != nil {
+				return
+			}
+		default:
+			panic("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+		}
+	}
+	return
+}
+
+func (g FieldsLayout) Filter(accept func(typ FieldLayoutEntryType, name string) bool) (l FieldsLayout, err error) {
+	for _, iv := range g {
+		switch t := iv.(type) {
+		case string:
+			if accept(FieldLayoutEntryTypeName, t) {
+				l = append(l, t)
+			}
+		case []string:
+			var names []string
+			for _, n := range t {
+				if accept(FieldLayoutEntryTypeName, n) {
+					names = append(names, n)
+				}
+			}
+			if len(names) > 0 {
+				l = append(l, names)
+			}
+		case *FieldsSection:
+			if accept(FieldLayoutEntryTypeSection, t.Name) {
+				s := &FieldsSection{
+					Name:  t.Name,
+					Title: t.Title,
+				}
+				for _, row := range t.Rows {
+					var names []string
+					for _, n := range row {
+						if accept(FieldLayoutEntryTypeName, n) {
+							names = append(names, n)
+						}
+					}
+					if len(names) > 0 {
+						s.Rows = append(s.Rows, names)
+					}
+				}
+				if len(s.Rows) > 0 {
+					l = append(l, s)
+				}
+			}
+		case *FieldsGroup:
+			if accept(FieldLayoutEntryTypeGroup, t.Name) {
+				g := &FieldsGroup{
+					Name:  t.Name,
+					Title: t.Title,
+				}
+				if g.Items, err = t.Items.Filter(accept); err != nil {
+					return nil, err
+				}
+				if len(g.Items) > 0 {
+					l = append(l, g)
+				}
+			}
+		default:
+			return nil, errors.New("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+		}
+	}
+	return
+}
+
+func (g FieldsLayout) WalkNamesPath(cb func(pth []*FieldLayoutEntry, name string) error) (err error) {
+	return g.walkNamesPath([]*FieldLayoutEntry{
+		{
+			Entry: g,
+			Type:  FieldLayoutEntryTypeLayout,
+		},
+	}, cb)
+}
+
+func (g FieldsLayout) Names() (names []string) {
+	if err := g.WalkNames(func(name string) error {
+		names = append(names, name)
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (g FieldsLayout) ToGroup() (tree FieldsLayout) {
+	tree = make(FieldsLayout, len(g))
+
+	for i, iv := range g {
+		switch t := iv.(type) {
+		case string:
+			tree[i] = t
+		case []string:
+			g := &FieldsGroup{
+				Items: make(FieldsLayout, len(t)),
+			}
+
+			tree[i] = g
+
+			for i, n := range t {
+				g.Items[i] = n
+			}
+		case *FieldsSection:
+			g := &FieldsGroup{
+				Name: t.Name,
+			}
+
+			if t.Title != "" {
+				g.Title = func(ctx context.Context) string {
+					return t.Title
+				}
+			}
+
+			tree[i] = g
+
+			for _, row := range t.Rows {
+				for _, n := range row {
+					g.Items = append(g.Items, n)
+				}
+			}
+		case *FieldsGroup:
+			tree[i] = &FieldsGroup{
+				Name:  t.Name,
+				Title: t.Title,
+				Items: t.Items.ToGroup(),
+			}
+		default:
+			panic("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+		}
+	}
+	return
+}
+
+type FieldsGroup struct {
+	Name  string
+	Title func(ctx context.Context) string
+	Items FieldsLayout
+}
+
+func NewFieldsGroup(name string, items ...any) *FieldsGroup {
+	return &FieldsGroup{Name: name, Items: items}
+}
+
+func (g *FieldsGroup) WithTitleString(title string) *FieldsGroup {
+	g.Title = func(ctx context.Context) string {
+		return title
+	}
+	return g
+}
+
+func (g *FieldsGroup) WithTitle(f func(ctx context.Context) string) *FieldsGroup {
+	g.Title = f
+	return g
+}
+
+func (g *FieldsGroup) WithItemsFromStrings(v []string) *FieldsGroup {
+	g.Items = make([]any, len(v))
+	for i, s := range v {
+		g.Items[i] = s
+	}
+	return g
+}
+
+func (g *FieldsGroup) Append(v ...any) *FieldsGroup {
+	g.Items = append(g.Items, v...)
+	return g
+}
+
 type FieldsSection struct {
+	Name  string
 	Title string
 	Rows  [][]string
 }
@@ -493,35 +763,12 @@ func (b *FieldsBuilder) HasField(name string) bool {
 	return false
 }
 
-func (b *FieldsBuilder) getFieldNamesFromLayout() []string {
-	var ns []string
-	for _, iv := range b.fieldsLayout {
-		switch t := iv.(type) {
-		case string:
-			ns = append(ns, t)
-		case []string:
-			for _, n := range t {
-				ns = append(ns, n)
-			}
-		case *FieldsSection:
-			for _, row := range t.Rows {
-				for _, n := range row {
-					ns = append(ns, n)
-				}
-			}
-		default:
-			panic("unknown fields layout, must be string/[]string/*FieldsSection")
-		}
-	}
-	return ns
-}
-
 func (b *FieldsBuilder) Prepend(names ...any) (r *FieldsBuilder) {
-	return b.Only(append(names, b.fieldsLayout...)...)
+	return b.Only(append(names, b.Layout...)...)
 }
 
 func (b *FieldsBuilder) Append(names ...any) (r *FieldsBuilder) {
-	return b.Only(append(b.fieldsLayout, names...)...)
+	return b.Only(append(b.Layout, names...)...)
 }
 
 func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
@@ -531,12 +778,12 @@ func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
 
 	r = b.Clone()
 
-	r.fieldsLayout = vs
+	r.Layout = vs
 	var (
 		newFields []*FieldBuilder
 		exists    = make(map[string]any)
 	)
-	for _, fn := range r.getFieldNamesFromLayout() {
+	for _, fn := range r.Layout.Names() {
 		if _, ok := exists[fn]; !ok {
 			exists[fn] = nil
 			field := b.GetField(fn)
@@ -619,16 +866,16 @@ func (b *FieldsBuilder) String() (r string) {
 	return fmt.Sprint(names)
 }
 
-func (b *FieldsBuilder) CurrentLayout() (layout []interface{}) {
-	if b.fieldsLayout == nil {
-		layout = make([]interface{}, 0, len(b.fields))
+func (b *FieldsBuilder) CurrentLayout() (layout FieldsLayout) {
+	if b.Layout == nil {
+		layout = make(FieldsLayout, 0, len(b.fields))
 		for _, f := range b.fields {
 			layout = append(layout, f.name)
 		}
 	} else {
-		layout = b.fieldsLayout[:]
+		layout = b.Layout[:]
 		layoutFM := make(map[string]struct{})
-		for _, fn := range b.getFieldNamesFromLayout() {
+		for _, fn := range b.Layout.Names() {
 			layoutFM[fn] = struct{}{}
 		}
 		for _, f := range b.fields {
@@ -720,44 +967,25 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 		}
 	}
 
-	layout := b.CurrentLayout()
-
-	for _, iv := range layout {
-		var comp h.HTMLComponent
-		switch t := iv.(type) {
-		case string:
-			if _, ok := okNames[t]; ok {
-				continue
-			}
-			okNames[t] = nil
-
-			comp = b.fieldToComponentWithFormValueKey(opts, info, obj, mode, parent, ctx, t, vErr)
-		case []string:
-			colsComp := make([]h.HTMLComponent, 0, len(t))
-			for _, n := range t {
-				if _, ok := okNames[n]; ok {
+	var doLayout func(layout FieldsLayout) (comps []h.HTMLComponent)
+	doLayout = func(layout FieldsLayout) (comps []h.HTMLComponent) {
+		for _, iv := range layout {
+			var comp h.HTMLComponent
+			switch t := iv.(type) {
+			case string:
+				if _, ok := okNames[t]; ok {
 					continue
 				}
-				okNames[n] = nil
-				fComp := b.fieldToComponentWithFormValueKey(opts, info, obj, mode, parent, ctx, n, vErr)
-				if fComp == nil {
-					continue
-				}
-				colsComp = append(colsComp, v.VCol(fComp).Class("pr-4"))
-			}
-			if len(colsComp) > 0 {
-				comp = v.VRow(colsComp...).NoGutters(true)
-			}
-		case *FieldsSection:
-			rowsComp := make([]h.HTMLComponent, 0, len(t.Rows))
-			for _, row := range t.Rows {
-				colsComp := make([]h.HTMLComponent, 0, len(row))
-				for _, n := range row {
+				okNames[t] = nil
+
+				comp = b.fieldToComponentWithFormValueKey(opts, info, obj, mode, parent, ctx, t, vErr)
+			case []string:
+				colsComp := make([]h.HTMLComponent, 0, len(t))
+				for _, n := range t {
 					if _, ok := okNames[n]; ok {
 						continue
 					}
 					okNames[n] = nil
-
 					fComp := b.fieldToComponentWithFormValueKey(opts, info, obj, mode, parent, ctx, n, vErr)
 					if fComp == nil {
 						continue
@@ -765,29 +993,62 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 					colsComp = append(colsComp, v.VCol(fComp).Class("pr-4"))
 				}
 				if len(colsComp) > 0 {
-					rowsComp = append(rowsComp, v.VRow(colsComp...).NoGutters(true))
+					comp = v.VRow(colsComp...).NoGutters(true)
 				}
-			}
-			if len(rowsComp) > 0 {
-				var titleComp h.HTMLComponent
-				if t.Title != "" {
-					titleComp = h.Label(t.Title).Class("v-label theme--light text-caption")
+			case *FieldsSection:
+				rowsComp := make([]h.HTMLComponent, 0, len(t.Rows))
+				for _, row := range t.Rows {
+					colsComp := make([]h.HTMLComponent, 0, len(row))
+					for _, n := range row {
+						if _, ok := okNames[n]; ok {
+							continue
+						}
+						okNames[n] = nil
+
+						fComp := b.fieldToComponentWithFormValueKey(opts, info, obj, mode, parent, ctx, n, vErr)
+						if fComp == nil {
+							continue
+						}
+						colsComp = append(colsComp, v.VCol(fComp).Class("pr-4"))
+					}
+					if len(colsComp) > 0 {
+						rowsComp = append(rowsComp, v.VRow(colsComp...).NoGutters(true))
+					}
 				}
-				comp = h.Div(
-					titleComp,
-					v.VCard(rowsComp...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
-				)
+				if len(rowsComp) > 0 {
+					var titleComp h.HTMLComponent
+					if t.Title != "" {
+						titleComp = h.Label(t.Title).Class("v-label theme--light text-caption")
+					}
+					comp = h.Div(
+						titleComp,
+						v.VCard(rowsComp...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
+					)
+				}
+			case *FieldsGroup:
+				if g := doLayout(t.Items); len(g) > 0 {
+					var titleComp h.HTMLComponent
+					if t.Title != nil {
+						titleComp = h.Label(t.Title(ctx.Context())).Class("v-label theme--light text-caption")
+					}
+					comp = h.Div(
+						titleComp,
+						v.VCard(g...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
+					)
+				}
+			default:
+				panic("unknown fields layout, must be string/[]string/*FieldsSection")
 			}
-		default:
-			panic("unknown fields layout, must be string/[]string/*FieldsSection")
+			if comp == nil {
+				continue
+			}
+			comps = append(comps, comp)
 		}
-		if comp == nil {
-			continue
-		}
-		comps = append(comps, comp)
+
+		return
 	}
 
-	return h.Components(comps...)
+	return h.Components(append(comps, doLayout(b.CurrentLayout())...)...)
 }
 
 func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {

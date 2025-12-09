@@ -31,6 +31,10 @@ type (
 		SetSlotHeader(child ...h.HTMLComponent)
 		SetSlotPrependHeader(child ...h.HTMLComponent)
 		SetSlotAppendHeader(child ...h.HTMLComponent)
+		SetSlotPrependLeftToolbarActions(child ...h.HTMLComponent)
+		SetSlotAppendLeftToolbarActions(child ...h.HTMLComponent)
+		SetSlotPrependRightToolbarActions(child ...h.HTMLComponent)
+		SetSlotAppendRightToolbarActions(child ...h.HTMLComponent)
 		SetSlotTop(child ...h.HTMLComponent)
 		SetSlotBottom(child ...h.HTMLComponent)
 		SetScopedSlotBottom(scope string, child ...h.HTMLComponent)
@@ -110,6 +114,22 @@ func (b *VXAdvancedCardTagBuilder[T]) SetSlotPrependHeader(child ...h.HTMLCompon
 
 func (b *VXAdvancedCardTagBuilder[T]) SetSlotAppendHeader(child ...h.HTMLComponent) {
 	b.AppendChild(h.Template(child...).Attr("v-slot:appendHeader", true).Attr())
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SetSlotPrependLeftToolbarActions(child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:prependLeftToolbarActions", true).Attr())
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SetSlotAppendLeftToolbarActions(child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:appendLeftToolbarActions", true).Attr())
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SetSlotPrependRightToolbarActions(child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:prependRightToolbarActions", true).Attr())
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SetSlotAppendRightToolbarActions(child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:appendRightToolbarActions", true).Attr())
 }
 
 func (b *VXAdvancedCardTagBuilder[T]) SetSlotTop(child ...h.HTMLComponent) {

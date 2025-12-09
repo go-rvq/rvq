@@ -1,0 +1,51 @@
+.vuetify-pro-tiptap-editor {
+  background-color: #eeeeee !important;
+
+  & > .v-toolbar {
+    &.vuetify-pro-tiptap-editor__toolbar {
+      border-bottom: 1px solid #ccc;
+    }
+
+    &:not(.vuetify-pro-tiptap-editor__toolbar) {
+      border-top: 1px solid #ccc;
+
+      &.v-toolbar__content {
+        height: 30px !important;
+      }
+    }
+  }
+}
+
+.vx-tiptap-editor {
+  &.vx-tiptap-editor--error {
+    .v-messages {
+      color: rgb(var(--v-theme-error));
+      opacity: 1
+    }
+  }
+
+  [data-type=scriptBlock] {
+     border: 1px dotted #708;
+   }
+
+  [data-type=script] {
+    font-style: normal;
+    border: 1px dotted #708;
+    min-width: 35px;
+    margin: 0 5px;
+    display: inline-block;
+  }
+
+  [data-type=scriptValue] {
+    border: 1px solid #708;
+    border-left-width: 5px;
+    margin: 0 5px;
+    padding: 0 2px;
+    display: inline-block;
+
+    &> div {
+      display: inline-block;
+      min-width: 30px;
+    }
+  }
+}

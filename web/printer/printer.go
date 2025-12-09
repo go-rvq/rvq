@@ -114,6 +114,17 @@ func (p *Printer) Component() h.HTMLComponent {
 	@media print {
  		.noprint-media { display: none !important; }
 	}
+`),
+		h.Script(`
+document.addEventListener("DOMContentLoaded", function(e) {
+	document.querySelectorAll('[data-print-script]').forEach((e) => {
+		const s = e.getAttribute("data-print-script")
+		if (s) {
+			const f = new Function(s)
+			f.call(e)
+		}
+	})
+})
 `))
 
 	r := h.HTML(head, body).(h.HTMLComponents)

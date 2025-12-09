@@ -3,6 +3,7 @@ import { defineComponent, useModel, useTemplateRef } from 'vue'
 import TempVar from 'vue-temp-var'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import type { Density } from 'vuetify/composables/density'
+import { useFullscreen, type MaybeElementRef } from '@vueuse/core'
 
 let _: Density
 
@@ -63,16 +64,32 @@ export default defineComponent({
     modelValue: {
       type: Boolean,
       default: true
+    },
+    expandWidth: {},
+    cardProps: {
+      type: Object,
+      default: () => ({})
+    },
+    fullscreen: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['update:modelValue', 'open', 'close'],
-  data: (self) => ({
-    root: useTemplateRef('root'),
-    isOpen: useModel(self, 'modelValue'),
-    isExpanded: false,
-    isMainMenuOpen: false,
-    isSecondaryMenuOpen: false
-  }),
+  data(self) {
+    const container = useTemplateRef('root')
+    const { isFullscreen, enter, exit, toggle } = useFullscreen(container as MaybeElementRef)
+
+    return {
+      root: container,
+      isOpen: useModel(self, 'modelValue'),
+      isExpanded: false,
+      isMainMenuOpen: false,
+      isSecondaryMenuOpen: false,
+      fullScreenValue: false,
+      _toggleFullScreen: toggle,
+    }
+  },
 
   computed: {
     cIsOpen: {
@@ -84,12 +101,21 @@ export default defineComponent({
         this.isOpen = v
         this.$emit(v ? 'open' : 'close')
       }
+    },
+    cFullScreen: {
+      get() {
+        return this.fullScreenValue
+      },
+      set(v: boolean) {
+        this.fullScreenValue = true
+
+      }
     }
   },
 
   methods: {
     hasHeader() {
-      return this.expandable || this.closable || this.$slots.header || false
+      return this.expandable || this.fullscreen || this.closable || this.$slots.header || false
     },
     mainMenuScope() {
       return {
@@ -116,6 +142,10 @@ export default defineComponent({
         ],
         drawerUpStyle: { height: '100%' }
       }
+    },
+    toggleFullScreen() {
+      this.fullScreenValue = !this.fullScreenValue
+      this._toggleFullScreen()
     }
   },
 
@@ -134,103 +164,110 @@ export default defineComponent({
 </script>
 
 <template>
-  <v-card v-if="cIsOpen" ref="root">
-    <template v-if="isMainMenuOpen">
-      <TempVar v-slot="{ s }" :define="{ s: mainMenuScope() }">
-        <NavigationDrawer
-          v-if="$slots.mainMenu"
-          variant="menu"
-          close-icon="mdi-arrow-left"
-          location="left"
-          :style="s.drawerUpStyle"
-          @close="s.close"
-          v-model="s.open"
-          temporary
-          closable
-          :density="density"
-          expandable
-          :title="mainMenuTitle"
-        >
-          <slot name="mainMenu" v-bind="s"></slot>
-        </NavigationDrawer>
-        <slot v-else name="mainMenuContainer" v-bind="s"></slot>
-      </TempVar>
-    </template>
-    <template v-else-if="isSecondaryMenuOpen">
-      <TempVar v-slot="{ s }" :define="{ s: secondaryMenuScope() }">
-        <NavigationDrawer
-          v-if="$slots.secondaryMenu"
-          variant="menu"
-          close-icon="mdi-arrow-left"
-          location="right"
-          :style="s.drawerUpStyle"
-          @close="s.close()"
-          v-model="s.open"
-          temporary
-          closable
-          :density="density"
-          :title="secondaryMenuTitle"
-        >
-          <slot name="secondaryMenu" v-bind="s"></slot>
-        </NavigationDrawer>
-        <slot v-else name="secondaryMenuContainer" v-bind="s"></slot>
-      </TempVar>
-    </template>
+    <v-card v-if="cIsOpen" ref="root" :fullscreen="fullScreenValue" v-bind="cardProps">
+      <template v-if="isMainMenuOpen">
+        <TempVar v-slot="{ s }" :define="{ s: mainMenuScope() }">
+          <NavigationDrawer
+            v-if="$slots.mainMenu"
+            variant="menu"
+            close-icon="mdi-arrow-left"
+            location="left"
+            :style="s.drawerUpStyle"
+            @close="s.close"
+            v-model="s.open"
+            temporary
+            closable
+            :density="density"
+            expandable
+            :title="mainMenuTitle"
+          >
+            <slot name="mainMenu" v-bind="s"></slot>
+          </NavigationDrawer>
+          <slot v-else name="mainMenuContainer" v-bind="s"></slot>
+        </TempVar>
+      </template>
+      <template v-else-if="isSecondaryMenuOpen">
+        <TempVar v-slot="{ s }" :define="{ s: secondaryMenuScope() }">
+          <NavigationDrawer
+            v-if="$slots.secondaryMenu"
+            variant="menu"
+            close-icon="mdi-arrow-left"
+            location="right"
+            :style="s.drawerUpStyle"
+            @close="s.close()"
+            v-model="s.open"
+            temporary
+            closable
+            :density="density"
+            :title="secondaryMenuTitle"
+          >
+            <slot name="secondaryMenu" v-bind="s"></slot>
+          </NavigationDrawer>
+          <slot v-else name="secondaryMenuContainer" v-bind="s"></slot>
+        </TempVar>
+      </template>
 
-    <template
-      v-if="
+      <template
+        v-if="
         hasHeader && !(isMainMenuOpen && mainMenuUp) && !(isSecondaryMenuOpen && secondaryMenuUp)
       "
-    >
-      <slot name="prependHeader" />
-      <v-toolbar :density="density as Density" v-bind="toolbarProps">
-        <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer">
-          <v-fade-transition hide-on-leave>
-            <v-btn
-              v-if="!isMainMenuOpen"
-              icon="mdi-menu"
-              @click="isMainMenuOpen = !isMainMenuOpen"
-            ></v-btn>
-          </v-fade-transition>
-        </template>
-        <slot v-if="$slots.header" name="header"></slot>
-        <v-toolbar-title v-else-if="title">{{ title }}</v-toolbar-title>
-        <template v-slot:append>
-          <v-fade-transition hide-on-leave>
-            <v-btn
-              v-if="($slots.secondaryMenuContainer || $slots.secondaryMenu) && !isMainMenuOpen"
-              icon="mdi-dots-vertical"
-              @click="isSecondaryMenuOpen = !isSecondaryMenuOpen"
-            ></v-btn>
-          </v-fade-transition>
-          <v-fade-transition hide-on-leave>
-            <v-btn
-              v-if="expandable"
-              :icon="isExpanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
-              @click="isExpanded = !isExpanded"
-            ></v-btn>
-          </v-fade-transition>
-          <v-fade-transition hide-on-leave>
-            <v-btn
-              v-if="closable && !isMainMenuOpen && !isSecondaryMenuOpen"
-              :icon="closeIcon"
-              @click="cIsOpen = false"
-            />
-          </v-fade-transition>
-        </template>
-      </v-toolbar>
-      <slot name="appendHeader" />
-      <v-divider></v-divider>
-    </template>
-    <div v-if="$slots.top">
-      <slot name="top" />
-    </div>
-    <v-card-text v-if="$slots.body" style="background-color: rgba(var(--v-theme-background))">
-      <slot name="body"></slot>
-    </v-card-text>
-    <slot v-else></slot>
-    <v-card-actions v-if="$slots.bottom">
-      <slot name="bottom" />
-    </v-card-actions>
-  </v-card>
+      >
+        <slot name="prependHeader" />
+        <v-toolbar :density="density as Density" v-bind="toolbarProps">
+          <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer">
+            <v-fade-transition hide-on-leave>
+              <v-btn
+                v-if="!isMainMenuOpen"
+                icon="mdi-menu"
+                @click="isMainMenuOpen = !isMainMenuOpen"
+              ></v-btn>
+            </v-fade-transition>
+          </template>
+          <slot v-if="$slots.header" name="header"></slot>
+          <v-toolbar-title v-else-if="title">{{ title }}</v-toolbar-title>
+          <template v-slot:append>
+            <v-fade-transition hide-on-leave>
+              <v-btn
+                v-if="($slots.secondaryMenuContainer || $slots.secondaryMenu) && !isMainMenuOpen"
+                icon="mdi-dots-vertical"
+                @click="isSecondaryMenuOpen = !isSecondaryMenuOpen"
+              ></v-btn>
+            </v-fade-transition>
+            <v-fade-transition hide-on-leave>
+              <v-btn
+                v-if="expandable && !fullScreenValue"
+                :icon="isExpanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
+                @click="isExpanded = !isExpanded"
+              ></v-btn>
+            </v-fade-transition>
+            <v-fade-transition hide-on-leave>
+              <v-btn
+                v-if="fullscreen"
+                :icon="fullScreenValue ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+                @click="toggleFullScreen"
+              ></v-btn>
+            </v-fade-transition>
+            <v-fade-transition hide-on-leave>
+              <v-btn
+                v-if="closable && !isMainMenuOpen && !isSecondaryMenuOpen"
+                :icon="closeIcon"
+                @click="cIsOpen = false"
+              />
+            </v-fade-transition>
+          </template>
+        </v-toolbar>
+        <slot name="appendHeader" />
+        <v-divider></v-divider>
+      </template>
+      <div v-if="$slots.top">
+        <slot name="top" />
+      </div>
+      <v-card-text v-if="$slots.body" style="background-color: rgba(var(--v-theme-background))">
+        <slot name="body"></slot>
+      </v-card-text>
+      <slot v-else></slot>
+      <v-card-actions v-if="$slots.bottom">
+        <slot name="bottom" />
+      </v-card-actions>
+    </v-card>
 </template>

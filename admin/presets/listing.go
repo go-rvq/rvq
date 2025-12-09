@@ -120,7 +120,7 @@ func (mb *ModelBuilder) newListing() (lb *ListingBuilder) {
 	return
 }
 
-func (mb *ModelBuilder) Listing(vs ...string) (r *ListingBuilder) {
+func (mb *ModelBuilder) Listing(vs ...any) (r *ListingBuilder) {
 	r = mb.listing
 	if len(vs) == 0 {
 		return
@@ -130,19 +130,11 @@ func (mb *ModelBuilder) Listing(vs ...string) (r *ListingBuilder) {
 	return r
 }
 
-func (mb *ModelBuilder) ListingAny(vs ...interface{}) (r *ListingBuilder) {
-	var names = make([]string, len(vs))
-	for i, v := range vs {
-		names[i] = v.(string)
-	}
-	return mb.Listing(names...)
-}
-
 func (b *ListingBuilder) ModelBuilder() *ModelBuilder {
 	return b.mb
 }
 
-func (b *ListingBuilder) Only(vs ...string) (r *ListingBuilder) {
+func (b *ListingBuilder) Only(vs ...any) (r *ListingBuilder) {
 	r = b
 	ivs := make([]interface{}, 0, len(vs))
 	for _, v := range vs {
@@ -348,6 +340,27 @@ func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 	return
 }
 
+func (b *ListingBuilder) EncodeRecords(ctx *web.EventContext, encoderName string, records any) (r []any, err error) {
+	encFacory, ok := b.recordEncoderFactories[encoderName]
+	if !ok {
+		err = fmt.Errorf("%s: %q not found", ParamListingEncoder, encoderName)
+		return
+	}
+
+	r = make([]any, reflect.ValueOf(records).Len())
+	if len(r) == 0 {
+		return
+	}
+
+	enc := encFacory(ctx)
+	var i int
+	reflectutils.ForEach(records, func(v interface{}) {
+		r[i] = enc(v)
+		i++
+	})
+	return
+}
+
 func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, err error) {
 	if b.mb.permissioner.ReqLister(ctx.R).Denied() {
 		err = perm.PermissionDenied
@@ -366,22 +379,9 @@ func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, er
 	}
 
 	if encName := ctx.R.FormValue(ParamListingEncoder); encName != "" {
-		encFacory, ok := b.recordEncoderFactories[encName]
-		if !ok {
-			err = fmt.Errorf("%s: %q not found", ParamListingEncoder, encName)
+		if sr.Records, err = b.EncodeRecords(ctx, encName, sr.Records); err != nil {
 			return
 		}
-
-		encodedRecords := make([]any, reflect.ValueOf(sr.Records).Len())
-		enc := encFacory(ctx)
-
-		var i int
-		reflectutils.ForEach(sr.Records, func(v interface{}) {
-			encodedRecords[i] = enc(v)
-			i++
-		})
-
-		sr.Records = encodedRecords
 	}
 
 	r.Data = &sr
@@ -397,13 +397,41 @@ type SearchResult struct {
 	orderableFieldMap map[string]string // map[FieldName]DBColumn
 }
 
-func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err error) {
-	var (
-		qs            = ctx.R.Form
-		perPage int64 = 0
-	)
+func (b *ListingBuilder) GetConditions() []*SQLCondition {
+	return b.conditions
+}
 
-	if !b.disablePagination {
+func (b *ListingBuilder) BuildOrderBySQL(orderBys ...*ColOrderBy) (fieldMap map[string]string, sql string) {
+	// map[FieldName]DBColumn
+	fieldMap = make(map[string]string)
+	for _, v := range b.orderableFields {
+		fieldMap[v.FieldName] = v.DBColumn
+	}
+	for _, ob := range orderBys {
+		dbCol, ok := fieldMap[ob.FieldName]
+		if !ok {
+			continue
+		}
+		sql += fmt.Sprintf("%s %s,", dbCol, ob.Asc)
+	}
+	// remove the last ","
+	if sql != "" {
+		sql = sql[:len(sql)-1]
+	}
+	if sql == "" {
+		if b.orderBy != "" {
+			sql = b.orderBy
+		} else if fields := b.mb.Schema().PrimaryFields(); len(fields) > 0 {
+			sql = fmt.Sprintf("%s DESC", strings.Join(fields.QuotedFullDBNames(), ", "))
+		}
+	}
+	return
+}
+
+func (b *ListingBuilder) NewSearchParams(ctx *web.EventContext, qs url.Values, paginate bool) (orderBys []*ColOrderBy, orderableFieldMap map[string]string, params *SearchParams, err error) {
+	var perPage int64 = 0
+
+	if paginate {
 		var requestPerPage int64
 		qPerPageStr := qs.Get("per_page")
 		qPerPage, _ := strconv.ParseInt(qPerPageStr, 10, 64)
@@ -427,32 +455,10 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 	}
 
 	var orderBySQL string
-	r.OrderBys = GetOrderBysFromQuery(qs)
-	// map[FieldName]DBColumn
-	r.orderableFieldMap = make(map[string]string)
-	for _, v := range b.orderableFields {
-		r.orderableFieldMap[v.FieldName] = v.DBColumn
-	}
-	for _, ob := range r.OrderBys {
-		dbCol, ok := r.orderableFieldMap[ob.FieldName]
-		if !ok {
-			continue
-		}
-		orderBySQL += fmt.Sprintf("%s %s,", dbCol, ob.Asc)
-	}
-	// remove the last ","
-	if orderBySQL != "" {
-		orderBySQL = orderBySQL[:len(orderBySQL)-1]
-	}
-	if orderBySQL == "" {
-		if b.orderBy != "" {
-			orderBySQL = b.orderBy
-		} else if fields := b.mb.Schema().PrimaryFields(); len(fields) > 0 {
-			orderBySQL = fmt.Sprintf("%s DESC", strings.Join(fields.QuotedFullDBNames(), ", "))
-		}
-	}
+	orderBys = GetOrderBysFromQuery(qs)
+	orderableFieldMap, orderBySQL = b.BuildOrderBySQL(orderBys...)
 
-	searchParams := &SearchParams{
+	params = &SearchParams{
 		KeywordColumns: b.searchColumns,
 		Keyword:        qs.Get("keyword"),
 		PerPage:        perPage,
@@ -461,20 +467,16 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 		SQLConditions:  b.conditions,
 	}
 
-	searchParams.Page, _ = strconv.ParseInt(qs.Get("page"), 10, 64)
-	if searchParams.Page == 0 {
-		searchParams.Page = 1
+	params.Page, _ = strconv.ParseInt(qs.Get("page"), 10, 64)
+	if params.Page == 0 {
+		params.Page = 1
 	}
 
-	r.Page = searchParams.Page
-	r.PerPage = perPage
-
-	var fd vx.FilterData
 	if b.filterDataFunc != nil {
-		fd = b.filterDataFunc(ctx)
+		fd := b.filterDataFunc(ctx)
 		cond, args := fd.SetByQueryString(ctx.R.URL.RawQuery)
 
-		searchParams.SQLConditions = append(searchParams.SQLConditions, &SQLCondition{
+		params.SQLConditions = append(params.SQLConditions, &SQLCondition{
 			Query: cond,
 			Args:  args,
 		})
@@ -485,6 +487,17 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 		return
 	}
 
+	return
+}
+
+func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err error) {
+	var searchParams *SearchParams
+	if r.OrderBys, r.orderableFieldMap, searchParams, err = b.NewSearchParams(ctx, ctx.R.Form, !b.disablePagination); err != nil {
+		return
+	}
+
+	r.PerPage = searchParams.PerPage
+	r.Page = searchParams.Page
 	r.Records, r.TotalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx)
 	return
 }
@@ -794,7 +807,8 @@ func (b *ListingBuilder) openActionDialogInternal(actionList []*ActionBuilder, c
 		return
 	}
 
-	err = action.View(b.mb, ctx.R.Form.Get(ParamID), ctx, &r)
+	ctx.Resp = &r
+	err = action.View(b.mb, ctx.R.Form.Get(ParamID), ctx)
 	return
 }
 
@@ -818,8 +832,10 @@ func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ct
 		return
 	}
 
+	ctx.Resp = &r
+
 	var success bool
-	if success, err = action.Do(b.mb, "", ctx, &r); err != nil || !success {
+	if success, err = action.Do(b.mb, "", ctx); err != nil || !success {
 		return
 	}
 	return
@@ -1363,13 +1379,17 @@ func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.Event
 		return
 	}
 
-	r.UpdatePortal(
-		lcb.portals.DataTable(),
-		dataTable,
-	).UpdatePortal(
-		lcb.portals.DataTableAdditions(),
-		dataTableAdditions,
-	)
+	r.
+		UpdatePortal(
+			lcb.portals.DataTable(),
+			dataTable,
+			func(opts *web.PortalUpdateOptions) {
+				opts.ResetScroll = true
+			}).
+		UpdatePortal(
+			lcb.portals.DataTableAdditions(),
+			dataTableAdditions,
+		)
 	r.RunScript = fmt.Sprintf(`presetsListing.loader.parseUrl(%q)`, ctx.R.RequestURI)
 	return
 }

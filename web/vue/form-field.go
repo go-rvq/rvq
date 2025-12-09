@@ -64,7 +64,10 @@ func (b *FormFieldBuilder) Value(fieldName string, value any) *FormFieldBuilder 
 	scope.fieldValue = {
 		value: computed({
 			get: () => form[` + q + `],		
-			set: (newValue) => form[` + q + `] = newValue
+			set: (newValue) => {
+				console.log("set", newValue)
+				form[` + q + `] = newValue
+			}
 		})
 	}
 }`)

@@ -125,6 +125,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			// Publish/UnPublish/Republish ConfirmDialog
 			div.AppendChildren(
 				utils.ConfirmDialog(msgr.Areyousure, web.Plaid().EventFunc(web.Var("locals.action")).
+					URL(b.Info().ListingHrefCtx(ctx)).
 					Query(presets.ParamID, primarySlugger.PrimarySlug()).Go(),
 					utilsMsgr),
 			)
@@ -263,7 +264,7 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 				return in(model, params, ctx)
 			}
 		})
-	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, fieldName, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		return cell
 	})
 	lb.Field("Version").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {

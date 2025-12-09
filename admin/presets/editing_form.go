@@ -129,7 +129,7 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 
 	if f.b.mode == NEW {
 		f.Title = f.b.msgr.CreatingObjectTitle(
-			b.mb.TTitleAuto(ctx.Context()),
+			b.mb.TTitle(ctx.Context()),
 			b.mb.female,
 		)
 	} else {

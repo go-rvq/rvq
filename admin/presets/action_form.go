@@ -50,11 +50,12 @@ func (c *ActionFormBuilderHandlers[T]) Prepend(handlers ...ActionFormBuilderHand
 }
 
 type ActionFormBuilder[T any] struct {
-	action   *ActionBuilder
-	eb       *EditingBuilder
-	fetch    bool
-	handlers ActionFormBuilderHandlers[T]
-	initForm func(fctx *ActionFormContext[T]) error
+	action      *ActionBuilder
+	eb          *EditingBuilder
+	fetch       bool
+	handlers    ActionFormBuilderHandlers[T]
+	initForm    func(fctx *ActionFormContext[T]) error
+	decodedForm func(ctx *ActionFormContext[T]) (err error)
 }
 
 func (b *ActionFormBuilder[T]) Handler(h ActionFormBuilderHandler[T]) *ActionFormBuilder[T] {
@@ -69,6 +70,11 @@ func (b *ActionFormBuilder[T]) Fetch(v bool) *ActionFormBuilder[T] {
 
 func (b *ActionFormBuilder[T]) InitForm(f func(fctx *ActionFormContext[T]) error) *ActionFormBuilder[T] {
 	b.initForm = f
+	return b
+}
+
+func (b *ActionFormBuilder[T]) DecodedForm(f func(fctx *ActionFormContext[T]) error) *ActionFormBuilder[T] {
+	b.decodedForm = f
 	return b
 }
 
@@ -116,31 +122,40 @@ func (b *ActionFormBuilder[T]) GetOrCreateContext(id string, ctx *web.EventConte
 	return fctx, nil
 }
 
-func (b *ActionFormBuilder[T]) Build() *ActionBuilder {
-	b.handlers.Prepend(func(ctx *ActionFormContext[T]) (err error) {
-		verr := b.eb.RunSetterFunc(&FieldsSetterOptions{
-			SkipPermVerify: true,
-		}, ctx.Context, true, ctx.Form)
-		if verr.HaveErrors() {
-			goto done
-		}
+func (b *ActionFormBuilder[T]) decodeForm(ctx *ActionFormContext[T]) (err error) {
+	verr := b.eb.RunSetterFunc(&FieldsSetterOptions{
+		SkipPermVerify: true,
+	}, ctx.Context, true, ctx.Form)
+	if verr.HaveErrors() {
+		goto done
+	}
 
-		if verr = b.eb.Validators.Validate(ctx.Form, FieldModeStack{NEW}, ctx.Context); verr.HaveErrors() {
-			goto done
-		}
+	if verr = b.eb.Validators.Validate(ctx.Form, FieldModeStack{NEW}, ctx.Context); verr.HaveErrors() {
+		goto done
+	}
 
-		b.eb.FieldsBuilder.Walk(b.eb.mb.modelInfo, ctx.Form, FieldModeStack{NEW}, ctx.Context, func(field *FieldContext) (s FieldWalkState) {
-			if field.Field.IsEnabled(field) {
-				verr.Merge(field.Field.Validators.Validate(field))
-			}
-			return s
-		})
-	done:
-		if verr.HaveErrors() {
-			ctx.Err = &verr
+	b.eb.FieldsBuilder.Walk(b.eb.mb.modelInfo, ctx.Form, FieldModeStack{NEW}, ctx.Context, func(field *FieldContext) (s FieldWalkState) {
+		if field.Field.IsEnabled(field) {
+			verr.Merge(field.Field.Validators.Validate(field))
 		}
-		return
+		return s
 	})
+
+	if b.decodedForm != nil {
+		if err = b.decodedForm(ctx); err != nil {
+			return
+		}
+	}
+
+done:
+	if verr.HaveErrors() {
+		ctx.Err = &verr
+	}
+	return
+}
+
+func (b *ActionFormBuilder[T]) Build() *ActionBuilder {
+	b.handlers.Prepend(b.decodeForm)
 
 	if b.fetch {
 		b.handlers.Prepend(b.FetchObject)

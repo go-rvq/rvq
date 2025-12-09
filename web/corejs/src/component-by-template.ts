@@ -39,11 +39,42 @@ interface Config {
   data?: (ctx: Context) => object
 }
 
+export interface RenderSelf {
+  element: HTMLElement,
+  comp: any,
+  window: any,
+  Vue:any
+}
+
+export interface RenderOptions {
+  mounted?: ((self: RenderSelf) => void)[]
+  unmounted?: ((self: RenderSelf) => void)[]
+  resetScroll?:boolean
+}
+
+const callCallbacks = (funcs: any[], self: RenderSelf) => {
+  funcs?.forEach((fn: any) => {
+    if (!fn) return
+    if (typeof fn === 'string') {
+      fn = new Function('self', fn)
+    }
+    fn(self)
+  })
+}
+
 export function componentByTemplate(
   template: string,
   scope: any = {},
-  portal: Ref = ref()
+  portal: Ref = ref(),
+  options: RenderOptions = {}
 ): DefineComponent {
+  options = {...(options || {})}
+  if (options.resetScroll) {
+    options.mounted?.push(self => {
+      self.element.scrollIntoView({behavior: 'smooth', block: 'start'})
+    })
+  }
+
   return defineComponent({
     setup() {
       const plaid = inject('plaid'),
@@ -60,6 +91,7 @@ export function componentByTemplate(
         fullscreen,
         isFetching,
         updateRootTemplate,
+        options: options,
         ...scope
       }
 
@@ -71,9 +103,26 @@ export function componentByTemplate(
     },
     mounted() {
       this.$nextTick(() => /**/ {
-        if (this.$el && this.$el.style && this.$el.style.height) {
-          portal.value.style.height = this.$el.style.height
+        if (this.$el) {
+          if (this.$el.style && this.$el.style.height) {
+            portal.value.style.height = this.$el.style.height
+          }
         }
+
+        callCallbacks(options.mounted as any[], {
+          element: portal.value,
+          comp: this,
+          window,
+          Vue
+        })
+      })
+    },
+    unmounted() {
+      callCallbacks(options.unmounted as any[], {
+        element: portal.value,
+        comp: this,
+        window,
+        Vue
       })
     },
     template

@@ -161,10 +161,10 @@ type FilterItemInTheLastUnit string
 type FilterData []*FilterItem
 
 type SelectItem struct {
-	Text             string                       `json:"text,omitempty"`
-	Value            string                       `json:"value,omitempty"`
-	SQLCondition     string                       `gorm:"-" json:"-"`
-	SQLConditionFunc func(val, mod string) string `gorm:"-" json:"-"`
+	Text             string                                                          `json:"text,omitempty"`
+	Value            string                                                          `json:"value,omitempty"`
+	SQLCondition     string                                                          `gorm:"-" json:"-"`
+	SQLConditionFunc func(val, mod string) (rawQuery bool, query string, args []any) `gorm:"-" json:"-"`
 }
 
 type FilterLinkageSelectData struct {
@@ -174,25 +174,34 @@ type FilterLinkageSelectData struct {
 	SQLConditions    []string               `json:"-"`
 }
 
+type ItemTypeStringConfig struct {
+	ModifierDisabled bool   `json:"modifierDisabled,omitempty"`
+	Rows             int    `json:"rows,omitempty"`
+	Hint             string `json:"hint,omitempty"`
+	Width            any    `json:"width,omitempty"`
+	MaxWidth         any    `json:"maxWidth,omitempty"`
+	Many             bool   `json:"many,omitempty"`
+}
+
 type FilterItem struct {
-	Key                    string                        `json:"key,omitempty"`
-	Label                  string                        `json:"label,omitempty"`
-	Folded                 bool                          `json:"folded,omitempty"`
-	ItemType               FilterItemType                `json:"itemType,omitempty"`
-	Selected               bool                          `json:"selected,omitempty"`
-	Modifier               FilterItemModifier            `json:"modifier,omitempty"`
-	ValueIs                string                        `json:"valueIs,omitempty"`
-	ValuesAre              []string                      `json:"valuesAre"`
-	ValueFrom              string                        `json:"valueFrom,omitempty"`
-	ValueTo                string                        `json:"valueTo,omitempty"`
-	SQLCondition           string                        `json:"-"`
-	SQLConditionFunc       func(val, mod string) string  `json:"-"`
-	Options                []*SelectItem                 `json:"options,omitempty"`
-	LinkageSelectData      FilterLinkageSelectData       `json:"linkageSelectData,omitempty"`
-	Invisible              bool                          `json:"invisible,omitempty"`
-	AutocompleteDataSource *AutocompleteDataSource       `json:"autocompleteDataSource,omitempty"`
-	Translations           FilterIndependentTranslations `json:"translations,omitempty"`
-	Config                 any                           `json:"config,omitempty"`
+	Key                    string                                                          `json:"key,omitempty"`
+	Label                  string                                                          `json:"label,omitempty"`
+	Folded                 bool                                                            `json:"folded,omitempty"`
+	ItemType               FilterItemType                                                  `json:"itemType,omitempty"`
+	Selected               bool                                                            `json:"selected,omitempty"`
+	Modifier               FilterItemModifier                                              `json:"modifier,omitempty"`
+	ValueIs                string                                                          `json:"valueIs,omitempty"`
+	ValuesAre              []string                                                        `json:"valuesAre"`
+	ValueFrom              string                                                          `json:"valueFrom,omitempty"`
+	ValueTo                string                                                          `json:"valueTo,omitempty"`
+	SQLCondition           string                                                          `json:"-"`
+	SQLConditionFunc       func(val, mod string) (rawQuery bool, query string, args []any) `json:"-"`
+	Options                []*SelectItem                                                   `json:"options,omitempty"`
+	LinkageSelectData      FilterLinkageSelectData                                         `json:"linkageSelectData,omitempty"`
+	Invisible              bool                                                            `json:"invisible,omitempty"`
+	AutocompleteDataSource *AutocompleteDataSource                                         `json:"autocompleteDataSource,omitempty"`
+	Translations           FilterIndependentTranslations                                   `json:"translations,omitempty"`
+	Config                 any                                                             `json:"config,omitempty"`
 }
 
 func (fd FilterData) Clone() (r FilterData) {
@@ -210,10 +219,10 @@ func (fd FilterData) Clone() (r FilterData) {
 	return
 }
 
-func (fd FilterData) getSQLCondition(key string, val, mod string) string {
+func (fd FilterData) getSQLCondition(key string, val, mod string) (rawQuery bool, query string, args []any) {
 	it := fd.getFilterItem(key)
 	if it == nil {
-		return ""
+		return
 	}
 
 	// If item type is ItemTypeSelect and value is not nil, we use option's SQLCondition instead of item SQLCondition if option's SQLCondition present.
@@ -221,7 +230,7 @@ func (fd FilterData) getSQLCondition(key string, val, mod string) string {
 		for _, option := range it.Options {
 			if option.Value == val {
 				if option.SQLCondition != "" {
-					return option.SQLCondition
+					return false, option.SQLCondition, nil
 				} else if option.SQLConditionFunc != nil {
 					return option.SQLConditionFunc(val, mod)
 				}
@@ -232,7 +241,7 @@ func (fd FilterData) getSQLCondition(key string, val, mod string) string {
 	if it.SQLConditionFunc != nil {
 		return it.SQLConditionFunc(val, mod)
 	}
-	return it.SQLCondition
+	return false, it.SQLCondition, nil
 }
 
 func (fd FilterData) getFilterItem(key string) *FilterItem {
@@ -306,8 +315,15 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 				}
 			}
 		} else {
-			sqlc := fd.getSQLCondition(key, v[0], mod)
+			rawQuery, sqlc, args := fd.getSQLCondition(key, v[0], mod)
+
 			if len(sqlc) > 0 {
+				if rawQuery {
+					conds = append(conds, sqlc)
+					sqlArgs = append(sqlArgs, args...)
+					continue
+				}
+
 				var ival interface{} = val
 				if it.ItemType == ItemTypeDatetimeRange {
 					var err error

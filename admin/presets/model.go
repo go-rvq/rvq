@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"reflect"
 	"strings"
 
@@ -423,7 +424,7 @@ func (mb *ModelBuilder) NewFieldsBuilder(fields ...*FieldBuilder) *FieldsBuilder
 	}
 }
 
-func (mb *ModelBuilder) Info() (r *ModelInfo) {
+func (mb *ModelBuilder) Info() *ModelInfo {
 	return mb.modelInfo
 }
 
@@ -703,10 +704,12 @@ func (mb *ModelBuilder) URI() string {
 		dotUri = mb.menuGroupName + "/" + dotUri
 	}
 	if mb.parent != nil {
-		if mb.parent.singleton {
-			return fmt.Sprintf("%s/%s", mb.parent.URI(), dotUri)
+		pth := []string{mb.parent.URI()}
+		if !mb.parent.singleton {
+			pth = append(pth, fmt.Sprintf("{parent_%d_id}", mb.parent.Depth()))
 		}
-		return fmt.Sprintf("%s/{parent_%d_id}/%s", mb.parent.URI(), mb.parent.Depth(), dotUri)
+		pth = append(pth, dotUri)
+		return path.Join(pth...)
 	}
 	return dotUri
 }
@@ -758,8 +761,17 @@ func (mb *ModelBuilder) GetChildByID(id string) *ModelBuilder {
 	return nil
 }
 
+// GetChildByFqId returns a child by full qualified id
+func (mb *ModelBuilder) GetChildByFqId(pth string) *ModelBuilder {
+	id := strings.Split(pth, ".")
+	for _, s := range id {
+		mb = mb.GetChildByID(s)
+	}
+	return mb
+}
+
 func (mb *ModelBuilder) AddChild(child *ModelBuilder) {
-	mb.AddChildH(child, nil)
+	mb.AddChildH(child)
 }
 
 func (mb *ModelBuilder) AddChildH(child *ModelBuilder, h ...func(mb *ModelBuilder)) *ModelBuilder {

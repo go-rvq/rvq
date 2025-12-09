@@ -10,6 +10,7 @@ type headKey int
 
 const (
 	titleKey headKey = iota
+	langKey
 )
 
 type MetaKey string
@@ -19,12 +20,6 @@ type keyComp struct {
 	comp h.HTMLComponent
 }
 
-type PageInjector struct {
-	skipDefaultSetting bool
-	comps              map[injectPosition][]*keyComp
-	lang               string
-}
-
 type injectPosition int
 
 const (
@@ -32,6 +27,12 @@ const (
 	tail
 	extra
 )
+
+type PageInjector struct {
+	skipDefaultSetting bool
+	comps              map[injectPosition][]*keyComp
+	lang               string
+}
 
 func (b *PageInjector) putComp(key interface{}, comp h.HTMLComponent, pos injectPosition, replace bool) {
 	if b.comps == nil {
@@ -76,6 +77,12 @@ func (b *PageInjector) setDefault() {
 	if b.getComp(MetaKey("viewport"), head) == nil {
 		b.MetaNameContent("viewport", "width=device-width, initial-scale=1, shrink-to-fit=no")
 	}
+
+	b.Meta(MetaKey("http-equiv"), "http-equiv", "X-UA-Compatible", "content", "IE=edge")
+	b.MetaNameContent("HandheldFriendly", "true")
+	b.MetaNameContent("apple-mobile-web-app-capable", "yes")
+	b.MetaNameContent("apple-mobile-web-app-status-bar-style", "black")
+	b.MetaNameContent("format-detection", "telephone=no")
 }
 
 func (b *PageInjector) Title(title string) {
@@ -87,8 +94,8 @@ func (b *PageInjector) HasTitle() (r bool) {
 	return b.getComp(titleKey, head) != nil
 }
 
-func (b *PageInjector) MetaNameContent(name, content string) {
-	b.Meta(MetaKey(name), "name", name, "content", content)
+func (b *PageInjector) MetaNameContent(name, content string, attrs ...string) {
+	b.Meta(MetaKey(name), append([]string{"name", name, "content", content}, attrs...)...)
 	return
 }
 
@@ -146,6 +153,10 @@ func (b *PageInjector) GetExtraHTMLComponent() h.HTMLComponent {
 func (b *PageInjector) HTMLLang(lang string) {
 	b.lang = lang
 	return
+}
+
+func (b *PageInjector) GetHTMLLang() string {
+	return b.lang
 }
 
 func (b *PageInjector) HTMLLangAttrs() []any {

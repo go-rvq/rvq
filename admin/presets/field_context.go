@@ -45,7 +45,7 @@ func ContextWrapFieldOptions(ctx web.ContextValuer, fqn CtxField, f func(opts *C
 }
 
 func (b *FieldBuilder) NewContext(info *ModelInfo, ctx *web.EventContext, parent *FieldContext, obj any) (fctx *FieldContext) {
-	return NewFieldContextBuilder(b, info, ctx, parent, obj).Build()
+	return b.NewContextBuilder(info, ctx, parent, obj).Build()
 }
 
 func (b *FieldBuilder) NewContextBuilder(info *ModelInfo, ctx *web.EventContext, parent *FieldContext, obj any) *FieldContextBuilder {
@@ -72,6 +72,22 @@ func (b *FieldContextBuilder) Index(index int) *FieldContextBuilder {
 	return b
 }
 
+func (b *FieldContextBuilder) ContextOptionsFromPath(keyPath string) *CtxFieldOptions {
+	return FieldOptionsFromContext(b.ctx, CtxField(keyPath), true)
+}
+
+func (b *FieldContextBuilder) ContextOptions() *CtxFieldOptions {
+	return b.ContextOptionsFromPath(b.field.name)
+}
+
+func (b *FieldContextBuilder) ContextLabel(finfo *CtxFieldOptions) (label string) {
+	label = finfo.Label
+	if label == "" {
+		label = b.field.ContextLabel(b.info, b.ctx.Context())
+	}
+	return
+}
+
 func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 	var (
 		keyPath = b.field.name
@@ -92,15 +108,12 @@ func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 	}
 
 	var (
-		finfo = FieldOptionsFromContext(b.ctx, CtxField(keyPath), true)
-		label string
+		options = b.ContextOptionsFromPath(keyPath)
+		label   string
 	)
 
-	if !finfo.Hidden && !finfo.HiddenLabel && !b.field.hiddenLabel {
-		label = finfo.Label
-		if label == "" {
-			label = b.field.ContextLabel(b.info, b.ctx.Context())
-		}
+	if !options.Hidden && !options.HiddenLabel && !b.field.hiddenLabel {
+		label = b.ContextLabel(options)
 	}
 
 	fctx = &FieldContext{
@@ -115,8 +128,8 @@ func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 		Name:               b.field.name,
 		Label:              label,
 		HintLoader: func() string {
-			if finfo.Hint != "" {
-				return finfo.Hint
+			if options.Hint != "" {
+				return options.Hint
 			}
 			return b.field.ContextHint(b.info, b.ctx.Context())
 		},

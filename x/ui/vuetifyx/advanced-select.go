@@ -76,7 +76,8 @@ func (b *VXAdvancedSelectBuilder) ItemTextExpr(v string) *VXAdvancedSelectBuilde
 
 func (b *VXAdvancedSelectBuilder) Write(ctx *h.Context) (err error) {
 	if b.itemsSearcher != nil {
-		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json().then(v => v.Records)}`, b.itemsSearcher.String()))
+		s := b.itemsSearcher.String()
+		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json().then(v => v.Records)}`, s))
 	} else if b.searchItemsFunc != "" {
 		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return $plaid().eventFunc("%s").query("keyword", val).json().then(v => v.Records)}`, b.searchItemsFunc))
 	}

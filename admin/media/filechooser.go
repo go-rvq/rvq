@@ -85,6 +85,9 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		orderByKey           = "order_by"
 		orderByCreatedAt     = "created_at"
 		orderByCreatedAtDESC = "created_at_desc"
+		hiddenKey            = "hidden"
+		hiddenOnly           = "only"
+		hiddenAll            = "all"
 
 		typeKey   = "type"
 		typeAll   = "all"
@@ -94,6 +97,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 	)
 	orderByVal := ctx.R.URL.Query().Get(orderByKey)
 	typeVal := ctx.R.URL.Query().Get(typeKey)
+	hiddenVal := ctx.R.URL.Query().Get(hiddenKey)
 
 	var files []*media_library.MediaLibrary
 	wh := db.Model(&media_library.MediaLibrary{})
@@ -115,6 +119,14 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		wh = wh.Where("selected_type = ?", media_library.ALLOW_TYPE_FILE)
 	default:
 		typeVal = typeAll
+	}
+
+	switch hiddenVal {
+	case hiddenOnly:
+		wh = wh.Where("hidden")
+	case hiddenAll:
+	default:
+		wh = wh.Where("not hidden")
 	}
 
 	currentPageInt, _ := strconv.Atoi(ctx.R.FormValue(currentPageName(field)))
@@ -363,7 +375,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 									{Text: msgr.Files, Value: typeFile},
 								}).ItemTitle("Text").ItemValue("Value").
 									Attr(web.VField(typeKey, typeVal)...).
-									Attr("@change",
+									Attr("@update:modelValue",
 										web.GET().PushState(true).
 											Query(typeKey, web.Var("$event")).
 											MergeQuery(true).Go(),
@@ -376,9 +388,23 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 									{Text: msgr.UploadedAt, Value: orderByCreatedAt},
 								}).ItemTitle("Text").ItemValue("Value").
 									Attr(web.VField(orderByKey, orderByVal)...).
-									Attr("@change",
+									Attr("@update:modelValue",
 										web.GET().PushState(true).
 											Query(orderByKey, web.Var("$event")).
+											MergeQuery(true).Go(),
+									).
+									Density(DensityCompact).Variant(FieldVariantSolo).Class("mb-n8"),
+							).Cols(3),
+							VCol(
+								VSelect().Items([]selectItem{
+									{Text: msgr.NotHidden, Value: ""},
+									{Text: msgr.OnlyHidden, Value: hiddenOnly},
+									{Text: msgr.IncludeHidden, Value: hiddenAll},
+								}).ItemTitle("Text").ItemValue("Value").
+									Attr(web.VField(hiddenKey, hiddenVal)...).
+									Attr("@update:modelValue",
+										web.GET().PushState(true).
+											Query(hiddenKey, web.Var("$event")).
 											MergeQuery(true).Go(),
 									).
 									Density(DensityCompact).Variant(FieldVariantSolo).Class("mb-n8"),

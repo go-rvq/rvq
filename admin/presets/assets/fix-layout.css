@@ -1,0 +1,8 @@
+.v-breadcrumbs .v-breadcrumbs-divider {
+    padding: 0;
+}
+
+.vx-navigation-drawer > .v-navigation-drawer__content > .rvq-presets-breadcrumbs-wraper,
+.vx-dialog > .v-overlay__content > .v-card  > .rvq-presets-breadcrumbs-wraper {
+    background-color: rgb(var(--v-theme-surface-light));
+}

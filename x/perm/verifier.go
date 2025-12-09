@@ -12,11 +12,12 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/ory/ladon"
 	"github.com/sunfmin/reflectutils"
+	"github.com/theplant/osenv"
 )
 
 var ErrIsDanied = errors.New("verifier is denied")
 
-var Verbose = false
+var Verbose = osenv.GetBool("PERM_VERBOSE", "Print all permissions verification", false)
 
 type verReq struct {
 	subjects       []string

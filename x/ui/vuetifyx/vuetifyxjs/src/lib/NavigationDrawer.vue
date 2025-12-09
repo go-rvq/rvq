@@ -7,12 +7,7 @@ let _: Density
 
 declare let window: Window
 
-const state = {
-    closeChanging: false,
-    expandChanging: false,
-    windowOverflowToggler: false
-  },
-  parentEl = (el: any) => {
+const parentEl = (el: any) => {
     return (el.nodeType == Node.TEXT_NODE ? el.nextElementSibling : el).parentElement
   }
 
@@ -101,7 +96,12 @@ export default defineComponent({
     root: useTemplateRef('root'),
     isExpanded: false,
     isMainMenuOpen: false,
-    isSecondaryMenuOpen: false
+    isSecondaryMenuOpen: false,
+    state: {
+      closeChanging: false,
+      expandChanging: false,
+      windowOverflowToggler: false
+    }
   }),
   computed: {
     cIsOpen: {
@@ -109,7 +109,7 @@ export default defineComponent({
         return this.isOpen as boolean
       },
       set(v: boolean) {
-        state.closeChanging = true
+        this.state.closeChanging = true
         if (!v) {
           this.isExpanded = false
         }
@@ -128,16 +128,16 @@ export default defineComponent({
     openCb() {
       if (this.temporary) {
         const cl = window.document.body.parentElement?.classList as DOMTokenList
-        state.windowOverflowToggler = !(
+        this.state.windowOverflowToggler = !(
           cl.contains('overflow-y-hidden') || cl.contains('overflow-hidden')
         )
-        if (state.windowOverflowToggler) {
+        if (this.state.windowOverflowToggler) {
           cl.add('overflow-y-hidden')
         }
       }
     },
     closeCb() {
-      if (state.windowOverflowToggler) {
+      if (this.state.windowOverflowToggler) {
         window.document.body.parentElement?.classList.remove('overflow-y-hidden')
       }
     },
@@ -188,7 +188,7 @@ export default defineComponent({
       if (val && this.isExpanded) {
         this.isExpanded = false
       }
-      if (!state.closeChanging) {
+      if (!this.state.closeChanging) {
         this.$emit(val ? 'open' : 'close')
         if (val) {
           this.openCb()
@@ -196,7 +196,7 @@ export default defineComponent({
           this.closeCb()
         }
       }
-      state.closeChanging = false
+      this.state.closeChanging = false
     }
   },
 
@@ -204,6 +204,10 @@ export default defineComponent({
     if (this.isOpen) {
       this.openCb()
     }
+  },
+
+  unmounted() {
+    this.closeCb()
   }
 })
 </script>
@@ -282,18 +286,20 @@ export default defineComponent({
         :density="density as Density"
         v-bind="toolbarProps"
       >
-        <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer">
+        <slot name="prependToolbar" />
+        <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer || $slots.prependLeftToolbarActions || $slots.appendLeftToolbarActions">
+          <slot name="prependLeftToolbarActions" />
           <v-btn
             v-if="!isMainMenuOpen"
             icon="mdi-menu"
             @click="isMainMenuOpen = !isMainMenuOpen"
           ></v-btn>
+          <slot name="appendLeftToolbarActions" />
         </template>
-        <slot name="prependToolbar" />
         <slot v-if="$slots.header" name="header"></slot>
         <v-toolbar-title v-else-if="title" :title="title">{{ title }}</v-toolbar-title>
-        <slot name="appendToolbar" />
         <template v-slot:append>
+          <slot name="prependRightToolbarActions" />
           <v-btn
             v-if="($slots.secondaryMenuContainer || $slots.secondaryMenu) && !isMainMenuOpen"
             icon="mdi-dots-vertical"
@@ -309,7 +315,9 @@ export default defineComponent({
             :icon="closeIcon"
             @click="cIsOpen = false"
           />
+          <slot name="appendRightToolbarActions" />
         </template>
+        <slot name="appendToolbar" />
       </v-toolbar>
       <slot name="appendHeader" />
       <v-divider></v-divider>

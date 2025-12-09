@@ -33,6 +33,10 @@ type Messages struct {
 	Files                       string
 	MediaLibrary                string
 	MediaLibraries              string
+	ShowHidden                  string
+	OnlyHidden                  string
+	IncludeHidden               string
+	NotHidden                   string
 }
 
 var Messages_en_US = &Messages{
@@ -56,6 +60,10 @@ var Messages_en_US = &Messages{
 	Images:                      "Images",
 	Videos:                      "Videos",
 	Files:                       "Files",
+	ShowHidden:                  "Show hidden",
+	OnlyHidden:                  "Only hidden",
+	IncludeHidden:               "Include hidden",
+	NotHidden:                   "Not hidden",
 }
 
 var Messages_zh_CN = &Messages{

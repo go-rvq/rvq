@@ -132,6 +132,10 @@ func (s IDSlice) Last() ID {
 	return s[len(s)-1]
 }
 
+func (s IDSlice) First() ID {
+	return s[0]
+}
+
 func (s IDSlice) LastValues() []any {
 	return s.Last().Values
 }
@@ -160,4 +164,15 @@ func (s IDSlice) String() string {
 		str[i] = id.String()
 	}
 	return strings.Join(str, ",")
+}
+
+func NewSingleID(fieldName string, value any) ID {
+	return ID{
+		Fields: []Field{SingleField(fieldName)},
+		Values: []any{value},
+	}
+}
+
+func NewID(value any) ID {
+	return NewSingleID("ID", value)
 }

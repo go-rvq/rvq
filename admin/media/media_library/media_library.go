@@ -22,6 +22,7 @@ type MediaLibrary struct {
 	gorm.Model
 	SelectedType string
 	File         MediaLibraryStorage `sql:"size:4294967295;" mediaLibrary:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
+	Hidden       bool                `gorm:"default:false"`
 }
 
 type MediaOption struct {

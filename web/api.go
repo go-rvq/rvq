@@ -47,10 +47,37 @@ func (pr *PageResponse) Wrap(f ...func(comp h.HTMLComponent) h.HTMLComponent) {
 	pr.Wrapers = append(pr.Wrapers, f...)
 }
 
+type PortalUpdateOptions struct {
+	ResetScroll bool     `json:"resetScroll,omitempty"`
+	Mounted     []string `json:"mounted,omitempty"`
+	Unmounted   []string `json:"unmounted,omitempty"`
+}
+
+func (u *PortalUpdateOptions) OnMounted(script string) *PortalUpdateOptions {
+	u.Mounted = append(u.Mounted, script)
+	return u
+}
+
+func (u *PortalUpdateOptions) OnUnmounted(script string) *PortalUpdateOptions {
+	u.Unmounted = append(u.Unmounted, script)
+	return u
+}
+
 type PortalUpdate struct {
-	Name  string          `json:"name,omitempty"`
-	Body  h.HTMLComponent `json:"body,omitempty"`
-	Defer bool            `json:"defer,omitempty"`
+	Name    string               `json:"name,omitempty"`
+	Body    h.HTMLComponent      `json:"body,omitempty"`
+	Defer   bool                 `json:"defer,omitempty"`
+	Options *PortalUpdateOptions `json:"options,omitempty"`
+}
+
+func (u *PortalUpdate) Wrap(f func(comp h.HTMLComponent) h.HTMLComponent) *PortalUpdate {
+	u.Body = f(u.Body)
+	return u
+}
+
+func (u *PortalUpdate) WithOptions(f func(opts *PortalUpdateOptions)) *PortalUpdate {
+	f(u.Options)
+	return u
 }
 
 // @snippet_begin(EventResponseDefinition)
@@ -69,18 +96,28 @@ type EventResponse struct {
 	deferedPortals map[string]bool
 }
 
-func (r *EventResponse) UpdatePortal(name string, body h.HTMLComponent) *EventResponse {
+func (r *EventResponse) UpdatePortal(name string, body h.HTMLComponent, doOptions ...func(opts *PortalUpdateOptions)) *EventResponse {
+	r.UpdatePortalR(name, body, doOptions...)
+	return r
+}
+
+func (r *EventResponse) UpdatePortalR(name string, body h.HTMLComponent, doOptions ...func(opts *PortalUpdateOptions)) (pu *PortalUpdate) {
 	for _, p := range r.UpdatePortals {
 		if p.Name == name {
 			panic("Duplicate Portal '" + name + "' Update")
 		}
 	}
-	r.UpdatePortals = append(r.UpdatePortals, &PortalUpdate{
-		Name:  name,
-		Body:  body,
-		Defer: r.deferedPortals[name],
-	})
-	return r
+	pu = &PortalUpdate{
+		Name:    name,
+		Body:    body,
+		Defer:   r.deferedPortals[name],
+		Options: &PortalUpdateOptions{},
+	}
+	for _, f := range doOptions {
+		f(pu.Options)
+	}
+	r.UpdatePortals = append(r.UpdatePortals, pu)
+	return pu
 }
 
 func (r *EventResponse) DeferedPortal(name string) *EventResponse {
@@ -267,10 +304,19 @@ type RequestContext interface {
 type EventContext struct {
 	R         *http.Request
 	W         ResponseWriter
+	Resp      *EventResponse
 	Injector  *PageInjector
 	Flash     interface{} // pass value from actions to index
 	i         int64
 	dataStack []any
+}
+
+func (e *EventContext) UrlQuery() *UrlQuery {
+	return UrlQueryFromRequest(e.R)
+}
+
+func (e *EventContext) GetUrlQueryValue(key string) string {
+	return e.UrlQuery().Get(key)
 }
 
 func (e *EventContext) Data() any {
@@ -424,10 +470,11 @@ func (ctx *EventContext) UnmarshalFormValues(values url.Values, v interface{}) (
 }
 
 func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {
-	mf := ctx.R.MultipartForm
 	if ctx.R.MultipartForm == nil {
 		return
 	}
+
+	mf := ctx.R.MultipartForm
 
 	if err = ctx.UnmarshalFormValues(mf.Value, v); err != nil {
 		return
@@ -449,28 +496,5 @@ func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {
 			}
 		}
 	}
-	return
-}
-
-type contextKey int
-
-const eventKey contextKey = iota
-
-func WrapEventContext(parent context.Context, ctx *EventContext) (r context.Context) {
-	r = context.WithValue(parent, eventKey, ctx)
-	return
-}
-
-func MustGetEventContext(c context.Context) (r *EventContext) {
-	r, _ = c.Value(eventKey).(*EventContext)
-	if r == nil {
-		panic("EventContext required")
-	}
-	return
-}
-
-func Injector(c context.Context) (r *PageInjector) {
-	ctx := MustGetEventContext(c)
-	r = ctx.Injector
 	return
 }

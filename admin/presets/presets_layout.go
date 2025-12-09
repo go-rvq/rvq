@@ -1,6 +1,7 @@
 package presets
 
 import (
+	_ "embed"
 	"fmt"
 	"path"
 	"strings"
@@ -15,8 +16,46 @@ import (
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
 
+//go:embed assets/fix-layout.css
+var fixLayoutCSS []byte
+
+func BuildBreadcrumbsComponent(b *Builder, bc *BreadcrumbsBuilder, ctx *web.EventContext, pageTitle string) (breadcrumb h.HTMLComponent) {
+	home := &Breadcrumb{
+		Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
+		URI:   b.prefix + "/",
+	}
+
+	if path.Clean(ctx.R.URL.Path) != path.Clean(home.URI) {
+		msgr := MustGetMessages(ctx.Context())
+		bc.Prepend(home)
+		if len(pageTitle) > 0 {
+			bc.Append(&Breadcrumb{Label: pageTitle})
+		}
+
+		return bc.Component(msgr.YouAreHere)
+	}
+	return
+}
+
 func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.PageFunc) {
 	return func(ctx *web.EventContext) (pr web.PageResponse, err error) {
+		defer func() {
+			lang := ctx.Injector.GetHTMLLang()
+
+			if len(lang) == 0 {
+				// set current locale fallback
+				lang = i18n.DynaFromContext(ctx.Context()).GetLanguage()
+				ctx.Injector.HTMLLang(lang)
+			}
+
+			// add vuetify locale setter
+			if ls := web.VueLocaleSetterFromContext(ctx); ls != nil {
+				ls.Append(func(lang string) string {
+					return fmt.Sprintf(`window.Vuetify.useLocale().current.value = %q`, GetLocale(lang))
+				})
+			}
+		}()
+
 		b.InjectAssets(ctx)
 
 		// call CreateMenus before in(ctx) to fill the menuGroupName for modelBuilders first
@@ -76,21 +115,11 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		pr.Actions = innerPr.Actions
 		pr.Menu = innerPr.Menu
 
-		var breadcrumbs []h.HTMLComponent
+		var breadcrumbs h.HTMLComponent
 
 		if !breadCrumbDisabled {
 			if pr.PageTitle != "" {
-				bc := GetOrInitBreadcrumbs(ctx.R)
-				home := &Breadcrumb{
-					Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
-					URI:   b.prefix + "/",
-				}
-				if path.Clean(ctx.R.URL.Path) != path.Clean(home.URI) {
-					msgr := MustGetMessages(ctx.Context())
-					bc.Prepend(home)
-					bc.Append(&Breadcrumb{Label: pr.PageTitle})
-					breadcrumbs = append(breadcrumbs, bc.Component(msgr.YouAreHere))
-				}
+				breadcrumbs = BuildBreadcrumbsComponent(b, GetOrInitBreadcrumbs(ctx.R), ctx, pr.PageTitle)
 			}
 		}
 
@@ -175,6 +204,12 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			))
 		}
 
+		for _, action := range actions {
+			if t, _ := action.(h.TagGetter); t != nil {
+				t.GetHTMLTagBuilder().Class("noprint")
+			}
+		}
+
 		hasHeader := (!titleDisabled && innerPr.PageTitle != "") || len(actions) > 0 || menuCloser != nil
 
 		pr.Body = VApp(
@@ -247,7 +282,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 							).Class("d-flex align-center mx-2 border-b w-100 rvq-page-header").Style("height: 48px"),
 						).Elevation(0).Class("rvq-page__toolbar"),
 					),
-					h.If(len(breadcrumbs) > 0, VContainer(breadcrumbs...).Class("rvq-page-breadcrumbs").Fluid(true).Style("padding-top:0;padding-bottom:0")),
+					h.If(breadcrumbs != nil, VContainer(breadcrumbs).Class("rvq-page-breadcrumbs").Fluid(true).Style("padding-top:0;padding-bottom:0")),
 					h.Div(innerPr.Body).Class("rvq-page-content"),
 				),
 			).Class("v-main__page_content").Class("rvq-page"),

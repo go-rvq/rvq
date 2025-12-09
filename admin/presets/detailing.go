@@ -202,7 +202,7 @@ func (b *DetailingBuilder) GetVerifiers() perm.PermVerifiers {
 }
 
 func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	if b.mb.deletingDisabled {
+	if b.mb.detailingDisabled {
 		err = ErrReadRecordNotAllowed
 		return
 	}
@@ -328,7 +328,7 @@ func (d *DetailingBuilder) AddRawPageFunc(path string, f web.PageFunc, methods .
 }
 
 func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
-	if b.mb.deletingDisabled {
+	if b.mb.detailingDisabled {
 		err = ErrReadRecordNotAllowed
 		return
 	}
@@ -440,7 +440,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 	f.Portal = portalName
 
-	if b.EditingRestriction.CanObj(obj, ctx) {
+	if !b.mb.editingDisabled && b.EditingRestriction.CanObj(obj, ctx) {
 		var cb web.Callback
 		cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
 
@@ -571,7 +571,8 @@ func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse,
 		return
 	}
 
-	_, err = action.Do(b.mb, id, ctx, &r)
+	ctx.Resp = &r
+	_, err = action.Do(b.mb, id, ctx)
 	return
 }
 
@@ -596,7 +597,8 @@ func (b *DetailingBuilder) formAction(ctx *web.EventContext) (r web.EventRespons
 		return
 	}
 
-	err = action.View(b.mb, id, ctx, &r)
+	ctx.Resp = &r
+	err = action.View(b.mb, id, ctx)
 	return
 }
 

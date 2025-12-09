@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/corejs"
 	"github.com/go-rvq/rvq/web/printer"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -27,7 +28,7 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 	mainJSPath := b.prefix + "/assets/main.js"
 	mux.Handle("GET "+mainJSPath,
 		ub.PacksHandler("text/javascript",
-			Vuetify(),
+			web.ComponentsPack(corejs.RegisterComponentWithDefaults(Vuetify())),
 			JSComponentsPack(),
 			vuetifyx.JSComponentsPack(),
 			web.JSComponentsPack(),
@@ -47,7 +48,9 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 
 	mux.Handle("GET "+b.prefix+"/assets/main.css",
 		ub.PacksHandler("text/css",
+			web.ComponentsPack(fixLayoutCSS),
 			vuetifyx.CSSComponentsPack(),
+			web.StdContentStyles(),
 		),
 	)
 

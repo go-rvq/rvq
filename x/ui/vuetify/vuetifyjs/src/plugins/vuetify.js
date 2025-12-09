@@ -15,12 +15,18 @@ import '@/scss/index.scss'
 // Composables
 import { createVuetify } from 'vuetify'
 import { themes } from './theme'
+import * as lang from 'vuetify/locale'
 
 // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
 export default createVuetify({
   theme: {
     defaultTheme: "light",
     themes,
+  },
+  locale: {
+    locale: 'en',
+    fallback: 'en',
+    messages: lang
   },
   autoImport: { labs: true },
   components,

@@ -115,6 +115,26 @@ func (b *VXAdvancedCardTagBuilder[T]) SlotAppendHeader(child ...h.HTMLComponent)
 	return b.Dot()
 }
 
+func (b *VXAdvancedCardTagBuilder[T]) SlotPrependLeftToolbarActions(child ...h.HTMLComponent) T {
+	b.SetSlotPrependLeftToolbarActions(child...)
+	return b.Dot()
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SlotAppendLeftToolbarActions(child ...h.HTMLComponent) T {
+	b.SetSlotAppendLeftToolbarActions(child...)
+	return b.Dot()
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SlotPrependRightToolbarActions(child ...h.HTMLComponent) T {
+	b.SetSlotPrependRightToolbarActions(child...)
+	return b.Dot()
+}
+
+func (b *VXAdvancedCardTagBuilder[T]) SlotAppendRightToolbarActions(child ...h.HTMLComponent) T {
+	b.SetSlotAppendRightToolbarActions(child...)
+	return b.Dot()
+}
+
 func (b *VXAdvancedCardTagBuilder[T]) SlotTop(child ...h.HTMLComponent) T {
 	b.SetSlotTop(child...)
 	return b.Dot()

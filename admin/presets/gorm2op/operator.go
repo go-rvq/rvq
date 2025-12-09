@@ -16,6 +16,8 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+const CountingConfigKey = "gorm2op:counting"
+
 var wildcardReg = regexp.MustCompile(`[%_]`)
 
 type (
@@ -240,8 +242,10 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 		do = func(state *CallbackState) (err error) {
 			var (
 				c   int64
-				cdb = state.DB.Count(&c)
+				cdb = state.DB.Session(&gorm.Session{}).Set(CountingConfigKey, true)
 			)
+
+			cdb = cdb.Count(&c)
 
 			totalCount = int(c)
 

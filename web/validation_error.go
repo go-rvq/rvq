@@ -91,6 +91,9 @@ func (b *ValidationErrors) Merge(other ValidationErrors) {
 	b.globalErrors = append(b.globalErrors, other.globalErrors...)
 }
 
-func (b *ValidationErrors) Error() string {
+func (b ValidationErrors) Error() string {
+	if (b.globalErrors == nil && b.fieldErrors == nil) || (len(b.globalErrors)+len(b.fieldErrors) == 0) {
+		return ""
+	}
 	return fmt.Sprintf("validation error global: %+v, fields: %+v", b.globalErrors, b.fieldErrors)
 }

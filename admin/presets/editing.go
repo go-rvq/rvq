@@ -32,12 +32,17 @@ type EditingBuilder struct {
 	FieldsBuilder
 	preComponents  []ModeObjectComponentFunc
 	postComponents []ModeObjectComponentFunc
+	maxPostSize    int64
 
 	EditingRestrictionField[*EditingBuilder]
 }
 
 func NewEditingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *EditingBuilder {
-	e := &EditingBuilder{mb: mb, FieldsBuilder: fieldsBuilder}
+	e := &EditingBuilder{
+		mb:            mb,
+		FieldsBuilder: fieldsBuilder,
+		maxPostSize:   web.DefaulMaxPostSize,
+	}
 	e.EditingRestriction = NewObjRestriction(e, func(r *ObjRestriction[*EditingBuilder]) {
 		r.Insert(mb.EditingRestriction)
 	})
@@ -78,6 +83,18 @@ func (mb *ModelBuilder) SetEditingBuilder(b *EditingBuilder) {
 
 func (b *EditingBuilder) ModelBuilder() *ModelBuilder {
 	return b.mb
+}
+
+func (b *EditingBuilder) MaxPostSize(size int64) *EditingBuilder {
+	if size <= 0 {
+		size = web.DefaulMaxPostSize
+	}
+	b.maxPostSize = size
+	return b
+}
+
+func (b *EditingBuilder) GetMaxPostSize() int64 {
+	return b.maxPostSize
 }
 
 // string / []string / *FieldsSection
@@ -192,6 +209,21 @@ func (b *EditingBuilder) WrapPostSaveCallback(f func(old SaveCallbackFunc) SaveC
 	return b.PostSaveCallback(f(b.postSaveCallback))
 }
 
+func (b *EditingBuilder) WrapNew(f func(ctx *web.EventContext, obj any) (err error)) *EditingBuilder {
+	if b.New == nil {
+		b.New = f
+	} else {
+		old := b.New
+		b.New = func(ctx *web.EventContext, obj any) (err error) {
+			if err = old(ctx, obj); err != nil {
+				return
+			}
+			return f(ctx, obj)
+		}
+	}
+	return b
+}
+
 func (b *EditingBuilder) OnChangeActionFunc(v OnChangeActionFunc) (r *EditingBuilder) {
 	b.onChangeAction = v
 	return b
@@ -246,6 +278,11 @@ func (b *EditingBuilder) FetchAndUnmarshal(opts *FieldsSetterOptions, id ID, rem
 func (b *EditingBuilder) RunSetterFunc(opts *FieldsSetterOptions, ctx *web.EventContext, removeDeletedAndSort bool, toObj interface{}) (vErr web.ValidationErrors) {
 	if b.Setter != nil {
 		b.Setter(toObj, ctx)
+	}
+
+	if err := ctx.R.ParseMultipartForm(b.maxPostSize); err != nil {
+		vErr.GlobalError(err.Error())
+		return
 	}
 
 	vErr = b.Unmarshal(opts, toObj, b.mb.Info(), removeDeletedAndSort, ctx)

@@ -64,25 +64,8 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 
 	go func() {
 		defer close(fieldsChan)
-
-		for _, iv := range layout {
-			switch t := iv.(type) {
-			case string:
-				fieldsChan <- t
-
-			case []string:
-				for _, s2 := range t {
-					fieldsChan <- s2
-				}
-			case *FieldsSection:
-				for _, row := range t.Rows {
-					for _, n := range row {
-						fieldsChan <- n
-					}
-				}
-			default:
-				panic("unknown fields layout, must be string/[]string/*FieldsSection")
-			}
+		for _, iv := range layout.Names() {
+			fieldsChan <- iv
 		}
 	}()
 

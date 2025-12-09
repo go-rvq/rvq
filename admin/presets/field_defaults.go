@@ -72,6 +72,13 @@ func (f FieldMode) Split() (modes []FieldMode) {
 	return
 }
 
+func (m FieldMode) Remove(rm ...FieldMode) FieldMode {
+	for _, mode := range rm {
+		m &^= mode
+	}
+	return m
+}
+
 const (
 	NONE FieldMode = 1 << iota
 	LIST

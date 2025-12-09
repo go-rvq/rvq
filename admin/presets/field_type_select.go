@@ -2,6 +2,7 @@ package presets
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/go-playground/form"
 	h "github.com/go-rvq/htmlgo"
@@ -12,11 +13,14 @@ import (
 
 type (
 	SelectConfigor interface {
+		Many(ctx *FieldContext) bool
 		AvailableKeys(ctx *FieldContext) []string
 		KeyLabels(ctx *FieldContext, key []string) []string
 		KeyLabelsAndHints(ctx *FieldContext, key []string) [][2]string
 		SelectedKey(ctx *FieldContext) string
+		SelectedKeys(ctx *FieldContext) []string
 		SetSelectedKey(ctx *FieldContext, key string) (err error)
+		SetSelectedKeys(ctx *FieldContext, key []string) (err error)
 		ToStringWrap(ctx *FieldContext, key, label string) (newLabel string)
 	}
 
@@ -26,13 +30,23 @@ type (
 )
 
 type SelectConfig struct {
+	ManyFunc func(ctx *FieldContext) bool
 	// AvailableKeys list of pairs of key and label [[key, label], ...]
 	AvailableKeysFunc     func(ctx *FieldContext) []string
 	KeyLabelsFunc         func(ctx *FieldContext, key []string) []string
 	KeyLabelsAndHintsFunc func(ctx *FieldContext, key []string) [][2]string
 	SelectedKeyFunc       func(ctx *FieldContext) string
+	SelectedKeysFunc      func(ctx *FieldContext) []string
 	SetSelectedKeyFunc    func(ctx *FieldContext, key string) (err error)
+	SetSelectedKeysFunc   func(ctx *FieldContext, key []string) (err error)
 	ToStringWrapFunc      func(ctx *FieldContext, key, label string) (newLabel string)
+}
+
+func (s *SelectConfig) Many(ctx *FieldContext) bool {
+	if s.ManyFunc == nil {
+		return false
+	}
+	return s.ManyFunc(ctx)
 }
 
 func (s *SelectConfig) AvailableKeys(ctx *FieldContext) []string {
@@ -78,6 +92,13 @@ func (s *SelectConfig) SelectedKey(ctx *FieldContext) string {
 	return ctx.StringValue()
 }
 
+func (s *SelectConfig) SelectedKeys(ctx *FieldContext) []string {
+	if s.SelectedKeysFunc != nil {
+		return s.SelectedKeysFunc(ctx)
+	}
+	return strings.Split(ctx.StringValue(), ",")
+}
+
 func (s *SelectConfig) SetSelectedKey(ctx *FieldContext, key string) (err error) {
 	if s.SetSelectedKeyFunc != nil {
 		return s.SetSelectedKeyFunc(ctx, key)
@@ -85,6 +106,16 @@ func (s *SelectConfig) SetSelectedKey(ctx *FieldContext, key string) (err error)
 	d := form.NewDecoder()
 	return d.Decode(ctx.Obj, url.Values{
 		ctx.Name: []string{key},
+	})
+}
+
+func (s *SelectConfig) SetSelectedKeys(ctx *FieldContext, key []string) (err error) {
+	if s.SetSelectedKeyFunc != nil {
+		return s.SetSelectedKeysFunc(ctx, key)
+	}
+	d := form.NewDecoder()
+	return d.Decode(ctx.Obj, url.Values{
+		ctx.Name: key,
 	})
 }
 
@@ -97,7 +128,7 @@ func (s *SelectConfig) ToStringWrap(ctx *FieldContext, key, label string) (newLa
 
 type FieldSelectConfigor func() *SelectConfig
 
-func selectorConfigorFromFieldContext(field *FieldContext) SelectConfigor {
+func SelectorConfigorFromFieldContext(field *FieldContext) SelectConfigor {
 	switch t := field.RawValue().(type) {
 	case GetSelectConfigor:
 		return t.SelectConfigor()
@@ -113,12 +144,13 @@ func selectorConfigorFromFieldContext(field *FieldContext) SelectConfigor {
 
 func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.HTMLComponent) {
 	var (
-		cfg      = selectorConfigorFromFieldContext(field)
+		cfg      = SelectorConfigorFromFieldContext(field)
 		keys     = cfg.AvailableKeys(field)
-		selected = cfg.SelectedKey(field)
 		options  = make([]any, len(keys))
+		val any
 	)
 
+	
 	for i, labelAndHint := range cfg.KeyLabelsAndHints(field, keys) {
 		options[i] = map[string]any{
 			"value": keys[i],
@@ -139,40 +171,56 @@ func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.
 	if field.Field.hint {
 		sel.Hint(field.HintLoader()).PersistentHint(true)
 	}
+	
+	if cfg.Many(field) {
+		val = cfg.SelectedKeys(field)
+	} else {
+		val = cfg.SelectedKey(field)
+	}
 
-	return vue.FormField(
-		sel,
-	).
-		Value(field.FormKey, selected)
+	return vue.FormField(sel).Value(field.FormKey, val)
 }
 
 func SelectReadComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	var (
-		comp        h.HTMLComponents
-		cfg         = selectorConfigorFromFieldContext(field)
-		selectedKey = cfg.SelectedKey(field)
+		comp h.HTMLComponents
+		cfg  = SelectorConfigorFromFieldContext(field)
 	)
 
 	if cfg == nil {
 		cfg = field.Value().(SelectConfigor)
 	}
 
-	if len(selectedKey) == 0 {
-		return nil
+	if cfg.Many(field) {
+		selectedKeys := cfg.SelectedKeys(field)
+		if len(selectedKeys) == 0 {
+			return nil
+		}
+
+		if field.Label != "" {
+			comp = append(comp, v.VLabel(h.Text(field.Label)))
+		}
+
+		labelsComp := v.VChipGroup().Attr(":model-value", cfg.KeyLabels(field, selectedKeys))
+		comp = append(comp, labelsComp)
+	} else {
+		selectedKey := cfg.SelectedKey(field)
+		if len(selectedKey) == 0 {
+			return nil
+		}
+
+		if field.Label != "" {
+			comp = append(comp, v.VLabel(h.Text(field.Label)))
+		}
+
+		comp = append(comp, h.Div(h.Text(cfg.KeyLabels(field, []string{selectedKey})[0])).Class("pt-1 mb-3"))
 	}
-
-	if field.Label != "" {
-		comp = append(comp, v.VLabel(h.Text(field.Label)))
-	}
-
-	comp = append(comp, h.Div(h.Text(cfg.KeyLabels(field, []string{selectedKey})[0])).Class("pt-1 mb-3"))
-
 	return comp
 }
 
 func SelectToStringComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	var (
-		cfg = selectorConfigorFromFieldContext(field)
+		cfg = SelectorConfigorFromFieldContext(field)
 		key = cfg.SelectedKey(field)
 	)
 
@@ -237,6 +285,13 @@ func ConfigureSelectField(mb *ModelBuilder, name string, mode FieldMode, cfg Sel
 	}
 
 	setter := func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
+		if cfg.Many(field) {
+			var keys []string
+			if v := field.EventContext.R.Form.Get(field.FormKey); len(v) > 0 {
+				keys = strings.Split(v, ",")
+			}
+			return cfg.SetSelectedKeys(field, keys)
+		}
 		return cfg.SetSelectedKey(field, field.EventContext.R.Form.Get(field.FormKey))
 	}
 

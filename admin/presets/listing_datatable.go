@@ -71,7 +71,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 	tempPortal := lcb.portals.Temp()
 
-	cellWrapperFunc := func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+	cellWrapperFunc := func(cell h.MutableAttrHTMLComponent, fieldName, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		return cell
 	}
 
@@ -81,7 +81,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		selectedEventName := ctx.R.URL.Query().Get(SelectedEventParamName)
 		selectedEventConfig := ctx.R.URL.Query().Get(SelectedEventConfigParamName)
 		portalID := ctx.R.FormValue(ParamPortalID)
-		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, _, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 			onclick := web.Plaid().
 				EventFunc(selectedEventName).
 				Query(ParamSelectedID, id).
@@ -93,7 +93,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 	} else {
 		reloadCb := b.reloadCallback(ctx).Encode()
 
-		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) (comp h.HTMLComponent) {
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, _, id string, obj interface{}, dataTableID string, ctx *web.EventContext) (comp h.HTMLComponent) {
 			comp = cell
 
 			onclick := web.Plaid().
@@ -135,13 +135,52 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		}
 	}
 
-	var displayFields []*FieldBuilder
-	var selectColumnsBtn h.HTMLComponent
+	if lcb.cellWrap != nil {
+		old := cellWrapperFunc
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, fieldName, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+			return lcb.cellWrap(old(cell, fieldName, id, obj, dataTableID, ctx), fieldName, id, obj, dataTableID, ctx)
+		}
+	}
+
+	var (
+		displayFields    []*FieldBuilder
+		selectColumnsBtn h.HTMLComponent
+		headers          []*vx.DataTableHeaderBuilder
+		mode             = FieldModeStack{LIST}
+	)
 
 	if b.selectableColumns {
 		selectColumnsBtn, displayFields = b.selectColumnsBtn(ctx.R.URL, ctx, inDialog)
 	} else {
-		displayFields = b.fields.FieldsFromLayout(b.CurrentLayout(), FieldRenderable())
+		nodes := b.fields.FieldTreeLayout(b.fields.FilterLayout(b.CurrentLayout(), FieldRenderable()))
+		var nodes2Headers func(node FieldBuilderTreeNodes) []*vx.DataTableHeaderBuilder
+		nodes2Headers = func(nodes FieldBuilderTreeNodes) (r []*vx.DataTableHeaderBuilder) {
+			for _, node := range nodes {
+				t := &vx.DataTableHeaderBuilder{}
+
+				if node.IsTree {
+					t.Name(node.Tree.Name)
+					if node.Tree.Title != nil {
+						t.Title(node.Tree.Title(ctx.Context()))
+					}
+					t.Children = nodes2Headers(node.Tree.Nodes)
+					if len(t.Children) > 0 {
+						r = append(r, t)
+					}
+				} else {
+					fcb := node.Field.NewContext(b.mb.Info(), ctx, nil, nil)
+					if !fcb.Disabled && node.Field.IsEnabled(fcb) {
+						displayFields = append(displayFields, node.Field)
+						t.Name(node.Field.name)
+						t.Title(fcb.Label)
+						r = append(r, t)
+					}
+				}
+			}
+			return
+		}
+
+		headers = nodes2Headers(nodes)
 	}
 
 	var (
@@ -153,10 +192,8 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		density = DensityCompact
 	}
 
-	sDataTable := vx.DataTable(sr.Records).
-		SetDensity(density).
-		CellWrapperFunc(cellWrapperFunc).
-		HeadCellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, title string, ctx *web.EventContext) h.HTMLComponent {
+	headCellWrapperFunc := func(cell h.MutableAttrHTMLComponent, rowspan, colspan int, field string, title string, ctx *web.EventContext) h.HTMLComponent {
+		if len(field) > 0 {
 			if _, ok := sr.orderableFieldMap[field]; ok {
 				var orderBy string
 				var orderByIdx int
@@ -167,7 +204,8 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 						break
 					}
 				}
-				th := h.Th("").Style("cursor: pointer; white-space: nowrap;").
+				th := cell.(*h.HTMLTagBuilder).
+					Style("cursor: pointer; white-space: nowrap;").
 					Children(
 						h.Span(title).
 							Style("text-decoration: underline;"),
@@ -197,12 +235,24 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 					onclick.PushState(true)
 				}
 				th.Attr("@click", onclick.Go())
-
-				cell = th
 			}
+		}
 
-			return cell
-		}).
+		return cell
+	}
+
+	if lcb.headWrap != nil {
+		old := headCellWrapperFunc
+		headCellWrapperFunc = func(cell h.MutableAttrHTMLComponent, rowspan, colspan int, field string, title string, ctx *web.EventContext) h.HTMLComponent {
+			return lcb.headWrap(old(cell, rowspan, colspan, field, title, ctx), rowspan, colspan, field, title, ctx)
+		}
+	}
+
+	sDataTable := vx.DataTable(sr.Records).
+		Headers(headers).
+		SetDensity(density).
+		CellWrapperFunc(cellWrapperFunc).
+		HeadCellWrapperFunc(headCellWrapperFunc).
 		RowWrapperFunc(func(row h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 			row.SetAttr(":class", fmt.Sprintf(`{"vx-list-item--active primary--text": vars.presetsRightDrawer && locals.currEditingListItemID==="%s-%s"}`, dataTableID, id))
 
@@ -266,7 +316,6 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 	}
 
 	dataTable = sDataTable
-	mode := FieldModeStack{LIST}
 
 	for _, f := range displayFields {
 		fctx := f.NewContext(b.mb.Info(), ctx, nil, nil)

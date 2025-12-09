@@ -22,6 +22,10 @@ func New(db *gorm.DB) *Builder {
 	return b
 }
 
+func (b *Builder) DB() *gorm.DB {
+	return b.db
+}
+
 func (b *Builder) MediaLibraryPerPage(v int) *Builder {
 	b.mediaLibraryPerPage = v
 	return b

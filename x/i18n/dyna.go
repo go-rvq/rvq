@@ -36,12 +36,21 @@ func (d *DynaBuilder) Language(lang string) (r *DynaBuilder) {
 	return d
 }
 
+func (d *DynaBuilder) GetLanguage() string {
+	return d.lang
+}
+
 func T(ctx context.Context, module ModuleKey, key string, args ...string) (r string) {
 	return PT(ctx, module, "", key, args...)
 }
 
 func PT(ctx context.Context, module ModuleKey, prefix string, key string, args ...string) (r string) {
 	return PTFk(ctx, module, func() string { return strcase.ToCamel(prefix + " " + key) }, key, args...)
+}
+
+func DynaFromContext(ctx context.Context) (r *DynaBuilder) {
+	r, _ = ctx.Value(dynaBuilderKey).(*DynaBuilder)
+	return
 }
 
 func PTFk(ctx context.Context, module ModuleKey, fFieldKey func() string, key string, args ...string) (r string) {
@@ -51,11 +60,7 @@ func PTFk(ctx context.Context, module ModuleKey, fFieldKey func() string, key st
 		return defaultVal
 	}
 
-	var builder *DynaBuilder
-	b := ctx.Value(dynaBuilderKey)
-	if b != nil {
-		builder = b.(*DynaBuilder)
-	}
+	builder := DynaFromContext(ctx)
 
 	fieldKey := fFieldKey()
 	val, err := reflectutils.Get(msgr, fieldKey)

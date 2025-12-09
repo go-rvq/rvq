@@ -113,6 +113,10 @@ export function setFormValue(form: FormData, fieldName: string, val: any): boole
     return false
   }
 
+  if (typeof val === 'function') {
+    return setFormValue(form, fieldName, (val as Function)())
+  }
+
   if (val instanceof Event) {
     return setFormValue(form, fieldName, val.target)
   }
@@ -201,6 +205,7 @@ export function objectToFormData(obj: any, form: FormData, parentKey = '') {
   if (obj === undefined || obj === null) {
     return
   }
+
   const isArr = Array.isArray(obj)
   if (isArr && obj.length > 0) {
     if (obj[0] instanceof File || obj[0] instanceof Blob) {

@@ -5,17 +5,17 @@ import (
 	"slices"
 	"strings"
 
-	v "github.com/go-rvq/rvq/x/ui/vuetify"
-
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/moisespsena-go/tree2html"
 	"github.com/sunfmin/reflectutils"
 )
 
 type (
 	CellComponentFunc    func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent
-	CellWrapperFunc      func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
-	HeadCellWrapperFunc  func(cell h.MutableAttrHTMLComponent, field string, title string, ctx *web.EventContext) h.HTMLComponent
+	CellWrapperFunc      func(cell h.MutableAttrHTMLComponent, field string, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
+	HeadCellWrapperFunc  func(cell h.MutableAttrHTMLComponent, rowspan, colspan int, field string, title string, ctx *web.EventContext) h.HTMLComponent
 	RowWrapperFunc       func(row h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
 	RowMenuItemFunc      func(recordIndex int, obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent
 	RowComponentFunc     func(obj interface{}, ctx *web.EventContext) h.HTMLComponent
@@ -25,6 +25,11 @@ type (
 	RowStartFunc         func(rowIndex int, id string, obj interface{}, dataTableID string, ctx *web.EventContext) RowEndFunc
 	RowEndFunc           func(row *h.HTMLTagBuilder)
 )
+
+type dataTableCell struct {
+	FieldName string
+	h.HTMLComponent
+}
 
 type DataTableBuilder struct {
 	data               interface{}
@@ -37,6 +42,7 @@ type DataTableBuilder struct {
 	rowStart           RowStartFunc
 	rowMenuItemFuncs   []RowMenuItemFunc
 	rowExpandFunc      RowComponentFunc
+	headers            []*DataTableHeaderBuilder
 	columns            []*DataTableColumnBuilder
 	loadMoreCount      int
 	loadMoreLabel      string
@@ -280,20 +286,31 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 		}
 
 		for _, f := range b.columns {
-			tds = append(tds, f.cellComponentFunc(obj, f.name, ctx))
+			tds = append(tds, &dataTableCell{f.name, f.cellComponentFunc(obj, f.name, ctx)})
 		}
 
 		var bindTds []h.HTMLComponent
 		for _, td := range tds {
-			std, ok := td.(h.MutableAttrHTMLComponent)
-			if !ok {
+			var (
+				cell, _   = td.(*dataTableCell)
+				std       h.MutableAttrHTMLComponent
+				fieldName string
+			)
+			if cell == nil {
+				std = td.(h.MutableAttrHTMLComponent)
+			} else {
+				fieldName = cell.FieldName
+				td = cell.HTMLComponent
+				std, _ = td.(h.MutableAttrHTMLComponent)
+			}
+			if std == nil {
 				bindTds = append(bindTds, td)
 				continue
 			}
 
 			var tdWrapped h.HTMLComponent = std
 			if b.cellWrapper != nil {
-				tdWrapped = b.cellWrapper(std, id, obj, "", ctx)
+				tdWrapped = b.cellWrapper(std, fieldName, id, obj, "", ctx)
 			}
 
 			bindTds = append(bindTds, tdWrapped)
@@ -315,9 +332,9 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 						).Density("compact").
 							Attr("slim", true),
 					).ZIndex("50000"),
-				).Style("width: 64px;").Class("pl-0")
+				).Style("width: 64px;").Class("pl-0 noprint")
 			} else {
-				td = h.Td().Style("width: 64px;").Class("pl-0")
+				td = h.Td().Style("width: 64px;").Class("pl-0 noprint")
 			}
 			bindTds = append(bindTds, td)
 		}
@@ -364,7 +381,6 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 	var thead h.HTMLComponent
 
 	if !b.withoutHeaders {
-
 		var heads []h.HTMLComponent
 
 		if hasExpand {
@@ -402,27 +418,103 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 			).Style("width: 48px;").Class("pr-0"))
 		}
 
-		for _, f := range b.columns {
-			var head h.HTMLComponent
-			th := h.Th(f.title)
-			head = th
-			if b.headCellWrapper != nil {
-				head = b.headCellWrapper(
-					(h.MutableAttrHTMLComponent)(th),
-					f.name,
-					f.title,
-					ctx,
-				)
-			}
-			heads = append(heads, head)
-		}
+		{
+			var trows []h.HTMLComponents
 
-		if hasRowMenuCol {
-			heads = append(heads, h.Th("").Children(b.selectableColumnsBtn).Style("width: 64px;").Class("pl-0")) // Edit, Delete menu
+			if len(b.headers) > 0 {
+				var nodes2Tree func(node []*DataTableHeaderBuilder) []*tree2html.Tree
+				nodes2Tree = func(nodes []*DataTableHeaderBuilder) (r []*tree2html.Tree) {
+					r = make([]*tree2html.Tree, len(nodes))
+					for i, node := range nodes {
+						if len(node.Children) > 0 {
+							t := tree2html.New(nodes2Tree(node.Children)...)
+							t.Value = node
+							r[i] = t
+						} else {
+							t := tree2html.New()
+							t.Value = node
+							r[i] = t
+						}
+					}
+					return
+				}
+				tree := tree2html.New(nodes2Tree(b.headers)...)
+				tb := tree.VTable()
+				for _, row := range tb {
+					var heads h.HTMLComponents
+					for _, cell := range row {
+						f := cell.Node.Value.(*DataTableHeaderBuilder)
+						var head h.HTMLComponent
+						th := h.Th(f.title).
+							AttrIf("rowspan", cell.Rowspan, cell.Rowspan > 0).
+							AttrIf("colspan", cell.Colspan, cell.Colspan > 0)
+						head = th
+
+						if len(cell.Node.Children) > 0 {
+							th.Class("text-center")
+						}
+
+						if b.headCellWrapper != nil {
+							head = b.headCellWrapper(
+								(h.MutableAttrHTMLComponent)(th),
+								cell.Rowspan,
+								cell.Colspan,
+								f.name,
+								f.title,
+								ctx,
+							)
+						}
+						heads = append(heads, head)
+					}
+					trows = append(trows, heads)
+				}
+			} else {
+				var heads h.HTMLComponents
+				for _, f := range b.columns {
+					var head h.HTMLComponent
+					th := h.Th(f.title)
+					head = th
+					if b.headCellWrapper != nil {
+						head = b.headCellWrapper(
+							(h.MutableAttrHTMLComponent)(th),
+							0,
+							0,
+							f.name,
+							f.title,
+							ctx,
+						)
+					}
+					heads = append(heads, head)
+				}
+				trows = append(trows, heads)
+			}
+
+			if hasRowMenuCol {
+				trows[0] = append(trows[0], h.Th("").
+					Children(b.selectableColumnsBtn).
+					Style("width: 64px;").
+					Class("pl-0 noprint").
+					AttrIf("rowspan", len(trows), len(trows) > 1)) // Edit, Delete menu
+			}
+
+			for _, head := range heads {
+				comp, _ := head.(h.MutableAttrHTMLComponent)
+				if len(trows) > 1 {
+					comp.SetAttr("rowspan", len(trows))
+				}
+			}
+
+			trows[0] = append(heads, trows[0]...)
+			heads = nil
+
+			for _, trow := range trows {
+				heads = append(heads, h.Tr(trow...))
+			}
+
+			thead = h.Thead(
+				heads...,
+			).Class("bg-grey-lighten-5")
 		}
-		thead = h.Thead(
-			h.Tr(heads...),
-		).Class("bg-grey-lighten-5")
 	}
 
 	var tfoot h.HTMLComponent
@@ -559,6 +651,24 @@ func (b *DataTableBuilder) Column(name string) (r *DataTableColumnBuilder) {
 	return
 }
 
+func (b *DataTableBuilder) Header(name string) (r *DataTableHeaderBuilder) {
+	r = &DataTableHeaderBuilder{}
+	for _, c := range b.headers {
+		if c.name == name {
+			return c
+		}
+	}
+
+	r.Name(name).CellComponentFunc(defaultCellComponentFunc)
+	b.headers = append(b.headers, r)
+	return
+}
+
+func (b *DataTableBuilder) Headers(h []*DataTableHeaderBuilder) *DataTableBuilder {
+	b.headers = h
+	return b
+}
+
 func defaultCellComponentFunc(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent {
 	return h.Td(h.Text(fmt.Sprint(reflectutils.MustGet(obj, fieldName))))
 }
@@ -580,6 +690,28 @@ func (b *DataTableColumnBuilder) Title(v string) (r *DataTableColumnBuilder) {
 }
 
 func (b *DataTableColumnBuilder) CellComponentFunc(v CellComponentFunc) (r *DataTableColumnBuilder) {
+	b.cellComponentFunc = v
+	return b
+}
+
+type DataTableHeaderBuilder struct {
+	name              string
+	title             string
+	cellComponentFunc CellComponentFunc
+	Children          []*DataTableHeaderBuilder
+}
+
+func (b *DataTableHeaderBuilder) Name(v string) (r *DataTableHeaderBuilder) {
+	b.name = v
+	return b
+}
+
+func (b *DataTableHeaderBuilder) Title(v string) (r *DataTableHeaderBuilder) {
+	b.title = v
+	return b
+}
+
+func (b *DataTableHeaderBuilder) CellComponentFunc(v CellComponentFunc) (r *DataTableHeaderBuilder) {
 	b.cellComponentFunc = v
 	return b
 }

@@ -1,0 +1,22 @@
+export default {
+  back: "Back",
+  save: "Save",
+  apply: "Apply",
+  undo: "Undo",
+  redo: "Redo",
+  move: "Move",
+  changeOrder: "Change order",
+  select: "Select",
+  home: "Home",
+  preview: "Preview",
+  help: "Help",
+  pleaseEnterTheCode: "Please enter the code",
+  script: "Script",
+  scriptResult: "Script Result",
+  showDetail: 'Show detail',
+  insertTextBlockBefore: 'Insert text block before',
+  insertTextBlockAfter: 'Insert text block after',
+  preFormattedText: "Pre formatted text",
+  expand:"Expand",
+  collapse:"Collapse"
+}

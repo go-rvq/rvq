@@ -66,6 +66,8 @@ type ContentComponentBuilder struct {
 	Title           string
 	TopLeftActions  h.HTMLComponents
 	TopRightActions h.HTMLComponents
+	PrependHeader   h.HTMLComponents
+	AppendHeader    h.HTMLComponents
 	Tabs            []TabComponentFunc
 	PreBody         h.HTMLComponents
 	PostBody        h.HTMLComponents
@@ -154,6 +156,14 @@ func (b *ContentComponentBuilder) BuildOverlay() h.HTMLComponent {
 
 	if len(headerRight) > 0 {
 		tag.SetSlotAppendToolbar(headerRight...)
+	}
+
+	if len(b.PrependHeader) > 0 {
+		tag.SetSlotPrependHeader(b.PrependHeader...)
+	}
+
+	if len(b.AppendHeader) > 0 {
+		tag.SetSlotAppendHeader(b.AppendHeader...)
 	}
 
 	body := b.JoinedBody()

@@ -29,9 +29,21 @@ type CropOption struct {
 	X, Y, Width, Height int
 }
 
+type Reader interface {
+	io.Reader
+	io.ReaderAt
+	io.Seeker
+}
+
 // FileHeader is an interface, for matched values, when call its `Open` method will return `multipart.File`
 type FileHeader interface {
 	Open() (multipart.File, error)
+}
+
+type FileHeaderFunc func() (multipart.File, error)
+
+func (f FileHeaderFunc) Open() (multipart.File, error) {
+	return f()
 }
 
 type fileWrapper struct {
@@ -40,6 +52,52 @@ type fileWrapper struct {
 
 func (fileWrapper *fileWrapper) Open() (multipart.File, error) {
 	return fileWrapper.File, nil
+}
+
+type File interface {
+	FileHeader
+	Name() string
+}
+
+func NewFileHeader(name string, open func() (Reader, error)) File {
+	return &RawFileHeader{name: name, open: open}
+}
+
+type RawFileHeader struct {
+	name  string
+	open  func() (Reader, error)
+	close func(r Reader) error
+}
+
+func (h *RawFileHeader) SetClose(close func(r Reader) error) *RawFileHeader {
+	h.close = close
+	return h
+}
+
+func (h *RawFileHeader) Name() string {
+	return h.name
+}
+
+func (h *RawFileHeader) Open() (_ multipart.File, err error) {
+	var f Reader
+	if f, err = h.open(); err != nil {
+		return
+	}
+	return &closedReader{Reader: f, close: h.close}, nil
+}
+
+type closedReader struct {
+	Reader
+	close func(r Reader) error
+}
+
+func (f *closedReader) Close() error {
+	if f.close != nil {
+		return f.close(f.Reader)
+	} else if c, ok := f.Reader.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
 }
 
 // Base defined a base struct for storages
@@ -66,6 +124,8 @@ func (b *Base) Scan(data interface{}) (err error) {
 		b.FileName = filepath.Base(values.Name())
 	case *multipart.FileHeader:
 		b.FileHeader, b.FileName = values, values.Filename
+	case File:
+		b.FileHeader, b.FileName = values, values.Name()
 	case []*multipart.FileHeader:
 		if len(values) > 0 {
 			if file := values[0]; file.Size > 0 {

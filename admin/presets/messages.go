@@ -34,6 +34,22 @@ func (m StrMap) Set(pair ...string) {
 	}
 }
 
+func (m StrMap) Update(pair ...string) {
+	if len(pair)%2 != 0 {
+		panic("pairs must have pairs")
+	}
+
+	for i := 0; i < len(pair); i += 2 {
+		m[pair[i]] = pair[i+1]
+	}
+}
+
+func (m StrMap) Merge(other StrMap) {
+	for k, v := range other {
+		m[k] = v
+	}
+}
+
 type PrinterOptionsMessages struct {
 	Title          string
 	Print          string

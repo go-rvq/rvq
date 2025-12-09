@@ -1,0 +1,9 @@
+@use "vuetify/lib/styles/settings/_elevations" as VuetifyElevationSettings;
+@use "sass:map";
+
+@function shadow($elevation) {
+  @return
+          map.get(VuetifyElevationSettings.$shadow-key-umbra, $elevation),
+          map.get(VuetifyElevationSettings.$shadow-key-penumbra, $elevation),
+          map.get(VuetifyElevationSettings.$shadow-key-ambient, $elevation);
+}

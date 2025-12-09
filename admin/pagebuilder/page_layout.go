@@ -39,7 +39,7 @@ func DefaultPageLayoutFunc(body h.HTMLComponent, input *PageLayoutInput, ctx *we
 		body,
 		h.If(input.Footer != nil, input.Footer),
 		scriptWithCodes(input.FreeStyleBottomJs),
-	).Attr("data-site-domain", ctx.R.Header.Get("Qor5-Site-Domain"))
+	)
 }
 
 func scriptWithCodes(jscodes []string) h.HTMLComponent {

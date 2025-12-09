@@ -121,6 +121,13 @@ func (fc *FieldContext) LoadHint() *FieldContext {
 	return fc
 }
 
+func (fc *FieldContext) CheckHint() *FieldContext {
+	if len(fc.Hint) == 0 {
+		fc.LoadHint()
+	}
+	return fc
+}
+
 func (fc *FieldContext) SetContextValue(key, value interface{}) {
 	if fc.Context == nil {
 		fc.Context = context.WithValue(context.Background(), key, value)
@@ -191,6 +198,13 @@ func (n *FieldBuilder) SetLabelKey(labelKey string) *FieldBuilder {
 
 func (n *FieldBuilder) SetI18nLabel(i18nLabel func(ctx context.Context) string) *FieldBuilder {
 	n.i18nLabel = i18nLabel
+	return n
+}
+
+func (n *FieldBuilder) SetI18nLabelString(v string) *FieldBuilder {
+	n.i18nLabel = func(ctx context.Context) string {
+		return v
+	}
 	return n
 }
 
@@ -511,7 +525,24 @@ func (b FieldBuilders) FieldsFromLayout(layout []interface{}, filter ...FieldFil
 	return
 }
 
-func (b FieldBuilders) FieldsGenFromLayout(layout []interface{}, filter ...FieldFilter) func(func(int, *FieldBuilder) bool) {
+func (b FieldBuilders) FilterLayout(layout FieldsLayout, filter ...FieldFilter) FieldsLayout {
+	accept := FieldFilters(filter).Accept
+	l, err := layout.Filter(func(typ FieldLayoutEntryType, name string) bool {
+		if typ == FieldLayoutEntryTypeName {
+			if f := b.Get(name); f != nil {
+				return accept(f)
+			}
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
+
+func (b FieldBuilders) FieldsGenFromLayout(layout FieldsLayout, filter ...FieldFilter) func(func(int, *FieldBuilder) bool) {
 	accept := FieldFilters(filter).Accept
 
 	return func(yield_ func(int, *FieldBuilder) bool) {
@@ -528,35 +559,74 @@ func (b FieldBuilders) FieldsGenFromLayout(layout []interface{}, filter ...Field
 				return true
 			}
 		)
-		for _, iv := range layout {
-			switch t := iv.(type) {
-			case string:
-				if f := b.Get(t); f != nil {
-					if !yield(f) {
-						return
-					}
+		for _, name := range layout.Names() {
+			if f := b.Get(name); f != nil {
+				if !yield(f) {
+					return
 				}
-			case []string:
-				for _, n := range t {
-					if f := b.Get(n); f != nil {
-						if !yield(f) {
-							return
-						}
-					}
-				}
-			case *FieldsSection:
-				for _, row := range t.Rows {
-					for _, n := range row {
-						if f := b.Get(n); f != nil {
-							if !yield(f) {
-								return
-							}
-						}
-					}
-				}
-			default:
-				panic("unknown fields layout, must be string/[]string/*FieldsSection")
 			}
 		}
 	}
+}
+
+func (b FieldBuilders) FieldTreeLayout(layout FieldsLayout) (roots FieldBuilderTreeNodes) {
+	layout = layout.ToGroup()
+	roots = make(FieldBuilderTreeNodes, len(layout))
+
+	for i, e := range layout {
+		node := &FieldBuilderTreeNode{}
+		switch t := e.(type) {
+		case *FieldsGroup:
+			node.IsTree = true
+			node.Tree = &FieldsBuilderTree{
+				Name:  t.Name,
+				Title: t.Title,
+				Nodes: b.FieldTreeLayout(t.Items),
+			}
+		default:
+			name := t.(string)
+			node.Field = b.Get(name)
+		}
+
+		roots[i] = node
+	}
+	return
+}
+
+type FieldBuilderTreeNode struct {
+	IsTree bool
+	Field  *FieldBuilder
+	Tree   *FieldsBuilderTree
+}
+
+type FieldBuilderTreeNodes []*FieldBuilderTreeNode
+
+func (t FieldBuilderTreeNodes) Walk(cb func(n *FieldBuilderTreeNode) error) (err error) {
+	for _, node := range t {
+		if err = cb(node); err != nil {
+			return
+		}
+		if node.IsTree {
+			if err = node.Tree.Nodes.Walk(cb); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (t FieldBuilderTreeNodes) Fields() (fields FieldBuilders) {
+	_ = t.Walk(func(n *FieldBuilderTreeNode) error {
+		if !n.IsTree {
+			fields = append(fields, n.Field)
+		}
+		return nil
+	})
+	return
+}
+
+type FieldsBuilderTree struct {
+	Name  string
+	Title func(ctx context.Context) string
+	Nodes FieldBuilderTreeNodes
 }

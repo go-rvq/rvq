@@ -26,6 +26,16 @@ func Portal(children ...h.HTMLComponent) (r *PortalBuilder) {
 	return
 }
 
+func (b *PortalBuilder) Inline() *PortalBuilder {
+	b.tag.Style("display: inline-block")
+	return b
+}
+
+func (b *PortalBuilder) Class(names ...string) *PortalBuilder {
+	b.tag.Class(names...)
+	return b
+}
+
 func (b *PortalBuilder) Scope(name string, value any) *PortalBuilder {
 	b.scope[name] = value
 	return b

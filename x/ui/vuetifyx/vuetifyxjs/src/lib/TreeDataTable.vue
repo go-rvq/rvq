@@ -40,7 +40,7 @@
     <template v-slot:header.$columns-control="{ column }">
       <v-dialog max-width="450" scrollable v-bind="settingsProps">
         <template v-slot:activator="{ props }">
-          <v-btn icon="mdi-cog" density="compact" flat v-bind="props"></v-btn>
+          <v-btn icon="mdi-cog" density="compact" flat v-bind="props" class="noprint"></v-btn>
         </template>
         <template v-slot:default="{ isActive }">
           <v-card density="compact">
@@ -187,7 +187,6 @@ const updateHeaders = (value: any[]) => {
     reactive({ title: '', key: '$control', sortable: false, noSelectable: true, visible: true })
   ]
   value.forEach((item: any) => {
-    console.log(item, item.visible)
     if (item.visible === undefined) {
       item.visible = true
     }
@@ -200,7 +199,13 @@ const updateHeaders = (value: any[]) => {
       sortable: false,
       width: '0%',
       noSelectable: true,
-      visible: true
+      visible: true,
+      headerProps: {
+        class: 'noprint'
+      },
+      cellProps: {
+        class: 'noprint'
+      }
     })
   )
 

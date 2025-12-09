@@ -27,7 +27,11 @@ type ListingComponentBuilder struct {
 	tableBuilder          ListingTableBuilder
 	preBuild              ListingPreBuild
 	componentWrap         func(ctx *web.EventContext, comp h.HTMLComponent) h.HTMLComponent
+	headWrap              func(cell h.HTMLComponent, rowspan, colspan int, field string, dataTableID string, ctx *web.EventContext) h.HTMLComponent
+	cellWrap              func(cell h.HTMLComponent, field string, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent
 	filterComponentsBuild ListingFilterComponentsBuilder
+	SearchbarDisabled     bool
+	FilterDisabled        bool
 	datafield.DataField[*ListingComponentBuilder]
 }
 
@@ -42,6 +46,16 @@ func (lcb *ListingComponentBuilder) SetFilterComponentsBuild(filterComponentsBui
 
 func (lcb *ListingComponentBuilder) ComponentWrap(f func(ctx *web.EventContext, comp h.HTMLComponent) h.HTMLComponent) *ListingComponentBuilder {
 	lcb.componentWrap = f
+	return lcb
+}
+
+func (lcb *ListingComponentBuilder) CellWrap(f func(cell h.HTMLComponent, field string, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent) *ListingComponentBuilder {
+	lcb.cellWrap = f
+	return lcb
+}
+
+func (lcb *ListingComponentBuilder) HeadWrap(f func(cell h.HTMLComponent, rowspan, colspan int, field string, dataTableID string, ctx *web.EventContext) h.HTMLComponent) *ListingComponentBuilder {
+	lcb.headWrap = f
 	return lcb
 }
 
@@ -136,13 +150,14 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	}
 
 	var filterBar h.HTMLComponent
-	if b.filterDataFunc != nil {
+	if !lcb.FilterDisabled && b.filterDataFunc != nil {
 		fd := b.filterDataFunc(ctx)
 		fd.SetByQueryString(ctx.R.URL.RawQuery)
 		filterBar = b.filterBar(ctx, msgr, fd, inDialog)
 	}
+
 	var searchBoxDefault h.HTMLComponent
-	if b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible {
+	if !lcb.SearchbarDisabled && (b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible) {
 		searchBoxDefault = VResponsive(
 			web.Scope(
 				VRow(
@@ -244,7 +259,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 			cb.BottomActions = append(cb.BottomActions, VCardActions(footerActions...))
 		}
 
-		if b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible {
+		if !lcb.SearchbarDisabled && (b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible) {
 			searchBoxDefault = VResponsive(
 				web.Scope(
 					VRow(
@@ -296,12 +311,14 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 			).Width(100)
 		}
 
-		cb.TopBar = h.HTMLComponents{
-			VDivider(),
-			VToolbar(
-				searchBoxDefault,
-				filterBar,
-			).Flat(true).Color("surface").AutoHeight(true).Class("pa-2"),
+		if searchBoxDefault != nil || filterBar != nil {
+			cb.TopBar = h.HTMLComponents{
+				VDivider(),
+				VToolbar(
+					searchBoxDefault,
+					filterBar,
+				).Flat(true).Color("surface").AutoHeight(true).Class("pa-2"),
+			}
 		}
 
 		cb.BottomBar = VCardActions(web.Portal(dataTableAdditions).Name(lcb.portals.DataTableAdditions()))
@@ -337,8 +354,11 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 	cb.PreBody = append(cb.PreBody,
 		preContent,
-		h.Div(searchBoxDefault).Class("mb-2"),
 	)
+
+	if searchBoxDefault != nil {
+		cb.PreBody = append(cb.PreBody, h.Div(searchBoxDefault).Class("mb-2"))
+	}
 
 	if filterBar != nil {
 		cb.PreBody = append(cb.PreBody,

@@ -9,10 +9,11 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 )
+
+var DefaulMaxPostSize int64 = 128 << 20 // 128MB
 
 var Default = New()
 
@@ -204,7 +205,7 @@ func (p *PageBuilder) index(w ResponseWriter, r *http.Request) {
 		err     error
 		inj     = &PageInjector{}
 		ctx     = new(EventContext)
-		c       = WrapEventContext(r.Context(), ctx)
+		c       = ContextWithEventContext(r.Context(), ctx)
 		_, body = p.render(w, r, c, inj, false)
 	)
 
@@ -222,7 +223,7 @@ func (p *PageBuilder) index(w ResponseWriter, r *http.Request) {
 func (p *PageBuilder) parseForm(r *http.Request) *multipart.Form {
 	maxSize := p.maxFormSize
 	if maxSize == 0 {
-		maxSize = 128 << 20 // 128MB
+		maxSize = DefaulMaxPostSize // 128MB
 	}
 
 	err := r.ParseMultipartForm(maxSize)
@@ -241,9 +242,9 @@ func (p *PageBuilder) executeEvent(w ResponseWriter, r *http.Request) {
 	ctx.W = w
 	ctx.Injector = &PageInjector{}
 
-	c := WrapEventContext(r.Context(), ctx)
+	c := ContextWithEventContext(r.Context(), ctx)
 
-	eventFuncID := r.FormValue(EventFuncIDName)
+	eventFuncID := r.URL.Query().Get(EventFuncIDName)
 
 	// for server side restart and lost all the eventFuncs,
 	// but user keep clicking page without refresh page to call p.render to fill up eventFuncs
@@ -305,10 +306,9 @@ func reload(*EventContext) (r EventResponse, err error) {
 }
 
 func (p *PageBuilder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	ParseRequest(r)
-
+	r = ParseRequest(r)
 	w := WrapResponseWriter(rw)
-	if strings.Index(r.URL.String(), EventFuncIDName) >= 0 {
+	if v := UrlQueryFromRequest(r).Get(EventFuncIDName); len(v) > 0 {
 		p.executeEvent(w, r)
 		return
 	}

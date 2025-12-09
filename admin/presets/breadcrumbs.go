@@ -33,7 +33,13 @@ type Breadcrumb struct {
 }
 
 type BreadcrumbsBuilder struct {
-	items []*Breadcrumb
+	items             []*Breadcrumb
+	youAreHereDisable bool
+}
+
+func (b *BreadcrumbsBuilder) YouAreHere(v bool) *BreadcrumbsBuilder {
+	b.youAreHereDisable = !v
+	return b
 }
 
 func (b *BreadcrumbsBuilder) Items() []*Breadcrumb {
@@ -62,17 +68,28 @@ func (b *BreadcrumbsBuilder) Empty() bool {
 
 func (b *BreadcrumbsBuilder) Component(youAreHere string) h.HTMLComponent {
 	var (
-		children = make([]h.HTMLComponent, (len(b.items) * 2))
+		children h.HTMLComponents
 		i        = 1
 	)
-	children[0] = VBreadcrumbsItem(h.Text(youAreHere), h.Span(":")).Class("font-italic v-breadcrumbs-item-youarehere")
+
 	for _, item := range b.items[:len(b.items)-1] {
-		children[i] = h.A(h.Text(item.Label)).Href(item.URI)
-		children[i+1] = VBreadcrumbsDivider()
+		comp := h.Text(item.Label)
+		if len(item.URI) > 0 {
+			comp = h.A(comp).Href(item.URI)
+		}
+		children = append(children, VBreadcrumbsItem(comp).Style("text-wrap-mode: nowrap"), VBreadcrumbsDivider())
 		i += 2
 	}
-	children[i] = VBreadcrumbsItem(h.Text(b.items[len(b.items)-1].Label)).Active(true)
-	return VBreadcrumbs(children...).Style("padding:0")
+	children = append(children, VBreadcrumbsItem(h.Text(b.items[len(b.items)-1].Label)).Style("text-wrap-mode: nowrap").Active(true))
+	crumbs := VBreadcrumbs(children...).Class("flex-wrap rvq-presets-breadcrumbs").Style("padding:0")
+
+	if !b.youAreHereDisable && len(youAreHere) > 0 {
+		return h.Div(
+			h.Div(h.Text(youAreHere), h.Span(":")).Style("text-wrap-mode: nowrap").Class("font-italic v-breadcrumbs-item-youarehere"),
+			crumbs,
+		).Class("d-flex rvq-presets-breadcrumbs-wraper")
+	}
+	return crumbs
 }
 
 func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*ModelBuilder, parentsID IDSlice, bc *BreadcrumbsBuilder) (records []any, err error) {

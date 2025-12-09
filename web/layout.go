@@ -8,6 +8,9 @@ func NoopLayoutFunc(in PageFunc) PageFunc {
 
 func defaultLayoutFunc(in PageFunc) PageFunc {
 	return func(ctx *EventContext) (r PageResponse, err error) {
+		localeSetter := new(VueLayoutLocaleSetter)
+		ContextWithVueLocaleSetter(ctx, localeSetter)
+
 		r, err = in(ctx)
 		if ctx.W.Writed() || r.RedirectURL != "" {
 			return
@@ -20,13 +23,15 @@ func defaultLayoutFunc(in PageFunc) PageFunc {
 			ctx.Injector.Title(r.PageTitle)
 		}
 
+		localeSetter.lang = ctx.Injector.lang
+
 		var body []byte
-		if body, err = h.Marshal(r.Body, WrapEventContext(ctx.Context(), ctx)); err != nil {
+		if body, err = h.Marshal(r.Body, ContextWithEventContext(ctx.Context(), ctx)); err != nil {
 			return
 		}
 
 		r.Body = h.HTMLComponents{
-			h.RawHTML("<!DOCTYPE html>\n"),
+			h.RawHTML("<!DOCTYPE html>"),
 			h.Tag("html").Children(
 				h.Head(
 					ctx.Injector.GetHeadHTMLComponent(),
@@ -38,6 +43,7 @@ func defaultLayoutFunc(in PageFunc) PageFunc {
 						// innerHTML replaces attributes names to kebab-case, bugging non kebab-case slots names.
 						// 2. The main portal is anonymous to prevent cache.
 						Portal().Raw(true).Content(string(body)),
+						localeSetter,
 					).ID("app").Attr("v-cloak", true),
 					ctx.Injector.GetTailHTMLComponent(),
 				).Class("front"),

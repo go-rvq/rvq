@@ -7,6 +7,7 @@
   <template v-else>
     <div
       class="go-plaid-portal"
+      v-bind="$attrs"
       :id="portalName && 'portal--' + portalName"
       v-if="visible"
       ref="portal"
@@ -33,7 +34,7 @@ import {
   useSlots
 } from 'vue'
 
-import { componentByTemplate } from '@/component-by-template'
+import { componentByTemplate, type RenderOptions, type RenderSelf } from '@/component-by-template'
 import type { EventResponse } from '@/types'
 import type { Builder } from '@/builder'
 
@@ -57,6 +58,11 @@ const props = defineProps<{
   autoReloadInterval: string | number
   raw: boolean
   scope: any
+}>()
+
+const emit = defineEmits<{
+  mounted: [self:RenderSelf],
+  unmounted: [self:RenderSelf]
 }>()
 
 const current = shallowRef<DefineComponent | null>(null)
@@ -85,14 +91,24 @@ provide('form', form)
 
 const internalScope = { form, locals, ...(props.scope ?? {}) }
 
-const updatePortalTemplate = (template: string) => {
-  current.value = componentByTemplate(template, internalScope, portal)
+const mergeRenderOptions = (options:RenderOptions={}) => {
+  options.mounted ||= []
+  options.unmounted ||= []
+
+  options.mounted.push((self:RenderSelf) => emit('mounted', self))
+  options.unmounted.push((self:RenderSelf) => emit('unmounted', self))
+
+  return options
+}
+
+const updatePortalTemplate = (template: string, options:RenderOptions={}) => {
+  current.value = componentByTemplate(template, internalScope, portal, mergeRenderOptions(options))
 }
 
 // other reactive properties and methods
 const reload = () => {
   if (slots.default) {
-    current.value = componentByTemplate('<slot v-bind="SCOPE"></slot>', internalScope, portal)
+    current.value = componentByTemplate('<slot v-bind="SCOPE"></slot>', internalScope, portal, mergeRenderOptions({}))
     return
   }
 

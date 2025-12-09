@@ -388,7 +388,7 @@ export class Builder {
             if (window.__goplaid.portals[pu.name]) {
               const { updatePortalTemplate } = window.__goplaid.portals[pu.name]
               if (updatePortalTemplate) {
-                updatePortalTemplate(pu.body)
+                updatePortalTemplate(pu.body, pu.options)
               }
             } else if (pu.defer) {
               setTimeout(
@@ -396,7 +396,7 @@ export class Builder {
                   if (window.__goplaid.portals[pu.name]) {
                     const { updatePortalTemplate } = window.__goplaid.portals[pu.name]
                     if (updatePortalTemplate) {
-                      updatePortalTemplate(pu.body)
+                      updatePortalTemplate(pu.body, pu.options)
                     }
                   } else {
                     console.error("go-plaid-portal defered '" + pu.name + "' does not exists.")

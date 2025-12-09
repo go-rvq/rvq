@@ -18,10 +18,16 @@ import TreeDataTable from '@/lib/TreeDataTable.vue'
 import TreeRows from '@/lib/TreeRows.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
-import { default as ImageField } from 'vuetify-editable-image-field/src/lib/Input.vue'
+import { default as ImageField } from '@/lib/ImageTools/Input.vue'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import Dialog from '@/lib/Dialog.vue'
 import Card from '@/lib/Card.vue'
+import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
+import { VuetifyViewer } from 'vuetify-pro-tiptap'
+import { VXBtn } from '@/lib/VXBtn'
+import VXArraySorter from '@/lib/VXArraySorter'
+import  Portal from '@/lib/Portal/Portal.vue'
+import Messages from '@/lib/Messages'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -46,6 +52,12 @@ const vuetifyx = {
     app.component('vx-navigation-drawer', NavigationDrawer)
     app.component('vx-dialog', Dialog)
     app.component('vx-card', Card)
+    app.component('vx-tiptap-editor', VXTipTapEditor)
+    app.component('vx-tiptap-viewer', VuetifyViewer)
+    app.component('vx-btn', VXBtn)
+    app.component('vx-array-sorter', VXArraySorter)
+    app.component('vx-portal', Portal)
+    app.component('vx-messages', Messages)
   }
 }
 declare const window: any

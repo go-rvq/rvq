@@ -13,29 +13,31 @@ type FormConfigure interface {
 }
 
 type FormBuilder struct {
-	id          string
-	fb          *FieldsBuilder
-	ctx         *web.EventContext
-	msgr        *Messages
-	mode        FieldMode
-	mb          *ModelBuilder
-	obj         interface{}
-	portalName  string
-	overlayMode actions.OverlayMode
-	pre, post   []ModeObjectComponentFunc
+	id                string
+	fb                *FieldsBuilder
+	ctx               *web.EventContext
+	msgr              *Messages
+	mode              FieldMode
+	mb                *ModelBuilder
+	obj               interface{}
+	portalName        string
+	overlayMode       actions.OverlayMode
+	pre, post         []ModeObjectComponentFunc
+	renderBreadCrumbs bool
 }
 
 func NewFormBuilder(ctx *web.EventContext, mb *ModelBuilder, fb *FieldsBuilder, obj interface{}) *FormBuilder {
 	rawID := mb.MustRecordID(obj)
 
 	f := &FormBuilder{
-		id:          vx.ObjectID(obj),
-		fb:          fb,
-		ctx:         ctx,
-		msgr:        MustGetMessages(ctx.Context()),
-		mb:          mb,
-		obj:         obj,
-		overlayMode: GetOverlay(ctx),
+		id:                vx.ObjectID(obj),
+		fb:                fb,
+		ctx:               ctx,
+		msgr:              MustGetMessages(ctx.Context()),
+		mb:                mb,
+		obj:               obj,
+		overlayMode:       GetOverlay(ctx),
+		renderBreadCrumbs: ctx.R.FormValue(ParamRenderBreadcrumbs) == "true",
 	}
 	if rawID.IsZero() {
 		f.mode = NEW
@@ -76,10 +78,11 @@ func (f *FormBuilder) Build() (form *Form) {
 	ctx := f.ctx
 
 	form = &Form{
-		b:      f,
-		Obj:    f.obj,
-		MB:     f.mb,
-		Portal: f.portalName,
+		b:                 f,
+		Obj:               f.obj,
+		MB:                f.mb,
+		Portal:            f.portalName,
+		RenderBreadcrumbs: f.renderBreadCrumbs,
 	}
 
 	overlayType := f.overlayMode
@@ -145,12 +148,13 @@ type Form struct {
 	TopLeftActions  h.HTMLComponents
 	TopRightActions h.HTMLComponents
 
-	MainPortals   h.HTMLComponents
-	PrimaryAction h.HTMLComponent
-	Menu          h.HTMLComponents
-	Actions       h.HTMLComponents
-	ScopeDisabled bool
-	Wrap          func(h h.HTMLComponent) h.HTMLComponent
+	MainPortals       h.HTMLComponents
+	PrimaryAction     h.HTMLComponent
+	Menu              h.HTMLComponents
+	Actions           h.HTMLComponents
+	ScopeDisabled     bool
+	Wrap              func(h h.HTMLComponent) h.HTMLComponent
+	RenderBreadcrumbs bool
 }
 
 func (f *Form) Component() (comp h.HTMLComponent) {
@@ -172,6 +176,30 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 	}
 
 	overlay := f.b.overlayMode
+
+	if f.RenderBreadcrumbs {
+		var title string
+		if !overlay.Overlayed() {
+			title = f.Title
+		}
+
+		var (
+			tag  *h.HTMLTagBuilder
+			comp = BuildBreadcrumbsComponent(
+				f.b.mb.Builder(),
+				GetOrInitBreadcrumbs(f.b.ctx.R),
+				f.b.ctx,
+				title)
+		)
+		switch c := comp.(type) {
+		case *h.HTMLTagBuilder:
+			tag = c
+		default:
+			tag = comp.(h.TagGetter).GetHTMLTagBuilder()
+		}
+		tag.Class("px-3")
+		cb.AppendHeader = append(h.HTMLComponents{VDivider()}, comp)
+	}
 
 	cb.PreBody = append(cb.PreBody, f.Notice)
 

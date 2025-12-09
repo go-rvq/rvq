@@ -1,11 +1,8 @@
 <script setup lang="ts">
+import * as Vue from 'vue'
 import { ref } from 'vue'
 
-const props = defineProps<{
-  translations: any
-}>()
-
-const t = props.translations
+declare var window: any
 
 class Item {
   text: string = ''
@@ -17,6 +14,23 @@ class Model {
   valuesAre: Item[] = []
   modifier: String = 'in'
 }
+
+interface CompArgs {
+  window: any
+  Vue: any
+}
+
+interface Config {
+  component?: ((scope: CompArgs) => void)
+}
+
+const props = defineProps<{
+  translations: any
+  config: Config
+}>()
+
+const t = props.translations
+const config = props.config || {}
 
 const model = defineModel<Model>()
 
@@ -36,6 +50,12 @@ const items = ref([
   { text: t.in, value: 'in' },
   { text: t.notIn, value: 'notIn' }
 ])
+
+const itemSelectorComp = config.component?.({
+  window,
+  Vue
+})
+
 </script>
 
 <template>
@@ -52,7 +72,14 @@ const items = ref([
         hide-details
       ></v-select>
     </div>
+    <itemSelectorComp
+      v-if="itemSelectorComp"
+      v-model="(model as Model).valuesAre"
+      :items="(model as Model).options"
+      item-title="text"
+      item-value="value" />
     <v-select
+      v-else
       chips
       v-model="(model as Model).valuesAre"
       :items="(model as Model).options"
@@ -60,6 +87,6 @@ const items = ref([
       item-value="value"
       multiple
       density="comfortable"
-    ></v-select>
+    />
   </div>
 </template>

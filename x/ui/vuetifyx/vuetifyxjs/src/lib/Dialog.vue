@@ -72,7 +72,7 @@ export default defineComponent({
   },
   emits: ['update:modelValue', 'open', 'close'],
 
-  setup(props) {
+  setup(props, { slots }) {
     if (props.setup) {
       props.setup()
     }
@@ -246,18 +246,20 @@ export default defineComponent({
       >
         <slot name="prependHeader" />
         <v-toolbar :density="density as Density" v-bind="toolbarProps">
-          <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer">
+          <slot name="prependToolbar" />
+          <template v-slot:prepend v-if="$slots.mainMenu || $slots.mainMenuContainer || $slots.prependLeftToolbarActions || $slots.appendLeftToolbarActions">
+            <slot name="prependLeftToolbarActions" />
             <v-btn
               v-if="!isMainMenuOpen"
               icon="mdi-menu"
               @click="isMainMenuOpen = !isMainMenuOpen"
             ></v-btn>
+            <slot name="appendLeftToolbarActions" />
           </template>
-          <slot name="prependToolbar" />
           <slot v-if="$slots.header" name="header"></slot>
           <v-toolbar-title v-else-if="title">{{ title }}</v-toolbar-title>
-          <slot name="appendToolbar" />
           <template v-slot:append>
+            <slot name="prependRightToolbarActions" />
             <v-btn
               v-if="($slots.secondaryMenuContainer || $slots.secondaryMenu) && !isMainMenuOpen"
               icon="mdi-dots-vertical"
@@ -273,7 +275,9 @@ export default defineComponent({
               :icon="closeIcon"
               @click="cIsOpen = false"
             />
+            <slot name="appendRightToolbarActions" />
           </template>
+          <slot name="appendToolbar" />
         </v-toolbar>
         <slot name="appendHeader" />
         <v-divider></v-divider>

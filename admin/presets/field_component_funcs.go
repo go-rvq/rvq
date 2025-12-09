@@ -30,16 +30,12 @@ func TDStringComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 }
 
 func CheckboxComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VCheckbox().
+	return FieldWithHint(field, VCheckbox().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
 		Density(DensityCompact).
-		If(len(field.Hint) > 0, func(t *VCheckboxBuilder) {
-			t.Hint(field.Hint).
-				PersistentHint(true)
-		}).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func CheckboxReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
@@ -50,26 +46,21 @@ func CheckboxReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.H
 }
 
 func SwitchComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VSwitch().
+	return FieldWithHint(field, VSwitch().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
-		If(len(field.Hint) > 0, func(t *VSwitchBuilder) {
-			t.Hint(field.Hint).
-				PersistentHint(true)
-		}).
 		Label(field.Label).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VTextField().
+	return FieldWithHint(field, VTextField().
 		Type("number").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func TimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -139,25 +130,23 @@ func TimeComponentFuncSetter(obj interface{}, field *FieldContext, ctx *web.Even
 }
 
 func TextFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VTextField().
+	return FieldWithHint(field, VTextField().
 		Type("text").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func LongTextFieldComponentFunc(field *FieldContext, _ *web.EventContext) *VTextareaBuilder {
-	return VTextarea().
+	return FieldWithHint(field, VTextarea().
 		Type("text").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
 		Label(field.Label).
-		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func (f *FieldBuilder) AsSlice() *FieldBuilder {
@@ -192,13 +181,12 @@ func ReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 }
 
 func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-	return VFileInput().
+	return FieldWithHint(field, VFileInput().
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, "")...).
 		Label(field.Label).
-		Hint(field.HintLoader()).
 		ErrorMessages(field.Errors...).
-		Disabled(field.ReadOnly)
+		Disabled(field.ReadOnly))
 }
 
 func PasswordFieldComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -278,4 +266,13 @@ func EditorJSComponentWriteFunc(field *FieldContext, _ *web.EventContext) h.HTML
 	s, _ := field.Value().(string)
 	_, err := editorjs.Parse([]byte(s))
 	return vx.EditorJS().Label(field.Label).FormField(field.FormKey, field.Value().(string)).Errors(err)
+}
+
+func FieldWithHint[C h.TagGetter](field *FieldContext, comp C) C {
+	field.CheckHint()
+	if len(field.Hint) > 0 {
+		tag := comp.GetHTMLTagBuilder()
+		tag.Attr("hint", field.Hint, "persistent-hint", true)
+	}
+	return comp
 }

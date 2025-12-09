@@ -24,7 +24,7 @@ func ReadOnlyFieldComponentFuncWrapper(f FieldComponentFunc) FieldComponentFunc 
 func ListingFieldComponentFuncWrapper(f FieldComponentFunc) FieldComponentFunc {
 	return func(field *FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
 		if comp = f(field, ctx); comp == nil {
-			return
+			return h.Td()
 		}
 		return h.Td(comp)
 	}
