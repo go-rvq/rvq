@@ -15,6 +15,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
+	github.com/gad-lang/gad v0.0.0-20251118140158-818a37fe57e6
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1
@@ -24,7 +25,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/gosimple/unidecode v1.0.1
@@ -48,10 +49,10 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/xid v1.5.0
 	github.com/samber/lo v1.39.0
-	github.com/shopspring/decimal v1.3.1
+	github.com/shopspring/decimal v1.4.0
 	github.com/shurcooL/sanitized_anchor_name v1.0.0
 	github.com/spf13/cast v1.6.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/sunfmin/reflectutils v1.0.4
 	github.com/sunfmin/snippetgo v0.0.2
 	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
@@ -69,8 +70,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	goji.io/v3 v3.0.0
-	golang.org/x/crypto v0.24.0
-	golang.org/x/text v0.16.0
+	golang.org/x/crypto v0.38.0
+	golang.org/x/text v0.25.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/driver/sqlite v1.5.5
@@ -79,7 +80,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -119,7 +120,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
@@ -182,23 +183,20 @@ require (
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
-	go.opentelemetry.io/otel v1.26.0 // indirect
-	go.opentelemetry.io/otel/metric v1.26.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.24.0 // indirect
-	go.opentelemetry.io/otel/trace v1.26.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
+	go.opentelemetry.io/otel v1.35.0 // indirect
+	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
 	golang.org/x/image v0.17.0 // indirect
-	golang.org/x/net v0.26.0
-	golang.org/x/oauth2 v0.21.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240509183442-62759503f434 // indirect
-	google.golang.org/grpc v1.63.2 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	golang.org/x/net v0.40.0
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
+	google.golang.org/grpc v1.72.1 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -207,6 +205,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.4 // indirect
 	github.com/qor5/web v1.2.3 // indirect
 	github.com/theplant/htmlgo v1.0.3 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250505200425-f936aa4a68b2 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/
