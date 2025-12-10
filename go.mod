@@ -67,11 +67,14 @@ require (
 	github.com/tnclong/go-que v0.0.0-20240226030728-4e1f3c8ec781
 	github.com/ua-parser/uap-go v0.0.0-20240113215029-33f8e6d47f38
 	github.com/wcharczuk/go-chart/v2 v2.1.1
+	github.com/wneessen/go-mail v0.6.2
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	goji.io/v3 v3.0.0
 	golang.org/x/crypto v0.38.0
+	golang.org/x/oauth2 v0.30.0
 	golang.org/x/text v0.25.0
+	google.golang.org/api v0.235.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/driver/sqlite v1.5.5
@@ -202,12 +205,15 @@ require (
 )
 
 require (
+	cloud.google.com/go/auth v0.16.1 // indirect
+	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.4 // indirect
+	github.com/google/s2a-go v0.1.9 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
+	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/qor5/web v1.2.3 // indirect
 	github.com/theplant/htmlgo v1.0.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250505200425-f936aa4a68b2 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/
