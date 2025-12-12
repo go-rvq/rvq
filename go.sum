@@ -148,8 +148,8 @@ github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSw
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
-github.com/gad-lang/gad v0.0.0-20251118140158-818a37fe57e6 h1:IORmax9LB9yPJeuRr402nZCDShAf/MgQ0+dDfrJkgzc=
-github.com/gad-lang/gad v0.0.0-20251118140158-818a37fe57e6/go.mod h1:IUx3cjgz6V9TjVeputwrZAnHiBmZilHEld/sJPo8xl4=
+github.com/gad-lang/gad v0.0.0-20251212141109-f4898fea3658 h1:vGaLce/dyRM/S+yffmtNOEoJgeaFibeudpq/KK57H9Y=
+github.com/gad-lang/gad v0.0.0-20251212141109-f4898fea3658/go.mod h1:IUx3cjgz6V9TjVeputwrZAnHiBmZilHEld/sJPo8xl4=
 github.com/go-chi/chi/v5 v5.0.12 h1:9euLV5sTrTNTRUU9POmDUvfxyj6LAABLUcEWO+JJb4s=
 github.com/go-chi/chi/v5 v5.0.12/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
