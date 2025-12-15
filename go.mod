@@ -15,7 +15,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
-	github.com/gad-lang/gad v0.0.0-20251212141109-f4898fea3658
+	github.com/gad-lang/gad v0.0.0-20251215132517-de88614261d0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1
