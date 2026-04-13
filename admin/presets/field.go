@@ -128,6 +128,13 @@ func (fc *FieldContext) CheckHint() *FieldContext {
 	return fc
 }
 
+func (fc *FieldContext) GetOrLoadHint() string {
+	if len(fc.Hint) == 0 {
+		fc.LoadHint()
+	}
+	return fc.Hint
+}
+
 func (fc *FieldContext) SetContextValue(key, value interface{}) {
 	if fc.Context == nil {
 		fc.Context = context.WithValue(context.Background(), key, value)
@@ -361,6 +368,10 @@ func (b *FieldBuilder) WithContextValue(key interface{}, val interface{}) (r *Fi
 	return b
 }
 
+func (b *FieldBuilder) ContextPtr() *context.Context {
+	return &b.context
+}
+
 func (b *FieldBuilder) ContextLabel(info *ModelInfo, ctx context.Context, fallback ...func(ctx context.Context, nameLabel NameLabel) string) (label string) {
 	if b.hiddenLabel {
 		return ""
@@ -411,7 +422,7 @@ func (b *FieldBuilder) DefaultContextLabel(ctx context.Context) string {
 
 func (b *FieldBuilder) ContextHint(info *ModelInfo, ctx context.Context) string {
 	if info != nil {
-		return i18n.TranslateD(info.mb.FieldHintTranslator(), nil, ctx, b.name+"_Hint")
+		return i18n.TranslateD(info.mb.HintTranslator(), nil, ctx, b.name+"_Hint")
 	}
 
 	msgr := MustGetMessages(ctx)

@@ -398,10 +398,6 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 	}
 }
 
-func GetCurrentUser(r *http.Request) (u interface{}) {
-	return r.Context().Value(UserKey)
-}
-
 // IsLoginWIP indicates whether the user is in an intermediate step of login process,
 // such as on the TOTP validation page
 func IsLoginWIP(r *http.Request) bool {

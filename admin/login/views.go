@@ -439,7 +439,7 @@ func defaultTOTPSetupPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFun
 	return pb.PlainLayout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		msgr := login.GetMessages(ctx.Context())
 
-		user := login.GetCurrentUser(ctx.R)
+		user := login.CurrentUserFromRequest(ctx.R)
 		u := user.(login.UserPasser)
 
 		var QRCode bytes.Buffer

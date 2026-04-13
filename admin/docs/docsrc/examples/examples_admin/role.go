@@ -37,6 +37,7 @@ func rolePieces() {
 		{Text: "Create", Value: presets.PermCreate},
 		{Text: "Update", Value: presets.PermUpdate},
 		{Text: "Delete", Value: presets.PermDelete},
+		{Text: "Delete With Related", Value: presets.PermDeleteWithRelated},
 	})
 	// @snippet_end
 

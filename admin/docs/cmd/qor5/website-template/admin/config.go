@@ -73,8 +73,8 @@ func newPB() Config {
 
 	b.Permission(
 		perm.New().Policies(
-			perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(presets.PermCreate, presets.PermUpdate, presets.PermDelete, presets.PermGet, presets.PermList).On("*"),
-			perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermCreate, presets.PermUpdate, presets.PermDelete).On("*:activity_logs:*"),
+			perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(presets.PermCreate, presets.PermUpdate, presets.PermDelete, presets.PermDeleteWithRelated, presets.PermGet, presets.PermList).On("*"),
+			perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermCreate, presets.PermUpdate, presets.PermDelete, presets.PermDeleteWithRelated).On("*:activity_logs:*"),
 		),
 	)
 

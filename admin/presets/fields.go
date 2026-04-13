@@ -13,6 +13,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/mpvl/unique"
@@ -359,9 +360,12 @@ func (g FieldsLayout) ToGroup() (tree FieldsLayout) {
 }
 
 type FieldsGroup struct {
-	Name  string
-	Title func(ctx context.Context) string
-	Items FieldsLayout
+	Name      string
+	AutoTitle bool
+	Title     func(ctx context.Context) string
+	AutoHint  bool
+	Hint      func(ctx context.Context) string
+	Items     FieldsLayout
 }
 
 func NewFieldsGroup(name string, items ...any) *FieldsGroup {
@@ -435,7 +439,6 @@ func (b *FieldsBuilder) Unmarshal(opts *FieldsSetterOptions, toObj interface{}, 
 		vErr.GlobalError(err.Error())
 		return
 	}
-	// testingutils.PrintlnJson("Unmarshal fromObj", fromObj)
 
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R)
 
@@ -1027,10 +1030,36 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 				}
 			case *FieldsGroup:
 				if g := doLayout(t.Items); len(g) > 0 {
-					var titleComp h.HTMLComponent
-					if t.Title != nil {
-						titleComp = h.Label(t.Title(ctx.Context())).Class("v-label theme--light text-caption")
+					var (
+						titleComp,
+						hintComp h.HTMLComponent
+						title, hint string
+					)
+
+					if t.AutoTitle {
+						title = b.GroupTitle(info, ctx.Context(), t.Name)
+					} else if t.Title != nil {
+						title = t.Title(ctx.Context())
 					}
+
+					if len(title) > 0 {
+						titleComp = h.Label(title).Class("v-label input-fields-group_title text-caption")
+					}
+
+					if t.AutoHint {
+						hint = b.GroupHint(info, ctx.Context(), t.Name)
+					} else if t.Hint != nil {
+						hint = t.Title(ctx.Context())
+					}
+
+					if len(hint) > 0 {
+						hintComp = h.Div(h.RawHTML(hint)).Class("input-fields-group_hint text-caption mb-3 opacity-60")
+					}
+
+					if hintComp != nil {
+						g = append(h.HTMLComponents{hintComp}, g...)
+					}
+
 					comp = h.Div(
 						titleComp,
 						v.VCard(g...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
@@ -1049,6 +1078,30 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 	}
 
 	return h.Components(append(comps, doLayout(b.CurrentLayout())...)...)
+}
+
+func (b *FieldsBuilder) GroupTitle(info *ModelInfo, ctx context.Context, name string) (r string) {
+	if info != nil {
+		r = i18n.Translate(info.mb.FieldTranslator(), ctx, name)
+	} else {
+		msgr := MustGetMessages(ctx)
+		r = msgr.Common.Get(name)
+	}
+
+	if r == "" {
+		r = HumanizeString(name)
+	}
+	return
+}
+
+func (b *FieldsBuilder) GroupHint(info *ModelInfo, ctx context.Context, name string) (r string) {
+	if info != nil {
+		r = i18n.TranslateD(info.mb.HintTranslator(), nil, ctx, name+"_Hint")
+	} else {
+		msgr := MustGetMessages(ctx)
+		r = msgr.Common.Get(name + "_Hint")
+	}
+	return
 }
 
 func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, parent *FieldContext, ctx *web.EventContext, name string, vErr *web.ValidationErrors) h.HTMLComponent {

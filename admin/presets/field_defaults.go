@@ -87,7 +87,9 @@ const (
 	EDIT
 
 	WRITE = NEW | EDIT
-	ALL   = LIST | DETAIL | WRITE
+	READ  = LIST | DETAIL
+	FORM  = DETAIL | WRITE
+	ALL   = LIST | FORM
 )
 
 type FieldModeStack []FieldMode
@@ -208,7 +210,7 @@ func (b *FieldDefaults) Disable(patterns ...string) (r *FieldDefaults) {
 
 func (b *FieldDefaults) InspectFields(val interface{}, setup ...FieldSetuper) (r *FieldsBuilder) {
 	_, fields := reflect_utils.UniqueFieldsOfReflectType(reflect.TypeOf(val))
-	fieldBuilders := b.SetupFields(b.NewFieldBuilders(fields), setup...)
+	fieldBuilders := b.SetupFields(nil, b.NewFieldBuilders(fields), setup...)
 
 	return &FieldsBuilder{
 		model:    val,
@@ -239,7 +241,7 @@ func (b *FieldDefaults) NewFieldBuilders(fields reflect_utils.IndexableStructFie
 	return fbs[:validCount]
 }
 
-func (b *FieldDefaults) SetupFields(fbs FieldBuilders, setupers ...FieldSetuper) (result FieldBuilders) {
+func (b *FieldDefaults) SetupFields(mb *ModelBuilder, fbs FieldBuilders, setupers ...FieldSetuper) (result FieldBuilders) {
 	var (
 		applyFt = func(f *FieldBuilder, ft *FieldDefaultBuilder) {
 			if f.compFunc == nil {
@@ -262,7 +264,7 @@ func (b *FieldDefaults) SetupFields(fbs FieldBuilders, setupers ...FieldSetuper)
 	setuper := FieldSetupers(setupers)
 
 	for _, f := range fbs {
-		setuper.InitField(f)
+		setuper.InitField(mb, f)
 		withFt(f, f.structField.Type)
 		setuper.ConfigureField(f)
 		result = append(result, f)
@@ -350,7 +352,7 @@ func (b *FieldDefaults) builtInFieldTypes() {
 
 		for _, v := range timeVals {
 			b.FieldType(v).
-				ComponentFunc(TimeReadonlyComponentFunc)
+				ComponentFunc(DateTimeReadonlyComponentFunc)
 		}
 		return
 	}
@@ -370,8 +372,8 @@ func (b *FieldDefaults) builtInFieldTypes() {
 
 	for _, v := range timeVals {
 		b.FieldType(v).
-			ComponentFunc(TimeComponentFunc).
-			SetterFunc(TimeComponentFuncSetter)
+			ComponentFunc(DateTimeComponentFunc).
+			SetterFunc(DateTimeComponentFuncSetter)
 	}
 
 	b.FieldType([]*multipart.FileHeader{}).

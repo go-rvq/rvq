@@ -150,7 +150,7 @@ func (b *Builder) DetailComponentFunc(field *presets.FieldContext, ctx *web.Even
 	return comp
 }
 
-func (b *Builder) AutoComponentFunc(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+func (b *Builder) AutoComponentFunc(field *presets.FieldContext, _ *web.EventContext) (r h.HTMLComponent) {
 	var (
 		ro   = field.ReadOnly || !field.Mode.IsWrite()
 		comp = vx.VXTipTapEditor().
@@ -212,8 +212,10 @@ func (b *Builder) SetFieldsComponentFunc(fb *presets.FieldsBuilder, mode presets
 }
 
 func (b *Builder) _validateScript(ed *presets.EditingBuilder) {
-	for _, name := range b.fieldNames {
-		ed.Field(name).Validator(b.validateScript)
+	if b.validateScript != nil {
+		for _, name := range b.fieldNames {
+			ed.Field(name).Validator(b.validateScript)
+		}
 	}
 }
 

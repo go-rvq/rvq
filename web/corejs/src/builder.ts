@@ -1,5 +1,5 @@
-import type { EventFuncID, EventResponse, Location, PortalUpdate, Queries, QueryValue } from './types'
-import { buildPushState, objectToFormData } from '@/utils'
+import type {EventFuncID, EventResponse, Location, PortalUpdate, Queries, QueryValue} from './types'
+import {buildPushState, objectToFormData} from '@/utils'
 import querystring from 'query-string'
 
 declare let window: any
@@ -28,6 +28,8 @@ export class Builder {
   _parents?: any
   _preFetch: ((data: PreFetchData) => void)[] = []
   _noCache?: boolean = false
+  _postFetch: ((
+      builder: Builder, data: Record<string, any>) => void)[] = []
 
   readonly ignoreErrors = [
     'Failed to fetch', // Chrome
@@ -227,6 +229,11 @@ export class Builder {
     return this
   }
 
+  public postFetch(f: (b: Builder, d: Record<string, any>) => void): Builder {
+    this._postFetch.push(f)
+    return this
+  }
+
   public run(script: string): Builder {
     const f = new Function(script)
     f.apply(this)
@@ -272,8 +279,16 @@ export class Builder {
       if (window.history.length <= 2) {
         window.history.pushState({ url: window.location.href }, '', window.location.href)
       }
+
       const args = this.buildPushStateArgs()
+
       if (args) {
+        if (args[2]) {
+          // remove eventID __reload__ because must return a JSON
+          args[2] = args[2]?.replace(/__execute_event__=__reload__/, '')
+              .replace(/\?&/, '?')
+              .replace(/&&/, '&')
+        }
         window.history.pushState(...args)
       }
     }
@@ -419,6 +434,8 @@ export class Builder {
             .location(r.pushState)
             .go()
         }
+
+        this._postFetch.forEach((f) => f(this, r))
 
         if (this._loadPortalBody && r.body) {
           return r

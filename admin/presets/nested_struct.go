@@ -42,9 +42,15 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 				return nil
 			}
 		}
+
+		var hintComp h.HTMLComponent
+		if hint := field.GetOrLoadHint(); len(hint) > 0 {
+			hintComp = h.Div(h.RawHTML(hint)).Class("input-fields-group_hint text-caption opacity-60 mb-3")
+		}
+
 		return h.Div(
 			h.Label(field.Label).Class("v-label theme--light text-caption"),
-			v.VCard(body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
+			v.VCard(hintComp, body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
 		)
 	})
 }

@@ -10,6 +10,25 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
+func FieldComponentFuncWrapper(r, w FieldComponentFunc) FieldComponentFunc {
+	var (
+		lfw = ListingFieldComponentFuncWrapper(r)
+		dfw = FieldComponentWrapper(r)
+		wfw = FieldComponentWrapper(w)
+	)
+
+	return func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		mode := field.Mode.Dot()
+		if mode.HasAny(NEW, EDIT) {
+			return wfw(field, ctx)
+		}
+		if mode.Is(LIST) {
+			return lfw(field, ctx)
+		}
+		return dfw(field, ctx)
+	}
+}
+
 func ReadOnlyFieldComponentFuncWrapper(f FieldComponentFunc) FieldComponentFunc {
 	l, d := ListingFieldComponentFuncWrapper(f), FieldComponentWrapper(f)
 

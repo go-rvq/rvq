@@ -35,6 +35,7 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.OpenListingDialog, mb.listing.openListingDialog)
 	mb.RegisterEventFunc(actions.OpenListingDialogForSelection, mb.listing.openListingDialogForSelection)
 	mb.RegisterEventFunc(actions.UpdateListingDialog, mb.listing.updateListingDialog)
+	mb.RegisterEventFunc(actions.ShowRelatedItensForDeletion, mb.listing.showRelatedItensForDeletion)
 
 	// list editor
 	mb.RegisterEventFunc(actions.AddRowEvent, addListItemRow(mb))

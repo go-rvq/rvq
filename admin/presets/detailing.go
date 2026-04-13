@@ -32,6 +32,7 @@ type DetailingBuilder struct {
 
 	EditingRestrictionField[*DetailingBuilder]
 	DeletingRestrictionField[*DetailingBuilder]
+	DeletingWithRelatedRestrictionField[*DetailingBuilder]
 }
 
 func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder {
@@ -42,6 +43,9 @@ func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder
 	})
 	d.DeletingRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
 		r.Insert(mb.DetailingRestriction)
+	})
+	d.DeletingWithRelatedRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
+		r.Insert(mb.DeletingWithRelatedRestriction)
 	})
 	d.setupPagesRegistrator()
 	return d
@@ -118,6 +122,7 @@ func (mb *ModelBuilder) SetDetailingBuilder(dt *DetailingBuilder) *ModelBuilder 
 func (b DetailingBuilder) Clone() *DetailingBuilder {
 	b.EditingRestriction = b.EditingRestriction.Clone(&b)
 	b.DeletingRestriction = b.DeletingRestriction.Clone(&b)
+	b.DeletingWithRelatedRestriction = b.DeletingWithRelatedRestriction.Clone(&b)
 	return &b
 }
 

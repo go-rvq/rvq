@@ -39,7 +39,7 @@ var (
 )
 
 func getCurrentUser(r *http.Request) (u *models.User) {
-	u, ok := login.GetCurrentUser(r).(*models.User)
+	u, ok := login.CurrentUserFromRequest(r).(*models.User)
 	if !ok {
 		return nil
 	}

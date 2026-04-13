@@ -80,7 +80,7 @@ func New(db *gorm.DB, logModel ...ActivityLogInterface) *Builder {
 	}
 
 	ab.permPolicy = perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).
-		ToDo(presets.PermUpdate, presets.PermDelete, presets.PermCreate).On("*:activity_logs").On("*:activity_logs:*")
+		ToDo(presets.PermUpdate, presets.PermDelete, presets.PermDeleteWithRelated, presets.PermCreate).On("*:activity_logs").On("*:activity_logs:*")
 
 	return ab
 }

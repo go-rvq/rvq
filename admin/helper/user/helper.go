@@ -9,7 +9,7 @@ import (
 )
 
 func GetCurrentUser(r *http.Request) (u User) {
-	u, _ = login.GetCurrentUser(r).(User)
+	u, _ = login.CurrentUserFromRequest(r).(User)
 	return
 }
 

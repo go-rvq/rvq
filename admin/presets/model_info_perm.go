@@ -101,6 +101,10 @@ func (p *ModelPermissioner) ReqObjectDeleter(r *http.Request, obj any) *perm.Ver
 	return p.Deleter(r, p.mb.MustRecordID(obj), ParentsModelID(r)...)
 }
 
+func (p *ModelPermissioner) ReqObjectWithRelatedDeleter(r *http.Request, obj any) *perm.Verifier {
+	return p.WithRelatedDeleter(r, p.mb.MustRecordID(obj), ParentsModelID(r)...)
+}
+
 func (p *ModelPermissioner) ReqObjectActioner(r *http.Request, obj any, action string) *perm.Verifier {
 	return p.ReqObjectReader(r, obj).Do(action)
 }
@@ -163,6 +167,10 @@ func (p *ModelPermissioner) Reader(r *http.Request, id ID, parentID ...ID) *perm
 
 func (p *ModelPermissioner) Deleter(r *http.Request, id ID, parentID ...ID) *perm.Verifier {
 	return p.ObjectDo(r, PermDelete, id, parentID...)
+}
+
+func (p *ModelPermissioner) WithRelatedDeleter(r *http.Request, id ID, parentID ...ID) *perm.Verifier {
+	return p.ObjectDo(r, PermDeleteWithRelated, id, parentID...)
 }
 
 func (p *ModelPermissioner) Creator(r *http.Request, parentID ...ID) *perm.Verifier {

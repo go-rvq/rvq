@@ -79,3 +79,17 @@ func (b *VXDateTimePickerBuilder) HideDetails(v bool) (r *VXDateTimePickerBuilde
 	b.Attr(":hide-details", fmt.Sprint(v))
 	return b
 }
+
+func (b *VXDateTimePickerBuilder) Hint(v string) (r *VXDateTimePickerBuilder) {
+	if len(v) > 0 {
+		b.Attr("hint", v)
+	}
+	return b
+}
+
+func (b *VXDateTimePickerBuilder) PersistentHint(v bool) (r *VXDateTimePickerBuilder) {
+	if v {
+		b.Attr("persistent-hint", v)
+	}
+	return b
+}

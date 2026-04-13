@@ -153,3 +153,11 @@ type DeletingRestrictionField[T any] struct {
 func (r *DeletingRestrictionField[T]) CanDeleteObj(obj any, ctx *web.EventContext) bool {
 	return r.DeletingRestriction.CanObj(obj, ctx)
 }
+
+type DeletingWithRelatedRestrictionField[T any] struct {
+	DeletingWithRelatedRestriction *ObjRestriction[T]
+}
+
+func (r *DeletingWithRelatedRestrictionField[T]) CanDeleteWithRelatedObj(obj any, ctx *web.EventContext) bool {
+	return r.DeletingWithRelatedRestriction.CanObj(obj, ctx)
+}

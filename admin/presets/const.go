@@ -3,12 +3,13 @@ package presets
 import "net/http"
 
 const (
-	PermModule = "presets"
-	PermList   = "presets:list"
-	PermGet    = "presets:get"
-	PermCreate = "presets:create"
-	PermUpdate = "presets:update"
-	PermDelete = "presets:delete"
+	PermModule            = "presets"
+	PermList              = "presets:list"
+	PermGet               = "presets:get"
+	PermCreate            = "presets:create"
+	PermUpdate            = "presets:update"
+	PermDelete            = "presets:delete"
+	PermDeleteWithRelated = "presets:delete_with_related"
 
 	PermActions         = "action"
 	PermDoListingAction = "do_listing_action"

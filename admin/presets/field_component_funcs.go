@@ -63,15 +63,19 @@ func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompone
 		Disabled(field.ReadOnly))
 }
 
-func TimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
 	if v := field.Value(); v != nil {
 		switch vt := v.(type) {
 		case time.Time:
-			val = vt.Format("2006-01-02 15:04")
+			if !vt.IsZero() {
+				val = vt.Format("2006-01-02 15:04")
+			}
 		case *time.Time:
-			val = vt.Format("2006-01-02 15:04")
+			if vt != nil && !vt.IsZero() {
+				val = vt.Format("2006-01-02 15:04")
+			}
 		default:
 			panic(fmt.Sprintf("unknown time type: %T\n", v))
 		}
@@ -84,12 +88,14 @@ func TimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCompone
 			Format:     "24hr",
 			Scrollable: true,
 		}).
+		Hint(field.GetOrLoadHint()).
+		PersistentHint(true).
 		DialogWidth(640).
 		ClearText(msgr.Clear).
 		OkText(msgr.OK)
 }
 
-func TimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+func DateTimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	var t *time.Time
 	if v := field.Value(); v != nil {
 		switch vt := v.(type) {
@@ -117,7 +123,7 @@ func TimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTM
 		Value(val)
 }
 
-func TimeComponentFuncSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
+func DateTimeComponentFuncSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 	v := ctx.R.Form.Get(field.FormKey)
 	if v == "" {
 		return reflectutils.Set(obj, field.Name, nil)

@@ -31,6 +31,9 @@ func permissionPieces() {
 		// @snippet_begin(PermissionPermDelete)
 		presets.PermDelete,
 		// @snippet_end
+		// @snippet_begin(PermissionPermDeleteWithRelated)
+		presets.PermDeleteWithRelated,
+		// @snippet_end
 	}
 
 	var Who, Able, What, Something string

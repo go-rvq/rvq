@@ -9,8 +9,13 @@ type (
 	}
 	FieldValidators []FieldValidator
 	FieldSetuper    interface {
-		InitField(f *FieldBuilder)
+		InitField(mb *ModelBuilder, f *FieldBuilder)
 		ConfigureField(f *FieldBuilder)
+	}
+
+	FieldSetupFuncs struct {
+		Init      func(mb *ModelBuilder, f *FieldBuilder)
+		Configure func(f *FieldBuilder)
 	}
 
 	FieldSetupers []FieldSetuper
@@ -24,9 +29,17 @@ type (
 	}
 )
 
-func (s FieldSetupers) InitField(f *FieldBuilder) {
+func (sf *FieldSetupFuncs) InitField(mb *ModelBuilder, f *FieldBuilder) {
+	sf.Init(mb, f)
+}
+
+func (sf *FieldSetupFuncs) ConfigureField(f *FieldBuilder) {
+	sf.Configure(f)
+}
+
+func (s FieldSetupers) InitField(mb *ModelBuilder, f *FieldBuilder) {
 	for _, setuper := range s {
-		setuper.InitField(f)
+		setuper.InitField(mb, f)
 	}
 }
 

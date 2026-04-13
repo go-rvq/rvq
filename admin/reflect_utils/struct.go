@@ -85,6 +85,11 @@ func UniqueFieldsOfReflectType(ityp reflect.Type) (dotFields, result IndexableSt
 	return
 }
 
+func AllFieldsOfReflectType(ityp reflect.Type) (result IndexableStructFields) {
+	dot, other := FieldsOfReflectType(ityp)
+	return append(dot, other...)
+}
+
 func FieldsOfReflectType(ityp reflect.Type) (dotFields, fields IndexableStructFields) {
 	FieldsOfReflectTypeCB(
 		ityp,
@@ -136,4 +141,9 @@ func FieldsOfReflectTypeCB(ityp reflect.Type, appendDotField, appendField func(*
 	}
 
 	walk(ityp, nil, nil)
+}
+
+func AllFieldsOf(v any) (result IndexableStructFields) {
+	dot, other := FieldsOfReflectType(reflect.TypeOf(v))
+	return append(dot, other...)
 }

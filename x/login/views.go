@@ -381,7 +381,7 @@ func defaultTOTPSetupPage(vh *ViewHelper) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nLoginKey, Messages_en_US).(*Messages)
 
-		user := GetCurrentUser(ctx.R)
+		user := CurrentUserFromRequest(ctx.R)
 		u := user.(UserPasser)
 
 		var QRCode bytes.Buffer

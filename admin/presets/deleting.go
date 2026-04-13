@@ -31,8 +31,9 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 	}
 
 	var (
-		obj = b.mb.NewModel()
-		id  ID
+		obj     = b.mb.NewModel()
+		id      ID
+		related = ctx.R.FormValue("cascade") == "true"
 	)
 
 	if id, err = b.mb.ParseRecordID(pk); err != nil {
@@ -41,13 +42,18 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 
 	id.SetTo(obj)
 
-	if !b.DeletingRestriction.CanObj(obj, ctx) {
+	if related {
+		if !b.DeletingWithRelatedRestriction.CanObj(obj, ctx) {
+			err = perm.PermissionDenied
+			return
+		}
+	} else if !b.DeletingRestriction.CanObj(obj, ctx) {
 		err = perm.PermissionDenied
 		return
 	}
 
 	if len(pk) > 0 {
-		if err = b.Deleter(obj, id, ctx.R.FormValue("cascade") == "true", ctx); err != nil {
+		if err = b.Deleter(obj, id, related, ctx); err != nil {
 			return
 		}
 	}
@@ -75,6 +81,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 		theModelTitle = b.mb.TTheTitle(ctx.Context())
 		title         string
 		ido           ID
+		relatedComp   h.HTMLComponent
 	)
 
 	if ido, err = b.mb.ParseRecordID(id); err != nil {
@@ -82,6 +89,69 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 	}
 
 	ido.SetTo(obj)
+
+	if b.relatedDeletionConfig != nil {
+		rdCtx := &RelatedDeletionContext{
+			Builder: b,
+			Obj:     obj,
+			Context: ctx,
+			FormKey: "cascade.value",
+		}
+
+		if err = b.relatedDeletionConfig(rdCtx); err != nil {
+			return
+		}
+
+		if rdCtx.Enabled {
+			if !b.DeletingWithRelatedRestriction.CanObj(obj, ctx) {
+				err = perm.PermissionDenied
+				return
+			}
+
+			hint := rdCtx.Description
+
+			if hint == "" {
+				hint = msgr.DeleteRelatedHint
+			}
+
+			relatedComps := h.HTMLComponents{
+				VSwitch().
+					Attr("v-model", []byte(rdCtx.FormKey)).
+					Color(ColorWarning).
+					Label(msgr.DeleteRelated).
+					Hint(hint).
+					PersistentHint(true),
+			}
+
+			if !rdCtx.ShowRelatedDisabled && b.showRelatedItensForDeletionActionFunc != nil {
+				portalID := ctx.UID()
+				relatedComps = append(relatedComps,
+					web.Portal().Name(portalID),
+					VBtn(msgr.ShowRelatedItemsTitle).
+						Color(ColorInfo).
+						Size(SizeSmall).
+						Variant(VariantText).
+						Attr("@click", web.Plaid().
+							EventFunc(actions.ShowRelatedItensForDeletion).
+							Query(ParamTargetPortal, portalID).
+							Query(ParamID, id).
+							URL(ctx.R.URL.Path).
+							Go()))
+			}
+
+			relatedComp = VCard(VCardText(relatedComps))
+
+			if rdCtx.WrapComponent != nil {
+				relatedComp = rdCtx.WrapComponent(relatedComp)
+			}
+		} else if !b.DeletingRestriction.CanObj(obj, ctx) {
+			err = perm.PermissionDenied
+			return
+		}
+	} else if !b.DeletingRestriction.CanObj(obj, ctx) {
+		err = perm.PermissionDenied
+		return
+	}
 
 	if title, err = b.mb.RecordTitleFetch(obj, ctx); err != nil {
 		return
@@ -98,13 +168,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 						h.RawHTML(msgr.DeleteConfirmationHtml(modelTitle, theModelTitle, title)),
 					).Type(TypeWarning).
 						Variant(VariantTonal),
-					h.If(false, VSwitch().
-						Attr("v-model", []byte("cascade.value")).
-						Color(ColorWarning).
-						Label("Excluir relacionados").
-						Hint("Exclui automaticamente todas entidades relacionadas").
-						PersistentHint(true),
-					),
+					relatedComp,
 				).
 				ToolbarProps(fmt.Sprintf(`{color:%q}`, ColorError)).
 				SlotBottom(h.HTMLComponents{

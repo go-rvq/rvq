@@ -92,6 +92,7 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 				if zeroer.IsNil(obj) {
 					return nil
 				}
+
 				return VCard(
 					h.If(!b.fieldContext.ReadOnly,
 						VToolbar(

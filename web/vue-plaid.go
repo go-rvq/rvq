@@ -49,6 +49,8 @@ type VueEventTagBuilder struct {
 	Calls        []JsCall
 	afterScript  string
 	thenScript   string
+	eventID      string
+	pushState    bool
 }
 
 func Plaid() (r *VueEventTagBuilder) {
@@ -203,6 +205,23 @@ func (b *VueEventTagBuilder) QueryIf(key interface{}, vs interface{}, add bool) 
 	return b
 }
 
+func (b *VueEventTagBuilder) QueryIfElse(key string, condition bool, vTrue, vFalse interface{}) (r *VueEventTagBuilder) {
+	var vs interface{}
+	if condition {
+		vs = vTrue
+	} else {
+		vs = vFalse
+	}
+
+	if vs != nil {
+		b.Calls = append(b.Calls, JsCall{
+			Method: "query",
+			Args:   []interface{}{key, vs},
+		})
+	}
+	return b
+}
+
 // ClearMergeQuery param v use interface{} because you can not only pass []string,
 // but also pass in javascript variables by using web.Var("$event")
 func (b *VueEventTagBuilder) ClearMergeQuery(v interface{}) (r *VueEventTagBuilder) {
@@ -303,6 +322,14 @@ func (b *VueEventTagBuilder) Raw(script string) (r *VueEventTagBuilder) {
 func (b *VueEventTagBuilder) PreFetch(v string) (r *VueEventTagBuilder) {
 	b.Calls = append(b.Calls, JsCall{
 		Method: "preFetch",
+		Args:   []interface{}{Var(v)},
+	})
+	return b
+}
+
+func (b *VueEventTagBuilder) PostFetch(v string) (r *VueEventTagBuilder) {
+	b.Calls = append(b.Calls, JsCall{
+		Method: "postFetch",
 		Args:   []interface{}{Var(v)},
 	})
 	return b

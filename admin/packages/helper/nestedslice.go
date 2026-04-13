@@ -29,8 +29,8 @@ func (i *NestedSliceBuilderInfo) Delete(db *gorm.DB, parentID, id any) error {
 	return db.Exec(i.DeleteQuery, parentID, id).Error
 }
 
-func (i *NestedSliceBuilderInfo) Deleter() func(db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
-	return func(db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
+func (i *NestedSliceBuilderInfo) Deleter() func(old func() error, db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
+	return func(old func() error, db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 		parentID := presets.ParentsModelID(ctx.R).Last().Value()
 		return i.Delete(db, parentID, id)
 	}

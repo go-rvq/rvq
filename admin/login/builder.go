@@ -78,7 +78,7 @@ document.getElementsByTagName("head")[0].appendChild(tag);
 		otp := ctx.R.FormValue("otp")
 
 		msgr := login.GetMessages(ctx.Context())
-		err = b.ChangePasswordT(login.GetCurrentUser(ctx.R).(login.UserPasser), true, ctx.R, oldPassword, password, confirmPassword, otp)
+		err = b.ChangePasswordT(login.CurrentUserFromRequest(ctx.R).(login.UserPasser), true, ctx.R, oldPassword, password, confirmPassword, otp)
 		if err != nil {
 			msg := msgr.ErrorSystemError
 			var color string

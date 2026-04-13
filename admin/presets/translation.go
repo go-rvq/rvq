@@ -68,7 +68,7 @@ func (mb *ModelBuilder) FieldTranslator(module ...i18n.ModuleKey) i18n.Translato
 	return mb.KeyFormatTranslator("%s%s", module...)
 }
 
-func (mb *ModelBuilder) FieldHintTranslator(module ...i18n.ModuleKey) i18n.Translator {
+func (mb *ModelBuilder) HintTranslator(module ...i18n.ModuleKey) i18n.Translator {
 	return mb.KeyFormatTranslatorD("%s%s", true, module...)
 }
 

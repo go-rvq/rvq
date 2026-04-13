@@ -99,6 +99,7 @@ type ModelBuilder struct {
 	EditingRestrictionField[*ModelBuilder]
 	DetailingRestrictionField[*ModelBuilder]
 	DeletingRestrictionField[*ModelBuilder]
+	DeletingWithRelatedRestrictionField[*ModelBuilder]
 }
 
 func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOption) (mb *ModelBuilder) {
@@ -148,15 +149,22 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 	setupers.Init()
 	_, fields := reflect_utils.UniqueFieldsOfReflectType(mb.modelType)
 
-	fieldBuilders := func(def *FieldDefaults) FieldBuilders {
+	fieldBuilders := func(def *FieldDefaults, mode FieldMode) FieldBuilders {
 		fb := def.NewFieldBuilders(fields)
-		setupers.InitFields(&fb)
-		return def.SetupFields(fb, setupers)
+		setupers.InitFields(0, &fb)
+		return def.SetupFields(mb, fb, &FieldSetupFuncs{
+			Init: func(mb *ModelBuilder, f *FieldBuilder) {
+				setupers.InitField(mode, f)
+			},
+			Configure: func(f *FieldBuilder) {
+				setupers.ConfigureField(mode, f)
+			},
+		})
 	}
 
-	mb.listFieldBuilders = fieldBuilders(p.listFieldDefaults)
-	mb.detailFieldBuilders = fieldBuilders(p.detailFieldDefaults)
-	mb.writeFieldBuilders = fieldBuilders(p.writeFieldDefaults)
+	mb.listFieldBuilders = fieldBuilders(p.listFieldDefaults, LIST)
+	mb.detailFieldBuilders = fieldBuilders(p.detailFieldDefaults, DETAIL)
+	mb.writeFieldBuilders = fieldBuilders(p.writeFieldDefaults, WRITE)
 
 	mb.ListingRestriction = NewRestriction(mb, func(r *Restriction[*ModelBuilder]) {
 		r.Handler(OkHandlerFunc(func(ctx *web.EventContext) (_, _ bool) {
@@ -178,10 +186,14 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 			return r.dot.permissioner.ReqObjectReader(ctx.R, obj).Denied(), true
 		}))
 	})
-
 	mb.DeletingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
 		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
 			return r.dot.permissioner.ReqObjectDeleter(ctx.R, obj).Denied(), true
+		}))
+	})
+	mb.DeletingWithRelatedRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
+		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+			return r.dot.permissioner.ReqObjectWithRelatedDeleter(ctx.R, obj).Denied(), true
 		}))
 	})
 
@@ -539,7 +551,6 @@ func (mb *ModelBuilder) FieldHint(field *FieldBuilder, ctx *web.EventContext) (r
 	if f, _ := mb.fieldHints[field.name]; f != nil {
 		return f(ctx)
 	}
-
 	return field.ContextHint(mb.Info(), ctx.Context())
 }
 

@@ -17,7 +17,12 @@ func Parse(s string) (vm *gad.VM, kva gad.KeyValueArray, err error) {
 	builtints.Set("DETAIL", gad.Uint(presets.DETAIL))
 	builtints.Set("LIST", gad.Uint(presets.LIST))
 	builtints.Set("WRITE", gad.Uint(presets.WRITE))
+	builtints.Set("FORM", gad.Uint(presets.FORM))
 	builtints.Set("ALL", gad.Uint(presets.ALL))
+	builtints.Set("FIELD_TYPES", gad.Dict{
+		"text":       gad.Str("text"),
+		"inlineText": gad.Str("inlineText"),
+	})
 
 	src := "return (;" + s + ")"
 
@@ -36,6 +41,10 @@ func Parse(s string) (vm *gad.VM, kva gad.KeyValueArray, err error) {
 
 	var ret gad.Object
 	vm = gad.NewVM(bc)
+
+	vm.Setup(gad.SetupOpts{
+		Builtins: builtints,
+	})
 
 	if ret, err = vm.Run(); err != nil {
 		return

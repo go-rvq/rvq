@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/tag"
 	"github.com/go-rvq/rvq/web/zeroer"
+	"github.com/go-rvq/rvq/x/ui/tiptap"
 	"github.com/sunfmin/reflectutils"
 )
 
@@ -42,6 +43,11 @@ func TagOf(fb *presets.FieldBuilder) *AdminTag {
 	return nil
 }
 
+type FieldType struct {
+	Name    string
+	Options gad.Dict
+}
+
 type AdminTag struct {
 	Mode                  presets.FieldMode
 	Required              presets.FieldMode
@@ -51,13 +57,16 @@ type AdminTag struct {
 	WriteHint             string
 	DetailHint            string
 	EditorJS              bool
-	TipTap                bool
+	TipTap                presets.FieldMode
+	Type                  map[presets.FieldMode]FieldType
 	EditComponentHandlers []func(ctx *presets.FieldContext, comp h.HTMLComponent) h.HTMLComponent
 }
 
 func (t *AdminTag) Parse(sf *reflect.StructField, s string) (valid bool) {
 	if s == "" {
-		*t = AdminTag{}
+		*t = AdminTag{
+			Type: map[presets.FieldMode]FieldType{},
+		}
 		return true
 	}
 	typ := sf.Type
@@ -157,7 +166,56 @@ func (t *AdminTag) Parse(sf *reflect.StructField, s string) (valid bool) {
 
 	t.ReadOnly = !na.GetValue("ro").IsFalsy()
 	t.EditorJS = !na.GetValue("editorjs").IsFalsy()
-	t.TipTap = !na.GetValue("tiptap").IsFalsy()
+	if tt := na.GetValue("tiptap"); tt != gad.Nil {
+		if tt == gad.Yes {
+			t.TipTap = presets.FORM
+		} else {
+			switch tv := tt.(type) {
+			case gad.Uint:
+				t.TipTap = presets.FieldMode(tv)
+			}
+		}
+	}
+	if typeValue, _ := na.GetValue("type").(gad.KeyValueArray); typeValue != nil {
+		t.Type = make(map[presets.FieldMode]FieldType)
+
+		do := func(mode presets.FieldMode, value gad.Object) {
+			ft := FieldType{
+				Options: make(gad.Dict),
+			}
+
+			switch vv := value.(type) {
+			case gad.Str:
+				ft.Name = string(vv)
+			case *gad.MixedParams:
+				if len(vv.Positional) == 1 {
+					ft.Name = vv.Positional[0].ToString()
+				}
+				vv.Named.ToDict(ft.Options)
+			}
+
+			for _, m := range mode.Split() {
+				t.Type[m] = ft
+			}
+		}
+
+		for _, value := range typeValue {
+			switch value.K.ToString() {
+			case "FORM":
+				do(presets.FORM, value.V)
+			case "ALL":
+				do(presets.ALL, value.V)
+			case "NEW":
+				do(presets.NEW, value.V)
+			case "EDIT":
+				do(presets.EDIT, value.V)
+			case "DETAIL":
+				do(presets.DETAIL, value.V)
+			case "LIST":
+				do(presets.LIST, value.V)
+			}
+		}
+	}
 
 	return
 }
@@ -174,7 +232,13 @@ func (h *Hint) Fixed() *Hint {
 
 var tstr = reflect.TypeOf("")
 
-func FieldReadyHandle(field *presets.FieldBuilder) {
+func FieldReadyHandle(mb *presets.ModelBuilder, mode presets.FieldMode, field *presets.FieldBuilder) {
+	if field.GetData(AdminTagKey) != nil {
+		return
+	}
+
+	field.SetData(AdminTagKey, true)
+
 	var (
 		tag      AdminTag
 		tagValue = strings.TrimSpace(field.StructField().Tag.Get("admin"))
@@ -186,10 +250,6 @@ func FieldReadyHandle(field *presets.FieldBuilder) {
 	}
 
 	if !tag.Parse(&field.StructField().StructField, tagValue) {
-		return
-	}
-
-	if field.GetData(AdminTagKey) != nil {
 		return
 	}
 
@@ -270,6 +330,24 @@ func FieldReadyHandle(field *presets.FieldBuilder) {
 
 	if tag.EditorJS {
 		field.ComponentFunc(presets.EditorJSComponentFunc)
+	} else if tag.TipTap != 0 {
+		field.ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return tiptap.ComponentFunc(mb, tag.TipTap, field, ctx)
+		})
+	}
+
+	for mode, fieldType := range tag.Type {
+		switch fieldType.Name {
+		case "text":
+			field.WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
+				return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+					if field.Mode.Is(mode) {
+						return presets.LongTextFieldComponentFunc(field, ctx)
+					}
+					return old(field, ctx)
+				}
+			})
+		}
 	}
 
 	if len(tag.EditComponentHandlers) > 0 {

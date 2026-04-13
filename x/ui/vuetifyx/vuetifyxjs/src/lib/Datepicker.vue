@@ -7,6 +7,8 @@
           :disabled="disabled"
           :loading="loading"
           :label="label"
+          :hint="hint"
+          :persistent-hint="persistentHint"
           v-model="formattedDatetime"
           :hide-details="hideDetails"
           variant="underlined"
@@ -57,9 +59,9 @@
 </template>
 
 <script lang="ts" setup>
-import { format, parse } from 'date-fns'
+import {format, parse} from 'date-fns'
 
-import { computed, nextTick, onMounted, Ref, ref } from 'vue'
+import {computed, nextTick, onMounted, Ref, ref} from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -75,6 +77,13 @@ const props = defineProps({
   label: {
     type: String,
     default: ''
+  },
+  hint: {
+    type: String,
+    default: ''
+  },
+  persistentHint: {
+    type: Boolean
   },
   dialogWidth: {
     type: Number,

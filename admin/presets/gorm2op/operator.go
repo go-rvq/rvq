@@ -23,7 +23,7 @@ var wildcardReg = regexp.MustCompile(`[%_]`)
 type (
 	Mode     uint8
 	Preparer func(db *gorm.DB, mode Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB
-	Deleter  func(db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error)
+	Deleter  func(old func() error, db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error)
 	Updator  func(db *gorm.DB, obj interface{}, id model.ID, ctx *web.EventContext) (err error)
 	Creator  func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (err error)
 	Finder   func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (result any, err error)
@@ -36,6 +36,7 @@ const (
 	FetchTitle
 	Update
 	Delete
+	DeletedRelated
 
 	Read  = Search | Fetch
 	Write = Create | Update
@@ -395,15 +396,21 @@ func (b *DataOperatorBuilder) Update(obj interface{}, id model.ID, ctx *web.Even
 
 func (b *DataOperatorBuilder) Delete(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 	return b.tx(func(b *DataOperatorBuilder) (err error) {
+		mode := Delete
+		if cascade {
+			mode |= DeletedRelated
+		}
 		var (
-			db = b.Prepare(Delete, obj, id, nil, ctx)
+			db = b.Prepare(mode, obj, id, nil, ctx)
 			do = func(state *CallbackState) error {
 				return state.DB.Delete(state.Obj).Error
 			}
 		)
 		if b.deleter != nil {
 			do = func(state *CallbackState) error {
-				return b.deleter(state.DB, state.Obj, id, cascade, ctx)
+				return b.deleter(func() error {
+					return state.DB.Delete(state.Obj).Error
+				}, state.DB, state.Obj, id, cascade, ctx)
 			}
 		}
 

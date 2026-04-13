@@ -36,6 +36,18 @@ func (s ID) Value() any {
 	return s.Values[0]
 }
 
+func (s ID) IntValue() int {
+	return s.Value().(int)
+}
+
+func (s ID) UintValue() uint {
+	return s.Value().(uint)
+}
+
+func (s ID) StringValue() string {
+	return s.Value().(string)
+}
+
 func (id ID) String() string {
 	if id.IsZero() {
 		return ""

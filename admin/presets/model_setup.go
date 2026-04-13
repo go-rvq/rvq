@@ -22,8 +22,9 @@ var DefaultModelSetupFactories ModelSetupFactories
 type (
 	ModelSetuper interface {
 		Init()
-		InitFields(fieldBuilders *FieldBuilders)
-		FieldSetuper
+		InitFields(mode FieldMode, fieldBuilders *FieldBuilders)
+		InitField(mode FieldMode, f *FieldBuilder)
+		ConfigureField(mode FieldMode, f *FieldBuilder)
 	}
 
 	ModelSetupers []ModelSetuper
@@ -35,21 +36,21 @@ func (s ModelSetupers) Init() {
 	}
 }
 
-func (s ModelSetupers) InitFields(fieldBuilders *FieldBuilders) {
+func (s ModelSetupers) InitFields(mode FieldMode, fieldBuilders *FieldBuilders) {
 	for _, m := range s {
-		m.InitFields(fieldBuilders)
+		m.InitFields(mode, fieldBuilders)
 	}
 }
 
-func (s ModelSetupers) InitField(f *FieldBuilder) {
+func (s ModelSetupers) InitField(mode FieldMode, f *FieldBuilder) {
 	for _, m := range s {
-		m.InitField(f)
+		m.InitField(mode, f)
 	}
 }
 
-func (s ModelSetupers) ConfigureField(f *FieldBuilder) {
+func (s ModelSetupers) ConfigureField(mode FieldMode, f *FieldBuilder) {
 	for _, m := range s {
-		m.ConfigureField(f)
+		m.ConfigureField(mode, f)
 	}
 }
 
@@ -64,10 +65,10 @@ type defaultModelSetup struct {
 
 func (defaultModelSetup) Init() {}
 
-func (defaultModelSetup) InitFields(fb *FieldBuilders) {
+func (defaultModelSetup) InitFields(mode FieldMode, fieldBuilders *FieldBuilders) {
 }
 
-func (defaultModelSetup) InitField(f *FieldBuilder) {
+func (defaultModelSetup) InitField(mode FieldMode, f *FieldBuilder) {
 	switch f.name {
 	case "CreatedAt", "UpdatedAt", "DeletedAt":
 		f.SetMode(DETAIL)
@@ -75,7 +76,7 @@ func (defaultModelSetup) InitField(f *FieldBuilder) {
 	}
 }
 
-func (defaultModelSetup) ConfigureField(f *FieldBuilder) {
+func (defaultModelSetup) ConfigureField(mode FieldMode, f *FieldBuilder) {
 	switch f.name {
 	case "CreatedAt", "UpdatedAt", "DeletedAt":
 		f.DisableZeroRender()

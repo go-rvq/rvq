@@ -546,7 +546,7 @@ func (b *Builder) wrapHook(v HookFunc) HookFunc {
 	}
 
 	return func(r *http.Request, user interface{}, extraVals ...interface{}) error {
-		if user != nil && GetCurrentUser(r) == nil {
+		if user != nil && CurrentUserFromRequest(r) == nil {
 			r = r.WithContext(context.WithValue(r.Context(), UserKey, user))
 		}
 		return v(r, user, extraVals...)
@@ -1228,7 +1228,7 @@ func (b *Builder) consumeTOTPCode(r *http.Request, up UserPasser, passcode strin
 	}
 	if passcode == lastCode {
 		if b.afterTOTPCodeReusedHook != nil {
-			if herr := b.afterTOTPCodeReusedHook(r, GetCurrentUser(r)); herr != nil {
+			if herr := b.afterTOTPCodeReusedHook(r, CurrentUserFromRequest(r)); herr != nil {
 				return herr
 			}
 		}
@@ -1250,7 +1250,7 @@ func (b *Builder) logout(w http.ResponseWriter, r *http.Request) {
 	b.cleanAuthCookies(w)
 
 	if b.afterLogoutHook != nil {
-		user := GetCurrentUser(r)
+		user := CurrentUserFromRequest(r)
 		if user != nil {
 			if herr := b.afterLogoutHook(r, user); herr != nil {
 				setNoticeOrPanic(w, herr)
@@ -1662,7 +1662,7 @@ func (b *Builder) doFormChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	redirectURL := b.changePasswordPageURL
 
-	err := b.ChangePassword(GetCurrentUser(r).(UserPasser), true, r, oldPassword, password, confirmPassword, otp)
+	err := b.ChangePassword(CurrentUserFromRequest(r).(UserPasser), true, r, oldPassword, password, confirmPassword, otp)
 	if err != nil {
 		if ne, ok := err.(*NoticeError); ok {
 			setNoticeFlash(w, ne)

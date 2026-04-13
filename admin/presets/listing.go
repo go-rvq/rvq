@@ -22,22 +22,24 @@ import (
 )
 
 type ListingBuilder struct {
-	mb                 *ModelBuilder
-	bulkActions        []*BulkActionBuilder
-	footerActions      []*FooterActionBuilder
-	actions            []*ActionBuilder
-	actionsAsMenu      bool
-	filterDataFunc     FilterDataFunc
-	filterTabsFunc     FilterTabsFunc
-	newBtnFunc         ComponentFunc
-	pageFunc           web.PageFunc
-	cellWrapperFunc    vx.CellWrapperFunc
-	Searcher           SearchFunc
-	Deleter            DeleteFunc
-	searchColumns      []string
-	itemActions        []*ActionBuilder
-	prependListButtons []func(ctx *web.EventContext) h.HTMLComponents
-	appendListButtons  []func(ctx *web.EventContext) h.HTMLComponents
+	mb                                    *ModelBuilder
+	bulkActions                           []*BulkActionBuilder
+	footerActions                         []*FooterActionBuilder
+	actions                               []*ActionBuilder
+	actionsAsMenu                         bool
+	filterDataFunc                        FilterDataFunc
+	filterTabsFunc                        FilterTabsFunc
+	relatedDeletionConfig                 RelatedDeletionFunc
+	newBtnFunc                            ComponentFunc
+	pageFunc                              web.PageFunc
+	cellWrapperFunc                       vx.CellWrapperFunc
+	Searcher                              SearchFunc
+	Deleter                               DeleteFunc
+	showRelatedItensForDeletionActionFunc ShowRelatedItensFormDeletionFunc
+	searchColumns                         []string
+	itemActions                           []*ActionBuilder
+	prependListButtons                    []func(ctx *web.EventContext) h.HTMLComponents
+	appendListButtons                     []func(ctx *web.EventContext) h.HTMLComponents
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -77,6 +79,7 @@ type ListingBuilder struct {
 	EditingRestrictionField[*ListingBuilder]
 	DetailingRestrictionField[*ListingBuilder]
 	DeletingRestrictionField[*ListingBuilder]
+	DeletingWithRelatedRestrictionField[*ListingBuilder]
 }
 
 func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBuilder {
@@ -100,6 +103,9 @@ func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBu
 	})
 	lb.DeletingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
 		r.Insert(mb.DetailingRestriction)
+	})
+	lb.DeletingWithRelatedRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
+		r.Insert(mb.DeletingWithRelatedRestriction)
 	})
 	lb.setupPagesRegistrator()
 	return lb
@@ -322,6 +328,11 @@ func (b *ListingBuilder) TTitle(ctx context.Context) string {
 		return b.title
 	}
 	return MustGetMessages(ctx).ListingObjectTitle(b.mb.TTitlePlural(ctx))
+}
+
+func (b *ListingBuilder) RelatedDelete(f RelatedDeletionFunc) *ListingBuilder {
+	b.relatedDeletionConfig = f
+	return b
 }
 
 func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -1349,24 +1360,31 @@ func (b *ListingBuilder) openListingDialog(ctx *web.EventContext) (r web.EventRe
 }
 
 func (b *ListingBuilder) wrapComp(ctx *web.EventContext, comp h.HTMLComponent) h.HTMLComponent {
-	plaid := web.POST().NoCache()
+	var (
+		plaid  = web.POST().NoCache()
+		onLoad string
+	)
 	if IsInDialog(ctx) {
 		plaid.ParseURL(ctx.R.URL.Path + "?" + ctx.R.Form.Encode()).
 			EventFunc(actions.UpdateListingDialog)
 	} else {
 		plaid.EventFunc("__reload__")
+		// reset page scroll
+		onLoad = `window.setTimeout(() => window.document.querySelector(".rvq-page").scrollIntoView({behavior: 'smooth', block: 'start'}),0)`
 	}
-	return vue.UserComponent(web.Scope(comp).Slot("{ form }")).
+	return vue.UserComponent(web.Scope(comp).Slot("{ form}")).
 		ScopeVar("parentPresetsListing", "presetsListing").
 		ScopeVar("presetsListing", "{}").
-		Setup(fmt.Sprintf(`({scope}) => {
+		Setup(fmt.Sprintf(`({scope, window }) => {
 	scope.presetsListing.parent = scope.parentPresetsListing;
 	const presetsListing = scope.presetsListing;
 	scope.presetsListing.uri = %q
 	scope.presetsListing.loader = %s
+	%s
 }`,
 			ctx.R.URL.Path,
 			plaid.String(),
+			onLoad,
 		))
 }
 

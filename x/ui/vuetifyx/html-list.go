@@ -9,6 +9,9 @@ import (
 func HTMLList(tag *h.HTMLTagBuilder, itens ...any) h.HTMLComponent {
 	tag.Style("list-style: inside")
 	for _, iten := range itens {
+		if iten == nil {
+			continue
+		}
 		var c h.HTMLComponent
 		switch t := iten.(type) {
 		case h.HTMLComponent:

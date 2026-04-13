@@ -21,3 +21,9 @@ func NewFieldsContextLabelGetter(mi *ModelInfo, fg interface {
 func (g *FieldsContextLabelGetter) Get(name string) string {
 	return g.fg.Field(name).ContextLabel(g.mi, g.ctx.Context())
 }
+
+var RecordTimesGroup = &FieldsGroup{
+	Name:      "RecordTimes",
+	AutoTitle: true,
+	Items:     FieldsLayout{[]string{"CreatedAt", "UpdatedAt", "DeletedAt"}},
+}

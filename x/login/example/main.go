@@ -95,7 +95,7 @@ func main() {
 	h := http.NewServeMux()
 	b.Mount(h)
 	h.Handle("/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w, "%#+v", login.GetCurrentUser(r))
+		_, _ = fmt.Fprintf(w, "%#+v", login.CurrentUserFromRequest(r))
 	}))
 
 	mux := http.NewServeMux()
