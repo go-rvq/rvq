@@ -1,5 +1,4 @@
-import type { RendererOptions } from 'vue'
-import type { RenderOptions } from '@/component-by-template'
+import type {RenderOptions} from '@/component-by-template'
 
 export interface ValueOp {
   value: string | string[]

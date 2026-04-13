@@ -9,7 +9,7 @@
     Copyright 2021, Imperavi Ltd.
     License: MIT
 */
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import "./redactor.min.css";
 import "./redactor.min.js";
 

@@ -1,7 +1,7 @@
 // Video Block Tool, based on Image Tool
 import ImageTool from '@editorjs/image'
 // renders custom Videojs Vue component
-import { render, h } from 'vue'
+import {h, render} from 'vue'
 import Videojs from './Videojs.vue'
 
 const IconVideo =

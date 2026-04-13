@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as Vue from 'vue'
-import { ref } from 'vue'
+import {ref} from 'vue'
 
 declare var window: any
 

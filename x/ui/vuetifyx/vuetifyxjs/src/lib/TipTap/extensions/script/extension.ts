@@ -1,6 +1,9 @@
-import { GeneralOptions } from 'vuetify-pro-tiptap'
+import {GeneralOptions} from 'vuetify-pro-tiptap'
 import Button from './Button.vue'
-import { InlineTemplateCode as ExtInlineTemplateCode, InlineTemplateCodeOptions as ExtInlineTemplateCodeOptions } from './types'
+import {
+  InlineTemplateCode as ExtInlineTemplateCode,
+  InlineTemplateCodeOptions as ExtInlineTemplateCodeOptions
+} from './types'
 
 export interface InlineTemplateCodeOptions extends ExtInlineTemplateCodeOptions, GeneralOptions<InlineTemplateCodeOptions> {
 }

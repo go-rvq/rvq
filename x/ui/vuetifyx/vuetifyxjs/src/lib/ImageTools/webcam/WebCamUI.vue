@@ -95,10 +95,10 @@
 </template>
 
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, useTemplateRef, watch, ref, computed, useAttrs } from 'vue'
-import { Translator } from './translator'
+import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef} from 'vue'
+import {Translator} from './translator'
 import IconButton from '../IconButton.vue'
-import { Picture } from './types.js'
+import {Picture} from './types.js'
 import WebCam from './WebCam.vue'
 
 class interval {

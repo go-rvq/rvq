@@ -1,7 +1,7 @@
 <!--   @snippet_begin(TipTapEditorVueComponent) -->
 <script setup lang="ts">
 import "@/lib/sass/main.scss";
-import { Editor, EditorContent } from "@tiptap/vue-3";
+import {Editor, EditorContent} from "@tiptap/vue-3";
 import Blockquote from "@tiptap/extension-blockquote";
 import Bold from "@tiptap/extension-bold";
 import BulletList from "@tiptap/extension-bullet-list";
@@ -27,7 +27,7 @@ import Text from "@tiptap/extension-text";
 
 import Icon from "./Icon.vue";
 
-import { onMounted, ref } from "vue";
+import {onMounted, ref} from "vue";
 
 const emit = defineEmits(["update:modelValue"]);
 const props = defineProps({ modelValue: String });

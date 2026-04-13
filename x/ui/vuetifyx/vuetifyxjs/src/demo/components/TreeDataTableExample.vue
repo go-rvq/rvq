@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { default as TreeDataTable, PostLoadEvent } from '@/lib/TreeDataTable.vue'
+import {ref} from 'vue'
+import {default as TreeDataTable, PostLoadEvent} from '@/lib/TreeDataTable.vue'
 
 const value = [
   {

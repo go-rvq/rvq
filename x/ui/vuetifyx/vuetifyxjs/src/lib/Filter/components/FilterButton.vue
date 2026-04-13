@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FilterItem } from '@/lib/Filter/Model'
+import {FilterItem} from '@/lib/Filter/Model'
 import FilterButtonBody from '@/lib/Filter/components/FilterButtonBody.vue'
 
 const props = defineProps<{

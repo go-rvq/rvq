@@ -3,18 +3,19 @@ import {
   type GenericProps,
   getPropertyFromItem,
   propsFactory,
-  type SelectItemKey, useRender
+  type SelectItemKey,
+  useRender
 } from 'vuetify/lib/util/index'
 
-import { computed, markRaw, ModelRef, PropType, ref, Ref, toRaw, toRef, useModel } from 'vue'
-import { VAvatar, VCard, VList, VListItem, VSpacer, VToolbar, VToolbarTitle } from 'vuetify/components'
+import {computed, markRaw, ModelRef, PropType, ref, Ref, toRaw, toRef, useModel} from 'vue'
+import {VAvatar, VCard, VList, VListItem, VSpacer, VToolbar, VToolbarTitle} from 'vuetify/components'
 
-import { makeComponentProps } from 'vuetify/lib/composables/component'
-import { makeDensityProps } from 'vuetify/lib/composables/density'
-import { makeThemeProps } from 'vuetify/lib/composables/theme'
-import { useI18n } from './locale/index'
-import { VXBtn } from './VXBtn'
-import { VueDraggableNext } from 'vue-draggable-next'
+import {makeComponentProps} from 'vuetify/lib/composables/component'
+import {makeDensityProps} from 'vuetify/lib/composables/density'
+import {makeThemeProps} from 'vuetify/lib/composables/theme'
+import {useI18n} from './locale/index'
+import {VXBtn} from './VXBtn'
+import {VueDraggableNext} from 'vue-draggable-next'
 
 export type VXArraySorterSlotProps<T> = {
   sorting: ModelRef<boolean>

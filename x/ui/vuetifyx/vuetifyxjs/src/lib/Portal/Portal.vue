@@ -16,13 +16,8 @@
 
 <script lang="ts">
 export { type RenderOptions } from '@/lib/component-by-template'
-import {
-  buildComponentData,
-  Callbacks,
-  componentByTemplate,
-  type RenderOptions
-} from '@/lib/component-by-template'
-import { type ContentType, UpdateEvent, makeProps, Portal, PortalContent, usePortals } from './types'
+import {buildComponentData, Callbacks, componentByTemplate, type RenderOptions} from '@/lib/component-by-template'
+import {type ContentType, makeProps, Portal, PortalContent, UpdateEvent, usePortals} from './types'
 </script>
 
 <script setup lang="ts">

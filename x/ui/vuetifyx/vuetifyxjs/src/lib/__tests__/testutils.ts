@@ -1,6 +1,6 @@
-import { mount, VueWrapper } from '@vue/test-utils'
-import { Component } from 'vue'
-import { createVuetify } from 'vuetify'
+import {mount, VueWrapper} from '@vue/test-utils'
+import {Component} from 'vue'
+import {createVuetify} from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 

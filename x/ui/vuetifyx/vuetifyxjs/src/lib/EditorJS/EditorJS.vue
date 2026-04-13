@@ -60,7 +60,7 @@ import Delimiter from '@editorjs/delimiter'
 // TODO: import Personality from '@editorjs/personality'
 // import Paragraph   from "@editorjs/paragraph"; // no change on view
 // import TextVariantTune from '@editorjs/text-variant-tune'; // bug view
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import {onMounted, onUnmounted, ref, watch} from 'vue'
 
 const htmlelement = ref(null),
   props = defineProps({

@@ -1,5 +1,5 @@
-import { objectToFormData, setFormValue } from '../utils'
-import { describe, it, expect } from 'vitest'
+import {objectToFormData, setFormValue} from '../utils'
+import {describe, expect, it} from 'vitest'
 
 describe('utils', () => {
   it('setFormValue', () => {

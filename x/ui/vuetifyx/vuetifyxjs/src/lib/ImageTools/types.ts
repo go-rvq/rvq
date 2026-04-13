@@ -1,6 +1,4 @@
 import ImageEditor from 'tui-image-editor'
-import { ref, Ref } from 'vue'
-import * as url from 'node:url'
 
 export class URLValue {
   value: string

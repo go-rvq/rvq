@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
-import { onMounted, type Ref, ref } from "vue";
+import {onMounted, type Ref, ref} from "vue";
 
 const emit = defineEmits(["update:modelValue"]);
 console.log(typeof window);

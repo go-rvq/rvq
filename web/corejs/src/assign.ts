@@ -1,4 +1,4 @@
-import type { Directive } from 'vue'
+import type {Directive} from 'vue'
 
 export const assignOnMounted: Directive = {
   mounted: (el, binding) => {

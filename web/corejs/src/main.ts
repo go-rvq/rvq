@@ -1,4 +1,4 @@
-import { createWebApp } from '@/app'
+import {createWebApp} from '@/app'
 
 const appElement = document.getElementById('app')
 if (!appElement) {

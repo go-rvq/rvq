@@ -1,29 +1,20 @@
-import { type App } from "vue";
+import {type App} from "vue";
 
 import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Filler,
+    Legend,
+    LinearScale,
+    LineElement,
+    PointElement,
+    RadialLinearScale,
+    Title,
+    Tooltip,
 } from "chart.js";
-import {
-  Bar,
-  Bubble,
-  Doughnut,
-  Line,
-  Pie,
-  PolarArea,
-  Radar,
-  Scatter,
-} from "vue-chartjs";
+import {Bar, Bubble, Doughnut, Line, Pie, PolarArea, Radar, Scatter,} from "vue-chartjs";
 
 ChartJS.register(
   Title,

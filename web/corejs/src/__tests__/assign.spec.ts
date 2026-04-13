@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { nextTick, ref } from 'vue'
-import { mockFetchWithReturnTemplate, mountTemplate, waitUntil } from './testutils'
-import { flushPromises } from '@vue/test-utils'
+import {describe, expect, it} from 'vitest'
+import {nextTick} from 'vue'
+import {mountTemplate} from './testutils'
 
 describe('assign', () => {
   it('test assign', async () => {

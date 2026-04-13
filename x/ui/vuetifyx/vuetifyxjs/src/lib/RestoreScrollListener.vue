@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import {onMounted} from 'vue'
 
 let scrollLeft = 0
 let scrollTop = 0

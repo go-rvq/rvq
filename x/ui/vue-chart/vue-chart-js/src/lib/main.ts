@@ -1,4 +1,4 @@
-import { vuechart } from "@/lib/vuechart.ts";
+import {vuechart} from "@/lib/vuechart.ts";
 
 declare const window: any;
 window.__goplaidVueComponentRegisters =

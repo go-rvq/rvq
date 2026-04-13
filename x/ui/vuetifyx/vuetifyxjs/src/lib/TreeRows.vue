@@ -63,7 +63,7 @@
   </template>
 </template>
 <script setup lang="ts">
-import { isReactive, nextTick, onMounted, reactive, ref } from 'vue'
+import {isReactive, nextTick, onMounted, reactive, ref} from 'vue'
 
 const props = defineProps({
   items: {

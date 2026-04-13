@@ -1,6 +1,6 @@
-import type { DefineComponent, Ref } from 'vue'
+import type {DefineComponent, Ref} from 'vue'
 import * as Vue from 'vue'
-import { defineComponent, inject, reactive, ref } from 'vue'
+import {defineComponent, inject, reactive, ref} from 'vue'
 
 declare let window: any
 

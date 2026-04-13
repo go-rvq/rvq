@@ -1,7 +1,7 @@
-import { getCurrentInstance, inject, ModelRef, PropType, provide } from 'vue'
+import {getCurrentInstance, inject, ModelRef, PropType, provide} from 'vue'
 
-import { type RenderOptions, Data, Locals } from '@/lib/component-by-template'
-import { makeComponentProps } from 'vuetify/lib/composables/component'
+import {Data, Locals, type RenderOptions} from '@/lib/component-by-template'
+import {makeComponentProps} from 'vuetify/lib/composables/component'
 
 const portalKey = Symbol("vx$portal")
 

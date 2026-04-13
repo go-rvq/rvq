@@ -1,11 +1,10 @@
 #!/usr/bin/env ../../../_dev/python_env/.venv/bin/python
 
-import os
 import json
+import os
 import re
 
 import chompjs
-
 import requests
 
 cwd = os.path.dirname(os.path.realpath(__file__))

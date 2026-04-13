@@ -1,4 +1,4 @@
-import { useI18n as vuseI18n, UseI18nOptions } from 'vue-i18n'
+import {useI18n as vuseI18n, UseI18nOptions} from 'vue-i18n'
 import pt from './pt'
 import en from './en'
 

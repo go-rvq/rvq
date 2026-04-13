@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Editor } from '@tiptap/vue-3'
-import { mdiEye } from '@mdi/js'
-import { useTheme } from 'vuetify'
+import type {Editor} from '@tiptap/vue-3'
+import {mdiEye} from '@mdi/js'
+import {useTheme} from 'vuetify'
 import Dialog from '@/lib/Dialog.vue'
-import { useI18n } from '@/lib/locale'
+import {useI18n} from '@/lib/locale'
 
-import { ActionButton } from 'vuetify-pro-tiptap'
+import {ActionButton} from 'vuetify-pro-tiptap'
 
 withDefaults(defineProps<Props>(), {
   disabled: false

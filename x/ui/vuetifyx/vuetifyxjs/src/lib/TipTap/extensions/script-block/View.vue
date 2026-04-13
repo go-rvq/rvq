@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { nodeViewProps, NodeViewWrapper } from '@tiptap/vue-3'
-import { computed, ref } from 'vue'
+import {nodeViewProps, NodeViewWrapper} from '@tiptap/vue-3'
+import {computed, ref} from 'vue'
 import VXGadLangCodeEditor from '@/lib/GadLangCodeEditor'
-import { VXBtn } from '@/lib/VXBtn'
-import { useI18n } from '@/lib/locale'
-import { default as Messages, Message } from '@/lib/Messages'
+import {VXBtn} from '@/lib/VXBtn'
+import {useI18n} from '@/lib/locale'
+import {default as Messages, Message} from '@/lib/Messages'
 
 import insertBeforeIcon from './insert-before.svg'
 import insertAfterIcon from './insert-after.svg'

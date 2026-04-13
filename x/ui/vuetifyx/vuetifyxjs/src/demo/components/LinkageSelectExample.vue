@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ref, ref } from 'vue'
+import {Ref, ref} from 'vue'
 import LinkageSelect from '@/lib/LinkageSelect.vue'
 
 const value = ref(['2', '3', '6'])

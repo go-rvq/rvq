@@ -2,7 +2,7 @@ import 'formdata-polyfill'
 import querystring from 'query-string'
 import union from 'lodash/union'
 import without from 'lodash/without'
-import type { EventFuncID, ValueOp } from './types'
+import type {EventFuncID, ValueOp} from './types'
 
 export function buildPushState(eventFuncId: EventFuncID, url: string): any {
   const loc = eventFuncId.location

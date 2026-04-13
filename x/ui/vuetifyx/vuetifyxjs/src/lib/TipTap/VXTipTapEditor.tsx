@@ -1,19 +1,18 @@
-import { genericComponent, type GenericProps, propsFactory, useRender } from 'vuetify/lib/util/index'
+import {genericComponent, type GenericProps, propsFactory, useRender} from 'vuetify/lib/util/index'
 
-import { computed, markRaw, ModelRef, PropType, ref, Ref, toValue, useId, useModel, useTemplateRef, watch } from 'vue'
-import { VAlert, VCard, VCardText, VDivider, VMessages, VToolbar, VToolbarTitle } from 'vuetify/components'
+import {computed, markRaw, ModelRef, PropType, ref, Ref, toValue, useId, useModel, useTemplateRef, watch} from 'vue'
+import {VAlert, VCard, VCardText, VDivider, VMessages, VToolbar, VToolbarTitle} from 'vuetify/components'
 
-import { makeComponentProps } from 'vuetify/lib/composables/component'
-import { type DensityProps, makeDensityProps } from 'vuetify/lib/composables/density'
-import { makeThemeProps } from 'vuetify/lib/composables/theme'
-import { useI18n } from '@/lib/locale'
-import Card from '@/lib/Card.vue'
+import {makeComponentProps} from 'vuetify/lib/composables/component'
+import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/density'
+import {makeThemeProps} from 'vuetify/lib/composables/theme'
+import {useI18n} from '@/lib/locale'
 
-import { Heading as TiptapHeading, Level as TiptapHeadingLevel } from '@tiptap/extension-heading'
-import { Blockquote as TiptapBlockquote } from '@tiptap/extension-blockquote'
+import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
+import {Blockquote as TiptapBlockquote} from '@tiptap/extension-blockquote'
 
 import Portal from './../Portal/Portal.vue'
-import { unrefElement, useResizeObserver } from '@vueuse/core'
+import {unrefElement, useResizeObserver} from '@vueuse/core'
 
 // https://github.com/go-rvq/vuetify-pro-tiptap
 import {
@@ -53,23 +52,23 @@ import './VXTipTapEditor.scss'
 import preview from './extensions/preview'
 import help from './extensions/help'
 import LinkDialog from './components/LinkDialog.vue'
-import { default as ImageTab } from './components/Image'
+import {default as ImageTab} from './components/Image'
 
 import 'vuetify-pro-tiptap/style.css'
 import 'vuetify-pro-tiptap/styles/editor.css'
 import 'vuetify-pro-tiptap/styles/markdown.css'
 import './styles/markdown/github.scss'
 
-import { Editor, JSONContent } from '@tiptap/core'
-import { makeInputProps } from '../util'
-import { InlineTemplateCode } from '@/lib/TipTap/extensions/script/extension'
-import { TemplateCodeValue } from '@/lib/TipTap/extensions/script-value/extension'
-import { ToolsButton } from '@/lib/TipTap/extensions/tools-button/extension'
-import { CopyAndPasteContentItem } from '@/lib/TipTap/extensions/tools-button/tools/CopyAndPasteContent'
-import { CodeBlock } from '@/lib/TipTap/extensions/codeblock/types'
-import { ScriptBlockMenuItemBuilder } from '@/lib/TipTap/extensions/script-block/extension'
-import { ScriptBlock } from '@/lib/TipTap/extensions/script-block/types'
-import { VXBtn } from '@/lib/VXBtn'
+import {Editor, JSONContent} from '@tiptap/core'
+import {makeInputProps} from '../util'
+import {InlineTemplateCode} from '@/lib/TipTap/extensions/script/extension'
+import {TemplateCodeValue} from '@/lib/TipTap/extensions/script-value/extension'
+import {ToolsButton} from '@/lib/TipTap/extensions/tools-button/extension'
+import {CopyAndPasteContentItem} from '@/lib/TipTap/extensions/tools-button/tools/CopyAndPasteContent'
+import {CodeBlock} from '@/lib/TipTap/extensions/codeblock/types'
+import {ScriptBlockMenuItemBuilder} from '@/lib/TipTap/extensions/script-block/extension'
+import {ScriptBlock} from '@/lib/TipTap/extensions/script-block/types'
+import {VXBtn} from '@/lib/VXBtn'
 
 export type ModelType = string | JSONContent
 

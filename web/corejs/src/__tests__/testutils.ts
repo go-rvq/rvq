@@ -1,10 +1,11 @@
-import { expect, vi } from 'vitest'
-import { mount, VueWrapper } from '@vue/test-utils'
-import { plaidPlugin, Root } from '../app'
-import { type Ref } from 'vue'
-import { createVuetify } from 'vuetify'
+import {vi} from 'vitest'
+import {mount, VueWrapper} from '@vue/test-utils'
+import {plaidPlugin, Root} from '../app'
+import {type Ref} from 'vue'
+import {createVuetify} from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+
 const vuetify = createVuetify({
   components,
   directives

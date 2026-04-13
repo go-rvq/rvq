@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { mountTemplate } from './testutils'
-import { defineComponent, nextTick } from 'vue'
-import { flushPromises } from '@vue/test-utils'
+import {describe, expect, it} from 'vitest'
+import {mountTemplate} from './testutils'
+import {defineComponent, nextTick} from 'vue'
+import {flushPromises} from '@vue/test-utils'
 import GoPlaidScope from '../go-plaid-scope.vue'
 import GoPlaidPortal from '../go-plaid-portal.vue'
 

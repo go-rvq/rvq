@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { mockFetchWithReturnTemplate, mountTemplate, waitUntil } from './testutils'
-import { nextTick, ref } from 'vue'
-import { flushPromises } from '@vue/test-utils'
+import {describe, expect, it} from 'vitest'
+import {mockFetchWithReturnTemplate, mountTemplate, waitUntil} from './testutils'
+import {nextTick, ref} from 'vue'
+import {flushPromises} from '@vue/test-utils'
 
 describe('scope change', () => {
   it('debounce locals', async () => {

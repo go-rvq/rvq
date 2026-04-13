@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, useAttrs, useSlots, useTemplateRef, watch } from 'vue'
-import { fileToURL } from './utils'
-import { Timer, type Controller} from './types'
+import {computed, onMounted, ref, useAttrs, useSlots, useTemplateRef, watch} from 'vue'
+import {fileToURL} from './utils'
+import {type Controller, Timer} from './types'
 import Editor from './Editor.vue'
 import WebCamUI from './webcam/WebCamUI.vue'
-import { FieldTranslator } from './translator'
+import {FieldTranslator} from './translator'
 import IconButton from './IconButton.vue'
 
 export interface Translator {

@@ -2,7 +2,7 @@
 import VxFilter from '@/lib/Filter/index.vue'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
-import { ref } from 'vue'
+import {ref} from 'vue'
 
 const internalValue = ref([
   {

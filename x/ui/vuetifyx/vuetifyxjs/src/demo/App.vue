@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent } from 'vue'
+import {defineComponent} from 'vue'
 import TipTapEditorExample from '@/demo/components/TipTapEditorExample.vue'
 
 export default defineComponent({

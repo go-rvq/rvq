@@ -1,12 +1,12 @@
-import { computed, CSSProperties, defineComponent, ExtractPublicPropTypes, h, toRaw } from 'vue'
-import { useTextColor } from 'vuetify/lib/composables/color'
-import { VAlert, VIcon } from 'vuetify/components'
-import { useRender } from 'vuetify/lib/util/index'
-import { makeComponentProps } from 'vuetify/lib/composables/component'
+import {computed, CSSProperties, defineComponent, ExtractPublicPropTypes, h, toRaw} from 'vue'
+import {useTextColor} from 'vuetify/lib/composables/color'
+import {VAlert, VIcon} from 'vuetify/components'
+import {useRender} from 'vuetify/lib/util/index'
+import {makeComponentProps} from 'vuetify/lib/composables/component'
 import Dialog from './Dialog.vue'
-import { VXBtn } from './VXBtn'
-import { useI18n } from './locale'
-import { componentByTemplate, ComponentDefinition } from './component-by-template'
+import {VXBtn} from './VXBtn'
+import {useI18n} from './locale'
+import {componentByTemplate, ComponentDefinition} from './component-by-template'
 
 export type Detail = string | ComponentDefinition
 

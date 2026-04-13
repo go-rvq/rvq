@@ -1,7 +1,7 @@
-import { Node } from '@tiptap/core'
-import { VueNodeViewRenderer } from '@tiptap/vue-3'
+import {Node} from '@tiptap/core'
+import {VueNodeViewRenderer} from '@tiptap/vue-3'
 import View from './View.vue'
-import { makeInnerTextAsValueAttribute, makeMessagesAttribute } from '../script-block/utils'
+import {makeInnerTextAsValueAttribute, makeMessagesAttribute} from '../script-block/utils'
 
 export interface InlineTemplateCodeOptions {
   value ?: string

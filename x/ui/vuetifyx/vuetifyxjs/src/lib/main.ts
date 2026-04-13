@@ -1,4 +1,4 @@
-import { App } from 'vue'
+import {App} from 'vue'
 
 import Datepicker from '@/lib/Datepicker.vue'
 import Datetimepicker from '@/lib/Datetimepicker.vue'
@@ -18,15 +18,15 @@ import TreeDataTable from '@/lib/TreeDataTable.vue'
 import TreeRows from '@/lib/TreeRows.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
-import { default as ImageField } from '@/lib/ImageTools/Input.vue'
+import {default as ImageField} from '@/lib/ImageTools/Input.vue'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import Dialog from '@/lib/Dialog.vue'
 import Card from '@/lib/Card.vue'
 import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
-import { VuetifyViewer } from 'vuetify-pro-tiptap'
-import { VXBtn } from '@/lib/VXBtn'
+import {VuetifyViewer} from 'vuetify-pro-tiptap'
+import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
-import  Portal from '@/lib/Portal/Portal.vue'
+import Portal from '@/lib/Portal/Portal.vue'
 import Messages from '@/lib/Messages'
 
 const vuetifyx = {

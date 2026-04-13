@@ -14,7 +14,7 @@
  * @see https://github.com/videojs/video.js
  */
 import videojs from './video.js'
-import { ref, onMounted, onUnmounted } from 'vue'
+import {onMounted, onUnmounted, ref} from 'vue'
 // declare a ref to hold the element reference
 // the name must match template ref value
 const videoEl = ref(null)

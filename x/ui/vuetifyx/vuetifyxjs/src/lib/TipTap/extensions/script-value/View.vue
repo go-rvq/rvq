@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { nodeViewProps, NodeViewWrapper } from '@tiptap/vue-3'
-import { default as Messages, Message } from '@/lib/Messages'
+import {nodeViewProps, NodeViewWrapper} from '@tiptap/vue-3'
+import {default as Messages, Message} from '@/lib/Messages'
 import VXGadLangCodeEditor from '@/lib/GadLangCodeEditor'
-import { computed } from 'vue'
+import {computed} from 'vue'
 
 const props = defineProps(nodeViewProps)
 const messages = (props.node.attrs.messages ?? []) as Message[]

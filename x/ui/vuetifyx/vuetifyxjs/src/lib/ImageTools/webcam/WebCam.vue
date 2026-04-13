@@ -46,8 +46,8 @@
 
 <script setup lang="ts">
 const deviceorientation = require('deviceorientation-js')
-import { drawRotated } from './utils'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {drawRotated} from './utils'
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
 
 
 class Local {

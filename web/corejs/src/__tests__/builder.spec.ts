@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { plaid } from '../builder'
+import {describe, expect, it} from 'vitest'
+import {plaid} from '../builder'
 
 describe('builder', () => {
   it('pushState with object will merge into url queries', () => {

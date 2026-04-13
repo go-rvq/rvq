@@ -13,8 +13,8 @@ import * as directives from 'vuetify/directives'
 import '@/scss/index.scss'
 
 // Composables
-import { createVuetify } from 'vuetify'
-import { themes } from './theme'
+import {createVuetify} from 'vuetify'
+import {themes} from './theme'
 import * as lang from 'vuetify/locale'
 
 // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides

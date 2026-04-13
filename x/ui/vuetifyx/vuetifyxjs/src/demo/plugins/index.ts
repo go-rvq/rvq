@@ -6,9 +6,9 @@
 
 // Plugins
 import vuetify from './vuetify'
-import { createI18n } from 'vue-i18n'
+import {createI18n} from 'vue-i18n'
 // Types
-import type { App } from 'vue'
+import type {App} from 'vue'
 
 export function registerPlugins(app: App) {
   app.use(createI18n({

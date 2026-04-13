@@ -1,9 +1,9 @@
 <script lang="ts">
-import { defineComponent, useModel, useTemplateRef } from 'vue'
+import {defineComponent, useModel, useTemplateRef} from 'vue'
 import TempVar from 'vue-temp-var'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
-import type { Density } from 'vuetify/composables/density'
-import { useFullscreen, type MaybeElementRef } from '@vueuse/core'
+import type {Density} from 'vuetify/composables/density'
+import {type MaybeElementRef, useFullscreen} from '@vueuse/core'
 
 let _: Density
 

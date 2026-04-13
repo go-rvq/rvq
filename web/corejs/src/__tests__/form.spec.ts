@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { mockFetchWithReturnTemplate, mountTemplate } from './testutils'
-import { inject, nextTick, ref } from 'vue'
-import { flushPromises } from '@vue/test-utils'
-import { VFileInput } from 'vuetify/components/VFileInput'
+import {describe, expect, it} from 'vitest'
+import {mockFetchWithReturnTemplate, mountTemplate} from './testutils'
+import {inject, nextTick, ref} from 'vue'
+import {flushPromises} from '@vue/test-utils'
+import {VFileInput} from 'vuetify/components/VFileInput'
 
 const BaseInput = {
   template: `

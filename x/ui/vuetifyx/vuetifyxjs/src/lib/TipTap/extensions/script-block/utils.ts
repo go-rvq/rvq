@@ -1,4 +1,4 @@
-import { Message } from '@/lib/Messages'
+import {Message} from '@/lib/Messages'
 
 export const makeMessagesAttribute = () => ({
   messages: {

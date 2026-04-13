@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, PropType, ref } from 'vue'
+import {onMounted, PropType, ref} from 'vue'
 
 interface ItemValue {
   v: string

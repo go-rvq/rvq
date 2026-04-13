@@ -37,8 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import type { ChartData } from "chart.js";
+import {onMounted, ref} from "vue";
+import type {ChartData} from "chart.js";
 
 const options = {
     responsive: true,

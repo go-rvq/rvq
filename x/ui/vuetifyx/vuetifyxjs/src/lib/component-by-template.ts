@@ -1,5 +1,6 @@
 import * as Vue from 'vue'
-import { ComponentInternalInstance, DefineComponent, getCurrentInstance } from 'vue'
+import {ComponentInternalInstance, DefineComponent, getCurrentInstance} from 'vue'
+
 const { defineComponent } = Vue
 
 declare let window: any

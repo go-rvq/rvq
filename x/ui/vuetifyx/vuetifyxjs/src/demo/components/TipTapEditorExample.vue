@@ -1,20 +1,17 @@
 <script setup lang="ts">
 
-import { computed, onMounted, ref, watch } from 'vue'
-import { default as VXTipTapEditor } from '@/lib/TipTap/VXTipTapEditor'
+import {computed, onMounted, ref, watch} from 'vue'
+import {default as VXTipTapEditor} from '@/lib/TipTap/VXTipTapEditor'
 // import { highlight, languages } from 'prismjs/components/prism-core'
-
 // import { languages } from 'prismjs/components'
 // import { highlight } from 'prismjs'
-
 import Prism from 'prismjs'
-const { highlight, languages } = Prism
-
-import { PrismEditor } from 'vue-prism-editor'
+import {PrismEditor} from 'vue-prism-editor'
 import 'prismjs/components/prism-markup'
 import 'prismjs/components/prism-json'
 
-import { VuetifyViewer } from 'vuetify-pro-tiptap'
+const { highlight, languages } = Prism
+
 declare const window: any
 
 const readonly = ref(false)

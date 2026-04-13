@@ -1,4 +1,4 @@
-import { type App } from "vue";
+import {type App} from "vue";
 import Cropper from "@/lib/Cropper.vue";
 
 declare const window: any;

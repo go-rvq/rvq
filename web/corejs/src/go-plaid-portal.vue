@@ -34,9 +34,9 @@ import {
   useSlots
 } from 'vue'
 
-import { componentByTemplate, type RenderOptions, type RenderSelf } from '@/component-by-template'
-import type { EventResponse } from '@/types'
-import type { Builder } from '@/builder'
+import {componentByTemplate, type RenderOptions, type RenderSelf} from '@/component-by-template'
+import type {EventResponse} from '@/types'
+import type {Builder} from '@/builder'
 
 declare let window: any
 window.__goplaid = window.__goplaid ?? {}

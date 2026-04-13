@@ -1,4 +1,4 @@
-import { Editor } from '@tiptap/vue-3'
+import {Editor} from '@tiptap/vue-3'
 
 export interface ToolsItemComponent {
   props?: Object

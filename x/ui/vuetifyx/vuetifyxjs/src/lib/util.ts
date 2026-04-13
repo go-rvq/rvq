@@ -1,5 +1,5 @@
-import { propsFactory } from 'vuetify/lib/util/propsFactory'
-import { PropType } from 'vue'
+import {propsFactory} from 'vuetify/lib/util/propsFactory'
+import {PropType} from 'vue'
 
 export const makeInputProps = propsFactory({
   id: String,

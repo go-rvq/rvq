@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as vue from 'vue'
-import { onBeforeUnmount, onMounted, onUnmounted } from 'vue'
+import {onBeforeUnmount, onMounted, onUnmounted} from 'vue'
 
 const props = defineProps({
   script: {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { Editor } from '@tiptap/vue-3'
-import { mdiHelpCircle } from '@mdi/js'
+import type {Editor} from '@tiptap/vue-3'
+import {mdiHelpCircle} from '@mdi/js'
 
-import { ActionButton } from 'vuetify-pro-tiptap'
-import { useI18n } from '@/lib/locale'
+import {ActionButton} from 'vuetify-pro-tiptap'
+import {useI18n} from '@/lib/locale'
 
 const { t } = useI18n()
 

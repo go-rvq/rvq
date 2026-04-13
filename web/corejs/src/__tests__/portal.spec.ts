@@ -1,7 +1,8 @@
-import { defineComponent, inject, nextTick, ref } from 'vue'
-import { flushPromises, mount } from '@vue/test-utils'
-import { describe, it, expect } from 'vitest'
-import { mockFetchWithReturnTemplate, mountTemplate, waitUntil } from './testutils'
+import {defineComponent, inject, nextTick, ref} from 'vue'
+import {flushPromises} from '@vue/test-utils'
+import {describe, expect, it} from 'vitest'
+import {mockFetchWithReturnTemplate, mountTemplate, waitUntil} from './testutils'
+
 declare let window: any
 
 describe('portal', () => {

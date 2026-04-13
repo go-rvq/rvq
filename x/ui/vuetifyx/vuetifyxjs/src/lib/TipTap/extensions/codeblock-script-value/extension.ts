@@ -1,9 +1,6 @@
-import { GeneralOptions } from 'vuetify-pro-tiptap'
+import {GeneralOptions} from 'vuetify-pro-tiptap'
 import Button from './Button.vue'
-import {
-  CodeBlockScriptValue as ExtCodeBlockScriptValue,
-  Options as ExtOptions
-} from './types'
+import {CodeBlockScriptValue as ExtCodeBlockScriptValue, Options as ExtOptions} from './types'
 
 export interface Options extends ExtOptions, GeneralOptions<Options> {
 }

@@ -1,7 +1,7 @@
-import { computed, defineComponent, ExtractPublicPropTypes, PropType, useModel } from 'vue'
-import { ImageProperties } from 'vuetify-pro-tiptap'
+import {computed, defineComponent, ExtractPublicPropTypes, PropType, useModel} from 'vue'
+import {ImageProperties} from 'vuetify-pro-tiptap'
 import Input from '../../ImageTools/Input.vue'
-import { VTextField } from 'vuetify/components'
+import {VTextField} from 'vuetify/components'
 
 const propsOptions = {
   modelValue: {

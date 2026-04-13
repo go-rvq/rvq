@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { FilterItem } from '@/lib/Filter/Model'
+import {FilterItem} from '@/lib/Filter/Model'
 import FilterButton from '@/lib/Filter/components/FilterButton.vue'
-import { ref } from 'vue'
+import {ref} from 'vue'
 
 interface WithBeforeDoneHandler {
   beforeDoneHandler: (cb:(empty:boolean)=>void)=>void

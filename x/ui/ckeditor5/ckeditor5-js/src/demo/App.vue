@@ -9,7 +9,8 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import {ref} from "vue";
+import Editor from "./Editor.vue";
 
 const data = ref(`<p>hello</p>
 <ol class="multilevel-list">
@@ -38,6 +39,4 @@ const data = ref(`<p>hello</p>
     </ol>
   </li>
 </ol>`);
-
-import Editor from "./Editor.vue";
 </script>

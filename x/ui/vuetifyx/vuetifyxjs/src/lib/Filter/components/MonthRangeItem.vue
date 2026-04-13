@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import * as constants from '../Constants'
 import Monthpicker from '@/lib/Monthpicker.vue'
 

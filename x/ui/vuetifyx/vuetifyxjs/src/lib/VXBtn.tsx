@@ -1,6 +1,6 @@
-import { genericComponent, propsFactory, useRender } from 'vuetify/lib/util/index'
-import { VBtn, VTooltip } from 'vuetify/components'
-import { makeVBtnProps, type VBtnSlots } from 'vuetify/lib/components/VBtn/VBtn'
+import {genericComponent, propsFactory, useRender} from 'vuetify/lib/util/index'
+import {VBtn, VTooltip} from 'vuetify/components'
+import {makeVBtnProps, type VBtnSlots} from 'vuetify/lib/components/VBtn/VBtn'
 
 export const makeVXBtnProps = propsFactory({
   title: String,

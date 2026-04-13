@@ -1,8 +1,8 @@
-import { Node } from '@tiptap/core'
-import { VueNodeViewRenderer } from '@tiptap/vue-3'
-import { type GeneralOptions, type DisabledCheckOptions } from 'vuetify-pro-tiptap'
+import {Node} from '@tiptap/core'
+import {VueNodeViewRenderer} from '@tiptap/vue-3'
+import {type DisabledCheckOptions, type GeneralOptions} from 'vuetify-pro-tiptap'
 import View from './View.vue'
-import { makeAttributes } from './utils'
+import {makeAttributes} from './utils'
 
 export interface ScriptBlockOptions extends GeneralOptions<ScriptBlockOptions>, DisabledCheckOptions {
   value ?: string

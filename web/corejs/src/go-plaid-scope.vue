@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, isProxy, onMounted, provide, reactive, watch } from 'vue'
+import {computed, inject, isProxy, onMounted, provide, reactive, watch} from 'vue'
 import debounce from 'lodash/debounce'
 
 const props = defineProps<{

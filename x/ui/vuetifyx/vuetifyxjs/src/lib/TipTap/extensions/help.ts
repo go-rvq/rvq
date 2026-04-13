@@ -1,8 +1,8 @@
-import type { GeneralOptions } from 'vuetify-pro-tiptap'
-import { Extension } from '@tiptap/core'
+import type {GeneralOptions} from 'vuetify-pro-tiptap'
+import {Extension} from '@tiptap/core'
 
 import HelpActionButton from '../components/HelpActionButton.vue'
-import { Ref } from 'vue'
+import {Ref} from 'vue'
 
 export interface HelpOptions extends GeneralOptions<HelpOptions> {
   modelValue?:Ref<boolean>

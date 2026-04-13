@@ -4,9 +4,9 @@
 </template>
 
 <script lang="ts" setup>
-import { default as ImageEditor } from 'tui-image-editor'
-import { onMounted, onUnmounted, useTemplateRef } from 'vue'
-import { Controller } from './types'
+import {default as ImageEditor} from 'tui-image-editor'
+import {onMounted, onUnmounted, useTemplateRef} from 'vue'
+import {Controller} from './types'
 
 import './tui-color-picker.css'
 import 'tui-image-editor/dist/tui-image-editor.css'

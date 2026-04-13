@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, unref, watch } from 'vue'
+import {computed, unref, watch} from 'vue'
 
 interface SelectImageProps {
   modelValue?: Record<string, string>

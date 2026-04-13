@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUpdated, PropType, Ref, ref } from 'vue'
+import {computed, onMounted, onUpdated, PropType, Ref, ref} from 'vue'
 import draggable from 'vuedraggable'
 
 enum Variant {

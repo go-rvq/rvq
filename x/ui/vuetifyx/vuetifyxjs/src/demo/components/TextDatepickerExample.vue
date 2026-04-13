@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import TextDatepicker from '@/lib/TextDatepicker.vue'
 
 const value = ref('2023-10-01')

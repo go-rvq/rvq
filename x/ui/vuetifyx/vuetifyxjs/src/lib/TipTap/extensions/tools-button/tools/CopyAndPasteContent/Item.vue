@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { mdiContentCopy, mdiContentPaste } from '@mdi/js'
-import { useI18n } from '@/lib/locale'
-import { PropType } from 'vue'
-import { Editor } from '@tiptap/vue-3'
-import { type Notify } from '../../types'
+import {mdiContentCopy, mdiContentPaste} from '@mdi/js'
+import {useI18n} from '@/lib/locale'
+import {PropType} from 'vue'
+import {Editor} from '@tiptap/vue-3'
+import {type Notify} from '../../types'
 
 const props = defineProps({
   t: {

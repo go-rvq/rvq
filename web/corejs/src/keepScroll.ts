@@ -1,4 +1,4 @@
-import type { ObjectDirective } from 'vue'
+import type {ObjectDirective} from 'vue'
 import qs from 'query-string'
 import debounce from 'lodash/debounce'
 

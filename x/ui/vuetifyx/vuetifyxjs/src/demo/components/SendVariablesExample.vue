@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Seo from '@/lib/SendVariables.vue'
-import { ref } from 'vue'
+import {ref} from 'vue'
 
 const seo = ref()
 const value = ref('1eiuh1ihaubfiad')

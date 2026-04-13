@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {ActionButton, extActionButtonProps} from 'vuetify-pro-tiptap'
-import { mdiEqual } from '@mdi/js'
-import { useI18n } from '@/lib/locale'
+import {mdiEqual} from '@mdi/js'
+import {useI18n} from '@/lib/locale'
 
 const { t } = useI18n()
 const { editor } = defineProps(extActionButtonProps)

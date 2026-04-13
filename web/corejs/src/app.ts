@@ -1,23 +1,23 @@
 import {
-  type App,
-  createApp,
-  type DefineComponent,
-  defineComponent,
-  onMounted,
-  provide,
-  reactive,
-  ref,
-  shallowRef
+    type App,
+    createApp,
+    type DefineComponent,
+    defineComponent,
+    onMounted,
+    provide,
+    reactive,
+    ref,
+    shallowRef
 } from 'vue'
-import { GlobalEvents } from 'vue-global-events'
+import {GlobalEvents} from 'vue-global-events'
 import GoPlaidScope from '@/go-plaid-scope.vue'
 import GoPlaidPortal from '@/go-plaid-portal.vue'
 import GoPlaidRunScript from '@/go-plaid-run-script.vue'
 import UserComponent from '@/user-component.vue'
-import { componentByTemplate } from '@/component-by-template'
-import { Builder, plaid } from '@/builder'
-import { keepScroll } from '@/keepScroll'
-import { assignOnMounted } from '@/assign'
+import {componentByTemplate} from '@/component-by-template'
+import {Builder, plaid} from '@/builder'
+import {keepScroll} from '@/keepScroll'
+import {assignOnMounted} from '@/assign'
 
 export const Root = defineComponent({
   props: {

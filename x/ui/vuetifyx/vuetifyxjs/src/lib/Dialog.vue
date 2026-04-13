@@ -1,7 +1,7 @@
 <script lang="ts">
-import { computed, defineComponent, useModel } from 'vue'
+import {computed, defineComponent, useModel} from 'vue'
 import TempVar from 'vue-temp-var'
-import { type Density } from 'vuetify/lib/composables/density'
+import {type Density} from 'vuetify/lib/composables/density'
 
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 

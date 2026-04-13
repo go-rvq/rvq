@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { computed, useAttrs, useSlots } from 'vue'
+import {computed, useAttrs, useSlots} from 'vue'
 import Field from './Field.vue'
-import { URLValue } from './types'
+import {URLValue} from './types'
 
 const props = defineProps({
   field: { type: Object,  default: {} },

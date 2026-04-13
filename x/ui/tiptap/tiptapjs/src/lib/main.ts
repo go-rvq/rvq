@@ -1,5 +1,5 @@
 // @snippet_begin(TipTapRegisterVueComponent)
-import { type App } from "vue";
+import {type App} from "vue";
 import TipTapEditor from "@/lib/Editor.vue";
 
 declare const window: any;

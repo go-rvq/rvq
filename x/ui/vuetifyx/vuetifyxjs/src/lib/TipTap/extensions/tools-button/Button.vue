@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import {  extActionButtonProps } from 'vuetify-pro-tiptap'
-import { useI18n } from '@/lib/locale'
-import { PropType, ref } from 'vue'
-import { Editor } from '@tiptap/vue-3'
-import { CommandArgs, ToolsItem } from '@/lib/TipTap/extensions/tools-button/types'
-import { mdiTools } from '@mdi/js'
+import {extActionButtonProps} from 'vuetify-pro-tiptap'
+import {useI18n} from '@/lib/locale'
+import {PropType, ref} from 'vue'
+import {Editor} from '@tiptap/vue-3'
+import {CommandArgs, ToolsItem} from '@/lib/TipTap/extensions/tools-button/types'
+import {mdiTools} from '@mdi/js'
 import {Message} from './types'
 
 const props = defineProps({

@@ -1,7 +1,7 @@
 <script lang="ts">
-import { defineComponent, useModel, useTemplateRef } from 'vue'
+import {defineComponent, useModel, useTemplateRef} from 'vue'
 import TempVar from 'vue-temp-var'
-import { type Density } from 'vuetify/lib/composables/density'
+import {type Density} from 'vuetify/lib/composables/density'
 
 let _: Density
 

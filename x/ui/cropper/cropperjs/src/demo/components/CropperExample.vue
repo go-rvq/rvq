@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Cropper from "@/lib/Cropper.vue";
-import { ref } from "vue";
+import {ref} from "vue";
+
 const value = ref();
 const src =
   "https://cdn.pixabay.com/photo/2023/11/23/20/40/ocean-8408693_1280.jpg";

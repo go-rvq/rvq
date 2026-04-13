@@ -1,20 +1,20 @@
 <script setup lang="ts">
 
-import { type ContentType, PortalContent } from '@/lib/Portal/types'
+import {type ContentType, PortalContent} from '@/lib/Portal/types'
 import Portal from '@/lib/Portal/Portal.vue'
-import { ref, shallowRef } from 'vue'
-import { componentByTemplate } from '@/lib/component-by-template'
+import {ref, shallowRef} from 'vue'
+import {componentByTemplate} from '@/lib/component-by-template'
 
 import 'vue-prism-editor/dist/prismeditor.min.css'
-import { languages } from 'prismjs/components'
-import { highlight } from 'prismjs'
-import { PrismEditor } from 'vue-prism-editor'
+import {languages} from 'prismjs/components'
+import {highlight} from 'prismjs'
+import {PrismEditor} from 'vue-prism-editor'
 import 'prismjs/components/prism-markup'
 import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-clike'
 import 'prismjs/components/prism-javascript'
 import 'prismjs/components/prism-typescript'
-import { VCard, VBtn } from 'vuetify/components'
+import {VBtn, VCard} from 'vuetify/components'
 import 'prismjs/themes/prism-coy.css'
 
 const templateContent = ref(`<h1>My dynamic portal content</h1>

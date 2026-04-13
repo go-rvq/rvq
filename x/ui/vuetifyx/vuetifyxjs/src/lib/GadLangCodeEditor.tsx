@@ -1,18 +1,18 @@
-import { computed, defineComponent, ExtractPublicPropTypes, PropType, useModel, nextTick } from 'vue'
+import {defineComponent, ExtractPublicPropTypes, nextTick, PropType, useModel} from 'vue'
 
 // import Prism Editor
-import { PrismEditor, EditorProps } from 'vue-prism-editor'
+import {EditorProps, PrismEditor} from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
 
 import Prism from 'prismjs'
-const { highlight, languages } = Prism
-
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-gad';
 import 'prismjs/themes/prism-coy.css'; // import syntax highlighting styles
 import "./styles/GadLangCodeEditor.scss"
 
-import { useI18n } from '@/lib/locale'
+import {useI18n} from '@/lib/locale'
+
+const { highlight, languages } = Prism
 
 const propsOptions = {
   modelValue: {
