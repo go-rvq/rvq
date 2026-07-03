@@ -1,8 +1,6 @@
 module github.com/go-rvq/rvq/admin/utils/testflow/gentool
 
-go 1.24
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	github.com/go-rvq/rvq v0.0.0-20250707114503-7cc586165fd6

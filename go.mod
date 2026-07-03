@@ -1,6 +1,6 @@
 module github.com/go-rvq/rvq
 
-go 1.24
+go 1.25.0
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1
@@ -36,6 +36,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/libtnb/sqlite v1.1.2
 	github.com/manifoldco/promptui v0.9.0
 	github.com/markbates/goth v1.80.0
 	github.com/mattn/go-tty v0.0.7
@@ -77,8 +78,8 @@ require (
 	google.golang.org/api v0.235.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.7
-	gorm.io/driver/sqlite v1.5.5
-	gorm.io/gorm v1.25.10
+	gorm.io/driver/sqlite v1.6.0
+	gorm.io/gorm v1.31.1
 	gorm.io/hints v1.1.2
 )
 
@@ -194,8 +195,8 @@ require (
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
 	golang.org/x/image v0.17.0 // indirect
 	golang.org/x/net v0.40.0
-	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/grpc v1.72.1 // indirect
@@ -211,9 +212,15 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
+	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/qor5/web v1.2.3 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/theplant/htmlgo v1.0.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	modernc.org/libc v1.72.3 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.11.0 // indirect
+	modernc.org/sqlite v1.52.0 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/

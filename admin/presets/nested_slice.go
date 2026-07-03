@@ -78,7 +78,6 @@ func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 }
 
 func (n *NestedSliceBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOptions) (s FieldWalkState) {
-
 	if fctx.Obj == nil {
 		if opts.SkipNestedNil {
 			return

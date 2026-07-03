@@ -634,6 +634,7 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 	fieldFormKey := parent.ChildFieldFormKey(f.name)
 
 	i := 0
+
 	reflectutils.ForEach(childFromObjs, func(childFromObj interface{}) {
 		defer func() { i++ }()
 		if childFromObj == nil {
@@ -1236,6 +1237,13 @@ func (b *ModifiedIndexesBuilder) DeletedContains(sliceFormKey string, index int)
 		return false
 	}
 	return b.deletedValues[sliceFormKey][index]
+}
+
+func (b *ModifiedIndexesBuilder) HasDeletions(sliceFormKey string) (r bool) {
+	if b.deletedValues == nil || b.deletedValues[sliceFormKey] == nil {
+		return false
+	}
+	return len(b.deletedValues[sliceFormKey]) > 0
 }
 
 func (b *ModifiedIndexesBuilder) SortedForEach(slice interface{}, sliceFormKey string, f func(obj interface{}, i int)) {

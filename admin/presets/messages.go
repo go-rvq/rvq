@@ -114,7 +114,7 @@ type Messages struct {
 	FiltersMultipleSelectIn                    string
 	FiltersMultipleSelectNotIn                 string
 	Month                                      string
-	MonthNames                                 [time.December + 1]string
+	MonthNames                                 [13]string
 	Year                                       string
 	PaginationRowsPerPage                      string
 	PaginationPageInfo                         string

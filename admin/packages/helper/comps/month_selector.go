@@ -11,10 +11,10 @@ import (
 )
 
 type MonthSelector struct {
-	getLabels func(r *http.Request) [time.December + 1]string
+	getLabels func(r *http.Request) [13]string
 }
 
-func NewMonthSelector(getLabels func(r *http.Request) [time.December + 1]string) *MonthSelector {
+func NewMonthSelector(getLabels func(r *http.Request) [13]string) *MonthSelector {
 	return &MonthSelector{getLabels: getLabels}
 }
 
@@ -98,7 +98,7 @@ type MonthSelectorField struct {
 	s         *MonthSelector
 	mb        *presets.ModelBuilder
 	fieldName string
-	getLabels func(r *http.Request) [time.December + 1]string
+	getLabels func(r *http.Request) [13]string
 }
 
 func (m *MonthSelectorField) InputField(field *presets.FieldBuilder) *MonthSelectorField {

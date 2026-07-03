@@ -77,6 +77,10 @@ func New() *Builder {
 	}
 }
 
+func (b *Builder) AllowAll() *Builder {
+	return b.Policies(PolicyFor("*").WhoAre(Allowed).ToDo(Anything).On(Anything))
+}
+
 func (b *Builder) Policies(ps ...*PolicyBuilder) (r *Builder) {
 	b.DeletePolicies(b.policies...)
 	b.policies = make([]*PolicyBuilder, 0)

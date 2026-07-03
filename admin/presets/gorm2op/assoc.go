@@ -3,14 +3,16 @@ package gorm2op
 import (
 	"reflect"
 
+	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web/zeroer"
 	"gorm.io/gorm"
 )
 
 type SaveHasManyAssociationBuilder struct {
-	field     string
-	pre, post []Callback
-	updator   func(db *gorm.DB, r any) error
+	field        string
+	fieldFormKey func(fieldName string, state *CallbackState) string
+	pre, post    []Callback
+	updator      func(db *gorm.DB, r any) error
 }
 
 func (b *SaveHasManyAssociationBuilder) Updator(f func(db *gorm.DB, r any) (err error)) *SaveHasManyAssociationBuilder {
@@ -18,8 +20,16 @@ func (b *SaveHasManyAssociationBuilder) Updator(f func(db *gorm.DB, r any) (err 
 	return b
 }
 
-func SaveHasManyAssociation(field string) *SaveHasManyAssociationBuilder {
-	return &SaveHasManyAssociationBuilder{field: field}
+func SaveHasManyAssociation(field string, fieldFormKey ...func(fieldName string, state *CallbackState) string) *SaveHasManyAssociationBuilder {
+	b := &SaveHasManyAssociationBuilder{field: field}
+	for _, b.fieldFormKey = range fieldFormKey {
+	}
+	if b.fieldFormKey == nil {
+		b.fieldFormKey = func(fieldName string, state *CallbackState) string {
+			return fieldName
+		}
+	}
+	return b
 }
 
 func (b *SaveHasManyAssociationBuilder) Pre(f ...Callback) *SaveHasManyAssociationBuilder {
@@ -45,6 +55,8 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 	}
 	post := func(state *CallbackState) (err error) {
 		assoc := state.SharedDB.Session(&gorm.Session{}).Model(state.Obj).Association(b.field)
+		fieldFormKey := b.fieldFormKey(b.field, state)
+		modifiedIndexes := presets.ContextModifiedIndexesBuilder(state.Ctx)
 
 		if v, ok := state.GetOk(b.field); ok {
 			var (
@@ -91,6 +103,10 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 				if err = db.Append(newValues.Interface()); err != nil {
 					return
 				}
+			}
+		} else if modifiedIndexes.HasDeletions(fieldFormKey) {
+			if err = assoc.Unscoped().Clear(); err != nil {
+				return
 			}
 		}
 		return
