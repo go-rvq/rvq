@@ -1,13 +1,9 @@
-DOCKER_CMD ?= docker
-
-docker_args="docker_args.start docker_args.end"
-
-# ../dev is a local repository of https://github.com/go-rvq/dev
-docker_image_env = ../../../dev/dockers/js/env.sh
+BUN ?= bun
 
 .PHONY: build
 build:
-	$(docker_image_env) @build "$(docker_args)"
+	$(BUN) install
+	$(BUN) run build
 	cp assets/* dist
 
 get:

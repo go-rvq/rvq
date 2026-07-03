@@ -1,6 +1,9 @@
+BUN ?= bun
+
 .PHONY: dist
 dist:
-	../../../../_dockers/js/env.sh docker_build_pj $(shell pwd)
+	$(BUN) install
+	$(BUN) run build
 
 .PHONY: dist-clean
 dist-clean:
@@ -8,7 +11,8 @@ dist-clean:
 
 .PHONY: clean
 clean:
-	rm -rf node_modules .pnpm-store
+	rm -rf node_modules
 
+.PHONY: dev
 dev:
-	../../_env/env.sh pj_pnpm $(shell pwd) run dev
+	$(BUN) run dev
