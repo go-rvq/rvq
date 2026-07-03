@@ -1,0 +1,176 @@
+package vuetify
+
+import (
+	"fmt"
+
+	h "github.com/go-rvq/htmlgo"
+)
+
+type VExpansionPanelsBuilder struct {
+	VTagBuilder[*VExpansionPanelsBuilder]
+}
+
+func VExpansionPanels(children ...h.HTMLComponent) *VExpansionPanelsBuilder {
+	return VTag(&VExpansionPanelsBuilder{}, "v-expansion-panels", children...)
+}
+
+func (b *VExpansionPanelsBuilder) Flat(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":flat", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Tag(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":tag", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Theme(v string) (r *VExpansionPanelsBuilder) {
+	b.Attr("theme", v)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Eager(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":eager", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) BgColor(v string) (r *VExpansionPanelsBuilder) {
+	b.Attr("bg-color", v)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Disabled(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":disabled", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) ExpandIcon(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":expand-icon", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) CollapseIcon(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":collapse-icon", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Multiple(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":multiple", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Mandatory(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":mandatory", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Elevation(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":elevation", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Rounded(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":rounded", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Tile(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":tile", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Color(v string) (r *VExpansionPanelsBuilder) {
+	b.Attr("color", v)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Variant(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":variant", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) ModelValue(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":model-value", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Static(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":static", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Readonly(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":readonly", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Max(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":max", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) HideActions(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":hide-actions", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) SelectedClass(v string) (r *VExpansionPanelsBuilder) {
+	b.Attr("selected-class", v)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Focusable(v bool) (r *VExpansionPanelsBuilder) {
+	b.Attr(":focusable", fmt.Sprint(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Ripple(v interface{}) (r *VExpansionPanelsBuilder) {
+	b.Attr(":ripple", h.JSONString(v))
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) On(name string, value string) (r *VExpansionPanelsBuilder) {
+	b.Attr(fmt.Sprintf("v-on:%s", name), value)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) Bind(name string, value string) (r *VExpansionPanelsBuilder) {
+	b.Attr(fmt.Sprintf("v-bind:%s", name), value)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) SetSlot(name string, child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:"+name, true).Attr())
+}
+
+func (b *VExpansionPanelsBuilder) SetScopedSlot(name string, scope string, child ...h.HTMLComponent) {
+	b.AppendChild(h.Template(child...).Attr("v-slot:"+name, scope).Attr())
+}
+
+func (b *VExpansionPanelsBuilder) Slot(name string, child ...h.HTMLComponent) (r *VExpansionPanelsBuilder) {
+	b.SetSlot(name, child...)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) ScopedSlot(name string, scope string, child ...h.HTMLComponent) (r *VExpansionPanelsBuilder) {
+	b.SetScopedSlot(name, scope, child...)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) SetSlotDefault(child ...h.HTMLComponent) {
+	b.SetSlot("default", child...)
+}
+
+func (b *VExpansionPanelsBuilder) SetScopedSlotDefault(scope string, child ...h.HTMLComponent) {
+	b.SetScopedSlot("default", scope, child...)
+}
+
+func (b *VExpansionPanelsBuilder) SlotDefault(child ...h.HTMLComponent) (r *VExpansionPanelsBuilder) {
+	b.SetSlotDefault(child...)
+	return b
+}
+
+func (b *VExpansionPanelsBuilder) ScopedSlotDefault(scope string, child ...h.HTMLComponent) (r *VExpansionPanelsBuilder) {
+	b.SetScopedSlotDefault(scope, child...)
+	return b
+}

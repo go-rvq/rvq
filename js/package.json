@@ -8,6 +8,7 @@
     "ckeditor5",
     "vue-chart",
     "vuetify",
-    "vuetifyx"
+    "vuetifyx",
+    "scripts/generate-go-vuetify"
   ]
 }

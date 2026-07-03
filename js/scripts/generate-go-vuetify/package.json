@@ -1,0 +1,11 @@
+{
+  "name": "generate-go-vuetify",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "bun run index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30"
+  }
+}
