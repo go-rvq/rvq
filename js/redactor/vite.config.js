@@ -9,7 +9,7 @@ import {resolve} from 'path'
 export default defineConfig({
   build: {
     // minify: false,
-    outDir: '../../x/ui/redactor/redactorjs/dist',
+    outDir: 'dist',
     emptyOutDir: true,
     lib: {
       entry: resolve(__dirname, 'src/lib/main.js'),

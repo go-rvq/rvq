@@ -40,7 +40,7 @@ export default defineConfig({
     port: 3000,
   },
   build: {
-    outDir: '../../x/ui/vuetify/vuetifyjs/dist',
+    outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
       external: ['vue'],

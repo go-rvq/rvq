@@ -2,17 +2,14 @@ package web
 
 // @snippet_begin(PackrSample)
 import (
-	"embed"
 	"io/fs"
 
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/theplant/osenv"
 )
 
-//go:embed corejs/dist/*.js
-var box embed.FS
-
 func JSComponentsPack() ComponentsPack {
-	return ComponentsPackFromFile(box, "corejs/dist/index.js")
+	return ComponentsPackFromFile(rvqjs.CoreJS, "corejs/dist/index.js")
 }
 
 var webVueDebug = osenv.GetBool("WEB_VUE_DEBUG", "Use dev vue.js javascript source code to debug vue components", false)
@@ -23,7 +20,7 @@ func JSVueComponentsPack() ComponentsPack {
 		if webVueDebug {
 			name = "vue.global.dev.js"
 		}
-		box, _ := fs.Sub(box, "corejs/dist")
+		box, _ := fs.Sub(rvqjs.CoreJS, "corejs/dist")
 		ctx.AppendFile(box, name)
 		ctx.AppendFile(box, "vue-i18n.js")
 	})

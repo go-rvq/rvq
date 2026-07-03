@@ -16,7 +16,7 @@ import {fileURLToPath, URL} from "node:url";
 export default defineConfig({
   build: {
     // minify: false,
-    outDir: '../../x/ui/vue-chart/vue-chart-js/dist',
+    outDir: 'dist',
     emptyOutDir: true,
     lib: {
       entry: resolve(__dirname, "src/lib/main.ts"),

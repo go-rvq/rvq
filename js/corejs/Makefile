@@ -4,7 +4,7 @@ BUN ?= bun
 build:
 	$(BUN) install
 	$(BUN) run build
-	cp assets/* ../../web/corejs/dist
+	cp assets/* dist
 
 get:
 	wget https://unpkg.com/vue@3/dist/vue.global.js -O assets/vue.global.dev.js

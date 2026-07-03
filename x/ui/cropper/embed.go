@@ -1,16 +1,12 @@
 package cropper
 
 import (
-	"embed"
-
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 )
 
-//go:embed cropperjs/dist
-var box embed.FS
-
 func JSComponentsPack() web.ComponentsPack {
-	v, err := box.ReadFile("cropperjs/dist/cropperjs.umd.cjs")
+	v, err := rvqjs.Cropper.ReadFile("cropper/dist/cropperjs.umd.cjs")
 	if err != nil {
 		panic(err)
 	}
@@ -19,7 +15,7 @@ func JSComponentsPack() web.ComponentsPack {
 }
 
 func CSSComponentsPack() web.ComponentsPack {
-	v, err := box.ReadFile("cropperjs/dist/cropperjs.css")
+	v, err := rvqjs.Cropper.ReadFile("cropper/dist/cropperjs.css")
 	if err != nil {
 		panic(err)
 	}

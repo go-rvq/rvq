@@ -13,7 +13,7 @@ dist:
 
 .PHONY: dist-clean
 dist-clean:
-	rm -rf ../../x/ui/ckeditor5/ckeditor5-js/dist
+	rm -rf dist
 
 .PHONY: clean
 clean:

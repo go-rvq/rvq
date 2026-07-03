@@ -2,16 +2,12 @@ package tiptap
 
 // @snippet_begin(TipTapPackrSample)
 import (
-	"embed"
-
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 )
 
-//go:embed tiptapjs/dist
-var box embed.FS
-
 func JSComponentsPack() web.ComponentsPack {
-	v, err := box.ReadFile("tiptapjs/dist/tiptapjs.umd.cjs")
+	v, err := rvqjs.TipTap.ReadFile("tiptap/dist/tiptapjs.umd.cjs")
 	if err != nil {
 		panic(err)
 	}
@@ -20,7 +16,7 @@ func JSComponentsPack() web.ComponentsPack {
 }
 
 func CSSComponentsPack() web.ComponentsPack {
-	v, err := box.ReadFile("tiptapjs/dist/tiptap.css")
+	v, err := rvqjs.TipTap.ReadFile("tiptap/dist/tiptap.css")
 	if err != nil {
 		panic(err)
 	}

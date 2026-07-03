@@ -1,16 +1,12 @@
 package vuetifyx
 
 import (
-	"embed"
-
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 )
 
-//go:embed vuetifyxjs/dist
-var assetsbox embed.FS
-
 func JSComponentsPack() web.ComponentsPack {
-	v, err := assetsbox.ReadFile("vuetifyxjs/dist/vuetifyxjs.umd.js")
+	v, err := rvqjs.VuetifyX.ReadFile("vuetifyx/dist/vuetifyxjs.umd.js")
 	if err != nil {
 		panic(err)
 	}
@@ -19,7 +15,7 @@ func JSComponentsPack() web.ComponentsPack {
 }
 
 func CSSComponentsPack() web.ComponentsPack {
-	v, err := assetsbox.ReadFile("vuetifyxjs/dist/vuetifyxjs.css")
+	v, err := rvqjs.VuetifyX.ReadFile("vuetifyx/dist/vuetifyxjs.css")
 	if err != nil {
 		panic(err)
 	}

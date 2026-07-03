@@ -2,17 +2,14 @@ package redactor
 
 import (
 	"bytes"
-	"embed"
 
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 )
 
-//go:embed redactorjs
-var box embed.FS
-
 func JSComponentsPack() web.ComponentsPack {
 	var js [][]byte
-	j1, err := box.ReadFile("redactorjs/dist/redactorjs.umd.cjs")
+	j1, err := rvqjs.Redactor.ReadFile("redactor/dist/redactorjs.umd.cjs")
 	if err != nil {
 		panic(err)
 	}
@@ -21,7 +18,7 @@ func JSComponentsPack() web.ComponentsPack {
 }
 
 func CSSComponentsPack() web.ComponentsPack {
-	c, err := box.ReadFile("redactorjs/dist/redactor.css")
+	c, err := rvqjs.Redactor.ReadFile("redactor/dist/redactor.css")
 	if err != nil {
 		panic(err)
 	}

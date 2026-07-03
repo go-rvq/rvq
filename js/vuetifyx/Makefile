@@ -15,7 +15,7 @@ build:
 
 .PHONY: dist-clean
 dist-clean:
-	rm -rf ../../x/ui/vuetifyx/vuetifyxjs/dist
+	rm -rf dist
 
 .PHONY: clean
 clean:

@@ -1,26 +1,20 @@
 package vuetify
 
 import (
-	"embed"
 	"io/fs"
 	"net/http"
 	"strings"
 
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 	"github.com/theplant/osenv"
 )
-
-//go:embed dist
-var assetsbox embed.FS
-
-//go:embed vuetifyjs/dist
-var vuetifyjs embed.FS
 
 var customizeVuetifyCSS = osenv.GetBool("CUSTOMIZE_VUETIFY_CSS", "Use customized styles for vuetify", true)
 
 func JSComponentsPack() web.ComponentsPack {
 	return web.ComponentsPackBuilder(func(ctx *web.ComponentsPackBuilderContext) {
-		FS, _ := fs.Sub(assetsbox, "dist")
+		FS, _ := fs.Sub(rvqjs.VuetifyRuntime, "vuetify/runtime-dist")
 		ctx.AppendFile(FS, "vuetify.min.js")
 		ctx.AppendFile(FS, "vuetify-labs.min.js")
 		ctx.WriteString("window.Vuetify.__locale_messages = ")
@@ -32,9 +26,9 @@ func CSSComponentsPack() web.ComponentsPack {
 	var v []byte
 	var err error
 	if customizeVuetifyCSS {
-		v, err = vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/index.css")
+		v, err = rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/index.css")
 	} else {
-		v, err = assetsbox.ReadFile("dist/vuetify.min.css")
+		v, err = rvqjs.VuetifyRuntime.ReadFile("vuetify/runtime-dist/vuetify.min.css")
 		// v2, err := assetsbox.ReadFile("dist/vuetify-labs.min.css")
 		// if err != nil {
 		//	panic(err)
@@ -50,7 +44,7 @@ func CSSComponentsPack() web.ComponentsPack {
 }
 
 func fontEot() web.ComponentsPack {
-	v, err := vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/materialdesignicons-webfont.eot")
+	v, err := rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/materialdesignicons-webfont.eot")
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +52,7 @@ func fontEot() web.ComponentsPack {
 }
 
 func fontTtf() web.ComponentsPack {
-	v, err := vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/materialdesignicons-webfont.ttf")
+	v, err := rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/materialdesignicons-webfont.ttf")
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +60,7 @@ func fontTtf() web.ComponentsPack {
 }
 
 func fontWoff() web.ComponentsPack {
-	v, err := vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/materialdesignicons-webfont.woff")
+	v, err := rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/materialdesignicons-webfont.woff")
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +68,7 @@ func fontWoff() web.ComponentsPack {
 }
 
 func fontWoff2() web.ComponentsPack {
-	v, err := vuetifyjs.ReadFile("vuetifyjs/dist/vuetify/assets/materialdesignicons-webfont.woff2")
+	v, err := rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/materialdesignicons-webfont.woff2")
 	if err != nil {
 		panic(err)
 	}

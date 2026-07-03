@@ -13,7 +13,7 @@ dist:
 
 .PHONY: dist-clean
 dist-clean:
-	rm -rf ../../x/ui/vue-chart/vue-chart-js/dist
+	rm -rf dist
 
 .PHONY: clean
 clean:

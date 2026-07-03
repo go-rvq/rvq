@@ -1,14 +1,15 @@
 package vue_chart
 
 import (
-	_ "embed"
-
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 )
 
-//go:embed vue-chart-js/dist/vue-chart.umd.cjs
-var js []byte
-
 func JSComponentsPack() web.ComponentsPack {
-	return web.ComponentsPack(js)
+	v, err := rvqjs.VueChart.ReadFile("vue-chart/dist/vue-chart.umd.cjs")
+	if err != nil {
+		panic(err)
+	}
+
+	return web.ComponentsPack(v)
 }
