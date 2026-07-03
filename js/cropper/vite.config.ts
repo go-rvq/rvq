@@ -9,6 +9,8 @@ import {resolve} from "path";
 export default defineConfig({
     build: {
         // minify: false,
+        outDir: '../../x/ui/cropper/cropperjs/dist',
+        emptyOutDir: true,
         lib: {
             entry: resolve(__dirname, 'src/lib/main.ts'),
             formats: ['umd'],

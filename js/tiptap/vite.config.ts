@@ -13,6 +13,8 @@ export default defineConfig(({mode}) => {
         },
         build: {
             // minify: false,
+            outDir: '../../x/ui/tiptap/tiptapjs/dist',
+            emptyOutDir: true,
             lib: {
                 entry: resolve(__dirname, 'src/lib/main.ts'),
                 formats: ['umd'],

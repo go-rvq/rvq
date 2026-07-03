@@ -19,6 +19,8 @@ export default ({mode}) => {
   return defineConfig({
     build: {
       // minify: false,
+      outDir: '../../x/ui/vuetifyx/vuetifyxjs/dist',
+      emptyOutDir: true,
       lib: {
         entry: resolve(__dirname, 'src/lib/main.ts'),
         formats: ['umd'],

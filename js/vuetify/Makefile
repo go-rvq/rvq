@@ -1,19 +1,13 @@
 BUN ?= bun
 
-.PHONY: build
-build:
-	$(BUN) install
-	$(BUN) run build
-
 .PHONY: dist
 dist:
 	$(BUN) install
 	$(BUN) run build
 
-
 .PHONY: dist-clean
 dist-clean:
-	rm -rf dist
+	rm -rf ../../x/ui/vuetify/vuetifyjs/dist
 
 .PHONY: clean
 clean:

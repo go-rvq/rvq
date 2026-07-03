@@ -16,6 +16,8 @@ import {fileURLToPath, URL} from "node:url";
 export default defineConfig({
   build: {
     // minify: false,
+    outDir: '../../x/ui/ckeditor5/ckeditor5-js/dist',
+    emptyOutDir: true,
     lib: {
       entry: resolve(__dirname, "src/lib/main.ts"),
       formats: ["umd"],
