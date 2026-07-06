@@ -15,7 +15,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
-	github.com/gad-lang/gad v0.0.0-20251215132517-de88614261d0
+	github.com/gad-lang/gad v0.0.2-0.20260704234103-6f1f84ab611d
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1
@@ -36,7 +36,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
-	github.com/libtnb/sqlite v1.1.2
 	github.com/manifoldco/promptui v0.9.0
 	github.com/markbates/goth v1.80.0
 	github.com/mattn/go-tty v0.0.7
@@ -56,7 +55,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/sunfmin/reflectutils v1.0.4
 	github.com/sunfmin/snippetgo v0.0.2
-	github.com/tailscale/hujson v0.0.0-20250605163823-992244df8c5a
 	github.com/theplant/bimg v1.1.1
 	github.com/theplant/docgo v0.0.16
 	github.com/theplant/gofixtures v1.1.2
@@ -212,15 +210,10 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
-	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/qor5/web v1.2.3 // indirect
-	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/theplant/htmlgo v1.0.3 // indirect
+	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	modernc.org/libc v1.72.3 // indirect
-	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.52.0 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/

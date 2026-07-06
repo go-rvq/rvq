@@ -11,40 +11,35 @@ func Parse(s string) (vm *gad.VM, kva gad.KeyValueArray, err error) {
 		return
 	}
 
-	builtints := gad.NewBuiltins()
-	builtints.Set("NEW", gad.Uint(presets.NEW))
-	builtints.Set("EDIT", gad.Uint(presets.EDIT))
-	builtints.Set("DETAIL", gad.Uint(presets.DETAIL))
-	builtints.Set("LIST", gad.Uint(presets.LIST))
-	builtints.Set("WRITE", gad.Uint(presets.WRITE))
-	builtints.Set("FORM", gad.Uint(presets.FORM))
-	builtints.Set("ALL", gad.Uint(presets.ALL))
-	builtints.Set("FIELD_TYPES", gad.Dict{
+	builtins := gad.NewBuiltins()
+	builtins.Set("NEW", gad.Uint(presets.NEW))
+	builtins.Set("EDIT", gad.Uint(presets.EDIT))
+	builtins.Set("DETAIL", gad.Uint(presets.DETAIL))
+	builtins.Set("LIST", gad.Uint(presets.LIST))
+	builtins.Set("WRITE", gad.Uint(presets.WRITE))
+	builtins.Set("FORM", gad.Uint(presets.FORM))
+	builtins.Set("ALL", gad.Uint(presets.ALL))
+	builtins.Set("FIELD_TYPES", gad.Dict{
 		"text":       gad.Str("text"),
 		"inlineText": gad.Str("inlineText"),
 	})
+	staticBuiltins := builtins.Build()
+	symbols := gad.NewSymbolTable(staticBuiltins.Builtins().NameSet)
 
 	src := "return (;" + s + ")"
 
 	var bc *gad.Bytecode
 
-	if bc, err = gad.Compile([]byte(src), gad.CompileOptions{
+	if _, bc, err = gad.Compile(symbols, []byte(src), gad.CompileOptions{
 		ScannerOptions: parser.ScannerOptions{
 			Mode: parser.ScanCharAsString,
-		},
-		CompilerOptions: gad.CompilerOptions{
-			SymbolTable: gad.NewSymbolTable(builtints),
 		},
 	}); err != nil {
 		return
 	}
 
 	var ret gad.Object
-	vm = gad.NewVM(bc)
-
-	vm.Setup(gad.SetupOpts{
-		Builtins: builtints,
-	})
+	vm = gad.NewVM(staticBuiltins, bc)
 
 	if ret, err = vm.Run(); err != nil {
 		return

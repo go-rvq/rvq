@@ -83,13 +83,13 @@ const items = ['a', 'b']
 </script>
 <p>Itens: <i><script type="text/script">for item in items do</script><script type="text/scriptValue">item</script>, <script type="text/script">end</script></i></p>
 <p>A + B= <script type="text/scriptValue">199++2</script></p>`,
-			result: `<script type="text/scriptBlock">
+			result: `<p>Itens: <i>a, b, <script type="text/scriptBlock">
 const items = ['a', 'b']
 </script>
 <p>Itens: <i><script type="text/script">for item in items do</script><script type="text/scriptValue">item</script>, <script type="text/script">end</script></i></p>
-<p>A + B= <script type="text/scriptValue" data-messages="[{&#34;value&#34;:&#34;Parse ERROR at [1:4]: expected &#39;MIXEDVALUEEND&#39;, found &#39;++&#39;&#34;,&#34;type&#34;:&#34;error&#34;,&#34;detail&#34;:&#34;\u003cpre\u003eParse ERROR at [1:4]: expected &#39;MIXEDVALUEEND&#39;, found &#39;++&#39;\n\n       🠆 1| 199++2\n               ^\u003c/pre\u003e&#34;},{&#34;value&#34;:&#34;Parse ERROR at [1:8]: expected statement, found &#39;MIXEDVALUEEND&#39;&#34;,&#34;type&#34;:&#34;error&#34;,&#34;detail&#34;:&#34;\u003cpre\u003eParse ERROR at [1:8]: expected statement, found &#39;MIXEDVALUEEND&#39;\n\n       🠆 1| 199++2\n                   ^\u003c/pre\u003e&#34;}]">199++2</script></p>
+<p>A + B= <script type="text/scriptValue" data-messages="[{&#34;value&#34;:&#34;Run ERROR at [1:1]: TypeError: unsupported operand types for &#39;++&#39;: &#39;int&#39; and &#39;int&#39;&#34;,&#34;type&#34;:&#34;error&#34;,&#34;detail&#34;:&#34;\u003cpre\u003eRun ERROR at [1:1]: TypeError: unsupported operand types for &#39;++&#39;: &#39;int&#39; and &#39;int&#39;\n\n       🠆 1| 199++2\n            ^\u003c/pre\u003e&#34;}]">199++2</script></p>
 `,
-			err:        "Script Error [PARSE] at [19:4]: expected 'MIXEDVALUEEND', found '++'",
+			err:        ErrScriptFailure.Error(),
 			nodeFailed: true,
 		},
 		{

@@ -342,7 +342,7 @@ func (r *ScriptBuilderResult) NodeSourceFileFromPos(pos source.FilePos) (n *Node
 
 	var err error
 	if n.file == nil {
-		n.file, err = pos.File.Slice(r.nodesFileSet, fmt.Sprintf("(node:%d)", nodeIndex), nodeStartLine, n.LineCount)
+		n.file, err = pos.File.SliceLines(r.nodesFileSet, fmt.Sprintf("(node:%d)", nodeIndex), nodeStartLine, n.LineCount)
 		if err != nil {
 			return
 		}
@@ -510,11 +510,13 @@ func (b *ScriptRunBuilder) Run() (err error) {
 
 	var bc *gad.Bytecode
 
-	if bc, err = gad.Compile([]byte(b.r.Script), *b.co); err != nil {
+	builtins := gad.NewBuiltins().Build()
+	symbols := gad.NewSymbolTable(builtins.Builtins().NameSet)
+	if _, bc, err = gad.Compile(symbols, []byte(compatGadScript(b.r.Script)), *b.co); err != nil {
 		return
 	}
 
-	vm := gad.NewVM(bc)
+	vm := gad.NewVM(builtins, bc)
 
 	if b.configureVM != nil {
 		if err = b.configureVM(vm); err != nil {
@@ -527,6 +529,16 @@ func (b *ScriptRunBuilder) Run() (err error) {
 	}
 
 	return
+}
+
+func compatGadScript(script string) string {
+	lines := strings.Split(script, "\n")
+	for i, line := range lines {
+		if strings.HasSuffix(strings.TrimRight(line, " \t"), " do") {
+			lines[i] = strings.TrimRight(line, " \t")[:len(strings.TrimRight(line, " \t"))-len(" do")] + " begin"
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func Build(htmlValue string, opt ...BuilderOption) (result *ScriptBuilderResult, err error) {

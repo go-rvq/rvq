@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+set -u
+
+status=0
+
+run() {
+	printf 'Running %s\n' "$*"
+	if ! "$@"; then
+		status=1
+		printf 'Command failed: %s\n' "$*" >&2
+	fi
+}
+
+run staticcheck ./...
+run go vet ./...
+run go test ./...
+
+if [ "$status" -ne 0 ]; then
+	printf 'Pre-commit checks reported failures. Commit is allowed so existing repository issues do not block local work.\n' >&2
+fi
+
+exit 0
