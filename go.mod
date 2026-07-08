@@ -1,6 +1,6 @@
 module github.com/go-rvq/rvq
 
-go 1.25.0
+go 1.26.4
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1
