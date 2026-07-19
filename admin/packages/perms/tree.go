@@ -71,6 +71,24 @@ func fieldNodesFromBuilder(fb *presets.FieldsBuilder) (nodes []FieldNode) {
 	return
 }
 
+// ActionNode is a detail action of a resource, grantable per record.
+type ActionNode struct {
+	Name string // action name (label)
+	Verb string // perm verb (PermName) checked at runtime
+}
+
+// ActionNodes enumerates the record-level (detail) actions of a resource. Each
+// is grantable by allowing its verb on the record resource.
+func ActionNodes(mb *presets.ModelBuilder) (out []ActionNode) {
+	if !mb.HasDetailing() {
+		return
+	}
+	for _, a := range mb.Detailing().GetActions() {
+		out = append(out, ActionNode{Name: a.Name(), Verb: a.PermName()})
+	}
+	return
+}
+
 // FieldResource returns the exact permission resource of a record field (or a
 // nested field, given the field path), computed by the presets permissioner —
 // the same computation the runtime field-permission check uses, so a policy

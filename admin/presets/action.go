@@ -593,3 +593,15 @@ func (b *DetailingBuilder) Action(name string) (r *ActionBuilder) {
 func (b *DetailingBuilder) GetAction(name string) *ActionBuilder {
 	return getAction(b.actions, name)
 }
+
+// GetActions returns the listing's record-level actions (read-only).
+func (b *ListingBuilder) GetActions() []*ActionBuilder { return b.actions }
+
+// GetBulkActions returns the listing's bulk actions (read-only).
+func (b *ListingBuilder) GetBulkActions() []*BulkActionBuilder { return b.bulkActions }
+
+// GetItemActions returns the listing's per-item actions (read-only).
+func (b *ListingBuilder) GetItemActions() []*ActionBuilder { return b.itemActions }
+
+// GetActions returns the detailing's actions (read-only).
+func (b *DetailingBuilder) GetActions() []*ActionBuilder { return b.actions }

@@ -103,6 +103,10 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 				if err = applyFieldGrants(db, mb, rid, subject, referBase, ctx); err != nil {
 					return err
 				}
+				// per-action grants (record-level detail actions)
+				if err = applyActionGrants(db, mb, rid, subject, referBase, RecordResource(mb, rid), ctx); err != nil {
+					return err
+				}
 			}
 			reload()
 			return nil
@@ -194,6 +198,42 @@ func applyFieldGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subje
 	return apply(ModeEdit, VerbEdit)
 }
 
+// actionFormKey encodes an action verb into a stable form field name.
+func actionFormKey(verb string) string { return "perms_a_" + verb }
+
+// actionMatrix renders the record-level actions as checkboxes.
+func actionMatrix(mb *presets.ModelBuilder, title string) h.HTMLComponent {
+	actions := ActionNodes(mb)
+	if len(actions) == 0 {
+		return nil
+	}
+	var boxes h.HTMLComponents
+	for _, a := range actions {
+		boxes = append(boxes, v.VCheckbox().Label(a.Name).Density(v.DensityCompact).HideDetails(true).
+			Attr(web.VField(actionFormKey(a.Verb), false)...))
+	}
+	return v.VExpansionPanel(
+		v.VExpansionPanelTitle(h.Text(title)),
+		v.VExpansionPanelText(boxes...),
+	)
+}
+
+// applyActionGrants grants/revokes the per-action permissions selected in the
+// dialog for one subject: a checked action allows its verb on the record.
+func applyActionGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subject, referBase, record string, ctx *web.EventContext) error {
+	for _, a := range ActionNodes(mb) {
+		referID := referBase + ":a:" + a.Verb + ":" + subject
+		if ctx.R.FormValue(actionFormKey(a.Verb)) == "true" {
+			if _, err := Grant(db, referID, subject, record, []string{a.Verb}); err != nil {
+				return err
+			}
+		} else if err := Revoke(db, referID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 	rows := h.HTMLComponents{h.Tr(h.Th(m.Subject), h.Th(m.Permissions))}
 	if len(pols) == 0 {
@@ -211,6 +251,9 @@ func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPol
 		panels = append(panels, p)
 	}
 	if p := fieldMatrix(mb, ModeEdit, m.FieldsEdit); p != nil {
+		panels = append(panels, p)
+	}
+	if p := actionMatrix(mb, m.Actions); p != nil {
 		panels = append(panels, p)
 	}
 

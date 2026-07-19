@@ -17,6 +17,7 @@ type Messages struct {
 	Subject        string
 	SubjectHint    string
 	Permissions    string
+	Actions        string
 	NoGrants       string
 	Help           string
 	View           string
@@ -37,6 +38,7 @@ var Messages_en_US = &Messages{
 	Subject:        "Roles or users",
 	SubjectHint:    "One per line (or comma-separated). Applies to all of them.",
 	Permissions:    "Permissions",
+	Actions:        "Actions",
 	NoGrants:       "No permissions granted for this record.",
 	Help:           "Grant a role/user permission over this record. Clear everything and save to revoke.",
 	View:           "View",
@@ -57,6 +59,7 @@ var Messages_pt_BR = &Messages{
 	Subject:        "Papéis ou usuários",
 	SubjectHint:    "Um por linha (ou separados por vírgula). Aplica a todos os informados.",
 	Permissions:    "Permissões",
+	Actions:        "Ações",
 	NoGrants:       "Nenhuma permissão concedida para este registro.",
 	Help:           "Conceda a um papel/usuário permissão sobre este registro. Desmarque tudo e salve para revogar.",
 	View:           "Visualizar",
