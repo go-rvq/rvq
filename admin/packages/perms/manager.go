@@ -6,6 +6,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
@@ -64,7 +65,7 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 			if err != nil {
 				return nil, err
 			}
-			return managerBody(msgs(ctx.Context()), pols), nil
+			return managerBody(msgs(ctx.Context()), mb, pols), nil
 		}).
 		UpdateFunc(func(id string, ctx *web.EventContext) error {
 			referBase, resource, ok := scope(id)
@@ -85,7 +86,9 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 			if ctx.R.FormValue(fieldDelete) == "true" {
 				verbs = append(verbs, VerbDelete...)
 			}
+			rid, _ := mb.ParseRecordID(id)
 			for _, subject := range subjects {
+				// whole-record grant/revoke
 				referID := referBase + ":" + subject
 				var err error
 				if len(verbs) == 0 {
@@ -94,6 +97,10 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 					_, err = Grant(db, referID, subject, resource, verbs)
 				}
 				if err != nil {
+					return err
+				}
+				// fine-grained per-field grants (restrict to specific fields)
+				if err = applyFieldGrants(db, mb, rid, subject, referBase, ctx); err != nil {
 					return err
 				}
 			}
@@ -119,7 +126,75 @@ func parseSubjects(s string) []string {
 	return out
 }
 
-func managerBody(m *Messages, pols []perm.DefaultDBPolicy) h.HTMLComponent {
+// flatField is a field flattened from the (possibly nested) mode field tree.
+type flatField struct {
+	Label string   // display path, e.g. "ChavesPix › Chave"
+	Path  []string // field path, e.g. ["ChavesPix","Chave"]
+}
+
+func flatten(nodes []FieldNode, parent []string, label string) (out []flatField) {
+	for _, n := range nodes {
+		path := append(append([]string{}, parent...), n.Name)
+		lbl := n.Name
+		if label != "" {
+			lbl = label + " › " + n.Name
+		}
+		if len(n.Children) == 0 {
+			out = append(out, flatField{Label: lbl, Path: path})
+		} else {
+			out = append(out, flatten(n.Children, path, lbl)...)
+		}
+	}
+	return
+}
+
+// fieldFormKey encodes a mode+field path into a stable form field name.
+func fieldFormKey(mode string, path []string) string {
+	return "perms_f_" + mode + "_" + strings.Join(path, "__")
+}
+
+// fieldMatrix renders, for a mode, the flattened fields as checkboxes.
+func fieldMatrix(mb *presets.ModelBuilder, mode, title string) h.HTMLComponent {
+	fields := flatten(FieldNodes(mb, mode), nil, "")
+	if len(fields) == 0 {
+		return nil
+	}
+	var boxes h.HTMLComponents
+	for _, f := range fields {
+		boxes = append(boxes, v.VCheckbox().Label(f.Label).Density(v.DensityCompact).HideDetails(true).
+			Attr(web.VField(fieldFormKey(mode, f.Path), false)...))
+	}
+	return v.VExpansionPanel(
+		v.VExpansionPanelTitle(h.Text(title)),
+		v.VExpansionPanelText(boxes...),
+	)
+}
+
+// applyFieldGrants grants/revokes the per-field permissions selected in the
+// dialog for one subject: detail-mode fields grant the view verb, edit-mode
+// fields the edit verb, on the field's exact resource.
+func applyFieldGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subject, referBase string, ctx *web.EventContext) error {
+	apply := func(mode string, verbs []string) error {
+		for _, f := range flatten(FieldNodes(mb, mode), nil, "") {
+			res := FieldResource(mb, rid, f.Path...)
+			referID := referBase + ":f:" + mode + ":" + strings.Join(f.Path, ".") + ":" + subject
+			if ctx.R.FormValue(fieldFormKey(mode, f.Path)) == "true" {
+				if _, err := Grant(db, referID, subject, res, verbs); err != nil {
+					return err
+				}
+			} else if err := Revoke(db, referID); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := apply(ModeDetail, VerbView); err != nil {
+		return err
+	}
+	return apply(ModeEdit, VerbEdit)
+}
+
+func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 	rows := h.HTMLComponents{h.Tr(h.Th(m.Subject), h.Th(m.Permissions))}
 	if len(pols) == 0 {
 		rows = append(rows, h.Tr(h.Td(h.Text("—")), h.Td(h.Text(m.NoGrants))))
@@ -130,6 +205,15 @@ func managerBody(m *Messages, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 			h.Td(h.Text(strings.Join([]string(p.Actions), ", "))),
 		))
 	}
+	// fine-grained per-field matrix (nested fields included), by mode
+	var panels h.HTMLComponents
+	if p := fieldMatrix(mb, ModeDetail, m.FieldsView); p != nil {
+		panels = append(panels, p)
+	}
+	if p := fieldMatrix(mb, ModeEdit, m.FieldsEdit); p != nil {
+		panels = append(panels, p)
+	}
+
 	return h.Div(
 		v.VAlert(h.Text(m.Help)).Type("info").Variant(v.VariantTonal).Density(v.DensityComfortable).Class("mb-4"),
 		v.VTable(h.Tbody(rows...)).Density(v.DensityCompact).Class("mb-4"),
@@ -138,6 +222,8 @@ func managerBody(m *Messages, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 		v.VCheckbox().Label(m.View).Attr(web.VField(fieldView, false)...),
 		v.VCheckbox().Label(m.Edit).Attr(web.VField(fieldEdit, false)...),
 		v.VCheckbox().Label(m.Delete).Attr(web.VField(fieldDelete, false)...),
+		h.Div(h.Text(m.FieldsHelp)).Class("text-caption text-medium-emphasis mt-2"),
+		v.VExpansionPanels(panels...).Class("my-2"),
 		h.Div(h.Text(m.RevokeHint)).Class("text-caption text-medium-emphasis"),
 	)
 }

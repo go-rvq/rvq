@@ -29,6 +29,9 @@ func (b *FieldBuilder) AutoNested(mb *ModelBuilder, fb *FieldsBuilder) (r *Field
 	}
 }
 
+// GetNested returns the field's nested configuration, or nil.
+func (b *FieldBuilder) GetNested() Nested { return b.nested }
+
 func (b *FieldBuilder) Nested(n Nested) (r *FieldBuilder) {
 	b.nested = n
 	n.Build(b)

@@ -22,6 +22,9 @@ type Messages struct {
 	View           string
 	Edit           string
 	Delete         string
+	FieldsView     string
+	FieldsEdit     string
+	FieldsHelp     string
 	RevokeHint     string
 	TabAll         string
 	TabTrash       string
@@ -39,6 +42,9 @@ var Messages_en_US = &Messages{
 	View:           "View",
 	Edit:           "Edit",
 	Delete:         "Delete",
+	FieldsView:     "Fields — view",
+	FieldsEdit:     "Fields — edit",
+	FieldsHelp:     "Optional: restrict the grant to specific fields (nested included).",
 	RevokeHint:     "Saving with no option checked revokes the given roles/users' permissions.",
 	TabAll:         "All",
 	TabTrash:       "Trash",
@@ -56,6 +62,9 @@ var Messages_pt_BR = &Messages{
 	View:           "Visualizar",
 	Edit:           "Editar",
 	Delete:         "Excluir",
+	FieldsView:     "Campos — visualizar",
+	FieldsEdit:     "Campos — editar",
+	FieldsHelp:     "Opcional: restringe a concessão a campos específicos (nested incluídos).",
 	RevokeHint:     "Salvar sem nenhuma opção marcada revoga as permissões dos papéis/usuários informados.",
 	TabAll:         "Tudo",
 	TabTrash:       "Lixeira",
