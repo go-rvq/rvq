@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/model"
+	"github.com/google/uuid"
 )
 
 type (
@@ -17,6 +18,51 @@ type (
 	IDSlice = model.IDSlice
 	Schema  = model.Schema
 )
+
+var (
+	errorType = reflect.TypeOf((*error)(nil)).Elem()
+	uuidType  = reflect.TypeOf(uuid.UUID{})
+)
+
+// IdParserFallback holds per-type fallback parsers for record ids, tried as a
+// last resort when a primary-key field is neither a basic kind, nor uuid.UUID,
+// nor exposes Parse(string) (T, error), nor implements sql.Scanner. Register a
+// parser to support a custom id type without changing this package.
+var IdParserFallback = map[reflect.Type]func(string) (any, error){}
+
+// parseByMethod parses v using a Parse(string) (T, error) method exposed by t
+// (or *t), returning the parsed value. It supports id types such as uuid.UUID
+// that carry their own string parser. ok is false when no such method exists.
+func parseByMethod(t reflect.Type, v string) (av any, ok bool, err error) {
+	for _, rt := range []reflect.Type{t, reflect.PointerTo(t)} {
+		m, found := rt.MethodByName("Parse")
+		if !found {
+			continue
+		}
+		ft := m.Func.Type()
+		// method signature (receiver included): func(recv, string) (T, error)
+		if ft.NumIn() != 2 || ft.In(1).Kind() != reflect.String ||
+			ft.NumOut() != 2 || !ft.Out(1).Implements(errorType) {
+			continue
+		}
+		var recv reflect.Value
+		if rt.Kind() == reflect.Pointer {
+			recv = reflect.New(rt.Elem())
+		} else {
+			recv = reflect.New(rt).Elem()
+		}
+		out := m.Func.Call([]reflect.Value{recv, reflect.ValueOf(v)})
+		if !out[1].IsNil() {
+			return nil, true, out[1].Interface().(error)
+		}
+		res := out[0]
+		if res.Kind() == reflect.Pointer {
+			res = res.Elem()
+		}
+		return res.Interface(), true, nil
+	}
+	return nil, false, nil
+}
 
 func ParentsModelID(r *http.Request) IDSlice {
 	if v := r.Context().Value(ParentsModelIDKey); v != nil {
@@ -149,16 +195,44 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 				av = i
 			}
 		default:
+			// uuid.UUID (an [16]byte array) parses from its string form.
+			if field.Type == uuidType {
+				var u uuid.UUID
+				if u, err = uuid.Parse(v); err != nil {
+					return
+				}
+				av = u
+				break
+			}
+			// types exposing Parse(string) (T, error) parse from their string
+			// form.
+			if parsed, hasParse, e := parseByMethod(field.Type, v); hasParse {
+				if e != nil {
+					err = e
+					return
+				}
+				av = parsed
+				break
+			}
 			fv := reflect.New(field.Type).Interface()
 			if s, _ := fv.(sql.Scanner); s != nil {
 				if err = s.Scan(v); err != nil {
 					return
 				}
-				av = s
-			} else {
-				err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", field.Type, field.Name))
-				return
+				// store the scanned value (deref the pointer), not the *T, so
+				// ID.SetTo can Convert it to the field type without panicking.
+				av = reflect.ValueOf(s).Elem().Interface()
+				break
 			}
+			// last resort: a globally registered fallback parser.
+			if fn := IdParserFallback[field.Type]; fn != nil {
+				if av, err = fn(v); err != nil {
+					return
+				}
+				break
+			}
+			err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", field.Type, field.Name))
+			return
 		}
 		id.Values = append(id.Values, av)
 	}
