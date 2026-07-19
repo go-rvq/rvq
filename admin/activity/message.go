@@ -18,6 +18,11 @@ type Messages struct {
 	ModelLabel     string
 	ModelLink      string
 	ModelDiffs     string
+	ModelIP        string
+	ModelUserAgent string
+
+	LogAction string
+	LogEmpty  string
 
 	FilterAction    string
 	FilterCreatedAt string
@@ -52,6 +57,11 @@ var Messages_en_US = &Messages{
 	ModelLabel:     "Menu Name",
 	ModelLink:      "Link",
 	ModelDiffs:     "Diffs",
+	ModelIP:        "IP Address",
+	ModelUserAgent: "Browser",
+
+	LogAction: "Activity Log",
+	LogEmpty:  "No activity recorded for this record.",
 
 	FilterAction:    "Action",
 	FilterCreatedAt: "Create Time",
@@ -85,6 +95,11 @@ var Messages_zh_CN = &Messages{
 	ModelLabel:     "菜单名",
 	ModelLink:      "链接",
 	ModelDiffs:     "差异",
+	ModelIP:        "IP 地址",
+	ModelUserAgent: "浏览器",
+
+	LogAction: "活动日志",
+	LogEmpty:  "该记录没有活动记录。",
 
 	FilterAction:    "操作类型",
 	FilterCreatedAt: "操作时间",

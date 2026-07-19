@@ -50,7 +50,19 @@ type ActivityLog struct {
 
 	ModelLink  string
 	ModelDiffs string `sql:"type:text;"`
+
+	// request origin of the action (see RequestInfoSetter)
+	IP        string `gorm:"index"`
+	UserAgent string `sql:"type:text;"`
 }
+
+func (al *ActivityLog) SetIP(s string) { al.IP = s }
+
+func (al *ActivityLog) GetIP() string { return al.IP }
+
+func (al *ActivityLog) SetUserAgent(s string) { al.UserAgent = s }
+
+func (al *ActivityLog) GetUserAgent() string { return al.UserAgent }
 
 func (al *ActivityLog) String() string {
 	return fmt.Sprintf("#%v %s %s #%s by %s at %s", al.ID, al.Action, al.ModelName, al.ModelKeys, al.Creator, al.CreatedAt)

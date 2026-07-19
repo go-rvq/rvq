@@ -10,6 +10,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,7 +18,7 @@ import (
 
 var (
 	db          *gorm.DB
-	pb          = presets.New()
+	pb          = presets.New(i18n.New())
 	pageModel   = pb.Model(&Page{})
 	widgetModel = pb.Model(&Widget{})
 )
@@ -295,11 +296,14 @@ func TestMutliModelBuilder(t *testing.T) {
 	data3 := &TestActivityModel{ID: 3, VersionName: "v3", Title: "test3", Description: "Description3"}
 
 	resetDB()
-	// add create record
+	// add create record. A zero id makes gorm2op insert the row (Save→Create);
+	// the record's own primary key travels in the object.
+	zero2, _ := pageModel2.ParseRecordID("")
+	zero3, _ := pageModel3.ParseRecordID("")
 	db.Create(data1)
 	builder.AddCreateRecord("Test User", data1, db)
-	pageModel2.Editing().Saver(data2, "2", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
-	pageModel3.Editing().Saver(data3, "3", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	pageModel2.Editing().Saver(data2, zero2, &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	pageModel3.Editing().Saver(data3, zero3, &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
 	{
 		for _, id := range []string{"1", "2"} {
 			var log TestActivityLog
@@ -322,11 +326,11 @@ func TestMutliModelBuilder(t *testing.T) {
 
 	data2.Title = "test2-1"
 	data2.Description = "Description2-1"
-	pageModel2.Editing().Saver(data2, "2", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	pageModel2.Editing().Saver(data2, pageModel2.MustRecordID(data2), &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
 
 	data3.Title = "test3-1"
 	data3.Description = "Description3-1"
-	pageModel3.Editing().Saver(data3, "3", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	pageModel3.Editing().Saver(data3, pageModel3.MustRecordID(data3), &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
 
 	{
 		var log1 TestActivityLog
@@ -367,8 +371,10 @@ func TestMutliModelBuilder(t *testing.T) {
 	builder.AddDeleteRecord("Test User", data1, db)
 	db.Delete(data1)
 
-	pageModel2.Editing().Deleter(data2, "2", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
-	pageModel3.Editing().Deleter(data3, "3", &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	// use the listing Deleter (the activity delete wrapper wraps it); the model
+	// Deleter would bypass the audit hook.
+	pageModel2.Listing().Deleter(data2, pageModel2.MustRecordID(data2), false, &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-01/2", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
+	pageModel3.Listing().Deleter(data3, pageModel3.MustRecordID(data3), false, &web.EventContext{R: httptest.NewRequest("POST", "/admin/page-02/3", nil).WithContext(context.WithValue(context.Background(), "creator", "Test User"))})
 	{
 		for _, id := range []string{"1", "3"} {
 			var log TestActivityLog

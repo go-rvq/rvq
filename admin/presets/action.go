@@ -587,3 +587,9 @@ func (b *DetailingBuilder) Action(name string) (r *ActionBuilder) {
 	b.actions = append(b.actions, r)
 	return
 }
+
+// GetAction returns the detailing action named name, or nil when it is not
+// registered (unlike Action, it never creates one).
+func (b *DetailingBuilder) GetAction(name string) *ActionBuilder {
+	return getAction(b.actions, name)
+}

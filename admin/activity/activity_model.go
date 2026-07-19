@@ -205,35 +205,23 @@ func (mb *ModelBuilder) AddRecords(action string, ctx context.Context, vs ...int
 	var (
 		creator = mb.activity.getCreatorFromContext(ctx)
 		db      = mb.activity.getDBFromContext(ctx)
+		info    = RequestInfoFromContext(ctx)
 	)
 
 	switch action {
-	case ActivityView:
+	case ActivityView, ActivityDelete, ActivityCreate:
 		for _, v := range vs {
-			err := mb.AddViewRecord(creator, v, db)
-			if err != nil {
-				return err
-			}
-		}
-
-	case ActivityDelete:
-		for _, v := range vs {
-			err := mb.AddDeleteRecord(creator, v, db)
-			if err != nil {
-				return err
-			}
-		}
-	case ActivityCreate:
-		for _, v := range vs {
-			err := mb.AddCreateRecord(creator, v, db)
-			if err != nil {
+			if err := mb.saveWithInfo(info, creator, action, v, db, ""); err != nil {
 				return err
 			}
 		}
 	case ActivityEdit:
 		for _, v := range vs {
-			err := mb.AddEditRecord(creator, v, db)
-			if err != nil {
+			old, ok := findOld(v, db)
+			if !ok {
+				return fmt.Errorf("can't find old data for %+v ", v)
+			}
+			if err := mb.addDiffWithInfo(info, ActivityEdit, creator, old, v, db); err != nil {
 				return err
 			}
 		}
@@ -246,17 +234,18 @@ func (mb *ModelBuilder) AddCustomizedRecord(action string, diff bool, ctx contex
 	var (
 		creator = mb.activity.getCreatorFromContext(ctx)
 		db      = mb.activity.getDBFromContext(ctx)
+		info    = RequestInfoFromContext(ctx)
 	)
 
 	if !diff {
-		return mb.save(creator, action, obj, db, "")
+		return mb.saveWithInfo(info, creator, action, obj, db, "")
 	}
 
 	old, ok := findOld(obj, db)
 	if !ok {
 		return fmt.Errorf("can't find old data for %+v ", obj)
 	}
-	return mb.addDiff(action, creator, old, obj, db)
+	return mb.addDiffWithInfo(info, action, creator, old, obj, db)
 }
 
 // AddViewRecord add view record
@@ -297,7 +286,23 @@ func (mb *ModelBuilder) AddEditRecordWithOld(creator interface{}, old, now inter
 	return mb.addDiff(ActivityEdit, creator, old, now, db)
 }
 
+// AddEditRecordWithOldCtx is AddEditRecordWithOld resolving creator, db and
+// request info (IP, user agent) from ctx.
+func (mb *ModelBuilder) AddEditRecordWithOldCtx(ctx context.Context, old, now interface{}) error {
+	return mb.addDiffWithInfo(
+		RequestInfoFromContext(ctx),
+		ActivityEdit,
+		mb.activity.getCreatorFromContext(ctx),
+		old, now,
+		mb.activity.getDBFromContext(ctx),
+	)
+}
+
 func (mb *ModelBuilder) addDiff(action string, creator, old, now interface{}, db *gorm.DB) error {
+	return mb.addDiffWithInfo(nil, action, creator, old, now, db)
+}
+
+func (mb *ModelBuilder) addDiffWithInfo(info *RequestInfo, action string, creator, old, now interface{}, db *gorm.DB) error {
 	diffs, err := mb.Diff(old, now)
 	if err != nil {
 		return err
@@ -312,7 +317,7 @@ func (mb *ModelBuilder) addDiff(action string, creator, old, now interface{}, db
 		return err
 	}
 
-	return mb.save(creator, ActivityEdit, now, db, string(b))
+	return mb.saveWithInfo(info, creator, ActivityEdit, now, db, string(b))
 }
 
 // Diff get diffs between old and now value
@@ -322,10 +327,23 @@ func (mb *ModelBuilder) Diff(old, now interface{}) ([]Diff, error) {
 
 // save log into db
 func (mb *ModelBuilder) save(creator interface{}, action string, v interface{}, db *gorm.DB, diffs string) error {
+	return mb.saveWithInfo(nil, creator, action, v, db, diffs)
+}
+
+// saveWithInfo saves the log, persisting the request origin when both info is
+// available and the log model implements RequestInfoSetter.
+func (mb *ModelBuilder) saveWithInfo(info *RequestInfo, creator interface{}, action string, v interface{}, db *gorm.DB, diffs string) error {
 	m := mb.activity.NewLogModelData()
 	log, ok := m.(ActivityLogInterface)
 	if !ok {
 		return fmt.Errorf("model %T is not implement ActivityLogInterface", m)
+	}
+
+	if info != nil {
+		if s, ok := log.(RequestInfoSetter); ok {
+			s.SetIP(info.IP)
+			s.SetUserAgent(info.UserAgent)
+		}
 	}
 
 	log.SetCreatedAt(time.Now())

@@ -194,6 +194,9 @@ func (ab *Builder) RegisterModel(m interface{}) (mb *ModelBuilder) {
 func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.ModelBuilder) {
 	mb.presetModel = presetModel
 
+	// every audited resource gets a detail action to view its activity log
+	mb.InstallLogViewAction(presetModel)
+
 	editing := presetModel.Editing()
 	d := presetModel.Detailing()
 
@@ -214,12 +217,18 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 				return err
 			}
 
-			if (!ok || id.IsZero()) && mb.skip&Create == 0 {
-				return mb.AddRecords(ActivityCreate, ctx.R.Context(), obj)
+			// gorm2op.Save creates when the id is zero and updates otherwise
+			// (operator.go Save). Mirror that: a zero id (or no existing row)
+			// is a create, a non-zero id with an existing row is an edit.
+			if id.IsZero() || !ok {
+				if mb.skip&Create == 0 {
+					return mb.AddRecords(ActivityCreate, ContextWithRequestInfo(ctx.R.Context(), ctx.R), obj)
+				}
+				return
 			}
 
-			if ok && id.IsZero() && mb.skip&Update == 0 {
-				return mb.AddEditRecordWithOld(ab.getCreatorFromContext(ctx.R.Context()), old, obj, ab.getDBFromContext(ctx.R.Context()))
+			if mb.skip&Update == 0 {
+				return mb.AddEditRecordWithOldCtx(ContextWithRequestInfo(ctx.R.Context(), ctx.R), old, obj)
 			}
 
 			return
@@ -234,7 +243,7 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 			if err = in(obj, ctx); err != nil {
 				return err
 			}
-			return mb.AddRecords(ActivityCreate, ctx.R.Context(), obj)
+			return mb.AddRecords(ActivityCreate, ContextWithRequestInfo(ctx.R.Context(), ctx.R), obj)
 		}
 	})
 
@@ -250,7 +259,7 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 			}
 
 			if ok {
-				return mb.AddRecords(ActivityDelete, ctx.R.Context(), old)
+				return mb.AddRecords(ActivityDelete, ContextWithRequestInfo(ctx.R.Context(), ctx.R), old)
 			}
 
 			return
