@@ -218,3 +218,8 @@ func (pr *PagesRegistrator) MenuItems(ctx *web.EventContext, uri string) (inmenu
 	}
 	return
 }
+
+// HttpPages returns the registered http pages (read-only). It does not require
+// the registrator to be built: page metadata (path, auto-perm, verifier) is set
+// at registration time.
+func (pr *PagesRegistrator) HttpPages() []*HttpPageBuilder { return pr.httpPages }

@@ -107,6 +107,10 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 				if err = applyActionGrants(db, mb, rid, subject, referBase, RecordResource(mb, rid), ctx); err != nil {
 					return err
 				}
+				// per-page grants (auto-perm listing/detail pages)
+				if err = applyPageGrants(db, mb, rid, subject, referBase, ctx); err != nil {
+					return err
+				}
 			}
 			reload()
 			return nil
@@ -234,6 +238,45 @@ func applyActionGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subj
 	return nil
 }
 
+// pageFormKey encodes a page (mode+path) into a stable form field name.
+func pageFormKey(mode, pagePath string) string { return "perms_p_" + mode + "_" + pagePath }
+
+// pageMatrix renders the (detail) auto-perm pages as checkboxes.
+func pageMatrix(mb *presets.ModelBuilder, title string) h.HTMLComponent {
+	pages := PageNodes(mb)
+	if len(pages) == 0 {
+		return nil
+	}
+	var boxes h.HTMLComponents
+	for _, p := range pages {
+		boxes = append(boxes, v.VCheckbox().Label(p.Name).Density(v.DensityCompact).HideDetails(true).
+			Attr(web.VField(pageFormKey(p.Mode, p.Path), false)...))
+	}
+	return v.VExpansionPanel(
+		v.VExpansionPanelTitle(h.Text(title)),
+		v.VExpansionPanelText(boxes...),
+	)
+}
+
+// applyPageGrants grants/revokes the per-page permissions selected in the
+// dialog for one subject: a checked page allows the page (its path is the perm
+// segment) on the record/listing resource.
+func applyPageGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subject, referBase string, ctx *web.EventContext) error {
+	for _, p := range PageNodes(mb) {
+		res := PageResource(mb, p.Mode, rid, p.Path)
+		referID := referBase + ":p:" + p.Mode + ":" + p.Path + ":" + subject
+		if ctx.R.FormValue(pageFormKey(p.Mode, p.Path)) == "true" {
+			// the page path is the perm segment, granted with the view verb
+			if _, err := Grant(db, referID, subject, res, VerbView); err != nil {
+				return err
+			}
+		} else if err := Revoke(db, referID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 	rows := h.HTMLComponents{h.Tr(h.Th(m.Subject), h.Th(m.Permissions))}
 	if len(pols) == 0 {
@@ -254,6 +297,9 @@ func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPol
 		panels = append(panels, p)
 	}
 	if p := actionMatrix(mb, m.Actions); p != nil {
+		panels = append(panels, p)
+	}
+	if p := pageMatrix(mb, m.Pages); p != nil {
 		panels = append(panels, p)
 	}
 

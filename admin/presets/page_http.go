@@ -228,3 +228,15 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 
 	return ph
 }
+
+// Path returns the page's path segment.
+func (b *HttpPageBuilder) Path() string { return b.path }
+
+// AutoPermEnabled reports whether the page uses the automatic path-based
+// permission (its path is used as the permission segment).
+func (b *HttpPageBuilder) AutoPermEnabled() bool { return b.autoPerm }
+
+// HasCustomVerifier reports whether the page has its own (developer-defined)
+// verifier — i.e. its own permission check mechanism, not the automatic
+// path-based one.
+func (b *HttpPageBuilder) HasCustomVerifier() bool { return b.verififer != nil && !b.autoPerm }
