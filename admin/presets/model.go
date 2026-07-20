@@ -259,6 +259,19 @@ func (mb *ModelBuilder) SetUriName(uriName string) *ModelBuilder {
 	return mb
 }
 
+// MenuGroupName returns the model's menu-group path segment (also used as a URI
+// segment).
+func (mb *ModelBuilder) MenuGroupName() string { return mb.menuGroupName }
+
+// SetMenuGroupName sets the model's menu-group path segment. The menu-order
+// mechanism sets this for top-level models; nested models (added via AddChild)
+// are not reached by it, so a module mounting a resource under a parent can set
+// the segment explicitly to place it at parent/{id}/<group>/<uri>.
+func (mb *ModelBuilder) SetMenuGroupName(v string) *ModelBuilder {
+	mb.menuGroupName = v
+	return mb
+}
+
 func (mb *ModelBuilder) SetLabel(label string) *ModelBuilder {
 	mb.label = label
 	return mb
