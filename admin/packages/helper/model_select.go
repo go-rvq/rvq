@@ -344,19 +344,28 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			}
 		}
 
+		is := itemsSearcher(field, searcher)
 		selector := vx.VXSelectOne().
 			Label(field.Label).
 			Attr(web.VField(field.FormKey, assign)...).
 			ItemValue("ID").
 			ItemText("Text").
-			ItemsSearcher(itemsSearcher(field, searcher)).
-			Attr(":model-value", assign).
+			ItemsSearcher(is).
+			// :model-value is a Vue (JS) binding: the value must be JSON-encoded
+			// so non-numeric ids (e.g. UUID strings) become a quoted JS string
+			// rather than an invalid bare literal.
+			Attr(":model-value", h.JSONString(assign)).
 			Many(b.many)
 
 		configureSelector(field, selector)
 
 		if configuror != nil {
 			configuror(selector)
+		}
+
+		itemText := selector.GetAttr("item-text")
+		if itemText != nil {
+			is.Query(presets.ParamsItemTextKey, itemText.Value.(string))
 		}
 
 		if val == nil {
@@ -378,10 +387,22 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			if b.recordEncodeFactory != nil {
 				selector.Items(b.recordEncodeFactory.REF.EncodeSlice(ctx, val))
 			} else {
+				/*var items any = []any{val}
+				if itemText != nil {
+					if key, ok := itemText.Value.(string); !ok {
+						mt := b.Model.ModelType()
+						if _, ok := mt.FieldByName(key); !ok {
+							if s, _ := val.(fmt.Stringer); s != nil {
+								items = h.JSONEncodeFunc(func() (b []byte, err error) {
+									return presets.JSONEncodeItemsWithStringer(key, items)
+								})
+							}
+						}
+					}
+				}*/
 				selector.Items([]any{val})
 			}
 		}
-
 		selector.ErrorMessages(field.Errors...)
 
 		return selector
