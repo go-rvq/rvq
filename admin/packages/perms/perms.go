@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/x/perm"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -65,9 +66,47 @@ func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*p
 	}
 }
 
+// GrantShared is like Grant but stamps the policy with sharedID, marking it as
+// part of a resource share (organization/project). On update the SharedID is
+// (re)applied so a policy adopted by a share is tracked.
+func GrantShared(db *gorm.DB, referID, subject, resource string, actions []string, sharedID uuid.UUID) (*perm.DefaultDBPolicy, error) {
+	p, err := Grant(db, referID, subject, resource, actions)
+	if err != nil {
+		return nil, err
+	}
+	p.SharedID = &sharedID
+	return p, db.Model(p).Update("shared_id", sharedID).Error
+}
+
 // Revoke soft-deletes the policy identified by referID.
 func Revoke(db *gorm.DB, referID string) error {
 	return db.Where("refer_id = ?", referID).Delete(&perm.DefaultDBPolicy{}).Error
+}
+
+// RevokeShared soft-deletes every policy belonging to the given share.
+func RevokeShared(db *gorm.DB, sharedID uuid.UUID) error {
+	return db.Where("shared_id = ?", sharedID).Delete(&perm.DefaultDBPolicy{}).Error
+}
+
+// ListShared returns the active policies belonging to the given share, ordered
+// by subject.
+func ListShared(db *gorm.DB, sharedID uuid.UUID) (out []perm.DefaultDBPolicy, err error) {
+	err = db.Where("shared_id = ?", sharedID).Order("subject").Find(&out).Error
+	return
+}
+
+// IsShared reports whether the policy identified by referID carries a SharedID
+// (and therefore may only be removed through the sharing UI, not the permission
+// manager).
+func IsShared(db *gorm.DB, referID string) (bool, error) {
+	var p perm.DefaultDBPolicy
+	if err := db.Select("shared_id").Where("refer_id = ?", referID).First(&p).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return p.SharedID != nil, nil
 }
 
 // List returns the active policies whose resources contain resource.

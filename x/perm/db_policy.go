@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
@@ -41,6 +42,12 @@ type DefaultDBPolicy struct {
 	Effect    string
 	Actions   pq.StringArray `gorm:"type:text[]"`
 	Resources pq.StringArray `gorm:"type:text[]"`
+
+	// SharedID, when set, marks the policy as belonging to a resource "share"
+	// (e.g. an organization or project shared with another user). It identifies
+	// the share so the sharing UI can group/manage the policies it created,
+	// separately from ad-hoc grants made in the permission manager.
+	SharedID *uuid.UUID `gorm:"type:uuid;index"`
 }
 
 func (p DefaultDBPolicy) LoadDBPolicies(db *gorm.DB, startFrom *time.Time) (toUpdateOrCreate []*PolicyBuilder, toDelete []*PolicyBuilder) {
