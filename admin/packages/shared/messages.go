@@ -18,6 +18,7 @@ type Messages struct {
 	ShareTitle    string
 	ShareWith     string
 	ShareWithHint string
+	Permissions   string
 	CanView       string
 	CanEdit       string
 	CanDelete     string
@@ -35,6 +36,7 @@ type Messages struct {
 var Messages_en_US = &Messages{
 	ShareTitle:    "Share",
 	ShareWith:     "Share with",
+	Permissions:   "Permission",
 	ShareWithHint: "Users to share this record with (one per line, or comma/semicolon separated).",
 	CanView:       "Can view",
 	CanEdit:       "Can edit",
@@ -53,6 +55,7 @@ var Messages_en_US = &Messages{
 var Messages_pt_BR = &Messages{
 	ShareTitle:    "Compartilhar",
 	ShareWith:     "Compartilhar com",
+	Permissions:   "Permissão",
 	ShareWithHint: "Usuários com quem compartilhar este registro (um por linha, ou separados por vírgula/ponto e vírgula).",
 	CanView:       "Pode ver",
 	CanEdit:       "Pode editar",

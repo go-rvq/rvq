@@ -12,33 +12,63 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 const (
 	fieldSubjects = "share_subjects"
+	fieldTemplate = "share_template"
 	fieldView     = "share_view"
 	fieldEdit     = "share_edit"
 	fieldDelete   = "share_delete"
 )
 
+// ScopeFunc resolves the permission-template scope (typically the organization
+// id) for the record being shared, so the dialog can offer that scope's
+// templates. Return nil for global templates only.
+type ScopeFunc func(ctx *web.EventContext) *uuid.UUID
+
+// Option configures Install.
+type Option func(*shareConfig)
+
+type shareConfig struct {
+	notifier Notifier
+	scope    ScopeFunc
+}
+
+// WithNotifier notifies the invited user and the inviter of share events.
+func WithNotifier(n Notifier) Option { return func(c *shareConfig) { c.notifier = n } }
+
+// WithTemplates lets the dialog offer named permission templates (from the
+// scope's "configuration") instead of raw verb checkboxes. scope resolves the
+// template scope (e.g. the organization id) for the record being shared.
+func WithTemplates(scope ScopeFunc) Option { return func(c *shareConfig) { c.scope = scope } }
+
 // Install adds a permissioned "Share" detail action to mb: a dialog listing who
 // the record is currently shared with and letting an authorized subject invite
-// more users (with view/edit/delete). Sharing sends a pending invite per user
-// (notified via the optional Notifier); access is only granted once the invited
-// user accepts (see Accept), which writes the share (perm.DefaultDBPolicy.
-// SharedID). Mount it only on aggregate resources whose owner controls access
-// (e.g. an organization or a project). The action is guarded by the "share" verb.
-func Install(mb *presets.ModelBuilder, db *gorm.DB, notifier ...Notifier) {
+// more users. Sharing sends a pending invite per user (notified via a Notifier
+// when WithNotifier is set); access is only granted once the invited user
+// accepts (see Accept), which writes the share (perm.DefaultDBPolicy.SharedID).
+// Verbs come from a permission template (WithTemplates) or from view/edit/delete
+// checkboxes. Mount it only on aggregate resources whose owner controls access
+// (e.g. an organization or a project). Guarded by the "share" verb.
+func Install(mb *presets.ModelBuilder, db *gorm.DB, opts ...Option) {
 	if !mb.HasDetailing() {
 		return
 	}
+	cfg := &shareConfig{}
+	for _, o := range opts {
+		o(cfg)
+	}
+	n := cfg.notifier
 	if err := AutoMigrateInvites(db); err != nil {
 		panic(err)
 	}
-	var n Notifier
-	if len(notifier) > 0 {
-		n = notifier[0]
+	if cfg.scope != nil {
+		if err := AutoMigrateTemplates(db); err != nil {
+			panic(err)
+		}
 	}
 	registerMessages(mb.Builder().I18n())
 
@@ -72,7 +102,11 @@ func Install(mb *presets.ModelBuilder, db *gorm.DB, notifier ...Notifier) {
 			if err != nil {
 				return nil, err
 			}
-			return shareBody(msgs(ctx.Context()), pols), nil
+			var templates []ShareTemplate
+			if cfg.scope != nil {
+				templates, _ = Templates(db, cfg.scope(ctx))
+			}
+			return shareBody(msgs(ctx.Context()), pols, templates), nil
 		}).
 		UpdateFunc(func(id string, ctx *web.EventContext) error {
 			resource, ok := resourceOf(id, ctx)
@@ -84,14 +118,22 @@ func Install(mb *presets.ModelBuilder, db *gorm.DB, notifier ...Notifier) {
 				return nil
 			}
 			var actions []string
-			if ctx.R.FormValue(fieldView) == "true" {
-				actions = append(actions, VerbView...)
+			// a chosen template wins over the checkboxes
+			if tid := ctx.R.FormValue(fieldTemplate); tid != "" {
+				if id, e := uuid.Parse(tid); e == nil {
+					actions, _ = TemplateActions(db, id)
+				}
 			}
-			if ctx.R.FormValue(fieldEdit) == "true" {
-				actions = append(actions, VerbEdit...)
-			}
-			if ctx.R.FormValue(fieldDelete) == "true" {
-				actions = append(actions, VerbDelete...)
+			if len(actions) == 0 {
+				if ctx.R.FormValue(fieldView) == "true" {
+					actions = append(actions, VerbView...)
+				}
+				if ctx.R.FormValue(fieldEdit) == "true" {
+					actions = append(actions, VerbEdit...)
+				}
+				if ctx.R.FormValue(fieldDelete) == "true" {
+					actions = append(actions, VerbDelete...)
+				}
 			}
 			if len(actions) == 0 {
 				actions = VerbView
@@ -109,7 +151,7 @@ func Install(mb *presets.ModelBuilder, db *gorm.DB, notifier ...Notifier) {
 		})
 }
 
-func shareBody(m *Messages, pols []perm.DefaultDBPolicy) h.HTMLComponent {
+func shareBody(m *Messages, pols []perm.DefaultDBPolicy, templates []ShareTemplate) h.HTMLComponent {
 	rows := h.HTMLComponents{h.Tr(h.Th(m.SharedWith), h.Th(""))}
 	if len(pols) == 0 {
 		rows = append(rows, h.Tr(h.Td(h.Text("—")), h.Td(h.Text(m.NoShares))))
@@ -120,13 +162,31 @@ func shareBody(m *Messages, pols []perm.DefaultDBPolicy) h.HTMLComponent {
 			h.Td(h.Text(strings.Join([]string(p.Actions), ", "))),
 		))
 	}
+
+	// permission input: a template selector when templates exist, otherwise
+	// the raw verb checkboxes.
+	var permInput h.HTMLComponent
+	if len(templates) > 0 {
+		items := make([]map[string]string, len(templates))
+		for i, t := range templates {
+			items[i] = map[string]string{"title": t.Name, "value": t.ID.String()}
+		}
+		permInput = v.VSelect().Label(m.Permissions).Items(items).
+			ItemTitle("title").ItemValue("value").Clearable(true).
+			Attr(web.VField(fieldTemplate, "")...)
+	} else {
+		permInput = h.Div(
+			v.VCheckbox().Label(m.CanView).Attr(web.VField(fieldView, true)...),
+			v.VCheckbox().Label(m.CanEdit).Attr(web.VField(fieldEdit, false)...),
+			v.VCheckbox().Label(m.CanDelete).Attr(web.VField(fieldDelete, false)...),
+		)
+	}
+
 	return h.Div(
 		v.VTable(h.Tbody(rows...)).Density(v.DensityCompact).Class("mb-4"),
 		v.VTextarea().Label(m.ShareWith).Rows(2).Hint(m.ShareWithHint).PersistentHint(true).
 			Attr(web.VField(fieldSubjects, "")...),
-		v.VCheckbox().Label(m.CanView).Attr(web.VField(fieldView, true)...),
-		v.VCheckbox().Label(m.CanEdit).Attr(web.VField(fieldEdit, false)...),
-		v.VCheckbox().Label(m.CanDelete).Attr(web.VField(fieldDelete, false)...),
+		permInput,
 	)
 }
 
