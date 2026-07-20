@@ -165,3 +165,11 @@ func PendingFor(db *gorm.DB, subject string) ([]ShareInvite, error) {
 		Order("created_at desc").Find(&out).Error
 	return out, err
 }
+
+// PendingCount is the number of pending invites addressed to subject — the value
+// an app can feed into its notification indicator (presets.NotificationFunc).
+func PendingCount(db *gorm.DB, subject string) int {
+	var n int64
+	db.Model(&ShareInvite{}).Where("subject = ? AND status = ?", subject, StatusPending).Count(&n)
+	return int(n)
+}

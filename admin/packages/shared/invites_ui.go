@@ -79,6 +79,27 @@ func currentSubject(ctx *web.EventContext) (string, bool) {
 	return u.GetID().String(), true
 }
 
+// NotificationCount returns a count function for presets.NotificationFunc: the
+// number of the current user's pending share invites. Wire it in the app, e.g.
+//
+//	b.NotificationFunc(shared.NotificationContent(db), shared.NotificationCount(db))
+func NotificationCount(db *gorm.DB) func(ctx *web.EventContext) int {
+	return func(ctx *web.EventContext) int {
+		if subject, ok := currentSubject(ctx); ok {
+			return PendingCount(db, subject)
+		}
+		return 0
+	}
+}
+
+// NotificationContent returns a content function for presets.NotificationFunc:
+// the current user's pending invites with accept/decline actions.
+func NotificationContent(db *gorm.DB) func(ctx *web.EventContext) h.HTMLComponent {
+	return func(ctx *web.EventContext) h.HTMLComponent {
+		return invitesBody(db, ctx)
+	}
+}
+
 // invitesBody renders the current user's pending invites with accept/decline
 // actions. It renders nothing when there are none.
 func invitesBody(db *gorm.DB, ctx *web.EventContext) h.HTMLComponent {
@@ -106,7 +127,24 @@ func invitesBody(db *gorm.DB, ctx *web.EventContext) h.HTMLComponent {
 			).Name("append"),
 		))
 	}
+	header := m.MyInvites
+	if n := len(invites); n > 0 {
+		header += " (" + itoa(n) + ")"
+	}
 	return v.VList(
-		append([]h.HTMLComponent{v.VListSubheader(h.Text(m.MyInvites))}, rows...)...,
+		append([]h.HTMLComponent{v.VListSubheader(h.Text(header))}, rows...)...,
 	).Density(v.DensityCompact)
+}
+
+// itoa is a tiny non-negative int to string.
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var b []byte
+	for n > 0 {
+		b = append([]byte{byte('0' + n%10)}, b...)
+		n /= 10
+	}
+	return string(b)
 }

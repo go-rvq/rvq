@@ -76,4 +76,12 @@ func TestInvitesBody(t *testing.T) {
 	if strings.Contains(empty.String(), resource) {
 		t.Errorf("a user without invites should see none")
 	}
+
+	// the notification count reflects the current user's pending invites
+	if got := NotificationCount(db)(ctx); got != 1 {
+		t.Errorf("NotificationCount = %d, want 1", got)
+	}
+	if got := NotificationCount(db)(ctxWithUser(uuid.New())); got != 0 {
+		t.Errorf("NotificationCount for a user without invites = %d, want 0", got)
+	}
 }
