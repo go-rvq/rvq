@@ -10,6 +10,7 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -20,9 +21,9 @@ const (
 	UserKey
 )
 
-func GetUserData(ctx *web.EventContext) (userID uint, creator string) {
+func GetUserData(ctx *web.EventContext) (userID uuid.UUID, creator string) {
 	if ctx.R.Context().Value(UserIDKey) != nil {
-		userID = ctx.R.Context().Value(UserIDKey).(uint)
+		userID = ctx.R.Context().Value(UserIDKey).(uuid.UUID)
 	}
 	if ctx.R.Context().Value(UserKey) != nil {
 		creator = ctx.R.Context().Value(UserKey).(string)

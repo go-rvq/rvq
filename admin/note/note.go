@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type QorNote struct {
 	gorm.Model
 
-	UserID       uint `gorm:"index"`
+	UserID       uuid.UUID `gorm:"type:uuid;index"`
 	Creator      string
 	ResourceType string `gorm:"index"`
 	ResourceID   string `gorm:"index"`
@@ -28,13 +29,13 @@ func (this *QorNote) BeforeCreate(tx *gorm.DB) (err error) {
 type UserNote struct {
 	gorm.Model
 
-	UserID       uint   `gorm:"index"`
-	ResourceType string `gorm:"index"`
-	ResourceID   string `gorm:"index"`
+	UserID       uuid.UUID `gorm:"type:uuid;index"`
+	ResourceType string    `gorm:"index"`
+	ResourceID   string    `gorm:"index"`
 	Number       int64
 }
 
-func GetUnreadNotesCount(db *gorm.DB, userID uint, resourceType, resourceID string) int64 {
+func GetUnreadNotesCount(db *gorm.DB, userID uuid.UUID, resourceType, resourceID string) int64 {
 	var total int64
 	db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).Count(&total)
 

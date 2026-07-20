@@ -4,6 +4,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/google/uuid"
 )
 
 func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
@@ -59,7 +60,7 @@ func updateUserNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 		rt := ctx.R.FormValue("resource_type")
 
 		userID, _ := GetUserData(ctx)
-		if userID == 0 {
+		if userID == uuid.Nil {
 			return
 		}
 

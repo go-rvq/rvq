@@ -16,6 +16,7 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -252,7 +253,7 @@ func (c *Builder) loginSession(_ string, ctx *web.EventContext, cb *presets.Cont
 }
 
 type Profile struct {
-	ID          uint `admin:"ro"`
+	ID          uuid.UUID `admin:"ro" gorm:"type:uuid"`
 	Name        string
 	AccountName string `admin:"ro"`
 	Status      string `admin:"ro"`

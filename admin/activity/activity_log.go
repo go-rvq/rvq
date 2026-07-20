@@ -3,6 +3,8 @@ package activity
 import (
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -13,15 +15,15 @@ const (
 )
 
 type CreatorInterface interface {
-	GetID() uint
+	GetID() uuid.UUID
 	GetName() string
 }
 
 type ActivityLogInterface interface {
 	SetCreatedAt(time.Time)
 	GetCreatedAt() time.Time
-	SetUserID(uint)
-	GetUserID() uint
+	SetUserID(uuid.UUID)
+	GetUserID() uuid.UUID
 	SetCreator(string)
 	GetCreator() string
 	SetAction(string)
@@ -39,8 +41,8 @@ type ActivityLogInterface interface {
 }
 
 type ActivityLog struct {
-	ID         uint `gorm:"primary_key"`
-	UserID     uint
+	ID         uint      `gorm:"primary_key"`
+	UserID     uuid.UUID `gorm:"type:uuid;index"`
 	CreatedAt  time.Time
 	Creator    string
 	Action     string
@@ -76,11 +78,11 @@ func (al ActivityLog) GetCreatedAt() time.Time {
 	return al.CreatedAt
 }
 
-func (al *ActivityLog) SetUserID(id uint) {
+func (al *ActivityLog) SetUserID(id uuid.UUID) {
 	al.UserID = id
 }
 
-func (al ActivityLog) GetUserID() uint {
+func (al ActivityLog) GetUserID() uuid.UUID {
 	return al.UserID
 }
 

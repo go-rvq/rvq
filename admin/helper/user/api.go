@@ -5,11 +5,12 @@ import (
 
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/login"
+	"github.com/google/uuid"
 )
 
 type User interface {
 	login.UserPasser
-	GetID() uint
+	GetID() uuid.UUID
 	GetName() string
 	SetName(v string)
 	SetEmail(v string)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/login"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -13,11 +14,11 @@ type Middlewares struct {
 	db *gorm.DB
 
 	logoutURL                    string
-	checkIsTokenValidFromRequest func(db *gorm.DB, r *http.Request, userID uint) (valid bool, err error)
+	checkIsTokenValidFromRequest func(db *gorm.DB, r *http.Request, userID uuid.UUID) (valid bool, err error)
 	dev                          bool
 }
 
-func (b *Builder) Middlewares(db *gorm.DB, logoutURL string, checkIsTokenValidFromRequest func(db *gorm.DB, r *http.Request, userID uint) (valid bool, err error)) *Middlewares {
+func (b *Builder) Middlewares(db *gorm.DB, logoutURL string, checkIsTokenValidFromRequest func(db *gorm.DB, r *http.Request, userID uuid.UUID) (valid bool, err error)) *Middlewares {
 	return &Middlewares{
 		b:                            b,
 		db:                           db,

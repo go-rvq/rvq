@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/google/uuid"
 	"github.com/ua-parser/uap-go/uaparser"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func NewManager(lb *login.Builder) *Manager {
 	return &Manager{lb: lb}
 }
 
-func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uint) (err error) {
+func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uuid.UUID) (err error) {
 	token := login.GetSessionToken(m.lb, r)
 	client := uaparser.NewFromSaved().Parse(r.Header.Get("User-Agent"))
 
@@ -45,7 +46,7 @@ func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uin
 	return nil
 }
 
-func (m *Manager) UpdateCurrentSessionLog(db *gorm.DB, r *http.Request, userID uint, oldToken string) (err error) {
+func (m *Manager) UpdateCurrentSessionLog(db *gorm.DB, r *http.Request, userID uuid.UUID, oldToken string) (err error) {
 	token := login.GetSessionToken(m.lb, r)
 	tokenHash := GetStringHash(token, LoginTokenHashLen)
 	oldTokenHash := GetStringHash(oldToken, LoginTokenHashLen)
@@ -61,7 +62,7 @@ func (m *Manager) UpdateCurrentSessionLog(db *gorm.DB, r *http.Request, userID u
 	return nil
 }
 
-func (m *Manager) ExpireCurrentSessionLog(db *gorm.DB, r *http.Request, userID uint) (err error) {
+func (m *Manager) ExpireCurrentSessionLog(db *gorm.DB, r *http.Request, userID uuid.UUID) (err error) {
 	token := login.GetSessionToken(m.lb, r)
 	tokenHash := GetStringHash(token, LoginTokenHashLen)
 	if err = db.Model(&LoginSession{}).
@@ -75,7 +76,7 @@ func (m *Manager) ExpireCurrentSessionLog(db *gorm.DB, r *http.Request, userID u
 	return nil
 }
 
-func (m *Manager) ExpireAllSessionLogs(db *gorm.DB, userID uint) (err error) {
+func (m *Manager) ExpireAllSessionLogs(db *gorm.DB, userID uuid.UUID) (err error) {
 	return db.Model(&LoginSession{}).
 		Where("user_id = ?", userID).
 		Updates(map[string]interface{}{
@@ -83,7 +84,7 @@ func (m *Manager) ExpireAllSessionLogs(db *gorm.DB, userID uint) (err error) {
 		}).Error
 }
 
-func (m *Manager) ExpireOtherSessionLogs(db *gorm.DB, r *http.Request, userID uint) (err error) {
+func (m *Manager) ExpireOtherSessionLogs(db *gorm.DB, r *http.Request, userID uuid.UUID) (err error) {
 	token := login.GetSessionToken(m.lb, r)
 
 	return db.Model(&LoginSession{}).
@@ -93,7 +94,7 @@ func (m *Manager) ExpireOtherSessionLogs(db *gorm.DB, r *http.Request, userID ui
 		}).Error
 }
 
-func (m *Manager) CheckIsTokenValidFromRequest(db *gorm.DB, r *http.Request, userID uint) (valid bool, err error) {
+func (m *Manager) CheckIsTokenValidFromRequest(db *gorm.DB, r *http.Request, userID uuid.UUID) (valid bool, err error) {
 	token := login.GetSessionToken(m.lb, r)
 	if token == "" {
 		return false, nil
@@ -117,7 +118,7 @@ func (m *Manager) CheckIsTokenValidFromRequest(db *gorm.DB, r *http.Request, use
 	return true, nil
 }
 
-func (m *Manager) Sessions(db *gorm.DB, ctx *web.EventContext, userID uint) (comp h.HTMLComponent, err error) {
+func (m *Manager) Sessions(db *gorm.DB, ctx *web.EventContext, userID uuid.UUID) (comp h.HTMLComponent, err error) {
 	msgr := GetMessages(ctx.Context())
 	var items []*LoginSession
 	if err = db.Where("user_id = ?", userID).Find(&items).Error; err != nil {

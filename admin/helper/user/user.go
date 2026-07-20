@@ -19,6 +19,7 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/google/uuid"
 	"github.com/sunfmin/reflectutils"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ type Builder struct {
 	lb *login.Builder
 	mb *presets.ModelBuilder
 
-	ExpireAllSessionLogs  func(db *gorm.DB, userID uint) (err error)
+	ExpireAllSessionLogs  func(db *gorm.DB, userID uuid.UUID) (err error)
 	LoginInitialUserEmail string
 	Roles                 []string
 	UserManagerRoles      []string
@@ -231,7 +232,7 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 				})
 			}
 
-			if u.GetID() == 0 {
+			if u.GetID() == uuid.Nil {
 				err = reflectutils.Set(obj, field.Name, roles)
 			} else {
 				err = db.Model(u).Association(field.Name).Replace(roles)

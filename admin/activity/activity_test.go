@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/google/uuid"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -216,8 +217,10 @@ func TestCreator(t *testing.T) {
 
 type user struct{}
 
-func (u user) GetID() uint {
-	return 10
+var testUserID = uuid.MustParse("00000000-0000-0000-0000-000000000010")
+
+func (u user) GetID() uuid.UUID {
+	return testUserID
 }
 
 func (u user) GetName() string {
@@ -239,8 +242,8 @@ func TestCreatorInferface(t *testing.T) {
 	if record.GetCreator() != "user a" {
 		t.Errorf("want the creator %v, but got %v", "a", record.GetCreator())
 	}
-	if record.GetUserID() != 10 {
-		t.Errorf("want the creator id %v, but got %v", 10, record.GetUserID())
+	if record.GetUserID() != testUserID {
+		t.Errorf("want the creator id %v, but got %v", testUserID, record.GetUserID())
 	}
 }
 

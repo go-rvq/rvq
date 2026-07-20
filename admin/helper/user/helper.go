@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/login"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -50,7 +51,7 @@ func (b *Builder) GenInitialUser(db *gorm.DB) (user User) {
 	return
 }
 
-func (b *Builder) GrantUserRole(db *gorm.DB, userID uint, roleName string) error {
+func (b *Builder) GrantUserRole(db *gorm.DB, userID uuid.UUID, roleName string) error {
 	var roleID int
 	if err := db.Table("roles").Where("name = ?", roleName).Pluck("id", &roleID).Error; err != nil {
 		panic(err)
