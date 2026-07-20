@@ -32,6 +32,8 @@ type Messages struct {
 	TabTrash       string
 	Restore        string
 	TrashEmptyHint string
+	Shared         string
+	SharedNote     string
 }
 
 var Messages_en_US = &Messages{
@@ -54,6 +56,8 @@ var Messages_en_US = &Messages{
 	TabTrash:       "Trash",
 	Restore:        "Restore",
 	TrashEmptyHint: "No deleted records.",
+	Shared:         "Share",
+	SharedNote:     "Managed in Sharing — cannot be removed here.",
 }
 
 var Messages_pt_BR = &Messages{
@@ -76,6 +80,8 @@ var Messages_pt_BR = &Messages{
 	TabTrash:       "Lixeira",
 	Restore:        "Restaurar",
 	TrashEmptyHint: "Nenhum registro excluído.",
+	Shared:         "Compartilhamento",
+	SharedNote:     "Gerenciado em Compartilhamento — não pode ser removido aqui.",
 }
 
 func msgs(ctx context.Context) *Messages {

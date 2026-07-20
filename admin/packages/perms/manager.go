@@ -90,6 +90,11 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 			for _, subject := range subjects {
 				// whole-record grant/revoke
 				referID := referBase + ":" + subject
+				// a shared policy can only be removed through the Sharing dialog,
+				// never here (SPEC §: SharedID grants are managed in Sharing).
+				if shared, _ := IsShared(db, referID); shared {
+					continue
+				}
 				var err error
 				if len(verbs) == 0 {
 					err = Revoke(db, referID)
@@ -278,14 +283,24 @@ func applyPageGrants(db *gorm.DB, mb *presets.ModelBuilder, rid model.ID, subjec
 }
 
 func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPolicy) h.HTMLComponent {
-	rows := h.HTMLComponents{h.Tr(h.Th(m.Subject), h.Th(m.Permissions))}
+	rows := h.HTMLComponents{h.Tr(h.Th(m.Subject), h.Th(m.Permissions), h.Th(m.Shared))}
 	if len(pols) == 0 {
-		rows = append(rows, h.Tr(h.Td(h.Text("—")), h.Td(h.Text(m.NoGrants))))
+		rows = append(rows, h.Tr(h.Td(h.Text("—")), h.Td(h.Text(m.NoGrants)), h.Td(h.Text(""))))
 	}
 	for _, p := range pols {
+		// SharedID is shown read-only; shared policies are managed in the Sharing
+		// dialog and must not be removed from the permission manager.
+		sharedCell := h.Td(h.Text(""))
+		if p.SharedID != nil {
+			sharedCell = h.Td(
+				v.VChip(h.Text(p.SharedID.String())).Size(v.SizeXSmall).Attr("readonly", true).Class("mr-1"),
+				h.Span(m.SharedNote).Class("text-caption text-medium-emphasis"),
+			)
+		}
 		rows = append(rows, h.Tr(
 			h.Td(h.Text(p.Subject)),
 			h.Td(h.Text(strings.Join([]string(p.Actions), ", "))),
+			sharedCell,
 		))
 	}
 	// fine-grained per-field matrix (nested fields included), by mode
