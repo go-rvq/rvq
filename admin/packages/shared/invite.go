@@ -51,6 +51,7 @@ func AutoMigrateInvites(db *gorm.DB) error { return db.AutoMigrate(&ShareInvite{
 
 var (
 	ErrInviteNotPending = errors.New("the share invite is not pending")
+	ErrInviteNotYours   = errors.New("the share invite is addressed to another user")
 )
 
 // Notifier is the app's hook to surface share events in its UI (e.g. the rvq
@@ -114,6 +115,32 @@ func Accept(db *gorm.DB, inviteID uuid.UUID, n Notifier) error {
 		}
 		return nil
 	})
+}
+
+// AcceptFor accepts an invite only when it is addressed to subject, so a user
+// can never accept someone else's invite. Use it from the UI with the current
+// user as subject.
+func AcceptFor(db *gorm.DB, inviteID uuid.UUID, subject string, n Notifier) error {
+	var inv ShareInvite
+	if err := db.Select("subject").First(&inv, "id = ?", inviteID).Error; err != nil {
+		return err
+	}
+	if inv.Subject != subject {
+		return ErrInviteNotYours
+	}
+	return Accept(db, inviteID, n)
+}
+
+// RejectFor rejects an invite only when it is addressed to subject.
+func RejectFor(db *gorm.DB, inviteID uuid.UUID, subject string) error {
+	var inv ShareInvite
+	if err := db.Select("subject").First(&inv, "id = ?", inviteID).Error; err != nil {
+		return err
+	}
+	if inv.Subject != subject {
+		return ErrInviteNotYours
+	}
+	return Reject(db, inviteID)
 }
 
 // Reject marks a pending invite rejected (no access granted).

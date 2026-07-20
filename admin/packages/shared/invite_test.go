@@ -93,3 +93,34 @@ func TestInviteAcceptGrants(t *testing.T) {
 		t.Errorf("rejecting a missing invite should fail, got %v", err)
 	}
 }
+
+func TestAcceptForVerifiesSubject(t *testing.T) {
+	db := inviteTestDB(t)
+	invites, err := Invite(db, "presets:orgs:o1:*", []string{"ana"}, VerbView, "owner", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := invites[0].ID
+
+	// another user cannot accept ana's invite
+	if err := AcceptFor(db, id, "mallory", nil); !errors.Is(err, ErrInviteNotYours) {
+		t.Fatalf("a foreign user must not accept the invite, got %v", err)
+	}
+	if err := RejectFor(db, id, "mallory"); !errors.Is(err, ErrInviteNotYours) {
+		t.Fatalf("a foreign user must not reject the invite, got %v", err)
+	}
+	// no permission was granted by the failed attempts
+	var pols int64
+	db.Model(&perm.DefaultDBPolicy{}).Count(&pols)
+	if pols != 0 {
+		t.Fatalf("no permission should exist after foreign attempts, got %d", pols)
+	}
+
+	// the addressed user accepts -> granted
+	if err := AcceptFor(db, id, "ana", nil); err != nil {
+		t.Fatal(err)
+	}
+	if subs, _ := Subjects(db, invites[0].SharedID); len(subs) != 1 {
+		t.Errorf("ana's acceptance should grant one policy, got %d", len(subs))
+	}
+}

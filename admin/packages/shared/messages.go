@@ -25,6 +25,11 @@ type Messages struct {
 	NoShares      string
 	Add           string
 	Remove        string
+	MyInvites     string
+	NoInvites     string
+	AcceptInvite  string
+	RejectInvite  string
+	InviteFrom    string
 }
 
 var Messages_en_US = &Messages{
@@ -38,6 +43,11 @@ var Messages_en_US = &Messages{
 	NoShares:      "Not shared with anyone yet.",
 	Add:           "Share",
 	Remove:        "Remove",
+	MyInvites:     "Share invites",
+	NoInvites:     "No pending invites.",
+	AcceptInvite:  "Accept",
+	RejectInvite:  "Decline",
+	InviteFrom:    "Invited by",
 }
 
 var Messages_pt_BR = &Messages{
@@ -51,6 +61,11 @@ var Messages_pt_BR = &Messages{
 	NoShares:      "Ainda não compartilhado com ninguém.",
 	Add:           "Compartilhar",
 	Remove:        "Remover",
+	MyInvites:     "Convites de compartilhamento",
+	NoInvites:     "Nenhum convite pendente.",
+	AcceptInvite:  "Aceitar",
+	RejectInvite:  "Recusar",
+	InviteFrom:    "Convidado por",
 }
 
 func registerMessages(b *i18n.Builder) {
