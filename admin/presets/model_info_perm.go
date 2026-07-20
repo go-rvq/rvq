@@ -29,7 +29,7 @@ func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
 	} else {
 		if p.mb.parent != nil {
 			var pid ID
-			if !p.mb.parent.singleton {
+			if !p.mb.parent.singleton && len(parentID) > 0 {
 				pid = parentID[0]
 				parentID = parentID[1:]
 			}
@@ -56,7 +56,7 @@ func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
 func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
 	if p.mb.parent != nil {
 		var pid ID
-		if !p.mb.parent.singleton {
+		if !p.mb.parent.singleton && len(parentID) > 0 {
 			pid = parentID[0]
 			parentID = parentID[1:]
 		}

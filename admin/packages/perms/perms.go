@@ -30,14 +30,17 @@ const PermManage = "managePermissions"
 
 // RecordResource returns the exact permission resource string of a record, as
 // computed by the presets permissioner (the module "presets" is already seeded
-// into Resource(), so it is not added again).
-func RecordResource(mb *presets.ModelBuilder, id model.ID) string {
-	return mb.Permissioner().Verifier(id).Resource()
+// into Resource(), so it is not added again). For a nested resource, pass the
+// parent ids (the same the request carries) so the resource matches the runtime
+// check.
+func RecordResource(mb *presets.ModelBuilder, id model.ID, parentID ...model.ID) string {
+	return mb.Permissioner().Verifier(id, parentID...).Resource()
 }
 
-// ListResource returns the permission resource of the whole listing.
-func ListResource(mb *presets.ModelBuilder) string {
-	return mb.Permissioner().ListVerifier().Resource()
+// ListResource returns the permission resource of the whole listing. For a
+// nested resource, pass the parent ids.
+func ListResource(mb *presets.ModelBuilder, parentID ...model.ID) string {
+	return mb.Permissioner().ListVerifier(parentID...).Resource()
 }
 
 // Grant creates or updates a DB policy granting subject the actions on

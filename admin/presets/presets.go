@@ -341,8 +341,22 @@ func (b *Builder) Model(v interface{}, opts ...ModelBuilderOption) (r *ModelBuil
 
 func (b *Builder) GetModelByID(id string) *ModelBuilder {
 	for _, mb := range b.models {
-		if mb.id == id {
-			return mb
+		if found := findModelByID(mb, id); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// findModelByID returns mb or the first of its (recursive) children whose id
+// matches, so nested resources (AddChild) are resolvable by id.
+func findModelByID(mb *ModelBuilder, id string) *ModelBuilder {
+	if mb.id == id {
+		return mb
+	}
+	for _, child := range mb.children {
+		if found := findModelByID(child, id); found != nil {
+			return found
 		}
 	}
 	return nil
@@ -361,8 +375,24 @@ func (b *Builder) GetModel(typ any) *ModelBuilder {
 	}
 
 	for _, model := range b.models {
-		if model.modelType == t {
-			return model
+		if found := findModelByType(model, t); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// findModelByType returns mb or the first of its (recursive) children whose
+// modelType matches t. This lets GetModel resolve nested resources (added via
+// AddChild), so cross-model references such as field selectors keep working when
+// resources are mounted under a parent (e.g. under an organization).
+func findModelByType(mb *ModelBuilder, t reflect.Type) *ModelBuilder {
+	if mb.modelType == t {
+		return mb
+	}
+	for _, child := range mb.children {
+		if found := findModelByType(child, t); found != nil {
+			return found
 		}
 	}
 	return nil
