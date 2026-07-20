@@ -6,6 +6,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/helper/user"
 	"github.com/go-rvq/rvq/admin/packages/perms"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -22,14 +23,22 @@ const (
 )
 
 // Install adds a permissioned "Share" detail action to mb: a dialog listing who
-// the record is currently shared with and letting an authorized subject share
-// it with more users (granting view/edit/delete). Grants are written as a share
-// (perm.DefaultDBPolicy.SharedID) through the perms API and the verifier is
-// reloaded. Mount it only on aggregate resources whose owner controls access
+// the record is currently shared with and letting an authorized subject invite
+// more users (with view/edit/delete). Sharing sends a pending invite per user
+// (notified via the optional Notifier); access is only granted once the invited
+// user accepts (see Accept), which writes the share (perm.DefaultDBPolicy.
+// SharedID). Mount it only on aggregate resources whose owner controls access
 // (e.g. an organization or a project). The action is guarded by the "share" verb.
-func Install(mb *presets.ModelBuilder, db *gorm.DB) {
+func Install(mb *presets.ModelBuilder, db *gorm.DB, notifier ...Notifier) {
 	if !mb.HasDetailing() {
 		return
+	}
+	if err := AutoMigrateInvites(db); err != nil {
+		panic(err)
+	}
+	var n Notifier
+	if len(notifier) > 0 {
+		n = notifier[0]
 	}
 	registerMessages(mb.Builder().I18n())
 
@@ -87,7 +96,12 @@ func Install(mb *presets.ModelBuilder, db *gorm.DB) {
 			if len(actions) == 0 {
 				actions = VerbView
 			}
-			if _, err := Create(db, resource, subjects, actions); err != nil {
+			var invitedBy string
+			if u := user.GetCurrentUser(ctx.R); u != nil {
+				invitedBy = u.GetID().String()
+			}
+			// send pending invites — access is granted on acceptance, not now.
+			if _, err := Invite(db, resource, subjects, actions, invitedBy, n); err != nil {
 				return err
 			}
 			reload()
