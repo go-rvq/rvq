@@ -13,10 +13,6 @@ import (
 // errText maps each model validation sentinel to its translated message.
 func errText(m *messages.Messages, err error) string {
 	switch {
-	case errors.Is(err, models.ErrInvalidCPF):
-		return m.ErrInvalidCPF
-	case errors.Is(err, models.ErrInvalidCNPJ):
-		return m.ErrInvalidCNPJ
 	case errors.Is(err, models.ErrInvalidDocumentType):
 		return m.ErrInvalidDocumentType
 	}

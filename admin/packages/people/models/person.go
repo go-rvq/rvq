@@ -37,26 +37,16 @@ func (Person) TableName() string { return "people" }
 
 func (p *Person) String() string { return p.Name }
 
-var (
-	ErrInvalidCPF          = errors.New("invalid CPF")
-	ErrInvalidCNPJ         = errors.New("invalid CNPJ")
-	ErrInvalidDocumentType = errors.New("invalid document type")
-)
+var ErrInvalidDocumentType = errors.New("invalid document type")
 
-// BeforeSave validates the document against its type (CPF/CNPJ when applicable).
+// BeforeSave validates the document type is a known value. The document content
+// itself (CPF/CNPJ) is validated through the validators registry — see the
+// document validators (models/validators.go) applied as a field validator in the
+// admin (FieldBuilder.Validators), instead of hardcoded Go functions.
 func (p *Person) BeforeSave(*gorm.DB) error {
 	switch p.DocumentType {
-	case DocumentCPF:
-		if p.Document != "" && !ValidCPF(p.Document) {
-			return ErrInvalidCPF
-		}
-	case DocumentCNPJ:
-		if p.Document != "" && !ValidCNPJ(p.Document) {
-			return ErrInvalidCNPJ
-		}
-	case DocumentOther:
-	default:
-		return ErrInvalidDocumentType
+	case DocumentCPF, DocumentCNPJ, DocumentOther:
+		return nil
 	}
-	return nil
+	return ErrInvalidDocumentType
 }

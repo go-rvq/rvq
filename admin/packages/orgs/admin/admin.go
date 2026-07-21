@@ -5,32 +5,13 @@ package admin
 
 import (
 	"github.com/go-rvq/rvq/admin/packages/orgs/messages"
-	"github.com/go-rvq/rvq/admin/packages/orgs/models"
-	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/presets"
 	"gorm.io/gorm"
 )
 
-// Configure mounts the organizations module on b.
+// Configure mounts the organizations module on b (via the orgs Builder plugin).
 func Configure(b *presets.Builder, db *gorm.DB) {
-	if err := models.AutoMigrate(db); err != nil {
-		panic(err)
-	}
-	// seed the global sharing permission templates (Viewer/Editor/Manager),
-	// available to every organization's Share dialog.
-	if err := shared.AutoMigrateTemplates(db); err != nil {
-		panic(err)
-	}
-	if err := shared.SeedDefaultTemplates(db, nil); err != nil {
-		panic(err)
-	}
-	messages.Register(b.I18n())
-
-	configureOrganizacao(b, db)
-	configureSelector(b, db)
-	configureNestedMenu(b, db)
-	// the "my share invites" surface (accept/decline pending invites)
-	shared.InstallInvites(b, db)
+	b.Use(New(db))
 }
 
 // DefaultModelOptions appends the options shared by every org model.

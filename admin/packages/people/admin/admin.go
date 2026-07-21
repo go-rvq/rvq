@@ -5,9 +5,6 @@
 package admin
 
 import (
-	orgsadmin "github.com/go-rvq/rvq/admin/packages/orgs/admin"
-	"github.com/go-rvq/rvq/admin/packages/people/messages"
-	"github.com/go-rvq/rvq/admin/packages/people/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"gorm.io/gorm"
 )
@@ -22,17 +19,13 @@ func PersonModel(b *presets.Builder) *presets.ModelBuilder {
 	return b.GetModelByID(PersonModelID)
 }
 
-// Configure mounts the people package on b. It ensures the orgs package is
-// configured (idempotent) so the Person resource can be nested under the
-// organization.
-func Configure(b *presets.Builder, db *gorm.DB) {
-	if err := models.AutoMigrate(db); err != nil {
-		panic(err)
+// Configure mounts the people package on b via the people Builder (a
+// presets.Plugin). The optional customizers can register document validators
+// for other document types (see Builder.RegisterDocumentValidator).
+func Configure(b *presets.Builder, db *gorm.DB, customize ...func(*Builder)) {
+	pb := NewBuilder(db)
+	for _, c := range customize {
+		c(pb)
 	}
-	if orgsadmin.OrganizacaoModel(b) == nil {
-		orgsadmin.Configure(b, db)
-	}
-	messages.Register(b.I18n())
-	registerEnumSelects(b)
-	configurePerson(b, db)
+	b.Use(pb)
 }
