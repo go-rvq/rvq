@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"context"
 	"reflect"
 	"strings"
 
@@ -11,9 +10,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/tag"
-	"github.com/go-rvq/rvq/web/zeroer"
 	"github.com/go-rvq/rvq/x/ui/tiptap"
-	"github.com/sunfmin/reflectutils"
 )
 
 type (
@@ -191,7 +188,7 @@ func (t *AdminTag) Parse(sf *reflect.StructField, s string) (valid bool) {
 				if len(vv.Positional) == 1 {
 					ft.Name = vv.Positional[0].ToString()
 				}
-				vv.Named.ToDict(ft.Options)
+				vv.Named.UpdateIndexSetter(ft.Options)
 			}
 
 			for _, m := range mode.Split() {
@@ -263,35 +260,7 @@ func FieldReadyHandle(mb *presets.ModelBuilder, mode presets.FieldMode, field *p
 	}
 
 	if tag.Required != 0 {
-		field.ContextSetup(func(ctx *presets.FieldContext) {
-			if !ctx.Mode.Dot().HasAny(presets.DETAIL, presets.LIST) {
-				if ctx.Label != "" {
-					ctx.Label += " *"
-				}
-			}
-		})
-		field.Validators.Append(presets.FieldValidatorFunc(func(field *presets.FieldContext) (err web.ValidationErrors) {
-			if field.ReadOnly || (field.EventContext != nil && ContextIsSkipFieldRequirementCheck(presets.GetSaveContext(field.EventContext), field.FormKey)) {
-				return
-			}
-			if zeroer.IsZero(field.Value()) || len(strings.TrimSpace(field.StringValue())) == 0 {
-				if st := field.Field.StructField(); st != nil {
-					typ := st.Type
-					if typ.Kind() == reflect.Pointer {
-						typ = typ.Elem()
-					}
-					if typ.Kind() == reflect.Struct {
-						if v, err2 := reflectutils.Get(field.Obj, field.Name+"ID"); err2 == nil && v != nil {
-							if !gad.IsZero(v) {
-								return
-							}
-						}
-					}
-				}
-				err.FieldError(field.FormKey, GetMessages(field.EventContext.Context()).ErrFieldRequired.Error())
-			}
-			return
-		}))
+		field.Required(true)
 	}
 
 	if tag.Mode != 0 {
@@ -359,20 +328,4 @@ func FieldReadyHandle(mb *presets.ModelBuilder, mode presets.FieldMode, field *p
 	}
 
 	return
-}
-
-type ctxKey string
-
-func ContextIsSkipFieldRequirementCheck(ctx context.Context, fieldKey string) (v bool) {
-	if ctx == nil {
-		return
-	}
-	v, _ = ctx.Value(ctxKey("skipFieldRequirementCheck:" + fieldKey)).(bool)
-	return
-}
-
-func SkipFieldRequirementCheck(ctx web.ContextValuer, fieldKey ...string) {
-	for _, k := range fieldKey {
-		ctx.WithContextValue(ctxKey("skipFieldRequirementCheck:"+k), true)
-	}
 }

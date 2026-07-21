@@ -387,20 +387,19 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			if b.recordEncodeFactory != nil {
 				selector.Items(b.recordEncodeFactory.REF.EncodeSlice(ctx, val))
 			} else {
-				/*var items any = []any{val}
+				var items any = []any{val}
 				if itemText != nil {
-					if key, ok := itemText.Value.(string); !ok {
-						mt := b.Model.ModelType()
-						if _, ok := mt.FieldByName(key); !ok {
-							if s, _ := val.(fmt.Stringer); s != nil {
-								items = h.JSONEncodeFunc(func() (b []byte, err error) {
-									return presets.JSONEncodeItemsWithStringer(key, items)
-								})
-							}
+					key := itemText.Value.(string)
+					mt := b.Model.ModelType().Elem()
+					if _, ok := mt.FieldByName(key); !ok {
+						if s, _ := val.(fmt.Stringer); s != nil {
+							items = h.JSONEncodeFunc(func() (b []byte, err error) {
+								return presets.JSONEncodeItemsWithStringer(key, []any{val})
+							})
 						}
 					}
-				}*/
-				selector.Items([]any{val})
+				}
+				selector.Items(items)
 			}
 		}
 		selector.ErrorMessages(field.Errors...)

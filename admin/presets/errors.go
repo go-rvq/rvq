@@ -9,4 +9,5 @@ var (
 	ErrReadRecordNotAllowed   = errors.New("read record not allowed")
 	ErrCreateRecordNotAllowed = errors.New("create record not allowed")
 	ErrActionNotAllowed       = errors.New("action not allowed")
+	ErrFieldRequired          = errors.New("This field is required")
 )

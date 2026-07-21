@@ -136,7 +136,7 @@ func (b *ActionFormBuilder[T]) decodeForm(ctx *ActionFormContext[T]) (err error)
 
 	b.eb.FieldsBuilder.Walk(b.eb.mb.modelInfo, ctx.Form, FieldModeStack{NEW}, ctx.Context, func(field *FieldContext) (s FieldWalkState) {
 		if field.Field.IsEnabled(field) {
-			verr.Merge(field.Field.Validators.Validate(field))
+			verr.Merge(field.Field.Validate(field))
 		}
 		return s
 	})

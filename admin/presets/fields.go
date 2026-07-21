@@ -1142,8 +1142,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 	}
 
 	b.FieldToComponentSetup.Setup(fctx)
-	f.Setup.Setup(fctx)
-	f.ToComponentSetup.Setup(fctx)
+	f.ConfigureContext(fctx)
 
 	if fctx.Disabled || !f.IsEnabled(fctx) {
 		return nil

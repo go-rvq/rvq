@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/go-rvq/rvq/x/i18n"
 )
@@ -142,6 +141,7 @@ type Messages struct {
 	Error               string
 	ErrEmptyParamID     i18n.ErrorString
 	ErrPermissionDenied i18n.ErrorString
+	ErrFieldRequired    i18n.ErrorString
 
 	CopiedToClipboard string
 }
@@ -264,7 +264,7 @@ var Messages_en_US = &Messages{
 	FiltersMultipleSelectIn:            "in",
 	FiltersMultipleSelectNotIn:         "not in",
 	Month:                              "Month",
-	MonthNames: [time.December + 1]string{
+	MonthNames: [13]string{
 		"", "January", "February", "March", "April", "May", "June",
 		"July", "August", "September", "October", "November", "December",
 	},
@@ -286,6 +286,7 @@ var Messages_en_US = &Messages{
 
 	Error:             "ERROR",
 	ErrEmptyParamID:   "Empty param ID",
+	ErrFieldRequired:  i18n.ErrorString(ErrFieldRequired.Error()),
 	CopiedToClipboard: "Copied to clipboard",
 }
 
@@ -369,6 +370,7 @@ var Messages_pt_BR = &Messages{
 	Year:                                       "Ano",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",
+	ErrFieldRequired:                           "Este campo não pode ser vazio",
 
 	PrinterOptions: PrinterOptionsMessages{
 		Title:          "Opções de Impressão",
@@ -436,7 +438,7 @@ var Messages_pt_BR = &Messages{
 		"ConfirmPassword":     "Repita a Nova Senha",
 	},
 
-	MonthNames: [time.December + 1]string{
+	MonthNames: [13]string{
 		"",
 		"Janeiro",
 		"Fevereiro",

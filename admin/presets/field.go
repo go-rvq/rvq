@@ -194,6 +194,7 @@ type FieldBuilder struct {
 	defaultValuer    func()
 	audited          bool
 	hint             bool
+	required         bool
 
 	datafield.DataField[*FieldBuilder]
 }
@@ -464,6 +465,54 @@ func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {
 func (b *FieldBuilder) ContextSetup(f func(ctx *FieldContext)) *FieldBuilder {
 	b.ToComponentSetup = append(b.ToComponentSetup, f)
 	return b
+}
+
+func (b *FieldBuilder) Validate(ctx *FieldContext) (err web.ValidationErrors) {
+	if b.required {
+		if !(ctx.ReadOnly || (ctx.EventContext != nil && ContextIsSkipFieldRequirementCheck(GetSaveContext(ctx.EventContext), ctx.FormKey))) {
+			if zeroer.IsZero(ctx.Value()) || len(strings.TrimSpace(ctx.StringValue())) == 0 {
+				if st := ctx.Field.StructField(); st != nil {
+					typ := st.Type
+					if typ.Kind() == reflect.Pointer {
+						typ = typ.Elem()
+					}
+					if typ.Kind() == reflect.Struct {
+						if v, err2 := reflectutils.Get(ctx.Obj, ctx.Name+"ID"); err2 == nil && v != nil {
+							if !zeroer.IsZero(v) {
+								return
+							}
+						}
+					}
+				}
+
+				err.FieldError(ctx.FormKey, MustGetMessages(ctx.EventContext.Context()).ErrFieldRequired.Error())
+				return
+			}
+		}
+	}
+
+	return b.Validators.Validate(ctx)
+}
+
+func (b *FieldBuilder) ConfigureContext(ctx *FieldContext) {
+	b.Setup.Setup(ctx)
+	if b.required {
+		if !ctx.Mode.Dot().HasAny(DETAIL, LIST) {
+			if ctx.Label != "" {
+				ctx.Label += " *"
+			}
+		}
+	}
+	b.ToComponentSetup.Setup(ctx)
+}
+
+func (b *FieldBuilder) Required(v bool) *FieldBuilder {
+	b.required = v
+	return b
+}
+
+func (b *FieldBuilder) IsRequired() bool {
+	return b.required
 }
 
 type FieldBuilders []*FieldBuilder

@@ -39,6 +39,7 @@ const (
 	ParamMustResult                = "must_result"
 	ParamListingEncoder            = "presets_listingEncoder"
 	ParamRenderBreadcrumbs         = "presets_renderBreadcrumbs"
+	ParamsItemTextKey              = "presets_itemTextKey"
 
 	// list editor
 	ParamAddRowFormKey      = "listEditor_AddRowFormKey"

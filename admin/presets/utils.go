@@ -2,6 +2,7 @@ package presets
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/str_utils"
+	"github.com/go-rvq/rvq/web/zeroer"
 	"github.com/sunfmin/reflectutils"
 )
 
@@ -156,6 +158,66 @@ func ToStringContext(ctx *web.EventContext, v any) string {
 		return t.ContextString(ctx)
 	}
 	return fmt.Sprint(v)
+}
+
+func JSONEncodeItemWithStringer(key string, item fmt.Stringer) (data []byte, err error) {
+	if data, err = json.Marshal(item); err != nil {
+		return
+	}
+	if len(data) > 0 && data[0] == '{' {
+		v, _ := json.Marshal(item.String())
+		return append([]byte(`{"`+key+`":`+string(v)+","), data[1:]...), nil
+	}
+	return
+}
+
+func JSONEncodeItemsWithStringer(key string, list any) (data []byte, err error) {
+	if !zeroer.IsZero(list) {
+		value := reflect.ValueOf(list)
+	try:
+		typ := value.Type()
+		switch typ.Kind() {
+		case reflect.Slice:
+			if value.Len() > 0 {
+				value = value.Index(0)
+				typ = value.Type()
+				if typ.Kind() == reflect.Interface {
+					value = value.Elem()
+					typ = value.Type()
+				}
+				if typ.Implements(reflect.TypeFor[fmt.Stringer]()) {
+					if typ.Kind() == reflect.Ptr {
+						typ = typ.Elem()
+					}
+					if typ.Kind() == reflect.Struct {
+						if _, ok := typ.FieldByName(key); !ok {
+							var buf strings.Builder
+							buf.WriteByte('[')
+							var i int
+							reflectutils.ForEach(list, func(item any) {
+								if i > 0 {
+									buf.WriteByte(',')
+								}
+								if is, _ := item.(fmt.Stringer); is != nil {
+									if data, err = JSONEncodeItemWithStringer(key, item.(fmt.Stringer)); err != nil {
+										return
+									}
+								}
+								buf.Write(data)
+								i++
+							})
+							buf.WriteByte(']')
+							return []byte(buf.String()), nil
+						}
+					}
+				}
+			}
+		case reflect.Interface, reflect.Ptr:
+			value = value.Elem()
+			goto try
+		}
+	}
+	return json.Marshal(list)
 }
 
 var (

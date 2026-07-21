@@ -70,7 +70,7 @@ func (b *EditingBuilder) doUpdate(
 	usingB.FieldsBuilder.WalkOptions(usingB.mb.modelInfo, obj, FieldModeStack{EDIT}, ctx, &FieldWalkHandleOptions{
 		SkipNestedNil: true,
 		Handler: func(field *FieldContext) (s FieldWalkState) {
-			vErr.Merge(field.Field.Validators.Validate(field))
+			vErr.Merge(field.Field.Validate(field))
 			return s
 		},
 	})

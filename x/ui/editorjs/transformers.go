@@ -205,7 +205,7 @@ var MarkdownTransformers = map[string]Transformer{
 	},
 
 	"header": func(data *BlockData, out io.Writer) (err error) {
-		fmt.Fprintf(out, strings.Repeat("#", int(data.Level))+" "+data.Text)
+		fmt.Fprintf(out, "%s %s", strings.Repeat("#", int(data.Level)), data.Text)
 		return
 	},
 

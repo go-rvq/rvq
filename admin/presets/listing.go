@@ -393,6 +393,13 @@ func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, er
 		if sr.Records, err = b.EncodeRecords(ctx, encName, sr.Records); err != nil {
 			return
 		}
+	} else if sr.Records != nil {
+		if key := ctx.R.FormValue(ParamsItemTextKey); key != "" {
+			items := sr.Records
+			sr.Records = h.JSONEncodeFunc(func() ([]byte, error) {
+				return JSONEncodeItemsWithStringer(key, items)
+			})
+		}
 	}
 
 	r.Data = &sr

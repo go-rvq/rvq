@@ -9,6 +9,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 )
 
+type presetsCtxString string
 type presetsCtx int
 
 const (
@@ -202,4 +203,18 @@ func IsSkipAutoBreadcrumb(ctx web.ContextValuer) (ok bool) {
 func WithSkipAutoBreadcrumb(ctx web.ContextValuer) (ok bool) {
 	ctx.WithContextValue(CtxSkipAutoBreadcrumb, true)
 	return
+}
+
+func ContextIsSkipFieldRequirementCheck(ctx context.Context, fieldKey string) (v bool) {
+	if ctx == nil {
+		return
+	}
+	v, _ = ctx.Value(presetsCtxString("skipFieldRequirementCheck:" + fieldKey)).(bool)
+	return
+}
+
+func SkipFieldRequirementCheck(ctx web.ContextValuer, fieldKey ...string) {
+	for _, k := range fieldKey {
+		ctx.WithContextValue(presetsCtxString("skipFieldRequirementCheck:"+k), true)
+	}
 }
