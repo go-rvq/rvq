@@ -139,7 +139,7 @@ func (b *ListEditorListBuilder) Item(ctx *ListEditorItemContext) h.HTMLComponent
 			).Density(DensityCompact).AutoHeight(true),
 		),
 		VCardText(ctx.Body()),
-	).Variant(VariantOutlined)
+	).Variant(VariantOutlined).Attr("v-show", "!"+ctx.DeletedCond())
 }
 
 func (b *ListEditorListBuilder) DeletedItem(ctx *ListEditorItemContext) h.HTMLComponent {
@@ -164,7 +164,7 @@ func (b *ListEditorListBuilder) DeletedItem(ctx *ListEditorItemContext) h.HTMLCo
 				),
 			).Class("d-flex align-center"),
 		),
-	).Variant(VariantTonal).Class("mb-0")
+	).Variant(VariantTonal).Class("mb-0").Attr("v-show", ctx.DeletedCond())
 }
 
 type ListEditorBuilder struct {
@@ -209,6 +209,15 @@ func (b *ListEditorBuilder) Value(v interface{}) (r *ListEditorBuilder) {
 
 func (b *ListEditorBuilder) DisplayFieldInSorter(v string) (r *ListEditorBuilder) {
 	b.displayFieldInSorter = v
+	return b
+}
+
+// SetComponentBuilder swaps the component builder (e.g. a table renderer). A nil
+// value keeps the current one.
+func (b *ListEditorBuilder) SetComponentBuilder(v ListEditorComponentBuilder) (r *ListEditorBuilder) {
+	if v != nil {
+		b.ComponentBuilder = v
+	}
 	return b
 }
 
@@ -288,12 +297,14 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 					},
 				}
 
-				// render both views; the deleted placeholder (with its revert
-				// button) reactively takes the item's place when it is flagged
-				// deleted, so list order is preserved.
-				return h.Div(
-					h.Div(b.ComponentBuilder.Item(itemCtx)).Attr("v-show", "!"+itemCtx.DeletedCond()),
-					h.Div(b.ComponentBuilder.DeletedItem(itemCtx)).Attr("v-show", itemCtx.DeletedCond()),
+				// render both views; each builder toggles its own visibility via
+				// ctx.DeletedCond() (Item hidden when deleted, DeletedItem shown),
+				// so the deleted placeholder takes the item's place and list order
+				// is preserved. No wrapping element is added here, so table rows
+				// (<tr>) stay valid direct children of the container.
+				return h.Components(
+					b.ComponentBuilder.Item(itemCtx),
+					b.ComponentBuilder.DeletedItem(itemCtx),
 				)
 			})
 

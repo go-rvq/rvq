@@ -17,6 +17,7 @@ type NestedSliceBuilder struct {
 	addListItemRowEvent    string
 	removeListItemRowEvent string
 	sortListItemsEvent     string
+	componentBuilder       ListEditorComponentBuilder
 }
 
 func NestedSlice(mb *ModelBuilder, fb *FieldsBuilder) *NestedSliceBuilder {
@@ -67,13 +68,25 @@ func (n *NestedSliceBuilder) SetSortListItemsEvent(sortListItemsEvent string) *N
 	return n
 }
 
+func (n *NestedSliceBuilder) ComponentBuilder() ListEditorComponentBuilder {
+	return n.componentBuilder
+}
+
+// SetComponentBuilder selects the list-editor renderer for this field, e.g.
+// NewListEditorTableBuilder() for a table layout. Defaults to the card list.
+func (n *NestedSliceBuilder) SetComponentBuilder(componentBuilder ListEditorComponentBuilder) *NestedSliceBuilder {
+	n.componentBuilder = componentBuilder
+	return n
+}
+
 func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 	b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return NewListEditor(field).Value(field.Value()).
 			DisplayFieldInSorter(n.displayFieldInSorter).
 			AddListItemRowEvent(n.addListItemRowEvent).
 			RemoveListItemRowEvent(n.removeListItemRowEvent).
-			SortListItemsEvent(n.sortListItemsEvent).BuildComponent(ctx)
+			SortListItemsEvent(n.sortListItemsEvent).
+			SetComponentBuilder(n.componentBuilder).BuildComponent(ctx)
 	})
 }
 

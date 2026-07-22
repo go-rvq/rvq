@@ -76,6 +76,10 @@ func FieldComponentContainer(label any, comp h.HTMLComponent) h.HTMLComponent {
 func FieldComponentWrapper(f FieldComponentFunc) FieldComponentFunc {
 	return FormFieldComponentFuncWrapper(func(field *FieldContext, ctx *web.EventContext) (comp h.HTMLComponent) {
 		comp = f(field, ctx)
+		// MustInput: skip the label container, return only the input.
+		if field.MustInput {
+			return comp
+		}
 		return FieldComponentContainer(field.Label, comp)
 	})
 }

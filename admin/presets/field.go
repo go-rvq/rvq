@@ -65,8 +65,26 @@ type FieldContext struct {
 	ReadOnly           bool
 	Required           bool
 	Disabled           bool
-	ValueOverride      interface{}
-	ComponentHandlers  []func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent
+	// MustInput asks the field component to render only the bare input, with no
+	// label, hint or surrounding container — suitable for placing inside a table
+	// cell (the column header carries the label). The default component funcs
+	// honour it via InputLabel and the wrappers.
+	MustInput bool
+	// Density, when set (e.g. "compact"/"comfortable"), is applied to the field's
+	// input by the default component funcs — used to make table-cell inputs
+	// shorter. Empty keeps the component default.
+	Density           string
+	ValueOverride     interface{}
+	ComponentHandlers []func(ctx *FieldContext, comp h.HTMLComponent) h.HTMLComponent
+}
+
+// InputLabel is the label a field component should render on its input: empty
+// when MustInput is set (the label lives in the table header), otherwise Label.
+func (fc *FieldContext) InputLabel() string {
+	if fc.MustInput {
+		return ""
+	}
+	return fc.Label
 }
 
 func (fc *FieldContext) Root() *FieldContext {

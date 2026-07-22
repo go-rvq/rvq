@@ -144,13 +144,12 @@ func SelectorConfigorFromFieldContext(field *FieldContext) SelectConfigor {
 
 func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.HTMLComponent) {
 	var (
-		cfg      = SelectorConfigorFromFieldContext(field)
-		keys     = cfg.AvailableKeys(field)
-		options  = make([]any, len(keys))
-		val any
+		cfg     = SelectorConfigorFromFieldContext(field)
+		keys    = cfg.AvailableKeys(field)
+		options = make([]any, len(keys))
+		val     any
 	)
 
-	
 	for i, labelAndHint := range cfg.KeyLabelsAndHints(field, keys) {
 		options[i] = map[string]any{
 			"value": keys[i],
@@ -160,7 +159,7 @@ func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.
 	}
 
 	sel := v.VSelect().
-		Label(field.Label).
+		Label(field.InputLabel()).
 		Items(options).
 		Density(v.DensityComfortable).
 		ItemValue(`value`).
@@ -171,7 +170,7 @@ func SelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (comp h.
 	if field.Field.hint {
 		sel.Hint(field.HintLoader()).PersistentHint(true)
 	}
-	
+
 	if cfg.Many(field) {
 		val = cfg.SelectedKeys(field)
 	} else {
@@ -197,7 +196,7 @@ func SelectReadComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCom
 			return nil
 		}
 
-		if field.Label != "" {
+		if !field.MustInput && field.Label != "" {
 			comp = append(comp, v.VLabel(h.Text(field.Label)))
 		}
 
@@ -209,7 +208,7 @@ func SelectReadComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCom
 			return nil
 		}
 
-		if field.Label != "" {
+		if !field.MustInput && field.Label != "" {
 			comp = append(comp, v.VLabel(h.Text(field.Label)))
 		}
 

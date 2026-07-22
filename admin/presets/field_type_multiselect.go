@@ -46,10 +46,10 @@ func MultiSelectWriteComponentFunc(field *FieldContext, _ *web.EventContext) (co
 			),
 	).Class("v-input__details")
 
-	if field.Label != "" {
+	if !field.MustInput && field.Label != "" {
 		comp = h.HTMLComponents{
 			h.Div(
-				h.Label(field.Label).Class("v-label theme--light"),
+				h.Label(field.InputLabel()).Class("v-label theme--light"),
 			),
 			comp,
 		}
@@ -70,7 +70,7 @@ func MultiSelectReadComponentFunc(field *FieldContext, _ *web.EventContext) h.HT
 		return nil
 	}
 
-	if field.Label != "" {
+	if !field.MustInput && field.Label != "" {
 		comp = append(comp, VLabel(h.Text(field.Label)))
 	}
 

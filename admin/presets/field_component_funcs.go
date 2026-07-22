@@ -33,7 +33,7 @@ func CheckboxComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 	return FieldWithHint(field, VCheckbox().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
 		Density(DensityCompact).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -48,7 +48,7 @@ func CheckboxReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.H
 func SwitchComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return FieldWithHint(field, VSwitch().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -58,7 +58,7 @@ func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompone
 		Type("number").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -81,7 +81,7 @@ func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCom
 		}
 	}
 	return vx.VXDateTimePicker().
-		Label(field.Label).
+		Label(field.InputLabel()).
 		Attr(web.VField(field.FormKey, val)...).
 		Value(val).
 		TimePickerProps(vx.TimePickerProps{
@@ -119,7 +119,7 @@ func DateTimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := t.Format(msgr.TimeFormats.DateTime)
 	return vx.VXReadonlyField().
-		Label(field.Label).
+		Label(field.InputLabel()).
 		Value(val)
 }
 
@@ -140,7 +140,7 @@ func TextFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Type("text").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -150,7 +150,7 @@ func LongTextFieldComponentFunc(field *FieldContext, _ *web.EventContext) *VText
 		Type("text").
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, field.StringValue())...).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -180,7 +180,7 @@ func RuneFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 func ReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	if v := field.StringValue(); len(v) > 0 {
 		return vx.VXReadonlyField().
-			Label(field.Label).
+			Label(field.InputLabel()).
 			Value(v)
 	}
 	return nil
@@ -190,7 +190,7 @@ func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 	return FieldWithHint(field, VFileInput().
 		Variant(FieldVariantUnderlined).
 		Attr(web.VField(field.FormKey, "")...).
-		Label(field.Label).
+		Label(field.InputLabel()).
 		ErrorMessages(field.Errors...).
 		Disabled(field.ReadOnly))
 }
@@ -207,7 +207,7 @@ func PasswordFieldComponentFunc(field *FieldContext, ctx *web.EventContext) h.HT
 	return vue.FormField(
 		VTextField().
 			Variant(FieldVariantUnderlined).
-			Label(field.Label).
+			Label(field.InputLabel()).
 			ErrorMessages(field.Errors...).
 			Attr(":append-inner-icon", []byte(`visible.v ? "mdi-eye-off" : "mdi-eye"`)).
 			Attr(`:type`, []byte(`visible.v ? "text" : "password"`)).
@@ -260,7 +260,7 @@ func EditorJSComponentReadFunc(field *FieldContext, _ *web.EventContext) h.HTMLC
 
 	return h.HTMLComponents{
 		h.Div(
-			h.Label(field.Label),
+			h.Label(field.InputLabel()),
 		),
 		VCard(
 			VCardText(comp).Class("editorjs-body"),
@@ -271,10 +271,22 @@ func EditorJSComponentReadFunc(field *FieldContext, _ *web.EventContext) h.HTMLC
 func EditorJSComponentWriteFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	s, _ := field.Value().(string)
 	_, err := editorjs.Parse([]byte(s))
-	return vx.EditorJS().Label(field.Label).FormField(field.FormKey, field.Value().(string)).Errors(err)
+	return vx.EditorJS().Label(field.InputLabel()).FormField(field.FormKey, field.Value().(string)).Errors(err)
 }
 
 func FieldWithHint[C h.TagGetter](field *FieldContext, comp C) C {
+	if field.Density != "" {
+		comp.GetHTMLTagBuilder().Attr("density", field.Density)
+	}
+	if field.MustInput {
+		// bare input for a table cell: hide the details area only while there is
+		// nothing to show there — keep it (so the error renders) when the field
+		// has errors.
+		if len(field.Errors) == 0 {
+			comp.GetHTMLTagBuilder().Attr("hide-details", true)
+		}
+		return comp
+	}
 	field.CheckHint()
 	if len(field.Hint) > 0 {
 		tag := comp.GetHTMLTagBuilder()

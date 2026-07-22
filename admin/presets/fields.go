@@ -129,6 +129,32 @@ func (b *FieldsBuilder) SetSkipFieldVerifier(skipFieldVerifier func(name string)
 	b.skipFieldVerifier = skipFieldVerifier
 }
 
+// FieldsLayout is the ordered layout of a [FieldsBuilder]: it decides which
+// fields are rendered and how they are grouped. Each entry is one of:
+//
+//   - string — a single field, by name.
+//   - []string — a group of fields with no title (a row in a form; a group of
+//     columns under an unnamed header in a table).
+//   - *FieldsSection — a titled group ({Name, Title, Rows}) whose Rows are
+//     flattened into the group's fields.
+//   - *FieldsGroup — a (possibly nested) named/titled group of entries.
+//
+// Any other element type makes [FieldsLayout.ToGroup] panic. Groups nest,
+// producing multi-row / column-spanning headers in the listing and in the list
+// editor table.
+//
+// It seeds the Listing / Editing / Detailing builders, e.g.:
+//
+//	mb.Editing("Title", []string{"FirstName", "LastName"},
+//	    &presets.FieldsSection{Title: "Address", Rows: [][]string{{"City", "State"}}})
+//
+// and, per mode, the columns of a [ListEditorTableBuilder].
+//
+// Helpers: [FieldsLayout.Names] (flattened leaf names in order),
+// [FieldsLayout.WalkNames] / [FieldsLayout.WalkNamesPath] (visit each leaf),
+// [FieldsLayout.Filter], and [FieldsLayout.ToGroup] (normalize every entry to
+// *FieldsGroup). [FieldBuilders.FieldTreeLayout] turns a layout into the header
+// tree.
 type FieldsLayout []any
 
 type FieldLayoutEntryType uint8
