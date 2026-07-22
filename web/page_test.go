@@ -316,7 +316,7 @@ func TestMultiplePagesAndEvents(t *testing.T) {
 	}
 
 	pb := New()
-	pb.RegisterEventHandler("bookmark", bookmark)
+	pb.RegisterEventFunc("bookmark", bookmark)
 
 	mux := goji.NewMux()
 	mux.Handle(pat.New("/home/topics/:topicID"), pb.Page(topicDetail))
@@ -391,8 +391,8 @@ func TestEmbed(t *testing.T) {
 
 func PageFunc1(ctx *EventContext) (r PageResponse, err error) {
 	r.Body = h.H1("Page1")
-	ctx.WithContextValue("afterTitle", h.H2("abc")).
-		WithContextValue("customizeHeader", h.Components())
+	ctx.WithContextValue("afterTitle", h.H2("abc"))
+	ctx.WithContextValue("customizeHeader", h.Components())
 
 	ctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), "abc", h.H2("abc")))
 	return

@@ -10,10 +10,162 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/web/zeroer"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 )
+
+type ListEditorItemType uint8
+
+func (t ListEditorItemType) String() string {
+	switch t {
+	case ListEditorItemTypeNew:
+		return "new"
+	case ListEditorItemTypeEdit:
+		return "edit"
+	case ListEditorItemTypeDelete:
+		return "delete"
+	default:
+		return "-"
+	}
+}
+
+func (t ListEditorItemType) FormKeyValue(itemFormKey string) (string, string) {
+	return itemFormKey + ".__type", t.String()
+}
+
+const (
+	ListEditorItemTypeNew = iota
+	ListEditorItemTypeEdit
+	ListEditorItemTypeDelete
+)
+
+// Per-item form metadata emitted by the list editor. Each item posts these
+// alongside its real fields, keyed as `<itemFormKey>.<field>` (e.g.
+// `Parcelas[2].__deleted`). They replace the old global ModifiedIndexesBuilder:
+// the server reads each item's own state instead of a shared hidden index.
+//
+//   - ListEditorPositionField: the item's desired position (used to reorder the
+//     decoded slice by intent instead of by array index).
+//   - ListEditorNewField:      "true" for items created in the browser.
+//   - ListEditorDeletedField:  "true" for items the user removed; a non-new
+//     deleted item is posted as `{ID, __deleted:true}` so it can be reverted.
+//   - ListEditorPresentField:  always "1"; lets the server tell "the list was in
+//     the form but empty" (delete all) from "the field was absent" (leave as is).
+const (
+	ListEditorPositionField = "__pos"
+	ListEditorNewField      = "__new"
+	ListEditorDeletedField  = "__deleted"
+	ListEditorPresentField  = "__present"
+)
+
+type ListEditorItemContext struct {
+	FieldContext *FieldContext
+	ItemVar      string
+	RemoveEvent  string
+	Item         any
+	Path         FieldPath
+	// ItemKey internal key of item in list
+	ItemKey             int
+	ItemFormKey         string
+	ItemPositionFormKey string
+	Deleted             bool
+	New                 bool
+	Body                func() h.HTMLComponent
+	ItemType            ListEditorItemType
+	// Label is the display label of the item (used by the deleted placeholder).
+	Label string
+}
+
+// deletedKey is the flat form key holding this item's deletion flag,
+// e.g. `Parcelas[2].__deleted`.
+func (c *ListEditorItemContext) deletedKey() string {
+	return c.ItemFormKey + "." + ListEditorDeletedField
+}
+
+// DeleteExpr is the @click expression that marks the item as deleted. Deletion
+// is toggled on the reactive form (client-side) instead of round-tripping to the
+// server, so the item's inputs stay in the DOM and it can be reverted.
+func (c *ListEditorItemContext) DeleteExpr() string {
+	return fmt.Sprintf("form[%q] = true", c.deletedKey())
+}
+
+// RevertExpr is the @click expression that restores a deleted item.
+func (c *ListEditorItemContext) RevertExpr() string {
+	return fmt.Sprintf("form[%q] = false", c.deletedKey())
+}
+
+// DeletedCond is the truthy Vue condition for this item being deleted.
+func (c *ListEditorItemContext) DeletedCond() string {
+	return fmt.Sprintf("form[%q]", c.deletedKey())
+}
+
+type ListEditorContainerContext struct {
+	FieldContext *FieldContext
+}
+
+type ListEditorComponentBuilder interface {
+	Container(ctx *ListEditorContainerContext, items h.HTMLComponents) h.HTMLComponent
+	Item(ctx *ListEditorItemContext) h.HTMLComponent
+	// DeletedItem renders a persisted item that the user removed. It keeps the
+	// item's place in the list (so order is preserved) and offers a way to
+	// revert the deletion. It is shown, reactively, in place of Item while the
+	// item is flagged deleted.
+	DeletedItem(ctx *ListEditorItemContext) h.HTMLComponent
+}
+
+type ListEditorListBuilder struct {
+}
+
+func (b *ListEditorListBuilder) Container(ctx *ListEditorContainerContext, items h.HTMLComponents) h.HTMLComponent {
+	return items
+}
+
+func (b *ListEditorListBuilder) Item(ctx *ListEditorItemContext) h.HTMLComponent {
+	return VCard(
+		h.If(!ctx.FieldContext.ReadOnly,
+			VToolbar(
+				web.Slot(VBtn("").
+					Color("error").
+					Variant(VariantText).
+					Density(DensityCompact).
+					Icon("mdi-delete").
+					// mark the item deleted in the reactive scope instead of
+					// round-tripping to the server, so it can be reverted and its
+					// data is not lost.
+					Attr("@click", ctx.DeleteExpr()),
+				).Name("append"),
+			).Density(DensityCompact).AutoHeight(true),
+		),
+		VCardText(ctx.Body()),
+	).Variant(VariantOutlined)
+}
+
+func (b *ListEditorListBuilder) DeletedItem(ctx *ListEditorItemContext) h.HTMLComponent {
+	msgr := MustGetMessages(ctx.FieldContext.EventContext.Context())
+	label := ctx.Label
+	if label == "" {
+		label = msgr.ListEditorDeletedItem
+	}
+	return VCard(
+		VCardText(
+			h.Div(
+				VIcon("mdi-delete-outline").Class("mr-2").Color("error"),
+				h.Span(label).Class("text-decoration-line-through text-medium-emphasis"),
+				VSpacer(),
+				h.If(!ctx.FieldContext.ReadOnly,
+					VBtn(msgr.ListEditorRevertDeletion).
+						Variant(VariantText).
+						Color("primary").
+						Density(DensityCompact).
+						PrependIcon("mdi-undo-variant").
+						Attr("@click", ctx.RevertExpr()),
+				),
+			).Class("d-flex align-center"),
+		),
+	).Variant(VariantTonal).Class("mb-0")
+}
 
 type ListEditorBuilder struct {
 	fieldContext           *FieldContext
@@ -22,6 +174,7 @@ type ListEditorBuilder struct {
 	addListItemRowEvent    string
 	removeListItemRowEvent string
 	sortListItemsEvent     string
+	ComponentBuilder       ListEditorComponentBuilder
 }
 
 type ListSorter struct {
@@ -39,6 +192,7 @@ func NewListEditor(v *FieldContext) *ListEditorBuilder {
 		addListItemRowEvent:    actions.AddRowEvent,
 		removeListItemRowEvent: actions.RemoveRowEvent,
 		sortListItemsEvent:     actions.SortEvent,
+		ComponentBuilder:       &ListEditorListBuilder{},
 	}
 }
 
@@ -82,66 +236,87 @@ func (b *ListEditorBuilder) SortListItemsEvent(v string) (r *ListEditorBuilder) 
 	return b
 }
 
-func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
+// itemLabel is the display label of an item, from the configured sorter field
+// when set, otherwise a positional fallback.
+func (b *ListEditorBuilder) itemLabel(obj any, i int) string {
+	if b.displayFieldInSorter != "" {
+		return fmt.Sprint(reflectutils.MustGet(obj, b.displayFieldInSorter))
+	}
+	return fmt.Sprintf("Item %d", i+1)
+}
+
+func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponent {
 	msgr := MustGetMessages(ctx.Context())
 	formKey := b.fieldContext.FormKey
-	var form h.HTMLComponent
+	var (
+		form h.HTMLComponent
+		// itemsState feeds the drag sorter's list (index + label per item).
+		itemsState []map[string]any
+		// itemFormKeys is the ordered list of each rendered item's form key,
+		// used by Setup to seed per-item metadata (__pos, __deleted default).
+		itemFormKeys []string
+	)
 	if b.value != nil {
-		form = b.fieldContext.Nested.FieldsBuilder().
-			ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+		var i int
+		items := b.fieldContext.Nested.FieldsBuilder().
+			ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, itemFormKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
 				if zeroer.IsNil(obj) {
 					return nil
 				}
 
-				return VCard(
-					h.If(!b.fieldContext.ReadOnly,
-						VToolbar(
-							web.Slot(VBtn("").
-								Color("error").
-								Variant(VariantText).
-								Density(DensityCompact).
-								Icon("mdi-delete").
-								Attr("@click", web.Plaid().
-									URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
-									EventFunc(b.removeListItemRowEvent).
-									Queries(ctx.Queries()).
-									Query(ParamRemoveRowFormKey, formKey).
-									Go()),
-							).Name("append"),
-						).Density(DensityCompact).AutoHeight(true),
-					),
-					VCardText(content),
-				).Variant(VariantOutlined)
+				idx := i
+				i++
+
+				label := b.itemLabel(obj, idx)
+				itemsState = append(itemsState, map[string]any{"index": idx, "label": label})
+				itemFormKeys = append(itemFormKeys, itemFormKey)
+
+				itemCtx := &ListEditorItemContext{
+					FieldContext:        b.fieldContext,
+					ItemVar:             "",
+					RemoveEvent:         b.removeListItemRowEvent,
+					Item:                obj,
+					Path:                path,
+					ItemKey:             idx,
+					ItemFormKey:         itemFormKey,
+					ItemPositionFormKey: itemFormKey + "." + ListEditorPositionField,
+					Label:               label,
+					Deleted:             false,
+					New:                 false,
+					Body: func() h.HTMLComponent {
+						return content
+					},
+				}
+
+				// render both views; the deleted placeholder (with its revert
+				// button) reactively takes the item's place when it is flagged
+				// deleted, so list order is preserved.
+				return h.Div(
+					h.Div(b.ComponentBuilder.Item(itemCtx)).Attr("v-show", "!"+itemCtx.DeletedCond()),
+					h.Div(b.ComponentBuilder.DeletedItem(itemCtx)).Attr("v-show", itemCtx.DeletedCond()),
+				)
 			})
+
+		if i > 0 {
+			form = b.ComponentBuilder.Container(&ListEditorContainerContext{
+				FieldContext: b.fieldContext,
+			}, items)
+		}
 	}
 
 	isSortStart := ctx.R.FormValue(ParamIsStartSort) == "1" && ctx.R.FormValue(ParamSortSectionFormKey) == formKey
 	haveSorterIcon := true
 	var sorter h.HTMLComponent
-	var sorterData ListSorter
-	if b.value != nil {
-		deletedIndexes := ContextModifiedIndexesBuilder(ctx)
-
-		deletedIndexes.SortedForEach(b.value, formKey, func(obj interface{}, i int) {
-			if deletedIndexes.DeletedContains(b.fieldContext.FormKey, i) {
-				return
-			}
-			label := ""
-			if b.displayFieldInSorter != "" {
-				label = fmt.Sprint(reflectutils.MustGet(obj, b.displayFieldInSorter))
-			} else {
-				label = fmt.Sprintf("Item %d", i)
-			}
-			sorterData.Items = append(sorterData.Items, ListSorterItem{Label: label, Index: i})
-		})
-	}
-	if len(sorterData.Items) < 2 {
+	// the drag sorter reuses the reactive `items` state (built above) as its
+	// v-model, so deletion state and ordering share one source of truth instead
+	// of the global ModifiedIndexesBuilder.
+	if len(itemsState) < 2 {
 		haveSorterIcon = false
 	}
 	if haveSorterIcon && isSortStart {
 		sorter = VCard(
 			VList(
-				h.Tag("vx-draggable").Attr("v-model", "locals.items", "handle", ".handle", "animation", "300", "item-key", "index").Children(
+				h.Tag("vx-draggable").Attr("v-model", "items", "handle", ".handle", "animation", "300", "item-key", "index").Children(
 					h.Template().Attr("#item", " { element } ").Children(
 						VListItem(
 							web.Slot(
@@ -155,7 +330,7 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 			).Class("pa-0")).Variant(VariantOutlined).Class("mx-0 mt-1 mb-4")
 	}
 	return h.Div(
-		web.Scope(
+		vue.UserComponent(
 			h.If(!b.fieldContext.ReadOnly,
 				h.Div(
 					h.Label(b.fieldContext.Label).Class("v-label theme--light text-caption"),
@@ -190,7 +365,7 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 										Query(ParamID, ctx.R.FormValue(ParamID)).
 										Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
 										Query(ParamSortSectionFormKey, b.fieldContext.FormKey).
-										FieldValue(ParamSortResultFormKey, web.Var("JSON.stringify(locals.items)")).
+										FieldValue(ParamSortResultFormKey, web.Var("JSON.stringify(items)")).
 										Query(ParamIsStartSort, "0").
 										Go(),
 								),
@@ -216,8 +391,37 @@ func (b *ListEditorBuilder) Component(ctx *web.EventContext) h.HTMLComponent {
 				),
 			).Attr("v-show", h.JSONString(!isSortStart)).
 				Class("mt-1 mb-4"),
-		).LocalsInit(h.JSONString(sorterData)).Slot("{ locals }"),
+		).Scope("items", jsonOrEmptyArray(itemsState)).
+			Scope("form").
+			Setup(fmt.Sprintf(`({ scope }) => {
+			// expose the ambient (root) form as the slot-scoped form binding so the
+			// item inputs and the delete/revert expressions bind to the real parent
+			// form -- NOT a fresh object (which would reset the field).
+			scope.form = form
+			// presence marker: always posted so the server can tell an empty list
+			// that was submitted (delete all children) from a field that was
+			// absent (leave children untouched).
+			form[%q] = "1"
+			// seed each item's position on the reactive form so submit order is
+			// preserved (the server reorders the decoded slice by __pos). The real
+			// field values and the __deleted flag are bound directly by the item
+			// components; nothing here overwrites them.
+			const keys = %s
+			keys.forEach((k, i) => { form[k + %q] = i })
+		}`,
+				formKey+"."+ListEditorPresentField,
+				h.JSONString(itemFormKeys),
+				"."+ListEditorPositionField)),
 	)
+}
+
+// jsonOrEmptyArray marshals v, guaranteeing a JS array literal (never "null")
+// so a Vue v-model bound to it stays iterable.
+func jsonOrEmptyArray(v []map[string]any) string {
+	if len(v) == 0 {
+		return "[]"
+	}
+	return h.JSONString(v)
 }
 
 func addListItemRow(mb *ModelBuilder) web.EventFunc {

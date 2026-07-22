@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -466,7 +468,159 @@ func (ctx *EventContext) UnmarshalFormValues(values url.Values, v interface{}) (
 		dec.RegisterCustomTypeFunc(decoder.Decoder, decoder.Types...)
 	}
 
-	return dec.Decode(v, values)
+	if err = dec.Decode(v, values); err != nil {
+		return
+	}
+
+	// Reorder list-editor slices by the per-item `__pos` metadata (the ListEditor
+	// submits the intended order as `<slice>[i].__pos`), so the decoded order
+	// follows the user's sort instead of the raw array index. The form values are
+	// reindexed to the new order too, so later per-item reads (e.g. `__deleted`)
+	// stay aligned. Items without `__pos` are pushed to the end (stable order).
+	ReorderSlicesByPos(v, values)
+	return
+}
+
+// posFieldSuffix is the item metadata key carrying its position in a list editor.
+const (
+	posFieldSuffix     = ".__pos"
+	deletedFieldSuffix = ".__deleted"
+	newFieldSuffix     = ".__new"
+)
+
+var reItemPos = regexp.MustCompile(`^(.*)\[(\d+)\]\.__pos$`)
+
+// ReorderSlicesByPos reorders, for every list-editor slice found in values (a key
+// matching `<prefix>[i].__pos`), the decoded slice in v by the `__pos` value, and
+// reindexes the matching form keys in values to the new order. Items without a
+// `__pos` keep their relative order and are appended after the positioned ones.
+// Prefixes are processed deepest-first so nested lists are ordered before their
+// parents.
+func ReorderSlicesByPos(v interface{}, values url.Values) {
+	// collect, per slice prefix, the (originalIndex -> pos) pairs.
+	type item struct{ orig, pos int }
+	groups := map[string][]item{}
+	for k, vs := range values {
+		m := reItemPos.FindStringSubmatch(k)
+		if m == nil || m[1] == "" || len(vs) == 0 {
+			continue
+		}
+		orig, _ := strconv.Atoi(m[2])
+		pos, e := strconv.Atoi(strings.TrimSpace(vs[0]))
+		if e != nil {
+			pos = 1 << 30 // no/invalid pos -> end
+		}
+		groups[m[1]] = append(groups[m[1]], item{orig: orig, pos: pos})
+	}
+	if len(groups) == 0 {
+		return
+	}
+
+	prefixes := make([]string, 0, len(groups))
+	for p := range groups {
+		prefixes = append(prefixes, p)
+	}
+	// deepest first: more '[' means more nested.
+	sort.SliceStable(prefixes, func(i, j int) bool {
+		return strings.Count(prefixes[i], "[") > strings.Count(prefixes[j], "[")
+	})
+
+	for _, prefix := range prefixes {
+		items := groups[prefix]
+
+		slice, e := reflectutils.Get(v, prefix)
+		if e != nil || slice == nil {
+			continue
+		}
+		sv := reflect.ValueOf(slice)
+		if sv.Kind() != reflect.Slice {
+			continue
+		}
+		n := sv.Len()
+
+		// order: positioned items by (pos, orig), then any uncovered indexes.
+		sort.SliceStable(items, func(i, j int) bool {
+			if items[i].pos != items[j].pos {
+				return items[i].pos < items[j].pos
+			}
+			return items[i].orig < items[j].orig
+		})
+		order := make([]int, 0, n)
+		covered := make(map[int]bool, len(items))
+		for _, it := range items {
+			if it.orig >= 0 && it.orig < n && !covered[it.orig] {
+				order = append(order, it.orig)
+				covered[it.orig] = true
+			}
+		}
+		for i := 0; i < n; i++ {
+			if !covered[i] {
+				order = append(order, i)
+			}
+		}
+		if sameOrder(order) {
+			continue
+		}
+
+		// reorder the decoded slice.
+		newSlice := reflect.MakeSlice(sv.Type(), 0, n)
+		for _, oi := range order {
+			newSlice = reflect.Append(newSlice, sv.Index(oi))
+		}
+		if err := reflectutils.Set(v, prefix, newSlice.Interface()); err != nil {
+			continue
+		}
+
+		// reindex the form keys of this slice to the new order.
+		reindexSliceKeys(values, prefix, order)
+	}
+}
+
+func sameOrder(order []int) bool {
+	for i, o := range order {
+		if i != o {
+			return false
+		}
+	}
+	return true
+}
+
+// reindexSliceKeys rewrites, in values, every key `prefix[oldIndex]<rest>` to
+// `prefix[newIndex]<rest>` where newIndex is the position of oldIndex in order.
+func reindexSliceKeys(values url.Values, prefix string, order []int) {
+	remap := make(map[int]int, len(order))
+	for newIdx, oldIdx := range order {
+		remap[oldIdx] = newIdx
+	}
+	replacement := make(map[string][]string)
+	var toDelete []string
+	for k, vs := range values {
+		if !strings.HasPrefix(k, prefix+"[") {
+			continue
+		}
+		rest := k[len(prefix)+1:]
+		close := strings.IndexByte(rest, ']')
+		if close < 0 {
+			continue
+		}
+		oldIdx, e := strconv.Atoi(rest[:close])
+		if e != nil {
+			continue
+		}
+		newIdx, ok := remap[oldIdx]
+		if !ok || newIdx == oldIdx {
+			continue
+		}
+		newKey := fmt.Sprintf("%s[%d]%s", prefix, newIdx, rest[close+1:])
+		replacement[newKey] = vs
+		toDelete = append(toDelete, k)
+	}
+	for _, k := range toDelete {
+		delete(values, k)
+	}
+	for k, vs := range replacement {
+		values[k] = vs
+	}
 }
 
 func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {

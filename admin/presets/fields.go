@@ -1157,7 +1157,7 @@ func defaultRowFunc(obj interface{}, path FieldPath, formKey string, content h.H
 	return content
 }
 
-func (b *FieldsBuilder) ToComponentForEach(opts *ToComponentOptions, field *FieldContext, slice interface{}, mode FieldModeStack, ctx *web.EventContext, rowFunc RowFunc) h.HTMLComponent {
+func (b *FieldsBuilder) ToComponentForEach(opts *ToComponentOptions, field *FieldContext, slice interface{}, mode FieldModeStack, ctx *web.EventContext, rowFunc RowFunc) h.HTMLComponents {
 	var (
 		info            *ModelInfo
 		r               []h.HTMLComponent

@@ -130,6 +130,8 @@ type Messages struct {
 	Colon                                      string
 	NotFoundPageNotice                         string
 	AddRow                                     string
+	ListEditorDeletedItem                      string
+	ListEditorRevertDeletion                   string
 	PleaseSelectRecord                         string
 	PrinterOptions                             PrinterOptionsMessages
 	BulkActionConfirmationTextTemplate         string
@@ -281,6 +283,8 @@ var Messages_en_US = &Messages{
 	NotFoundPageNotice:                         "Sorry, the requested page cannot be found. Please check the URL.",
 	PleaseSelectRecord:                         "Please select a record",
 	AddRow:                                     "Add Row",
+	ListEditorDeletedItem:                      "Removed item",
+	ListEditorRevertDeletion:                   "Undo",
 
 	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> then {count} records?",
 
@@ -365,6 +369,8 @@ var Messages_pt_BR = &Messages{
 	NotFoundPageNotice:                         "Desculpe, a página solicitada não pode ser encontrada. Verifique o URL.",
 	PleaseSelectRecord:                         "Selecione pelo menos um registro.",
 	AddRow:                                     "Adicionar",
+	ListEditorDeletedItem:                      "Item removido",
+	ListEditorRevertDeletion:                   "Desfazer",
 	Error:                                      "Erro",
 	Month:                                      "Mês",
 	Year:                                       "Ano",

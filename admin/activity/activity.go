@@ -208,6 +208,10 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 
 	editing.WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+			// make this (audited) model's origin available to nested has-many
+			// saves so their child changes are logged too.
+			ctx.R = ctx.R.WithContext(ab.injectAssociationAuditor(ContextWithRequestInfo(ctx.R.Context(), ctx.R)))
+
 			if mb.skip&Update != 0 && mb.skip&Create != 0 {
 				return in(obj, id, ctx)
 			}
@@ -237,6 +241,8 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 
 	editing.CreatingBuilder().WrapCreateFunc(func(in presets.CreateFunc) presets.CreateFunc {
 		return func(obj interface{}, ctx *web.EventContext) (err error) {
+			ctx.R = ctx.R.WithContext(ab.injectAssociationAuditor(ContextWithRequestInfo(ctx.R.Context(), ctx.R)))
+
 			if mb.skip&Create != 0 {
 				return in(obj, ctx)
 			}

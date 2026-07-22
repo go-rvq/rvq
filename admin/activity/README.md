@@ -1,63 +1,53 @@
-# Activity
+# activity
 
-## Usage
+Audit logging for the `go-rvq/rvq` admin. The package records **who** did **what**
+to **which record** and **when**, persisting a row per action (create / edit /
+delete / view) into an `activity_logs` table, including a field-level diff for
+edits and the request origin (IP / user agent).
 
-- Firstly, you should create an activity instance in your project.
+It plugs into `presets` in two ways:
 
-  ```go
-  activity := activity.New(presetsBuilder, db, logModel)
-  ```
+- **Automatically** — register a `*presets.ModelBuilder` and create / edit /
+  delete performed through the admin are logged for you.
+- **Manually** — for plain structs, or records saved outside the preset flow
+  (nested associations, batch jobs, custom actions), call the `Add*Record`
+  helpers yourself.
 
-  - presetsBuilder (Required), it is a instance of `presets.Builder` to register activity into presets.
-  - db (Required), it is a global database instance. we will use it if we don't find the specific database instance in a operation.
-  - logModel (Optional), you can use your own model table to record the activity log as long as the model implements the `ActivityLogModel` interface.
+## Quick start
 
-- Register normal model or a `presets.ModelBuilder` into activity
+```go
+import "github.com/go-rvq/rvq/admin/activity"
 
-  ```go
-  activity.RegisterModel(normalModel) // It need you to record the activity log manually
-  activity.RegisterModel(presetModel) // It will record the activity log automatically when you create, update or delete the model data via preset admin
-  ```
+ab := activity.New(db)          // creates & auto-migrates the activity_logs table
+b.Use(ab)                        // install into the presets.Builder (i18n + perm + admin resource)
 
-- Skip recording activity log for preset model if you don't want to record the activity log automatically
+ab.RegisterModel(postModelBuilder)          // auto-log create/edit/delete
+ab.RegisterModel(&Comment{})                // plain struct: record manually
+```
 
-  ```go
-  activity.RegisterModel(presetModel).SkipCreate().SkipUpdate().SkipDelete()
-  ```
+```go
+// manual recording (creator, db and request origin resolved from context)
+ctx := activity.ContextWithCreator(
+    activity.ContextWithRequestInfo(r.Context(), r), "alice")
+ab.AddRecords(activity.ActivityCreate, ctx, comment)
+```
 
-- Configure more options for the `presets.ModelBuilder` to record more custom information
+## Documentation
 
-  ```go
-  activity.RegisterModel(presetModel).UseDefaultTab() //use activity tab on the admin model edit page
-  activity.RegisterModel(presetModel).AddKeys("ID", "Version") // will record value of the ID and Version field as the keyword of a model table
-  activity.RegisterModel(presetModel).AddIgnoredFields("UpdateAt") // will ignore the UpdateAt field when recording activity log for update operation
-  activity.RegisterModel(presetModel).AddTypeHanders(
-    time.Time{},
-    func(old, now interface{}, prefixField string) []Diff {
-  		oldString := old.(time.Time).Format(time.RFC3339)
-  		nowString := now.(time.Time).Format(time.RFC3339)
-  		if oldString != nowString {
-  			return []Diff{
-  				{Field: prefixField, Old: oldString, Now: nowString},
-  			}
-  		}
-  		return []Diff{}
-    }
-    ) // you define your own type handler to record some custom type for update operation
-  ```
+Detailed docs live under [`docs/`](docs/):
 
-- Record log manually when you use a normal model or save the model data via db directly
+- [Overview & architecture](docs/README.md)
+- [Getting started](docs/getting-started.md) — install, register models, wire creator/db/request-info
+- [Recording logs](docs/recording-logs.md) — automatic vs. manual, context helpers, nested records
+- [Model configuration](docs/model-configuration.md) — keys, ignored fields, type handlers, skip, tabs, links
+- [Data model](docs/data-model.md) — `ActivityLog`, the interfaces, and custom log tables
+- [API reference](docs/api-reference.md) — every exported symbol at a glance
 
-  - When a struct type only have one `activity.ModelBuilder`, you can use `activity` to record the log directly.
+## Actions
 
-    ```go
-      activity.AddRecords(ActivityEdit, ctx, record)
-      activity.AddRecords(ActivityCreate, ctx, record)
-    ```
-
-  - When a struct type have multiple `activity.ModelBuilder`, you need to get the corresponding `activity.ModelBuilder` and then use it to record the log.
-
-    ```go
-      activity.MustGetModelBuilder(presetModel1).AddRecords(ActivityEdit, ctx, record)
-      activity.MustGetModelBuilder(presetModel2).AddRecords(ActivityEdit, ctx, record)
-    ```
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `activity.ActivityCreate` | `"Create"` | a record was created |
+| `activity.ActivityEdit` | `"Edit"` | a record was edited (stores a field diff) |
+| `activity.ActivityDelete` | `"Delete"` | a record was deleted |
+| `activity.ActivityView` | `"View"` | a record was viewed |

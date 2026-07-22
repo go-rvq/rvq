@@ -73,7 +73,7 @@ func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 			DisplayFieldInSorter(n.displayFieldInSorter).
 			AddListItemRowEvent(n.addListItemRowEvent).
 			RemoveListItemRowEvent(n.removeListItemRowEvent).
-			SortListItemsEvent(n.sortListItemsEvent).Component(ctx)
+			SortListItemsEvent(n.sortListItemsEvent).BuildComponent(ctx)
 	})
 }
 

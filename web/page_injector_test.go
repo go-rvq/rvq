@@ -24,10 +24,13 @@ var cases = []struct {
 			b.Title("Hello")
 		},
 		expected: `<title>Hello</title>
-
 <meta charset='utf8'>
-
 <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+<meta name='HandheldFriendly' content='true'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black'>
+<meta name='format-detection' content='telephone=no'>
 		`,
 	},
 	{
@@ -37,10 +40,13 @@ var cases = []struct {
 			b.Meta(web.MetaKey("charset"), "charset", "shiftjis")
 		},
 		expected: `<title>Hello</title>
-
 <meta charset='shiftjis'>
-
 <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+<meta name='HandheldFriendly' content='true'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black'>
+<meta name='format-detection' content='telephone=no'>
 `,
 	},
 	{
@@ -52,12 +58,14 @@ var cases = []struct {
 			b.MetaNameContent("keywords", "Hello")
 		},
 		expected: `<title>Hello</title>
-
 <meta charset='utf8'>
-
 <meta name='keywords' content='Hello'>
-
 <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+<meta name='HandheldFriendly' content='true'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black'>
+<meta name='format-detection' content='telephone=no'>
 `,
 	},
 
@@ -88,8 +96,12 @@ var cases = []struct {
 </script>
 
 <meta charset='utf8'>
-
 <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+<meta name='HandheldFriendly' content='true'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black'>
+<meta name='format-detection' content='telephone=no'>
 `,
 	},
 }

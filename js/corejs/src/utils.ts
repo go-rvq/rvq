@@ -222,7 +222,9 @@ export function objectToFormData(obj: any, form: FormData, parentKey = '') {
     // Construct the form key
     const formKey = parentKey ? (isArr ? `${parentKey}[${key}]` : `${parentKey}.${key}`) : key
 
-    if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Date)) {
+    if (typeof value === 'function') {
+      objectToFormData((value as Function)(), form, formKey)
+    } else if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Date)) {
       objectToFormData(value, form, formKey)
     } else {
       setFormValue(form, formKey, value)

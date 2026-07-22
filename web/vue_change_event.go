@@ -20,7 +20,7 @@ const (
 func ApplyChangeEvent(s string, event ChangeEvent, id string) string {
 	return strings.NewReplacer(
 		IdKey, id,
-		ChangedEventKey, fmt.Sprintf(string(event)),
+		ChangedEventKey, string(event),
 	).Replace(s)
 }
 
