@@ -300,11 +300,19 @@ func (b *ListEditorTableBuilder) DeletedItem(ctx *ListEditorItemContext) h.HTMLC
 					Density(DensityCompact).
 					PrependIcon("mdi-undo-variant").
 					Attr("@click", ctx.RevertExpr()),
-			).Class("d-flex justify-end"),
+				VBtn(msgr.ListEditorRemoveItem).
+					Variant(VariantText).
+					Color("error").
+					Density(DensityCompact).
+					PrependIcon("mdi-delete-forever").
+					// dismiss the removed item for good: stays deleted (server
+					// removes it) but the placeholder is hidden and unrevertible.
+					Attr("@click", ctx.PurgeExpr()),
+			).Class("d-flex justify-end ga-2"),
 		))
 	}
 
-	return h.Tr(cells...).Attr("v-show", ctx.DeletedCond())
+	return h.Tr(cells...).Attr("v-show", ctx.DeletedVisibleCond())
 }
 
 // renderCell renders a single field of the item as the bare input for a table

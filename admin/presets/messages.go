@@ -132,6 +132,7 @@ type Messages struct {
 	AddRow                                     string
 	ListEditorDeletedItem                      string
 	ListEditorRevertDeletion                   string
+	ListEditorRemoveItem                       string
 	ListEditorActions                          string
 	PleaseSelectRecord                         string
 	PrinterOptions                             PrinterOptionsMessages
@@ -286,6 +287,7 @@ var Messages_en_US = &Messages{
 	AddRow:                                     "Add Row",
 	ListEditorDeletedItem:                      "Removed item",
 	ListEditorRevertDeletion:                   "Undo",
+	ListEditorRemoveItem:                       "Remove",
 	ListEditorActions:                          "Actions",
 
 	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> then {count} records?",
@@ -373,6 +375,7 @@ var Messages_pt_BR = &Messages{
 	AddRow:                                     "Adicionar",
 	ListEditorDeletedItem:                      "Item removido",
 	ListEditorRevertDeletion:                   "Desfazer",
+	ListEditorRemoveItem:                       "Remover",
 	ListEditorActions:                          "Ações",
 	Error:                                      "Erro",
 	Month:                                      "Mês",

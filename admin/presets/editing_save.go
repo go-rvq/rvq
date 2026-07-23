@@ -104,7 +104,7 @@ func (b *EditingBuilder) doUpdate(
 	}
 
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-	script := "closer.show = false"
+	script := `closer.show = false;`
 
 	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
 		cb := web.DecodeCallback(postSaveConfig)

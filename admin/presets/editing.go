@@ -275,12 +275,19 @@ func (b *EditingBuilder) FetchAndUnmarshal(opts *FieldsSetterOptions, id ID, rem
 	return
 }
 
+func (b *EditingBuilder) ParseMultipartForm(ctx *web.EventContext) error {
+	if ctx.R.MultipartForm == nil {
+		return ctx.R.ParseMultipartForm(b.maxPostSize)
+	}
+	return nil
+}
+
 func (b *EditingBuilder) RunSetterFunc(opts *FieldsSetterOptions, ctx *web.EventContext, removeDeletedAndSort bool, toObj interface{}) (vErr web.ValidationErrors) {
 	if b.Setter != nil {
 		b.Setter(toObj, ctx)
 	}
 
-	if err := ctx.R.ParseMultipartForm(b.maxPostSize); err != nil {
+	if err := b.ParseMultipartForm(ctx); err != nil {
 		vErr.GlobalError(err.Error())
 		return
 	}

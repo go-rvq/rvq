@@ -53,11 +53,20 @@ const (
 //     deleted item is posted as `{ID, __deleted:true}` so it can be reverted.
 //   - ListEditorPresentField:  always "1"; lets the server tell "the list was in
 //     the form but empty" (delete all) from "the field was absent" (leave as is).
+//   - ListEditorPurgedField:   client-only "true" for a deleted item the user
+//     dismissed for good — the removed placeholder is hidden and can no longer be
+//     reverted. The item stays __deleted, so the server still deletes it.
 const (
-	ListEditorPositionField = "__pos"
+	ListEditorPositionField = web.PosFieldSuffix
 	ListEditorNewField      = "__new"
 	ListEditorDeletedField  = "__deleted"
 	ListEditorPresentField  = "__present"
+	ListEditorPurgedField   = "__purged"
+)
+
+const (
+	ListEditorAddRowParamJsonItems    = "presets_listEditorAddRowJsonItems"
+	ListEditorAddRowParamCurrentItems = "presets_listEditorCurrentItems"
 )
 
 type ListEditorItemContext struct {
@@ -99,6 +108,29 @@ func (c *ListEditorItemContext) RevertExpr() string {
 // DeletedCond is the truthy Vue condition for this item being deleted.
 func (c *ListEditorItemContext) DeletedCond() string {
 	return fmt.Sprintf("form[%q]", c.deletedKey())
+}
+
+// purgedKey is the flat form key holding this item's "removed for good" flag.
+func (c *ListEditorItemContext) purgedKey() string {
+	return c.ItemFormKey + "." + ListEditorPurgedField
+}
+
+// PurgeExpr is the @click expression that dismisses a deleted item for good: it
+// stays deleted (so the server removes it) but its placeholder is hidden and it
+// can no longer be reverted.
+func (c *ListEditorItemContext) PurgeExpr() string {
+	return fmt.Sprintf("form[%q] = true", c.purgedKey())
+}
+
+// PurgedCond is the truthy Vue condition for this item having been purged.
+func (c *ListEditorItemContext) PurgedCond() string {
+	return fmt.Sprintf("form[%q]", c.purgedKey())
+}
+
+// DeletedVisibleCond is the condition for showing the deleted placeholder: the
+// item is deleted and has not been purged.
+func (c *ListEditorItemContext) DeletedVisibleCond() string {
+	return c.DeletedCond() + " && !" + c.PurgedCond()
 }
 
 type ListEditorContainerContext struct {
@@ -155,16 +187,67 @@ func (b *ListEditorListBuilder) DeletedItem(ctx *ListEditorItemContext) h.HTMLCo
 				h.Span(label).Class("text-decoration-line-through text-medium-emphasis"),
 				VSpacer(),
 				h.If(!ctx.FieldContext.ReadOnly,
-					VBtn(msgr.ListEditorRevertDeletion).
-						Variant(VariantText).
-						Color("primary").
-						Density(DensityCompact).
-						PrependIcon("mdi-undo-variant").
-						Attr("@click", ctx.RevertExpr()),
+					h.Div(
+						VBtn(msgr.ListEditorRevertDeletion).
+							Variant(VariantText).
+							Color("primary").
+							Density(DensityCompact).
+							PrependIcon("mdi-undo-variant").
+							Attr("@click", ctx.RevertExpr()),
+						VBtn(msgr.ListEditorRemoveItem).
+							Variant(VariantText).
+							Color("error").
+							Density(DensityCompact).
+							PrependIcon("mdi-delete-forever").
+							// dismiss the removed item for good: stays deleted (server
+							// removes it) but the placeholder is hidden and unrevertible.
+							Attr("@click", ctx.PurgeExpr()),
+					).Class("d-flex ga-2"),
 				),
 			).Class("d-flex align-center"),
 		),
-	).Variant(VariantTonal).Class("mb-0").Attr("v-show", ctx.DeletedCond())
+	).Variant(VariantTonal).Class("mb-0").Attr("v-show", ctx.DeletedVisibleCond())
+}
+
+type ListSorter struct {
+	Items []ListSorterItem `json:"items"`
+}
+
+type ListSorterItem struct {
+	Index int    `json:"index"`
+	Label string `json:"label"`
+}
+
+type ListEditorItemAppendActionEventContext struct {
+	*web.EventContext
+	Model     *ModelBuilder
+	items     any
+	FieldName string
+}
+
+func (c *ListEditorItemAppendActionEventContext) Items() any {
+	if c.items == nil {
+		obj := c.Model.NewModel()
+		formKey := c.R.FormValue(ParamAddRowFormKey)
+
+		if err := c.EventContext.UnmarshalFormValues(c.R.PostForm, obj); err != nil {
+			panic(err)
+		}
+
+		if items, err := reflectutils.Get(obj, formKey); err == nil {
+			c.items = items
+			return items
+		}
+	}
+	return c.items
+}
+
+func (c *ListEditorItemAppendActionEventContext) AddItems(v any) {
+	if rv := reflect.ValueOf(v); rv.Type().Kind() != reflect.Slice {
+		panic("ListEditorItemAppendActionEventContext AddItems must be a slice")
+	} else if rv.Len() > 0 {
+		c.Resp.AppendRunScript(fmt.Sprintf("$listEditorAddItems(%s)", h.JSONString(v)))
+	}
 }
 
 type ListEditorBuilder struct {
@@ -175,15 +258,7 @@ type ListEditorBuilder struct {
 	removeListItemRowEvent string
 	sortListItemsEvent     string
 	ComponentBuilder       ListEditorComponentBuilder
-}
-
-type ListSorter struct {
-	Items []ListSorterItem `json:"items"`
-}
-
-type ListSorterItem struct {
-	Index int    `json:"index"`
-	Label string `json:"label"`
+	addItemEvent           string
 }
 
 func NewListEditor(v *FieldContext) *ListEditorBuilder {
@@ -209,6 +284,25 @@ func (b *ListEditorBuilder) Value(v interface{}) (r *ListEditorBuilder) {
 
 func (b *ListEditorBuilder) DisplayFieldInSorter(v string) (r *ListEditorBuilder) {
 	b.displayFieldInSorter = v
+	return b
+}
+
+func (b *ListEditorBuilder) AddItemEvent(event string) *ListEditorBuilder {
+	b.addItemEvent = event
+	return b
+}
+
+func (b *ListEditorBuilder) RegisterItemEvent(mb *ModelBuilder, eventName string, handler func(ctx *ListEditorItemAppendActionEventContext) error) *ListEditorBuilder {
+	b.addItemEvent = eventName
+	mb.RegisterEventFunc(eventName, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		ctx.Resp = &r
+		err = handler(&ListEditorItemAppendActionEventContext{
+			EventContext: ctx,
+			Model:        mb,
+		})
+		return
+	})
+
 	return b
 }
 
@@ -255,8 +349,6 @@ func (b *ListEditorBuilder) itemLabel(obj any, i int) string {
 }
 
 func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponent {
-	msgr := MustGetMessages(ctx.Context())
-	formKey := b.fieldContext.FormKey
 	var (
 		form h.HTMLComponent
 		// itemsState feeds the drag sorter's list (index + label per item).
@@ -264,49 +356,56 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 		// itemFormKeys is the ordered list of each rendered item's form key,
 		// used by Setup to seed per-item metadata (__pos, __deleted default).
 		itemFormKeys []string
+
+		msgr       = MustGetMessages(ctx.Context())
+		formKey    = b.fieldContext.FormKey
+		tempPortal = ctx.UID()
 	)
+
 	if b.value != nil {
-		var i int
-		items := b.fieldContext.Nested.FieldsBuilder().
-			ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, itemFormKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
-				if zeroer.IsNil(obj) {
-					return nil
-				}
+		var (
+			i     int
+			items = b.fieldContext.Nested.FieldsBuilder().
+				ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, itemFormKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+					if zeroer.IsNil(obj) {
+						return nil
+					}
 
-				idx := i
-				i++
+					idx := i
+					i++
 
-				label := b.itemLabel(obj, idx)
-				itemsState = append(itemsState, map[string]any{"index": idx, "label": label})
-				itemFormKeys = append(itemFormKeys, itemFormKey)
+					label := b.itemLabel(obj, idx)
+					itemsState = append(itemsState, map[string]any{"index": idx, "label": label})
+					itemFormKeys = append(itemFormKeys, itemFormKey)
 
-				itemCtx := &ListEditorItemContext{
-					FieldContext:        b.fieldContext,
-					ItemVar:             "",
-					RemoveEvent:         b.removeListItemRowEvent,
-					Item:                obj,
-					Path:                path,
-					ItemKey:             idx,
-					ItemFormKey:         itemFormKey,
-					ItemPositionFormKey: itemFormKey + "." + ListEditorPositionField,
-					Label:               label,
-					Deleted:             false,
-					New:                 false,
-					Body: func() h.HTMLComponent {
-						return content
-					},
-				}
+					itemCtx := &ListEditorItemContext{
+						FieldContext:        b.fieldContext,
+						ItemVar:             "",
+						RemoveEvent:         b.removeListItemRowEvent,
+						Item:                obj,
+						Path:                path,
+						ItemKey:             idx,
+						ItemFormKey:         itemFormKey,
+						ItemPositionFormKey: itemFormKey + "." + ListEditorPositionField,
+						Label:               label,
+						Deleted:             false,
+						New:                 false,
+						Body: func() h.HTMLComponent {
+							return content
+						},
+					}
 
-				// render both views; each builder toggles its own visibility via
-				// ctx.DeletedCond() (Item hidden when deleted, DeletedItem shown),
-				// so the deleted placeholder takes the item's place and list order
-				// is preserved. No wrapping element is added here, so table rows
-				// (<tr>) stay valid direct children of the container.
-				return h.Components(
-					b.ComponentBuilder.Item(itemCtx),
-					b.ComponentBuilder.DeletedItem(itemCtx),
-				)
-			})
+					// render both views; each builder toggles its own visibility via
+					// ctx.DeletedCond() (Item hidden when deleted, DeletedItem shown),
+					// so the deleted placeholder takes the item's place and list order
+					// is preserved. No wrapping element is added here, so table rows
+					// (<tr>) stay valid direct children of the container.
+					return h.Components(
+						b.ComponentBuilder.Item(itemCtx),
+						b.ComponentBuilder.DeletedItem(itemCtx),
+					)
+				})
+		)
 
 		if i > 0 {
 			form = b.ComponentBuilder.Container(&ListEditorContainerContext{
@@ -315,15 +414,19 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 		}
 	}
 
-	isSortStart := ctx.R.FormValue(ParamIsStartSort) == "1" && ctx.R.FormValue(ParamSortSectionFormKey) == formKey
-	haveSorterIcon := true
-	var sorter h.HTMLComponent
+	var (
+		sorter         h.HTMLComponent
+		isSortStart    = ctx.R.FormValue(ParamIsStartSort) == "1" && ctx.R.FormValue(ParamSortSectionFormKey) == formKey
+		haveSorterIcon = true
+	)
+
 	// the drag sorter reuses the reactive `items` state (built above) as its
 	// v-model, so deletion state and ordering share one source of truth instead
 	// of the global ModifiedIndexesBuilder.
 	if len(itemsState) < 2 {
 		haveSorterIcon = false
 	}
+
 	if haveSorterIcon && isSortStart {
 		sorter = VCard(
 			VList(
@@ -340,6 +443,79 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 				),
 			).Class("pa-0")).Variant(VariantOutlined).Class("mx-0 mt-1 mb-4")
 	}
+
+	var (
+		url          = b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)
+		addItemClick string
+		addItemTb    = web.Plaid().
+				URL(url).
+				EventFunc(b.addListItemRowEvent).
+				Queries(web.Query(ctx.Queries()).
+					Set(ParamAddRowFormKey, b.fieldContext.FormKey).
+					URLValues())
+		scopeSetup strings.Builder
+	)
+
+	fmt.Fprintf(&scopeSetup, `({ scope }) => {
+			const formKey = "%s";
+			// expose the ambient (root) form as the slot-scoped form binding so the
+			// item inputs and the delete/revert expressions bind to the real parent
+			// form -- NOT a fresh object (which would reset the field).
+			scope.form = form
+			// presence marker: always posted so the server can tell an empty list
+			// that was submitted (delete all children) from a field that was
+			// absent (leave children untouched).
+			form[formKey + "." + %q] = "1"
+			// seed each item's position on the reactive form so submit order is
+			// preserved (the server reorders the decoded slice by __pos). The real
+			// field values and the __deleted flag are bound directly by the item
+			// components; nothing here overwrites them.
+			const keys = %s
+			keys && keys.forEach((k, i) => { form[k + %q] = i })
+		`,
+		formKey,
+		ListEditorPresentField,
+		h.JSONString(itemFormKeys),
+		"."+ListEditorPositionField,
+	)
+
+	if len(b.addItemEvent) > 0 {
+		addItemClick = "openItemsSelector"
+		fmt.Fprintf(&scopeSetup, `
+			scope.$listEditorAddItems = (items) => {
+				if (!items) return;
+				((typeof items) !== "string" && (items = JSON.stringify(items)))
+				%s.formData({%s: items}).go()
+			} 
+
+			scope.openItemsSelector = () => {
+				const items = {},
+					prefix = formKey + "["
+
+				Object.entries(form).forEach(([key, value]) => {
+					if (key.startsWith(prefix)) items[key] = value
+				});
+
+				%s.form(items).scope({$listEditorAddItems: scope.$listEditorAddItems}).go()
+			}`,
+			addItemTb,
+			ListEditorAddRowParamJsonItems,
+			web.Plaid().
+				EventFunc(b.addItemEvent).
+				URL(url).
+				Query(ParamTargetPortal, tempPortal).
+				FormData(map[string]any{
+					ParamAddRowFormKey: formKey,
+				}).
+				SkipFiles(true),
+		)
+	} else {
+		addItemClick = addItemTb.
+			Go()
+	}
+
+	scopeSetup.WriteByte('}')
+
 	return h.Div(
 		vue.UserComponent(
 			h.If(!b.fieldContext.ReadOnly,
@@ -391,38 +567,17 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 					VBtn(msgr.AddRow).
 						Variant(VariantText).
 						Color("primary").
-						Attr("@click", web.Plaid().
-							URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
-							EventFunc(b.addListItemRowEvent).
-							Queries(web.Query(ctx.Queries()).
-								Set(ParamAddRowFormKey, b.fieldContext.FormKey).
-								URLValues()).
-							Go(),
-						),
+						Attr("data-list-editor-add", formKey).
+						Attr("@click", addItemClick),
 				),
 			).Attr("v-show", h.JSONString(!isSortStart)).
 				Class("mt-1 mb-4"),
 		).Scope("items", jsonOrEmptyArray(itemsState)).
+			Scope("$listEditorAddItems").
+			Scope("openItemsSelector").
 			Scope("form").
-			Setup(fmt.Sprintf(`({ scope }) => {
-			// expose the ambient (root) form as the slot-scoped form binding so the
-			// item inputs and the delete/revert expressions bind to the real parent
-			// form -- NOT a fresh object (which would reset the field).
-			scope.form = form
-			// presence marker: always posted so the server can tell an empty list
-			// that was submitted (delete all children) from a field that was
-			// absent (leave children untouched).
-			form[%q] = "1"
-			// seed each item's position on the reactive form so submit order is
-			// preserved (the server reorders the decoded slice by __pos). The real
-			// field values and the __deleted flag are bound directly by the item
-			// components; nothing here overwrites them.
-			const keys = %s
-			keys.forEach((k, i) => { form[k + %q] = i })
-		}`,
-				formKey+"."+ListEditorPresentField,
-				h.JSONString(itemFormKeys),
-				"."+ListEditorPositionField)),
+			Setup(scopeSetup.String()),
+		web.Portal().Name(tempPortal),
 	)
 }
 
@@ -449,13 +604,32 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
 		formKey := ctx.R.FormValue(ParamAddRowFormKey)
 		t := reflectutils.GetType(obj, formKey+"[0]")
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
+
+		if jsonItems := ctx.R.FormValue(ListEditorAddRowParamJsonItems); len(jsonItems) > 0 {
+			// jsonItems is a JSON array of serialized items; decode them into the
+			// slice element type and append each to obj's slice.
+			itemsPtr := reflect.New(reflect.SliceOf(t))
+			if err = json.Unmarshal([]byte(jsonItems), itemsPtr.Interface()); err != nil {
+				return
+			}
+			items := itemsPtr.Elem()
+			for i := 0; i < items.Len(); i++ {
+				if err = reflectutils.Set(obj, formKey+"[]", items.Index(i).Interface()); err != nil {
+					return
+				}
+			}
+		} else {
+			if t.Kind() == reflect.Ptr {
+				t = t.Elem()
+			}
+			newVal := reflect.New(t).Interface()
+			if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
+				return
+			}
 		}
-		newVal := reflect.New(t).Interface()
-		if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
-			return
-		}
+
+		// prevent to create new form scope
+		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
 
 		return me.respondFormEdit(ctx, obj)
 	}
@@ -486,6 +660,8 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 
 		ContextModifiedIndexesBuilder(ctx).AppendDeleted(sliceField, index)
 
+		// prevent to create new form scope
+		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
 		return me.respondFormEdit(ctx, obj)
 	}
 }
@@ -517,6 +693,8 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			mib.SetSorted(sortSectionFormKey, indexes)
 		}
 
+		// prevent to create new form scope
+		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
 		return me.respondFormEdit(ctx, obj)
 	}
 }
@@ -552,8 +730,6 @@ func RemoveEmptySliceItems(obj any, mib *ModifiedIndexesBuilder) func() {
 			newSlice.Index(j).Set(sliceV.Index(i))
 			j++
 		}
-
-		fmt.Println(newSlice.Interface())
 		if err := reflectutils.Set(obj, k, newSlice.Interface()); err != nil {
 			panic(err)
 		}

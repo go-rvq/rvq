@@ -486,6 +486,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 				Color("primary").
 				Attr(":disabled", "isFetching").
 				Attr(":loading", "isFetching").
+				Attr("data-event", "edit").
 				Attr("@click", onclick.Go()).
 				Attr("@click.middle",
 					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))).

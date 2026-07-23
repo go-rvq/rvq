@@ -18,6 +18,7 @@ type NestedSliceBuilder struct {
 	removeListItemRowEvent string
 	sortListItemsEvent     string
 	componentBuilder       ListEditorComponentBuilder
+	withEditor             func(b *ListEditorBuilder)
 }
 
 func NestedSlice(mb *ModelBuilder, fb *FieldsBuilder) *NestedSliceBuilder {
@@ -79,14 +80,23 @@ func (n *NestedSliceBuilder) SetComponentBuilder(componentBuilder ListEditorComp
 	return n
 }
 
+func (n *NestedSliceBuilder) WithEditor(handler func(b *ListEditorBuilder)) *NestedSliceBuilder {
+	n.withEditor = handler
+	return n
+}
+
 func (n *NestedSliceBuilder) Build(b *FieldBuilder) {
 	b.ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return NewListEditor(field).Value(field.Value()).
+		e := NewListEditor(field).Value(field.Value()).
 			DisplayFieldInSorter(n.displayFieldInSorter).
 			AddListItemRowEvent(n.addListItemRowEvent).
 			RemoveListItemRowEvent(n.removeListItemRowEvent).
 			SortListItemsEvent(n.sortListItemsEvent).
-			SetComponentBuilder(n.componentBuilder).BuildComponent(ctx)
+			SetComponentBuilder(n.componentBuilder)
+		if n.withEditor != nil {
+			n.withEditor(e)
+		}
+		return e.BuildComponent(ctx)
 	})
 }
 

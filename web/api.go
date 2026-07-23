@@ -138,11 +138,11 @@ func (r *EventResponse) AppendRunScript(script string) {
 
 // @snippet_begin(PageFuncAndEventFuncDefinition)
 type (
-	PageFunc        func(ctx *EventContext) (r PageResponse, err error)
+	PageFunc func(ctx *EventContext) (r PageResponse, err error)
+
 	PageFuncWrapper func(old PageFunc) PageFunc
-	EventHandler    interface {
-		Handle(ctx *EventContext) (r EventResponse, err error)
-	}
+	LayoutFunc      func(in PageFunc) PageFunc
+
 	EventFunc func(ctx *EventContext) (r EventResponse, err error)
 )
 
@@ -156,12 +156,17 @@ func (f EventFunc) Handle(ctx *EventContext) (r EventResponse, err error) {
 
 // @snippet_end
 
-type LayoutFunc func(in PageFunc) PageFunc
-
 // @snippet_begin(EventHandlerHubDefinition)
-type EventHandlerHub interface {
-	RegisterEventHandler(eventFuncId string, ef EventHandler) (key string)
-}
+type (
+	EventHandler interface {
+		Handle(ctx *EventContext) (r EventResponse, err error)
+	}
+
+	EventHandlerHub interface {
+		RegisterEventHandler(eventFuncId string, ef EventHandler) (key string)
+		RegisterEventFunc(id string, f EventFunc) string
+	}
+)
 
 // @snippet_end
 
@@ -481,14 +486,12 @@ func (ctx *EventContext) UnmarshalFormValues(values url.Values, v interface{}) (
 	return
 }
 
-// posFieldSuffix is the item metadata key carrying its position in a list editor.
+// PosFieldSuffix is the item metadata key carrying its position in a list editor.
 const (
-	posFieldSuffix     = ".__pos"
-	deletedFieldSuffix = ".__deleted"
-	newFieldSuffix     = ".__new"
+	PosFieldSuffix = "__pos"
 )
 
-var reItemPos = regexp.MustCompile(`^(.*)\[(\d+)\]\.__pos$`)
+var reItemPos = regexp.MustCompile(`^(.*)\[(\d+)\]\.` + PosFieldSuffix + `$`)
 
 // ReorderSlicesByPos reorders, for every list-editor slice found in values (a key
 // matching `<prefix>[i].__pos`), the decoded slice in v by the `__pos` value, and

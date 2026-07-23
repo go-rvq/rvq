@@ -304,6 +304,22 @@ func (b *VueEventTagBuilder) PopState(v interface{}) (r *VueEventTagBuilder) {
 	return b
 }
 
+func (b *VueEventTagBuilder) FormData(data map[string]any) (r *VueEventTagBuilder) {
+	b.Calls = append(b.Calls, JsCall{
+		Method: "formData",
+		Args:   []interface{}{Var(h.JSONString(data))},
+	})
+	return b
+}
+
+func (b *VueEventTagBuilder) SkipFiles(v bool) (r *VueEventTagBuilder) {
+	b.Calls = append(b.Calls, JsCall{
+		Method: "skipFiles",
+		Args:   []interface{}{v},
+	})
+	return b
+}
+
 func (b *VueEventTagBuilder) Run(script string) (r *VueEventTagBuilder) {
 	b.Calls = append(b.Calls, JsCall{
 		Method: "run",

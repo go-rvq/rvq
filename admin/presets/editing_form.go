@@ -112,6 +112,7 @@ func (b *EditingBuilder) SaveBtn(ctx *web.EventContext, id string, edit bool, ta
 		Variant(VariantFlat).
 		Attr(":disabled", "isFetching").
 		Attr(":loading", "isFetching").
+		Attr("data-event", event).
 		Attr("@click", onClick.Go()).
 		Icon(true).
 		Density("comfortable").

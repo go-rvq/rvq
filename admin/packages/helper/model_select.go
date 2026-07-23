@@ -347,7 +347,7 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		is := itemsSearcher(field, searcher)
 		selector := vx.VXSelectOne().
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, assign)...).
+			Attr(web.VField(field.FormKey+"ID", assign)...).
 			ItemValue("ID").
 			ItemText("Text").
 			ItemsSearcher(is).
@@ -408,8 +408,10 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 	}
 
 	b.Model.WithEditingBuilders(func(e *presets.EditingBuilder) {
-		e.Except(b.Field + "ID").
-			Field(b.Field).
+		e.Field(b.Field + "ID").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return nil
+		})
+		e.Field(b.Field).
 			ComponentFunc(comp).
 			SetterFunc(setter)
 	})
