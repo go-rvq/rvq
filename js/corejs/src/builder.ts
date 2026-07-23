@@ -20,6 +20,7 @@ export class Builder {
   _scope?: any = {}
   _loadPortalBody: boolean = false
   _form?: any = {}
+  _formData?: any = {}
   _popstate?: boolean
   _pushState?: boolean
   _location?: Location
@@ -28,6 +29,7 @@ export class Builder {
   _parents?: any
   _preFetch: ((data: PreFetchData) => void)[] = []
   _noCache?: boolean = false
+  _skipFiles?: boolean = false
   _postFetch: ((
       builder: Builder, data: Record<string, any>) => void)[] = []
 
@@ -211,6 +213,18 @@ export class Builder {
     return this
   }
 
+  public formData(v: any): Builder {
+    if (v) {
+      this._formData = { ...(this._formData ?? {}), ...v }
+    }
+    return this
+  }
+
+  public skipFiles(v: boolean): Builder {
+    this._skipFiles = v
+    return this
+  }
+
   public fieldValue(name: string, v: any): Builder {
     if (!this._form) {
       throw new Error('form not exist')
@@ -311,7 +325,20 @@ export class Builder {
     if (fetchOpts.method === 'POST') {
       const formData = new FormData()
       objectToFormData(this._form, formData)
-      fetchOpts.body = formData
+      objectToFormData(this._formData, formData)
+
+      if (this._skipFiles) {
+        formData.forEach((value, key) => {
+          // FormData entries are `string | File`; drop the non-string (file)
+          // ones. (Avoids the narrowed `string instanceof Blob` type error.)
+          if (typeof value !== 'string') {
+            formData.delete(key);
+          }
+        })
+        fetchOpts.body = new URLSearchParams([...formData.entries()] as string[][])
+      } else {
+        fetchOpts.body = formData
+      }
     }
 
     window.dispatchEvent(new Event('fetchStart'))
