@@ -3,7 +3,6 @@ package gorm2op
 import (
 	"net/url"
 	"reflect"
-	"strconv"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -55,7 +54,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 	// form, so post can act on the user's intent.
 	pre := func(state *CallbackState) (err error) {
 		fieldFormKey := b.fieldFormKey(b.field, state)
-		present := sliceSubmittedInForm(state.Ctx, fieldFormKey)
+		present := presets.ListEditorInitialized(formValues(state.Ctx), fieldFormKey)
 		state.Set(assocPresentKey(b.field), present)
 
 		value := reflect.ValueOf(state.Obj).Elem().FieldByName(b.field)
@@ -68,11 +67,13 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 
 	// post reconciles the persisted children with the submitted list:
 	//   - items flagged __deleted (or missing from the list) are removed;
-	//   - items with a zero primary key are created;
-	//   - the remaining items are updated.
-	// When the list was present but empty every child is removed. When an
-	// AssociationAuditor is available in the context (the parent model is
-	// audited), each create/update/delete is logged.
+	//   - items flagged __new are created;
+	//   - the remaining (existing) items are updated.
+	// Classification is delegated to presets.PartitionListEditorItems, which uses
+	// only the __deleted/__new form flags (never the primary key) so the list
+	// editor works for element types without an ID. When the list was present but
+	// empty every child is removed. When an AssociationAuditor is available in the
+	// context (the parent model is audited), each create/update/delete is logged.
 	post := func(state *CallbackState) (err error) {
 		present, _ := state.Get(assocPresentKey(b.field)).(bool)
 		if !present {
@@ -100,46 +101,36 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			items     = reflect.ValueOf(v)
 			sliceType = items.Type()
 			pkName    = assoc.Relationship.FieldSchema.PrimaryFields[0].Name
-
-			// kept: the desired final child set (new + updated), passed to Replace.
-			kept = reflect.MakeSlice(sliceType, 0, items.Len())
-			// updates: existing children whose fields must be persisted.
-			updates []any
-			// newItems: children to be created (zero pk); logged after Replace
-			// assigns their ids.
-			newItems []any
-			// keptIDs: primary keys of the existing children we keep, used to
-			// detect which persisted rows are being removed.
-			keptIDs = map[any]bool{}
 		)
 
-		for i := 0; i < items.Len(); i++ {
-			item := items.Index(i)
-			if itemFlag(state.Ctx, fieldFormKey, i, presets.ListEditorDeletedField) {
-				// deleted rows post only {ID, __deleted}; drop them from the kept
-				// set so Replace removes them.
-				continue
-			}
-			kept = reflect.Append(kept, item)
-
-			pkVal := reflect.Indirect(item).FieldByName(pkName)
-			if zeroer.IsZero(pkVal) || itemFlag(state.Ctx, fieldFormKey, i, presets.ListEditorNewField) {
-				newItems = append(newItems, item.Interface())
-			} else {
-				keptIDs[normalizeKey(pkVal)] = true
-				updates = append(updates, item.Interface())
-			}
+		// part classifies the submitted items by their __deleted/__new flags, in
+		// __pos order. A nil part means the list editor was not initialized for this
+		// field, so its children are left untouched.
+		part := presets.PartitionListEditorItems(formValues(state.Ctx), fieldFormKey, items)
+		if part == nil {
+			return
 		}
+		kept := part.KeptSlice(sliceType)
 
 		auditor := AssociationAuditorFromContext(state.Ctx.R.Context())
 
 		// oldByID snapshots the persisted children in a single query. It powers
 		// both the update diff and the deletion log, and is only fetched when an
-		// auditor is present (otherwise the reads are pure overhead).
+		// auditor is present (otherwise the reads are pure overhead). The primary
+		// key is only consulted here, for auditing — never for classification.
 		var oldByID map[any]any
 		if auditor != nil {
 			if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkName); err != nil {
 				return
+			}
+			// keptIDs: primary keys of the existing children we keep, used to
+			// detect which persisted rows are being removed.
+			keptIDs := make(map[any]bool, len(part.Kept))
+			for _, item := range part.Kept {
+				pkVal := reflect.Indirect(item).FieldByName(pkName)
+				if !zeroer.IsZero(pkVal) {
+					keptIDs[normalizeKey(pkVal)] = true
+				}
 			}
 			for id, old := range oldByID {
 				if !keptIDs[id] {
@@ -157,12 +148,13 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 				return db.Updates(r).Error
 			}
 		}
-		for _, rec := range updates {
+		for _, item := range part.Others {
+			rec := item.Interface()
 			if err = up(db.Session(&gorm.Session{}).Model(rec), rec); err != nil {
 				return
 			}
 			if auditor != nil {
-				if old, okOld := oldByID[normalizeKey(reflect.Indirect(reflect.ValueOf(rec)).FieldByName(pkName))]; okOld {
+				if old, okOld := oldByID[normalizeKey(reflect.Indirect(item).FieldByName(pkName))]; okOld {
 					if err = auditor.LogUpdated(db, old, rec); err != nil {
 						return
 					}
@@ -177,8 +169,8 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		}
 
 		if auditor != nil {
-			for _, rec := range newItems {
-				if err = auditor.LogCreated(db, rec); err != nil {
+			for _, item := range part.New {
+				if err = auditor.LogCreated(db, item.Interface()); err != nil {
 					return
 				}
 			}
@@ -215,52 +207,10 @@ func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, s
 
 // formValues returns the (reordered) submitted form values. UnmarshalForm
 // reindexes MultipartForm.Value by __pos, so item indexes there line up with the
-// decoded slice order.
+// decoded slice order. It delegates to presets.ListEditorFormValues so the
+// persistence layer reads from the very same source as the list-editor render.
 func formValues(ctx *web.EventContext) url.Values {
-	if ctx != nil && ctx.R != nil {
-		if ctx.R.MultipartForm != nil && ctx.R.MultipartForm.Value != nil {
-			return ctx.R.MultipartForm.Value
-		}
-		if ctx.R.Form != nil {
-			return ctx.R.Form
-		}
-	}
-	return nil
-}
-
-// sliceSubmittedInForm reports whether the list field was part of the submitted
-// form, even when it is empty. It honours the explicit presence marker and also
-// falls back to detecting any item key, so it works with older forms.
-func sliceSubmittedInForm(ctx *web.EventContext, fieldFormKey string) bool {
-	values := formValues(ctx)
-	if values == nil {
-		return false
-	}
-	if _, ok := values[fieldFormKey+"."+presets.ListEditorPresentField]; ok {
-		return true
-	}
-	prefix := fieldFormKey + "["
-	for k := range values {
-		if len(k) > len(prefix) && k[:len(prefix)] == prefix {
-			return true
-		}
-	}
-	return false
-}
-
-// itemFlag reports whether the boolean metadata field (e.g. __deleted, __new) is
-// truthy for item i of the list.
-func itemFlag(ctx *web.EventContext, fieldFormKey string, i int, field string) bool {
-	values := formValues(ctx)
-	if values == nil {
-		return false
-	}
-	key := fieldFormKey + "[" + strconv.Itoa(i) + "]." + field
-	switch values.Get(key) {
-	case "true", "1", "on":
-		return true
-	}
-	return false
+	return presets.ListEditorFormValues(ctx)
 }
 
 // normalizeKey makes primary key values comparable as map keys regardless of

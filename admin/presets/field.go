@@ -529,6 +529,12 @@ func (b *FieldBuilder) Required(v bool) *FieldBuilder {
 	return b
 }
 
+// SetRequired is a Set*-named alias of Required, marking the field as required
+// (its Validate reports ErrFieldRequired when the value is empty).
+func (b *FieldBuilder) SetRequired(v bool) *FieldBuilder {
+	return b.Required(v)
+}
+
 func (b *FieldBuilder) IsRequired() bool {
 	return b.required
 }

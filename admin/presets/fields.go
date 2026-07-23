@@ -924,6 +924,12 @@ func (b *FieldsBuilder) CurrentLayout() (layout FieldsLayout) {
 type ToComponentOptions struct {
 	FieldVerifier  *perm.Verifier
 	SkipPermVerify bool
+	// ItemFormKeyIndex, when set, maps a slice position to the bracket index used
+	// in the item's form key (e.g. the list editor's stable __index), decoupling
+	// the persisted form key from the volatile slice position. It applies to the
+	// immediate ToComponentForEach level only (not propagated to nested lists).
+	// Defaults to identity when nil.
+	ItemFormKeyIndex func(slicePos int) int
 }
 
 func (b *FieldsBuilder) ToComponent(opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
@@ -1177,10 +1183,21 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 	return f.ToComponent(fctx)
 }
 
-type RowFunc func(obj interface{}, path FieldPath, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent
+// RowFunc receives the item body as a lazy builder (content) instead of an
+// already-rendered component: some callers (e.g. the list editor table
+// renderer) re-render each field into their own cells and never use the body,
+// and building it eagerly would consume the item's field validation errors
+// (GetRemoveFieldErrors) before those callers can read them.
+// RowFunc receives, besides the item body (see below), the item's slice
+// position (slicePos) and its form key. When ItemFormKeyIndex remaps the form
+// key, slicePos still refers to the real decoded-slice index — read this item's
+// submitted per-item flags at slicePos (they are aligned with the decoded slice,
+// e.g. after ReorderSlicesByPos), while formKey carries the (possibly stable)
+// bracket index used for output.
+type RowFunc func(obj interface{}, path FieldPath, formKey string, slicePos int, content func() h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent
 
-func defaultRowFunc(obj interface{}, path FieldPath, formKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
-	return content
+func defaultRowFunc(obj interface{}, path FieldPath, formKey string, slicePos int, content func() h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+	return content()
 }
 
 func (b *FieldsBuilder) ToComponentForEach(opts *ToComponentOptions, field *FieldContext, slice interface{}, mode FieldModeStack, ctx *web.EventContext, rowFunc RowFunc) h.HTMLComponents {
@@ -1203,16 +1220,37 @@ func (b *FieldsBuilder) ToComponentForEach(opts *ToComponentOptions, field *Fiel
 		rowFunc = defaultRowFunc
 	}
 
+	// the form-key indexer (if any) applies to this level only; build a child
+	// opts with it cleared so nested lists key by their own slice position.
+	itemOpts := opts
+	if opts != nil && opts.ItemFormKeyIndex != nil {
+		o := *opts
+		o.ItemFormKeyIndex = nil
+		itemOpts = &o
+	}
+
 	modifiedIndexes.SortedForEach(slice, field.FormKey, func(obj interface{}, i int) {
 		if modifiedIndexes.DeletedContains(field.FormKey, i) {
 			return
 		}
 
+		// keyIdx is the bracket index used in the emitted form key. It defaults to
+		// the slice position i, but ItemFormKeyIndex may map it to a stable id (the
+		// list editor's __index) so the form key survives reordering.
+		keyIdx := i
+		if opts != nil && opts.ItemFormKeyIndex != nil {
+			keyIdx = opts.ItemFormKeyIndex(i)
+		}
+
 		parent := *field
-		parent.FormKey = fmt.Sprintf("%s[%d]", parent.FormKey, i)
+		parent.FormKey = fmt.Sprintf("%s[%d]", parent.FormKey, keyIdx)
 		parent.Path.AppendIndex(i)
-		comps := b.toComponentWithFormValueKey(opts, info.ItemOf(slice, i), obj, mode, &parent, modifiedIndexes, ctx)
-		r = append(r, rowFunc(obj, parent.Path, parent.FormKey, comps, ctx))
+		// build the item body lazily so builders that never render it don't
+		// consume this item's field validation errors (see RowFunc doc).
+		body := func() h.HTMLComponent {
+			return b.toComponentWithFormValueKey(itemOpts, info.ItemOf(slice, i), obj, mode, &parent, modifiedIndexes, ctx)
+		}
+		r = append(r, rowFunc(obj, parent.Path, parent.FormKey, i, body, ctx))
 	})
 
 	return h.Components(r...)

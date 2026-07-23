@@ -56,12 +56,19 @@ const (
 //   - ListEditorPurgedField:   client-only "true" for a deleted item the user
 //     dismissed for good — the removed placeholder is hidden and can no longer be
 //     reverted. The item stays __deleted, so the server still deletes it.
+//   - ListEditorIndexField:    a stable per-item id, seeded once at init (= the
+//     item's position) and preserved across re-renders. It is used as the item's
+//     form-key bracket (`<slice>[__index].field`) instead of the volatile slice
+//     position, so a row keeps the same form key when the list is sorted, and a
+//     removed row does not leak its metadata onto whatever later reuses its slot.
+//     New rows get a fresh __index.
 const (
 	ListEditorPositionField = web.PosFieldSuffix
 	ListEditorNewField      = "__new"
 	ListEditorDeletedField  = "__deleted"
 	ListEditorPresentField  = "__present"
 	ListEditorPurgedField   = "__purged"
+	ListEditorIndexField    = "__index"
 )
 
 const (
@@ -356,6 +363,16 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 		// itemFormKeys is the ordered list of each rendered item's form key,
 		// used by Setup to seed per-item metadata (__pos, __deleted default).
 		itemFormKeys []string
+		// deletedItemFormKeys holds the form keys of the items the server
+		// currently considers deleted (from the submitted form). Setup re-seeds
+		// their __deleted flag after clearing stale ones, so a stale __deleted no
+		// longer leaks onto a reused index across re-renders.
+		deletedItemFormKeys []string
+		// newItemFormKeys holds the form keys of the items flagged __new (browser
+		// created). Setup re-seeds their __new flag the same way, so the "is a
+		// creation" intent survives every re-render and is posted on save — the
+		// persistence layer classifies by __new, never by primary key.
+		newItemFormKeys []string
 
 		msgr       = MustGetMessages(ctx.Context())
 		formKey    = b.fieldContext.FormKey
@@ -363,10 +380,29 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 	)
 
 	if b.value != nil {
+		// read per-item metadata from the reindexed multipart values, so slice
+		// positions align with the decoded (possibly __pos-reordered) slice.
+		vals := ListEditorFormValues(ctx)
 		var (
-			i     int
+			i int
+			// stableIndexOf maps a slice position to the item's stable __index (the
+			// bracket used in its form key). It reads the submitted __index at the
+			// slice position and falls back to the slice position itself on the
+			// first render / for freshly added rows, which the Setup then persists.
+			opts = &ToComponentOptions{
+				ItemFormKeyIndex: func(slicePos int) int {
+					if vals != nil {
+						if v := vals.Get(fmt.Sprintf("%s[%d].%s", formKey, slicePos, ListEditorIndexField)); v != "" {
+							if n, err := strconv.Atoi(v); err == nil {
+								return n
+							}
+						}
+					}
+					return slicePos
+				},
+			}
 			items = b.fieldContext.Nested.FieldsBuilder().
-				ToComponentForEach(&ToComponentOptions{}, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, itemFormKey string, content h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
+				ToComponentForEach(opts, b.fieldContext, b.value, b.fieldContext.Mode, ctx, func(obj interface{}, path FieldPath, itemFormKey string, slicePos int, content func() h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
 					if zeroer.IsNil(obj) {
 						return nil
 					}
@@ -378,6 +414,31 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 					itemsState = append(itemsState, map[string]any{"index": idx, "label": label})
 					itemFormKeys = append(itemFormKeys, itemFormKey)
 
+					// Read each per-item flag at the slice position (aligned with the
+					// decoded, reindexed slice), but collect the item's *form key*
+					// (which uses the stable __index) for the Setup below to re-seed.
+
+					// Honor the item's submitted __deleted unconditionally, so any
+					// in-session re-render (add / remove / sort, or a re-render after a
+					// failed save) keeps a removed item removed — new items included.
+					// This does not leak a stale flag onto a reopened form: reopening
+					// fetches from the DB and posts a fresh form (no __deleted), and
+					// the Setup below clears any client-cached __deleted/__purged and
+					// re-seeds only the items actually rendered as deleted.
+					deleted := ListEditorItemFlag(vals, formKey, slicePos, ListEditorDeletedField)
+					if deleted {
+						deletedItemFormKeys = append(deletedItemFormKeys, itemFormKey)
+					}
+
+					// A browser-created row carries __new (set by the add event and
+					// preserved across re-renders by the Setup below). It is read from
+					// the form, never inferred from a zero primary key, so the list
+					// editor is usable with element types that have no ID.
+					isNew := ListEditorItemFlag(vals, formKey, slicePos, ListEditorNewField)
+					if isNew {
+						newItemFormKeys = append(newItemFormKeys, itemFormKey)
+					}
+
 					itemCtx := &ListEditorItemContext{
 						FieldContext:        b.fieldContext,
 						ItemVar:             "",
@@ -388,11 +449,9 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 						ItemFormKey:         itemFormKey,
 						ItemPositionFormKey: itemFormKey + "." + ListEditorPositionField,
 						Label:               label,
-						Deleted:             false,
-						New:                 false,
-						Body: func() h.HTMLComponent {
-							return content
-						},
+						Deleted:             deleted,
+						New:                 isNew,
+						Body:                content,
 					}
 
 					// render both views; each builder toggles its own visibility via
@@ -467,16 +526,41 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 			// absent (leave children untouched).
 			form[formKey + "." + %q] = "1"
 			// seed each item's position on the reactive form so submit order is
-			// preserved (the server reorders the decoded slice by __pos). The real
-			// field values and the __deleted flag are bound directly by the item
-			// components; nothing here overwrites them.
+			// preserved (the server reorders the decoded slice by __pos).
 			const keys = %s
 			keys && keys.forEach((k, i) => { form[k + %q] = i })
+			// seed each item's stable __index (the numeric bracket of its form key)
+			// so it is posted and the next render can recover the stable key after
+			// the decoded slice is reindexed by __pos.
+			keys && keys.forEach((k) => { const m = k.match(/\[(\d+)\]$/); if (m) form[k + %q] = Number(m[1]) })
+			// reset the stale client-side metadata flags of this field, then
+			// re-establish the deleted/new state from the server-rendered items. The
+			// reactive form persists across re-renders (add/remove/sort keep the
+			// dialog form), so without this a stale __deleted/__purged/__new would
+			// leak onto a reused item index (a fresh item showing up as removed).
+			const itemPrefix = formKey + "[";
+			Object.keys(form).forEach((k) => {
+				if (k.startsWith(itemPrefix) && (k.endsWith(%q) || k.endsWith(%q) || k.endsWith(%q))) {
+					delete form[k];
+				}
+			});
+			const deletedKeys = %s
+			deletedKeys && deletedKeys.forEach((k) => { form[k + %q] = true })
+			const newKeys = %s
+			newKeys && newKeys.forEach((k) => { form[k + %q] = true })
 		`,
 		formKey,
 		ListEditorPresentField,
 		h.JSONString(itemFormKeys),
 		"."+ListEditorPositionField,
+		"."+ListEditorIndexField,
+		"."+ListEditorDeletedField,
+		"."+ListEditorPurgedField,
+		"."+ListEditorNewField,
+		h.JSONString(deletedItemFormKeys),
+		"."+ListEditorDeletedField,
+		h.JSONString(newItemFormKeys),
+		"."+ListEditorNewField,
 	)
 
 	if len(b.addItemEvent) > 0 {
@@ -590,6 +674,20 @@ func jsonOrEmptyArray(v []map[string]any) string {
 	return h.JSONString(v)
 }
 
+// listSliceLen returns the length of the slice field at formKey on obj, or 0
+// when it is absent or not a slice.
+func listSliceLen(obj any, formKey string) int {
+	v := reflectutils.MustGet(obj, formKey)
+	if v == nil {
+		return 0
+	}
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Slice {
+		return 0
+	}
+	return rv.Len()
+}
+
 func addListItemRow(mb *ModelBuilder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		var mid ID
@@ -604,6 +702,11 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
 		formKey := ctx.R.FormValue(ParamAddRowFormKey)
 		t := reflectutils.GetType(obj, formKey+"[0]")
+
+		// items appended below land at indexes [startLen, newLen); they are flagged
+		// __new so the persistence layer treats them as creations without inspecting
+		// the primary key (which may be absent or pre-assigned).
+		startLen := listSliceLen(obj, formKey)
 
 		if jsonItems := ctx.R.FormValue(ListEditorAddRowParamJsonItems); len(jsonItems) > 0 {
 			// jsonItems is a JSON array of serialized items; decode them into the
@@ -626,6 +729,13 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
 				return
 			}
+		}
+
+		// flag the freshly appended rows as new on the reactive form so the render
+		// (and every later submit) carries __new for them. The rendered item form
+		// key uses the slice index, which matches these indexes here.
+		for i := startLen; i < listSliceLen(obj, formKey); i++ {
+			ctx.R.Form.Set(fmt.Sprintf("%s[%d].%s", formKey, i, ListEditorNewField), "true")
 		}
 
 		// prevent to create new form scope

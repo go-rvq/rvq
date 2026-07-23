@@ -101,12 +101,14 @@ func TestSaveHasManyAssociation_UpdateCreateDelete(t *testing.T) {
 	}
 	c1, c2 := parent.Children[0].ID, parent.Children[1].ID
 
-	// submitted: c1 -> "a2" (edit), c2 deleted (posts only ID+__deleted), one new "c".
+	// submitted: c1 -> "a2" (edit), c2 deleted (posts only ID+__deleted), one new
+	// "c" flagged __new (creation is classified by __new, not by a zero PK).
 	vals := url.Values{
 		"Children.__present":    {"1"},
 		"Children[0].ID":        {itoa(c1)},
 		"Children[1].ID":        {itoa(c2)},
 		"Children[1].__deleted": {"true"},
+		"Children[2].__new":     {"true"},
 	}
 	obj := &assocParent{ID: parent.ID, Title: "p", Children: []*assocChild{
 		{ID: c1, Name: "a2"},
