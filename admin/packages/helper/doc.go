@@ -1,8 +1,8 @@
 // Package helper provides higher-level building blocks on top of the presets
 // admin (github.com/go-rvq/rvq/admin/presets) for editing associations from a
 // parent form: nested has-many / many-to-many editors, foreign-key selectors and
-// inline child editing. It is used by HERMON-CMS and IPCD to wire related models
-// into a parent's edit form with a minimum of boilerplate.
+// inline child editing. It wires related models into a parent's edit form with a
+// minimum of boilerplate.
 //
 // # Files
 //

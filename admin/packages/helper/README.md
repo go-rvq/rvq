@@ -2,7 +2,7 @@
 
 Higher-level building blocks on top of the presets admin
 (`github.com/go-rvq/rvq/admin/presets`) for editing **associations** from a
-parent form. Used by HERMON-CMS and IPCD.
+parent form.
 
 ## What's here
 

@@ -73,9 +73,8 @@ Always run the full pipeline (Format + Test) automatically after any file edit, 
 
 ## Verification & Build
 * **Global Build Check**: `go build ./...`
-* When changing `admin/packages/helper` or `admin/presets/gorm2op`, also build the
-  downstream apps that consume them: HERMON-CMS (`go-rvq/hermon-cms`) and IPCD
-  (`ipc-vicosa/ipcd`).
+* When changing `admin/packages/helper` or `admin/presets/gorm2op`, also build any
+  downstream applications that consume them.
 
 ## Admin associations & list editor
 - **Never assume an integer `id` or a single-column key.** Record keys can be any
