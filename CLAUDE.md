@@ -73,3 +73,31 @@ Always run the full pipeline (Format + Test) automatically after any file edit, 
 
 ## Verification & Build
 * **Global Build Check**: `go build ./...`
+* When changing `admin/packages/helper` or `admin/presets/gorm2op`, also build the
+  downstream apps that consume them: HERMON-CMS (`go-rvq/hermon-cms`) and IPCD
+  (`ipc-vicosa/ipcd`).
+
+## Admin associations & list editor
+- **Never assume an integer `id` or a single-column key.** Record keys can be any
+  type (int, UUID, string) and **composite** (two or more columns). Read keys from
+  the schema/relationship, not from hardcoded `id`/`<Field>ID`.
+  - Use `model.ID` (composite-capable: `Values`/`Fields`, `SetTo`, `Related`,
+    `String`) and `presets.ParseRecordID` (composite string parts joined by `_`).
+  - For gorm associations, drive link/unlink through the **Association API**
+    (`db.Model(parent).Association(field).Append/Delete`) and build filters from
+    the relationship `References` — never with `id::BIGINT`-style raw SQL.
+- **List editor per-item metadata** (flat reactive-form keys, see
+  `admin/presets/listeditor.go`): `__present` (field submitted), `__index` (stable
+  per-item form-key bracket, not the slice index), `__pos` (order), `__new`
+  (browser-created), `__deleted`/`__purged` (client-side removal). Classify items
+  by flags, never by primary key; a removed `__new` row vanishes.
+  - `presets.PartitionListEditorItems(values, fieldFormKey, items)` groups the
+    submitted slice (Deleted/New/Others/Kept, `__pos` order) or returns `nil` when
+    not initialized. `gorm2op.SaveHasManyAssociation` uses it and supports
+    composite PKs.
+- Reference docs: `admin/packages/helper/{doc.go,README.md,docs/keys.md}`.
+
+## Tasks
+- **New tasks:** `todo.md`
+- **Done tasks:** `todo-done.md`
+- **When a task is DONE**, move it to `todo-done.md`.

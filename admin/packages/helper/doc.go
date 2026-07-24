@@ -28,23 +28,19 @@
 //
 // # Primary-key types and composite keys
 //
-// The many-to-many machinery in nestedslice.go no longer assumes an integer `id`
-// column: the related record's primary-key column is read from the schema and
-// used as its own type, so integer, UUID and other single-column key types all
-// work (see m2mInsertQuery / relatedPKColumn and TestM2MLinkQuery_NonIntegerKey).
+// These helpers do not assume an integer `id`: primary/foreign key columns are
+// read from the schema and used as their own type, so integer, UUID and other
+// key types all work — and COMPOSITE keys (two or more columns) are supported:
 //
-// COMPOSITE primary keys are NOT yet supported by these helpers:
+//   - NestedSlice reads related rows through a filter built from the relationship
+//     references, and links/unlinks them through gorm's Association API, which
+//     handles any key type and composite keys (see hasManyParentFilter /
+//     m2mParentFilter / associationAppend / associationDeleter, and
+//     TestM2MParentFilter_CompositeRelatedKey).
+//   - ModelSelectorBuilder resolves every foreign-key column of the belongs-to
+//     relationship (foreignKeyFieldsOf) and writes them all when a record is
+//     selected, so a composite foreign key is persisted in full (see
+//     TestForeignKeyFieldsOf_Composite).
 //
-//   - NestedSlice rejects a related model with more than one primary field
-//     (panics with a descriptive message); the join link/unlink/filter is built
-//     for a single related key column.
-//   - ModelSelectorBuilder binds a single `<Field>ID` foreign key and selects by a
-//     single "ID" value, so it cannot represent a composite foreign key.
-//
-// Supporting composite keys here is a larger change (the raw join SQL and the
-// single-`<Field>ID` selector would have to be generalized to every primary /
-// foreign field). Note that the presets list editor itself
-// (presets.NestedSlice + gorm2op.SaveHasManyAssociation) already handles
-// composite primary keys for has-many reconciliation — these helper builders are
-// a separate, selector-oriented layer.
+// See README.md and docs/ in this package for a fuller guide.
 package helper

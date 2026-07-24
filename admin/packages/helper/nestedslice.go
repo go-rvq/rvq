@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
@@ -145,41 +146,33 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 	var (
 		db       = b.baseModel.Builder().GetDataOperator().(*gorm2op.DataOperatorBuilder).DB().Session(&gorm.Session{})
 		relation = db.Model(b.baseModel.Model()).Association(b.fieldName).Relationship
-		// baseTable    = relation.Schema.Table
-		relatedTable             = relation.FieldSchema.Table
-		filterQuery, insertQuery string
-		deleteQuery, linkQuery   string
 
 		info       = &NestedSliceBuilderInfo{}
 		itemsModel *presets.ModelBuilder
+
+		// filterQuery selects the related rows that belong to a parent; ownerFilter
+		// holds the owner primary-key field names in placeholder order, so the args
+		// are extracted from the parent id (supporting composite keys, any type).
+		filterQuery string
+		ownerFilter []string
 	)
 
 	switch relation.Type {
+	case schema.HasMany:
+		filterQuery, ownerFilter = hasManyParentFilter(relation)
 	case schema.Many2Many:
-		joinTable := relation.JoinTable
-		// The related record's primary key column is taken from the schema, never
-		// assumed to be "id" nor cast to a fixed SQL type — so the key may be an
-		// integer, a UUID or any other type. (Composite related keys are rejected
-		// by the guard below; the join here uses the single related key column.)
-		relatedPKCol := relatedPKColumn(relation)
-		filterQuery = fmt.Sprintf("EXISTS (SELECT 1 FROM %s rel WHERE rel.%s = ? AND rel.%s = %s.%s)",
-			joinTable.Name, joinTable.DBNames[0], joinTable.DBNames[1], relatedTable, relatedPKCol)
-		insertQuery = fmt.Sprintf("INSERT INTO %s (%s, %s) VALUES (?, ?)",
-			joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1])
-		deleteQuery = fmt.Sprintf("DELETE FROM %s WHERE %s = ? AND %s = ?",
-			joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1])
-		linkQuery = fmt.Sprintf(m2mInsertQuery, relatedTable, joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1], relatedPKCol)
-		info.JoinTable = joinTable
-		info.DeleteQuery = deleteQuery
-		info.LinkInsertQuery = linkQuery
+		filterQuery, ownerFilter = m2mParentFilter(relation)
+		info.JoinTable = relation.JoinTable
+		// Legacy: expose a single-key link query for callers that read it. The
+		// actual link/unlink below goes through gorm's Association API, which
+		// handles any key type and composite keys.
+		if jt := relation.JoinTable; len(jt.DBNames) == 2 && len(relation.FieldSchema.PrimaryFields) == 1 {
+			info.LinkInsertQuery = fmt.Sprintf(m2mInsertQuery, relation.FieldSchema.Table, jt.Table,
+				jt.DBNames[0], jt.DBNames[1], relation.FieldSchema.PrimaryFields[0].DBName)
+		}
 	}
 
 	b.baseModel.TakeFieldAsChild(b.fieldName, func(FieldModel *presets.ModelBuilder) {
-		if len(FieldModel.Schema().PrimaryFields()) > 1 {
-			panic(fmt.Sprintf("helper.NestedSlice(%q): composite primary keys are not supported for the related model (%T); the key may be any single-column type (int, UUID, ...) but not composite",
-				b.fieldName, FieldModel.Model()))
-		}
-
 		b.fieldModel = FieldModel
 
 		switch relation.Type {
@@ -189,8 +182,8 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 					WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
 						return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 							if !mode.Is(gorm2op.Fetch, gorm2op.FetchTitle) {
-								parentID := presets.ParentsModelID(ctx.R).Last().Value()
-								params.Where(relation.References[0].ForeignKey.DBName+" = ?", parentID)
+								parentID := presets.ParentsModelID(ctx.R).Last()
+								params.Where(filterQuery, parentFilterArgs(parentID, ownerFilter)...)
 							}
 							return old(db, mode, obj, id, params, ctx)
 						}
@@ -202,26 +195,26 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 					WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
 						return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 							if !mode.Is(gorm2op.Fetch, gorm2op.FetchTitle) {
-								parentID := presets.ParentsModelID(ctx.R).Last().Value()
-								params.Where(filterQuery, parentID)
+								parentID := presets.ParentsModelID(ctx.R).Last()
+								params.Where(filterQuery, parentFilterArgs(parentID, ownerFilter)...)
 							}
 							return old(db, mode, obj, id, params, ctx)
 						}
 					}).
+					// Create the related record and link it to the parent through the
+					// join table via gorm's Association API (any key type / composite).
 					SetCreator(func(db *gorm.DB, obj interface{}, ctx *web.EventContext) (err error) {
 						return db.Transaction(func(db *gorm.DB) (err error) {
 							if err = db.Create(obj).Error; err != nil {
 								return
 							}
-							parentID := presets.ParentsModelID(ctx.R).Last().Value()
-							itemID := FieldModel.MustRecordID(obj).Value()
-							return db.Exec(insertQuery, parentID, itemID).Error
+							return b.associationAppend(db, ctx, obj)
 						})
 					})
 			})
 
 			FieldModel.UpdateDataOperator(func(dataOperator presets.DataOperator) presets.DataOperator {
-				return dataOperator.(*gorm2op.DataOperatorBuilder).SetDeleter(info.Deleter())
+				return dataOperator.(*gorm2op.DataOperatorBuilder).SetDeleter(b.associationDeleter())
 			})
 
 			targetModel := b.linkModel
@@ -331,26 +324,29 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 
 			save := func(obj interface{}, ctx *web.EventContext) (err error) {
 				p := obj.(*NestedSliceItems)
-				var ids = make(map[string]any)
+				var (
+					seen    = make(map[string]bool)
+					records []any
+				)
 				for _, item := range p.Items {
-					if item != "" {
-						ids[item] = nil
+					if item == "" || seen[item] {
+						continue
 					}
+					seen[item] = true
+					// build a bare related record carrying only its (possibly
+					// composite, any-type) primary key, from the selected id string.
+					rec := FieldModel.NewModel()
+					FieldModel.MustParseRecordID(item).SetTo(rec)
+					records = append(records, rec)
 				}
 
-				if len(ids) == 0 {
+				if len(records) == 0 {
 					return
 				}
 
-				var idSlice []any
-
-				for key := range ids {
-					idSlice = append(idSlice, FieldModel.MustParseRecordID(key).Value())
-				}
-
-				parentID := presets.ParentsModelID(ctx.R).Last().Value()
-				err = db.Session(&gorm.Session{}).Exec(info.LinkInsertQuery, parentID, idSlice).Error
-				return
+				// link the selected related records to the parent through the join
+				// table via gorm's Association API (any key type / composite key).
+				return b.associationAppend(db.Session(&gorm.Session{}), ctx, records...)
 			}
 
 			editing.WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
@@ -500,12 +496,73 @@ data as (
 insert into %[2]s (%[3]s, %[4]s) select p_id, f_id from data_ok;
 `
 
-// relatedPKColumn returns the DB column of the related model's primary key for a
-// many-to-many relation, from the schema (never assumed to be "id"). It uses the
-// first primary field; composite related keys are rejected by the builder.
-func relatedPKColumn(rel *schema.Relationship) string {
-	if len(rel.FieldSchema.PrimaryFields) > 0 {
-		return rel.FieldSchema.PrimaryFields[0].DBName
+// parentFilterArgs extracts the owner primary-key values (in fieldNames order)
+// from the parent id, to bind the placeholders of a parent filter. Supports
+// single and composite keys.
+func parentFilterArgs(id model.ID, fieldNames []string) []any {
+	args := make([]any, len(fieldNames))
+	for i, name := range fieldNames {
+		args[i] = id.GetValue(name)
 	}
-	return "id"
+	return args
+}
+
+// hasManyParentFilter builds the WHERE matching a has-many child by its parent
+// ("<fk> = ? [AND ...]") and the owner primary-key field names in placeholder
+// order. Every reference participates, so composite foreign keys (two or more
+// fields) work.
+func hasManyParentFilter(rel *schema.Relationship) (sql string, ownerFields []string) {
+	conds := make([]string, 0, len(rel.References))
+	for _, ref := range rel.References {
+		conds = append(conds, ref.ForeignKey.DBName+" = ?")
+		ownerFields = append(ownerFields, ref.PrimaryKey.Name)
+	}
+	return strings.Join(conds, " AND "), ownerFields
+}
+
+// m2mParentFilter builds an EXISTS(...) correlated subquery matching the related
+// rows linked to a parent through the join table, and the owner primary-key field
+// names in placeholder order. Owner-side join columns are bound to the parent id;
+// related-side columns are correlated to the related table. Handles single and
+// composite keys of any type (any number of key fields).
+func m2mParentFilter(rel *schema.Relationship) (sql string, ownerFields []string) {
+	conds := make([]string, 0, len(rel.References))
+	for _, ref := range rel.References {
+		if ref.OwnPrimaryKey {
+			conds = append(conds, fmt.Sprintf("j.%s = ?", ref.ForeignKey.DBName))
+			ownerFields = append(ownerFields, ref.PrimaryKey.Name)
+		} else {
+			conds = append(conds, fmt.Sprintf("j.%s = %s.%s", ref.ForeignKey.DBName, rel.FieldSchema.Table, ref.PrimaryKey.DBName))
+		}
+	}
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s j WHERE %s)", rel.JoinTable.Table, strings.Join(conds, " AND ")), ownerFields
+}
+
+// newParent builds a bare parent record carrying only the current parent's
+// (possibly composite) primary key, for gorm Association operations.
+func (b *NestedSliceBuilder) newParent(ctx *web.EventContext) any {
+	parent := b.baseModel.NewModel()
+	presets.ParentsModelID(ctx.R).Last().SetTo(parent)
+	return parent
+}
+
+// associationAppend links related records to the parent through the association
+// (join table) using gorm's Association API, so any key type, composite keys and
+// duplicate links are handled by gorm.
+func (b *NestedSliceBuilder) associationAppend(db *gorm.DB, ctx *web.EventContext, records ...any) error {
+	if len(records) == 0 {
+		return nil
+	}
+	return db.Model(b.newParent(ctx)).Association(b.fieldName).Append(records...)
+}
+
+// associationDeleter returns a data-operator deleter that unlinks the related
+// record from the parent (removes the join rows), leaving the related record
+// itself. It targets the record by its (possibly composite) primary key.
+func (b *NestedSliceBuilder) associationDeleter() func(old func() error, db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) error {
+	return func(old func() error, db *gorm.DB, obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) error {
+		rec := b.fieldModel.NewModel()
+		id.SetTo(rec)
+		return db.Model(b.newParent(ctx)).Association(b.fieldName).Delete(rec)
+	}
 }

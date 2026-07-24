@@ -28,7 +28,7 @@ type LinkPost struct {
 func buildLinkQuery(db *gorm.DB) (query, relatedPKCol string, ownerCol, relatedCol string) {
 	rel := db.Model(&LinkPost{}).Association("Tags").Relationship
 	jt := rel.JoinTable
-	relatedPKCol = relatedPKColumn(rel)
+	relatedPKCol = rel.FieldSchema.PrimaryFields[0].DBName
 	query = fmt.Sprintf(m2mInsertQuery, rel.FieldSchema.Table, jt.Table, jt.DBNames[0], jt.DBNames[1], relatedPKCol)
 	return query, relatedPKCol, jt.DBNames[0], jt.DBNames[1]
 }
@@ -80,5 +80,96 @@ func TestM2MLinkQuery_NonIntegerKey(t *testing.T) {
 	sort.Strings(codes)
 	if fmt.Sprint(codes) != fmt.Sprint([]string{"a", "b", "c"}) {
 		t.Fatalf("linked codes = %v, want [a b c] (deduplicated)", codes)
+	}
+}
+
+// CKItem is a many-to-many related model with a COMPOSITE primary key
+// (OrgID, Code), of mixed types — proving the join filter and link/unlink work
+// with more than one related key field.
+type CKItem struct {
+	OrgID uint   `gorm:"primaryKey"`
+	Code  string `gorm:"primaryKey"`
+	Name  string
+}
+
+type CKParent struct {
+	ID    uint
+	Items []*CKItem `gorm:"many2many:ck_parent_items;"`
+}
+
+func TestM2MParentFilter_CompositeRelatedKey(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&CKParent{}, &CKItem{}); err != nil {
+		t.Fatal(err)
+	}
+
+	rel := db.Model(&CKParent{}).Association("Items").Relationship
+
+	// the filter builder must produce one owner placeholder (parent id) and
+	// correlate BOTH related key columns (org_id, code) — no fixed SQL cast.
+	filterSQL, ownerFields := m2mParentFilter(rel)
+	if len(ownerFields) != 1 || ownerFields[0] != "ID" {
+		t.Fatalf("owner filter fields = %v, want [ID]", ownerFields)
+	}
+	if strings.Contains(strings.ToUpper(filterSQL), "BIGINT") {
+		t.Fatalf("filter must not cast to BIGINT:\n%s", filterSQL)
+	}
+	for _, col := range []string{"org_id", "code"} {
+		if !strings.Contains(filterSQL, "ck_item_"+col) && !strings.Contains(filterSQL, col) {
+			t.Fatalf("filter must correlate related key column %q:\n%s", col, filterSQL)
+		}
+	}
+
+	// seed items + parent, link two of three via the Association API (exactly what
+	// associationAppend does)
+	items := []*CKItem{
+		{OrgID: 1, Code: "a", Name: "A"},
+		{OrgID: 1, Code: "b", Name: "B"},
+		{OrgID: 2, Code: "a", Name: "A2"},
+	}
+	if err = db.Create(&items).Error; err != nil {
+		t.Fatal(err)
+	}
+	parent := &CKParent{ID: 1}
+	if err = db.Create(parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Model(parent).Association("Items").Append([]*CKItem{items[0], items[2]}); err != nil {
+		t.Fatalf("append: %v", err)
+	}
+
+	linkedNames := func() []string {
+		var got []CKItem
+		if err := db.Table(rel.FieldSchema.Table).
+			Where(filterSQL, 1).Order("name").Find(&got).Error; err != nil {
+			t.Fatal(err)
+		}
+		names := make([]string, len(got))
+		for i, g := range got {
+			names[i] = g.Name
+		}
+		return names
+	}
+
+	if got := linkedNames(); fmt.Sprint(got) != fmt.Sprint([]string{"A", "A2"}) {
+		t.Fatalf("linked = %v, want [A A2]", got)
+	}
+
+	// unlink (1,a) via the Association API (exactly what associationDeleter does)
+	if err = db.Model(parent).Association("Items").Delete(&CKItem{OrgID: 1, Code: "a"}); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if got := linkedNames(); fmt.Sprint(got) != fmt.Sprint([]string{"A2"}) {
+		t.Fatalf("after unlink linked = %v, want [A2]", got)
+	}
+
+	// the related rows themselves are untouched (only the link was removed)
+	var count int64
+	db.Model(&CKItem{}).Count(&count)
+	if count != 3 {
+		t.Fatalf("expected 3 items to remain, got %d", count)
 	}
 }

@@ -218,6 +218,12 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		formKeySufix = "ID"
 	}
 
+	// foreignKeyFields holds every foreign-key column that stores the selected
+	// record's key, in related-primary-key order — so a COMPOSITE foreign key
+	// (two or more columns) is written in full, not just a single "<Field>ID".
+	// It falls back to the "<Field>ID" convention for a single key.
+	foreignKeyFields := b.foreignKeyFields(formKeySufix)
+
 	configuror, _ := b.foreignModel.GetData(ModelSelectorConfigurorKey).(ModelSelectorConfiguror)
 
 	searcher := web.GET().
@@ -274,9 +280,11 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 				if v[0] == "" {
 					f := reflect.ValueOf(obj).Elem().FieldByName(field.Name)
 					f.Set(reflect.Zero(f.Type()))
-					if formKeySufix != "" {
-						f := reflect.ValueOf(obj).Elem().FieldByName(field.Name + formKeySufix)
-						f.Set(reflect.Zero(f.Type()))
+					// clear every foreign-key column (composite keys included)
+					for _, fk := range foreignKeyFields {
+						if ff := reflect.ValueOf(obj).Elem().FieldByName(fk); ff.IsValid() {
+							ff.Set(reflect.Zero(ff.Type()))
+						}
 					}
 				} else {
 					if id, err = b.foreignModel.ParseRecordID(v[0]); err != nil {
@@ -284,7 +292,9 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 					}
 					if !id.IsZero() {
 						s, _ := b.foreignModel.CurrentDataOperator().Schema(obj)
-						id.Related(s, b.Field+formKeySufix).SetTo(obj)
+						// map the selected record's (possibly composite) key onto the
+						// owner's foreign-key columns, in related-primary-key order.
+						id.Related(s, foreignKeyFields...).SetTo(obj)
 					}
 				}
 			}
@@ -550,6 +560,45 @@ func (b *ModelSelectorBuilder) ReadonlyComponentOfRecord(record any, text []stri
 		return comp
 	}
 	return each(record, text[0])
+}
+
+// foreignKeyFields returns the owner's foreign-key field names for the belongs-to
+// Field, in related-primary-key order, resolved from the gorm relationship — so a
+// composite foreign key (two or more columns) is fully represented. It falls back
+// to the single "<Field><suffix>" convention when the relationship cannot be
+// resolved (e.g. a non-gorm data operator) or exposes a single key.
+func (b *ModelSelectorBuilder) foreignKeyFields(suffix string) []string {
+	if do, ok := b.Model.Builder().GetDataOperator().(*gorm2op.DataOperatorBuilder); ok {
+		if fks := foreignKeyFieldsOf(do.DB(), b.Model.Model(), b.Field); len(fks) > 0 {
+			return fks
+		}
+	}
+	if suffix != "" {
+		return []string{b.Field + suffix}
+	}
+	return nil
+}
+
+// foreignKeyFieldsOf resolves, from the gorm relationship of a belongs-to field,
+// the owner's foreign-key field names in related-primary-key order. It supports
+// composite foreign keys (two or more columns). Returns nil when the relationship
+// cannot be resolved.
+func foreignKeyFieldsOf(db *gorm.DB, model any, field string) []string {
+	rel := db.Model(model).Association(field).Relationship
+	if rel == nil || len(rel.References) == 0 {
+		return nil
+	}
+	byRelatedPK := make(map[string]string, len(rel.References))
+	for _, ref := range rel.References {
+		byRelatedPK[ref.PrimaryKey.Name] = ref.ForeignKey.Name
+	}
+	out := make([]string, 0, len(rel.FieldSchema.PrimaryFields))
+	for _, pf := range rel.FieldSchema.PrimaryFields {
+		if fk, ok := byRelatedPK[pf.Name]; ok {
+			out = append(out, fk)
+		}
+	}
+	return out
 }
 
 func ModelSelect(model *presets.ModelBuilder, field string) {
