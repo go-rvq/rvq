@@ -124,11 +124,14 @@ func newApp(db *gorm.DB) *presets.Builder {
 	mb := p.Model(&Product{}).URIName(ProductURI)
 
 	// The child model + its editing fields (the columns the table renders).
+	// Label is required so a removed row with an empty Label would fail validation
+	// unless the deleted row is skipped (see TestSaveOK_DeletedItemSkipsValidation).
 	itemMB := presets.NewModelBuilder(mb.Builder(), &Item{})
 	ied := itemMB.Editing(&presets.FieldsSection{
 		Rows: [][]string{{"Label"}},
 	})
 	ied.HiddenField("ID")
+	ied.Field("Label").SetRequired(true)
 
 	ed := mb.Editing("Name", ItemsField)
 	ed.Field("Name").SetRequired(true)

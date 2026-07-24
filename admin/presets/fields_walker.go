@@ -15,7 +15,11 @@ type (
 		SkipMode          bool
 		InitializeSlices  bool
 		InitializeObjects bool
-		Handler           FieldWalkHandle
+		// SkipListEditorDeleted skips list-editor items flagged __deleted, so their
+		// fields are not walked (e.g. not validated) — a removed row is about to be
+		// discarded and must not fail required/format checks.
+		SkipListEditorDeleted bool
+		Handler               FieldWalkHandle
 	}
 
 	FieldWalkHandle func(field *FieldContext) (s FieldWalkState)

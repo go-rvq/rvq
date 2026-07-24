@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	"net/url"
 	"reflect"
 
 	h "github.com/go-rvq/htmlgo"
@@ -123,9 +124,18 @@ func (n *NestedSliceBuilder) Walk(fctx *FieldContext, opts *FieldWalkHandleOptio
 		}
 	}
 
+	var delVals url.Values
+	if opts.SkipListEditorDeleted {
+		delVals = ListEditorFormValues(fctx.EventContext)
+	}
+
 	reflectutils.ForEach(slice, func(v interface{}) {
 		defer func() { i++ }()
 		if opts.SkipNestedNil && zeroer.IsNil(v) {
+			return
+		}
+		// a row flagged __deleted is about to be removed; don't walk (validate) it.
+		if opts.SkipListEditorDeleted && ListEditorItemFlag(delVals, fctx.FormKey, i, ListEditorDeletedField) {
 			return
 		}
 		fieldInfo := n.mb.Info().ChildOf(fctx.ModelInfo, fctx.Obj).ItemOf(slice, i)

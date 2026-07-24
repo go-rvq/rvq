@@ -200,6 +200,60 @@ func TestSaveFail_NewItemRemoved_KeepsDeletedInUI(t *testing.T) {
 	}, app)
 }
 
+// TestSaveOK_DeletedItemSkipsValidation reproduces the bug where a removed row's
+// fields were still validated: item #1 is marked deleted and posts an EMPTY
+// required Label. The save must succeed (the deleted row is skipped, not
+// validated) and item #1 must be removed from the database.
+func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
+	db, err := newDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Create(&Product{ID: 1, Name: "P1", Items: []*Item{
+		{ID: 1, ProductID: 1, Label: "A", Pos: 0},
+		{ID: 2, ProductID: 1, Label: "B", Pos: 1},
+	}}).Error; err != nil {
+		t.Fatal(err)
+	}
+	app := newApp(db)
+
+	RunCase(t, TestCase{
+		Name: "deleted item with empty required field does not fail validation",
+		ReqFunc: func() *http.Request {
+			return NewMultipartBuilder().
+				PageURL("/admin/products").
+				EventFunc(actions.Update).
+				Query(presets.ParamID, "1").
+				Query(presets.ParamOverlay, string(actions.Dialog)).
+				AddField("Name", "P1"). // valid
+				AddField("Items.__present", "1").
+				AddField("Items[0].ID", "1").
+				AddField("Items[0].Label", "A").
+				AddField("Items[0].__pos", "0").
+				// item #1 removed, and its required Label posted EMPTY
+				AddField("Items[1].ID", "2").
+				AddField("Items[1].Label", ""). // empty required field
+				AddField("Items[1].__pos", "1").
+				AddField("Items[1].__deleted", "true").
+				BuildEventFuncRequest()
+		},
+		// save succeeds -> the dialog closes; no validation error rendered
+		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
+		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
+			if strings.Contains(er.Body, "This field is required") {
+				t.Errorf("deleted item's empty required field should not be validated; body: %s", er.Body)
+			}
+			var items []Item
+			if err := db.Order("id").Find(&items).Error; err != nil {
+				t.Fatal(err)
+			}
+			if len(items) != 1 || items[0].ID != 1 {
+				t.Errorf("expected only item #0 to remain, got %+v", items)
+			}
+		},
+	}, app)
+}
+
 // TestSaveOK_DeletedItemRemovedFromDB validates the persistence side: a
 // successful save (valid Name) with item #1 (ID=2) removed drops it from the
 // database while keeping item #0 (ID=1).
