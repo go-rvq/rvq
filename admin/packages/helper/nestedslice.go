@@ -157,13 +157,18 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 	switch relation.Type {
 	case schema.Many2Many:
 		joinTable := relation.JoinTable
-		filterQuery = fmt.Sprintf("EXISTS (SELECT 1 FROM %s rel WHERE rel.%s = ? AND rel.%s = %s.id)",
-			joinTable.Name, joinTable.DBNames[0], joinTable.DBNames[1], relatedTable)
+		// The related record's primary key column is taken from the schema, never
+		// assumed to be "id" nor cast to a fixed SQL type — so the key may be an
+		// integer, a UUID or any other type. (Composite related keys are rejected
+		// by the guard below; the join here uses the single related key column.)
+		relatedPKCol := relatedPKColumn(relation)
+		filterQuery = fmt.Sprintf("EXISTS (SELECT 1 FROM %s rel WHERE rel.%s = ? AND rel.%s = %s.%s)",
+			joinTable.Name, joinTable.DBNames[0], joinTable.DBNames[1], relatedTable, relatedPKCol)
 		insertQuery = fmt.Sprintf("INSERT INTO %s (%s, %s) VALUES (?, ?)",
 			joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1])
 		deleteQuery = fmt.Sprintf("DELETE FROM %s WHERE %s = ? AND %s = ?",
 			joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1])
-		linkQuery = fmt.Sprintf(m2mInsertQuery, relatedTable, joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1])
+		linkQuery = fmt.Sprintf(m2mInsertQuery, relatedTable, joinTable.Table, joinTable.DBNames[0], joinTable.DBNames[1], relatedPKCol)
 		info.JoinTable = joinTable
 		info.DeleteQuery = deleteQuery
 		info.LinkInsertQuery = linkQuery
@@ -171,7 +176,8 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 
 	b.baseModel.TakeFieldAsChild(b.fieldName, func(FieldModel *presets.ModelBuilder) {
 		if len(FieldModel.Schema().PrimaryFields()) > 1 {
-			panic("NestSlice doesn't supports ModelBuilder with many primary fields")
+			panic(fmt.Sprintf("helper.NestedSlice(%q): composite primary keys are not supported for the related model (%T); the key may be any single-column type (int, UUID, ...) but not composite",
+				b.fieldName, FieldModel.Model()))
 		}
 
 		b.fieldModel = FieldModel
@@ -476,15 +482,30 @@ type NestedSliceItems struct {
 	Items []string
 }
 
-const m2mInsertQuery = `with 
+// m2mInsertQuery links the selected related rows (%[5]s = the related PK column,
+// %[1]s = related table) to a parent (? = parent key) in the join table (%[2]s,
+// with owner column %[3]s and related column %[4]s), skipping links that already
+// exist. The related key is used as its own type — no fixed SQL cast — so integer,
+// UUID and other key types all work.
+const m2mInsertQuery = `with
 data as (
-	select id::BIGINT as f_id, ?::BIGINT as p_id FROM %[1]s WHERE id IN ?
-) 
+	select %[5]s as f_id, ? as p_id FROM %[1]s WHERE %[5]s IN ?
+)
 , data_ok as (
-	select f_id, p_ID from data d where not exists (
-	select 1 
-	from %[2]s fp 
+	select f_id, p_id from data d where not exists (
+	select 1
+	from %[2]s fp
 	where fp.%[3]s = p_id and fp.%[4]s = f_id)
 )
 insert into %[2]s (%[3]s, %[4]s) select p_id, f_id from data_ok;
 `
+
+// relatedPKColumn returns the DB column of the related model's primary key for a
+// many-to-many relation, from the schema (never assumed to be "id"). It uses the
+// first primary field; composite related keys are rejected by the builder.
+func relatedPKColumn(rel *schema.Relationship) string {
+	if len(rel.FieldSchema.PrimaryFields) > 0 {
+		return rel.FieldSchema.PrimaryFields[0].DBName
+	}
+	return "id"
+}
