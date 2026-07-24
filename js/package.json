@@ -9,6 +9,7 @@
     "vue-chart",
     "vuetify",
     "vuetifyx",
-    "scripts/generate-go-vuetify"
+    "scripts/generate-go-vuetify",
+    "integration_tests/admin/presets"
   ]
 }

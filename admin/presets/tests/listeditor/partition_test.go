@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
+	. "github.com/go-rvq/rvq/admin/presets/integration"
 )
 
 // labels extracts each item's Label for order-sensitive assertions.

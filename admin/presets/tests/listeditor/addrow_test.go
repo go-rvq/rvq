@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	. "github.com/go-rvq/rvq/admin/presets/integration"
 	. "github.com/go-rvq/rvq/web/multipartestutils"
 )
 
@@ -53,7 +54,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 
 	// (3) the browser then saves; the appended row posts __new with ID=0 and must
 	// be created (classification by __new, not by the zero primary key).
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +63,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 	}}).Error; err != nil {
 		t.Fatal(err)
 	}
-	app2 := newApp(db)
+	app2 := NewApp(db)
 
 	RunCase(t, TestCase{
 		Name: "save with appended __new row (zero ID) creates it",
@@ -107,7 +108,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 // the update path and gorm raised "WHERE conditions required". The save must now
 // succeed — a row without a primary key is left for Replace to create.
 func TestSaveOK_ZeroPKItemWithoutNewDoesNotCrash(t *testing.T) {
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func TestSaveOK_ZeroPKItemWithoutNewDoesNotCrash(t *testing.T) {
 	}}).Error; err != nil {
 		t.Fatal(err)
 	}
-	app := newApp(db)
+	app := NewApp(db)
 
 	RunCase(t, TestCase{
 		Name: "zero-PK row without __new does not crash the save",

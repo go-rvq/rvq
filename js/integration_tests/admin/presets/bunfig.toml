@@ -1,0 +1,4 @@
+# Register happy-dom + the DOM globals before the DOM tests run, so the corejs
+# Root can be mounted under `bun test`.
+[test]
+preload = ["./setup.ts"]

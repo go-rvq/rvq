@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	. "github.com/go-rvq/rvq/admin/presets/integration"
 	. "github.com/go-rvq/rvq/web/multipartestutils"
 )
 
@@ -62,7 +63,7 @@ func TestIndexStable_FormKeysFollowIndexNotPosition(t *testing.T) {
 // browser-created row flagged __new with no ID. The new row must be persisted —
 // classification uses __new, never the (zero) primary key.
 func TestSaveOK_NewItemCreated(t *testing.T) {
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func TestSaveOK_NewItemCreated(t *testing.T) {
 	}}).Error; err != nil {
 		t.Fatal(err)
 	}
-	app := newApp(db)
+	app := NewApp(db)
 
 	RunCase(t, TestCase{
 		Name: "new item (flagged __new, no ID) is created",

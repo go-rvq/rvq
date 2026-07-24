@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	. "github.com/go-rvq/rvq/admin/presets/integration"
 	. "github.com/go-rvq/rvq/web/multipartestutils"
 )
 
@@ -33,7 +34,7 @@ import (
 // twoPersistedItems seeds a product (id=1) with two persisted children:
 // #0 (ID=1, "A") and #1 (ID=2, "B").
 func twoPersistedItems() (*presets.Builder, error) {
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func twoPersistedItems() (*presets.Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newApp(db), nil
+	return NewApp(db), nil
 }
 
 // bodyContainsAll asserts the rendered event-response body contains every
@@ -211,7 +212,7 @@ func TestSaveFail_NewItemRemoved_VanishesFromUI(t *testing.T) {
 // required Label. The save must succeed (the deleted row is skipped, not
 // validated) and item #1 must be removed from the database.
 func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +222,7 @@ func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
 	}}).Error; err != nil {
 		t.Fatal(err)
 	}
-	app := newApp(db)
+	app := NewApp(db)
 
 	RunCase(t, TestCase{
 		Name: "deleted item with empty required field does not fail validation",
@@ -264,7 +265,7 @@ func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
 // successful save (valid Name) with item #1 (ID=2) removed drops it from the
 // database while keeping item #0 (ID=1).
 func TestSaveOK_DeletedItemRemovedFromDB(t *testing.T) {
-	db, err := newDB()
+	db, err := NewDB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestSaveOK_DeletedItemRemovedFromDB(t *testing.T) {
 	}}).Error; err != nil {
 		t.Fatal(err)
 	}
-	app := newApp(db)
+	app := NewApp(db)
 
 	RunCase(t, TestCase{
 		Name: "successful save removes the deleted item",

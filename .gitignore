@@ -1,3 +1,6 @@
 .*
 CLAUDE.md
 TASK.md
+# temporary build artifacts (test server binary, etc.)
+/.tmp/
+node_modules/
