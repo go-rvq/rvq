@@ -1,6 +1,7 @@
 package gorm2op
 
 import (
+	"fmt"
 	"net/url"
 	"reflect"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/zeroer"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type SaveHasManyAssociationBuilder struct {
@@ -100,7 +102,9 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		var (
 			items     = reflect.ValueOf(v)
 			sliceType = items.Type()
-			pkName    = assoc.Relationship.FieldSchema.PrimaryFields[0].Name
+			// support composite primary keys: every primary field participates in
+			// the key used to match/skip rows, not just the first.
+			pkNames = primaryFieldNames(assoc.Relationship.FieldSchema)
 		)
 
 		// part classifies the submitted items by their __deleted/__new flags, in
@@ -120,16 +124,15 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		// key is only consulted here, for auditing — never for classification.
 		var oldByID map[any]any
 		if auditor != nil {
-			if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkName); err != nil {
+			if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkNames); err != nil {
 				return
 			}
 			// keptIDs: primary keys of the existing children we keep, used to
 			// detect which persisted rows are being removed.
 			keptIDs := make(map[any]bool, len(part.Kept))
 			for _, item := range part.Kept {
-				pkVal := reflect.Indirect(item).FieldByName(pkName)
-				if !zeroer.IsZero(pkVal) {
-					keptIDs[normalizeKey(pkVal)] = true
+				if !pkAllZero(item, pkNames) {
+					keptIDs[pkMapKey(item, pkNames)] = true
 				}
 			}
 			for id, old := range oldByID {
@@ -151,9 +154,10 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		for _, item := range part.Others {
 			// an "existing" row must have a primary key to update; without one there
 			// is nothing to target (gorm would raise "WHERE conditions required").
-			// Leave it for Replace to create — this is a safety net for rows that
-			// reach Others without a PK (e.g. a client that omitted __new).
-			if zeroer.IsZero(reflect.Indirect(item).FieldByName(pkName)) {
+			// For a composite key every primary field must be set. Leave a keyless
+			// row for Replace to create — a safety net for rows that reach Others
+			// without a PK (e.g. a client that omitted __new).
+			if pkAllZero(item, pkNames) {
 				continue
 			}
 			rec := item.Interface()
@@ -161,7 +165,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 				return
 			}
 			if auditor != nil {
-				if old, okOld := oldByID[normalizeKey(reflect.Indirect(item).FieldByName(pkName))]; okOld {
+				if old, okOld := oldByID[pkMapKey(item, pkNames)]; okOld {
 					if err = auditor.LogUpdated(db, old, rec); err != nil {
 						return
 					}
@@ -197,8 +201,8 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 }
 
 // snapshotExisting loads the persisted children of the association into a map
-// keyed by their primary key, in one query.
-func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, sliceType reflect.Type, pkName string) (map[any]any, error) {
+// keyed by their (possibly composite) primary key, in one query.
+func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, sliceType reflect.Type, pkNames []string) (map[any]any, error) {
 	existingPtr := reflect.New(sliceType).Interface()
 	if err := db.Model(obj).Association(b.field).Find(existingPtr); err != nil {
 		return nil, err
@@ -207,9 +211,43 @@ func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, s
 	out := make(map[any]any, existing.Len())
 	for i := 0; i < existing.Len(); i++ {
 		row := existing.Index(i)
-		out[normalizeKey(reflect.Indirect(row).FieldByName(pkName))] = row.Interface()
+		out[pkMapKey(row, pkNames)] = row.Interface()
 	}
 	return out, nil
+}
+
+// primaryFieldNames returns the names of every primary-key field of a schema, so
+// composite keys are handled and not just the first field.
+func primaryFieldNames(s *schema.Schema) []string {
+	names := make([]string, len(s.PrimaryFields))
+	for i, f := range s.PrimaryFields {
+		names[i] = f.Name
+	}
+	return names
+}
+
+// pkAllZero reports whether every primary-key field of item is zero, i.e. the row
+// has no usable key to target an update (a new/keyless row).
+func pkAllZero(item reflect.Value, pkNames []string) bool {
+	for _, name := range pkNames {
+		if !zeroer.IsZero(reflect.Indirect(item).FieldByName(name)) {
+			return false
+		}
+	}
+	return true
+}
+
+// pkMapKey builds a comparable map key from item's primary-key field(s),
+// supporting composite keys unambiguously.
+func pkMapKey(item reflect.Value, pkNames []string) any {
+	if len(pkNames) == 1 {
+		return normalizeKey(reflect.Indirect(item).FieldByName(pkNames[0]))
+	}
+	parts := make([]any, len(pkNames))
+	for i, name := range pkNames {
+		parts[i] = normalizeKey(reflect.Indirect(item).FieldByName(name))
+	}
+	return fmt.Sprintf("%v", parts)
 }
 
 // formValues returns the (reordered) submitted form values. UnmarshalForm
