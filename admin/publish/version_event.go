@@ -105,7 +105,7 @@ func duplicateVersionAction(mb *presets.ModelBuilder, pb *Builder) web.EventFunc
 			// close dialog and open editing
 			web.AppendRunScripts(&r,
 				presets.CloseListingDialogVarScript,
-				web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, mid.String()).Go(),
+				web.Plaid().EventFunc(actions.EditForm).Query(presets.ParamID, mid.String()).Go(),
 			)
 			return
 		}
@@ -132,7 +132,7 @@ func selectVersion(pm *presets.ModelBuilder) web.EventFunc {
 			// close dialog and open editing
 			web.AppendRunScripts(&r,
 				presets.CloseListingDialogVarScript,
-				web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, id).Go(),
+				web.Plaid().EventFunc(actions.EditForm).Query(presets.ParamID, id).Go(),
 			)
 			return
 		}
@@ -283,7 +283,7 @@ func deleteVersion(mb *presets.ModelBuilder, pm *presets.ModelBuilder, db *gorm.
 
 			if !pm.HasDetailing() {
 				web.AppendRunScripts(&r,
-					web.Plaid().EventFunc(actions.Edit).Query(presets.ParamID, currentDisplaySlug).Go(),
+					web.Plaid().EventFunc(actions.EditForm).Query(presets.ParamID, currentDisplaySlug).Go(),
 				)
 			} else {
 				web.AppendRunScripts(&r,

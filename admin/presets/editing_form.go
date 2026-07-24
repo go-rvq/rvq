@@ -4,29 +4,82 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/perm"
 
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any, initForm ...bool) (r web.EventResponse, err error) {
+// formScope responds with the single form-scope wrapper: a closer scope holding
+// a user-component that establishes the `form` reactive scope (child of the
+// ambient form) around an inner portal, then runs the real create/edit event
+// (innerEvent) into that portal.
+//
+// A `closer` (dialog closer) is defined above the user-component:
+//   - it starts true (CloserScope(_, true) sets closer.show = true), which mounts
+//     the user-component and, on mount, RunScript fires the Edit/New plaid into
+//     the inner portal;
+//   - the user-component is guarded by v-if="closer.show", so setting
+//     closer.show = false (e.g. the submit response) unmounts it and destroys the
+//     whole form and its UI.
+//
+// Because the scope lives in the outer (wrapper) portal, the inner form and every
+// list-editor add/remove/sort or validation re-render re-render only the inner
+// portal and never recreate the scope. The wrapper is mounted in ParamTargetPortal
+// (where the caller wants the response).
+func (b *EditingBuilder) formScope(ctx *web.EventContext, innerEvent string) (r web.EventResponse, err error) {
+	innerPortal := ctx.UID()
+
+	queries := ctx.Queries()
+	queries.Set(ParamTargetPortal, innerPortal)
+
+	onclick := web.Plaid().
+		URL(b.mb.Info().ListingHrefCtx(ctx)).
+		EventFunc(innerEvent).
+		Queries(queries).
+		// pass the wrapper's closer down, so the inner form (and its submit) share
+		// the same closer and can destroy the whole wrapper via closer.show = false.
+		Scope(web.Var("{closer: closer}")).
+		Go()
+
+	form := vue.UserComponent(
+		web.Portal().Name(innerPortal),
+		web.RunScript(onclick),
+	).Scope("form", vue.Var("{$parent: form}"))
+	// destroy the whole form (scope + UI) when the closer is turned off.
+	form.Attr("v-if", "closer.show")
+
+	// closer starts true: mounts the form and fires the Edit/New plaid.
+	comp := web.CloserScope(form, true)
+
+	if target := ctx.R.FormValue(ParamTargetPortal); target != "" {
+		r.UpdatePortal(target, comp)
+	} else {
+		r.Body = comp
+	}
+	return
+}
+
+func (b *EditingBuilder) formEditScope(ctx *web.EventContext) (web.EventResponse, error) {
+	return b.formScope(ctx, actions.Edit)
+}
+
+func (b *EditingBuilder) formNewScope(ctx *web.EventContext) (web.EventResponse, error) {
+	return b.formScope(ctx, actions.New)
+}
+
+func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.EventResponse, err error) {
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
 	if overlay.IsDrawer() && targetPortal == "" {
 		targetPortal = overlay.PortalName()
 	}
 
+	// The `form` scope is established once by the EditForm/NewForm wrapper; the
+	// form here renders inside it (never creating its own scope).
 	f := b.form(obj, ctx)
-	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
-
 	comp := f.Component()
 	mode := GetOverlay(ctx)
-
-	for _, v := range initForm {
-		if v {
-			comp = web.Scope(comp).FormInit()
-		}
-	}
 
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
@@ -75,7 +128,7 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 		return
 	}
 
-	return b.respondFormEdit(ctx, obj, true)
+	return b.respondFormEdit(ctx, obj)
 }
 
 func (b *EditingBuilder) SaveBtn(ctx *web.EventContext, id string, edit bool, targetPortal string) h.HTMLComponent {
@@ -86,10 +139,6 @@ func (b *EditingBuilder) SaveBtn(ctx *web.EventContext, id string, edit bool, ta
 
 	if id != "" {
 		queries.Set(ParamID, id)
-	}
-
-	if GetEditFormUnscoped(ctx) {
-		queries.Set(ParamEditFormUnscoped, "true")
 	}
 
 	if edit {

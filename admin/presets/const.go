@@ -31,7 +31,6 @@ const (
 	ParamAfterDeleteEvent          = "presets_after_delete_event"
 	ParamPortalID                  = "portal_id"
 	ParamTargetPortal              = "target_portal"
-	ParamEditFormUnscoped          = "presets_edit_form_unscoped"
 	ParamPostChangeCallback        = "presets_post_change_callback"
 	ParamPostDeleteCallback        = "presets_post_delete_callback"
 	ParamPostExecuteActionCallback = "presets_post_execute_action_callback"

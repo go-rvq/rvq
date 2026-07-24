@@ -152,7 +152,6 @@ type Form struct {
 	PrimaryAction     h.HTMLComponent
 	Menu              h.HTMLComponents
 	Actions           h.HTMLComponents
-	ScopeDisabled     bool
 	Wrap              func(h h.HTMLComponent) h.HTMLComponent
 	RenderBreadcrumbs bool
 }
@@ -209,19 +208,19 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 	}
 
 	if overlay.Overlayed() {
-		if !f.ScopeDisabled {
-			cb.Scope = web.Scope().Form().Locals().Vars()
-		}
+		// The `form` scope is established by the EditForm/NewForm wrapper; only the
+		// locals/vars scopes are created here (a go-plaid-scope without :form keeps
+		// the injected form).
+		cb.Scope = web.Scope().Locals().Vars()
 		return cb.BuildOverlay()
 	}
-	if !f.ScopeDisabled {
-		scope := GetScope(f.b.ctx)
-		if scope == nil {
-			scope = web.Scope()
-			cb.Scope = scope
-		}
-		scope.Form().Locals().Vars()
+	// Page: no wrapper, so create the form/locals/vars scope here.
+	scope := GetScope(f.b.ctx)
+	if scope == nil {
+		scope = web.Scope()
+		cb.Scope = scope
 	}
+	scope.Form().Locals().Vars()
 	return cb.BuildPage()
 }
 
@@ -231,14 +230,9 @@ func (f *Form) Respond(r *web.EventResponse) {
 
 func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 	comp := f.Component()
-	oldWrap := f.Wrap
 
-	f.Wrap = func(h h.HTMLComponent) h.HTMLComponent {
-		if oldWrap != nil {
-			h = oldWrap(h)
-		}
-		return web.Scope(h).FormInit("{}")
-	}
+	// The dialog/drawer no longer wraps its content in its own `form` scope: the
+	// single `form` is defined by the EditForm/NewForm wrapper above it.
 
 	switch f.b.overlayMode {
 	case actions.Dialog:

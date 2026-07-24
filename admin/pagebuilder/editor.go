@@ -82,7 +82,7 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 		if containerDataID != "" {
 			arr := strings.Split(containerDataID, "_")
 			if len(arr) >= 2 {
-				editEvent := web.GET().EventFunc(actions.Edit).
+				editEvent := web.GET().EventFunc(actions.EditForm).
 					URL(fmt.Sprintf(`%s/%s`, b.prefix, arr[0])).
 					Query(presets.ParamID, arr[1]).
 					Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).

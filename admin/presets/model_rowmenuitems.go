@@ -32,7 +32,7 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 		}
 
 		onclick := web.Plaid().
-			EventFunc(actions.Edit).
+			EventFunc(actions.EditForm).
 			Queries(editExtraParams).
 			Query(ParamID, id).
 			URL(url)

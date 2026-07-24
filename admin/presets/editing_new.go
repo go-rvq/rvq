@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
@@ -189,12 +188,10 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 	targetPortal := respondTargetPortal
 	ctx.R.Form.Set(ParamTargetPortal, targetPortal)
 
+	// The `form` scope is established once by the NewForm wrapper; the form here
+	// renders inside it (never creating its own scope).
 	f := b.form(obj, ctx)
 	f.Portal = targetPortal
-	f.Wrap = func(c h.HTMLComponent) h.HTMLComponent {
-		return web.Scope(web.Portal(c).
-			Name(targetPortal)).FormInit()
-	}
 
 	f.RespondToPortal(respondTargetPortal, &r)
 	return

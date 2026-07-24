@@ -470,7 +470,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 		onclick := web.Plaid().
 			URL(b.mb.Info().ListingHrefCtx(ctx)).
-			EventFunc(actions.Edit).
+			EventFunc(actions.EditForm).
 			Query(ParamID, f.b.id).
 			ValidQuery(ParamTargetPortal, editPortal).
 			ValidQuery(ParamOverlay, editMode.String()).

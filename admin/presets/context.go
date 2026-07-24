@@ -20,7 +20,6 @@ const (
 	ctxDetailingAfterTitleComponent
 	ctxModel
 	ctxScope
-	ctxEditFormUnscoped
 	ctxFlashMessages
 	ctxActionFormContext
 	ctxBulkActionFormContext
@@ -130,15 +129,6 @@ func WithScope(ctx web.ContextValuer, scope *web.ScopeBuilder) {
 
 func GetScope(ctx web.ContextValuer) (scope *web.ScopeBuilder) {
 	scope, _ = ctx.ContextValue(ctxScope).(*web.ScopeBuilder)
-	return
-}
-
-func EditFormUnscoped(ctx web.ContextValuer, v bool) {
-	ctx.WithContextValue(ctxEditFormUnscoped, v)
-}
-
-func GetEditFormUnscoped(ctx web.ContextValuer) (ok bool) {
-	ok, _ = ctx.ContextValue(ctxEditFormUnscoped).(bool)
 	return
 }
 

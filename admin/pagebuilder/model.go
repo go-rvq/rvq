@@ -189,7 +189,7 @@ func (b *ModelBuilder) renderContainersSortedList(ctx *web.EventContext) (r h.HT
 													VBtn("").Variant(VariantText).Icon("mdi-cog").Size(SizeSmall).Attr("@click",
 														web.Plaid().
 															URL(web.Var(fmt.Sprintf(`"%s/"+element.label`, b.builder.prefix))).
-															EventFunc(actions.Edit).
+															EventFunc(actions.EditForm).
 															Query(presets.ParamOverlay, actions.Content).
 															Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 															Query(presets.ParamID, web.Var("element.model_id")).
@@ -245,7 +245,7 @@ func (b *ModelBuilder) addContainer(ctx *web.EventContext) (r web.EventResponse,
 		Go() + ";" +
 		web.Plaid().
 			URL(fmt.Sprintf(`%s/%s`, b.builder.prefix, inflection.Plural(strcase.ToKebab(cb.name)))).
-			EventFunc(actions.Edit).
+			EventFunc(actions.EditForm).
 			Query(presets.ParamTargetPortal, pageBuilderRightContentPortal).
 			Query(presets.ParamOverlay, actions.Content).
 			Query(presets.ParamID, modelID).

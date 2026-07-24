@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"net/http"
+
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
@@ -276,8 +278,17 @@ func (b *EditingBuilder) FetchAndUnmarshal(opts *FieldsSetterOptions, id ID, rem
 }
 
 func (b *EditingBuilder) ParseMultipartForm(ctx *web.EventContext) error {
-	if ctx.R.MultipartForm == nil {
-		return ctx.R.ParseMultipartForm(b.maxPostSize)
+	if ctx.R.MultipartForm != nil {
+		return nil
+	}
+	// Parse the multipart body; when the request is not multipart (urlencoded /
+	// query only), fall back to a plain form parse instead of failing, so
+	// non-multipart submits still populate ctx.R.Form.
+	if err := ctx.R.ParseMultipartForm(b.maxPostSize); err != nil {
+		if err == http.ErrNotMultipart {
+			return ctx.R.ParseForm()
+		}
+		return err
 	}
 	return nil
 }
@@ -357,8 +368,6 @@ func (b *EditingBuilder) UpdateOverlayContent(
 	}
 
 	f := b.form(obj, ctx)
-	f.ScopeDisabled = ctx.R.FormValue(ParamEditFormUnscoped) == "true"
-
 	f.Respond(r)
 }
 
@@ -426,10 +435,6 @@ func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContex
 
 	// set portal to edit btn
 	ctx.R.Form.Set(ParamTargetPortal, portalName)
-
-	if !creating {
-		EditFormUnscoped(ctx, true)
-	}
 
 	f := b.form(obj, ctx)
 	comp := f.Component()

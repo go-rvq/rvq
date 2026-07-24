@@ -627,7 +627,13 @@ func reindexSliceKeys(values url.Values, prefix string, order []int) {
 }
 
 func (ctx *EventContext) UnmarshalForm(v interface{}) (err error) {
+	// When the request is not multipart (urlencoded body / query only), there is
+	// no MultipartForm; decode the parsed form values (r.Form) instead of doing
+	// nothing — so a non-multipart submit still populates v.
 	if ctx.R.MultipartForm == nil {
+		if ctx.R.Form != nil {
+			return ctx.UnmarshalFormValues(ctx.R.Form, v)
+		}
 		return
 	}
 

@@ -655,6 +655,14 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 	removeDeletedAndSort bool,
 	ctx *web.EventContext,
 ) (verr web.ValidationErrors) {
+	// items belong to the nested model: derive the child ModelInfo (as the nested
+	// struct case does) so per-item id/permission lookups key by the ITEM's
+	// primary key — otherwise the parent's key is assumed, which panics for
+	// composite / non-"ID" primary keys.
+	if f.nested != nil {
+		info = f.nested.Model().Info().ChildOf(info, fromObj)
+	}
+
 	childFromObjs := reflectutils.MustGet(fromObj, f.name)
 	if childFromObjs == nil || reflect.TypeOf(childFromObjs).Kind() != reflect.Slice {
 		return
@@ -1209,6 +1217,14 @@ func (b *FieldsBuilder) ToComponentForEach(opts *ToComponentOptions, field *Fiel
 
 	if field != nil {
 		info = field.ModelInfo
+		// The items belong to the nested model, not the parent: use the nested
+		// model's ModelInfo so per-item id/schema lookups (LookupID, HasPrimaryFields)
+		// key by the ITEM's primary key. Otherwise the parent's key is assumed —
+		// which only works by accident when the item also has an "ID" field, and
+		// panics for composite / non-"ID" primary keys.
+		if field.Nested != nil {
+			info = field.Nested.Model().Info().ChildOf(field.ModelInfo, field.Obj)
+		}
 	} else {
 		field = &FieldContext{
 			ToComponentOptions: opts,

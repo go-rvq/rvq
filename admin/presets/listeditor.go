@@ -759,9 +759,6 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			}
 		}
 
-		// prevent to create new form scope
-		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
-
 		return me.respondFormEdit(ctx, obj)
 	}
 }
@@ -791,8 +788,6 @@ func removeListItemRow(mb *ModelBuilder) web.EventFunc {
 
 		ContextModifiedIndexesBuilder(ctx).AppendDeleted(sliceField, index)
 
-		// prevent to create new form scope
-		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
 		return me.respondFormEdit(ctx, obj)
 	}
 }
@@ -824,8 +819,6 @@ func sortListItems(mb *ModelBuilder) web.EventFunc {
 			mib.SetSorted(sortSectionFormKey, indexes)
 		}
 
-		// prevent to create new form scope
-		ctx.R.Form.Set(ParamEditFormUnscoped, "true")
 		return me.respondFormEdit(ctx, obj)
 	}
 }

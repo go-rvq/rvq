@@ -118,7 +118,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 				if !b.mb.editing.mb.CanEditObj(obj, ctx) {
 					return
 				}
-				onclick.EventFunc(actions.Edit)
+				onclick.EventFunc(actions.EditForm)
 			}
 
 			onclick.Query(ParamOverlay, overlayMode.Up())
@@ -502,7 +502,7 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 			mode := OverlayMode(ctx)
 
 			onclick := web.Plaid().
-				EventFunc(actions.New).URL(ctx.R.RequestURI).
+				EventFunc(actions.NewForm).URL(ctx.R.RequestURI).
 				Query(ParamTargetPortal, lcb.portals.Temp()).
 				Query(ParamOverlay, mode.Up().String()).
 				Query(ParamPostChangeCallback, b.reloadCallback(ctx).Encode())

@@ -1,8 +1,15 @@
 package actions
 
 const (
-	New                         = "presets_New"
-	Edit                        = "presets_Edit"
+	New  = "presets_New"
+	Edit = "presets_Edit"
+	// NewForm / EditForm wrap the create/edit form in a single `form` scope
+	// (a go-plaid-scope with {$parent: form}) around an inner portal, then run
+	// the actual New/Edit event into that portal. The scope is created once by
+	// the wrapper, so the inner form (and its list-editor add/remove/sort and
+	// validation re-renders) never recreates it.
+	NewForm                     = "presets_NewForm"
+	EditForm                    = "presets_EditForm"
 	Action                      = "presets_Action"
 	DeleteConfirmation          = "presets_DeleteConfirmation"
 	Update                      = "presets_Update"

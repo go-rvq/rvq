@@ -243,7 +243,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 				if !m.CanEditObj(obj, ctx) {
 					onclick = nil
 				} else {
-					onclick.EventFunc(actions.Edit)
+					onclick.EventFunc(actions.EditForm)
 				}
 			}
 

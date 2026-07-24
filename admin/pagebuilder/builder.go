@@ -1163,7 +1163,7 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 
 		tdbind.SetAttr("@click.self",
 			web.Plaid().
-				EventFunc(actions.Edit).
+				EventFunc(actions.EditForm).
 				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHrefCtx(ctx)).
 				Query(presets.ParamID, c.ModelID).
 				Query(paramOpenFromSharedContainer, 1).
@@ -1236,7 +1236,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 							Variant(VariantText).
 							Color(ColorPrimary).Attr("@click",
 							web.Plaid().
-								EventFunc(actions.New).
+								EventFunc(actions.NewForm).
 								URL(builder.GetModelBuilder().Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 								Query(presets.ParamPostChangeCallback, web.CallbackScript(
 									web.POST().
@@ -1273,7 +1273,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 								Variant(VariantText).
 								Color(ColorPrimary).Attr("@click",
 								web.Plaid().
-									EventFunc(actions.Edit).
+									EventFunc(actions.EditForm).
 									URL(builder.GetModelBuilder().Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 									Query(presets.ParamID, fmt.Sprint(modelID)).
 									Go()),
@@ -1299,7 +1299,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 
 		tdbind.SetAttr("@click.self",
 			web.Plaid().
-				EventFunc(actions.Edit).
+				EventFunc(actions.EditForm).
 				URL(b.ContainerByName(c.ModelName).GetModelBuilder().Info().ListingHrefCtx(ctx)).
 				Query(presets.ParamID, c.ModelID).
 				Go()+fmt.Sprintf(`; vars.currEditingListItemID="%s-%d"`, dataTableID, c.ModelID))
@@ -1659,7 +1659,7 @@ func (b *Builder) generateEditorBarJsFunction(_ *web.EventContext) string {
 		Query(paramContainerID, web.Var("container_id")).
 		RunPushState() + ";" +
 		web.POST().
-			EventFunc(actions.Edit).
+			EventFunc(actions.EditForm).
 			URL(web.Var(fmt.Sprintf(`"%s/"+arr[0]`, b.prefix))).
 			Query(presets.ParamID, web.Var("arr[1]")).
 			Query(presets.ParamOverlay, actions.Content).

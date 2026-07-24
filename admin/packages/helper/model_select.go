@@ -528,7 +528,7 @@ func (b *ModelSelectorBuilder) ReadonlyComponentOfRecord(record any, text []stri
 				if b.foreignModel.HasDetailing() {
 					onclick.EventFunc(actions.Detailing)
 				} else {
-					onclick.EventFunc(actions.Edit)
+					onclick.EventFunc(actions.EditForm)
 				}
 
 				if om.IsDrawer() {

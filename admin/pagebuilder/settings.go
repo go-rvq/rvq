@@ -110,7 +110,7 @@ func templateSettings(_ *gorm.DB, pm *presets.ModelBuilder) presets.FieldCompone
 
 		editBtn := VBtn("Edit").Variant(VariantFlat).
 			Attr("@click", web.POST().
-				EventFunc(actions.Edit).
+				EventFunc(actions.EditForm).
 				Query(presets.ParamOverlay, actions.Dialog).
 				Query(presets.ParamID, p.PrimarySlug()).
 				URL(pm.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).Go(),

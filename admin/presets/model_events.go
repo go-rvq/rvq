@@ -8,6 +8,8 @@ import (
 func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.New, mb.editing.formNew)
 	mb.RegisterEventFunc(actions.Edit, mb.editing.formEdit)
+	mb.RegisterEventFunc(actions.NewForm, mb.editing.formNewScope)
+	mb.RegisterEventFunc(actions.EditForm, mb.editing.formEditScope)
 	mb.RegisterEventFunc(actions.DeleteConfirmation, mb.listing.deleteConfirmation)
 	mb.RegisterEventFunc(actions.Update, mb.editing.defaultUpdate)
 	mb.RegisterEventFunc(actions.Create, mb.editing.defaultCreate)
