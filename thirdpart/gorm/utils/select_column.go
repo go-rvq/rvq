@@ -7,6 +7,7 @@ import (
 
 type RawColumn struct {
 	Table, Name, Query string
+	Args               []any
 }
 
 func (r *RawColumn) ModifyStatement(stmt *gorm.Statement) {

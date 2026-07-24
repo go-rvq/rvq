@@ -9,6 +9,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	gormutils "github.com/go-rvq/rvq/thirdpart/gorm/utils"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/zeroer"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -569,7 +570,7 @@ func (b *ModelSelectorBuilder) ReadonlyComponentOfRecord(record any, text []stri
 // resolved (e.g. a non-gorm data operator) or exposes a single key.
 func (b *ModelSelectorBuilder) foreignKeyFields(suffix string) []string {
 	if do, ok := b.Model.Builder().GetDataOperator().(*gorm2op.DataOperatorBuilder); ok {
-		if fks := foreignKeyFieldsOf(do.DB(), b.Model.Model(), b.Field); len(fks) > 0 {
+		if fks := gormutils.ForeignKeyFields(do.DB(), b.Model.Model(), b.Field); len(fks) > 0 {
 			return fks
 		}
 	}
@@ -577,28 +578,6 @@ func (b *ModelSelectorBuilder) foreignKeyFields(suffix string) []string {
 		return []string{b.Field + suffix}
 	}
 	return nil
-}
-
-// foreignKeyFieldsOf resolves, from the gorm relationship of a belongs-to field,
-// the owner's foreign-key field names in related-primary-key order. It supports
-// composite foreign keys (two or more columns). Returns nil when the relationship
-// cannot be resolved.
-func foreignKeyFieldsOf(db *gorm.DB, model any, field string) []string {
-	rel := db.Model(model).Association(field).Relationship
-	if rel == nil || len(rel.References) == 0 {
-		return nil
-	}
-	byRelatedPK := make(map[string]string, len(rel.References))
-	for _, ref := range rel.References {
-		byRelatedPK[ref.PrimaryKey.Name] = ref.ForeignKey.Name
-	}
-	out := make([]string, 0, len(rel.FieldSchema.PrimaryFields))
-	for _, pf := range rel.FieldSchema.PrimaryFields {
-		if fk, ok := byRelatedPK[pf.Name]; ok {
-			out = append(out, fk)
-		}
-	}
-	return out
 }
 
 func ModelSelect(model *presets.ModelBuilder, field string) {

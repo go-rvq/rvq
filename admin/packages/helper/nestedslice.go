@@ -3,13 +3,13 @@ package helper
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	gormutils "github.com/go-rvq/rvq/thirdpart/gorm/utils"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -159,9 +159,9 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 
 	switch relation.Type {
 	case schema.HasMany:
-		filterQuery, ownerFilter = hasManyParentFilter(relation)
+		filterQuery, ownerFilter = gormutils.HasManyParentFilter(relation)
 	case schema.Many2Many:
-		filterQuery, ownerFilter = m2mParentFilter(relation)
+		filterQuery, ownerFilter = gormutils.M2MParentFilter(relation)
 		info.JoinTable = relation.JoinTable
 		// Legacy: expose a single-key link query for callers that read it. The
 		// actual link/unlink below goes through gorm's Association API, which
@@ -183,7 +183,7 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 						return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 							if !mode.Is(gorm2op.Fetch, gorm2op.FetchTitle) {
 								parentID := presets.ParentsModelID(ctx.R).Last()
-								params.Where(filterQuery, parentFilterArgs(parentID, ownerFilter)...)
+								params.Where(filterQuery, gormutils.ParentFilterArgs(parentID, ownerFilter)...)
 							}
 							return old(db, mode, obj, id, params, ctx)
 						}
@@ -196,7 +196,7 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 						return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 							if !mode.Is(gorm2op.Fetch, gorm2op.FetchTitle) {
 								parentID := presets.ParentsModelID(ctx.R).Last()
-								params.Where(filterQuery, parentFilterArgs(parentID, ownerFilter)...)
+								params.Where(filterQuery, gormutils.ParentFilterArgs(parentID, ownerFilter)...)
 							}
 							return old(db, mode, obj, id, params, ctx)
 						}
@@ -495,48 +495,6 @@ data as (
 )
 insert into %[2]s (%[3]s, %[4]s) select p_id, f_id from data_ok;
 `
-
-// parentFilterArgs extracts the owner primary-key values (in fieldNames order)
-// from the parent id, to bind the placeholders of a parent filter. Supports
-// single and composite keys.
-func parentFilterArgs(id model.ID, fieldNames []string) []any {
-	args := make([]any, len(fieldNames))
-	for i, name := range fieldNames {
-		args[i] = id.GetValue(name)
-	}
-	return args
-}
-
-// hasManyParentFilter builds the WHERE matching a has-many child by its parent
-// ("<fk> = ? [AND ...]") and the owner primary-key field names in placeholder
-// order. Every reference participates, so composite foreign keys (two or more
-// fields) work.
-func hasManyParentFilter(rel *schema.Relationship) (sql string, ownerFields []string) {
-	conds := make([]string, 0, len(rel.References))
-	for _, ref := range rel.References {
-		conds = append(conds, ref.ForeignKey.DBName+" = ?")
-		ownerFields = append(ownerFields, ref.PrimaryKey.Name)
-	}
-	return strings.Join(conds, " AND "), ownerFields
-}
-
-// m2mParentFilter builds an EXISTS(...) correlated subquery matching the related
-// rows linked to a parent through the join table, and the owner primary-key field
-// names in placeholder order. Owner-side join columns are bound to the parent id;
-// related-side columns are correlated to the related table. Handles single and
-// composite keys of any type (any number of key fields).
-func m2mParentFilter(rel *schema.Relationship) (sql string, ownerFields []string) {
-	conds := make([]string, 0, len(rel.References))
-	for _, ref := range rel.References {
-		if ref.OwnPrimaryKey {
-			conds = append(conds, fmt.Sprintf("j.%s = ?", ref.ForeignKey.DBName))
-			ownerFields = append(ownerFields, ref.PrimaryKey.Name)
-		} else {
-			conds = append(conds, fmt.Sprintf("j.%s = %s.%s", ref.ForeignKey.DBName, rel.FieldSchema.Table, ref.PrimaryKey.DBName))
-		}
-	}
-	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s j WHERE %s)", rel.JoinTable.Table, strings.Join(conds, " AND ")), ownerFields
-}
 
 // newParent builds a bare parent record carrying only the current parent's
 // (possibly composite) primary key, for gorm Association operations.

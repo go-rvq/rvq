@@ -1,15 +1,13 @@
 package gorm2op
 
 import (
-	"fmt"
 	"net/url"
 	"reflect"
 
 	"github.com/go-rvq/rvq/admin/presets"
+	gormutils "github.com/go-rvq/rvq/thirdpart/gorm/utils"
 	"github.com/go-rvq/rvq/web"
-	"github.com/go-rvq/rvq/web/zeroer"
 	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 )
 
 type SaveHasManyAssociationBuilder struct {
@@ -104,7 +102,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			sliceType = items.Type()
 			// support composite primary keys: every primary field participates in
 			// the key used to match/skip rows, not just the first.
-			pkNames = primaryFieldNames(assoc.Relationship.FieldSchema)
+			pkNames = gormutils.PrimaryFieldNames(assoc.Relationship.FieldSchema)
 		)
 
 		// part classifies the submitted items by their __deleted/__new flags, in
@@ -131,8 +129,8 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			// detect which persisted rows are being removed.
 			keptIDs := make(map[any]bool, len(part.Kept))
 			for _, item := range part.Kept {
-				if !pkAllZero(item, pkNames) {
-					keptIDs[pkMapKey(item, pkNames)] = true
+				if !gormutils.PKAllZero(item, pkNames) {
+					keptIDs[gormutils.PKMapKey(item, pkNames)] = true
 				}
 			}
 			for id, old := range oldByID {
@@ -157,7 +155,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			// For a composite key every primary field must be set. Leave a keyless
 			// row for Replace to create — a safety net for rows that reach Others
 			// without a PK (e.g. a client that omitted __new).
-			if pkAllZero(item, pkNames) {
+			if gormutils.PKAllZero(item, pkNames) {
 				continue
 			}
 			rec := item.Interface()
@@ -165,7 +163,7 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 				return
 			}
 			if auditor != nil {
-				if old, okOld := oldByID[pkMapKey(item, pkNames)]; okOld {
+				if old, okOld := oldByID[gormutils.PKMapKey(item, pkNames)]; okOld {
 					if err = auditor.LogUpdated(db, old, rec); err != nil {
 						return
 					}
@@ -211,43 +209,9 @@ func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, s
 	out := make(map[any]any, existing.Len())
 	for i := 0; i < existing.Len(); i++ {
 		row := existing.Index(i)
-		out[pkMapKey(row, pkNames)] = row.Interface()
+		out[gormutils.PKMapKey(row, pkNames)] = row.Interface()
 	}
 	return out, nil
-}
-
-// primaryFieldNames returns the names of every primary-key field of a schema, so
-// composite keys are handled and not just the first field.
-func primaryFieldNames(s *schema.Schema) []string {
-	names := make([]string, len(s.PrimaryFields))
-	for i, f := range s.PrimaryFields {
-		names[i] = f.Name
-	}
-	return names
-}
-
-// pkAllZero reports whether every primary-key field of item is zero, i.e. the row
-// has no usable key to target an update (a new/keyless row).
-func pkAllZero(item reflect.Value, pkNames []string) bool {
-	for _, name := range pkNames {
-		if !zeroer.IsZero(reflect.Indirect(item).FieldByName(name)) {
-			return false
-		}
-	}
-	return true
-}
-
-// pkMapKey builds a comparable map key from item's primary-key field(s),
-// supporting composite keys unambiguously.
-func pkMapKey(item reflect.Value, pkNames []string) any {
-	if len(pkNames) == 1 {
-		return normalizeKey(reflect.Indirect(item).FieldByName(pkNames[0]))
-	}
-	parts := make([]any, len(pkNames))
-	for i, name := range pkNames {
-		parts[i] = normalizeKey(reflect.Indirect(item).FieldByName(name))
-	}
-	return fmt.Sprintf("%v", parts)
 }
 
 // formValues returns the (reordered) submitted form values. UnmarshalForm
@@ -256,20 +220,4 @@ func pkMapKey(item reflect.Value, pkNames []string) any {
 // persistence layer reads from the very same source as the list-editor render.
 func formValues(ctx *web.EventContext) url.Values {
 	return presets.ListEditorFormValues(ctx)
-}
-
-// normalizeKey makes primary key values comparable as map keys regardless of
-// their concrete integer/uint/string type.
-func normalizeKey(v reflect.Value) any {
-	v = reflect.Indirect(v)
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int()
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return int64(v.Uint())
-	case reflect.String:
-		return v.String()
-	default:
-		return v.Interface()
-	}
 }
