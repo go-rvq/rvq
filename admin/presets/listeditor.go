@@ -407,34 +407,37 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 						return nil
 					}
 
+					// Read each per-item flag at the slice position (aligned with the
+					// decoded, reindexed slice).
+					//
+					// __deleted is honored unconditionally, so any in-session re-render
+					// (add / remove / sort, or a re-render after a failed save) keeps a
+					// removed item removed. __new marks a browser-created row (set by the
+					// add event, never inferred from a zero primary key).
+					deleted := ListEditorItemFlag(vals, formKey, slicePos, ListEditorDeletedField)
+					isNew := ListEditorItemFlag(vals, formKey, slicePos, ListEditorNewField)
+
+					// A browser-created row that was removed has no persisted identity:
+					// drop it entirely — do not render it, do not re-seed its flags, do
+					// not track its key (so the Setup below prunes it from the reactive
+					// form). It simply vanishes instead of lingering/leaking as a cached
+					// "removed" placeholder.
+					if isNew && deleted {
+						return nil
+					}
+
 					idx := i
 					i++
 
 					label := b.itemLabel(obj, idx)
 					itemsState = append(itemsState, map[string]any{"index": idx, "label": label})
+					// itemFormKeys uses the stable __index form key; the Setup re-seeds
+					// per-item metadata (and prunes anything not in this set).
 					itemFormKeys = append(itemFormKeys, itemFormKey)
 
-					// Read each per-item flag at the slice position (aligned with the
-					// decoded, reindexed slice), but collect the item's *form key*
-					// (which uses the stable __index) for the Setup below to re-seed.
-
-					// Honor the item's submitted __deleted unconditionally, so any
-					// in-session re-render (add / remove / sort, or a re-render after a
-					// failed save) keeps a removed item removed — new items included.
-					// This does not leak a stale flag onto a reopened form: reopening
-					// fetches from the DB and posts a fresh form (no __deleted), and
-					// the Setup below clears any client-cached __deleted/__purged and
-					// re-seeds only the items actually rendered as deleted.
-					deleted := ListEditorItemFlag(vals, formKey, slicePos, ListEditorDeletedField)
 					if deleted {
 						deletedItemFormKeys = append(deletedItemFormKeys, itemFormKey)
 					}
-
-					// A browser-created row carries __new (set by the add event and
-					// preserved across re-renders by the Setup below). It is read from
-					// the form, never inferred from a zero primary key, so the list
-					// editor is usable with element types that have no ID.
-					isNew := ListEditorItemFlag(vals, formKey, slicePos, ListEditorNewField)
 					if isNew {
 						newItemFormKeys = append(newItemFormKeys, itemFormKey)
 					}
@@ -454,11 +457,17 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 						Body:                content,
 					}
 
-					// render both views; each builder toggles its own visibility via
-					// ctx.DeletedCond() (Item hidden when deleted, DeletedItem shown),
-					// so the deleted placeholder takes the item's place and list order
-					// is preserved. No wrapping element is added here, so table rows
-					// (<tr>) stay valid direct children of the container.
+					// A new (unsaved) row has no "removed" placeholder: deleting it
+					// client-side simply hides the row (v-show !__deleted) and it
+					// vanishes — a browser-created row the user removed has nothing to
+					// restore. Persisted rows render both views; each builder toggles its
+					// own visibility via ctx.DeletedCond() (Item hidden when deleted,
+					// DeletedItem shown), so the deleted placeholder takes the item's
+					// place and list order is preserved. No wrapping element is added
+					// here, so table rows (<tr>) stay valid direct children.
+					if itemCtx.New {
+						return b.ComponentBuilder.Item(itemCtx)
+					}
 					return h.Components(
 						b.ComponentBuilder.Item(itemCtx),
 						b.ComponentBuilder.DeletedItem(itemCtx),
@@ -533,16 +542,22 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 			// so it is posted and the next render can recover the stable key after
 			// the decoded slice is reindexed by __pos.
 			keys && keys.forEach((k) => { const m = k.match(/\[(\d+)\]$/); if (m) form[k + %q] = Number(m[1]) })
-			// reset the stale client-side metadata flags of this field, then
-			// re-establish the deleted/new state from the server-rendered items. The
-			// reactive form persists across re-renders (add/remove/sort keep the
-			// dialog form), so without this a stale __deleted/__purged/__new would
-			// leak onto a reused item index (a fresh item showing up as removed).
+			// Prune the reactive form of any item that is NOT part of this render,
+			// then reset the current items' toggle flags for re-seeding below. The
+			// reactive form persists across re-renders — and even across forms — so a
+			// removed/leaked row would otherwise linger and be re-submitted. Since
+			// each item is keyed by its stable __index, anything whose index is not
+			// rendered here (e.g. a browser-created row that was removed, or a row
+			// left over from another form) is stale and dropped entirely.
+			const allowed = new Set();
+			keys && keys.forEach((k) => { const m = k.match(/\[(\d+)\]$/); if (m) allowed.add(m[1]) });
 			const itemPrefix = formKey + "[";
 			Object.keys(form).forEach((k) => {
-				if (k.startsWith(itemPrefix) && (k.endsWith(%q) || k.endsWith(%q) || k.endsWith(%q))) {
-					delete form[k];
-				}
+				if (!k.startsWith(itemPrefix)) return;
+				const m = k.slice(itemPrefix.length).match(/^(\d+)\]/);
+				if (!m) return;
+				if (!allowed.has(m[1])) { delete form[k]; return; }
+				if (k.endsWith(%q) || k.endsWith(%q) || k.endsWith(%q)) delete form[k];
 			});
 			const deletedKeys = %s
 			deletedKeys && deletedKeys.forEach((k) => { form[k + %q] = true })

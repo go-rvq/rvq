@@ -143,25 +143,26 @@ func TestSaveFail_PersistedItemRemoved_KeepsDeletedInUI(t *testing.T) {
 	}, app)
 }
 
-// TestSaveFail_NewItemRemoved_KeepsDeletedInUI reproduces the harder case:
+// TestSaveFail_NewItemRemoved_VanishesFromUI covers the harder case:
 //
 //  1. open the edit form (two persisted items);
-//  2. add a brand-new row (zero PK) at index 2;
+//  2. add a brand-new row (no ID, __new) at index 2;
 //  3. remove that new row (Items[2].__deleted = true);
 //  4. clear the required Name;
 //  5. SAVE.
 //
-// Expected: the new (zero-PK) item ALSO stays rendered as deleted. Its submitted
-// __deleted must be honoured unconditionally because a new item only ever exists
-// in the posted form (a reopened form fetches from the DB, where it is absent).
-func TestSaveFail_NewItemRemoved_KeepsDeletedInUI(t *testing.T) {
+// Expected: a browser-created row that was removed has no persisted identity, so
+// it VANISHES entirely — it is not rendered, not re-seeded, and is pruned from
+// the reactive form (so it cannot leak into another form). The Name error still
+// renders and the two persisted items are untouched.
+func TestSaveFail_NewItemRemoved_VanishesFromUI(t *testing.T) {
 	app, err := twoPersistedItems()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	RunCase(t, TestCase{
-		Name: "save fails, removed new item stays deleted",
+		Name: "save fails, removed new item vanishes",
 		ReqFunc: func() *http.Request {
 			return NewMultipartBuilder().
 				PageURL("/admin/products").
@@ -171,13 +172,15 @@ func TestSaveFail_NewItemRemoved_KeepsDeletedInUI(t *testing.T) {
 				AddField("Items.__present", "1").
 				AddField("Items[0].ID", "1").
 				AddField("Items[0].Label", "A").
+				AddField("Items[0].__index", "0").
 				AddField("Items[0].__pos", "0").
 				AddField("Items[1].ID", "2").
 				AddField("Items[1].Label", "B").
+				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "1").
-				// a browser-created row: no ID, then removed
-				AddField("Items[2].ID", "").
+				// a browser-created row (no ID, __new) that was then removed
 				AddField("Items[2].Label", "C").
+				AddField("Items[2].__index", "2").
 				AddField("Items[2].__pos", "2").
 				AddField("Items[2].__new", "true").
 				AddField("Items[2].__deleted", "true").
@@ -187,14 +190,17 @@ func TestSaveFail_NewItemRemoved_KeepsDeletedInUI(t *testing.T) {
 			bodyContainsAll(t, er.Body,
 				// the Name required error still renders
 				`:error-messages='["This field is required"]'`,
-				// the NEW item (index 2) is re-seeded as deleted
-				`const deletedKeys = ["Items[2]"]`,
-				`v-show='form["Items[2].__deleted"] && !form["Items[2].__purged"]'`,
 			)
-			// the two persisted items were not removed
+			// the removed new item is gone: not rendered, not re-seeded
 			bodyContainsNone(t, er.Body,
-				`const deletedKeys = ["Items[0]`,
-				`const deletedKeys = ["Items[1]`,
+				`form["Items[2].Label"]`,
+				`Items[2].__deleted`,
+				`const deletedKeys = [`, // nothing is deleted (the only removal vanished)
+			)
+			// the two persisted items are still rendered and not removed
+			bodyContainsAll(t, er.Body,
+				`form["Items[0].Label"]`,
+				`form["Items[1].Label"]`,
 			)
 		},
 	}, app)
