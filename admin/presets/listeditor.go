@@ -746,11 +746,17 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			}
 		}
 
-		// flag the freshly appended rows as new on the reactive form so the render
-		// (and every later submit) carries __new for them. The rendered item form
-		// key uses the slice index, which matches these indexes here.
-		for i := startLen; i < listSliceLen(obj, formKey); i++ {
-			ctx.R.Form.Set(fmt.Sprintf("%s[%d].%s", formKey, i, ListEditorNewField), "true")
+		// flag the freshly appended rows as new, so the render seeds __new for them
+		// (and every later submit carries it, letting the persistence layer classify
+		// them as creations without inspecting the primary key). The flag must be set
+		// on the SAME values the render reads (ListEditorFormValues: the reindexed
+		// multipart values), not ctx.R.Form — otherwise the render never sees it. The
+		// appended rows land at slice indexes [startLen, newLen), which is where the
+		// render reads their flags.
+		if vals := ListEditorFormValues(ctx); vals != nil {
+			for i := startLen; i < listSliceLen(obj, formKey); i++ {
+				vals.Set(fmt.Sprintf("%s[%d].%s", formKey, i, ListEditorNewField), "true")
+			}
 		}
 
 		// prevent to create new form scope

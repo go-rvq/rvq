@@ -149,6 +149,13 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			}
 		}
 		for _, item := range part.Others {
+			// an "existing" row must have a primary key to update; without one there
+			// is nothing to target (gorm would raise "WHERE conditions required").
+			// Leave it for Replace to create — this is a safety net for rows that
+			// reach Others without a PK (e.g. a client that omitted __new).
+			if zeroer.IsZero(reflect.Indirect(item).FieldByName(pkName)) {
+				continue
+			}
 			rec := item.Interface()
 			if err = up(db.Session(&gorm.Session{}).Model(rec), rec); err != nil {
 				return
