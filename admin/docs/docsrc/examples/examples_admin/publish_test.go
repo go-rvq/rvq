@@ -68,7 +68,8 @@ func TestPublish(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				emptyData.TruncatePut(dbr)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/with-publish-products?__execute_event__=presets_Update").
+					// creating is presets_Create; Update without an id answers "Empty param ID"
+					PageURL("/with-publish-products?__execute_event__=presets_Create").
 					AddField("Name", "123321").
 					AddField("Price", "200").
 					BuildEventFuncRequest()

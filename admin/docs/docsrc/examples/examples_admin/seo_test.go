@@ -27,7 +27,7 @@ func TestSEOExampleBasic(t *testing.T) {
 			Debug: true,
 			ReqFunc: func() *http.Request {
 				seoData.TruncatePut(SqlDB)
-				return httptest.NewRequest("GET", "/seo-posts", nil)
+				return httptest.NewRequest("GET", "/seoposts", nil)
 			},
 			ExpectPageBodyContainsInOrder: []string{"The seo post 1"},
 		},
@@ -37,7 +37,7 @@ func TestSEOExampleBasic(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				seoData.TruncatePut(SqlDB)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/seo-posts?__execute_event__=presets_Detailing_Field_Save&detailField=SEO&id=1").
+					PageURL("/seoposts?__execute_event__=presets_Detailing_Field_Save&detailField=SEO&id=1").
 					AddField("Seo.EnabledCustomize", "true").
 					AddField("Seo.Title", "My seo title").
 					BuildEventFuncRequest()
