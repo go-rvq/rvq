@@ -12,6 +12,11 @@ Reference notes for the `presets` admin package. See the package
 - [List editor & tables](list-editor.md) — nested slices, the client-side list
   editor (`__pos`/`__new`/`__deleted`), and the table renderer
   (`ListEditorTableBuilder`).
+- [Form host](form-host.md) — how a page opens and destroys its edit/create
+  overlays with a single variable (`VAR.show = true|false`): the NEW / row
+  DETAIL-EDIT / detailing EDIT flows, the dialog & drawer closer, the re-renders
+  on validation errors and list-editor add/remove, and driving the form from your
+  own buttons.
 - [Record IDs](record-id.md) — how a model's primary key is encoded into a
   record id, parsed back (`ParseRecordID` / `ParseRecordIDTo`), the supported
   key types (basic kinds, `uuid.UUID`, a `Parse` method, `sql.Scanner`) and the
