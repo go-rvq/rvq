@@ -252,7 +252,7 @@ func flowSchedule_Step02_Event_publish_eventSchedulePublish(t *testing.T, f *Flo
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "locals.schedulePublishDialog = false; plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_ReloadList\").go()", resp.RunScript)
+	assert.Equal(t, "locals.schedulePublishDialog = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_ReloadList\").go()", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }

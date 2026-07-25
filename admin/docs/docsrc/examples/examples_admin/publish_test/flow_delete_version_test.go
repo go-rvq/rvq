@@ -475,7 +475,7 @@ func flowDeleteVersion_Step11_Event_publish_eventDeleteVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v05\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v05\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v03\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
+	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v05\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v05\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v03\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -553,7 +553,7 @@ func flowDeleteVersion_Step14_Event_publish_eventSelectVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v03\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v03\").go() }", resp.RunScript)
+	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v03\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v03\").go() }", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -664,7 +664,7 @@ func flowDeleteVersion_Step18_Event_publish_eventDeleteVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v02\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v02\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v02\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
+	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v02\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v02\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v02\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -767,7 +767,7 @@ func flowDeleteVersion_Step22_Event_publish_eventSelectVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v01\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v01\").go() }", resp.RunScript)
+	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v01\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v01\").go() }", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -878,7 +878,7 @@ func flowDeleteVersion_Step26_Event_publish_eventDeleteVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v05\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v05\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v05\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
+	assert.Equal(t, "vars.publish_VarCurrentDisplayID = \"1_2024-05-26-v05\"; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v05\").go(); plaid().vars(vars).locals(locals).form(form).url(\"/samples/publish-example/with-publish-products-version-list-dialog\").queries({\"select_id\":[\"1_2024-05-26-v05\"]}).eventFunc(\"presets_UpdateListingDialog\").go()", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }

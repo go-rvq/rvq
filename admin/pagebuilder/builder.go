@@ -464,7 +464,12 @@ func (b *Builder) defaultPageInstall(pm *presets.ModelBuilder) (err error) {
 		return nil
 	})
 
-	eb.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	// One function for both paths: creating a page has to clean the slug, take
+	// the locale, apply the selected template and — when the request is a
+	// version duplicate — copy the containers over. The create flow calls
+	// Creator, never Saver, so registering it only as SaveFunc left all of that
+	// out of every page creation.
+	savePage := func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		localeCode, _ := l10n.IsLocalizableFromContext(ctx.R.Context())
 		p := obj.(*Page)
 		if p.Slug != "" {
@@ -530,6 +535,11 @@ func (b *Builder) defaultPageInstall(pm *presets.ModelBuilder) (err error) {
 		})
 
 		return
+	}
+
+	eb.SaveFunc(savePage)
+	eb.CreateFunc(func(obj interface{}, ctx *web.EventContext) (err error) {
+		return savePage(obj, model.ID{}, ctx)
 	})
 	return
 }

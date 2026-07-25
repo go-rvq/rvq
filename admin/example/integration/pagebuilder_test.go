@@ -97,7 +97,8 @@ func TestPageBuilder(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				pageBuilderData.TruncatePut(dbr)
 				req := NewMultipartBuilder().
-					PageURL("/pages?__execute_event__=presets_Update").
+					// creating is its own event now; Update without an id fails
+					PageURL("/pages?__execute_event__=presets_Create").
 					AddField("Title", "Hello 4").
 					AddField("CategoryID", "1").
 					AddField("Slug", "hello4").
@@ -215,7 +216,7 @@ func TestPageBuilder(t *testing.T) {
 
 				return req
 			},
-			ExpectPortalUpdate0ContainsInOrder: []string{`plaid().vars(vars).locals(locals).form(form).eventFunc("page_builder_DeleteContainerEvent").query("containerID", "10_International").go()`},
+			ExpectPortalUpdate0ContainsInOrder: []string{`plaid().vars(vars).locals(locals).form(form).closer(closer).scope({"onSaveCallbacks": onSaveCallbacks,"presetsListing": presetsListing}).eventFunc("page_builder_DeleteContainerEvent").query("containerID", "10_International").go()`},
 		},
 		{
 			Name:  "Page Builder delete container ",
