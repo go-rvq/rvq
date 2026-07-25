@@ -93,7 +93,7 @@ func TestPublish(t *testing.T) {
 					BuildEventFuncRequest()
 				return req
 			},
-			ExpectPortalUpdate0ContainsInOrder: []string{`:width='"600"'`},
+			ExpectPortalUpdate0ContainsInOrder: []string{`width='600'`},
 		},
 		{
 			Name:  "Detailing drawer control bar should be on top",

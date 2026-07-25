@@ -171,6 +171,10 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 
 		Overlay: &ContentComponentBuilderOverlay{
 			Mode: f.b.overlayMode,
+			// the configured width (RightDrawerWidth): the model's when it set
+			// one, otherwise the builder's — without it the overlay card falls
+			// back to its own default and the configuration is ignored
+			Width: f.overlayWidth(),
 		},
 	}
 
@@ -225,6 +229,15 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 	scope.Form().Locals().Vars()
 	f.setupAutoSave(scope)
 	return cb.BuildPage()
+}
+
+// overlayWidth is the width configured for this model's overlays, or the
+// builder's default.
+func (f *Form) overlayWidth() string {
+	if f.MB.rightDrawerWidth != "" {
+		return f.MB.rightDrawerWidth
+	}
+	return f.MB.p.rightDrawerWidth
 }
 
 // setupAutoSave makes the form save itself when its values change, for models
