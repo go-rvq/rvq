@@ -137,6 +137,10 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	msgr := MustGetMessages(ctx.Context())
 	portalID := GetPortalID(ctx.R)
 
+	// publish the per-item hosts before anything renders a row, so the rows open
+	// the listing's shared overlays instead of carrying their own plaid.
+	itemHosts := lcb.itemFormHosts(ctx)
+
 	filterTabs := b.filterTabs(lcb.portals, ctx, inDialog)
 
 	actionsComponent := lcb.actionsComponent(msgr, ctx, inDialog)
@@ -340,7 +344,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 		comp = vue.UserComponent(comp).ScopeVar("filterBarVisible", "{value: false}")
 
-		return comp, nil
+		return lcb.hostForms(ctx, comp, itemHosts), nil
 	}
 
 	if lcb.configureComponent != nil {
@@ -387,8 +391,68 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 		comp = lcb.componentWrap(ctx, comp)
 	}
 
-	return vue.UserComponent(web.Scope(
+	comp = vue.UserComponent(web.Scope(
 		comp,
 	).Slot("{ locals }").LocalsInit(`{currEditingListItemID: ""}`),
-	).ScopeVar("filterBarVisible", "{value: false}"), nil
+	).ScopeVar("filterBarVisible", "{value: false}")
+
+	return lcb.hostForms(ctx, comp, itemHosts), nil
+}
+
+// itemFormHosts builds the listing's per-item hosts (edit and detail) and
+// publishes them on the context, so every row rendered afterwards can open them
+// with `<scope>.id = "<id>"; <scope>.show = true` instead of carrying its own
+// overlay plaid. There is ONE host for the whole listing, keyed by the id var.
+func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFormHosts {
+	var (
+		b        = lcb.b
+		overlay  = OverlayMode(ctx).Up().String()
+		reloadCb = b.reloadCallback(ctx).Encode()
+		hosts    = &ItemFormHosts{}
+		host     = func(scope, event string) *FormHostBuilder {
+			portal := ctx.UID()
+			return FormHost(scope, portal,
+				web.Plaid().
+					URL(b.mb.Info().ListingHrefCtx(ctx)).
+					EventFunc(event).
+					Query(ParamID, web.Var("vars."+scope+".id")).
+					Query(ParamTargetPortal, portal).
+					Query(ParamOverlay, overlay).
+					Query(ParamPostChangeCallback, reloadCb)).
+				Var("id", "null")
+		}
+	)
+
+	if !b.mb.editingDisabled {
+		hosts.Edit = host(ListingItemEditScope, actions.Edit)
+	}
+	if b.mb.hasDetailing && !b.mb.detailingDisabled {
+		hosts.Detail = host(ListingItemDetailScope, actions.Detailing)
+	}
+
+	WithItemFormHosts(ctx, hosts)
+	return hosts
+}
+
+// hostForms wraps the listing in its form hosts: the create form (ListingNewScope,
+// opened by the New button) and the per-item edit/detail overlays (opened by the
+// rows). Each host owns its overlay's closer, so turning its scope off destroys
+// the overlay and turning it on loads a fresh one — always a single request.
+func (lcb *ListingComponentBuilder) hostForms(ctx *web.EventContext, comp h.HTMLComponent, hosts *ItemFormHosts) h.HTMLComponent {
+	for _, h := range []*FormHostBuilder{hosts.Detail, hosts.Edit} {
+		if h != nil {
+			comp = h.Children(comp).Component()
+		}
+	}
+
+	newPortal := ctx.UID()
+	return FormHost(ListingNewScope, newPortal,
+		web.Plaid().
+			URL(ctx.R.RequestURI).
+			EventFunc(actions.New).
+			Query(ParamTargetPortal, newPortal).
+			Query(ParamOverlay, OverlayMode(ctx).Up().String()).
+			Query(ParamPostChangeCallback, lcb.b.reloadCallback(ctx).Encode())).
+		Children(comp).
+		Component()
 }

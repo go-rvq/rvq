@@ -20,6 +20,7 @@ const (
 	ctxDetailingAfterTitleComponent
 	ctxModel
 	ctxScope
+	ctxItemFormHosts
 	ctxFlashMessages
 	ctxActionFormContext
 	ctxBulkActionFormContext

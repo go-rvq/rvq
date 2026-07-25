@@ -257,17 +257,47 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
 	form.mode = DETAIL
-	f := b.configureForm(form.Build())
 
-	if len(f.MainPortals) > 0 {
-		AddPortals(ctx, f.MainPortals...)
-	}
-
-	f.MainPortals = nil
-
-	r.Body = f.Component()
+	r.Body = b.hostedComponent(ctx, id, form)
 
 	return
+}
+
+// hostedComponent renders the detailing inside its edit-form host: the
+// DetailingEditScope var is the edit overlay's closer, so the Edit button (see
+// configureForm) — or any other button on the page — opens the form with
+// `<scope>.show = true`, loading it straight into the host portal (one request),
+// and turning it off destroys the form completely.
+func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, form *FormBuilder) h.HTMLComponent {
+	editPortal := ctx.UID()
+
+	var cb web.Callback
+	cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
+
+	overlayMode := form.overlayMode
+	if overlayMode.Overlayed() {
+		cb.AddScript(web.Plaid().
+			URL(ctx.R.RequestURI).
+			EventFunc(actions.Detailing).
+			StringQuery(ctx.Queries().Encode()).
+			Go())
+	} else {
+		cb.AddScript(web.Plaid().
+			URL(ctx.R.RequestURI).
+			StringQuery(ctx.Queries().Encode()).
+			Go())
+	}
+
+	return FormHost(DetailingEditScope, editPortal,
+		web.Plaid().
+			URL(b.mb.Info().ListingHrefCtx(ctx)).
+			EventFunc(actions.Edit).
+			Query(ParamID, id).
+			ValidQuery(ParamTargetPortal, editPortal).
+			ValidQuery(ParamOverlay, overlayMode.Up().String()).
+			ValidQuery(ParamPostChangeCallback, cb.String())).
+		Children(b.configureForm(form.Build()).Component()).
+		Component()
 }
 
 func (b *DetailingBuilder) buildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -364,13 +394,15 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
 	form.mode = DETAIL
-	f := b.configureForm(form.Build()).Component()
+
+	f := b.hostedComponent(ctx, id, form)
 
 	mode := GetOverlay(ctx)
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
 			SetValidPortalName(targetPortal).
 			SetScrollable(true).
+			SetCloserProvided(CloserProvided(ctx)).
 			Respond(&r, f)
 	} else {
 		b.mb.p.Dialog().
@@ -446,40 +478,9 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	f.Portal = portalName
 
 	if !b.mb.editingDisabled && b.EditingRestriction.CanObj(obj, ctx) {
-		var cb web.Callback
-		cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
-
-		overlayMode := f.b.overlayMode
-
-		if overlayMode.Overlayed() {
-			cb.AddScript(web.Plaid().
-				URL(ctx.R.RequestURI).
-				EventFunc(actions.Detailing).
-				StringQuery(ctx.Queries().Encode()).
-				Go())
-		} else {
-			cb.AddScript(web.Plaid().
-				URL(ctx.R.RequestURI).
-				StringQuery(ctx.Queries().Encode()).
-				Go())
-		}
-
-		editMode := overlayMode.Up()
-		editingPortalID := ctx.UID()
-		editPortal := formPortalName + editingPortalID
-
-		onclick := web.Plaid().
-			URL(b.mb.Info().ListingHrefCtx(ctx)).
-			EventFunc(actions.EditForm).
-			Query(ParamID, f.b.id).
-			ValidQuery(ParamTargetPortal, editPortal).
-			ValidQuery(ParamOverlay, editMode.String()).
-			ValidQuery(ParamPostChangeCallback, cb.String())
-
-		f.MainPortals = append(f.MainPortals,
-			web.Portal().
-				Name(editPortal))
-
+		// The edit form is hosted by the detailing event (see FormHost there): the
+		// button only turns the host's scope on, which mounts and loads the form.
+		// Any other button on this page can do the same.
 		f.PrimaryAction = h.HTMLComponents{
 			VBtn("").
 				Variant(VariantFlat).
@@ -487,7 +488,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 				Attr(":disabled", "isFetching").
 				Attr(":loading", "isFetching").
 				Attr("data-event", "edit").
-				Attr("@click", onclick.Go()).
+				Attr("@click", "vars."+DetailingEditScope+".show = true").
 				Attr("@click.middle",
 					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
 				Icon(true).

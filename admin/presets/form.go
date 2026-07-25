@@ -248,6 +248,7 @@ func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 				SetPortalName(portal).
 				SetScrollable(true).
 				SetValidWidth(f.MB.rightDrawerWidth).
+				SetCloserProvided(CloserProvided(f.b.ctx)).
 				RootWrap(f.Wrap)
 
 			d.Respond(r, comp)

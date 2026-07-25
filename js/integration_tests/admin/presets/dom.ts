@@ -40,6 +40,17 @@ export function mountPresets(template: string, components: Record<string, any> =
     global: {
       plugins: [plaidPlugin, vuetify],
       components: { "vx-dialog": VxDialogStub, ...components },
+      // the real app declares these as global properties (see createWebApp in
+      // corejs/src/app.ts); without them a rendered portal that references
+      // `presetsListing` cannot resolve it and its content fails to render.
+      config: {
+        globalProperties: {
+          presetsListing: null,
+          presetsDetailing: null,
+          presetsCreating: null,
+          presetsEditing: null,
+        },
+      },
     },
   });
 }

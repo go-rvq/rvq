@@ -1,6 +1,41 @@
-# Em andamento — refactor do form scope (EditForm/NewForm)
+# FORM HOST (evolução do EditForm/NewForm)
 
-Estado (NÃO commitado ainda; validar no navegador antes do commit):
+- [x] Conceito do usuário generalizado em `presets.FormHost` (`form_host.go`): a
+      PÁGINA hospeda o form — declara uma var de estado que É o closer do overlay
+      e guarda o bloco do form com `v-if='<ref>?.show'`. Ligar monta o bloco, cujo
+      run-script carrega o form direto no portal do host (UM request, sem o
+      round-trip do wrapper); desligar destrói o form e seu escopo por completo;
+      qualquer botão pode reabrir (form fresco).
+- [x] O estado vive em `vars` (não em slot scope): na PÁGINA o botão vai para o
+      app-bar via layout, FORA do componente do host — com slot scope dava
+      `TypeError: editing is undefined`. Vars são alcançáveis de qualquer ponto.
+      Nomes prefixados: `$presetsEditing`, `$presetsCreating`,
+      `$presetsItemEditing`, `$presetsItemDetailing` (sem colisão com a app).
+- [x] Aplicado a: detailing (evento E página/defaultPageFunc), listing (New) e
+      ITENS do listing — UM host por ação para toda a listagem (não um por linha):
+      a linha faz `vars.$presetsItemDetailing.id = "<id>"; ….show = true` e o host
+      carrega aquele registro. Hosts publicados no ctx (`WithItemFormHosts`) e as
+      linhas/row-menu os consultam, com fallback ao evento self-hosted fora de um
+      listing.
+- [x] `ParamCloserProvided` + `closerScope` no **Dialog e no Drawer**: quando o
+      host provê o closer, o overlay NÃO cria um filho — fechar/salvar desliga o
+      host e destrói o form. (O Drawer importa: na página o edit abre em
+      RightDrawer.)
+- [x] `formScope` (EditForm/NewForm) reimplementado sobre o FormHost (Show(true)),
+      para os call sites que não podem hospedar (row menu fora de listing,
+      publish, l10n, model_select, pagebuilder).
+- [x] Fix: o bloco do form usa `go-plaid-scope` (FormInit), não um user-component
+      aninhado — `<template v-slot>` dentro de outro NÃO é compilado pelo parser
+      de runtime e o conteúdo renderizava inerte (os campos sumiam).
+- [x] Testes (bun, 27 pass): `formhost.dom.test.ts` (EDIT/NEW abrir-destruir-
+      reabrir, 1 request por abertura), `listing.dom.test.ts` + `listing.test.ts`
+      (hosts por item), `detailing.test.ts` (evento E página hospedam igual),
+      `editform.test.ts` atualizado.
+- [ ] PENDENTE: validar no NAVEGADOR as demais telas (drawer/teleport reais).
+
+# Base — refactor do form scope (commitado em 4d0de132 / e24e0ee4)
+
+Estado (validar no navegador antes de publicar):
 
 - [x] Novas ações `actions.EditForm`/`actions.NewForm` + handler `formScope`
       (`admin/presets/editing_form.go`): responde no `ParamTargetPortal` com

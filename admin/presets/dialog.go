@@ -16,6 +16,7 @@ type DialogBuilder struct {
 	targetPortal      string
 	contentPortalName string
 	scrollabled       bool
+	closerProvided    bool
 	wrap              func(comp *v.VDialogBuilder)
 	rootWrap          func(comp h.HTMLComponent) h.HTMLComponent
 }
@@ -119,6 +120,33 @@ func (p *DialogBuilder) SetScrollable(s bool) *DialogBuilder {
 	return p
 }
 
+// SetCloserProvided marks that the caller already provides `closer` in the
+// content's scope (a FormHost owns it). The dialog then binds to that closer
+// instead of creating its own child one — so turning it off destroys the host's
+// form, and turning it back on re-opens a fresh one.
+func (p *DialogBuilder) SetCloserProvided(v bool) *DialogBuilder {
+	p.closerProvided = v
+	return p
+}
+
+// closerScope wraps comp in a scope. When the caller already provides the closer
+// (a FormHost owns it), the scope is created WITHOUT one — the content still gets
+// its regular form/locals scope, but binds to the host's closer, so turning that
+// off destroys the host's form instead of just hiding a child overlay.
+func (p *DialogBuilder) closerScope(comp h.HTMLComponent) h.HTMLComponent {
+	if p.closerProvided {
+		sb, ok := comp.(*web.ScopeBuilder)
+		if !ok {
+			sb = web.Scope(comp)
+		}
+		// Re-provide the closer already in scope (the host's one, a reactive proxy
+		// → go-plaid-scope adopts it as is) instead of creating a child closer, and
+		// keep the usual slot vars for the content.
+		return sb.Closer().Attr(":closer", "closer")
+	}
+	return web.CloserScope(comp, true)
+}
+
 func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 	if fvc := FirstValidComponent(comp); fvc != nil {
 		switch t := fvc.(type) {
@@ -155,7 +183,7 @@ func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 		p.wrap(d)
 	}
 
-	comp = web.CloserScope(d, true)
+	comp = p.closerScope(d)
 
 	if p.rootWrap != nil {
 		comp = p.rootWrap(comp)
@@ -165,6 +193,12 @@ func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 }
 
 func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent) {
+	// a form host owning the closer asks (via the request) not to create another
+	// one, so its `<scope>.show` really controls this overlay.
+	if CloserProvided(ctx) {
+		p.closerProvided = true
+	}
+
 	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
 		ac.SetVModel("closer.show")
 		if acd, ok := ac.(vx.VXAdvancedExpandCloseCardTagger); ok {
@@ -179,7 +213,7 @@ func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, com
 		}
 		comp = p.Component(comp)
 	}
-	r.UpdatePortal(p.targetPortal, web.CloserScope(comp, true))
+	r.UpdatePortal(p.targetPortal, p.closerScope(comp))
 }
 
 func (b *Builder) dialog(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {

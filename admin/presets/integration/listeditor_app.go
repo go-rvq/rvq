@@ -70,6 +70,10 @@ func NewApp(db *gorm.DB) *presets.Builder {
 
 	mb := p.Model(&Product{}).URIName(ProductURI)
 
+	// A detailing, so the tests can exercise its Edit button — the form host: the
+	// button only turns presets.DetailingEditScope.show on.
+	mb.Detailing("Name")
+
 	// The child model + its editing fields (the columns the table renders).
 	// Label is required so a removed row with an empty Label would fail validation
 	// unless the deleted row is skipped.

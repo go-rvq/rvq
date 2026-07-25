@@ -41,13 +41,20 @@ func editRowMenuItemFunc(mi *ModelInfo, url string, editExtraParams url.Values) 
 				Query(ParamOverlay, actions.Dialog).
 				Query(ParamListingQueries, ctx.Queries().Encode())
 		}
+		// Prefer the listing's shared edit host (one request, and closing it
+		// destroys the form); fall back to the self-hosting event outside a listing.
+		open := GetItemFormHosts(ctx).OpenEditExpr(id)
+		if open == "" {
+			open = onclick.Go()
+		}
+
 		return VListItem(
 			web.Slot(
 				VIcon("mdi-pencil"),
 			).Name("prepend"),
 
 			VListItemTitle(h.Text(msgr.Edit)),
-		).Attr("@click", onclick.Go())
+		).Attr("@click", open)
 	}
 }
 

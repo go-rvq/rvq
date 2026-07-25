@@ -20,17 +20,22 @@ var PermRead = []string{PermList, PermGet}
 
 // params
 const (
-	ParamID                        = "id"
-	ParamSelectedID                = "selected_id"
-	ParamAction                    = "action"
-	ParamOverlay                   = "overlay"
-	ParamOverlayUpdateID           = "overlay_update_id"
-	ParamBulkActionName            = "bulk_action"
-	ParamSelectedIds               = "selected_ids"
-	ParamListingQueries            = "presets_listing_queries"
-	ParamAfterDeleteEvent          = "presets_after_delete_event"
-	ParamPortalID                  = "portal_id"
-	ParamTargetPortal              = "target_portal"
+	ParamID               = "id"
+	ParamSelectedID       = "selected_id"
+	ParamAction           = "action"
+	ParamOverlay          = "overlay"
+	ParamOverlayUpdateID  = "overlay_update_id"
+	ParamBulkActionName   = "bulk_action"
+	ParamSelectedIds      = "selected_ids"
+	ParamListingQueries   = "presets_listing_queries"
+	ParamAfterDeleteEvent = "presets_after_delete_event"
+	ParamPortalID         = "portal_id"
+	ParamTargetPortal     = "target_portal"
+	// ParamCloserProvided tells the responder that the caller already provides the
+	// overlay's `closer` (a form host owns it, see FormHost), so the response must
+	// NOT wrap its content in a new closer scope — otherwise it would create a
+	// child closer and closing it would no longer destroy the host's form.
+	ParamCloserProvided            = "presets_closer_provided"
 	ParamPostChangeCallback        = "presets_post_change_callback"
 	ParamPostDeleteCallback        = "presets_post_delete_callback"
 	ParamPostExecuteActionCallback = "presets_post_execute_action_callback"

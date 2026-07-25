@@ -28,30 +28,33 @@ afterAll(() => {
 });
 
 describe("EditForm wrapper", () => {
-  it("mounts a closer scope + form scope + inner portal + run-script", async () => {
+  it("responds with a self-opening form host (scope var + guarded portal + run-script)", async () => {
     const r = await eventFunc(server, "presets_EditForm", {
       query: { id: "1", overlay: "Dialog", target_portal: "outerPortal" },
     });
 
     const body = portalBody(r, "outerPortal");
 
-    // closer scope above, turned on via a setup timeout
+    // the host owns the form's closer in a scope var, already on (self-opening)
+    expect(body).toContain("<user-component");
+    expect(body).toContain('{...{"$presetsEditing": {show:true}}}');
+    // the form block is guarded by it: turning it off destroys the form
+    expect(body).toContain("v-if='vars.$presetsEditing?.show'");
+    // inside, a child `form` scope + the portal (seeded with the host's closer)
+    // and the run-script that loads the real Edit into it
     expect(body).toContain("<go-plaid-scope");
-    expect(body).toContain("closer.show = true");
-    // the form is destroyed when the closer is turned off
-    expect(body).toContain("v-if='closer.show'");
-    // a single form scope, child of the ambient form (raw JS, not a string)
-    expect(body).toContain(":scope='{form: {$parent: form}}'");
-    // an inner portal + a run-script that fires the real Edit into it, sharing
-    // the same closer
+    expect(body).toContain(":form='[{}]'");
+    expect(body).toContain('"closer": vars.$presetsEditing');
     expect(body).toContain("<go-plaid-portal");
     expect(body).toContain("<go-plaid-run-script");
 
     const script = extractRunScript(body);
     const inner = parseRunScriptEvent(script);
     expect(inner.event).toBe("presets_Edit");
-    expect(script).toContain("scope({closer: closer})");
-    // the inner Edit targets the inner portal (not the outer one)
+    // the loaded overlay binds to the host's closer instead of creating one
+    expect(script).toContain("scope({closer: vars.$presetsEditing})");
+    expect(script).toContain('query("presets_closer_provided", "true")');
+    // and it targets the inner portal (not the outer one)
     expect(inner.queries["target_portal"]).toBeTruthy();
     expect(inner.queries["target_portal"]).not.toBe("outerPortal");
   });

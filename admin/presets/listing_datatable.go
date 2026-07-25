@@ -101,6 +101,12 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 				URL(b.mb.detailing.mb.Info().ListingHrefCtx(ctx)).
 				Query(ParamPostChangeCallback, reloadCb)
 
+			// The listing hosts one shared overlay per action (see itemFormHosts):
+			// a row just points it at its record and turns it on — no per-row plaid,
+			// one request, and closing destroys the overlay.
+			hosts := GetItemFormHosts(ctx)
+			var open string
+
 			if b.mb.detailing.mb.hasDetailing {
 				if b.mb.detailingDisabled {
 					return
@@ -109,6 +115,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 				if !b.mb.detailing.mb.CanDetailObj(obj, ctx) {
 					return
 				}
+				open = hosts.OpenDetailExpr(id)
 				onclick.EventFunc(actions.Detailing)
 			} else {
 				if b.mb.editingDisabled {
@@ -118,6 +125,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 				if !b.mb.editing.mb.CanEditObj(obj, ctx) {
 					return
 				}
+				open = hosts.OpenEditExpr(id)
 				onclick.EventFunc(actions.EditForm)
 			}
 
@@ -127,8 +135,14 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 				onclick.Query(ParamTargetPortal, tempPortal)
 			}
 
+			if open == "" {
+				// no host around (component rendered outside a listing): fall back to
+				// the self-hosting event.
+				open = onclick.Go()
+			}
+
 			cell.SetAttr("@click.self",
-				onclick.Go()+fmt.Sprintf(`; locals.currEditingListItemID="%s-%s"`, dataTableID, id))
+				open+fmt.Sprintf(`; locals.currEditingListItemID="%s-%s"`, dataTableID, id))
 			cell.SetAttr("@click.middle",
 				fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.detailing.mb.Info().DetailingHrefCtx(ctx, id)))
 			return
@@ -499,20 +513,16 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 				actionBtns = append(actionBtns, b.newBtnFunc(ctx))
 			}
 		} else if b.mb.permissioner.ReqCreator(ctx.R).Allowed() {
-			mode := OverlayMode(ctx)
-
-			onclick := web.Plaid().
-				EventFunc(actions.NewForm).URL(ctx.R.RequestURI).
-				Query(ParamTargetPortal, lcb.portals.Temp()).
-				Query(ParamOverlay, mode.Up().String()).
-				Query(ParamPostChangeCallback, b.reloadCallback(ctx).Encode())
-
+			// The create form is hosted by the listing component (see FormHost
+			// there): this button only turns the host's scope on, which mounts and
+			// loads the form. Any other button in the listing can do the same.
 			actionBtns = append(actionBtns, VBtn("").
 				Color("primary").
 				Variant(VariantFlat).
 				Theme("dark").Class("ml-2").
 				// Size(SizeSmall).
-				Attr("@click", onclick.Go()).
+				Attr("data-event", "new").
+				Attr("@click", "vars."+ListingNewScope+".show = true").
 				Icon(true).
 				Density("comfortable").
 				Children(VIcon("mdi-plus")))

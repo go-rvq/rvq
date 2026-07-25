@@ -4,53 +4,37 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
-	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/perm"
 
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-// formScope responds with the single form-scope wrapper: a closer scope holding
-// a user-component that establishes the `form` reactive scope (child of the
-// ambient form) around an inner portal, then runs the real create/edit event
-// (innerEvent) into that portal.
+// formScope responds with a self-opening FormHost: it owns the form's `closer`
+// and its `form` scope, and loads the real create/edit event (innerEvent) into
+// its inner portal as soon as it mounts (Show(true)).
 //
-// A `closer` (dialog closer) is defined above the user-component:
-//   - it starts true (CloserScope(_, true) sets closer.show = true), which mounts
-//     the user-component and, on mount, RunScript fires the Edit/New plaid into
-//     the inner portal;
-//   - the user-component is guarded by v-if="closer.show", so setting
-//     closer.show = false (e.g. the submit response) unmounts it and destroys the
-//     whole form and its UI.
+// This is the entry point for callers that cannot host the form themselves (a
+// row menu, an action button elsewhere, …). Pages that CAN host it — the
+// detailing (edit) and the listing (create) — embed a FormHost directly and just
+// flip `<scope>.show`, saving this round-trip.
 //
-// Because the scope lives in the outer (wrapper) portal, the inner form and every
-// list-editor add/remove/sort or validation re-render re-render only the inner
-// portal and never recreate the scope. The wrapper is mounted in ParamTargetPortal
-// (where the caller wants the response).
-func (b *EditingBuilder) formScope(ctx *web.EventContext, innerEvent string) (r web.EventResponse, err error) {
+// Either way the semantics are the same: the host owns the closer, so turning it
+// off destroys the form and its scope completely, and turning it on loads a fresh
+// one; the form's own re-renders (list editor, validation) never recreate the
+// scope.
+func (b *EditingBuilder) formScope(ctx *web.EventContext, scope, innerEvent string) (r web.EventResponse, err error) {
 	innerPortal := ctx.UID()
 
 	queries := ctx.Queries()
 	queries.Set(ParamTargetPortal, innerPortal)
 
-	onclick := web.Plaid().
-		URL(b.mb.Info().ListingHrefCtx(ctx)).
-		EventFunc(innerEvent).
-		Queries(queries).
-		// pass the wrapper's closer down, so the inner form (and its submit) share
-		// the same closer and can destroy the whole wrapper via closer.show = false.
-		Scope(web.Var("{closer: closer}")).
-		Go()
-
-	form := vue.UserComponent(
-		web.Portal().Name(innerPortal),
-		web.RunScript(onclick),
-	).Scope("form", vue.Var("{$parent: form}"))
-	// destroy the whole form (scope + UI) when the closer is turned off.
-	form.Attr("v-if", "closer.show")
-
-	// closer starts true: mounts the form and fires the Edit/New plaid.
-	comp := web.CloserScope(form, true)
+	comp := FormHost(scope, innerPortal,
+		web.Plaid().
+			URL(b.mb.Info().ListingHrefCtx(ctx)).
+			EventFunc(innerEvent).
+			Queries(queries)).
+		Show(true).
+		Component()
 
 	if target := ctx.R.FormValue(ParamTargetPortal); target != "" {
 		r.UpdatePortal(target, comp)
@@ -61,11 +45,11 @@ func (b *EditingBuilder) formScope(ctx *web.EventContext, innerEvent string) (r 
 }
 
 func (b *EditingBuilder) formEditScope(ctx *web.EventContext) (web.EventResponse, error) {
-	return b.formScope(ctx, actions.Edit)
+	return b.formScope(ctx, DetailingEditScope, actions.Edit)
 }
 
 func (b *EditingBuilder) formNewScope(ctx *web.EventContext) (web.EventResponse, error) {
-	return b.formScope(ctx, actions.New)
+	return b.formScope(ctx, ListingNewScope, actions.New)
 }
 
 func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.EventResponse, err error) {
@@ -85,6 +69,7 @@ func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.
 		b.mb.p.Drawer(mode).
 			SetScrollable(true).
 			SetValidPortalName(targetPortal).
+			SetCloserProvided(CloserProvided(ctx)).
 			Respond(&r, comp)
 	} else if mode.IsDialog() {
 		b.mb.p.Dialog().

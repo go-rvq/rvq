@@ -11,12 +11,35 @@ import (
 )
 
 type Drawer struct {
-	location   string
-	width      string
-	portalName string
-	safeClose  bool
-	scrollable bool
-	rootWrap   func(comp h.HTMLComponent) h.HTMLComponent
+	location       string
+	width          string
+	portalName     string
+	safeClose      bool
+	scrollable     bool
+	closerProvided bool
+	rootWrap       func(comp h.HTMLComponent) h.HTMLComponent
+}
+
+// SetCloserProvided marks that the caller already provides `closer` in the
+// content's scope (a FormHost owns it), so this drawer binds to that closer
+// instead of creating its own child one — turning the host's scope off then
+// destroys the form, and turning it on re-opens a fresh one.
+func (p *Drawer) SetCloserProvided(v bool) *Drawer {
+	p.closerProvided = v
+	return p
+}
+
+// closerScope wraps comp in a scope, without creating a closer when the caller
+// already provides one (see SetCloserProvided).
+func (p *Drawer) closerScope(comp h.HTMLComponent) h.HTMLComponent {
+	if p.closerProvided {
+		sb, ok := comp.(*web.ScopeBuilder)
+		if !ok {
+			sb = web.Scope(comp)
+		}
+		return sb.Closer().Attr(":closer", "closer")
+	}
+	return web.CloserScope(comp, true)
 }
 
 func NewDrawer(width string, portalName string) *Drawer {
@@ -142,10 +165,7 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 		comp = drawer
 	}
 
-	comp = web.CloserScope(
-		comp,
-		true,
-	)
+	comp = p.closerScope(comp)
 
 	if p.rootWrap != nil {
 		comp = p.rootWrap(comp)
