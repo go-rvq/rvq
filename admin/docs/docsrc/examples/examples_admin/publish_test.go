@@ -55,7 +55,7 @@ func TestPublish(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				publishData.TruncatePut(dbr)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/with-publish-products?__execute_event__=presets_New").
+					PageURL("/with-publish-products?__execute_event__=presets_New&overlay=RightDrawer").
 					BuildEventFuncRequest()
 				return req
 			},
