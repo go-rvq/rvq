@@ -835,6 +835,13 @@ func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
 		if _, ok := exists[fn]; !ok {
 			exists[fn] = nil
 			field := b.GetField(fn)
+			if field == nil {
+				// a name with no field behind it is a VIRTUAL field: a section, or
+				// the page builder's preview card. Dropping it silently lost the
+				// component someone mounts on it later, and with it the position
+				// the layout gave it.
+				field = r.NewFieldWithName(fn)
+			}
 			if field != nil {
 				newFields = append(newFields, field)
 			}
