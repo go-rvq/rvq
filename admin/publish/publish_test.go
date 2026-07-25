@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/x/i18n"
 	"io"
 	"os"
 	"sort"
@@ -247,11 +249,15 @@ func TestPublishVersionContentToS3(t *testing.T) {
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV1)
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV2)
 
+	// Publish/UnPublish take the record's model builder now
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	productMB := pb.Model(&Product{})
+
 	p := publish.New(db, Storage)
 	// publish v1
 	skipListTrueContext := context.WithValue(context.Background(), "skip_list", true)
 	skipListFalseContext := context.WithValue(context.Background(), "skip_list", false)
-	if err := p.Publish(&productV1, skipListTrueContext); err != nil {
+	if err := p.Publish(productMB, &productV1, skipListTrueContext); err != nil {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV1, publish.StatusOnline, productV1.getUrl())
@@ -259,7 +265,7 @@ func TestPublishVersionContentToS3(t *testing.T) {
 	// assertUploadFile(t, productV1.getListContent(), productV1.getListUrl(), Storage)
 
 	// publish v2
-	if err := p.Publish(&productV2, skipListFalseContext); err != nil {
+	if err := p.Publish(productMB, &productV2, skipListFalseContext); err != nil {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV2, publish.StatusOnline, productV2.getUrl())
@@ -271,7 +277,7 @@ func TestPublishVersionContentToS3(t *testing.T) {
 	assertUpdateStatus(t, db, &productV1, publish.StatusOffline, productV1.getUrl())
 
 	// unpublish v2
-	if err := p.UnPublish(&productV2, skipListFalseContext); err != nil {
+	if err := p.UnPublish(productMB, &productV2, skipListFalseContext); err != nil {
 		t.Error(err)
 	}
 	assertUpdateStatus(t, db, &productV2, publish.StatusOffline, productV2.getUrl())
@@ -308,11 +314,14 @@ func TestPublishList(t *testing.T) {
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV2)
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV3)
 
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	productMB := pb.Model(&Product{})
+
 	publisher := publish.New(db, storage)
 	listPublisher := publish.NewListPublishBuilder(db, storage)
 
-	publisher.Publish(&productV1, context.Background())
-	publisher.Publish(&productV3, context.Background())
+	publisher.Publish(productMB, &productV1, context.Background())
+	publisher.Publish(productMB, &productV3, context.Background())
 	if err := listPublisher.Run(ProductWithoutVersion{}); err != nil {
 		panic(err)
 	}
@@ -326,7 +335,7 @@ get: %v
 `, expected, storage.Objects["/product_without_version/list/1.html"])))
 	}
 
-	publisher.Publish(&productV2, context.Background())
+	publisher.Publish(productMB, &productV2, context.Background())
 	if err := listPublisher.Run(ProductWithoutVersion{}); err != nil {
 		panic(err)
 	}
@@ -339,7 +348,7 @@ get: %v
 `, expected, storage.Objects["/product_without_version/list/1.html"])))
 	}
 
-	publisher.UnPublish(&productV2, context.Background())
+	publisher.UnPublish(productMB, &productV2, context.Background())
 	if err := listPublisher.Run(ProductWithoutVersion{}); err != nil {
 		panic(err)
 	}
@@ -352,7 +361,7 @@ get: %v
 `, expected, storage.Objects["/product_without_version/list/1.html"])))
 	}
 
-	publisher.UnPublish(&productV3, context.Background())
+	publisher.UnPublish(productMB, &productV3, context.Background())
 	if err := listPublisher.Run(ProductWithoutVersion{}); err != nil {
 		panic(err)
 	}
@@ -382,8 +391,11 @@ func TestSchedulePublish(t *testing.T) {
 
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&productV1)
 
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	productMB := pb.Model(&Product{})
+
 	publisher := publish.New(db, storage)
-	publisher.Publish(&productV1, context.Background())
+	publisher.Publish(productMB, &productV1, context.Background())
 
 	var expected string
 	expected = "11"
@@ -401,7 +413,8 @@ func TestSchedulePublish(t *testing.T) {
 		panic(err)
 	}
 	schedulePublisher := publish.NewSchedulePublishBuilder(publisher)
-	if err := schedulePublisher.Run(productV1); err != nil {
+	// Run takes the pair of record and its model builder now
+	if err := schedulePublisher.Run(&publish.Model{Record: &productV1, Builder: productMB}); err != nil {
 		panic(err)
 	}
 	expected = "12"
@@ -417,7 +430,8 @@ func TestSchedulePublish(t *testing.T) {
 	if err := db.Save(&productV1).Error; err != nil {
 		panic(err)
 	}
-	if err := schedulePublisher.Run(productV1); err != nil {
+	// Run takes the pair of record and its model builder now
+	if err := schedulePublisher.Run(&publish.Model{Record: &productV1, Builder: productMB}); err != nil {
 		panic(err)
 	}
 	expected = ""
@@ -443,9 +457,12 @@ func TestPublishContentWithoutVersionToS3(t *testing.T) {
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&product1)
 	ctx := context.Background()
 
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	productMB := pb.Model(&Product{})
+
 	p := publish.New(db, storage)
 	// publish product1
-	if err := p.Publish(&product1, ctx); err != nil {
+	if err := p.Publish(productMB, &product1, ctx); err != nil {
 		t.Error(err)
 	}
 	assertNoVersionUpdateStatus(t, db, &product1, publish.StatusOnline, product1.getUrl())
@@ -455,7 +472,7 @@ func TestPublishContentWithoutVersionToS3(t *testing.T) {
 	product1Clone.Code = "0002"
 
 	// publish product1 again
-	if err := p.Publish(&product1Clone, ctx); err != nil {
+	if err := p.Publish(productMB, &product1Clone, ctx); err != nil {
 		t.Error(err)
 	}
 	assertNoVersionUpdateStatus(t, db, &product1Clone, publish.StatusOnline, product1Clone.getUrl())
@@ -465,7 +482,7 @@ func TestPublishContentWithoutVersionToS3(t *testing.T) {
 	// if delete product1 old file
 	assertContentDeleted(t, product1.getUrl(), storage)
 	// unpublish product1
-	if err := p.UnPublish(&product1Clone, ctx); err != nil {
+	if err := p.UnPublish(productMB, &product1Clone, ctx); err != nil {
 		t.Error(err)
 	}
 	assertNoVersionUpdateStatus(t, db, &product1Clone, publish.StatusOffline, product1Clone.getUrl())

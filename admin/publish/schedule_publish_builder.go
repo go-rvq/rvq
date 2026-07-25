@@ -41,9 +41,14 @@ func (b *SchedulePublishBuilder) Run(model *Model) (err error) {
 	}
 	reqCtx := b.publisher.WithContextValues(context.Background())
 
-	// If model is Product{}
-	// Generate a records: []*Product{}
-	records := reflect.MakeSlice(reflect.SliceOf(reflect.New(reflect.TypeOf(model)).Type()), 0, 0).Interface()
+	// If the record is a Product, generate records: []*Product{}. It is the
+	// RECORD's type: taking the type of `model` built a slice of the
+	// record/builder pair, which gorm cannot parse as a table.
+	recordType := reflect.TypeOf(model.Record)
+	for recordType.Kind() == reflect.Ptr {
+		recordType = recordType.Elem()
+	}
+	records := reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(recordType)), 0, 0).Interface()
 	flagTime := scope.NowFunc()
 	var unpublishAfterPublishRecords []interface{}
 
