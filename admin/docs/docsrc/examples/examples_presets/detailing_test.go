@@ -44,7 +44,7 @@ func TestPresetsDetailing(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				detailData.TruncatePut(SqlDB)
 				return multipartestutils.NewMultipartBuilder().
-					PageURL("/customers?__execute_event__=presets_DetailingDrawer&id=12").
+					PageURL("/customers?__execute_event__=presets_Detailing&overlay=RightDrawer&id=12").
 					BuildEventFuncRequest()
 			},
 			ExpectPortalUpdate0ContainsInOrder: []string{"Felix 1"},
@@ -56,7 +56,7 @@ func TestPresetsDetailing(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				detailData.TruncatePut(SqlDB)
 				return multipartestutils.NewMultipartBuilder().
-					PageURL("/customers?__execute_event__=presets_DetailingDrawer" +
+					PageURL("/customers?__execute_event__=presets_Detailing&overlay=RightDrawer" +
 						"&id=12").
 					BuildEventFuncRequest()
 			},
@@ -96,12 +96,12 @@ func TestPresetsDetailing(t *testing.T) {
 			Name:  "page detail show for field sections",
 			Debug: true,
 			HandlerMaker: func() http.Handler {
-				return pb1
+				return pb2
 			},
 			ReqFunc: func() *http.Request {
 				detailData.TruncatePut(SqlDB)
 				return multipartestutils.NewMultipartBuilder().
-					PageURL("/customers?__execute_event__=presets_DetailingDrawer" +
+					PageURL("/customers?__execute_event__=presets_Detailing&overlay=RightDrawer" +
 						"&id=12").
 					BuildEventFuncRequest()
 			},
