@@ -112,7 +112,7 @@ func (b *Builder) middleware(handler http.Handler) http.Handler {
 		if capturedResponse.StatusCode() == http.StatusNotFound {
 			if !b.skipNotFoundHandler(r) {
 				// If no other handler wrote to the response, assume 404 and write our custom response.
-				notFoundHandler.ServeHTTP(w, r)
+				notFoundHandler.ServeHTTP(&forcedStatusWriter{ResponseWriter: w, code: http.StatusNotFound}, r)
 			}
 		}
 		return

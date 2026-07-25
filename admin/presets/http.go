@@ -31,3 +31,27 @@ func (rw *wrapedResponseWriter) Write(b []byte) (int, error) {
 
 	return rw.ResponseWriter.Write(b)
 }
+
+// forcedStatusWriter answers with a fixed status code, whatever the handler
+// writing through it asks for. The not-found page renders through the normal
+// page pipeline, which writes 200; the response has to stay a 404.
+type forcedStatusWriter struct {
+	http.ResponseWriter
+	code    int
+	written bool
+}
+
+func (w *forcedStatusWriter) WriteHeader(int) {
+	if w.written {
+		return
+	}
+	w.written = true
+	w.ResponseWriter.WriteHeader(w.code)
+}
+
+func (w *forcedStatusWriter) Write(b []byte) (int, error) {
+	if !w.written {
+		w.WriteHeader(w.code)
+	}
+	return w.ResponseWriter.Write(b)
+}

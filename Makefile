@@ -22,6 +22,7 @@ GO_TEST_PKGS := \
 	./admin/pagebuilder \
 	./admin/publish \
 	./admin/example/integration \
+	./admin/docs/docsrc/examples/examples_presets \
 	./admin/seo \
 	./admin/packages/... \
 	./thirdpart/...

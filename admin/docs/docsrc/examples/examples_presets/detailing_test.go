@@ -96,7 +96,8 @@ func TestPresetsDetailing(t *testing.T) {
 			Name:  "page detail show for field sections",
 			Debug: true,
 			HandlerMaker: func() http.Handler {
-				return pb2
+				// PresetsDetailInlineEditFieldSections is the one that renders them
+				return pb1
 			},
 			ReqFunc: func() *http.Request {
 				detailData.TruncatePut(SqlDB)
