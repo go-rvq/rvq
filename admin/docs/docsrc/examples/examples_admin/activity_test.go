@@ -13,7 +13,7 @@ import (
 )
 
 var activityData = gofixtures.Data(gofixtures.Sql(`
-INSERT INTO public.activity_logs (id, user_id, created_at, creator, action, model_keys, model_name, model_label, model_link, model_diffs) VALUES (1, '00000000-0000-0000-0000-000000000000', '2024-05-30 07:02:53.393836 +00:00', 'smile', 'Create', '1:xxx', 'WithActivityProduct', 'with-activity-products', '', '');
+INSERT INTO public.activity_logs (id, user_id, created_at, creator, action, model_keys, model_name, model_label, model_link, model_diffs) VALUES (1, '00000000-0000-0000-0000-000000000000', '2024-05-30 07:02:53.393836 +00:00', 'smile', 'Create', '1', 'WithActivityProduct', 'with-activity-products', '', '');
 
 INSERT INTO public.with_activity_products (title, code, price, id, created_at, updated_at, deleted_at) VALUES ('P11111111111', 'code11111111', 0, 1, '2024-05-30 07:02:53.389781 +00:00', '2024-05-30 07:15:38.585837 +00:00', null);
 
@@ -45,7 +45,9 @@ func TestActivity(t *testing.T) {
 					BuildEventFuncRequest()
 				return req
 			},
-			ExpectPortalUpdate0ContainsInOrder: []string{"WithActivityProduct 1"},
+			// the timeline shows the record's log — action and author — not the
+			// record's own identity, which the page around it already states
+			ExpectPortalUpdate0ContainsInOrder: []string{"v-timeline", "smile"},
 		},
 	}
 

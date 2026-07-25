@@ -200,10 +200,17 @@ func (ab *Builder) installModelBuilder(mb *ModelBuilder, presetModel *presets.Mo
 	editing := presetModel.Editing()
 	d := presetModel.Detailing()
 
+	// the record's activity log, rendered inline — the same timeline the log
+	// view action opens in a dialog (it was a placeholder returning an empty
+	// timeline, so the field showed nothing)
 	d.Field(Timeline).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return vuetify.VTimeline(
-			vuetify.VTimelineItem(),
-		)
+		id := presetModel.MustRecordID(field.Obj).String()
+		logs, err := mb.RecordLogs(id)
+		if err != nil {
+			return vuetify.VAlert(h.Text(err.Error())).
+				Type(vuetify.TypeError).Variant(vuetify.VariantTonal).Density(vuetify.DensityCompact)
+		}
+		return mb.logTimeline(ctx, logs)
 	})
 
 	editing.WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {

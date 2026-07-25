@@ -19,6 +19,7 @@ GO_TEST_PKGS := \
 	./admin/presets \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
+	./admin/activity/... \
 	./admin/pagebuilder \
 	./admin/publish \
 	./admin/example/integration \
