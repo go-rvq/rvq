@@ -74,9 +74,13 @@ func (d *SectionsBuilder) appendNewSection(name string) (r *SectionBuilder) {
 		alwaysShowListLabel:     false,
 		isList:                  false,
 	}
-	r.editingFB.Model(d.mb.model)
+	// The section's own field builders start from the model's, the way every
+	// other builder does (see ModelBuilder.Editing / Detailing): Only() picks
+	// from the fields a builder already has, so starting empty made
+	// Section(…).Editing("Name", …) select nothing and the section render blank.
+	r.editingFB = *d.mb.NewFieldsBuilder(d.mb.writeFieldBuilders.HasMode(WRITE)...)
 	r.editingFB.defaults = d.mb.editing.defaults
-	r.viewingFB.Model(d.mb.model)
+	r.viewingFB = *d.mb.NewFieldsBuilder(d.mb.detailFieldBuilders.HasMode(DETAIL)...)
 	r.viewingFB.defaults = d.mb.p.detailFieldDefaults
 	r.saver = r.DefaultSaveFunc
 
@@ -223,6 +227,11 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 				ToComponentOptions: &ToComponentOptions{},
 				FormKey:            b.name,
 				Path:               FieldPath{b.name},
+				// the record and its model: a field's permission check reads them
+				// from the root context, and without them it asked for the id of a
+				// nil object and the whole section rendered as an error
+				Obj:       field.Obj,
+				ModelInfo: field.ModelInfo,
 			}, ctx)
 		})
 	}
@@ -239,6 +248,8 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 				ToComponentOptions: field.ToComponentOptions,
 				FormKey:            b.name,
 				Path:               FieldPath{b.name},
+				Obj:                field.Obj,
+				ModelInfo:          field.ModelInfo,
 			}, ctx)
 		})
 	}

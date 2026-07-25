@@ -744,6 +744,8 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 	r.UpdatePortal(f.FieldPortalName(), f.editComponent(obj, &FieldContext{
 		ToComponentOptions: &ToComponentOptions{},
 		EventContext:       ctx,
+		Obj:                obj,
+		ModelInfo:          b.mb.Info(),
 		FormKey:            f.name,
 		Path:               FieldPath{f.name},
 		Name:               f.name,
@@ -784,6 +786,7 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 			ToComponentOptions: &ToComponentOptions{},
 			EventContext:       ctx,
 			Obj:                obj,
+			ModelInfo:          b.mb.Info(),
 			FormKey:            f.name,
 			Path:               FieldPath{f.name},
 			Name:               f.name,
