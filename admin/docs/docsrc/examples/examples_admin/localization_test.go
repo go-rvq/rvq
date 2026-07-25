@@ -70,7 +70,7 @@ func TestLocalization(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				l10nDataWithChina.TruncatePut(SqlDB)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/l10n-models?__execute_event__=presets_Edit&id=1_China").
+					PageURL("/l10n-models?__execute_event__=presets_Edit&overlay=RightDrawer&id=1_China").
 					BuildEventFuncRequest()
 				return req
 			},
