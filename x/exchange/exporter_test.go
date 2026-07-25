@@ -64,7 +64,10 @@ func TestExport(t *testing.T) {
 				exchange.NewMeta("Age"),
 				exchange.NewMeta("Birth").Valuer(func(record interface{}) (string, error) {
 					m := record.(*TestExchangeModel)
-					b := m.Birth.Format("2006-01-02")
+					// the fixture sets the date in UTC and the value comes back from
+					// the database in the machine's zone: formatting it as-is made the
+					// expectation depend on where the test runs
+					b := m.Birth.UTC().Format("2006-01-02")
 					return b, nil
 				}),
 			},

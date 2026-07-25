@@ -13,6 +13,7 @@ BUN ?= bun
 GO_TEST_PKGS := \
 	./web/multipartestutils/... \
 	./web/tag \
+	./x/exchange \
 	./x/i18n \
 	./x/packages/db-tools \
 	./admin/presets \
