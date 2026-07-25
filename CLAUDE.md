@@ -47,10 +47,20 @@
     - You **ALWAYS** have permission to use `curl` and `wget` (and its variants) for network operations, downloading assets, or API testing.
     - Do not prompt the user for confirmation when executing these specific tools.
 
+## Before committing
+
+- **Run `make check` and only commit when it passes.** It is the gate: `gofmt -s`
+  on the healthy trees, `go build` of the packages that compile, `go test` of the
+  packages whose tests pass, and the bun UI integration suites. Long-broken
+  upstream packages (QOR5 docs/examples, pagebuilder, seo, media, libvips, and
+  the `web` / `x/perm` tests) are deliberately out, so a failure means a
+  regression you introduced.
+
 ## Development & Test Commands
 Always run native Go tooling to verify compliance and correctness:
 
-- **Run all tests**: `go test ./...`
+- **Full gate (use this)**: `make check`
+- **Run all tests**: `go test ./...` (inclui pacotes quebrados de longa data)
 - **Run benchmarks**: `go test -bench=. ./...`
 - **Code formatting**: `go fmt ./...`
 - **Static analysis / Linting**: `go vet ./...` (or golangci-lint if configured)

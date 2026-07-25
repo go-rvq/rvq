@@ -17,7 +17,11 @@ com minhas alterações.
 
 ## Testes
 
-- Go: `go test ./...`.
+- **`make check`** — o portão antes de commitar: `gofmt -s`, build, os testes Go
+  que passam e as suítes de integração de UI. Pacotes quebrados de longa data
+  (docs/examples do QOR5, pagebuilder, seo, media, libvips, testes de `web` e
+  `x/perm`) ficam de fora de propósito.
+- Go: `go test ./...` (roda tudo, inclusive o que já está quebrado).
 - **Testes de integração de UI: `js/integration_tests/`** — rodam com `bun test`
   a partir do diretório da suíte (é lá que fica o `bunfig.toml` com o `preload`),
   p.ex. `cd js/integration_tests/admin/presets && bun test`. Cada suíte sobe o
