@@ -81,7 +81,7 @@ func RegisterListContentLiteContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 	// the nested items need their own model builder (NestedSlice binds the
 	// field to it), built on the same presets builder as the container
 	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &ListItemLite{})
-	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb))
+	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb).SetDisplayFieldInSorter("Heading"))
 }
 
 func ListContentLiteBody(data *ListContentLite, input *pagebuilder.RenderInput) (body HTMLComponent) {

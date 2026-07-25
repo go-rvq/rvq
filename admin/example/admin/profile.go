@@ -90,8 +90,8 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 
 	eb := m.Editing("Info", "Actions", "Sessions")
 
-	m.RegisterEventHandler(signOutAllSessionEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+	m.RegisterEventFunc(signOutAllSessionEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		u := getCurrentUser(ctx.R)
 
@@ -108,12 +108,13 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 		return
 	})
 
-	eb.FetchFunc(func(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error) {
+	eb.FetchFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		u := getCurrentUser(ctx.R)
 		if u == nil {
-			return nil, errors.New("cannot get current user")
+			return errors.New("cannot get current user")
 		}
-		return u, nil
+		*(obj.(*models.User)) = *u
+		return nil
 	})
 
 	eb.SetterFunc(func(obj interface{}, ctx *web.EventContext) {
@@ -122,8 +123,9 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 		return
 	})
 
-	eb.Field("Info").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+	eb.Field("Info").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		u := obj.(*models.User)
 		var roles []string
@@ -160,8 +162,8 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 		).Class("mx-2 mt-4")
 	})
 
-	eb.Field("Actions").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+	eb.Field("Actions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		// We don't allow public user to change its password
 		u := getCurrentUser(ctx.R)
@@ -185,8 +187,9 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 		).Class("mx-2 mt-4 text-left")
 	})
 
-	eb.Field("Sessions").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+	eb.Field("Sessions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		u := obj.(*models.User)
 		items := []*models.LoginSession{}
@@ -260,7 +263,7 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 			return true
 		})
 
-		sessionTableHeaders := []DataTableHeader{
+		sessionTableHeaders := []DataTableHeaderBasic{
 			{msgr.Time, "Time", "25%", false},
 			{msgr.Device, "Device", "25%", false},
 			{msgr.IPAddress, "IP", "25%", false},

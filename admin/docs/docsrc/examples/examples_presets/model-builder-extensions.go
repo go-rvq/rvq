@@ -37,7 +37,8 @@ func PresetsModelBuilderExtensions(b *presets.Builder, db *gorm.DB) (
 		)
 	})
 
-	eb.Field("Actions").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	eb.Field("Actions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		cust := obj.(*Customer)
 		return VBtn("Change Name").Attr("@click",
 			web.POST().
@@ -47,13 +48,13 @@ func PresetsModelBuilderExtensions(b *presets.Builder, db *gorm.DB) (
 		)
 	})
 
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		cust := obj.(*Customer)
 		if len(cust.Name) < 5 {
 			err.GlobalError("Name must be longer than 5")
 		}
 		return
-	})
+	}))
 
 	mb.RegisterEventHandler("changeName", changeNameEventFunc(mb))
 
@@ -65,9 +66,10 @@ func changeNameEventFunc(mb *presets.ModelBuilder) web.EventFunc {
 		eb := mb.Editing()
 		obj := mb.NewModel()
 		id := ctx.Param(presets.ParamID)
-		obj, err = eb.Fetcher(obj, id, ctx)
+		mid := mb.MustParseRecordID(id)
+		err = eb.Fetcher(obj, mid, ctx)
 		obj.(*Customer).Name = "Darwin"
-		err = eb.Saver(obj, id, ctx)
+		err = eb.Saver(obj, mid, ctx)
 		presets.ShowMessage(&r, "Nicely updated", "")
 		eb.UpdateOverlayContent(ctx, &r, obj, "Good work", err)
 		return

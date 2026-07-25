@@ -18,18 +18,19 @@ func configCategory(b *presets.Builder, db *gorm.DB, publisher *publish.Builder)
 	eb := p.Editing("StatusBar", "ScheduleBar", "Name", "Products")
 	p.Listing("Name")
 
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(*models.Category)
 		if u.Name == "" {
 			err.FieldError("Name", "Name is required")
 		}
 		return
-	})
+	}))
 
 	p.RegisterEventHandler("products_selector", productsSelector(db))
 
 	eb.Field("Products").
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			selectedItems := []productItem{}
 			c, ok := obj.(*models.Category)
 			if ok {

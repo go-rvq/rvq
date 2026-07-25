@@ -39,7 +39,8 @@ func PresetsDetailPageTopNotes(b *presets.Builder, db *gorm.DB) (
 
 	dp = cust.Detailing("TopNotes")
 
-	dp.Field("TopNotes").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	dp.Field("TopNotes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		mi := field.ModelInfo
 		cu := obj.(*Customer)
 
@@ -73,7 +74,7 @@ func PresetsDetailPageTopNotes(b *presets.Builder, db *gorm.DB) (
 		})
 
 		cusID := fmt.Sprint(cu.ID)
-		dt.RowMenuItemFuncs(presets.EditDeleteRowMenuItemFuncs(mi, mi.PresetsPrefix()+"/notes", url.Values{"model": []string{"Customer"}, "model_id": []string{cusID}})...)
+		dt.RowMenuItemFuncs(rowMenuItems(presets.EditDeleteRowMenuItemFuncs(mi, mi.PresetsPrefix()+"/notes", url.Values{"model": []string{"Customer"}, "model_id": []string{cusID}}))...)
 
 		return vx.Card(
 			dt,
@@ -117,7 +118,8 @@ func PresetsDetailPageDetails(b *presets.Builder, db *gorm.DB) (
 		panic(err)
 	}
 	dp = cust.Detailing("TopNotes", "Details")
-	dp.Field("Details").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	dp.Field("Details").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		mi := field.ModelInfo
 		cu := obj.(*Customer)
 		cusID := fmt.Sprint(cu.ID)
@@ -174,7 +176,7 @@ func PresetsDetailPageDetails(b *presets.Builder, db *gorm.DB) (
 			Updates(map[string]interface{}{"term_agreed_at": time.Now()}).Error
 
 		return
-	}).ComponentFunc(func(id string, ctx *web.EventContext) h.HTMLComponent {
+	}).ComponentFunc(func(id string, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
 		var alert h.HTMLComponent
 
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
@@ -189,7 +191,7 @@ func PresetsDetailPageDetails(b *presets.Builder, db *gorm.DB) (
 		return h.Components(
 			alert,
 			VCheckbox().Attr(web.VField("Agree", agreedAt != nil && agreedAt.IsZero())...).Label("Agree the terms"),
-		)
+		), nil
 	})
 	return
 }
@@ -221,9 +223,10 @@ func PresetsDetailPageCards(b *presets.Builder, db *gorm.DB) (
 		panic(err)
 	}
 
-	dp = cust.RightDrawerWidth("800").Detailing("TopNotes", "Details", "Cards").Drawer(true)
+	dp = cust.RightDrawerWidth("800").Detailing("TopNotes", "Details", "Cards")
 
-	dp.Field("Cards").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	dp.Field("Cards").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		mi := field.ModelInfo
 		cu := obj.(*Customer)
 		cusID := fmt.Sprint(cu.ID)
@@ -248,7 +251,7 @@ func PresetsDetailPageCards(b *presets.Builder, db *gorm.DB) (
 						vx.DetailField(vx.OptionalText(card.Email).ZeroLabel("No email provided")).Label("Email"),
 					),
 				)
-			}).RowMenuItemFuncs(presets.EditDeleteRowMenuItemFuncs(mi, mi.PresetsPrefix()+"/credit-cards", url.Values{"customerID": []string{cusID}})...)
+			}).RowMenuItemFuncs(rowMenuItems(presets.EditDeleteRowMenuItemFuncs(mi, mi.PresetsPrefix()+"/credit-cards", url.Values{"customerID": []string{cusID}}))...)
 
 		dt.Column("Type")
 		dt.Column("Number")
@@ -284,3 +287,10 @@ func PresetsDetailPageCards(b *presets.Builder, db *gorm.DB) (
 const PresetsDetailPageCardsPath = "/samples/presets-detail-page-cards"
 
 // @snippet_end
+
+// rowMenuItems adapts the presets record-menu items to the data table's own
+// row-menu func type (see RecordMenuItemFuncs.ToRowMenuItemFuncs).
+func rowMenuItems(funcs []presets.RecordMenuItemFunc) []vx.RowMenuItemFunc {
+	return presets.RecordMenuItemFuncs(funcs).ToRowMenuItemFuncs("",
+		func(rctx *presets.RecordMenuItemContext, name string) string { return name })
+}

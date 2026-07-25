@@ -24,7 +24,7 @@ func PresetsDetailSimple(b *presets.Builder, db *gorm.DB) (
 	b.DataOperator(gorm2op.DataOperator(db)).Use(mediaBuilder)
 
 	cust = b.Model(&Customer{})
-	dp = cust.Detailing("Name", "Email", "Description", "Avatar").Drawer(true)
+	dp = cust.Detailing("Name", "Email", "Description", "Avatar")
 
 	return
 }
@@ -43,7 +43,7 @@ func PresetsDetailInlineEditDetails(b *presets.Builder, db *gorm.DB) (
 	b.DataOperator(gorm2op.DataOperator(db)).Use(mediaBuilder)
 
 	cust = b.Model(&Customer{})
-	dp = cust.Detailing("Details").Drawer(true)
+	dp = cust.Detailing("Details")
 	dp.Section("Details").
 		Editing("Name", "Email", "Description", "Avatar")
 
@@ -64,7 +64,7 @@ func PresetsDetailInlineEditFieldSections(b *presets.Builder, db *gorm.DB) (
 	b.DataOperator(gorm2op.DataOperator(db)).Use(mediaBuilder)
 
 	cust = b.Model(&Customer{})
-	dp = cust.Detailing("Details").Drawer(true)
+	dp = cust.Detailing("Details")
 	sb := dp.Section("Details").
 		Editing(&presets.FieldsSection{
 			Title: "Hello",
@@ -74,11 +74,12 @@ func PresetsDetailInlineEditFieldSections(b *presets.Builder, db *gorm.DB) (
 			},
 		}, "Avatar")
 
-	sb.EditingField("Name").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Input("").Attr(web.VField("Details."+field.Name, field.Value(obj))...)
+	sb.EditingField("Name").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Input("").Attr(web.VField("Details."+field.Name, field.Value())...)
 	})
 
-	sb.ViewingField("Email").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	sb.ViewingField("Email").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		return h.Strong(obj.(*Customer).Email)
 	})
 
@@ -99,7 +100,7 @@ func PresetsDetailInlineEditInspectTables(b *presets.Builder, db *gorm.DB) (
 
 	cust = b.Model(&Customer{})
 	// This should inspect Notes attributes, When it is a list, It should show a standard table in detail page
-	dp = cust.Detailing("CreditCards").Drawer(true)
+	dp = cust.Detailing("CreditCards")
 
 	return
 }
@@ -118,30 +119,30 @@ func PresetsDetailInlineEditDetailsInspectShowFields(b *presets.Builder, db *gor
 
 	cust = b.Model(&Customer{})
 	b.URIPrefix(examples.URLPathByFunc(PresetsDetailInlineEditDetailsInspectShowFields))
-	dp = cust.Detailing("Details", "CreditCards").Drawer(true)
+	dp = cust.Detailing("Details", "CreditCards")
 	dp.WrapFetchFunc(func(in presets.FetchFunc) presets.FetchFunc {
-		return func(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error) {
+		return func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 			var cus Customer
 			db.Find(&cus)
 
 			var cc []*CreditCard
 			db.Find(&cc)
 			cus.CreditCards = cc
-			r = cus
+			*(obj.(*Customer)) = cus
 			return
 		}
 	})
 	dp.Section("Details").
 		Editing("Name", "Email2", "Description")
 
-	dp.Field("Email2").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	dp.Field("Email2").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div().Text("abc")
 	})
 
 	ccm := b.Model(&CreditCard{}).InMenu(false)
 	ccm.Editing("Number")
 	l := ccm.Listing("Name")
-	l.Field("Name").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	l.Field("Name").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div()
 	})
 	return

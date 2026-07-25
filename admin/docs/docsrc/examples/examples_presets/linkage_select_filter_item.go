@@ -22,7 +22,8 @@ func PresetsLinkageSelectFilterItem(b *presets.Builder, db *gorm.DB) (
 
 	eb := mb.Editing("ProvinceCityDistrict")
 
-	eb.Field("ProvinceCityDistrict").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	eb.Field("ProvinceCityDistrict").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		m := obj.(*Address)
 		return vx.VXLinkageSelect().
 			Attr(web.VField(field.Name, []string{m.Province, m.City, m.District})...).

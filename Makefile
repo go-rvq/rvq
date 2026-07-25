@@ -31,6 +31,7 @@ GO_BUILD_PKGS := \
 	./admin/l10n/... \
 	./admin/login/... \
 	./admin/microsite/... \
+	./admin/docs/docsrc/examples/examples_presets \
 	./admin/pagebuilder/... \
 	./admin/seo/... \
 	./admin/presets \

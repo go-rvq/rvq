@@ -31,19 +31,24 @@ func configNestedFieldDemo(b *presets.Builder, db *gorm.DB) {
 		},
 	})
 
+	// nested slices bind the field to a model builder of the item type
 	phoneFb := b.NewFieldsBuilder(presets.WRITE).Model(&models.Phone{}).Only("Number")
-	addFb.Field("Phones").Nested(phoneFb, &presets.DisplayFieldInSorter{Field: "Number"})
+	phoneMB := presets.NewModelBuilder(b, &models.Phone{})
+	addFb.Field("Phones").Nested(presets.NestedSlice(phoneMB, phoneFb).SetDisplayFieldInSorter("Number"))
+
 	ed := cust.Editing("Name", "Addresses", "MembershipCard")
-	ed.Field("Addresses").Nested(addFb, &presets.DisplayFieldInSorter{Field: "Street"})
+	addressMB := presets.NewModelBuilder(b, &models.Address{})
+	ed.Field("Addresses").Nested(presets.NestedSlice(addressMB, addFb).SetDisplayFieldInSorter("Street"))
 
 	cardFb := b.NewFieldsBuilder(presets.WRITE).Model(&models.MembershipCard{}).Only("Number", "ValidBefore")
-	ed.Field("MembershipCard").Nested(cardFb)
+	cardMB := presets.NewModelBuilder(b, &models.MembershipCard{})
+	ed.Field("MembershipCard").Nested(presets.NestedSlice(cardMB, cardFb))
 
-	ed.FetchFunc(func(obj interface{}, id string, ctx *web.EventContext) (r interface{}, err error) {
+	ed.FetchFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		return gorm2op.DataOperator(db.Preload("Addresses.Phones").Preload("MembershipCard")).Fetch(obj, id, ctx)
 	})
 
-	ed.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	ed.SaveFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		c := obj.(*models.Customer)
 		err = db.Delete(&models.Phone{}, "address_id IN (select id from addresses where customer_id = ?)", c.ID).Error
 		if err != nil {

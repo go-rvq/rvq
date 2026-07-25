@@ -7,6 +7,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 )
 
@@ -24,13 +25,13 @@ INSERT INTO public.notes (id, source_type, source_id, content, created_at, updat
 `, []string{"customers", "credit_cards", "notes"}))
 
 func TestPresetsDetailing(t *testing.T) {
-	pb := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	PresetsDetailInlineEditDetails(pb, TestDB)
 
-	pb1 := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb1 := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	PresetsDetailInlineEditFieldSections(pb1, TestDB)
 
-	pb2 := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb2 := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	PresetsDetailPageCards(pb2, TestDB)
 
 	cases := []multipartestutils.TestCase{

@@ -41,12 +41,12 @@ func addJobs(w *worker.Builder) {
 			job.AddLog(fmt.Sprintf("Context %#+v", jobInfo.Context))
 			return nil
 		})
-	ajb.GetResourceBuilder().Editing().Field("F1").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ajb.GetResourceBuilder().Editing().Field("F1").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var vErr web.ValidationErrors
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
 		}
-		return VTextField().Attr(web.VField(field.Name, field.Value(obj))...).Label(field.Label).ErrorMessages(vErr.GetFieldErrors(field.Name)...)
+		return VTextField().Attr(web.VField(field.Name, field.Value())...).Label(field.Label).ErrorMessages(vErr.GetFieldErrors(field.Name)...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 		v := ctx.R.FormValue("F1")
 		obj.(*ArgJobResource).F1 = v

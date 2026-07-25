@@ -37,12 +37,12 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 		SourceAttr,
 	)
 
-	lb.Field(CreatedDateAttr).ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Td(h.Text(field.Value(obj).(time.Time).Local().Format("2006-01-02 15:04:05")))
+	lb.Field(CreatedDateAttr).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Td(h.Text(field.Value().(time.Time).Local().Format("2006-01-02 15:04:05")))
 	}).Label("Date Created")
 
-	lb.Field(CheckInDateAttr).Label("Check In Date").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		pTime := field.Value(obj)
+	lb.Field(CheckInDateAttr).Label("Check In Date").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		pTime := field.Value()
 		if pTime != nil {
 			return h.Td(h.Text((*pTime.(*time.Time)).Local().Format("2006-01-02 15:04:05")))
 		} else {
@@ -50,8 +50,8 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 		}
 	})
 
-	lb.Field(StatusAttr).ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		status := field.Value(obj).(models.OrderStatus)
+	lb.Field(StatusAttr).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		status := field.Value().(models.OrderStatus)
 		if status == "" {
 			return h.Td()
 		}
@@ -81,7 +81,7 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 		}
 	})
 
-	lb.Action("Export").ButtonCompFunc(func(ctx *web.EventContext) h.HTMLComponent {
+	lb.Action("Export").ButtonCompFunc(func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 		return vuetify.VBtn("Export").
 			Color("primary").
 			Variant(vuetify.VariantFlat).
@@ -89,7 +89,7 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 			Href(exportOrdersURL)
 	})
 
-	lb.BulkAction("Change status").ComponentFunc(func(selectedIds []string, ctx *web.EventContext) h.HTMLComponent {
+	lb.BulkAction("Change status").ComponentFunc(func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
 		vErr := &web.ValidationErrors{}
 		if ctx.Flash != nil {
 			vErr = ctx.Flash.(*web.ValidationErrors)
@@ -104,7 +104,7 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 					ErrorMessages(vErr.GetFieldErrors("status")...),
 			),
 		)
-	}).UpdateFunc(func(selectedIds []string, ctx *web.EventContext) (err error) {
+	}).UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 		vErr := &web.ValidationErrors{}
 		status := ctx.R.FormValue("status")
 		if status == "" {
@@ -132,11 +132,12 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 				{SourceAttr},
 			},
 		},
-	).Drawer(true)
+	)
 
 	orderDetailing.Field(OrderCodeAttr).Label("Order ID")
 
-	orderDetailing.Field(CreatedDateAttr).Label("Check In Date").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	orderDetailing.Field(CreatedDateAttr).Label("Check In Date").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		order := obj.(*models.Order)
 		v := order.CreatedAt.Local().Format("2006-01-02 15:04:05")
 		return vuetifyx.VXReadonlyField().
@@ -144,12 +145,14 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 			Value(v)
 	})
 
-	orderDetailing.Field(StatusAttr).ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	orderDetailing.Field(StatusAttr).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		return vuetifyx.VXReadonlyField(GetColoredStatus(obj.(*models.Order).Status)).
 			Label(field.Label)
 	})
 
-	orderDetailing.Field(CheckInDateAttr).Label("Check In Date").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	orderDetailing.Field(CheckInDateAttr).Label("Check In Date").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		order := obj.(*models.Order)
 		var v string
 		if order.ConfirmedAt != nil {
@@ -160,14 +163,16 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 			Value(v)
 	})
 
-	orderDetailing.Field(PaymentMethodAttr).Label("Payment Method").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	orderDetailing.Field(PaymentMethodAttr).Label("Payment Method").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		order := obj.(*models.Order)
 		return vuetifyx.VXReadonlyField().
 			Label(field.Label).
 			Value(order.PaymentMethod)
 	})
 
-	orderDetailing.Field(DeliveryMethodAttr).Label("Fulfilment").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	orderDetailing.Field(DeliveryMethodAttr).Label("Fulfilment").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		order := obj.(*models.Order)
 		return vuetifyx.VXReadonlyField().
 			Label(field.Label).

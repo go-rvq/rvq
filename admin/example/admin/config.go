@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3control"
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
@@ -20,6 +19,8 @@ import (
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	media_oss "github.com/go-rvq/rvq/admin/media/oss"
+	"github.com/go-rvq/rvq/admin/media/storage"
+	"github.com/go-rvq/rvq/admin/media/storage/s3"
 	"github.com/go-rvq/rvq/admin/microsite"
 	microsite_utils "github.com/go-rvq/rvq/admin/microsite/utils"
 	"github.com/go-rvq/rvq/admin/note"
@@ -48,7 +49,7 @@ import (
 var assets embed.FS
 
 // PublishStorage is used to storage static pages published by page builder.
-var PublishStorage oss.StorageInterface = filesystem.New("publish")
+var PublishStorage storage.Storage = storage.NewFileSystem("publish")
 
 type Config struct {
 	pb          *presets.Builder
@@ -88,22 +89,20 @@ func NewConfig(db *gorm.DB) Config {
 		panic(err)
 	}
 
-	sess := session.Must(session.NewSession())
 	media_oss.Storage = s3.New(&s3.Config{
 		Bucket:   s3Bucket,
 		Region:   s3Region,
 		ACL:      s3control.S3CannedAccessControlListBucketOwnerFullControl,
 		Endpoint: s3Endpoint,
-		Session:  sess,
 	})
 	PublishStorage = microsite_utils.NewClient(s3.New(&s3.Config{
 		Bucket:   s3PublishBucket,
 		Region:   s3PublishRegion,
 		ACL:      s3control.S3CannedAccessControlListBucketOwnerFullControl,
-		Session:  sess,
 		Endpoint: publishURL,
 	}))
-	b := presets.New().RightDrawerWidth("700")
+	i18nB := i18n.New()
+	b := presets.New(i18nB).RightDrawerWidth("700")
 	defer b.Build()
 
 	js, _ := assets.ReadFile("assets/fontcolor.min.js")
@@ -141,10 +140,10 @@ func NewConfig(db *gorm.DB) Config {
 	mediab := media.New(db)
 
 	l10nBuilder := l10n.New(db)
+	l10nBuilder.RegisterLocale("International", "international", "International")
+	l10nBuilder.RegisterLocale("China", "cn", "China")
+	l10nBuilder.RegisterLocale("Japan", "jp", "Japan")
 	l10nBuilder.
-		RegisterLocale("International", "international", "International").
-		RegisterLocales("China", "cn", "China").
-		RegisterLocales("Japan", "jp", "Japan").
 		SupportLocalesFunc(func(R *http.Request) []string {
 			return l10nBuilder.GetSupportLocaleCodes()[:]
 		})
@@ -159,8 +158,8 @@ func NewConfig(db *gorm.DB) Config {
 			return fmt.Sprintf("%s %s at %s", log.GetCreator(), strings.ToLower(log.GetAction()), log.GetCreatedAt().Format("2006-01-02 15:04:05"))
 		}).
 		WrapLogModelInstall(func(in presets.ModelInstallFunc) presets.ModelInstallFunc {
-			return func(pb *presets.Builder, mb *presets.ModelBuilder) (err error) {
-				err = in(pb, mb)
+			return func(mb *presets.ModelBuilder) (err error) {
+				err = in(mb)
 				if err != nil {
 					return
 				}
@@ -207,7 +206,7 @@ func NewConfig(db *gorm.DB) Config {
 			{Text: "ActivityLogs", Value: "*:activity_logs:*"},
 			{Text: "Workers", Value: "*:workers:*"},
 		}).
-		AfterInstall(func(pb *presets.Builder, mb *presets.ModelBuilder) error {
+		AfterInstall(func(mb *presets.ModelBuilder) error {
 			mb.Listing().SearchFunc(func(
 				model interface{},
 				params *presets.SearchParams,
@@ -225,7 +224,7 @@ func NewConfig(db *gorm.DB) Config {
 			return nil
 		})
 
-	w := worker.New(db)
+	w := worker.New(i18nB, db)
 	defer w.Listen()
 	addJobs(w)
 	configProduct(b, db, w, publisher)
@@ -257,8 +256,8 @@ func NewConfig(db *gorm.DB) Config {
 		Activity(ab).
 		SEO(seoBuilder).
 		WrapPageInstall(func(in presets.ModelInstallFunc) presets.ModelInstallFunc {
-			return func(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
-				err = in(pb, pm)
+			return func(pm *presets.ModelBuilder) (err error) {
+				err = in(pm)
 				if err != nil {
 					return
 				}
@@ -275,7 +274,7 @@ func NewConfig(db *gorm.DB) Config {
 				})
 
 				pmListing.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-					msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+					msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 					return []*presets.FilterTab{
 						{
@@ -313,7 +312,7 @@ func NewConfig(db *gorm.DB) Config {
 
 	publisher.Activity(ab)
 
-	initLoginBuilder(db, b, ab)
+	initLoginBuilder(db, b, ab, i18nB)
 
 	configInputDemo(b, db)
 
@@ -351,7 +350,8 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 		l.Listing("ID", "Title", "Status")
 		ed := l.Editing("StatusBar", "ScheduleBar", "Title", "DetailPath", "ListPath")
 		ed.Field("DetailPath").ComponentFunc(
-			func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+			func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+				obj := field.Obj
 				this := obj.(*models.ListModel)
 
 				if this.Status.Status != publish.StatusOnline {
@@ -361,7 +361,7 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 				var content []h.HTMLComponent
 
 				content = append(content,
-					h.Label(i18n.PT(ctx.R, presets.ModelsI18nModuleKey, l.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
+					h.Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, l.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
 				)
 				domain := PublishStorage.GetEndpoint()
 				if this.OnlineUrl != "" {
@@ -382,7 +382,8 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 		})
 
 		ed.Field("ListPath").ComponentFunc(
-			func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+			func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+				obj := field.Obj
 				this := obj.(*models.ListModel)
 
 				if this.Status.Status != publish.StatusOnline || this.PageNumber == 0 {
@@ -392,7 +393,7 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 				var content []h.HTMLComponent
 
 				content = append(content,
-					h.Label(i18n.PT(ctx.R, presets.ModelsI18nModuleKey, l.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
+					h.Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, l.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
 				)
 				domain := PublishStorage.GetEndpoint()
 				if this.OnlineUrl != "" {
@@ -457,7 +458,7 @@ func configMenuOrder(b *presets.Builder) {
 
 func configBrand(b *presets.Builder, db *gorm.DB) {
 	b.BrandFunc(func(ctx *web.EventContext) h.HTMLComponent {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 		logo := "https://qor5.com/img/qor-logo.png"
 
 		now := time.Now()
@@ -479,7 +480,7 @@ func configBrand(b *presets.Builder, db *gorm.DB) {
 					h.Span(msgr.DBResetTipLabel),
 					v.VIcon("schedule").Size(v.SizeXSmall),
 					// .Left(true),
-					h.Span(countdown).Id("countdown"),
+					h.Span(countdown).ID("countdown"),
 				).Class("pt-1 pb-2"),
 				v.VDivider(),
 				h.Script("function updateCountdown(){const now=new Date();const nextEvenHour=new Date(now);nextEvenHour.setHours(nextEvenHour.getHours()+(nextEvenHour.getHours()%2===0?2:1),0,0,0);const timeLeft=nextEvenHour-now;const hours=Math.floor(timeLeft/(60*60*1000));const minutes=Math.floor((timeLeft%(60*60*1000))/(60*1000));const seconds=Math.floor((timeLeft%(60*1000))/1000);const countdownElem=document.getElementById(\"countdown\");countdownElem.innerText=`${hours.toString().padStart(2,\"0\")}:${minutes.toString().padStart(2,\"0\")}:${seconds.toString().padStart(2,\"0\")}`}updateCountdown();setInterval(updateCountdown,1000);"),
@@ -573,7 +574,7 @@ func configPost(
 	})
 
 	mListing.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		return []*presets.FilterTab{
 			{
@@ -611,7 +612,8 @@ func configPost(
 			media.MediaBoxConfig,
 			&media_library.MediaBoxConfig{})
 
-	ed.Field("Body").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("Body").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		return richeditor.RichEditor(db, "Body").Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).Value(obj.(*models.Post).Body).Label(field.Label)
 	})
 	return m

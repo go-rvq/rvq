@@ -23,7 +23,7 @@ type languageItem struct {
 func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 	return pb.PlainLayout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		// i18n start
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 		loginMsgr := login.GetMessages(ctx.R.Context())
 		i18nBuilder := vh.I18n()
 		var langs []languageItem
@@ -64,7 +64,7 @@ func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 							Div(
 								provider.Logo,
 							).Class("mr-2"),
-							Text(i18n.T(ctx.R, I18nExampleKey, provider.Text)),
+							Text(i18n.T(ctx.Context(), I18nExampleKey, provider.Text)),
 						),
 				)
 			}
@@ -100,13 +100,13 @@ func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 					).Class("mt-6"),
 					If(isRecaptchaEnabled,
 						// recaptcha response token
-						Input("token").Id("token").Type("hidden"),
+						Input("token").ID("token").Type("hidden"),
 					),
 					plogin.DefaultViewCommon.FormSubmitBtn(loginMsgr.SignInBtn).
 						ClassIf("g-recaptcha", isRecaptchaEnabled).
 						AttrIf("data-sitekey", vh.RecaptchaSiteKey(), isRecaptchaEnabled).
 						AttrIf("data-callback", "onSubmit", isRecaptchaEnabled),
-				).Id("login-form").Method(http.MethodPost).Action(vh.PasswordLoginURL()),
+				).ID("login-form").Method(http.MethodPost).Action(vh.PasswordLoginURL()),
 				If(!vh.NoForgetPasswordLink(),
 					Div(
 						A(Text(loginMsgr.ForgetPasswordLink)).Href(vh.ForgetPasswordPageURL()).

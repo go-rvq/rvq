@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/i18n"
 	"gorm.io/gorm"
 )
 
@@ -50,7 +51,7 @@ type exampleFunc func(b *presets.Builder, db *gorm.DB) (
 
 func addExample(mux examples.Muxer, db *gorm.DB, f exampleFunc) {
 	path := examples.URLPathByFunc(f)
-	p := presets.New().AssetFunc(examples.AddGA).URIPrefix(path)
+	p := presets.New(i18n.New()).AssetFunc(examples.AddGA).URIPrefix(path)
 	f(p, db)
 	fmt.Println("Example mounting at: ", path)
 	mux.Handle(

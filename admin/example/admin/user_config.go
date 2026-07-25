@@ -44,14 +44,14 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		"FavorPostID",
 	)
 
-	ed.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	ed.Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(*models.User)
 		if u.Account == "" {
 			err.FieldError("Account", "Email is required")
 		}
 		return
-	})
-	user.RegisterEventHandler("eventUnlockUser", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	}))
+	user.RegisterEventFunc("eventUnlockUser", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := models.User{}
 		if err = db.Where("id = ?", uid).First(&u).Error; err != nil {
@@ -65,7 +65,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return r, nil
 	})
 
-	user.RegisterEventHandler("eventSendResetPasswordEmail", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	user.RegisterEventFunc("eventSendResetPasswordEmail", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := models.User{}
 		if err = db.Where("id = ?", uid).First(&u).Error; err != nil {
@@ -79,7 +79,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return r, nil
 	})
 
-	user.RegisterEventHandler("eventRevokeTOTP", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	user.RegisterEventFunc("eventRevokeTOTP", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		uid := ctx.R.FormValue("id")
 		u := &models.User{}
 		if err = db.Where("id = ?", uid).First(u).Error; err != nil {
@@ -98,7 +98,8 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return r, nil
 	})
 
-	ed.Field("Type").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("Type").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		u := obj.(*models.User)
 		if u.ID == 0 {
 			return nil
@@ -120,7 +121,8 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		).Class("mb-2")
 	})
 
-	ed.Field("Actions").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("Actions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		var actionBtns h.HTMLComponents
 		u := obj.(*models.User)
 
@@ -159,8 +161,8 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		).Class("mb-5 text-right")
 	})
 
-	ed.Field("Account").Label("Email").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return VTextField().Attr(web.VField(field.Name, field.Value(obj))...).Label(field.Label).ErrorMessages(field.Errors...)
+	ed.Field("Account").Label("Email").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return VTextField().Attr(web.VField(field.Name, field.Value())...).Label(field.Label).ErrorMessages(field.Errors...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 		u := obj.(*models.User)
 		email := ctx.R.FormValue(field.Name)
@@ -169,28 +171,31 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		return nil
 	})
 
-	ed.Field("OAuthProvider").Label("OAuth Provider").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("OAuthProvider").Label("OAuth Provider").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		u := obj.(*models.User)
 		if !u.IsOAuthUser() && u.ID != 0 {
 			return nil
 		} else {
-			return VSelect().Attr(web.VField(field.Name, field.Value(obj))...).
+			return VSelect().Attr(web.VField(field.Name, field.Value())...).
 				Label(field.Label).
 				Items(models.OAuthProviders)
 		}
 	})
 
-	ed.Field("OAuthIdentifier").Label("OAuth Identifier").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ed.Field("OAuthIdentifier").Label("OAuth Identifier").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		u := obj.(*models.User)
 		if !u.IsOAuthUser() {
 			return nil
 		} else {
-			return VTextField().Attr(web.VField(field.Name, field.Value(obj))...).Label(field.Label).ErrorMessages(field.Errors...).Disabled(true)
+			return VTextField().Attr(web.VField(field.Name, field.Value())...).Label(field.Label).ErrorMessages(field.Errors...).Disabled(true)
 		}
 	})
 
 	ed.Field("Roles").
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			selectedItems := []DefaultOptionItem{}
 			values := []string{}
 			u, ok := obj.(*models.User)
@@ -256,15 +261,15 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 		})
 
 	ed.Field("Status").
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return VSelect().Attr(web.VField(field.Name, field.Value(obj))...).
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return VSelect().Attr(web.VField(field.Name, field.Value())...).
 				Label(field.Label).
 				Items([]string{"active", "inactive"})
 		})
 
 	configureFavorPostSelectDialog(db, b, publisher)
-	ed.Field("FavorPostID").Label("Favorite Post").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		id := field.Value(obj).(uint)
+	ed.Field("FavorPostID").Label("Favorite Post").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		id := field.Value().(uint)
 		return web.Portal(favorPostSelector(db, id)).Name("favorPostSelector")
 	})
 
@@ -343,7 +348,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 	})
 
 	cl.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		return []*presets.FilterTab{
 			{
@@ -469,7 +474,7 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 	})
 
 	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 		return []*presets.FilterTab{
 			{
@@ -486,7 +491,7 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 	})
 
 	// select many
-	// lb.BulkAction("Confirm").ButtonCompFunc(func(ctx *web.EventContext) h.HTMLComponent {
+	// lb.BulkAction("Confirm").ButtonCompFunc(func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 	// 	return VBtn("Confirm").
 	// 		Color("primary").
 	// 		Attr("@click", web.Plaid().
@@ -498,13 +503,13 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 }
 
 func registerSelectFavorPostEvent(db *gorm.DB, b *presets.Builder) {
-	b.GetWebBuilder().RegisterEventHandler("selectFavorPost", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	b.GetWebBuilder().RegisterEventFunc("selectFavorPost", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		var id uint
 		if v := ctx.R.FormValue("id"); v != "" {
 			iv, _ := strconv.Atoi(v)
 			id = uint(iv)
 		}
-		r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
+		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 			Name: "favorPostSelector",
 			Body: favorPostSelector(db, id),
 		})

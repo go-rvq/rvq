@@ -9,6 +9,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -36,7 +37,7 @@ func TestPresetsCommon(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	pb := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	pb.Model(&Customer{})
 
 	// dbr, _ := TestDB.DB()

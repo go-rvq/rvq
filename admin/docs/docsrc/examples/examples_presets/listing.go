@@ -86,7 +86,8 @@ func PresetsListingCustomizationFields(b *presets.Builder, db *gorm.DB) (
 
 	cl = mb.Listing("ID", "Name", "Company", "Email").
 		SearchColumns("name", "email").SelectableColumns(true)
-	cl.Field("Company").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	cl.Field("Company").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		c := obj.(*Customer)
 		var comp Company
 		if c.CompanyID == 0 {
@@ -119,34 +120,35 @@ func PresetsListingCustomizationFields(b *presets.Builder, db *gorm.DB) (
 
 	ce = mb.Editing("Name", "CompanyID")
 
-	mb.RegisterEventHandler("updateCompanyList", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+	mb.RegisterEventFunc("updateCompanyList", func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		companyID := ctx.ParamAsInt(presets.ParamOverlayUpdateID)
-		r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
+		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 			Name: "companyListPortal",
 			Body: companyList(ctx, db, companyID),
 		})
 		return
 	})
 
-	ce.Field("CompanyID").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ce.Field("CompanyID").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		c := obj.(*Customer)
 		return web.Portal(companyList(ctx, db, c.CompanyID)).Name("companyListPortal")
 	})
 
 	comp := b.Model(&Company{})
-	comp.Editing().ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	comp.Editing().Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		c := obj.(*Company)
 		if len(c.Name) < 5 {
 			err.GlobalError("name must longer than 5")
 		}
 		return
-	})
+	}))
 
 	return
 }
 
 func companyList(ctx *web.EventContext, db *gorm.DB, companyID int) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.R, presets.ModelsI18nModuleKey, Messages_en_US).(*Messages)
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), presets.ModelsI18nModuleKey, Messages_en_US).(*Messages)
 	var comps []Company
 	db.Find(&comps)
 	return h.Div(
@@ -163,8 +165,8 @@ func companyList(ctx *web.EventContext, db *gorm.DB, companyID int) h.HTMLCompon
 				URL("companies").
 				EventFunc(actions.New).
 				Query(presets.ParamOverlay, actions.Dialog).
-				Query(presets.ParamOverlayAfterUpdateScript,
-					web.POST().EventFunc("updateCompanyList").Go()).
+				Query(presets.ParamPostChangeCallback,
+					web.CallbackScript(web.POST().EventFunc("updateCompanyList").Go()).Encode()).
 				Go(),
 		),
 	)
@@ -183,7 +185,7 @@ func PresetsListingCustomizationFilters(b *presets.Builder, db *gorm.DB) (
 	mb, cl, ce, dp = PresetsListingCustomizationFields(b, db)
 
 	cl.FilterDataFunc(func(ctx *web.EventContext) vuetifyx.FilterData {
-		msgr := i18n.MustGetModuleMessages(ctx.R, presets.ModelsI18nModuleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), presets.ModelsI18nModuleKey, Messages_en_US).(*Messages)
 		var companyOptions []*vuetifyx.SelectItem
 		err := db.Model(&Company{}).Select("name as text, id as value").Scan(&companyOptions).Error
 		if err != nil {
@@ -273,7 +275,7 @@ func PresetsListingCustomizationBulkActions(b *presets.Builder, db *gorm.DB) (
 	mb, cl, ce, _ = PresetsListingCustomizationTabs(b, db)
 
 	cl.BulkAction("Approve").Label("Approve").
-		UpdateFunc(func(selectedIds []string, ctx *web.EventContext) (err error) {
+		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 			comment := ctx.R.FormValue("ApprovalComment")
 			if len(comment) < 10 {
 				ctx.Flash = "comment should larger than 10"
@@ -287,7 +289,7 @@ func PresetsListingCustomizationBulkActions(b *presets.Builder, db *gorm.DB) (
 			}
 			return
 		}).
-		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) h.HTMLComponent {
+		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
 			comment := ctx.R.FormValue("ApprovalComment")
 			errorMessage := ""
 			if ctx.Flash != nil {
@@ -297,16 +299,16 @@ func PresetsListingCustomizationBulkActions(b *presets.Builder, db *gorm.DB) (
 				Variant("underlined").
 				Attr(web.VField("ApprovalComment", comment)...).
 				Label("Comment").
-				ErrorMessages(errorMessage)
+				ErrorMessages(errorMessage), nil
 		})
 
 	cl.BulkAction("Delete").Label("Delete").
-		UpdateFunc(func(selectedIds []string, ctx *web.EventContext) (err error) {
+		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 			err = db.Where("id IN (?)", selectedIds).Delete(&Customer{}).Error
 			return
 		}).
-		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) h.HTMLComponent {
-			return h.Div().Text(fmt.Sprintf("Are you sure you want to delete %s ?", selectedIds)).Class("title deep-orange--text")
+		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
+			return h.Div().Text(fmt.Sprintf("Are you sure you want to delete %s ?", selectedIds)).Class("title deep-orange--text"), nil
 		})
 
 	return

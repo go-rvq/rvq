@@ -37,7 +37,8 @@ func PresetsEditingCustomizationDescription(b *presets.Builder, db *gorm.DB) (
 
 	ce.Only("Name", "CompanyID", "Description")
 
-	ce.Field("Description").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ce.Field("Description").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		return richeditor.RichEditor(db, "Body").Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).Value(obj.(*Customer).Description).Label(field.Label)
 	})
 	return
@@ -69,8 +70,8 @@ func PresetsEditingCustomizationFileType(b *presets.Builder, db *gorm.DB) (
 
 	b.FieldDefaults(presets.WRITE).
 		FieldType(MyFile("")).
-		ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			val := field.Value(obj).(MyFile)
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			val := field.Value().(MyFile)
 			var img h.HTMLComponent
 			if len(string(val)) > 0 {
 				img = h.Img(string(val))
@@ -131,13 +132,13 @@ func PresetsEditingCustomizationValidation(b *presets.Builder, db *gorm.DB) (
 ) {
 	mb, cl, ce, _ = PresetsEditingCustomizationDescription(b, db)
 
-	ce.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	ce.Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		cus := obj.(*Customer)
 		if len(cus.Name) < 10 {
 			err.FieldError("Name", "name is too short")
 		}
 		return
-	})
+	}))
 	return
 }
 

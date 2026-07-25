@@ -12,6 +12,7 @@ import (
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/role"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/github"
@@ -47,9 +48,11 @@ func getCurrentUser(r *http.Request) (u *models.User) {
 	return u
 }
 
-func initLoginBuilder(db *gorm.DB, pb *presets.Builder, ab *activity.Builder) {
+func initLoginBuilder(db *gorm.DB, pb *presets.Builder, ab *activity.Builder, i18nB *i18n.Builder) {
 	ab.RegisterModel(&models.User{})
-	loginBuilder = plogin.New(pb).
+	loginBuilder = login.New(i18nB)
+	plogin.New(loginBuilder)
+	loginBuilder.
 		DB(db).
 		UserModel(&models.User{}).
 		Secret(loginSecret).

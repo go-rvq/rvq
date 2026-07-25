@@ -127,32 +127,32 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 
 	listing.BulkAction("Action Job - No parameters").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - No parameters").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
 					Attr("@click", noParametersJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
 	listing.BulkAction("Action Job - Parameter input box").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Parameter input box").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
 					Attr("@click", parametersBoxJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 	listing.BulkAction("Action Job - Display log").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Display log").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
 					Attr("@click", displayLogJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
 	listing.BulkAction("Action Job - Get Args").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Get Args").Color("secondary").Variant(vuetify.VariantFlat).Class("ml-2").
 					Attr("@click", getArgsJob.URL(presets.ParentsModelID(ctx.R)...))
 			})
 
-	eb.ValidateFunc(func(obj interface{}, ctx *web.EventContext) (err web.ValidationErrors) {
+	eb.Validators.Append(presets.ValidatorFunc(func(obj interface{}, mode presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(*models.Product)
 		if u.Code == "" {
 			err.FieldError("Name", "Code is required")
@@ -161,7 +161,7 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 			err.FieldError("Name", "Name is required")
 		}
 		return
-	})
+	}))
 
 	eb.Field("Image").
 		WithContextValue(
