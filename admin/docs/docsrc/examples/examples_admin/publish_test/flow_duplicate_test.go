@@ -54,7 +54,7 @@ func flowDuplicate(t *testing.T, f *FlowDuplicate) {
 	var from examples_admin.WithPublishProduct
 	require.NoError(t, f.db.Where("id = ? AND version = ?", oid, over).First(&from).Error)
 
-	flowDuplicate_Step00_Event_presets_DetailingDrawer(t, f).Then(func(t *testing.T, w *httptest.ResponseRecorder, r *http.Request) {
+	flowDuplicate_Step00_Event_presets_Detailing(t, f).Then(func(t *testing.T, w *httptest.ResponseRecorder, r *http.Request) {
 		assert.True(t, ContainsVersionBar(w.Body.String()))
 	})
 
@@ -89,13 +89,13 @@ func flowDuplicate(t *testing.T, f *FlowDuplicate) {
 	flowDuplicate_Step02_Event___reload__(t, f)
 
 	// ensure it can be opened
-	flowDuplicate_Step03_Event_presets_DetailingDrawer(t, f)
+	flowDuplicate_Step03_Event_presets_Detailing(t, f)
 }
 
-func flowDuplicate_Step00_Event_presets_DetailingDrawer(t *testing.T, f *FlowDuplicate) *testflow.Then {
+func flowDuplicate_Step00_Event_presets_Detailing(t *testing.T, f *FlowDuplicate) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 
@@ -139,7 +139,7 @@ func flowDuplicate_Step01_Event_publish_EventDuplicateVersion(t *testing.T, f *F
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "plaid().vars(vars).locals(locals).form(form).go().then(function(r){ vars.presetsListingDialog = false; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \""+f.DuplicateID+"\").go(); vars.presetsMessage = { show: true, message: \"Successfully Created\", color: \"success\"} })", resp.RunScript)
+	assert.Equal(t, "plaid().vars(vars).locals(locals).form(form).go().then(function(r){ vars.presetsListingDialog = false; vars.presetsRightDrawer = false; plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_Detailing\").query(\"id\", \""+f.DuplicateID+"\").go(); vars.presetsMessage = { show: true, message: \"Successfully Created\", color: \"success\"} })", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -167,10 +167,10 @@ func flowDuplicate_Step02_Event___reload__(t *testing.T, f *FlowDuplicate) *test
 	return testflow.NewThen(t, w, r)
 }
 
-func flowDuplicate_Step03_Event_presets_DetailingDrawer(t *testing.T, f *FlowDuplicate) *testflow.Then {
+func flowDuplicate_Step03_Event_presets_Detailing(t *testing.T, f *FlowDuplicate) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.DuplicateID).
 		BuildEventFuncRequest()
 

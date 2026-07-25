@@ -140,7 +140,7 @@ func flowSchedule(t *testing.T, f *FlowSchedule) {
 	prevScheduledEndAt := scheduledTimeFormat(prev.ScheduledEndAt)
 
 	// Ensure the schedule button is displayed; if not, it implies that the state is incorrect
-	flowSchedule_Step00_Event_presets_DetailingDrawer(t, f).ThenValidate(testflow.ContainsInOrderAtUpdatePortal(0, "publish_eventSchedulePublishDialog"))
+	flowSchedule_Step00_Event_presets_Detailing(t, f).ThenValidate(testflow.ContainsInOrderAtUpdatePortal(0, "publish_eventSchedulePublishDialog"))
 
 	candidates := []string{
 		fmt.Sprintf(`[form, {"ScheduledStartAt":%q}]`, prevScheduledStartAt), // Ensure the original planned time is correct
@@ -174,10 +174,10 @@ func flowSchedule(t *testing.T, f *FlowSchedule) {
 	flowSchedule_Step05_Event_publish_eventSchedulePublish(t, f)
 }
 
-func flowSchedule_Step00_Event_presets_DetailingDrawer(t *testing.T, f *FlowSchedule) *testflow.Then {
+func flowSchedule_Step00_Event_presets_Detailing(t *testing.T, f *FlowSchedule) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 

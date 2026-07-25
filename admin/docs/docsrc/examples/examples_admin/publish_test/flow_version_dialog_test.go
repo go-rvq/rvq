@@ -60,7 +60,7 @@ func flowVersionDialog(t *testing.T, f *FlowVersionDialog) {
 	}
 
 	// Open drawer
-	flowVersionDialog_Step00_Event_presets_DetailingDrawer(t, f).ThenValidate(EnsureCurrentDisplayID(displayID))
+	flowVersionDialog_Step00_Event_presets_Detailing(t, f).ThenValidate(EnsureCurrentDisplayID(displayID))
 
 	// Open version list
 	flowVersionDialog_Step01_Event_presets_OpenListingDialog(t, f).ThenValidate(ensureListDisplay())
@@ -112,13 +112,13 @@ func flowVersionDialog(t *testing.T, f *FlowVersionDialog) {
 
 	// The previous step will ask you to open the newly selected version of Drawer.
 	displayID = selectID
-	flowVersionDialog_Step12_Event_presets_DetailingDrawer(t, f).ThenValidate(EnsureCurrentDisplayID(displayID))
+	flowVersionDialog_Step12_Event_presets_Detailing(t, f).ThenValidate(EnsureCurrentDisplayID(displayID))
 }
 
-func flowVersionDialog_Step00_Event_presets_DetailingDrawer(t *testing.T, f *FlowVersionDialog) *testflow.Then {
+func flowVersionDialog_Step00_Event_presets_Detailing(t *testing.T, f *FlowVersionDialog) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", "1_2024-05-26-v06").
 		BuildEventFuncRequest()
 
@@ -355,7 +355,7 @@ func flowVersionDialog_Step08_Event_publish_eventSelectVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v06\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v06\").go() }", resp.RunScript)
+	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v06\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_Detailing\").query(\"id\", \"1_2024-05-26-v06\").go() }", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
@@ -429,15 +429,15 @@ func flowVersionDialog_Step11_Event_publish_eventSelectVersion(t *testing.T, f *
 	assert.Empty(t, resp.ReloadPortals)
 	assert.Empty(t, resp.UpdatePortals)
 	assert.Nil(t, resp.Data)
-	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v05\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_DetailingDrawer\").query(\"id\", \"1_2024-05-26-v05\").go() }", resp.RunScript)
+	assert.Equal(t, "vars.presetsListingDialog = false; if (!!vars.publish_VarCurrentDisplayID && vars.publish_VarCurrentDisplayID != \"1_2024-05-26-v05\") { vars.presetsRightDrawer = false;plaid().vars(vars).locals(locals).form(form).closer(closer).scope({\"onSaveCallbacks\": onSaveCallbacks,\"presetsListing\": presetsListing}).eventFunc(\"presets_Detailing\").query(\"id\", \"1_2024-05-26-v05\").go() }", resp.RunScript)
 
 	return testflow.NewThen(t, w, r)
 }
 
-func flowVersionDialog_Step12_Event_presets_DetailingDrawer(t *testing.T, f *FlowVersionDialog) *testflow.Then {
+func flowVersionDialog_Step12_Event_presets_Detailing(t *testing.T, f *FlowVersionDialog) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", "1_2024-05-26-v05").
 		BuildEventFuncRequest()
 

@@ -211,7 +211,9 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 		// The `form` scope is established by the EditForm/NewForm wrapper; only the
 		// locals/vars scopes are created here (a go-plaid-scope without :form keeps
 		// the injected form).
-		cb.Scope = web.Scope().Locals().Vars()
+		scope := web.Scope().Locals().Vars()
+		f.setupAutoSave(scope)
+		cb.Scope = scope
 		return cb.BuildOverlay()
 	}
 	// Page: no wrapper, so create the form/locals/vars scope here.
@@ -221,7 +223,21 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 		cb.Scope = scope
 	}
 	scope.Form().Locals().Vars()
+	f.setupAutoSave(scope)
 	return cb.BuildPage()
+}
+
+// setupAutoSave makes the form save itself when its values change, for models
+// that asked for it with EditingBuilder.OnChangeActionFunc — the page builder
+// does, so a container's fields are stored as they are edited.
+func (f *Form) setupAutoSave(scope *web.ScopeBuilder) {
+	action := f.MB.Editing().onChangeAction
+	if action == nil {
+		return
+	}
+	if s := action(f.b.id, f.b.ctx); s != "" {
+		scope.OnChange(s)
+	}
 }
 
 func (f *Form) Respond(r *web.EventResponse) {

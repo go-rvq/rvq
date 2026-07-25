@@ -68,7 +68,7 @@ func flowPublish(t *testing.T, f *FlowPublish) {
 	}
 
 	// Open the drawer and confirm the display of draft status
-	flowPublish_Step00_Event_presets_DetailingDrawer(t, f).ThenValidate(ensureVersionBarDisplay(true, false, true))
+	flowPublish_Step00_Event_presets_Detailing(t, f).ThenValidate(ensureVersionBarDisplay(true, false, true))
 
 	// Execute publish and ensure data is modified, internally ensures Reload
 	previous := f.db.NowFunc()
@@ -84,14 +84,14 @@ func flowPublish(t *testing.T, f *FlowPublish) {
 	assertAfterPublish()
 
 	// Open the drawer and confirm the display of online status
-	flowPublish_Step02_Event_presets_DetailingDrawer(t, f).ThenValidate(ensureVersionBarDisplay(false, true, true))
+	flowPublish_Step02_Event_presets_Detailing(t, f).ThenValidate(ensureVersionBarDisplay(false, true, true))
 
 	previous = f.db.NowFunc()
 	flowPublish_Step03_Event_publish_EventRepublish(t, f)
 	assertAfterPublish()
 
 	// Open the drawer and confirm the display after republishing
-	flowPublish_Step04_Event_presets_DetailingDrawer(t, f).ThenValidate(ensureVersionBarDisplay(false, true, true))
+	flowPublish_Step04_Event_presets_Detailing(t, f).ThenValidate(ensureVersionBarDisplay(false, true, true))
 
 	previous = f.db.NowFunc()
 	flowPublish_Step05_Event_publish_EventUnpublish(t, f)
@@ -105,13 +105,13 @@ func flowPublish(t *testing.T, f *FlowPublish) {
 	}
 
 	// Open the drawer and confirm the display of offline status
-	flowPublish_Step06_Event_presets_DetailingDrawer(t, f).ThenValidate(ensureVersionBarDisplay(true, false, true))
+	flowPublish_Step06_Event_presets_Detailing(t, f).ThenValidate(ensureVersionBarDisplay(true, false, true))
 }
 
-func flowPublish_Step00_Event_presets_DetailingDrawer(t *testing.T, f *FlowPublish) *testflow.Then {
+func flowPublish_Step00_Event_presets_Detailing(t *testing.T, f *FlowPublish) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 
@@ -161,10 +161,10 @@ func flowPublish_Step01_Event_publish_EventPublish(t *testing.T, f *FlowPublish)
 	return testflow.NewThen(t, w, r)
 }
 
-func flowPublish_Step02_Event_presets_DetailingDrawer(t *testing.T, f *FlowPublish) *testflow.Then {
+func flowPublish_Step02_Event_presets_Detailing(t *testing.T, f *FlowPublish) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 
@@ -214,10 +214,10 @@ func flowPublish_Step03_Event_publish_EventRepublish(t *testing.T, f *FlowPublis
 	return testflow.NewThen(t, w, r)
 }
 
-func flowPublish_Step04_Event_presets_DetailingDrawer(t *testing.T, f *FlowPublish) *testflow.Then {
+func flowPublish_Step04_Event_presets_Detailing(t *testing.T, f *FlowPublish) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 
@@ -267,10 +267,10 @@ func flowPublish_Step05_Event_publish_EventUnpublish(t *testing.T, f *FlowPublis
 	return testflow.NewThen(t, w, r)
 }
 
-func flowPublish_Step06_Event_presets_DetailingDrawer(t *testing.T, f *FlowPublish) *testflow.Then {
+func flowPublish_Step06_Event_presets_Detailing(t *testing.T, f *FlowPublish) *testflow.Then {
 	r := multipartestutils.NewMultipartBuilder().
 		PageURL("/samples/publish-example/with-publish-products").
-		EventFunc("presets_DetailingDrawer").
+		EventFunc("presets_Detailing").
 		Query("id", f.ID).
 		BuildEventFuncRequest()
 

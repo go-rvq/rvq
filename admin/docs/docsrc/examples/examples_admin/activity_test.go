@@ -41,7 +41,7 @@ func TestActivity(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				activityData.TruncatePut(dbr)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/with-activity-products?__execute_event__=presets_DetailingDrawer&id=1").
+					PageURL("/with-activity-products?__execute_event__=presets_Detailing&overlay=RightDrawer&id=1").
 					BuildEventFuncRequest()
 				return req
 			},
