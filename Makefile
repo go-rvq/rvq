@@ -1,20 +1,20 @@
 # Verificação do que está saudável hoje. Rode `make check` ANTES DE COMMITAR.
 #
-# O repositório tem pacotes quebrados de longa data — o que sobrou da estrutura
-# antiga `github.com/go-rvq/admin`, um fork do qor5/admin (docs/examples,
-# pagebuilder, seo, media, os que exigem libvips), mais os testes de `web` e
-# `x/perm`. Eles NÃO entram aqui: `check` cobre o que passa, para que uma falha
-# signifique de fato uma regressão sua.
+# O repositório tem pacotes quebrados de longa data — o que sobrou das
+# estruturas antigas `github.com/go-rvq/{admin,web,x}`, forks do qor5
+# (docs/examples do admin, media, os que exigem libvips). Eles NÃO entram aqui:
+# `check` cobre o que passa, para que uma falha signifique de fato uma
+# regressão sua.
 
 GO ?= go
 BUN ?= bun
 
 # Pacotes Go com testes que passam.
 GO_TEST_PKGS := \
-	./web/multipartestutils/... \
-	./web/tag \
+	./web/... \
 	./x/exchange \
 	./x/i18n \
+	./x/perm \
 	./x/packages/db-tools \
 	./admin/presets \
 	./admin/presets/tests/... \

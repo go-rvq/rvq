@@ -3,9 +3,11 @@ package web_test
 import (
 	"bytes"
 	"context"
+	"html"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -214,17 +216,21 @@ var eventCases = []struct {
 	"pushState": null
 }`,
 		expectedIndexResp: `<!DOCTYPE html>
-
 <html>
-<head>
-<meta charset='utf8'>
-
-<meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
-</head>
-
-<body class='front'>
-<div id='app' v-cloak><div>hello</div></div>
-<script src='/assets/main.js'></script></body>
+	<head>
+		<meta charset='utf8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+		<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+		<meta name='HandheldFriendly' content='true'>
+		<meta name='apple-mobile-web-app-capable' content='yes'>
+		<meta name='apple-mobile-web-app-status-bar-style' content='black'>
+		<meta name='format-detection' content='telephone=no'>
+	</head>
+	<body class='front'>
+		<div id='app' v-cloak>
+			<go-plaid-portal :visible='true' raw :content='"\u003cdiv\u003ehello\u003c/div\u003e"' :form='form' :locals='locals' :scope='{"presetsListing": presetsListing}'></go-plaid-portal>
+			<user-component :setup='[(({window}) => {window.VueI18n.useI18n().locale.value = ""})]'></user-component>
+		</div><script src='/assets/main.js'></script></body>
 </html>
 
 `,
@@ -268,8 +274,8 @@ var mountCases = []struct {
 		bodyFunc: nil,
 		expected: `
 <div>
-	<a href="#" v-on:click='plaid().vars(vars).locals(locals).form(form).eventFunc("bookmark").go()'>xgb123</a>
-	<a href="#" v-on:blur='alert(1); plaid().vars(vars).locals(locals).form(form).fieldValue("Text1", $event).eventFunc("doIt").go()'>hello</a>
+	<a href="#" v-on:click='plaid().vars(vars).locals(locals).form(form).closer(closer).scope({"onSaveCallbacks": onSaveCallbacks,"presetsListing": presetsListing}).eventFunc("bookmark").go()'>xgb123</a>
+	<a href="#" v-on:blur='alert(1); plaid().vars(vars).locals(locals).form(form).closer(closer).scope({"onSaveCallbacks": onSaveCallbacks,"presetsListing": presetsListing}).fieldValue("Text1", $event).eventFunc("doIt").go()'>hello</a>
 </div>
 `,
 	},
@@ -334,11 +340,13 @@ func TestMultiplePagesAndEvents(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, r)
-			selector := "#app div"
-			if c.bodyFunc != nil {
-				selector = "*"
+			body := w.Body
+			if c.bodyFunc == nil {
+				// a page delivers its body as the raw payload of the app portal, so
+				// it is read from that attribute instead of selected from the DOM
+				body = bytes.NewBufferString(appPortalContent(t, w.Body.String()))
 			}
-			diff := htmltestingutils.PrettyHtmlDiff(w.Body, selector, c.expected)
+			diff := htmltestingutils.PrettyHtmlDiff(body, "*", c.expected)
 			if len(diff) > 0 {
 				t.Error(c.name, diff)
 			}
@@ -427,4 +435,23 @@ func TestLayoutWithExtra(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "abc") {
 		t.Errorf("wrong response %s", w.Body.String())
 	}
+}
+
+var appPortalContentRe = regexp.MustCompile(`(?s)go-plaid-portal :visible='true' raw :content='"(.*?)"'`)
+
+// appPortalContent returns the page body the app portal carries as its raw
+// payload, decoded back to HTML.
+func appPortalContent(t *testing.T, page string) string {
+	m := appPortalContentRe.FindStringSubmatch(page)
+	if m == nil {
+		t.Fatal("the app portal carries no content")
+	}
+	return html.UnescapeString(strings.NewReplacer(
+		`\u003c`, "<",
+		`\u003e`, ">",
+		`\u0026`, "&",
+		`\"`, `"`,
+		`\n`, "\n",
+		`\t`, "\t",
+	).Replace(m[1]))
 }

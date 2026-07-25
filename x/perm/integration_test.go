@@ -22,11 +22,6 @@ type MediaLibrary struct {
 	Category string
 }
 
-// RN -> Resource Name
-func (m *MediaLibrary) PermissionRN() []string {
-	return []string{"media_libraries", fmt.Sprint(m.ID), m.Category}
-}
-
 func getPost() *Post {
 	return &Post{ID: 12, Owner: "user_123"}
 }
@@ -116,45 +111,45 @@ var cases = []struct {
 	contextFunc        perm.ContextFunc
 }{
 	{
-		name: "anonymous should not have permission for upload on posts",
+		name: "anonymous should not have permission for upload on the post",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:posts:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:12:*"),
 		},
 		subjects:           nil,
 		dontWantPermission: "upload",
 	},
 
 	{
-		name: "developer should have permission for upload on posts",
+		name: "developer should have permission for upload on the post",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:posts:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:12:*"),
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",
 	},
 
 	{
-		name: "developer should not have permission for upload on posts",
+		name: "developer should not have permission for upload on another record",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:users:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:99:*"),
 		},
 		subjects:           []string{"developer"},
 		dontWantPermission: "upload",
 	},
 
 	{
-		name: "developer should have permission for upload on any posts media_libraries 33",
+		name: "developer should have permission for upload on the nested record 33",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*media_libraries:33*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:33:"),
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",
 	},
 
 	{
-		name: "developer should have permission for upload on any posts media_libraries images category",
+		name: "developer should have permission for upload on the heroImage field",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*media_libraries:*:images:"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:*:heroImage:*"),
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",
