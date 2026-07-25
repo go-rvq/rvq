@@ -77,6 +77,15 @@ func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.
 			SetValidWidth(b.mb.rightDrawerWidth).
 			SetTargetPortal(targetPortal).
 			Respond(ctx, &r, comp)
+	} else if mode == actions.Content {
+		// Content renders into a portal the caller already has on the page: the
+		// one it asked for, or the layout's global content portal when it did
+		// not (see Builder.contentDrawer, which decides the same way).
+		portal := targetPortal
+		if portal == "" {
+			portal = actions.RightDrawer.PortalName()
+		}
+		r.UpdatePortal(portal, comp)
 	} else {
 		r.Body = comp
 	}
