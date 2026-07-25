@@ -877,13 +877,18 @@ func (b *FieldsBuilder) NewFieldWithName(name string) (r *FieldBuilder) {
 	}
 	r.rt = fType
 
-	// if b.defaults == nil {
-	// 	panic("field defaults must be provided")
-	// }
-
-	// ft := b.defaults.fieldTypeByTypeOrCreate(fType)
-	// r.ComponentFunc(ft.compFunc).
-	// 	SetterFunc(ft.setterFunc)
+	// A field created on the fly still needs the defaults registered for its
+	// type — that is how l10n's Locale gets its chips column, for one. Without
+	// them it has no component at all and renders nothing.
+	if b.defaults != nil {
+		ft := b.defaults.fieldTypeByTypeOrCreate(fType)
+		if ft.compFunc != nil {
+			r.ComponentFunc(ft.compFunc)
+		}
+		if ft.setterFunc != nil {
+			r.SetterFunc(ft.setterFunc)
+		}
+	}
 	return
 }
 
