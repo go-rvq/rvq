@@ -42,32 +42,40 @@ func TestPrimarySlugger(t *testing.T) {
 	emptyData.TruncatePut(rawDB)
 	op := gorm2op.DataOperator(db)
 	ctx := new(web.EventContext)
-	err := op.Save(&TestVariant{ProductCode: "P01", ColorCode: "C01", Name: "Product 1"}, "", ctx)
+
+	// the operator takes a parsed record id now, and fills the object it is
+	// given instead of returning one
+	schema, err := op.Schema(&TestVariant{})
+	if err != nil {
+		panic(err)
+	}
+	id, err := presets.ParseRecordID(schema, "P01_C01")
 	if err != nil {
 		panic(err)
 	}
 
-	err = op.Save(&TestVariant{ProductCode: "P01", ColorCode: "C01", Name: "Product 2"}, "P01_C01", ctx)
-	if err != nil {
+	if err = op.Save(&TestVariant{ProductCode: "P01", ColorCode: "C01", Name: "Product 1"}, presets.ID{}, ctx); err != nil {
 		panic(err)
 	}
 
-	tv, err := op.Fetch(&TestVariant{}, "P01_C01", ctx)
-	if err != nil {
+	if err = op.Save(&TestVariant{ProductCode: "P01", ColorCode: "C01", Name: "Product 2"}, id, ctx); err != nil {
 		panic(err)
 	}
 
-	if tv.(*TestVariant).Name != "Product 2" {
+	tv := &TestVariant{}
+	if err = op.Fetch(tv, id, ctx); err != nil {
+		panic(err)
+	}
+
+	if tv.Name != "Product 2" {
 		t.Error("didn't update product 2", tv)
 	}
 
-	err = op.Delete(&TestVariant{}, "P01_C01", ctx)
-	if err != nil {
+	if err = op.Delete(&TestVariant{}, id, false, ctx); err != nil {
 		panic(err)
 	}
 
-	tv, err = op.Fetch(&TestVariant{}, "P01_C01", ctx)
-	if err != presets.ErrRecordNotFound {
-		t.Error("didn't return not found after delete", tv, err)
+	if err = op.Fetch(&TestVariant{}, id, ctx); err != presets.ErrRecordNotFound {
+		t.Error("didn't return not found after delete", err)
 	}
 }

@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/i18n"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,12 +40,12 @@ func TestFields(t *testing.T) {
 	vd.FieldError("String1", "too small")
 
 	ft := NewFieldDefaults(WRITE).Exclude("ID")
-	ft.FieldType(time.Time{}).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ft.FieldType(time.Time{}).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div().Class("time-control").
-			Attr(web.VField(field.Name, field.Value(obj).(time.Time).Format("2006-01-02"))...)
+			Attr(web.VField(field.Name, field.Value().(time.Time).Format("2006-01-02"))...)
 	})
 
-	ft.FieldType(Media("")).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ft.FieldType(Media("")).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		if field.ContextValue("a") == nil {
 			return h.Text("")
 		}
@@ -69,7 +70,8 @@ func TestFields(t *testing.T) {
 			FoundedAt: time.Unix(1567048169, 0),
 		},
 	}
-	mb := New().Model(&User{})
+	pb := New(i18n.New())
+	mb := pb.Model(&User{})
 
 	ftRead := NewFieldDefaults(LIST)
 
@@ -84,11 +86,11 @@ func TestFields(t *testing.T) {
 			name: "creating should copy editing",
 			toComponentFun: func() h.HTMLComponent {
 				ed := mb.Editing("Int1", "Float1")
-				ed.Field("Float1").ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-					return h.Div().Class("my_float32").Text(fmt.Sprintf("%f", field.Value(obj).(float32)))
+				ed.Field("Float1").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+					return h.Div().Class("my_float32").Text(fmt.Sprintf("%f", field.Value().(float32)))
 				})
 				creating := ed.Creating().Except("Int1")
-				return creating.FieldsBuilder.ToComponent(mb.Info(), user, ctx)
+				return creating.FieldsBuilder.ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
 <div class='my_float32'>23.100000</div>
@@ -97,13 +99,13 @@ func TestFields(t *testing.T) {
 		{
 			name: "Only with additional nested object",
 			toComponentFun: func() h.HTMLComponent {
-				return ft.InspectFields(&User{}).
-					Labels("Int1", "整数1", "Company.Name", "公司名").
+				// the labels are set on the fields themselves now
+				fb := ft.InspectFields(&User{})
+				fb.Field("Int1").Label("整数1")
+				fb.Field("Company.Name").Label("公司名")
+				return fb.
 					Only("Int1", "Float1", "String1", "Bool1", "Time1", "Company.Name", "Company.FoundedAt").
-					ToComponent(
-						mb.Info(),
-						user,
-						ctx)
+					ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
 <v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1":"2"}]' label='整数1' :disabled='false'></v-text-field>
@@ -127,7 +129,7 @@ func TestFields(t *testing.T) {
 			toComponentFun: func() h.HTMLComponent {
 				return ft.InspectFields(&User{}).
 					Except("Bool*").
-					ToComponent(mb.Info(), user, ctx)
+					ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
 <v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1":"2"}]' label='Int1' :disabled='false'></v-text-field>
@@ -144,7 +146,7 @@ func TestFields(t *testing.T) {
 			name: "Read Except with file glob pattern",
 			toComponentFun: func() h.HTMLComponent {
 				return ftRead.InspectFields(&User{}).
-					Except("Float*").ToComponent(mb.Info(), user, ctx)
+					Except("Float*").ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
 <td>1</td>
@@ -161,7 +163,7 @@ func TestFields(t *testing.T) {
 			name: "Read for a time field",
 			toComponentFun: func() h.HTMLComponent {
 				return ftRead.InspectFields(&User{}).
-					Only("Time1", "Int1").ToComponent(mb.Info(), user, ctx)
+					Only("Time1", "Int1").ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: fmt.Sprintf(`
 <td>%s</td>
@@ -178,7 +180,7 @@ func TestFields(t *testing.T) {
 				fb.Field("Media1").
 					WithContextValue("a", "context value1").
 					WithContextValue("b", "context value2")
-				return fb.ToComponent(mb.Info(), user, ctx)
+				return fb.ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `context value1, context value2`,
 		},
@@ -252,21 +254,22 @@ func addressHTML(v Address, formKeyPrefix string) string {
 }
 
 func TestFieldsBuilder(t *testing.T) {
+	pb := New(i18n.New())
 	defaults := NewFieldDefaults(WRITE)
 
-	addressFb := NewFieldsBuilder().Model(&Address{}).Defaults(defaults).Only("City", "Detail")
-	addressDetailFb := NewFieldsBuilder().Model(&AddressDetail{}).Defaults(defaults).Only("Address1", "Address2")
-	addressFb.Field("Detail").Nested(addressDetailFb)
+	addressFb := NewFieldsBuilder(pb).Model(&Address{}).Defaults(defaults).Only("City", "Detail")
+	addressDetailFb := NewFieldsBuilder(pb).Model(&AddressDetail{}).Defaults(defaults).Only("Address1", "Address2")
+	addressFb.Field("Detail").Nested(NestedStruct(nil, addressDetailFb))
 
-	employeeFbs := NewFieldsBuilder().Model(&Employee{}).Defaults(defaults)
-	employeeFbs.Field("Number").ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Input(field.FormKey).Type("text").Value(field.StringValue(obj))
+	employeeFbs := NewFieldsBuilder(pb).Model(&Employee{}).Defaults(defaults)
+	employeeFbs.Field("Number").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Input(field.FormKey).Type("text").Value(field.StringValue())
 	})
 
-	employeeFbs.Field("Address").Nested(addressFb)
+	employeeFbs.Field("Address").Nested(NestedStruct(nil, addressFb))
 
-	employeeFbs.Field("FakeNumber").ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Input(field.FormKey).Type("text").Value(fmt.Sprintf("900%v", reflectutils.MustGet(obj, "Number")))
+	employeeFbs.Field("FakeNumber").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Input(field.FormKey).Type("text").Value(fmt.Sprintf("900%v", reflectutils.MustGet(field.Obj, "Number")))
 	}).SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 		v := ctx.R.FormValue(field.FormKey)
 		if v == "" {
@@ -275,43 +278,43 @@ func TestFieldsBuilder(t *testing.T) {
 		return reflectutils.Set(obj, "Number", "900"+v)
 	})
 
-	deptFbs := NewFieldsBuilder().Model(&Department{}).Defaults(defaults)
-	deptFbs.Field("Name").ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	deptFbs := NewFieldsBuilder(pb).Model(&Department{}).Defaults(defaults)
+	deptFbs.Field("Name").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		// [0].Departments[0].Name
 		// [0].Departments[1].Name
 		// [1].Departments[0].Name
-		return h.Input(field.FormKey).Type("text").Value(field.StringValue(obj))
+		return h.Input(field.FormKey).Type("text").Value(field.StringValue())
 	}).SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 		reflectutils.Set(obj, field.Name, ctx.R.FormValue(field.FormKey)+"!!!")
 		// panic("dept name setter")
 		return
 	})
 
-	deptFbs.Field("Employees").Nested(employeeFbs).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	deptFbs.Field("Employees").Nested(NestedSlice(nil, employeeFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(
-			field.Nested.ToComponentForEach(field, obj.(*Department).Employees, ctx, nil),
+			field.Nested.FieldsBuilder().ToComponentForEach(nil, field, field.Obj.(*Department).Employees, field.Mode, ctx, nil),
 			h.Button("Add Employee"),
 		).Class("employees")
 	})
 
-	fbs := NewFieldsBuilder().Model(&Org{}).Defaults(defaults)
-	fbs.Field("Name").ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	fbs := NewFieldsBuilder(pb).Model(&Org{}).Defaults(defaults)
+	fbs.Field("Name").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		// [0].Name
-		return h.Input(field.Name).Type("text").Value(field.StringValue(obj))
+		return h.Input(field.Name).Type("text").Value(field.StringValue())
 	})
 	// .SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 	// 	return
 	// })
 
-	fbs.Field("Departments").Nested(deptFbs).ComponentFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	fbs.Field("Departments").Nested(NestedSlice(nil, deptFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		// [0].Departments
 		return h.Div(
-			field.Nested.ToComponentForEach(field, obj.(*Org).Departments, ctx, nil),
+			field.Nested.FieldsBuilder().ToComponentForEach(nil, field, field.Obj.(*Org).Departments, field.Mode, ctx, nil),
 			h.Button("Add Department"),
 		).Class("departments")
 	})
 
-	fbs.Field("Address").Nested(addressFb)
+	fbs.Field("Address").Nested(NestedStruct(nil, addressFb))
 
 	fbs.Field("PeopleCount").SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 		reflectutils.Set(obj, field.Name, ctx.R.FormValue(field.FormKey))
@@ -531,7 +534,7 @@ func TestFieldsBuilder(t *testing.T) {
 				R: httptest.NewRequest("POST", "/", nil),
 			}
 			c.setup(ctx)
-			result := fbs.ToComponent(nil, c.obj, ctx)
+			result := fbs.ToComponent(nil, nil, c.obj, FieldModeStack{WRITE}, ctx)
 			actual1 := h.MustString(result, context.TODO())
 
 			diff := testingutils.PrettyJsonDiff(c.expectedHTML, actual1)
@@ -973,7 +976,7 @@ func TestFieldsBuilder(t *testing.T) {
 			ctx2 := &web.EventContext{R: c.req}
 			_ = ctx2.R.ParseMultipartForm(128 << 20)
 			actual2 := c.initial
-			vErr := fbs.Unmarshal(actual2, nil, c.removeDeletedAndSort, ctx2)
+			vErr := fbs.Unmarshal(nil, actual2, nil, c.removeDeletedAndSort, ctx2)
 			if vErr.HaveErrors() {
 				t.Error(vErr.Error())
 			}

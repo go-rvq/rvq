@@ -240,13 +240,15 @@ func TestDetailFieldBuilder(t *testing.T) {
 
 	cust := b.Model(&ParameterSetting{})
 
-	detail := cust.Detailing("ParameterID", "Detail", "FormSetting").Drawer(true)
+	detail := cust.Detailing("ParameterID", "Detail", "FormSetting")
 	detail.Section("Detail").
-		ViewComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ViewComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			ps := obj.(*ParameterSetting)
 			return h.Div(h.Text(ps.DisplayName))
 		}).
-		EditComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		EditComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			ps := obj.(*ParameterSetting)
 			return h.Div(
 				v.VTextField().
@@ -256,7 +258,8 @@ func TestDetailFieldBuilder(t *testing.T) {
 	detail.Section("FormSetting").
 		IsList(&ParameterFieldSetting{}).
 		Editing("DisplayName", "Description", "Path", "ValType").
-		ElementShowComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ElementShowComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			ps := obj.(*ParameterFieldSetting)
 			return h.Div(
 				h.Span(ps.DisplayName),
@@ -265,7 +268,8 @@ func TestDetailFieldBuilder(t *testing.T) {
 				h.Span(ps.ValType),
 			)
 		}).
-		ElementEditComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ElementEditComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			ps := obj.(*ParameterFieldSetting)
 			div := h.Div(
 				v.VTextField().
