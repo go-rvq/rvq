@@ -15,6 +15,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/theplant/gofixtures"
 	"github.com/theplant/testingutils"
@@ -234,7 +235,7 @@ func TestDetailFieldBuilder(t *testing.T) {
 
 	db := TestDB
 	db.AutoMigrate(&ParameterSetting{})
-	b := presets.New().URIPrefix("/ps")
+	b := presets.New(i18n.New()).URIPrefix("/ps")
 	b.DataOperator(gorm2op.DataOperator(db))
 
 	cust := b.Model(&ParameterSetting{})

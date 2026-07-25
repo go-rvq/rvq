@@ -1,9 +1,10 @@
 # Verificação do que está saudável hoje. Rode `make check` ANTES DE COMMITAR.
 #
-# O repositório tem pacotes quebrados de longa data (docs/examples do QOR5,
-# pagebuilder, seo, media, os que exigem libvips, e os testes de `web` e
-# `x/perm`). Eles NÃO entram aqui: `check` cobre o que passa, para que uma
-# falha signifique de fato uma regressão sua.
+# O repositório tem pacotes quebrados de longa data — o que sobrou da estrutura
+# antiga `github.com/go-rvq/admin`, um fork do qor5/admin (docs/examples,
+# pagebuilder, seo, media, os que exigem libvips), mais os testes de `web` e
+# `x/perm`. Eles NÃO entram aqui: `check` cobre o que passa, para que uma falha
+# signifique de fato uma regressão sua.
 
 GO ?= go
 BUN ?= bun
@@ -11,16 +12,19 @@ BUN ?= bun
 # Pacotes Go com testes que passam.
 GO_TEST_PKGS := \
 	./web/multipartestutils/... \
+	./admin/presets \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
 	./admin/packages/... \
 	./thirdpart/...
 
-# Pacotes que precisam apenas compilar (sem testes próprios ou com testes
-# quebrados no upstream), incluindo as fixtures dos testes de integração.
+# Pacotes que precisam apenas compilar: sem testes próprios, ou com testes ainda
+# presos à API antiga do fork (admin/presets/integration), mais as fixtures dos
+# testes de integração.
 GO_BUILD_PKGS := \
 	./web/... \
 	./admin/presets \
+	./admin/presets/examples \
 	./admin/presets/integration \
 	./admin/packages/... \
 	./thirdpart/... \

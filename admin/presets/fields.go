@@ -610,8 +610,15 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 func (b *FieldsBuilder) setToObjNilOrDelete(toObj interface{}, formKey string, f *FieldBuilder, modifiedIndexes *ModifiedIndexesBuilder, removeDeletedAndSort bool) {
 	if !removeDeletedAndSort {
 		if modifiedIndexes.deletedValues != nil && modifiedIndexes.deletedValues[formKey] != nil {
-			for _, idx := range modifiedIndexes.deletedValues[formKey] {
-				sliceFieldName := fmt.Sprintf("%s[%s]", f.name, idx)
+			// deletedValues is a SET of indexes (AppendDeleted stores index → true),
+			// so the index is the KEY. Ranging over the value took the bool instead
+			// and built "Name[%!s(bool=true)]", which made reflectutils.Set fail and
+			// this function panic.
+			for idx, deleted := range modifiedIndexes.deletedValues[formKey] {
+				if !deleted {
+					continue
+				}
+				sliceFieldName := fmt.Sprintf("%s[%d]", f.name, idx)
 				err := reflectutils.Set(toObj, sliceFieldName, nil)
 				if err != nil {
 					panic(err)
