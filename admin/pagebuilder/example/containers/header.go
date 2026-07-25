@@ -25,12 +25,12 @@ func RegisterHeader(pb *pagebuilder.Builder) {
 		})
 
 	ed := header.Model(&WebHeader{}).Editing("Color")
-	ed.Field("Color").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("Color").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items([]string{"black", "white"}).
 			Variant(vuetify.FieldVariantUnderlined).
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
 }
 

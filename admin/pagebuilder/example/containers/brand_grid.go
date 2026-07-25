@@ -62,7 +62,10 @@ func RegisterBrandGridContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 		AllowType: "image",
 	})
 
-	eb.Field("Brands").Nested(fb, &presets.DisplayFieldInSorter{Field: "Name"})
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &Brand{})
+	eb.Field("Brands").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func BrandGridBody(data *BrandGrid, input *pagebuilder.RenderInput) (body HTMLComponent) {

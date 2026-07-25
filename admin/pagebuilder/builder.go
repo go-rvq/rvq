@@ -317,7 +317,7 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	b.configSharedContainer(pb, r)
 	b.configDemoContainer(pb)
 	categoryM := pb.Model(&Category{}).URIName("page_categories").Label("Categories")
-	err = b.categoryInstall(pb, categoryM)
+	err = b.categoryInstall(categoryM)
 
 	return
 }
@@ -345,14 +345,14 @@ func (b *Builder) configTemplateAndPage(pb *presets.Builder, r *ModelBuilder) {
 	}
 	if b.templateEnabled {
 		templateM = pb.Model(&Template{}).URIName("page_templates").Label("Templates")
-		err := b.templateInstall(pb, templateM)
+		err := b.templateInstall(templateM)
 		if err != nil {
 			panic(err)
 		}
 		b.templateModel = templateM
 	}
 	pm := r.mb
-	err := b.pageInstall(pb, pm)
+	err := b.pageInstall(pm)
 	if err != nil {
 		panic(err)
 	}
@@ -362,7 +362,8 @@ func (b *Builder) configTemplateAndPage(pb *presets.Builder, r *ModelBuilder) {
 	// dp.TabsPanels()
 }
 
-func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
+func (b *Builder) defaultPageInstall(pm *presets.ModelBuilder) (err error) {
+	pb := pm.Builder()
 	db := b.db
 	lb := pm.Listing("ID", publish.ListingFieldLive, "Title", "Path")
 	lb.Field("Path").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -371,7 +372,7 @@ func (b *Builder) defaultPageInstall(pb *presets.Builder, pm *presets.ModelBuild
 		if err != nil {
 			panic(err)
 		}
-		return h.Td(h.Text(page.getAccessUrl(page.getPublishUrl(b.l10n.GetLocalePath(page.LocaleCode), category.Path))))
+		return h.Td(h.Text(page.getAccessUrl(page.getPublishUrl(localePathOf(b.l10n, page.LocaleCode), category.Path))))
 	})
 	dp := pm.Detailing(PageBuilderPreviewCard)
 	// register modelBuilder
@@ -641,7 +642,7 @@ func (b *Builder) configDetailLayoutFunc(
 					return pb.DefaultNotFoundPageFunc(ctx)
 				}
 			}
-			err = dmb.Detailing().GetFetchFunc()(obj, id, ctx)
+			err = dmb.Detailing().GetFetchFunc()(obj, dmb.MustParseRecordID(id), ctx)
 			if err != nil {
 				if errors.Is(err, presets.ErrRecordNotFound) {
 					return pb.DefaultNotFoundPageFunc(ctx)
@@ -823,7 +824,7 @@ func fillCategoryIndentLevels(cats []*Category) {
 	}
 }
 
-func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
+func (b *Builder) defaultCategoryInstall(pm *presets.ModelBuilder) (err error) {
 	db := b.db
 
 	lb := pm.Listing("Name", "Path", "Description")
@@ -875,8 +876,8 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 		return nil
 	})
 
-	lb.DeleteFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
-		cs := obj.(presets.SlugDecoder).PrimaryColumnValuesBySlug(id)
+	lb.DeleteFunc(func(obj interface{}, id presets.ID, cascade bool, ctx *web.EventContext) (err error) {
+		cs := obj.(presets.SlugDecoder).PrimaryColumnValuesBySlug(id.String())
 		ID := cs["id"]
 		Locale := cs[l10n.SlugLocaleCode]
 
@@ -900,7 +901,7 @@ func (b *Builder) defaultCategoryInstall(pb *presets.Builder, pm *presets.ModelB
 		return
 	})
 
-	eb.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	eb.SaveFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		c := obj.(*Category)
 		c.Path = path.Clean(c.Path)
 		err = db.Save(c).Error
@@ -1157,7 +1158,7 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 	}
 	listing.Field("DisplayName").Label("Name")
 	listing.SearchFunc(sharedContainerSearcher(db, r))
-	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		tdbind := cell
 		c := obj.(*Container)
 
@@ -1293,7 +1294,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 		)
 	})
 
-	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+	listing.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 		tdbind := cell
 		c := obj.(*DemoContainer)
 
@@ -1307,7 +1308,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 		return tdbind
 	})
 
-	ed.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	ed.SaveFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		this := obj.(*DemoContainer)
 		err = db.Transaction(func(tx *gorm.DB) (inerr error) {
 			if b.l10n != nil && strings.Contains(ctx.R.RequestURI, l10n.DoLocalize) {
@@ -1334,7 +1335,7 @@ func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBui
 	return
 }
 
-func (b *Builder) defaultTemplateInstall(pb *presets.Builder, pm *presets.ModelBuilder) (err error) {
+func (b *Builder) defaultTemplateInstall(pm *presets.ModelBuilder) (err error) {
 	db := b.db
 
 	pm.Listing("ID", "Name", "Description")
@@ -1344,7 +1345,7 @@ func (b *Builder) defaultTemplateInstall(pb *presets.Builder, pm *presets.ModelB
 
 	eb := pm.Editing("Name", "Description")
 
-	eb.SaveFunc(func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+	eb.SaveFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		this := obj.(*Template)
 		err = db.Transaction(func(tx *gorm.DB) (inerr error) {
 			if inerr = gorm2op.DataOperator(tx).Save(obj, id, ctx); inerr != nil {
@@ -1727,7 +1728,8 @@ func (b *ContainerBuilder) autoSaveContainer(ctx *web.EventContext) (r web.Event
 		id = ctx.R.FormValue(presets.ParamID)
 		mb = b.mb.Editing()
 	)
-	obj, vErr := mb.FetchAndUnmarshal(id, true, ctx)
+	mid := b.mb.MustParseRecordID(id)
+	obj, vErr := mb.FetchAndUnmarshal(nil, mid, true, ctx)
 	if vErr.HaveErrors() {
 		err = errors.New(vErr.Error())
 		return
@@ -1738,7 +1740,7 @@ func (b *ContainerBuilder) autoSaveContainer(ctx *web.EventContext) (r web.Event
 		return
 	}
 
-	if err = mb.Saver(obj, id, ctx); err != nil {
+	if err = mb.Saver(obj, mid, ctx); err != nil {
 		return
 	}
 	r.RunScript = web.Plaid().EventFunc(ReloadRenderPageOrTemplateEvent).Go()

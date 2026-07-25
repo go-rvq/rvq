@@ -240,7 +240,7 @@ func (b *Builder) renderEditContainer(ctx *web.EventContext) (r h.HTMLComponent,
 				).Class("d-flex  pa-6 align-center justify-space-between"),
 				VDivider(),
 				h.Div(
-					builder.Editing().ToComponent(element, presets.FieldModeStack{presets.EDIT}, ctx),
+					builder.Editing().ToComponent(nil, element, presets.FieldModeStack{presets.EDIT}, ctx),
 				).Class("pa-6"),
 			),
 		),

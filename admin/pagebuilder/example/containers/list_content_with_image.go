@@ -64,7 +64,10 @@ func RegisterListContentWithImageContainer(pb *pagebuilder.Builder, db *gorm.DB)
 	fb := pb.GetPresetsBuilder().NewFieldsBuilder(presets.WRITE).Model(&ImageListItem{}).
 		Only("Image", "Link", "Heading", "Subheading", "Text")
 
-	eb.Field("Items").Nested(fb)
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &ImageListItem{})
+	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func ListContentWithImageBody(data *ListContentWithImage, input *pagebuilder.RenderInput) (body HTMLComponent) {

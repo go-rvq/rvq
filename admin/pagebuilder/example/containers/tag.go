@@ -37,31 +37,34 @@ func SetTagComponent(pb *pagebuilder.Builder, eb *presets.EditingBuilder) {
 	fb := pb.GetPresetsBuilder().NewFieldsBuilder(presets.WRITE).Model(&tag{}).
 		Only("Text", "FontColor", "BackgroundColor", "Icon", "Link")
 
-	fb.Field("FontColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	fb.Field("FontColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return v.VAutocomplete().
 			Variant(v.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...).
+			Attr(web.VField(field.FormKey, field.Value())...).
 			Label(field.Label).
 			Items(TagFontColors)
 	})
 
-	fb.Field("BackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	fb.Field("BackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return v.VAutocomplete().
 			Variant(v.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...).
+			Attr(web.VField(field.FormKey, field.Value())...).
 			Label(field.Label).
 			Items(TagBackgroundColors)
 	})
 
-	fb.Field("Icon").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	fb.Field("Icon").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return v.VAutocomplete().
 			Variant(v.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...).
+			Attr(web.VField(field.FormKey, field.Value())...).
 			Label(field.Label).
 			Items(TagIcons)
 	})
 
-	eb.Field("Tags").Nested(fb)
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &tag{})
+	eb.Field("Tags").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func getTagIconSVG(icon string) HTMLComponent {

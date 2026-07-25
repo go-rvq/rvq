@@ -40,7 +40,8 @@ func (mib *Builder) Install(b *presets.Builder) error {
 		PerPage(10)
 	model.Editing("StatusBar", "ScheduleBar", "Name", "Description", "PrePath", "FilesList", "Package")
 
-	model.Editing().Field("Package").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	model.Editing().Field("Package").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		obj := field.Obj
 		this := obj.(*MicroSite)
 
 		if this.GetPackage().FileName == "" {
@@ -51,7 +52,7 @@ func (mib *Builder) Install(b *presets.Builder) error {
 			h.Div(
 				h.Div(
 					h.Div(
-						h.Label(i18n.PT(ctx.R, presets.ModelsI18nModuleKey, model.Info().Label(), "Current Package")).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
+						h.Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, model.Info().Label(), "Current Package")).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
 						h.A().Href(this.GetPackageUrl(storage.GetEndpoint())).Text(this.GetPackage().FileName),
 					).Class("v-text-field__slot").Style("padding: 8px 0;"),
 				).Class("v-input__slot"),
@@ -118,7 +119,8 @@ func (mib *Builder) Install(b *presets.Builder) error {
 		})
 
 	model.Editing().Field("FilesList").ComponentFunc(
-		func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+		func(field *presets.FieldContext, ctx *web.EventContext) (r h.HTMLComponent) {
+			obj := field.Obj
 			this := obj.(*MicroSite)
 			if this.Status.Status == publish.StatusOffline || len(this.GetFileList()) == 0 {
 				return nil
@@ -127,7 +129,7 @@ func (mib *Builder) Install(b *presets.Builder) error {
 			var content []h.HTMLComponent
 
 			content = append(content,
-				h.Label(i18n.PT(ctx.R, presets.ModelsI18nModuleKey, model.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
+				h.Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, model.Info().Label(), field.Label)).Class("v-label v-label--active theme--light").Style("left: 0px; right: auto; position: absolute;"),
 			)
 
 			if this.Status.Status == publish.StatusOnline {

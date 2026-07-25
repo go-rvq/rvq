@@ -1,6 +1,7 @@
 package microsite
 
 import (
+	"github.com/go-rvq/rvq/admin/media/storage"
 	"github.com/go-rvq/rvq/admin/publish"
 	"gorm.io/gorm"
 )
@@ -19,14 +20,14 @@ type Builder struct {
 	db                       *gorm.DB
 	packageAndPreviewPrepath string
 	publisher                *publish.Builder
-	storage                  oss.StorageInterface
+	storage                  storage.Storage
 }
 
 func New(db *gorm.DB) *Builder {
 	b := &Builder{}
 	b.db = db
 	b.packageAndPreviewPrepath = "microsite"
-	b.storage = filesystem.New("public/microsite")
+	b.storage = storage.NewFileSystem("public/microsite")
 	return b
 }
 
@@ -40,7 +41,7 @@ func (b *Builder) Publisher(v *publish.Builder) (r *Builder) {
 	return b
 }
 
-func (b *Builder) Storage(v oss.StorageInterface) (r *Builder) {
+func (b *Builder) Storage(v storage.Storage) (r *Builder) {
 	b.storage = v
 	return b
 }

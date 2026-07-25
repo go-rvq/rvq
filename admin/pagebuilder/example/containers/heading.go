@@ -43,30 +43,31 @@ func RegisterHeadingContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 			return HeadingBody(v, input)
 		})
 	ed := vb.Model(&Heading{}).Editing("AddTopSpace", "AddBottomSpace", "AnchorID", "Heading", "FontColor", "BackgroundColor", "Link", "LinkText", "LinkDisplayOption", "Text")
-	ed.Field("Text").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("Text").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		obj := field.Obj
 		return richeditor.RichEditor(db, "Text").Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).Value(obj.(*Heading).Text).Label(field.Label)
 	})
 
-	ed.Field("FontColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("FontColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items(FontColors).
 			Label(field.Label).
 			Variant(vuetify.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
-	ed.Field("BackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("BackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items(BackgroundColors).
 			Label(field.Label).
 			Variant(vuetify.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
-	ed.Field("LinkDisplayOption").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("LinkDisplayOption").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items(LinkDisplayOptions).
 			Label(field.Label).
 			Variant(vuetify.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
 }
 

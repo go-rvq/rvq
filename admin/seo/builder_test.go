@@ -2,6 +2,7 @@ package seo
 
 import (
 	"context"
+	h "github.com/go-rvq/htmlgo"
 	"net/http"
 	"net/url"
 	"testing"
@@ -381,7 +382,7 @@ func TestBuilder_Render(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			resetDB()
 			tt.prepareDB()
-			if got, _ := tt.builder.Render(tt.obj, defaultRequest).MarshalHTML(context.TODO()); !metaEqual(string(got), tt.want) {
+			if got, _ := h.Marshal(tt.builder.Render(tt.obj, defaultRequest), context.TODO()); !metaEqual(string(got), tt.want) {
 				t.Errorf("Render = %v\nExpected = %v", string(got), tt.want)
 			}
 		})
@@ -527,7 +528,7 @@ func TestBuilder_SortSEOs(t *testing.T) {
 			c.builder.SortSEOs(c.data)
 			r := testingutils.PrettyJsonDiff(c.expected, c.data)
 			if r != "" {
-				t.Errorf(r)
+				t.Error(r)
 			}
 		})
 	}
@@ -1007,7 +1008,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 			c.prepareDB()
 			comps := c.builder.BatchRender(c.objs, defaultRequest)
 			for i, comp := range comps {
-				got, _ := comp.MarshalHTML(context.TODO())
+				got, _ := h.Marshal(comp, context.TODO())
 				if !metaEqual(string(got), c.wants[i]) {
 					t.Errorf("Render = %v\nExpected = %v", string(got), c.wants[i])
 				}

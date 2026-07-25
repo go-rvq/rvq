@@ -8,12 +8,13 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 )
 
 func main() {
 	db := example.ConnectDB()
 
-	p := presets.New().
+	p := presets.New(i18n.New()).
 		URIPrefix("/admin").
 		DataOperator(gorm2op.DataOperator(db))
 	pb := example.ConfigPageBuilder(db, "/page_builder", `<link rel="stylesheet" href="/frontstyle.css">`, p.I18n())

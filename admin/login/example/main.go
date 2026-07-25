@@ -10,6 +10,7 @@ import (
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
@@ -59,10 +60,15 @@ var (
 )
 
 func main() {
-	pb := presets.New()
+	i18nB := i18n.New()
+	pb := presets.New(i18nB)
 
-	lb := plogin.New(pb).
-		DB(db).
+	// the login builder owns the configuration; the presets side (plogin) plugs
+	// itself into it
+	lb := login.New(i18nB)
+	plogin.New(lb)
+
+	lb.DB(db).
 		UserModel(&User{}).
 		Secret("123").
 		OAuthProviders(
@@ -89,7 +95,7 @@ func main() {
 		TOTP(false)
 
 	pb.ProfileFunc(func(ctx *web.EventContext) h.HTMLComponent {
-		return h.A(h.Text("logout")).Href(lb.LogoutURL)
+		return h.A(h.Text("logout")).Href(lb.GetLogoutURL())
 	})
 
 	r := http.NewServeMux()

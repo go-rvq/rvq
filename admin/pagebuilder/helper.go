@@ -51,7 +51,7 @@ func pageValidator(_ context.Context, p *Page, db *gorm.DB, l10nB *l10n.Builder)
 
 	var localePath string
 	if l10nB != nil {
-		localePath = l10nB.GetLocalePath(p.LocaleCode)
+		localePath = localePathOf(l10nB, p.LocaleCode)
 	}
 
 	currentPageCategory, inErr := p.GetCategory(db)
@@ -71,7 +71,7 @@ func pageValidator(_ context.Context, p *Page, db *gorm.DB, l10nB *l10n.Builder)
 		}
 		var localePath string
 		if l10nB != nil {
-			localePath = l10nB.GetLocalePath(info.LocaleCode)
+			localePath = localePathOf(l10nB, info.LocaleCode)
 		}
 
 		if generatePublishUrl(localePath, info.CategoryPath, info.Slug) == currentPagePublishUrl {
@@ -92,7 +92,7 @@ func categoryValidator(category *Category, db *gorm.DB, l10nB *l10n.Builder) (er
 
 	var localePath string
 	if l10nB != nil {
-		localePath = l10nB.GetLocalePath(category.LocaleCode)
+		localePath = localePathOf(l10nB, category.LocaleCode)
 	}
 
 	currentCategoryPathPublishUrl := generatePublishUrl(localePath, categoryPath, "")
@@ -108,7 +108,7 @@ func categoryValidator(category *Category, db *gorm.DB, l10nB *l10n.Builder) (er
 		}
 		var localePath string
 		if l10nB != nil {
-			localePath = l10nB.GetLocalePath(c.LocaleCode)
+			localePath = localePathOf(l10nB, c.LocaleCode)
 		}
 		if generatePublishUrl(localePath, c.Path, "") == currentCategoryPathPublishUrl {
 			err.FieldError("Category.Category", existingPathMsg)
@@ -117,4 +117,16 @@ func categoryValidator(category *Category, db *gorm.DB, l10nB *l10n.Builder) (er
 	}
 
 	return
+}
+
+// localePathOf replaces l10n.Builder.GetLocalePath: the locale is looked up and
+// may not exist.
+func localePathOf(l10nB *l10n.Builder, localeCode string) string {
+	if l10nB == nil {
+		return ""
+	}
+	if l := l10nB.GetLocale(localeCode); l != nil {
+		return l.Path()
+	}
+	return ""
 }

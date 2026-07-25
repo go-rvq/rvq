@@ -33,19 +33,19 @@ func RegisterImageContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 		})
 	mb := vb.Model(&ImageContainer{})
 	eb := mb.Editing("AddTopSpace", "AddBottomSpace", "AnchorID", "BackgroundColor", "TransitionBackgroundColor", "Image")
-	eb.Field("BackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("BackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items([]string{"white", "blue", "grey"}).
 			Variant(vuetify.FieldVariantUnderlined).
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
-	eb.Field("TransitionBackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("TransitionBackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items([]string{"white", "blue", "grey"}).
 			Label(field.Label).
 			Variant(vuetify.FieldVariantUnderlined).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
 }
 

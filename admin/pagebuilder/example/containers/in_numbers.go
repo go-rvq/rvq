@@ -60,7 +60,10 @@ func RegisterInNumbersContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 
 	fb := pb.GetPresetsBuilder().NewFieldsBuilder(presets.WRITE).Model(&InNumbersItem{}).Only("Heading", "Text")
 
-	eb.Field("Items").Nested(fb, &presets.DisplayFieldInSorter{Field: "Heading"})
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &InNumbersItem{})
+	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func InNumbersBody(data *InNumbers, input *pagebuilder.RenderInput) (body HTMLComponent) {

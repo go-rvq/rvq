@@ -35,7 +35,7 @@ type formData struct {
 var fd formData
 
 func edit1(ctx *web.EventContext) (er web.EventResponse, err error) {
-	er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
+	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
 		Name: "part1",
 		Body: Div(
 			web.Scope(

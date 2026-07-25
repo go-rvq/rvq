@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/iancoleman/strcase"
 	"github.com/theplant/osenv"
 	"gorm.io/driver/postgres"
@@ -64,6 +65,6 @@ func AddGA(ctx *web.EventContext) {
 func AddPresetExample(mux Muxer, f func(*presets.Builder, *gorm.DB) http.Handler) {
 	path := URLPathByFunc(f)
 	fmt.Println("Examples mounting path:", path)
-	p := presets.New().AssetFunc(AddGA).URIPrefix(path)
+	p := presets.New(i18n.New()).AssetFunc(AddGA).URIPrefix(path)
 	mux.Handle(path, f(p, ExampleDB()))
 }

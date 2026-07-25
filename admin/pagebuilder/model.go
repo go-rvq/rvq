@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/admin/lang_utils"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/publish"
@@ -439,7 +440,7 @@ func (b *ModelBuilder) renderContainersList(ctx *web.EventContext) (component h.
 	sort.Slice(containerBuilders, func(i, j int) bool {
 		return containerBuilders[i].group != "" && containerBuilders[j].group == ""
 	})
-	groupContainers := utils.GroupBySlice[*ContainerBuilder, string](containerBuilders, func(builder *ContainerBuilder) string {
+	groupContainers := lang_utils.GroupBySlice[*ContainerBuilder, string](containerBuilders, func(builder *ContainerBuilder) string {
 		return builder.group
 	})
 	for _, group := range groupContainers {
@@ -487,7 +488,7 @@ func (b *ModelBuilder) renderContainersList(ctx *web.EventContext) (component h.
 	sort.Slice(cons, func(i, j int) bool {
 		return b.builder.ContainerByName(cons[i].ModelName).group != "" && b.builder.ContainerByName(cons[j].ModelName).group == ""
 	})
-	for _, group := range utils.GroupBySlice[*Container, string](cons, func(builder *Container) string {
+	for _, group := range lang_utils.GroupBySlice[*Container, string](cons, func(builder *Container) string {
 		return b.builder.ContainerByName(builder.ModelName).group
 	}) {
 		if len(group) == 0 {
@@ -917,7 +918,7 @@ func (b *ModelBuilder) renderPageOrTemplate(ctx *web.EventContext, obj interface
 					h.Body(
 						h.Div(
 							r,
-						).Id("app").Attr("v-cloak", true),
+						).ID("app").Attr("v-cloak", true),
 						newCtx.Injector.GetTailHTMLComponent(),
 					).Class("front"),
 				).Attr(newCtx.Injector.HTMLLangAttrs()...),

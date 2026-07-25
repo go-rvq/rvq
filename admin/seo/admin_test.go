@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/testingutils"
 	"gorm.io/gorm"
 )
@@ -151,7 +152,7 @@ func TestUpdate(t *testing.T) {
 				c.prepareDB()
 			}
 
-			admin := presets.New().URIPrefix("/admin").DataOperator(gorm2op.DataOperator(dbForTest))
+			admin := presets.New(i18n.New()).URIPrefix("/admin").DataOperator(gorm2op.DataOperator(dbForTest))
 			server := httptest.NewServer(admin)
 
 			l10nBuilder := l10n.New(dbForTest)
@@ -183,7 +184,7 @@ func TestUpdate(t *testing.T) {
 			actualSetting.Variables = seoSetting.Variables
 			r := testingutils.PrettyJsonDiff(c.expected, actualSetting)
 			if r != "" {
-				t.Errorf(r)
+				t.Error(r)
 			}
 		})
 	}

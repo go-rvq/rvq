@@ -15,6 +15,7 @@ GO_TEST_PKGS := \
 	./admin/presets \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
+	./admin/pagebuilder \
 	./admin/packages/... \
 	./thirdpart/...
 
@@ -23,6 +24,11 @@ GO_TEST_PKGS := \
 # testes de integração.
 GO_BUILD_PKGS := \
 	./web/... \
+	./admin/l10n/... \
+	./admin/login/... \
+	./admin/microsite/... \
+	./admin/pagebuilder/... \
+	./admin/seo/... \
 	./admin/presets \
 	./admin/presets/examples \
 	./admin/presets/integration \

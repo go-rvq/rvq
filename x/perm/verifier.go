@@ -119,7 +119,16 @@ func (b *Verifier) Do(v string) (r *Verifier) {
 }
 
 func (b *Verifier) Resource() string {
-	return strings.Join(b.vr.resourcesParts, ":") + ":"
+	return strings.Join(b.resourceParts(), ":") + ":"
+}
+
+// resourceParts is nil-safe: NewVerifier accepts a nil Builder (an app with no
+// permission builder), and then there is no request to read parts from.
+func (b *Verifier) resourceParts() []string {
+	if b.vr == nil {
+		return nil
+	}
+	return b.vr.resourcesParts
 }
 
 func (b *Verifier) ResourceWithModule() string {
@@ -127,7 +136,7 @@ func (b *Verifier) ResourceWithModule() string {
 	if b.module != "" {
 		m = b.module
 	}
-	return m + ":" + strings.Join(b.vr.resourcesParts, ":") + ":"
+	return m + ":" + strings.Join(b.resourceParts(), ":") + ":"
 }
 
 // SnakeDo convert string to snake form.

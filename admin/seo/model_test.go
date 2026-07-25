@@ -2,6 +2,7 @@ package seo
 
 import (
 	"context"
+	h "github.com/go-rvq/htmlgo"
 	"testing"
 )
 
@@ -66,7 +67,7 @@ func TestSettingHTMLComponent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := tt.setting.HTMLComponent(tt.tags).MarshalHTML(context.TODO()); !metaEqual(string(got), tt.want) {
+			if got, _ := h.Marshal(tt.setting.HTMLComponent(tt.tags), context.TODO()); !metaEqual(string(got), tt.want) {
 				t.Errorf("Setting.HTMLComponent() = %v, want %v", string(got), tt.want)
 			}
 		})

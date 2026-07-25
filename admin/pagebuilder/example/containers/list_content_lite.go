@@ -63,21 +63,25 @@ func RegisterListContentLiteContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 		"Items", "BackgroundColor",
 	)
 
-	eb.Field("BackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("BackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return v.VAutocomplete().
-			Attr(web.VField(field.Name, field.Value(obj))...).
+			Attr(web.VField(field.Name, field.Value())...).
 			Variant(v.FieldVariantUnderlined).
 			Label(field.Label).
 			Items([]string{White, Grey})
 	})
 
 	fb := pb.GetPresetsBuilder().NewFieldsBuilder(presets.WRITE).Model(&ListItemLite{}).Only("Heading", "Text")
-	fb.Field("Text").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	fb.Field("Text").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		obj := field.Obj
 		return richeditor.RichEditor(db, field.FormKey).
 			Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).
 			Value(obj.(*ListItemLite).Text).Label(field.Label)
 	})
-	eb.Field("Items").Nested(fb, &presets.DisplayFieldInSorter{Field: "Heading"})
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &ListItemLite{})
+	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func ListContentLiteBody(data *ListContentLite, input *pagebuilder.RenderInput) (body HTMLComponent) {

@@ -16,7 +16,7 @@ func Anchor(h *HTMLTagBuilder, text string) HTMLComponent {
 	return h.Children(
 		Text(text),
 		A().Class("anchor").Href(fmt.Sprintf("#%s", anchorName)),
-	).Id(anchorName)
+	).ID(anchorName)
 }
 
 type Example struct {

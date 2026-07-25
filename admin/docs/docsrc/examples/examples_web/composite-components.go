@@ -46,7 +46,7 @@ func Navbar(title string, activeIndex int, items ...HTMLComponent) HTMLComponent
 					Type("submit"),
 			).Class("form-inline my-2 my-lg-0"),
 		).Class("collapse navbar-collapse").
-			Id("navbarNav"),
+			ID("navbarNav"),
 	).Class("navbar navbar-expand-lg navbar-dark bg-primary")
 }
 
@@ -92,7 +92,7 @@ func Carousel(carouselId string, activeIndex int, items []*CarouselItem) HTMLCom
 			Href("#"+carouselId).
 			Role("button").
 			Attr("data-slide", "next"),
-	).Id(carouselId).
+	).ID(carouselId).
 		Class("carousel slide").
 		Attr("data-ride", "carousel")
 }

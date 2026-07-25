@@ -1,7 +1,6 @@
 package seo
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -446,7 +445,7 @@ func TestSEO_getLocaleFinalQorSEOSetting(t *testing.T) {
 			actual.Variables = seoSetting.Variables
 			r := testingutils.PrettyJsonDiff(c.expected, actual)
 			if r != "" {
-				t.Errorf(r)
+				t.Error(r)
 			}
 		})
 	}
@@ -539,7 +538,7 @@ func TestSEO_getFinalQorSEOSetting(t *testing.T) {
 			}
 			for locale, actualSets := range seoSets {
 				if expectedSets, isExist := c.expected[locale]; !isExist {
-					t.Errorf(fmt.Sprintf("There is no SEO configuration available for %v", locale))
+					t.Errorf("There is no SEO configuration available for %v", locale)
 				} else {
 					actual := &QorSEOSetting{}
 					actual.Setting = actualSets.Setting
@@ -548,7 +547,7 @@ func TestSEO_getFinalQorSEOSetting(t *testing.T) {
 					actual.LocaleCode = actualSets.LocaleCode
 					r := testingutils.PrettyJsonDiff(expectedSets, actual)
 					if r != "" {
-						t.Errorf(r)
+						t.Error(r)
 					}
 				}
 			}

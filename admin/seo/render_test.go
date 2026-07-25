@@ -2,6 +2,7 @@ package seo
 
 import (
 	"context"
+	h "github.com/go-rvq/htmlgo"
 	"net/http"
 	"net/url"
 	"testing"
@@ -97,7 +98,7 @@ func TestRenderSameType(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			dbForTest.Exec("truncate qor_seo_settings;")
 			c.prepareDB()
-			if got, _ := c.builder.Render(c.obj, defaultRequest).MarshalHTML(context.TODO()); !metaEqual(string(got), c.want) {
+			if got, _ := h.Marshal(c.builder.Render(c.obj, defaultRequest), context.TODO()); !metaEqual(string(got), c.want) {
 				t.Errorf("Render = %v\nExpected = %v", string(got), c.want)
 			}
 		})

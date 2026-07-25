@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/admin/media/storage"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/publish"
 	"gorm.io/gorm"
@@ -39,11 +40,11 @@ func (lmv *L10nModelWithVersion) PrimaryColumnValuesBySlug(slug string) map[stri
 	}
 }
 
-func (lmv *L10nModelWithVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (lmv *L10nModelWithVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 
-func (lmv *L10nModelWithVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage oss.StorageInterface) (objs []*publish.PublishAction, err error) {
+func (lmv *L10nModelWithVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
 	return
 }
 

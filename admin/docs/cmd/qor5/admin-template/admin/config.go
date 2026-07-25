@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
@@ -22,7 +23,7 @@ func setupAdmin() (b *presets.Builder) {
 	db := ConnectDB()
 
 	// Initialize the builder of QOR5
-	b = presets.New()
+	b = presets.New(i18n.New())
 
 	// Set up the project name, ORM and Homepage
 	b.URIPrefix("/admin").

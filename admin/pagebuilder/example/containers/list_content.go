@@ -64,24 +64,27 @@ func RegisterListContentContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 		})
 	mb := vb.Model(&ListContent{})
 	eb := mb.Editing("AddTopSpace", "AddBottomSpace", "AnchorID", "BackgroundColor", "Items", "Link", "LinkText", "LinkDisplayOption")
-	eb.Field("BackgroundColor").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("BackgroundColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Variant(vuetify.FieldVariantUnderlined).
 			Items([]string{"white", "grey"}).
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
-	eb.Field("LinkDisplayOption").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	eb.Field("LinkDisplayOption").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VSelect().
 			Items([]string{"desktop", "mobile", "all"}).
 			Variant(vuetify.FieldVariantUnderlined).
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
 
 	fb := pb.GetPresetsBuilder().NewFieldsBuilder(presets.WRITE).Model(&ListItem{}).Only("HeadingIcon", "Heading", "Text", "Link", "LinkText")
 
-	eb.Field("Items").Nested(fb, &presets.DisplayFieldInSorter{Field: "Heading"})
+	// the nested items need their own model builder (NestedSlice binds the
+	// field to it), built on the same presets builder as the container
+	itemMB := presets.NewModelBuilder(pb.GetPresetsBuilder(), &ListItem{})
+	eb.Field("Items").Nested(presets.NestedSlice(itemMB, fb))
 }
 
 func ListContentBody(data *ListContent, input *pagebuilder.RenderInput) (body HTMLComponent) {
