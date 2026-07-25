@@ -112,8 +112,13 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 
 	if sd, _ := s.Model().(SlugDecoder); sd != nil {
 		for fieldName, value := range sd.PrimaryColumnValuesBySlug(v) {
-			f := id.Schema.FieldsByName(fieldName)[0]
-			fields = append(fields, f)
+			// the decoder names its parts freely; an unknown one is an error, not
+			// an index panic
+			f := id.Schema.FieldsByName(fieldName)
+			if len(f) == 0 {
+				return id, fmt.Errorf("slug %q refers to unknown field %q", v, fieldName)
+			}
+			fields = append(fields, f[0])
 			parts = append(parts, value)
 		}
 	} else {

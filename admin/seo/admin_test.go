@@ -19,6 +19,7 @@ import (
 
 func TestUpdate(t *testing.T) {
 	cases := []struct {
+		id        string
 		name      string
 		prepareDB func()
 		builder   func() *Builder
@@ -28,6 +29,7 @@ func TestUpdate(t *testing.T) {
 	}{
 		{
 			name: "update_setting",
+			id:   "Product_en",
 			prepareDB: func() {
 				seoSetting := QorSEOSetting{
 					Name:   "Product",
@@ -66,6 +68,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name: "update_setting_without_locale",
+			id:   "Product_",
 			prepareDB: func() {
 				seoSetting := QorSEOSetting{
 					Name: "Product",
@@ -102,6 +105,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name: "update_variables",
+			id:   "Product_en",
 			prepareDB: func() {
 				seoSetting := QorSEOSetting{
 					Name:   "Product",
@@ -162,7 +166,7 @@ func TestUpdate(t *testing.T) {
 
 			form, mwriter := c.form()
 			req, err := http.DefaultClient.Post(
-				server.URL+"/admin/qor-seo-settings?__execute_event__=presets_Update",
+				server.URL+"/admin/qor-seosettings?__execute_event__=presets_Update&id="+c.id,
 				mwriter.FormDataContentType(),
 				form)
 			if err != nil {

@@ -66,7 +66,7 @@ func (s *Schema) PrimaryFields() (fields model.Fields) {
 func (s *Schema) FieldsByName(name ...string) (fields model.Fields) {
 	fields = make([]model.Field, len(name))
 	for i, name := range name {
-		f := s.s.FieldsByName[name]
+		f := s.fieldByAnyName(name)
 		if f == nil {
 			return nil
 		}
@@ -75,8 +75,18 @@ func (s *Schema) FieldsByName(name ...string) (fields model.Fields) {
 	return
 }
 
+// fieldByAnyName accepts the Go field name or the database column name: the
+// SlugDecoder implementations name their parts after the columns ("id",
+// "locale_code", "version"), and asking only by field name returned nothing.
+func (s *Schema) fieldByAnyName(name string) *schema.Field {
+	if f := s.s.FieldsByName[name]; f != nil {
+		return f
+	}
+	return s.s.FieldsByDBName[name]
+}
+
 func (s *Schema) FieldByName(name string) model.Field {
-	f := s.s.FieldsByName[name]
+	f := s.fieldByAnyName(name)
 	if f == nil {
 		return nil
 	}

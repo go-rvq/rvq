@@ -20,6 +20,7 @@ GO_TEST_PKGS := \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
 	./admin/pagebuilder \
+	./admin/seo \
 	./admin/packages/... \
 	./thirdpart/...
 
