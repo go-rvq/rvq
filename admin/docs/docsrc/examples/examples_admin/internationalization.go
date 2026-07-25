@@ -76,7 +76,7 @@ func InternationalizationExample(b *presets.Builder, db *gorm.DB) http.Handler {
 
 	b.DataOperator(gorm2op.DataOperator(db)).
 		BrandFunc(func(ctx *web.EventContext) h.HTMLComponent {
-			msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+			msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 
 			return v.VCardText(
 				h.H1(msgr.Admin),
@@ -86,7 +86,7 @@ func InternationalizationExample(b *presets.Builder, db *gorm.DB) http.Handler {
 	type home struct{}
 	b.Model(&home{}).URIName("home").MenuIcon("home").Listing().PageFunc(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		// @snippet_begin(I18nMustGetModuleMessages)
-		msgr := i18n.MustGetModuleMessages(ctx.R, I18nExampleKey, Messages_en_US).(*Messages)
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
 		r.Body = v.VContainer(
 			h.Div(
 				h.H1(msgr.Welcome),
@@ -95,7 +95,7 @@ func InternationalizationExample(b *presets.Builder, db *gorm.DB) http.Handler {
 		// @snippet_end
 		r.PageTitle = msgr.Welcome
 		return
-	}).Labels("Home")
+	}).ModelBuilder().Labels("Home")
 
 	b.Model(&video{}).MenuIcon("movie")
 

@@ -99,7 +99,7 @@ func VuetifyBasicInputs(ctx *web.EventContext) (pr web.PageResponse, err error) 
 }
 
 func addPortal(ctx *web.EventContext) (r web.EventResponse, err error) {
-	r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
+	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: "Portal1",
 		Body: h.Input("").Type("hidden").
 			Attr(":value", "form.PortalAddedValue = 'this is my portal added hidden value'"),

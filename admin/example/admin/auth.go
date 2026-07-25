@@ -2,6 +2,7 @@ package admin
 
 import (
 	"errors"
+	"github.com/google/uuid"
 	"net/http"
 	"strings"
 	"time"
@@ -241,7 +242,7 @@ func genInitialUser(db *gorm.DB) {
 	}
 }
 
-func grantUserRole(db *gorm.DB, userID uint, roleName string) error {
+func grantUserRole(db *gorm.DB, userID uuid.UUID, roleName string) error {
 	var roleID int
 	if err := db.Table("roles").Where("name = ?", roleName).Pluck("id", &roleID).Error; err != nil {
 		panic(err)

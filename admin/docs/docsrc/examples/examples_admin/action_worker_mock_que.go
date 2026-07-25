@@ -6,6 +6,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/admin/worker"
+	"github.com/go-rvq/rvq/x/i18n"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,7 @@ func ActionWorkerExample(b *presets.Builder, db *gorm.DB) http.Handler {
 	mb := b.Model(&ExampleResource{})
 	mb.Listing().ActionsAsMenu(true)
 
-	wb := worker.NewWithQueue(db, Que)
+	wb := worker.New(i18n.New(), db, worker.WithQueue(Que))
 	b.Use(wb)
 	addActionJobs(mb, wb)
 	wb.Listen()

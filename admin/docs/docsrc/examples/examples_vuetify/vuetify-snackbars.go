@@ -19,7 +19,7 @@ func VuetifySnackBars(ctx *web.EventContext) (pr web.PageResponse, err error) {
 }
 
 func showSnackBar(ctx *web.EventContext) (er web.EventResponse, err error) {
-	er.updatePortals = append(er.updatePortals,
+	er.UpdatePortals = append(er.UpdatePortals,
 		&web.PortalUpdate{
 			Name: "snackbar",
 			Body: snackbar("top", "red"),

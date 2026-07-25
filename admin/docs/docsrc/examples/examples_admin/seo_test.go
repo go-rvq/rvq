@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 )
 
@@ -17,7 +18,7 @@ INSERT INTO public.seo_posts (title, seo, id, created_at, updated_at, deleted_at
 `, []string{"seo_posts"}))
 
 func TestSEOExampleBasic(t *testing.T) {
-	pb := presets.New()
+	pb := presets.New(i18n.New())
 	SEOExampleBasic(pb, TestDB)
 
 	cases := []multipartestutils.TestCase{

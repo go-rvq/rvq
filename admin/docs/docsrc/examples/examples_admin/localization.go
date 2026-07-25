@@ -47,10 +47,10 @@ func LocalizationExample(b *presets.Builder, db *gorm.DB) http.Handler {
 
 	// @snippet_begin(L10nBuilderExample)
 	l10nBuilder := l10n.New(db)
+	l10nBuilder.RegisterLocale("International", "international", "International")
+	l10nBuilder.RegisterLocale("China", "cn", "China")
+	l10nBuilder.RegisterLocale("Japan", "jp", "Japan")
 	l10nBuilder.
-		RegisterLocale("International", "international", "International").
-		RegisterLocales("China", "cn", "China").
-		RegisterLocales("Japan", "jp", "Japan").
 		SupportLocalesFunc(func(R *http.Request) []string {
 			return l10nBuilder.GetSupportLocaleCodes()[:]
 		})

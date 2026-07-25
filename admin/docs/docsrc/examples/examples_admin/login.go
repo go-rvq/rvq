@@ -8,6 +8,7 @@ import (
 	plogin "github.com/go-rvq/rvq/admin/login"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/markbates/goth/providers/github"
@@ -40,9 +41,11 @@ var (
 func serve() {
 	DB := ExampleDB()
 
-	pb := presets.New()
-	lb := plogin.New(pb).
-		DB(DB).
+	i18nB := i18n.New()
+	pb := presets.New(i18nB)
+	lb := login.New(i18nB)
+	plogin.New(lb)
+	lb.DB(DB).
 		UserModel(&User{}).
 		Secret(loginSecret).
 		OAuthProviders(
@@ -58,7 +61,7 @@ func serve() {
 			},
 		)
 	pb.ProfileFunc(func(ctx *web.EventContext) HTMLComponent {
-		return A(Text("logout")).Href(lb.LogoutURL)
+		return A(Text("logout")).Href(lb.GetLogoutURL())
 	})
 
 	r := http.NewServeMux()

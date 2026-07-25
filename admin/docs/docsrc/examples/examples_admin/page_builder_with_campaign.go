@@ -127,11 +127,11 @@ func PageBuilderExample(b *presets.Builder, db *gorm.DB) http.Handler {
 		})
 
 	ed := header.Model(&MyContent{}).Editing("Text", "Color")
-	ed.Field("Color").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	ed.Field("Color").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		return vuetify.VTextField().
 			Variant(vuetify.FieldVariantUnderlined).
 			Label(field.Label).
-			Attr(web.VField(field.FormKey, field.Value(obj))...)
+			Attr(web.VField(field.FormKey, field.Value())...)
 	})
 
 	// Campaigns Menu

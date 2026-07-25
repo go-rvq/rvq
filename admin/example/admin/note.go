@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 
 	"github.com/go-rvq/rvq/admin/note"
 	"github.com/go-rvq/rvq/web"
@@ -36,7 +37,7 @@ var NoteAfterCreateFunc = func(db *gorm.DB) (err error) {
 type UserUnreadNote struct {
 	gorm.Model
 
-	UserID  uint `gorm:"uniqueIndex"`
+	UserID  uuid.UUID `gorm:"type:uuid;uniqueIndex"`
 	Content string
 }
 

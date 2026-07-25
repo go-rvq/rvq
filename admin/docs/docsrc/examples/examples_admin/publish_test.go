@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 )
 
@@ -20,7 +21,7 @@ INSERT INTO public.with_publish_products (id, created_at, updated_at, deleted_at
 var emptyData = gofixtures.Data(gofixtures.Sql(``, []string{"with_publish_products"}))
 
 func TestPublish(t *testing.T) {
-	pb := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	PublishExample(pb, TestDB)
 
 	dbr, _ := TestDB.DB()

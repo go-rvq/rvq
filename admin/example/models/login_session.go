@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
 	"gorm.io/gorm"
@@ -9,7 +10,7 @@ import (
 type LoginSession struct {
 	gorm.Model
 
-	UserID    uint `sql:"index"`
+	UserID    uuid.UUID `gorm:"type:uuid" sql:"index"`
 	Device    string
 	IP        string
 	TokenHash string `sql:"index"`

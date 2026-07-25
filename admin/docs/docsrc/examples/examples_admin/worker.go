@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/i18n"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -14,7 +15,7 @@ import (
 func MountWorker(b *presets.Builder) {
 	DB := ExampleDB()
 
-	wb := worker.New(DB)
+	wb := worker.New(i18n.New(), DB)
 	wb.Install(b)
 	defer wb.Listen()
 

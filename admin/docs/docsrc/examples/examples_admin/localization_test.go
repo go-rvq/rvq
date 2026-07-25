@@ -9,6 +9,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 	"github.com/theplant/testingutils"
 )
@@ -29,7 +30,7 @@ INSERT INTO public.l10n_models (id, created_at, updated_at, deleted_at, title, l
 `, []string{"l10n_models"}))
 
 func TestLocalization(t *testing.T) {
-	pb := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	LocalizationExample(pb, TestDB)
 
 	cases := []multipartestutils.TestCase{

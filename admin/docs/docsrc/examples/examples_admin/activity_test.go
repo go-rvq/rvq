@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 )
 
@@ -19,7 +20,7 @@ INSERT INTO public.with_activity_products (title, code, price, id, created_at, u
 `, []string{"with_activity_products", "activity_logs"}))
 
 func TestActivity(t *testing.T) {
-	pb := presets.New().DataOperator(gorm2op.DataOperator(TestDB))
+	pb := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(TestDB))
 	ActivityExample(pb, TestDB)
 
 	dbr, _ := TestDB.DB()

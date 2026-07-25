@@ -7,6 +7,7 @@ import (
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/media"
+	"github.com/go-rvq/rvq/admin/media/storage"
 	"github.com/go-rvq/rvq/admin/pagebuilder"
 	"github.com/go-rvq/rvq/admin/pagebuilder/example"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-rvq/rvq/admin/seo"
 	"github.com/go-rvq/rvq/admin/utils"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
@@ -40,7 +42,8 @@ func InitApp() *http.ServeMux {
 func newPB() Config {
 	db := ConnectDB()
 
-	b := presets.New().VuetifyOptions(`
+	i18nB := i18n.New()
+	b := presets.New(i18nB).VuetifyOptions(`
 {
   theme: {
     themes: {
@@ -83,16 +86,16 @@ func newPB() Config {
 	ab := activity.New(db).CreatorContextKey(login.UserKey)
 
 	pageBuilder := example.ConfigPageBuilder(db, "/admin/page_builder", ``, b.I18n())
-	storage := filesystem.New(PublishDir)
+	storage := storage.NewFileSystem(PublishDir)
 	publisher := publish.New(db, storage)
 
 	seoBuilder := seo.New(db)
 	l10nBuilder := l10n.New(db).Activity(ab)
 	pageBuilder.SEO(seoBuilder).Publisher(publisher).L10n(l10nBuilder).Activity(ab)
 
+	l10nBuilder.RegisterLocale("International", "International", "International")
+	l10nBuilder.RegisterLocale("China", "China", "China")
 	l10nBuilder.
-		RegisterLocale("International", "International", "International").
-		RegisterLocales("China", "China", "China").
 		SupportLocalesFunc(func(R *http.Request) []string {
 			return l10nBuilder.GetSupportLocaleCodes()[:]
 		})

@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/google/uuid"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -27,7 +28,7 @@ func TestHandler(db *gorm.DB) http.Handler {
 	mux := http.NewServeMux()
 	c := NewConfig(db)
 	u := &models.User{
-		Model: gorm.Model{ID: 888},
+		ID: uuid.MustParse("00000000-0000-0000-0000-000000000888"),
 		Roles: []role.Role{
 			{
 				Name: "admin",
@@ -57,7 +58,7 @@ func Router(db *gorm.DB) http.Handler {
 	mux.Handle("/posts/first", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var post models.Post
 		db.First(&post)
-		seodata, _ := seoBuilder.Render(post, r).MarshalHTML(r.Context())
+		seodata, _ := h.Marshal(seoBuilder.Render(post, r), r.Context())
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, `<html><head>%s</head><body>%s</body></html>`, seodata, post.Body)
 	}))

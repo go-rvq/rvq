@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	. "github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/gofixtures"
 )
 
@@ -20,7 +21,7 @@ INSERT INTO public.campaign_contents (id,title,banner) values (1,'campaign-conte
 `, []string{"campaigns", "products", "my_contents", "campaign_contents", "page_builder_containers"}))
 
 func TestPageBuilderCampaign(t *testing.T) {
-	pb := presets.New()
+	pb := presets.New(i18n.New())
 	b := PageBuilderExample(pb, TestDB)
 
 	dbr, _ := TestDB.DB()

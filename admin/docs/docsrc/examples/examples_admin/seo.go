@@ -24,7 +24,7 @@ func SEOExampleBasic(b *presets.Builder, db *gorm.DB) http.Handler {
 	b.DataOperator(gorm2op.DataOperator(db))
 
 	mb := b.Model(&SEOPost{})
-	dp := mb.Detailing("Title", seo.SeoDetailFieldName).Drawer(true)
+	dp := mb.Detailing("Title", seo.SeoDetailFieldName)
 	_ = dp
 	seob := seo.New(db)
 	seob.RegisterSEO("Post", &SEOPost{}).

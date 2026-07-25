@@ -80,7 +80,7 @@ func ListingExample(b *presets.Builder, db *gorm.DB) http.Handler {
 
 	rmn := postModelBuilder.Listing().RowMenu()
 	rmn.RowMenuItem("Show").
-		ComponentFunc(func(obj interface{}, id string, ctx *web.EventContext) h.HTMLComponent {
+		ComponentFunc(func(rctx *presets.RecordMenuItemContext) h.HTMLComponent {
 			return v.VListItem(
 				web.Slot(
 					v.VIcon("mdi-menu"),
@@ -93,7 +93,7 @@ func ListingExample(b *presets.Builder, db *gorm.DB) http.Handler {
 	postModelBuilder.Listing().ActionsAsMenu(true)
 	postModelBuilder.Listing().Action("Action0")
 
-	postModelBuilder.Editing().Field("CategoryID").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	postModelBuilder.Editing().Field("CategoryID").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		categories := []Category{}
 		if err := db.Find(&categories).Error; err != nil {
 			// ignore err for now
@@ -101,22 +101,22 @@ func ListingExample(b *presets.Builder, db *gorm.DB) http.Handler {
 
 		return v.VAutocomplete().
 			Chips(true).
-			Attr(web.VField(field.Name, field.Value(obj))...).Label(field.Label).
+			Attr(web.VField(field.Name, field.Value())...).Label(field.Label).
 			Items(categories).
 			ItemTitle("Name").
 			ItemValue("ID")
 	})
 
-	postModelBuilder.Listing().Field("CategoryID").Label("Category").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	postModelBuilder.Listing().Field("CategoryID").Label("Category").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		c := Category{}
-		cid, _ := field.Value(obj).(uint)
+		cid, _ := field.Value().(uint)
 		if err := db.Where("id = ?", cid).Find(&c).Error; err != nil {
 			// ignore err in the example
 		}
 		return h.Td(h.Text(c.Name))
 	})
 
-	postModelBuilder.Listing().Field("VirtualField").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	postModelBuilder.Listing().Field("VirtualField").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Td(h.Text("virtual field"))
 	})
 

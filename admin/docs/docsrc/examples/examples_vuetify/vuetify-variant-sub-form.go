@@ -100,7 +100,7 @@ func switchForm(ctx *web.EventContext) (r web.EventResponse, err error) {
 		form = form2(ctx, &fv, &verr)
 	}
 
-	r.updatePortals = append(r.updatePortals, &web.PortalUpdate{
+	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
 		Name: "subform",
 		Body: form,
 	})

@@ -81,9 +81,10 @@ func PublishExample(b *presets.Builder, db *gorm.DB) http.Handler {
 
 	// @snippet_begin(PublishConfigureView)
 	mb := b.Model(&WithPublishProduct{})
-	dp := mb.Detailing(publish.VersionsPublishBar, "Details").Drawer(true)
+	dp := mb.Detailing(publish.VersionsPublishBar, "Details")
 	dp.Section("Details").
-		ViewComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ViewComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			obj := field.Obj
 			product := obj.(*WithPublishProduct)
 			detail := vx.DetailInfo(
 				vx.DetailColumn(

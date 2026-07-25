@@ -263,11 +263,12 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 			return true
 		})
 
+		// the header is a named struct now (title/key/width/sortable)
 		sessionTableHeaders := []DataTableHeaderBasic{
-			{msgr.Time, "Time", "25%", false},
-			{msgr.Device, "Device", "25%", false},
-			{msgr.IPAddress, "IP", "25%", false},
-			{"", "Status", "25%", true},
+			{Title: msgr.Time, Key: "Time", Width: "25%"},
+			{Title: msgr.Device, Key: "Device", Width: "25%"},
+			{Title: msgr.IPAddress, Key: "IP", Width: "25%"},
+			{Key: "Status", Width: "25%", Sortable: true},
 		}
 
 		return h.Div(

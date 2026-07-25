@@ -12,13 +12,14 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/admin/worker/mock"
+	"github.com/go-rvq/rvq/x/i18n"
 	"gorm.io/gorm"
 )
 
 func WorkerExample(b *presets.Builder, db *gorm.DB) http.Handler {
 	b.DataOperator(gorm2op.DataOperator(db))
 
-	wb := worker.NewWithQueue(db, Que)
+	wb := worker.New(i18n.New(), db, worker.WithQueue(Que))
 	b.Use(wb)
 	addJobs(wb)
 	wb.Listen()

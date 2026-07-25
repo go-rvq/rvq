@@ -39,7 +39,7 @@ func VuetifyNavigationDrawer(ctx *web.EventContext) (pr web.PageResponse, err er
 }
 
 func showDrawer(ctx *web.EventContext) (er web.EventResponse, err error) {
-	er.updatePortals = append(er.updatePortals,
+	er.UpdatePortals = append(er.UpdatePortals,
 		&web.PortalUpdate{
 			Name: "drawer2",
 			Body: VNavigationDrawer(
@@ -71,14 +71,14 @@ func textField(value string, fieldErrors ...string) h.HTMLComponent {
 
 func updateParentAndClose(ctx *web.EventContext) (er web.EventResponse, err error) {
 	if len(ctx.R.FormValue("Drawer2Input")) < 10 {
-		er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
+		er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
 			Name: "InputPortal",
 			Body: textField(ctx.R.FormValue("Drawer2Input"), "input more then 10 characters"),
 		})
 		return
 	}
 
-	er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
+	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
 		Name: "drawer2UpdateContent",
 		Body: h.Text(fmt.Sprintf("Updated content at %s", time.Now())),
 	})

@@ -103,7 +103,7 @@ func configOrder(pb *presets.Builder, db *gorm.DB) {
 					// TODO fix it Attach(false).
 					ErrorMessages(vErr.GetFieldErrors("status")...),
 			),
-		)
+		), nil
 	}).UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
 		vErr := &web.ValidationErrors{}
 		status := ctx.R.FormValue("status")

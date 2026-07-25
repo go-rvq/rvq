@@ -138,7 +138,7 @@ func reloadAB(ctx *web.EventContext) (r web.EventResponse, err error) {
 }
 
 func updateCD(ctx *web.EventContext) (r web.EventResponse, err error) {
-	r.updatePortals = append(r.updatePortals,
+	r.UpdatePortals = append(r.UpdatePortals,
 		&web.PortalUpdate{
 			Name: "portalC",
 			Body: Text(fmt.Sprint(time.Now().UnixNano())),

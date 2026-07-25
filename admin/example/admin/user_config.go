@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"net/url"
 	"strconv"
 	"strings"
@@ -101,7 +102,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 	ed.Field("Type").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		obj := field.Obj
 		u := obj.(*models.User)
-		if u.ID == 0 {
+		if u.ID == uuid.Nil {
 			return nil
 		}
 
@@ -174,7 +175,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 	ed.Field("OAuthProvider").Label("OAuth Provider").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		obj := field.Obj
 		u := obj.(*models.User)
-		if !u.IsOAuthUser() && u.ID != 0 {
+		if !u.IsOAuthUser() && u.ID != uuid.Nil {
 			return nil
 		} else {
 			return VSelect().Attr(web.VField(field.Name, field.Value())...).
@@ -245,11 +246,11 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 					continue
 				}
 				roles = append(roles, role.Role{
-					Model: gorm.Model{ID: uint(uid)},
+					ID: uint(uid),
 				})
 			}
 
-			if u.ID == 0 {
+			if u.ID == uuid.Nil {
 				err = reflectutils.Set(obj, field.Name, roles)
 			} else {
 				err = db.Model(u).Association(field.Name).Replace(roles)
@@ -274,7 +275,7 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 	})
 
 	ed.WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
-		return func(obj interface{}, id string, ctx *web.EventContext) (err error) {
+		return func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 			u := obj.(*models.User)
 			if u.GetAccountName() == loginInitialUserEmail {
 				return perm.PermissionDenied
@@ -411,7 +412,7 @@ func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher 
 	lb.NewButtonFunc(func(ctx *web.EventContext) h.HTMLComponent { return nil })
 	lb.RowMenu().Empty()
 	registerSelectFavorPostEvent(db, pb)
-	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, _ *web.EventContext) h.HTMLComponent {
+	lb.CellWrapperFunc(func(cell h.MutableAttrHTMLComponent, field string, id string, obj interface{}, dataTableID string, _ *web.EventContext) h.HTMLComponent {
 		cell.SetAttr("@click.self", web.Plaid().
 			Query("id", strings.Split(id, "_")[0]).
 			EventFunc("selectFavorPost").

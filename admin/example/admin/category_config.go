@@ -51,10 +51,11 @@ func configCategory(b *presets.Builder, db *gorm.DB, publisher *publish.Builder)
 				}
 			}
 
+			// the advanced select takes its items directly; the separate
+			// SelectedItems setter is gone
 			return v.VXSelectMany().Label(field.Label).AddItemLabel("add").
 				ItemText("name").
-				// TODO (fix it ) FieldName(field.Name).
-				SelectedItems(selectedItems).
+				Items(selectedItems).
 				SearchItemsFunc("products_selector")
 		})
 

@@ -4,6 +4,7 @@ package examples_admin
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/i18n"
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
@@ -24,7 +25,7 @@ func MountActionWorker(b *presets.Builder) {
 	mb := b.Model(&ExampleResource{})
 	mb.Listing().ActionsAsMenu(true)
 
-	wb := worker.New(DB)
+	wb := worker.New(i18n.New(), DB)
 	wb.Install(b)
 	defer wb.Listen()
 
@@ -134,27 +135,27 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 
 	lb.Action("Action Job - No parameters").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - No parameters").Color("secondary").Class("ml-2").
 					Attr("@click", noParametersJob.URL())
 			})
 
 	lb.Action("Action Job - Parameter input box").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Parameter input box").Color("secondary").Class("ml-2").
 					Attr("@click", parametersBoxJob.URL())
 			})
 	lb.Action("Action Job - Display log").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Display log").Color("secondary").Class("ml-2").
 					Attr("@click", displayLogJob.URL())
 			})
 
 	lb.Action("Action Job - Get Args").
 		ButtonCompFunc(
-			func(ctx *web.EventContext) h.HTMLComponent {
+			func(ctx *web.EventContext, onclick *presets.OnClick) h.HTMLComponent {
 				return vuetify.VBtn("Action Job - Get Args").Color("secondary").Class("ml-2").
 					Attr("@click", getArgsJob.URL())
 			})

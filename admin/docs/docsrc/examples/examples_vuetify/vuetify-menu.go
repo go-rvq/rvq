@@ -92,7 +92,7 @@ func favoredIcon() HTMLComponent {
 
 func toggleFavored(ctx *web.EventContext) (er web.EventResponse, err error) {
 	globalFavored = !globalFavored
-	er.updatePortals = append(er.updatePortals, &web.PortalUpdate{
+	er.UpdatePortals = append(er.UpdatePortals, &web.PortalUpdate{
 		Name: favoredIconPortalName,
 		Body: favoredIcon(),
 	})

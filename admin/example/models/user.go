@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/login"
 	"gorm.io/gorm"
@@ -33,7 +35,11 @@ var OAuthProviders = []string{
 }
 
 type User struct {
-	gorm.Model
+	// Users use a UUID primary key (not the shared uint gorm.Model), so user
+	// references across the system (activity, notes, sessions) are UUIDs,
+	// matching the rvq user identity.
+	ID        uuid.UUID      `admin:"-" gorm:"type:uuid;primaryKey"`
+	DeletedAt gorm.DeletedAt `sql:"index"`
 
 	Name             string
 	Company          string
@@ -54,7 +60,15 @@ func (u User) GetName() string {
 	return u.Name
 }
 
-func (u User) GetID() uint {
+// BeforeCreate assigns a random UUID when none was provided.
+func (u *User) BeforeCreate(*gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
+}
+
+func (u User) GetID() uuid.UUID {
 	return u.ID
 }
 
