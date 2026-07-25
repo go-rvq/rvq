@@ -123,8 +123,6 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 	})
 
 	if _, ok := m.Model().(VersionInterface); ok {
-		panic("test deletion only by version")
-
 		listing.WrapSearchFunc(makeSearchFunc(m, b.db))
 		listing.RowMenu().RowMenuItem("Delete").ComponentFunc(func(rctx *presets.RecordMenuItemContext) htmlgo.HTMLComponent {
 			// DeleteRowMenu should be disabled when using the version interface

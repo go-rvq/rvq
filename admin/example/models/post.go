@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/media/storage"
@@ -25,8 +24,6 @@ type Post struct {
 	Body          string
 	HeroImage     media_library.MediaBox `sql:"type:text;"`
 	BodyImage     media_library.MediaBox `sql:"type:text;"`
-	UpdatedAt     time.Time
-	CreatedAt     time.Time
 
 	publish.Status
 	publish.Schedule

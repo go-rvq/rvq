@@ -42,7 +42,8 @@ func configNestedFieldDemo(b *presets.Builder, db *gorm.DB) {
 
 	cardFb := b.NewFieldsBuilder(presets.WRITE).Model(&models.MembershipCard{}).Only("Number", "ValidBefore")
 	cardMB := presets.NewModelBuilder(b, &models.MembershipCard{})
-	ed.Field("MembershipCard").Nested(presets.NestedSlice(cardMB, cardFb))
+	// a single nested object, not a slice
+	ed.Field("MembershipCard").Nested(presets.NestedStruct(cardMB, cardFb))
 
 	ed.FetchFunc(func(obj interface{}, id presets.ID, ctx *web.EventContext) (err error) {
 		return gorm2op.DataOperator(db.Preload("Addresses.Phones").Preload("MembershipCard")).Fetch(obj, id, ctx)
