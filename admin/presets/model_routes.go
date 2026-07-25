@@ -98,7 +98,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		if mb.hasDetailing {
 			mux.Handle(
 				itemRoutePath,
-				mb.p.Wrap(mb.p.detailLayoutFunc(mb.BindPageFunc(mb.detailing.GetPageFunc()), mb.layoutConfig)),
+				mb.p.WrapModel(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.detailing.GetPageFunc()), mb.layoutConfig)),
 			)
 			if routesDebug {
 				log.Printf("mounted url: %s\n", itemRoutePath)
@@ -122,7 +122,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 				routePath := itemRoutePath + "/edit"
 				mux.Handle(
 					routePath,
-					mb.p.Wrap(mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
+					mb.p.WrapModel(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetPageFunc()), mb.layoutConfig)),
 				)
 
 				if routesDebug {

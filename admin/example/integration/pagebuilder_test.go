@@ -172,7 +172,8 @@ func TestPageBuilder(t *testing.T) {
 				var containers []pagebuilder.Container
 				TestDB.Order("display_order asc").Find(&containers)
 				if len(containers) != 3 {
-					t.Error("containers not add", containers)
+					// stop here: the assertions below index the slice
+					t.Fatal("containers not add", containers)
 				}
 				if containers[0].ModelName != "ListContent" || containers[1].ModelName != "Header" || containers[2].ModelName != "BrandGrid" {
 					t.Error("containers not add under", containers)
