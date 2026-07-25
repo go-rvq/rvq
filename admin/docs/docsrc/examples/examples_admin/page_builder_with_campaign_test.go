@@ -69,7 +69,7 @@ func TestPageBuilderCampaign(t *testing.T) {
 			Debug: true,
 			ReqFunc: func() *http.Request {
 				pageBuilderData.TruncatePut(dbr)
-				return httptest.NewRequest("GET", "/page_builder/my-contents?__execute_event__=presets_Edit&id=1&overlay=content&portal_name=pageBuilderRightContentPortal", nil)
+				return httptest.NewRequest("GET", "/page_builder/my-contents?__execute_event__=presets_Edit&id=1&overlay=Content&target_portal=pageBuilderRightContentPortal", nil)
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				if er.UpdatePortals[0].Name != "pageBuilderRightContentPortal" {
@@ -83,7 +83,7 @@ func TestPageBuilderCampaign(t *testing.T) {
 			Debug: true,
 			ReqFunc: func() *http.Request {
 				pageBuilderData.TruncatePut(dbr)
-				return httptest.NewRequest("GET", "/page_builder/campaign-contents?__execute_event__=presets_Edit&id=1&overlay=content&portal_name=pageBuilderRightContentPortal", nil)
+				return httptest.NewRequest("GET", "/page_builder/campaign-contents?__execute_event__=presets_Edit&id=1&overlay=Content&target_portal=pageBuilderRightContentPortal", nil)
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				if er.UpdatePortals[0].Name != "pageBuilderRightContentPortal" {

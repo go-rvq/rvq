@@ -144,7 +144,7 @@ func TestPageBuilder(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				pageBuilderContainerTestData.TruncatePut(dbr)
 				req := NewMultipartBuilder().
-					PageURL("/page_builder/list-contents?__execute_event__=presets_Edit&id=10&overlay=content&portal_name=pageBuilderRightContentPortal").
+					PageURL("/page_builder/list-contents?__execute_event__=presets_Edit&id=10&overlay=Content&target_portal=pageBuilderRightContentPortal").
 					BuildEventFuncRequest()
 
 				return req

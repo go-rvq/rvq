@@ -137,16 +137,27 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 
 	for i, v := range parts {
 		var (
-			field, _ = modelType.Elem().FieldByName(fields[i].Name())
-			av       any
+			fieldName = fields[i].Name()
+			fieldType = fields[i].Type()
+			av        any
 		)
 
-		switch field.Type.Kind() {
+		if fieldType == nil {
+			// the field does not know its type: fall back to the model's struct
+			sf, _ := modelType.Elem().FieldByName(fieldName)
+			fieldType = sf.Type
+		}
+		if fieldType == nil {
+			err = fmt.Errorf("field %s of %s has no type", fieldName, modelType)
+			return
+		}
+
+		switch fieldType.Kind() {
 		case reflect.String:
 			av = v
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			bsize := strconv.IntSize
-			switch field.Type.Kind() {
+			switch fieldType.Kind() {
 			case reflect.Uint8:
 				bsize = 8
 			case reflect.Uint16:
@@ -172,7 +183,7 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			bsize := strconv.IntSize
-			switch field.Type.Kind() {
+			switch fieldType.Kind() {
 			case reflect.Int8:
 				bsize = 8
 			case reflect.Int16:
@@ -201,7 +212,7 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 			}
 		default:
 			// uuid.UUID (an [16]byte array) parses from its string form.
-			if field.Type == uuidType {
+			if fieldType == uuidType {
 				var u uuid.UUID
 				if u, err = uuid.Parse(v); err != nil {
 					return
@@ -211,7 +222,7 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 			}
 			// types exposing Parse(string) (T, error) parse from their string
 			// form.
-			if parsed, hasParse, e := parseByMethod(field.Type, v); hasParse {
+			if parsed, hasParse, e := parseByMethod(fieldType, v); hasParse {
 				if e != nil {
 					err = e
 					return
@@ -219,7 +230,7 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 				av = parsed
 				break
 			}
-			fv := reflect.New(field.Type).Interface()
+			fv := reflect.New(fieldType).Interface()
 			if s, _ := fv.(sql.Scanner); s != nil {
 				if err = s.Scan(v); err != nil {
 					return
@@ -230,13 +241,13 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 				break
 			}
 			// last resort: a globally registered fallback parser.
-			if fn := IdParserFallback[field.Type]; fn != nil {
+			if fn := IdParserFallback[fieldType]; fn != nil {
 				if av, err = fn(v); err != nil {
 					return
 				}
 				break
 			}
-			err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", field.Type, field.Name))
+			err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", fieldType, fieldName))
 			return
 		}
 		id.Values = append(id.Values, av)

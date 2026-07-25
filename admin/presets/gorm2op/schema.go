@@ -1,6 +1,7 @@
 package gorm2op
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/model"
@@ -11,6 +12,10 @@ import (
 type Field struct {
 	s *Schema
 	f *schema.Field
+}
+
+func (f *Field) Type() reflect.Type {
+	return f.f.FieldType
 }
 
 func (f *Field) Name() string {

@@ -1,5 +1,7 @@
 package model
 
+import "reflect"
+
 import "strconv"
 
 type Schema interface {
@@ -14,6 +16,11 @@ type Schema interface {
 
 type Field interface {
 	Name() string
+	// Type is the Go type of the field, or nil when the implementation does not
+	// know it. Resolving it by name over the model's struct is not enough: an
+	// embedded struct whose type name matches its inner primary-key field — as
+	// publish.Version does — shadows that field in reflect.FieldByName.
+	Type() reflect.Type
 	DBName() string
 	QuotedDBName() string
 	FullDBName() string
@@ -75,6 +82,10 @@ func HasPrimaryFields(s Schema) bool {
 }
 
 type SingleField string
+
+func (s SingleField) Type() reflect.Type {
+	return nil
+}
 
 func (s SingleField) Name() string {
 	return string(s)
