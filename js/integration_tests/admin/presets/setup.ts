@@ -72,3 +72,20 @@ if (typeof w.ResizeObserver === "undefined") {
     disconnect() {}
   };
 }
+// … and visualViewport, which VOverlay reads when it positions a menu: without
+// it, opening a row's "…" menu throws instead of rendering its items.
+if (typeof w.visualViewport === "undefined") {
+  const viewport = {
+    width: 1280,
+    height: 800,
+    offsetLeft: 0,
+    offsetTop: 0,
+    pageLeft: 0,
+    pageTop: 0,
+    scale: 1,
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  w.visualViewport = viewport;
+  if (w.window) w.window.visualViewport = viewport;
+}

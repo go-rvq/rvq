@@ -31,6 +31,26 @@
       reabrir, 1 request por abertura), `listing.dom.test.ts` + `listing.test.ts`
       (hosts por item), `detailing.test.ts` (evento E página hospedam igual),
       `editform.test.ts` atualizado.
+- [x] FIX (colisão em ANINHAMENTO): o estado saiu de `vars` (global) e passou a ser
+      VARIÁVEL DE ESCOPO. Em `vars`, cada listing/detailing vivo declarava o MESMO
+      nome e guardava seu bloco com `v-if` nele: abrir uma linha do listing de
+      dentro do dialog montava TAMBÉM o bloco do listing de baixo — 2 requests e
+      2 overlays (medido: `Received: 2`). Regra do usuário: em `*PageFunc` o botão
+      vai para a app bar (fora do host), então lá o host embrulha o BOTÃO
+      (`WrapsOpener`, botão + bloco guardado juntos); nos eventos o botão já está
+      dentro do host, que embrulha o conteúdo.
+- [x] `FormHosts(children, hosts...)`: os N hosts de um listing viram UM
+      user-component com N vars — hosts aninhados renderizariam
+      `<template v-slot>` dentro de outro, que o parser de runtime não compila.
+      Portais são compilados à parte, por isso dialog dentro de página funciona.
+- [x] Consumidores não podem mais hardcodar o nome: `GetItemFormHosts` ganhou
+      `New`/`OpenNewExpr` e há `WithDetailingEditHost`/`GetDetailingEditHost` +
+      `ShowExprOr`.
+- [x] Testes novos (37 no total): `nested_hosts.{test,dom}.test.ts` (dois listings
+      vivos; falham com o código antigo) e `nestedmodels.dom.test.ts` + fixture
+      `integration/nestedmodels_app.go` — 2 níveis de `helper.NewNestedSliceBuilder`
+      (Survey → Places → Products), navegando pelo menu "..." da linha, com os 4
+      diálogos EMPILHADOS. Stub de `visualViewport` no `setup.ts` para o v-menu.
 - [ ] PENDENTE: validar no NAVEGADOR as demais telas (drawer/teleport reais).
 
 # Base — refactor do form scope (commitado em 4d0de132 / e24e0ee4)

@@ -25,13 +25,13 @@ describe("listing form hosts", () => {
     const body = portalBody(r);
 
     // one host per action, each owning its overlay's closer
-    expect(body).toContain('{...{"$presetsItemDetailing": {show:false, id:null}}}');
-    expect(body).toContain('{...{"$presetsCreating": {show:false}}}');
+    expect(body).toContain("$presetsItemDetailing: {show:false, id:null}");
+    expect(body).toContain("$presetsCreating: {show:false}");
     // each host guards its block, so turning the scope off destroys the overlay
-    expect(body).toContain("v-if='vars.$presetsItemDetailing?.show'");
-    expect(body).toContain("v-if='vars.$presetsCreating?.show'");
+    expect(body).toContain("v-if='$presetsItemDetailing?.show'");
+    expect(body).toContain("v-if='$presetsCreating?.show'");
     // and loads through the shared portal, keyed by the scope's id
-    expect(body).toContain('query("id", vars.$presetsItemDetailing.id)');
+    expect(body).toContain('query("id", $presetsItemDetailing.id)');
     expect(body).toContain('query("presets_closer_provided", "true")');
   });
 
@@ -43,11 +43,11 @@ describe("listing form hosts", () => {
     const body = portalBody(r);
 
     // the row click only points the host at its record and turns it on …
-    expect(body).toContain('vars.$presetsItemDetailing.id = "1"; vars.$presetsItemDetailing.show = true');
+    expect(body).toContain('$presetsItemDetailing.id = "1"; $presetsItemDetailing.show = true');
     // … carrying no plaid of its own (the request is issued by the host's
     // run-script, once, when the scope is turned on)
     const rowClick = body.match(/@click\.self='([^']*)'/)?.[1] ?? "";
-    expect(rowClick).toContain("vars.$presetsItemDetailing.show = true");
+    expect(rowClick).toContain("$presetsItemDetailing.show = true");
     expect(rowClick).not.toContain("plaid()");
   });
 
@@ -58,7 +58,7 @@ describe("listing form hosts", () => {
     });
     const body = portalBody(r);
 
-    expect(body).toContain("@click='vars.$presetsCreating.show = true'");
+    expect(body).toContain("@click='$presetsCreating.show = true'");
     expect(body).not.toContain('eventFunc("presets_NewForm")');
   });
 });

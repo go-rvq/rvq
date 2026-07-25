@@ -411,15 +411,17 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 		hosts    = &ItemFormHosts{}
 		host     = func(scope, event string) *FormHostBuilder {
 			portal := ctx.UID()
-			return FormHost(scope, portal,
-				web.Plaid().
-					URL(b.mb.Info().ListingHrefCtx(ctx)).
-					EventFunc(event).
-					Query(ParamID, web.Var("vars."+scope+".id")).
-					Query(ParamTargetPortal, portal).
-					Query(ParamOverlay, overlay).
-					Query(ParamPostChangeCallback, reloadCb)).
-				Var("id", "null")
+			hb := FormHost(scope, portal, nil).Var("id", "null")
+			// the id comes from the host's own state, whose reference depends on
+			// where it lives (`vars` on a page, a slot variable elsewhere).
+			hb.load = web.Plaid().
+				URL(b.mb.Info().ListingHrefCtx(ctx)).
+				EventFunc(event).
+				Query(ParamID, web.Var(hb.ScopeVarExpr("id"))).
+				Query(ParamTargetPortal, portal).
+				Query(ParamOverlay, overlay).
+				Query(ParamPostChangeCallback, reloadCb)
+			return hb
 		}
 	)
 
@@ -430,29 +432,34 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 		hosts.Detail = host(ListingItemDetailScope, actions.Detailing)
 	}
 
-	WithItemFormHosts(ctx, hosts)
-	return hosts
-}
-
-// hostForms wraps the listing in its form hosts: the create form (ListingNewScope,
-// opened by the New button) and the per-item edit/detail overlays (opened by the
-// rows). Each host owns its overlay's closer, so turning its scope off destroys
-// the overlay and turning it on loads a fresh one — always a single request.
-func (lcb *ListingComponentBuilder) hostForms(ctx *web.EventContext, comp h.HTMLComponent, hosts *ItemFormHosts) h.HTMLComponent {
-	for _, h := range []*FormHostBuilder{hosts.Detail, hosts.Edit} {
-		if h != nil {
-			comp = h.Children(comp).Component()
-		}
-	}
-
 	newPortal := ctx.UID()
-	return FormHost(ListingNewScope, newPortal,
+	hosts.New = FormHost(ListingNewScope, newPortal,
 		web.Plaid().
 			URL(ctx.R.RequestURI).
 			EventFunc(actions.New).
 			Query(ParamTargetPortal, newPortal).
-			Query(ParamOverlay, OverlayMode(ctx).Up().String()).
-			Query(ParamPostChangeCallback, lcb.b.reloadCallback(ctx).Encode())).
-		Children(comp).
-		Component()
+			Query(ParamOverlay, overlay).
+			Query(ParamPostChangeCallback, reloadCb))
+
+	WithItemFormHosts(ctx, hosts)
+	return hosts
+}
+
+// hostForms wraps the listing in the hosts its ROWS open: the per-item edit and
+// detail overlays. Each host owns its overlay's closer, so turning its variable
+// off destroys the overlay and turning it on loads a fresh one — one request.
+//
+// The create host joins them only when the New button stays inline (in a
+// dialog); on a page that button is rendered by the layout into the app bar, so
+// the host travels WITH the button instead (see actionsComponent).
+//
+// They are declared by a SINGLE component: each host renders a
+// `<template v-slot>`, and one nested in another is not compiled by the runtime
+// template parser — the listing inside would render inert.
+func (lcb *ListingComponentBuilder) hostForms(ctx *web.EventContext, comp h.HTMLComponent, hosts *ItemFormHosts) h.HTMLComponent {
+	all := []*FormHostBuilder{hosts.Detail, hosts.Edit}
+	if IsInDialog(ctx) {
+		all = append(all, hosts.New)
+	}
+	return FormHosts(h.HTMLComponents{comp}, all...)
 }

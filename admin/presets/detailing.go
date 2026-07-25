@@ -288,16 +288,29 @@ func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, for
 			Go())
 	}
 
-	return FormHost(DetailingEditScope, editPortal,
+	host := FormHost(DetailingEditScope, editPortal,
 		web.Plaid().
 			URL(b.mb.Info().ListingHrefCtx(ctx)).
 			EventFunc(actions.Edit).
 			Query(ParamID, id).
 			ValidQuery(ParamTargetPortal, editPortal).
 			ValidQuery(ParamOverlay, overlayMode.Up().String()).
-			ValidQuery(ParamPostChangeCallback, cb.String())).
-		Children(b.configureForm(form.Build()).Component()).
-		Component()
+			ValidQuery(ParamPostChangeCallback, cb.String()))
+
+	// On a PAGE the host wraps its own opener (the Edit button, see configureForm)
+	// because the layout renders that button into the app bar, outside the page
+	// body. In an event the button is inline, so the host wraps the content and
+	// everything inside it can open the form.
+	host.WrapsOpener(!overlayMode.Overlayed())
+
+	// published BEFORE the form is built, so the button can wrap itself with it
+	WithDetailingEditHost(ctx, host)
+
+	comp := b.configureForm(form.Build()).Component()
+	if host.OpenerWrapped() {
+		return comp
+	}
+	return host.Children(comp).Component()
 }
 
 func (b *DetailingBuilder) buildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -478,22 +491,31 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	f.Portal = portalName
 
 	if !b.mb.editingDisabled && b.EditingRestriction.CanObj(obj, ctx) {
-		// The edit form is hosted by the detailing event (see FormHost there): the
-		// button only turns the host's scope on, which mounts and loads the form.
-		// Any other button on this page can do the same.
-		f.PrimaryAction = h.HTMLComponents{
+		// The edit form is hosted HERE, around the button: the host declares the
+		// scope variable and renders the guarded block next to it, so clicking
+		// only turns the variable on — which mounts the block and loads the form.
+		host := GetDetailingEditHost(ctx)
+		editBtn := h.HTMLComponents{
 			VBtn("").
 				Variant(VariantFlat).
 				Color("primary").
 				Attr(":disabled", "isFetching").
 				Attr(":loading", "isFetching").
 				Attr("data-event", "edit").
-				Attr("@click", "vars."+DetailingEditScope+".show = true").
+				Attr("@click", host.ShowExprOr(DetailingEditScope)).
 				Attr("@click.middle",
 					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
 				Icon(true).
 				Density("comfortable").
 				Children(VIcon("mdi-pencil")),
+		}
+
+		if host.OpenerWrapped() {
+			// the button carries the host: variable, guarded block and opener
+			// travel together to wherever the layout renders the action.
+			f.PrimaryAction = h.HTMLComponents{host.Children(editBtn...).Component()}
+		} else {
+			f.PrimaryAction = editBtn
 		}
 	}
 

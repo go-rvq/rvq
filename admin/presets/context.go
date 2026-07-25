@@ -21,6 +21,7 @@ const (
 	ctxModel
 	ctxScope
 	ctxItemFormHosts
+	ctxDetailingEditHost
 	ctxFlashMessages
 	ctxActionFormContext
 	ctxBulkActionFormContext

@@ -513,22 +513,36 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 				actionBtns = append(actionBtns, b.newBtnFunc(ctx))
 			}
 		} else if b.mb.permissioner.ReqCreator(ctx.R).Allowed() {
-			// The create form is hosted by the listing component (see FormHost
-			// there): this button only turns the host's scope on, which mounts and
-			// loads the form. Any other button in the listing can do the same.
+			// The create form is hosted by the listing (see FormHost there): this
+			// button only turns the host's variable on, which mounts the guarded
+			// block and loads the form. Any other button under the same host can
+			// do the same.
+			openNew := GetItemFormHosts(ctx).OpenNewExpr()
+			if openNew == "" {
+				openNew = ListingNewScope + ".show = true"
+			}
 			actionBtns = append(actionBtns, VBtn("").
 				Color("primary").
 				Variant(VariantFlat).
 				Theme("dark").Class("ml-2").
 				// Size(SizeSmall).
 				Attr("data-event", "new").
-				Attr("@click", "vars."+ListingNewScope+".show = true").
+				Attr("@click", openNew).
 				Icon(true).
 				Density("comfortable").
 				Children(VIcon("mdi-plus")))
 
 		}
 	}
+
+	// Out of a dialog these actions are rendered by the LAYOUT into the app bar,
+	// outside the listing the create host wraps — so the host travels with them:
+	// variable, guarded block and button together (see hostForms).
+	if host := GetItemFormHosts(ctx).New; !inDialog && host != nil && len(actionBtns) > 0 {
+		host.WrapsOpener(true)
+		return host.Children(actionBtns...).Component()
+	}
+
 	return actionBtns
 }
 

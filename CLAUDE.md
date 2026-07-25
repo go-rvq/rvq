@@ -14,6 +14,12 @@
 - Use `bun remove <package>` to remove dependencies.
 - Use `bun run <script>` to execute package scripts.
 - Use `bun test` for JavaScript tests.
+- **UI integration tests live in `js/integration_tests/`** (e.g.
+  `js/integration_tests/admin/presets`). Run them from the suite directory —
+  that is where `bunfig.toml` sets the `preload` the DOM tests need:
+  `cd js/integration_tests/admin/presets && bun test`. They boot the Go fixture
+  server (in-memory SQLite) and drive it over HTTP; `*.dom.test.ts` also mount
+  the real Vue app with happy-dom.
 - Do not use `npm`, `yarn`, or `pnpm` commands unless the user explicitly asks to change the project tooling.
 - Commit and maintain `bun.lock` when frontend dependencies are added.
 

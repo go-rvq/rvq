@@ -1,7 +1,8 @@
 // Command server boots a preset test app (in-memory SQLite, seeded) on an HTTP
 // port, for the bun/vitest integration tests to drive. The APP env var selects
 // the app: "" / "listeditor" → the one-level list editor; "nested" → the
-// four-level nested list editor.
+// four-level nested list editor; "nestedmodels" → two levels of nested MODELS
+// (Survey → Places → Products), each with its own listing/detailing.
 //
 // It prints "LISTENING http://<addr>" once ready (via integration.ServeEnvMain);
 // PORT=0 → ephemeral port.
@@ -25,6 +26,8 @@ func main() {
 		handler, err = integration.NewNestedSeededHandler()
 	case "composite":
 		handler, err = integration.NewCompositeSeededHandler()
+	case "nestedmodels":
+		handler, err = integration.NewNestedModelsSeededHandler()
 	default:
 		handler, err = integration.NewSeededHandler()
 	}

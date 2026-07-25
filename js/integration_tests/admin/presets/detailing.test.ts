@@ -22,14 +22,14 @@ afterAll(() => {
 // hostAssertions holds what every detailing entry point must render.
 function expectEditHost(body: string) {
   // the host owns the edit overlay's closer, closed by default
-  expect(body).toContain('{...{"$presetsEditing": {show:false}}}');
+  expect(body).toContain("$presetsEditing: {show:false}");
   // the form block is guarded by it (turning it off destroys the form)
-  expect(body).toContain("v-if='vars.$presetsEditing?.show'");
+  expect(body).toContain("v-if='$presetsEditing?.show'");
   // the Edit button only turns it on — it carries no plaid of its own
-  expect(body).toContain("@click='vars.$presetsEditing.show = true'");
+  expect(body).toContain("@click='$presetsEditing.show = true'");
   // the host loads the form itself, binding the overlay to its closer
   expect(body).toContain('eventFunc("presets_Edit")');
-  expect(body).toContain("scope({closer: vars.$presetsEditing})");
+  expect(body).toContain("scope({closer: $presetsEditing})");
   expect(body).toContain('query("presets_closer_provided", "true")');
 }
 

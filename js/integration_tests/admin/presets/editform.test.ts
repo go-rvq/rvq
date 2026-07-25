@@ -37,14 +37,14 @@ describe("EditForm wrapper", () => {
 
     // the host owns the form's closer in a scope var, already on (self-opening)
     expect(body).toContain("<user-component");
-    expect(body).toContain('{...{"$presetsEditing": {show:true}}}');
+    expect(body).toContain("$presetsEditing: {show:true}");
     // the form block is guarded by it: turning it off destroys the form
-    expect(body).toContain("v-if='vars.$presetsEditing?.show'");
+    expect(body).toContain("v-if='$presetsEditing?.show'");
     // inside, a child `form` scope + the portal (seeded with the host's closer)
     // and the run-script that loads the real Edit into it
     expect(body).toContain("<go-plaid-scope");
     expect(body).toContain(":form='[{}]'");
-    expect(body).toContain('"closer": vars.$presetsEditing');
+    expect(body).toContain('"closer": $presetsEditing');
     expect(body).toContain("<go-plaid-portal");
     expect(body).toContain("<go-plaid-run-script");
 
@@ -52,7 +52,7 @@ describe("EditForm wrapper", () => {
     const inner = parseRunScriptEvent(script);
     expect(inner.event).toBe("presets_Edit");
     // the loaded overlay binds to the host's closer instead of creating one
-    expect(script).toContain("scope({closer: vars.$presetsEditing})");
+    expect(script).toContain("scope({closer: $presetsEditing})");
     expect(script).toContain('query("presets_closer_provided", "true")');
     // and it targets the inner portal (not the outer one)
     expect(inner.queries["target_portal"]).toBeTruthy();

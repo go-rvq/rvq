@@ -36,10 +36,14 @@ import (
 //
 // The `form` scope is created once by the host, so the form's own re-renders
 // (list-editor add/remove/sort, validation) never recreate it.
-// The scope variable names of the built-in form hosts. A button anywhere inside
-// the host can open its form with `<scope>.show = true`.
-// They are prefixed with `$presets` so they never collide with an application's
-// own state on the shared `vars` object.
+// The BASE scope variable names of the built-in form hosts. They are prefixed
+// with `$presets` so they never collide with an application's own state on the
+// shared `vars` object.
+//
+// These are the names of a TOP-LEVEL host only. A host rendered inside an
+// overlay gets a unique name — see FormHostScope — so a button must ask the host
+// for its reference (ShowExpr/OpenExpr, via the ctx helpers) instead of
+// hardcoding one of these constants.
 const (
 	// DetailingEditScope hosts the edit form of a detailing page.
 	DetailingEditScope = "$presetsEditing"
@@ -54,18 +58,34 @@ const (
 )
 
 type FormHostBuilder struct {
-	scope    string
-	show     bool
-	vars     map[string]string
-	portal   string
-	load     *web.VueEventTagBuilder
-	children h.HTMLComponents
+	scope       string
+	wrapsOpener bool
+	show        bool
+	vars        map[string]string
+	portal      string
+	load        *web.VueEventTagBuilder
+	children    h.HTMLComponents
 }
 
 // FormHost starts a form host bound to the scope variable named scope (e.g.
-// "editing" / "creating"), loading the form into portal via the load event.
+// DetailingEditScope), loading the form into portal via the load event.
 func FormHost(scope, portal string, load *web.VueEventTagBuilder) *FormHostBuilder {
 	return &FormHostBuilder{scope: scope, portal: portal, load: load}
+}
+
+// WrapsOpener tells whether this host renders around its OPENER (the button)
+// instead of around the content. A page needs it: the primary action is
+// rendered by the LAYOUT into the app bar, outside the content, where the host's
+// slot variable does not exist. In an event the button is inside the content the
+// host wraps, so it already receives the variable from the scope.
+func (b *FormHostBuilder) WrapsOpener(v bool) *FormHostBuilder {
+	b.wrapsOpener = v
+	return b
+}
+
+// OpenerWrapped reports the WrapsOpener setting (nil-safe).
+func (b *FormHostBuilder) OpenerWrapped() bool {
+	return b != nil && b.wrapsOpener
 }
 
 // Show sets the initial state: false (default) waits for a button to turn the
@@ -108,7 +128,7 @@ func (b *FormHostBuilder) OpenExpr(vars map[string]string) string {
 }
 
 // ScopeVarExpr references a variable of this host's state (e.g.
-// "vars.itemEditing.id"), for use inside the load event.
+// "$presetsItemEditing.id"), for use inside the load event.
 func (b *FormHostBuilder) ScopeVarExpr(name string) string {
 	return b.Ref() + "." + name
 }
@@ -122,15 +142,25 @@ func sortedKeys(m map[string]string) []string {
 	return out
 }
 
-// Ref is the JS expression that addresses this host's state. It lives on the
-// app-global `vars` because the button that opens the form is not always inside
-// the host's DOM — on a page, the primary action is rendered by the layout into
-// the app bar, out of any local slot scope.
+// Ref is the JS expression that addresses this host's state: the slot variable
+// the host declares. It is per-render, so nested levels — a listing opened in a
+// dialog, a record's detail opened from THAT listing — never share state.
 func (b *FormHostBuilder) Ref() string {
-	return "vars." + b.scope
+	return b.scope
 }
 
-func (b *FormHostBuilder) Component() h.HTMLComponent {
+// init is the JS initializer of this host's state.
+func (b *FormHostBuilder) init() string {
+	s := fmt.Sprintf("{show:%v", b.show)
+	for _, name := range sortedKeys(b.vars) {
+		s += fmt.Sprintf(", %s:%s", name, b.vars[name])
+	}
+	return s + "}"
+}
+
+// block is the guarded form block: mounting it loads the form into the host's
+// portal, unmounting it destroys the form and its `form` scope.
+func (b *FormHostBuilder) block() h.HTMLComponent {
 	ref := b.Ref()
 
 	// the load event owns this host's closer: seed it in the portal content scope
@@ -143,7 +173,7 @@ func (b *FormHostBuilder) Component() h.HTMLComponent {
 	// (not a user-component): the latter renders its children inside a
 	// <template v-slot>, and a <template> nested in another one is not compiled
 	// by the runtime template parser — the content would render inert.
-	form := web.Scope(
+	return web.Scope(
 		web.Portal().Name(b.portal).Scope("closer", js.Raw(ref)),
 		web.RunScript(load.Go()),
 	).
@@ -151,17 +181,34 @@ func (b *FormHostBuilder) Component() h.HTMLComponent {
 		// `?.` because the state is assigned on mount: the guard must not throw
 		// while the host itself is still being set up.
 		Attr("v-if", ref+"?.show")
+}
 
-	init := fmt.Sprintf("{show:%v", b.show)
-	for _, name := range sortedKeys(b.vars) {
-		init += fmt.Sprintf(", %s:%s", name, b.vars[name])
+func (b *FormHostBuilder) Component() h.HTMLComponent {
+	return FormHosts(b.children, b)
+}
+
+// FormHosts renders several hosts as ONE component wrapping children: their
+// state variables are declared together and their guarded blocks are siblings.
+//
+// They must not be nested one inside the other. A host that keeps its state in a
+// slot variable renders a `<template v-slot>`, and a `<template v-slot>` inside
+// another one is NOT compiled by the runtime template parser — the inner content
+// (the whole listing) would render inert.
+func FormHosts(children h.HTMLComponents, hosts ...*FormHostBuilder) h.HTMLComponent {
+	var (
+		uc     = vue.UserComponent()
+		blocks h.HTMLComponents
+	)
+
+	for _, host := range hosts {
+		if host == nil {
+			continue
+		}
+		uc.ScopeVar(host.scope, host.init())
+		blocks = append(blocks, host.block())
 	}
-	init += "}"
 
-	// Assign the state onto `vars` (see Ref) instead of a slot-scoped variable,
-	// so buttons rendered outside this component — the page's app bar — reach it.
-	return vue.UserComponent(append(b.children, form)...).
-		Assign(vue.Var("vars"), b.scope, js.Raw(init))
+	return uc.AppendChild(append(children, blocks...)...)
 }
 
 func (b *FormHostBuilder) Write(ctx *h.Context) error {
@@ -174,11 +221,25 @@ func CloserProvided(ctx *web.EventContext) bool {
 	return ctx != nil && ctx.R != nil && ctx.R.FormValue(ParamCloserProvided) == "true"
 }
 
-// ItemFormHosts are the per-item hosts a listing renders once and every row
-// reuses (instead of each row carrying its own overlay plaid).
+// ItemFormHosts are the hosts a listing renders once and its buttons reuse: the
+// per-item edit/detail overlays every row opens (instead of each row carrying
+// its own overlay plaid), and the create form of the New button.
+//
+// They are published on the context because their scope names are not fixed —
+// a listing rendered inside an overlay gets unique ones (see FormHostScope).
 type ItemFormHosts struct {
 	Edit   *FormHostBuilder
 	Detail *FormHostBuilder
+	New    *FormHostBuilder
+}
+
+// OpenNewExpr is what the New button runs to open the listing's create form. It
+// returns "" when the listing did not host it (the caller falls back).
+func (h *ItemFormHosts) OpenNewExpr() string {
+	if h == nil || h.New == nil {
+		return ""
+	}
+	return h.New.ShowExpr()
 }
 
 // OpenEditExpr / OpenDetailExpr are what a row's click handler runs to open the
@@ -209,4 +270,27 @@ func WithItemFormHosts(ctx *web.EventContext, hosts *ItemFormHosts) {
 func GetItemFormHosts(ctx *web.EventContext) *ItemFormHosts {
 	h, _ := ctx.ContextValue(ctxItemFormHosts).(*ItemFormHosts)
 	return h
+}
+
+// WithDetailingEditHost publishes the detailing's edit host, so the Edit button
+// (and any other button of that page) targets the right variable — the detailing
+// keeps the well-known name only when it is not itself inside an overlay.
+func WithDetailingEditHost(ctx *web.EventContext, host *FormHostBuilder) {
+	ctx.WithContextValue(ctxDetailingEditHost, host)
+}
+
+// GetDetailingEditHost returns the edit host published by the enclosing
+// detailing, or nil outside one.
+func GetDetailingEditHost(ctx *web.EventContext) *FormHostBuilder {
+	h, _ := ctx.ContextValue(ctxDetailingEditHost).(*FormHostBuilder)
+	return h
+}
+
+// ShowExprOr is ShowExpr, falling back to the bare scope name when the host was
+// not published (component rendered outside any host).
+func (b *FormHostBuilder) ShowExprOr(scope string) string {
+	if b == nil {
+		return scope + ".show = true"
+	}
+	return b.ShowExpr()
 }

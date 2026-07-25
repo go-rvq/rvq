@@ -7,18 +7,20 @@ The page is the **host** of that overlay. It declares one reactive variable that
 *is* the overlay's `closer`, and guards the overlay's block with it:
 
 ```html
-<user-component :assign='[[vars,{...{"$presetsEditing": {show:false}}}]]'>
+<user-component :scope='{$presetsEditing: {show:false}}'>
+  <template v-slot='{$presetsEditing}'>
 
-  … the page (its Edit button only does `vars.$presetsEditing.show = true`) …
+    … the opener (its Edit button only does `$presetsEditing.show = true`) …
 
-  <go-plaid-scope v-if='vars.$presetsEditing?.show' v-slot='{ form }' :form='[{}]'>
-    <go-plaid-portal portal-name='<uid>' :scope='{"closer": vars.$presetsEditing}'/>
-    <go-plaid-run-script :script='plaid()…eventFunc("presets_Edit")
-        .query("target_portal","<uid>")
-        .scope({closer: vars.$presetsEditing})
-        .query("presets_closer_provided","true").go()'/>
-  </go-plaid-scope>
+    <go-plaid-scope v-if='$presetsEditing?.show' v-slot='{ form }' :form='[{}]'>
+      <go-plaid-portal portal-name='<uid>' :scope='{"closer": $presetsEditing}'/>
+      <go-plaid-run-script :script='plaid()…eventFunc("presets_Edit")
+          .query("target_portal","<uid>")
+          .scope({closer: $presetsEditing})
+          .query("presets_closer_provided","true").go()'/>
+    </go-plaid-scope>
 
+  </template>
 </user-component>
 ```
 
@@ -34,18 +36,28 @@ Built by [`FormHost`](../form_host.go). The scope variables:
 
 | Constant | Variable | Hosted by | Opens |
 | --- | --- | --- | --- |
-| `DetailingEditScope` | `vars.$presetsEditing` | detailing (event and page) | the edit form of the shown record |
-| `ListingNewScope` | `vars.$presetsCreating` | listing | the create form |
-| `ListingItemEditScope` | `vars.$presetsItemEditing` | listing | the edit form of a row (`.id`) |
-| `ListingItemDetailScope` | `vars.$presetsItemDetailing` | listing | the detailing of a row (`.id`) |
+| `DetailingEditScope` | `$presetsEditing` | detailing (event and page) | the edit form of the shown record |
+| `ListingNewScope` | `$presetsCreating` | listing | the create form |
+| `ListingItemEditScope` | `$presetsItemEditing` | listing | the edit form of a row (`.id`) |
+| `ListingItemDetailScope` | `$presetsItemDetailing` | listing | the detailing of a row (`.id`) |
 
 Two design points that are easy to get wrong:
 
-- **The state lives on `vars`, not on a slot scope.** On a page the primary
-  action (the Edit button) is rendered by the layout into the app bar — *outside*
-  the host component — where a slot-scoped variable does not exist. `vars` is the
-  app-wide reactive object, reachable from anywhere. The `$presets` prefix keeps
-  these out of the application's own namespace.
+- **The state is a SLOT variable, not app-global `vars`.** This is what allows
+  several hosts to be alive at once — the listing on the page, a nested list
+  opened in a dialog, and from THAT list a record's detail. Each render declares
+  its own variable, so its guarded block is watched by that render alone. On
+  `vars` they would all declare the same well-known name and guard their block
+  with `v-if` on it, and opening one would mount every one of them: several
+  requests, and the overlay rendered into portals nobody is looking at. The
+  `$presets` prefix keeps the names out of the application's own namespace.
+- **A host wraps whatever holds its opener.** In an event the opener is inline in
+  the content, so the host wraps the content and everything inside can drive the
+  overlay. On a **page** the primary action is rendered by the LAYOUT into the app
+  bar — *outside* the content — so there the host wraps the BUTTON instead:
+  variable, guarded block and opener travel together (`WrapsOpener`). Buttons
+  outside that wrapper cannot see the variable; they get the reference from the
+  host (see [Your own buttons](#your-own-buttons)).
 - **The overlay must not create its own closer.** The host seeds `closer` in the
   portal's content scope *and* sends `presets_closer_provided=true`; the
   `Dialog`/`Drawer` responder then binds to that closer instead of wrapping the
@@ -80,16 +92,18 @@ block. Closing by the ✕ button does the same through the same binding.
 
 ## NEW, from a listing
 
-The listing renders the `$presetsCreating` host around itself
-(`ListingComponentBuilder.hostForms`); the New button carries no plaid.
+The listing renders the `$presetsCreating` host around the New button when its
+actions go to the app bar, and around itself when they stay inline in a dialog
+(`ListingComponentBuilder.hostForms` / `actionsComponent`); the button carries no
+plaid either way.
 
 ```mermaid
 stateDiagram-v2
     direction TB
-    [*] --> ListingShown : listing rendered<br/>vars.$presetsCreating = {show:false}
+    [*] --> ListingShown : listing rendered<br/>$presetsCreating = {show:false}
 
-    ListingShown --> Loading : click New<br/>vars.$presetsCreating.show = true
-    Loading --> FormOpen : GET presets_New<br/>(target_portal=host, overlay=Dialog|RightDrawer,<br/>closer=vars.$presetsCreating, closer_provided=true)
+    ListingShown --> Loading : click New<br/>$presetsCreating.show = true
+    Loading --> FormOpen : GET presets_New<br/>(target_portal=host, overlay=Dialog|RightDrawer,<br/>closer=$presetsCreating, closer_provided=true)
 
     state FormOpen {
         [*] --> Editing
@@ -114,14 +128,14 @@ The listing renders **one** host per action for the whole table — not one per 
 Each host has an extra `id` variable; the row points it at its record:
 
 ```html
-<td @click.self='vars.$presetsItemDetailing.id = "42";
-                 vars.$presetsItemDetailing.show = true; …'>
+<td @click.self='$presetsItemDetailing.id = "42";
+                 $presetsItemDetailing.show = true; …'>
 ```
 
 and the host's run-script loads whatever the variable holds:
 
 ```js
-plaid()…eventFunc("presets_Detailing").query("id", vars.$presetsItemDetailing.id)…
+plaid()…eventFunc("presets_Detailing").query("id", $presetsItemDetailing.id)…
 ```
 
 Which host a row uses: `$presetsItemDetailing` when the model has a detailing,
@@ -152,14 +166,17 @@ how many rows the table has, and opening a second row simply reloads it.
 ## EDIT, from a detailing
 
 Both detailing entry points host the edit form the same way — the event (overlay)
-and the page (`defaultPageFunc`), through `DetailingBuilder.hostedComponent`:
+and the page (`defaultPageFunc`), through `DetailingBuilder.hostedComponent`. They
+differ only in WHAT the host wraps: the content on an overlay (the Edit button is
+inline in the toolbar), the button itself on a page (the layout renders it into
+the app bar):
 
 ```mermaid
 stateDiagram-v2
     direction TB
-    [*] --> DetailShown : detailing rendered<br/>vars.$presetsEditing = {show:false}
+    [*] --> DetailShown : detailing rendered<br/>$presetsEditing = {show:false}
 
-    DetailShown --> Loading : click Edit (app bar)<br/>vars.$presetsEditing.show = true
+    DetailShown --> Loading : click Edit (app bar)<br/>$presetsEditing.show = true
     Loading --> EditOpen : GET presets_Edit (id fixed = shown record)<br/>overlay = Dialog on an overlayed detailing,<br/>RightDrawer on a page
 
     state EditOpen {
@@ -175,7 +192,8 @@ stateDiagram-v2
 ```
 
 Because the button only flips a variable, **any** other button on the detailing
-can open the same form with `vars.$presetsEditing.show = true`.
+can open the same form with `$presetsEditing.show = true` — as long as it is
+rendered under the host (on a page, that means under the wrapped action button).
 
 ## Round-trip in detail
 
@@ -187,11 +205,11 @@ sequenceDiagram
     participant O as Host portal
 
     U->>P: click (New / row / Edit)
-    P->>P: vars.$presetsX.show = true<br/>(+ .id for row hosts)
+    P->>P: $presetsX.show = true<br/>(+ .id for row hosts)
     Note over P: v-if mounts the block:<br/>portal + run-script + child `form` scope
     P->>S: presets_New | presets_Edit | presets_Detailing<br/>target_portal, overlay, closer_provided=true
     S-->>O: updatePortal → dialog/drawer bound to v-model='closer.show'
-    Note over O: `closer` is vars.$presetsX<br/>(seeded by the portal's :scope)
+    Note over O: `closer` is $presetsX<br/>(seeded by the portal's :scope)
 
     U->>O: edit fields, add/remove list-editor rows
     U->>S: POST presets_Update | presets_Create
@@ -226,9 +244,10 @@ filled in.
 
 ## Your own buttons
 
-Anything rendered **inside the host** — and on a page that includes the app bar,
-because the state lives on `vars` — can drive the overlay by writing to the
-variable. No plaid, no portal, no event: just `VAR.show = true|false`.
+Anything rendered **inside the host** can drive the overlay by writing to its
+variable. No plaid, no portal, no event: just `VAR.show = true|false`. Since the
+variable is slot-scoped, ask the host for its reference (the helpers below) when
+the button is not obviously under it.
 
 ### Open the edit form from an extra button on a detailing
 
@@ -241,7 +260,8 @@ d.Field("Total").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventC
         // a second way into the same edit form
         VBtn("Corrigir total").
             Variant(VariantText).
-            Attr("@click", "vars."+presets.DetailingEditScope+".show = true"),
+            // resolves to `$presetsEditing.show = true` under this detailing
+            Attr("@click", presets.GetDetailingEditHost(ctx).ShowExprOr(presets.DetailingEditScope)),
     )
 })
 ```
@@ -254,8 +274,8 @@ overlay both spellings work:
 ```go
 // inside an editing field / action of the same model
 VBtn("Cancelar").Attr("@click", "closer.show = false")
-// … identical to:
-VBtn("Cancelar").Attr("@click", "vars."+presets.DetailingEditScope+".show = false")
+// … identical to, under the detailing that hosts it:
+VBtn("Cancelar").Attr("@click", presets.DetailingEditScope+".show = false")
 ```
 
 ### Open a row's edit form from a custom listing action
@@ -279,16 +299,23 @@ l.RowMenu().SetRowMenuItem("Editar total").ComponentFunc(
 ```
 
 `OpenEditExpr("42")` produces
-`vars.$presetsItemEditing.id = "42"; vars.$presetsItemEditing.show = true`.
+`$presetsItemEditing.id = "42"; $presetsItemEditing.show = true`.
 
 ### Open the create form from anywhere in a listing
 
 ```go
 l.NewButtonFunc(func(ctx *web.EventContext) h.HTMLComponent {
+    open := presets.GetItemFormHosts(ctx).OpenNewExpr() // "$presetsCreating.show = true"
     return VBtn("Novo produto").
         Color("primary").
-        Attr("@click", "vars."+presets.ListingNewScope+".show = true")
+        Attr("@click", open)
 })
+```
+
+The listing's action buttons are wrapped by the create host when they leave for
+the app bar, so a button returned here is under it either way.
+
+```go
 ```
 
 ### Toggle, or react to the state
@@ -297,10 +324,10 @@ The variable is plain reactive state, so it can also be read:
 
 ```go
 // toggle
-VBtn("").Attr("@click", "vars.$presetsEditing.show = !vars.$presetsEditing.show")
+VBtn("").Attr("@click", "$presetsEditing.show = !$presetsEditing.show")
 
 // disable something while the form is open
-VBtn("Excluir").Attr(":disabled", "vars.$presetsEditing?.show")
+VBtn("Excluir").Attr(":disabled", "$presetsEditing?.show")
 ```
 
 Use `?.` when reading in a place that may render before the host assigns its
@@ -319,28 +346,40 @@ wrapper response — which is precisely what page hosts avoid.
 ## API
 
 ```go
-// A page hosts a form:
-comp := presets.FormHost(presets.DetailingEditScope, portal,
-        web.Plaid().URL(url).EventFunc(actions.Edit).Query(presets.ParamID, id)…).
-    Children(pageContent).
-    Component()
+// host a form around the content that holds its opener:
+host := presets.FormHost(presets.DetailingEditScope, portal,
+    web.Plaid().URL(url).EventFunc(actions.Edit).Query(presets.ParamID, id)…)
 
-// A button opens it:
-btn.Attr("@click", "vars."+presets.DetailingEditScope+".show = true")
+comp := host.Children(content).Component()
+
+// a button under it opens it:
+btn.Attr("@click", host.ShowExpr()) // "$presetsEditing.show = true"
 ```
 
 | Method | Purpose |
 | --- | --- |
 | `Show(bool)` | initial state; `true` makes the host self-opening |
 | `Var(name, init)` | extra reactive variable (e.g. `id`), readable by the load event |
-| `Ref()` | the JS expression for the host state (`vars.$presetsEditing`) |
-| `ShowExpr()` / `OpenExpr(vars)` | what a button runs to open it |
-| `Children(...)` | the page content rendered inside the host |
+| `WrapsOpener(bool)` | this host wraps its BUTTON, not the content — for actions the layout renders into the app bar |
+| `Ref()` | the JS expression for the host state (`$presetsEditing`) |
+| `ShowExpr()` / `ShowExprOr(scope)` / `OpenExpr(vars)` | what a button runs to open it (`ShowExprOr` is nil-safe) |
+| `Children(...)` | what is rendered inside the host |
+| `FormHosts(children, hosts...)` | declare SEVERAL hosts in one component |
 
-Listings publish their per-item hosts on the context so rows can find them:
-`WithItemFormHosts` / `GetItemFormHosts`, whose `OpenEditExpr(id)` /
-`OpenDetailExpr(id)` return the expression for a row (or `""` when there is no
-host, so the caller can fall back).
+**Never nest one host inside another in the same response.** A host renders a
+`<template v-slot>`, and one nested directly in another is not compiled by the
+runtime template parser — the content inside would render inert. Declare them
+together with `FormHosts`, which emits a single component with all the
+variables; that is how a listing carries its item and create hosts. Separate
+*responses* are free to nest (a portal body is compiled on its own), which is
+what makes a dialog inside a page work.
+
+Because the names are slot variables, a component cannot hardcode them — it asks
+the host. Listings publish theirs with `WithItemFormHosts` / `GetItemFormHosts`
+(`OpenEditExpr(id)`, `OpenDetailExpr(id)`, `OpenNewExpr()`), and a detailing
+publishes its edit host with `WithDetailingEditHost` / `GetDetailingEditHost`.
+They return `""`/`nil` outside a host, so the caller can fall back to the
+self-hosting events.
 
 Related: [`ParamCloserProvided`](../const.go), `DialogBuilder.SetCloserProvided`,
 `Drawer.SetCloserProvided`.
