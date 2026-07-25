@@ -24,6 +24,7 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 	mb.RegisterEventFunc(actions.Action, mb.detailing.formAction)
 	mb.RegisterEventFunc(actions.DoAction, mb.detailing.doAction)
 	mb.RegisterEventFunc(actions.Detailing, mb.detailing.detailingEvent)
+	mb.RegisterEventFunc(actions.ReloadDetail, mb.detailing.reloadDetail)
 	// mb.RegisterEventFunc(actions.DetailingContent, mb.detailing.detailingContent)
 	mb.RegisterEventFunc(actions.DoSaveDetailingField, mb.detailing.SaveDetailField)
 	mb.RegisterEventFunc(actions.DoEditDetailingField, mb.detailing.EditDetailField)

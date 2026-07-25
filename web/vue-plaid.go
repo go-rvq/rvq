@@ -67,6 +67,9 @@ func Plaid() (r *VueEventTagBuilder) {
 		Closer(Var("closer")).
 		Scope(js.Object{
 			"presetsListing": js.Raw("presetsListing"),
+			// carried so a response's runScript can call the refresh hooks its
+			// scope collected — see presets.PostSaveScript
+			"onSaveCallbacks": js.Raw("onSaveCallbacks"),
 			// "presetsDetailing": js.Raw("presetsDetailing"),
 			// "presetsCreating":  js.Raw("presetsCreating"),
 			// "presetsEditing":   js.Raw("presetsEditing"),

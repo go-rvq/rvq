@@ -24,6 +24,7 @@ const (
 	OpenItemActionDialog        = "presets_OpenItemActionDialog"
 	NotificationCenter          = "presets_NotificationCenter"
 	Detailing                   = "presets_Detailing"
+	ReloadDetail                = "presets_ReloadDetail"
 	DetailingContent            = "presets_DetailingContent"
 	DoSaveDetailingField        = "presets_Detailing_Field_Save"
 	DoEditDetailingField        = "presets_Detailing_Field_Edit"

@@ -80,6 +80,7 @@ export function componentByTemplate(
       const plaid = inject('plaid'),
         vars = inject('vars'),
         closer = inject('closer'),
+        onSaveCallbacks = inject('onSaveCallbacks', []),
         fullscreen = inject('fullscreen'),
         isFetching = inject('isFetching'),
         updateRootTemplate = inject('updateRootTemplate')
@@ -88,6 +89,7 @@ export function componentByTemplate(
         plaid,
         vars,
         closer,
+        onSaveCallbacks,
         fullscreen,
         isFetching,
         updateRootTemplate,

@@ -405,13 +405,15 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 // overlay plaid. There is ONE host for the whole listing, keyed by the id var.
 func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFormHosts {
 	var (
-		b        = lcb.b
-		overlay  = OverlayMode(ctx).Up().String()
-		reloadCb = b.reloadCallback(ctx).Encode()
-		hosts    = &ItemFormHosts{}
-		host     = func(scope, event string) *FormHostBuilder {
+		b       = lcb.b
+		overlay = OverlayMode(ctx).Up().String()
+		reload  = b.reloadURI(ctx)
+		hosts   = &ItemFormHosts{}
+		host    = func(scope, event string) *FormHostBuilder {
 			portal := ctx.UID()
-			hb := FormHost(scope, portal, nil).Var("id", "null")
+			// whatever this host opens — a detail, an edit form — a successful save
+			// inside it changes a row of THIS listing, so the listing reloads.
+			hb := FormHost(scope, portal, nil).Var("id", "null").OnSave(reload)
 			// the id comes from the host's own state, whose reference depends on
 			// where it lives (`vars` on a page, a slot variable elsewhere).
 			hb.load = web.Plaid().
@@ -419,8 +421,7 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 				EventFunc(event).
 				Query(ParamID, web.Var(hb.ScopeVarExpr("id"))).
 				Query(ParamTargetPortal, portal).
-				Query(ParamOverlay, overlay).
-				Query(ParamPostChangeCallback, reloadCb)
+				Query(ParamOverlay, overlay)
 			return hb
 		}
 	)
@@ -438,8 +439,8 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 			URL(ctx.R.RequestURI).
 			EventFunc(actions.New).
 			Query(ParamTargetPortal, newPortal).
-			Query(ParamOverlay, overlay).
-			Query(ParamPostChangeCallback, reloadCb))
+			Query(ParamOverlay, overlay)).
+		OnSave(reload)
 
 	WithItemFormHosts(ctx, hosts)
 	return hosts

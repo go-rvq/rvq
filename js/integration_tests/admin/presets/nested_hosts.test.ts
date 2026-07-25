@@ -48,7 +48,7 @@ describe("nested form hosts — contract", () => {
     );
 
     // its own scope + guarded blocks, addressed as plain slot variables
-    expect(dialog).toContain("$presetsItemDetailing: {show:false, id:null}");
+    expect(dialog).toContain("$presetsItemDetailing: {show:false, id:null,");
     expect(dialog).toContain("v-if='$presetsItemDetailing?.show'");
     expect(dialog).toContain('query("id", $presetsItemDetailing.id)');
   });
@@ -59,7 +59,7 @@ describe("nested form hosts — contract", () => {
     });
     const body = portalBody(r, "p");
 
-    expect(body).toContain("$presetsEditing: {show:false}");
+    expect(body).toContain("$presetsEditing: {show:false,");
     expect(body).toContain("v-if='$presetsEditing?.show'");
     expect(body).toContain("@click='$presetsEditing.show = true'");
     expect(body).not.toContain("vars.$presetsEditing");

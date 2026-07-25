@@ -38,6 +38,11 @@ export const Root = defineComponent({
     const closer = reactive({})
     provide('closer', closer)
 
+    // Refresh hooks a saved form calls (see presets FormHost): every scope that
+    // owns something the change affects appends its own, and passes the longer
+    // list on. The root starts it empty.
+    provide('onSaveCallbacks', [])
+
     const fullscreen = reactive({})
     provide('fullscreen', locals)
 
@@ -122,6 +127,9 @@ export function createWebApp(template: string): App<Element> {
 
   app.config.globalProperties.copyToClipboard = copyToClipboard
   app.config.globalProperties.copiedToClipboard = copiedToClipboard
+  // the refresh hooks a saved form runs; scopes append to it and pass it on, so
+  // it must resolve to an empty list wherever nobody has (see FormHost)
+  app.config.globalProperties.onSaveCallbacks = []
   app.config.globalProperties.presetsListing = null
   app.config.globalProperties.presetsDetailing = null
   app.config.globalProperties.presetsCreating = null

@@ -45,6 +45,7 @@ export function mountPresets(template: string, components: Record<string, any> =
       // `presetsListing` cannot resolve it and its content fails to render.
       config: {
         globalProperties: {
+          onSaveCallbacks: [],
           presetsListing: null,
           presetsDetailing: null,
           presetsCreating: null,

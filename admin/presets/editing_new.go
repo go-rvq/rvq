@@ -142,6 +142,9 @@ func (b *EditingBuilder) doCreate(
 
 	id := vx.ObjectID(obj)
 
+	// see doUpdate: the closer is the host's state, which knows what to refresh
+	web.AppendRunScripts(r, PostSaveScript(id))
+
 	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
 		cb := web.DecodeCallback(postSaveConfig)
 		if len(cb.Scripts) > 0 {

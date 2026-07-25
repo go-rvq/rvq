@@ -107,6 +107,11 @@ func (b *EditingBuilder) doUpdate(
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
 	script := `closer.show = false;`
 
+	// Refresh what the change affects. The form does not know its opener: it just
+	// calls back into the closer, which IS the host's state — and the host was
+	// rendered by whoever must refresh (see FormHostBuilder.OnSave).
+	web.AppendRunScripts(r, PostSaveScript(mid.String()))
+
 	if postSaveConfig := ctx.R.URL.Query().Get(ParamPostChangeCallback); postSaveConfig != "" {
 		cb := web.DecodeCallback(postSaveConfig)
 		web.AppendRunScripts(r, web.ApplyChangeEvent(cb.Script(), web.Updated, mid.String()))

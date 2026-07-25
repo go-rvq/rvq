@@ -249,17 +249,62 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
-	if b.mb.singleton {
-		r.PageTitle = b.mb.TTitle(ctx.Context())
-	} else {
-		r.PageTitle = b.mb.RecordTitle(obj, ctx)
-	}
+	r.PageTitle = b.pageTitle(obj, ctx)
 
+	// The body lives in a portal so a save can bring the page up to date without
+	// reloading it: ReloadDetail re-renders THIS portal and answers with the new
+	// page title, which the client puts straight into <title>.
+	r.Body = web.Portal(b.pageComponent(ctx, id, obj)).Name(DetailPagePortalName)
+
+	return
+}
+
+func (b *DetailingBuilder) pageTitle(obj any, ctx *web.EventContext) string {
+	if b.mb.singleton {
+		return b.mb.TTitle(ctx.Context())
+	}
+	return b.mb.RecordTitle(obj, ctx)
+}
+
+func (b *DetailingBuilder) pageComponent(ctx *web.EventContext, id string, obj any) h.HTMLComponent {
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
 	form.mode = DETAIL
+	return b.hostedComponent(ctx, id, form)
+}
 
-	r.Body = b.hostedComponent(ctx, id, form)
+// reloadDetail re-renders the detailing PAGE body in place (see
+// DetailPagePortalName) and returns the current title with it. It is what the
+// page's edit host runs after a successful save: the record's data and the
+// document title reflect the change, and the page itself is never reloaded.
+func (b *DetailingBuilder) reloadDetail(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if b.mb.detailingDisabled {
+		err = ErrReadRecordNotAllowed
+		return
+	}
 
+	var (
+		id  = ctx.Param(ParamID)
+		mid ID
+		obj = b.mb.NewModel()
+	)
+
+	if !b.mb.singleton {
+		if mid, err = b.mb.ParseRecordID(id); err != nil {
+			return
+		}
+	}
+
+	if b.mb.permissioner.Reader(ctx.R, mid, ParentsModelID(ctx.R)...).Denied() {
+		err = perm.PermissionDenied
+		return
+	}
+
+	if err = b.GetFetchFunc()(obj, mid, ctx); err != nil {
+		return
+	}
+
+	r.PageTitle = b.pageTitle(obj, ctx)
+	r.UpdatePortal(DetailPagePortalName, b.pageComponent(ctx, id, obj))
 	return
 }
 
@@ -270,23 +315,7 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 // and turning it off destroys the form completely.
 func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, form *FormBuilder) h.HTMLComponent {
 	editPortal := ctx.UID()
-
-	var cb web.Callback
-	cb.Decode(ctx.R.FormValue(ParamPostChangeCallback))
-
 	overlayMode := form.overlayMode
-	if overlayMode.Overlayed() {
-		cb.AddScript(web.Plaid().
-			URL(ctx.R.RequestURI).
-			EventFunc(actions.Detailing).
-			StringQuery(ctx.Queries().Encode()).
-			Go())
-	} else {
-		cb.AddScript(web.Plaid().
-			URL(ctx.R.RequestURI).
-			StringQuery(ctx.Queries().Encode()).
-			Go())
-	}
 
 	host := FormHost(DetailingEditScope, editPortal,
 		web.Plaid().
@@ -294,8 +323,29 @@ func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, for
 			EventFunc(actions.Edit).
 			Query(ParamID, id).
 			ValidQuery(ParamTargetPortal, editPortal).
-			ValidQuery(ParamOverlay, overlayMode.Up().String()).
-			ValidQuery(ParamPostChangeCallback, cb.String()))
+			ValidQuery(ParamOverlay, overlayMode.Up().String()))
+
+	// What a successful edit refreshes. Both branches keep the page as it is —
+	// nothing is reloaded but the detail itself.
+	if overlayMode.Overlayed() {
+		// An overlayed detailing renders itself again, in the portal it already
+		// occupies — it does not depend on who opened it, which may not be a form
+		// host at all. Whoever DID open it (the listing showing this record) has
+		// its own hook in onSaveCallbacks, so it refreshes too.
+		host.OnSave(web.Plaid().
+			URL(ctx.R.RequestURI).
+			EventFunc(actions.Detailing).
+			StringQuery(ctx.Queries().Encode()).
+			Go())
+	} else {
+		// A detailing PAGE has no host above it, so it refreshes its own body —
+		// and its title — through its portal.
+		host.OnSave(web.Plaid().
+			URL(b.mb.Info().ListingHrefCtx(ctx)).
+			EventFunc(actions.ReloadDetail).
+			ValidQuery(ParamID, id).
+			Go())
+	}
 
 	// On a PAGE the host wraps its own opener (the Edit button, see configureForm)
 	// because the layout renders that button into the app bar, outside the page

@@ -57,10 +57,16 @@ const (
 	ListingItemDetailScope = "$presetsItemDetailing"
 )
 
+// DetailPagePortalName is the portal holding the body of a detailing PAGE, so a
+// save can refresh it (and the document title) in place — see
+// DetailingBuilder.reloadDetail.
+const DetailPagePortalName = "presets_detail_page"
+
 type FormHostBuilder struct {
 	scope       string
 	wrapsOpener bool
 	show        bool
+	onSave      string
 	vars        map[string]string
 	portal      string
 	load        *web.VueEventTagBuilder
@@ -86,6 +92,19 @@ func (b *FormHostBuilder) WrapsOpener(v bool) *FormHostBuilder {
 // OpenerWrapped reports the WrapsOpener setting (nil-safe).
 func (b *FormHostBuilder) OpenerWrapped() bool {
 	return b != nil && b.wrapsOpener
+}
+
+// OnSave is what the host refreshes after a form it hosts saves successfully.
+//
+// It is JS, evaluated in the host's own template — the place that KNOWS what the
+// change affects: a listing reloads itself, a detailing reloads its body. The
+// hook is APPENDED to `onSaveCallbacks`, which travels down the scope like
+// `closer` and `form`: each level adds its own and passes the longer list on, so
+// a save deep inside refreshes every level that shows the record, and nothing
+// has to be carried in the request.
+func (b *FormHostBuilder) OnSave(script string) *FormHostBuilder {
+	b.onSave = script
+	return b
 }
 
 // Show sets the initial state: false (default) waits for a button to turn the
@@ -149,13 +168,36 @@ func (b *FormHostBuilder) Ref() string {
 	return b.scope
 }
 
-// init is the JS initializer of this host's state.
+// init is the JS initializer of this host's state. Besides `show` (and any extra
+// Var), it carries the two functions that make a refresh possible without the
+// saving request knowing anything about its opener:
+//
+//	reload()  re-runs what this host loads (the detail, the form) into its portal
+//	onSave()  refreshes what the change affects, as declared by the host's owner
 func (b *FormHostBuilder) init() string {
 	s := fmt.Sprintf("{show:%v", b.show)
 	for _, name := range sortedKeys(b.vars) {
 		s += fmt.Sprintf(", %s:%s", name, b.vars[name])
 	}
+	s += ", reload: () => { " + b.loadScript() + " }"
 	return s + "}"
+}
+
+// callbacks is the `onSaveCallbacks` this host passes to what it loads: the list
+// it received, plus its own hook.
+func (b *FormHostBuilder) callbacks() string {
+	if b.onSave == "" {
+		return "onSaveCallbacks"
+	}
+	return "[...onSaveCallbacks, (id) => { " + b.onSave + " }]"
+}
+
+// loadScript is the plaid call that loads this host's content into its portal.
+func (b *FormHostBuilder) loadScript() string {
+	return b.load.Clone().
+		Scope(vue.Var("{closer: "+b.Ref()+", onSaveCallbacks: "+b.callbacks()+"}")).
+		Query(ParamCloserProvided, "true").
+		Go()
 }
 
 // block is the guarded form block: mounting it loads the form into the host's
@@ -163,19 +205,15 @@ func (b *FormHostBuilder) init() string {
 func (b *FormHostBuilder) block() h.HTMLComponent {
 	ref := b.Ref()
 
-	// the load event owns this host's closer: seed it in the portal content scope
-	// and tell the responder not to create another one.
-	load := b.load.Clone().
-		Scope(vue.Var("{closer: "+ref+"}")).
-		Query(ParamCloserProvided, "true")
-
 	// The guarded block gets its own child `form` scope. It is a go-plaid-scope
 	// (not a user-component): the latter renders its children inside a
 	// <template v-slot>, and a <template> nested in another one is not compiled
 	// by the runtime template parser — the content would render inert.
 	return web.Scope(
-		web.Portal().Name(b.portal).Scope("closer", js.Raw(ref)),
-		web.RunScript(load.Go()),
+		web.Portal().Name(b.portal).
+			Scope("closer", js.Raw(ref)).
+			Scope("onSaveCallbacks", js.Raw(b.callbacks())),
+		web.RunScript(b.loadScript()),
 	).
 		FormInit().
 		// `?.` because the state is assigned on mount: the guard must not throw
@@ -213,6 +251,16 @@ func FormHosts(children h.HTMLComponents, hosts ...*FormHostBuilder) h.HTMLCompo
 
 func (b *FormHostBuilder) Write(ctx *h.Context) error {
 	return b.Component().Write(ctx)
+}
+
+// PostSaveScript is what a form runs after saving successfully: it calls every
+// refresh hook its scope collected on the way down (see FormHostBuilder.OnSave),
+// handing each the saved record's id.
+//
+// The form knows nothing about who opened it; a form nobody hosted simply finds
+// an empty list and refreshes nothing.
+func PostSaveScript(id string) string {
+	return fmt.Sprintf("(onSaveCallbacks || []).forEach(f => f(%s))", strconv.Quote(id))
 }
 
 // CloserProvided reports whether the request comes from a form host that already

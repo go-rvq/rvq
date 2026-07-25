@@ -17,6 +17,10 @@ Reference notes for the `presets` admin package. See the package
   DETAIL-EDIT / detailing EDIT flows, the dialog & drawer closer, the re-renders
   on validation errors and list-editor add/remove, and driving the form from your
   own buttons.
+- [Post-save refresh](post-save-refresh.md) — what is refreshed after a
+  successful save (`onSaveCallbacks`): the listing behind a NEW, the detail and
+  the listing that opened it after an EDIT, the detail PAGE and its `<title>`
+  without a reload, and the singleton cases.
 - [Record IDs](record-id.md) — how a model's primary key is encoded into a
   record id, parsed back (`ParseRecordID` / `ParseRecordIDTo`), the supported
   key types (basic kinds, `uuid.UUID`, a `Parse` method, `sql.Scanner`) and the

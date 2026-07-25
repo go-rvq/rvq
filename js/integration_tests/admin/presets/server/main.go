@@ -28,6 +28,8 @@ func main() {
 		handler, err = integration.NewCompositeSeededHandler()
 	case "nestedmodels":
 		handler, err = integration.NewNestedModelsSeededHandler()
+	case "refresh":
+		handler, err = integration.NewRefreshSeededHandler()
 	default:
 		handler, err = integration.NewSeededHandler()
 	}

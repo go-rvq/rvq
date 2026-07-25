@@ -1,3 +1,36 @@
+# TASK — refresh pós-save (LISTING / DETAIL / EDIT / SINGLETON)
+
+Quando um formulário é salvo com sucesso, só o que reflete a mudança é
+atualizado — sem recarregar a página.
+
+- [x] Mecanismo: **`onSaveCallbacks`** desce pelo escopo como `closer`/`form`
+      (provide no `app.ts`, no localScope do `component-by-template`, global
+      property e em todo `web.Plaid()`), e cada FormHost ACRESCENTA seu hook antes
+      de repassar. O save responde com
+      `(onSaveCallbacks || []).forEach(f => f("<id>"))` — nada vai na request.
+      `ParamPostChangeCallback` deixou de ser necessário nesses fluxos.
+- [x] LISTING (página ou diálogo) → NEW → save ⇒ listing recarrega.
+- [x] LISTING → item DETAIL → EDIT → save ⇒ o DETAIL se re-renderiza no próprio
+      portal e o LISTING que o abriu recarrega (só ele: é o hook que estava na
+      lista daquele nível).
+- [x] Regra 1: o DETAIL não depende de quem o abriu — ele se recarrega sozinho,
+      então funciona aberto por qualquer coisa.
+- [x] Regra 2: sem DETAIL, a linha abre o EDIT e o listing recarrega igual.
+- [x] Regra 3: SINGLETON com DETAIL → o save do EDIT re-renderiza o DETAIL; sem
+      DETAIL só existe a página de EDIT, que se re-renderiza.
+- [x] Regra 4: nada recarrega a página. O corpo do DETAIL em página vive no portal
+      `presets_detail_page`; `actions.ReloadDetail` re-renderiza esse portal e
+      devolve `pageTitle`, que o cliente escreve no `<title>`.
+- [x] Testes: `refresh.test.ts` (8, contrato) e `refresh.dom.test.ts` (4, UI real
+      com clique/preenchimento/save) + fixture `integration/refresh_app.go`
+      (Article com detailing, Tag sem detailing, Site singleton+detailing, Pref
+      singleton só edit). Suíte total: 49 pass.
+- [x] Documentado em `admin/presets/docs/post-save-refresh.md` com diagramas
+      (sequência para NEW e para o DETAIL em página, estado para DETAIL→EDIT e
+      para os singletons).
+- [x] `make check` criado (gofmt + build + testes Go que passam + suítes bun) e
+      registrado no CLAUDE.md/README como portão antes do commit.
+
 # FORM HOST (evolução do EditForm/NewForm)
 
 - [x] Conceito do usuário generalizado em `presets.FormHost` (`form_host.go`): a
