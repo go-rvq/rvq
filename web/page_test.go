@@ -122,7 +122,7 @@ func TestFileUpload(t *testing.T) {
 
 	diff := testingutils.PrettyJsonDiff(`
 {
-	"body": "\n\u003ch1\u003eHello\u003c/h1\u003e\n",
+	"body": "\u003ch1\u003eHello\u003c/h1\u003e",
 	"reload": true,
 	"pushState": null
 }
@@ -184,7 +184,7 @@ var eventCases = []struct {
 			return
 		},
 		expectedEventResp: `{
-	"body": "\n\u003cdiv\u003e\n\u003ch1\u003ehello\u003c/h1\u003e\n\u003c/div\u003e\n",
+	"body": "\u003cdiv\u003e\n\t\u003ch1\u003ehello\u003c/h1\u003e\n\u003c/div\u003e",
 	"pushState": null
 }`,
 	},
@@ -280,7 +280,7 @@ var mountCases = []struct {
 		bodyFunc: func(b *multipartestutils.Builder) {
 			b.EventFunc("bookmark")
 		},
-		expected: `{"body":"\n\u003ch1\u003exgb123 bookmarked\u003c/h1\u003e\n","pushState":null}`,
+		expected: `{"body":"\u003ch1\u003exgb123 bookmarked\u003c/h1\u003e","pushState":null}`,
 	},
 }
 

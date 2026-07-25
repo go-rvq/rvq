@@ -12,6 +12,9 @@ BUN ?= bun
 # Pacotes Go com testes que passam.
 GO_TEST_PKGS := \
 	./web/multipartestutils/... \
+	./web/tag \
+	./x/i18n \
+	./x/packages/db-tools \
 	./admin/presets \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
@@ -34,6 +37,7 @@ GO_BUILD_PKGS := \
 	./admin/presets/integration \
 	./admin/packages/... \
 	./thirdpart/... \
+	./x/... \
 	./js/integration_tests/...
 
 # Suítes de integração de UI (bun). Cada uma roda no seu diretório, onde está o

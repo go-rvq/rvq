@@ -37,7 +37,7 @@ func TestInterval_Group(t *testing.T) {
 
 		do = func(i *Persistence, times []time.Time) []time.Time {
 			g, other := i.Group(times)
-			g.MustLast()
+			g.MustLast(func(t []time.Time) {})
 
 			printGroups("days", "2006-01-02", g.Days)
 			printGroups("wheeks", "2006-01-02 (Mon)", g.Weeks)

@@ -35,12 +35,12 @@ func TestLanguage(t *testing.T) {
 		RegisterForModule(language.English, mediaLibraryKey, Messages_en_US)
 
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		msg := i18n.MustGetModuleMessages(r, mediaLibraryKey, Messages_en_US).(*Messages)
+		msg := i18n.MustGetModuleMessages(r.Context(), mediaLibraryKey, Messages_en_US).(*Messages)
 		_, _ = fmt.Fprintln(w, "")
 		_, _ = fmt.Fprintln(w, msg.Update)
-		_, _ = fmt.Fprintln(w, i18n.T(r, mediaLibraryKey, "Welcome Home &!@*#&^*!@^#*(!@ Felix"))
-		_, _ = fmt.Fprintln(w, i18n.T(r, mediaLibraryKey, "Welcome to QOR5, {name}", "{name}", "Felix"))
-		_, _ = fmt.Fprintln(w, i18n.PT(r, mediaLibraryKey, "Customer", "Name"))
+		_, _ = fmt.Fprintln(w, i18n.T(r.Context(), mediaLibraryKey, "Welcome Home &!@*#&^*!@^#*(!@ Felix"))
+		_, _ = fmt.Fprintln(w, i18n.T(r.Context(), mediaLibraryKey, "Welcome to QOR5, {name}", "{name}", "Felix"))
+		_, _ = fmt.Fprintln(w, i18n.PT(r.Context(), mediaLibraryKey, "Customer", "Name"))
 	})
 
 	recorder := httptest.NewRecorder()

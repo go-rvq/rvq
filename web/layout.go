@@ -25,9 +25,13 @@ func defaultLayoutFunc(in PageFunc) PageFunc {
 
 		localeSetter.lang = ctx.Injector.lang
 
+		// a page func may leave the body unset (an event-only or empty page):
+		// marshalling a nil component dereferences it
 		var body []byte
-		if body, err = h.Marshal(r.Body, ContextWithEventContext(ctx.Context(), ctx)); err != nil {
-			return
+		if r.Body != nil {
+			if body, err = h.Marshal(r.Body, ContextWithEventContext(ctx.Context(), ctx)); err != nil {
+				return
+			}
 		}
 
 		r.Body = h.HTMLComponents{

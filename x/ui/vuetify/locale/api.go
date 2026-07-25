@@ -62,23 +62,23 @@ type Range struct {
 	Title  string `json:"title"`
 	Header string `json:"header"`
 }
-type Input struct {
+type DatePickerInput struct {
 	Placeholder string `json:"placeholder"`
 }
 type DatePicker struct {
-	ItemsSelected string `json:"itemsSelected"`
-	Range         Range  `json:"range"`
-	Title         string `json:"title"`
-	Header        string `json:"header"`
-	Input         Input  `json:"input"`
+	ItemsSelected string          `json:"itemsSelected"`
+	Range         Range           `json:"range"`
+	Title         string          `json:"title"`
+	Header        string          `json:"header"`
+	Input         DatePickerInput `json:"input"`
 }
-type AriaLabel struct {
+type CarouselAriaLabel struct {
 	Delimiter string `json:"delimiter"`
 }
 type Carousel struct {
-	Prev      string    `json:"prev"`
-	Next      string    `json:"next"`
-	AriaLabel AriaLabel `json:"ariaLabel"`
+	Prev      string            `json:"prev"`
+	Next      string            `json:"next"`
+	AriaLabel CarouselAriaLabel `json:"ariaLabel"`
 }
 type Calendar struct {
 	MoreEvents string `json:"moreEvents"`
@@ -104,7 +104,7 @@ type TimePicker struct {
 	Pm    string `json:"pm"`
 	Title string `json:"title"`
 }
-type AriaLabel struct {
+type PaginationAriaLabel struct {
 	Root        string `json:"root"`
 	Next        string `json:"next"`
 	Previous    string `json:"previous"`
@@ -114,17 +114,17 @@ type AriaLabel struct {
 	Last        string `json:"last"`
 }
 type Pagination struct {
-	AriaLabel AriaLabel `json:"ariaLabel"`
+	AriaLabel PaginationAriaLabel `json:"ariaLabel"`
 }
 type Stepper struct {
 	Next string `json:"next"`
 	Prev string `json:"prev"`
 }
-type AriaLabel struct {
+type RatingAriaLabel struct {
 	Item string `json:"item"`
 }
 type Rating struct {
-	AriaLabel AriaLabel `json:"ariaLabel"`
+	AriaLabel RatingAriaLabel `json:"ariaLabel"`
 }
 type InfiniteScroll struct {
 	LoadMore string `json:"loadMore"`

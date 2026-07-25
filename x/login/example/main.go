@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	. "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/twitter"
@@ -51,7 +52,7 @@ func main() {
 	user.EncryptPassword()
 	db.Create(user)
 
-	b := login.New().
+	b := login.New(i18n.New()).
 		DB(db).
 		UserModel(&User{}).
 		Secret("123").
