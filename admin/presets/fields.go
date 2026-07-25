@@ -872,14 +872,21 @@ func (b *FieldsBuilder) NewFieldWithName(name string) (r *FieldBuilder) {
 	}
 
 	fType := reflectutils.GetType(b.model, name)
+
+	// A field of the model still needs the defaults registered for its type —
+	// that is how l10n's Locale gets its chips column, for one. Without them it
+	// has no component at all and renders nothing.
+	//
+	// A VIRTUAL field (no such field on the model) gets none: whatever mounts it
+	// — a section, the page builder's preview card — provides the component, and
+	// those check whether one is already set before installing theirs.
 	if fType == nil {
-		fType = reflect.TypeOf("")
+		r.rt = reflect.TypeOf("")
+		return
 	}
+
 	r.rt = fType
 
-	// A field created on the fly still needs the defaults registered for its
-	// type — that is how l10n's Locale gets its chips column, for one. Without
-	// them it has no component at all and renders nothing.
 	if b.defaults != nil {
 		ft := b.defaults.fieldTypeByTypeOrCreate(fType)
 		if ft.compFunc != nil {

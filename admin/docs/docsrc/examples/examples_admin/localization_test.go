@@ -50,7 +50,9 @@ func TestLocalization(t *testing.T) {
 				l10nDataWithChina.TruncatePut(SqlDB)
 				return httptest.NewRequest("GET", "/l10n-models?locale=China", nil)
 			},
-			ExpectPageBodyContainsInOrder: []string{"中文标题", `<v-chip color='success' :variant='"flat"' :label='true' :size='"small"'>China</v-chip>`},
+			// a page's body travels as the escaped payload of the app portal, so the
+			// markup is matched the way it is written there
+			ExpectPageBodyContainsInOrder: []string{"中文标题", `v-chip color=&#39;success&#39; :variant=&#39;\"flat\"&#39; :label=&#39;true&#39; :size=&#39;\"small\"&#39;\u003eChina`},
 		},
 		{
 			Name:  "Localize dialog",
@@ -121,8 +123,8 @@ func TestLocalization(t *testing.T) {
 				l10nData.TruncatePut(SqlDB)
 				req := multipartestutils.NewMultipartBuilder().
 					PageURL("/l10n-models?__execute_event__=l10n_DoLocalizeEvent&id=1_International&localize_from=International").
-					AddField("localize_to", "China").
-					AddField("localize_to", "Japan").
+					AddField("LocalizeTo", "China").
+					AddField("LocalizeTo", "Japan").
 					BuildEventFuncRequest()
 				return req
 			},

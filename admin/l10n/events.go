@@ -235,15 +235,19 @@ func DoLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *web.E
 		toObj := mb.NewModel()
 		mid.SetTo(toObj)
 
-		if err = reflectutils.Set(toObj, "LocaleCode", toLocale); err != nil {
-			return
-		}
-
 		me.SetObjectFields(&presets.FieldsSetterOptions{SkipPermVerify: true}, fromObj, toObj, &presets.FieldContext{
 			ToComponentOptions: &presets.ToComponentOptions{},
 			Obj:                fromObj,
 			ModelInfo:          mb.Info(),
 		}, false, presets.ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R), ctx)
+
+		// after copying the record's fields: SetObjectFields brings the SOURCE
+		// locale along with everything else, and the copy has to carry the target
+		// one — it is part of the key, so writing it first meant inserting the
+		// source's row again.
+		if err = reflectutils.Set(toObj, "LocaleCode", toLocale); err != nil {
+			return
+		}
 
 		if vErr := me.Validators.Validate(toObj, presets.FieldModeStack{presets.EDIT}, ctx); vErr.HaveErrors() {
 			err = errors.New(vErr.Error())
