@@ -147,6 +147,20 @@ Estado (validar no navegador antes de publicar):
 - [ ] `pagebuilder` tem erro de build PRÉ-EXISTENTE (assinatura
       `defaultTemplateInstall`/`categoryInstall`), não relacionado a este refactor.
 
+# Avaliar Manualmente
+
+- [ ] **Título do painel no overlay `Content`.** `OverlayMode.Overlayed()` é só
+      dialog/drawer, então um form pedido com `overlay=Content` usa
+      `BuildPage()`: o título vai para o `PageTitle` da página, que não existe
+      numa resposta de portal. O painel direito do pagebuilder chega sem título.
+      Decidir se o `Content` deve carregá-lo e em que forma (card com toolbar,
+      ou container com cabeçalho) — é desenho de UI, não porte.
+      Casos que cobram isso: `examples_admin` →
+      `TestPageBuilderCampaign/{Campaign_My_Contents,CampaignContents_edit}`,
+      que esperam "Editing MyContent 1" / "Editing CampaignContent 1" no portal.
+      O conteúdo do form já chega correto (inclusive o autosave com
+      `@change-debounced`); falta só o título.
+
 # Nao prioritárias
 - [ ] crie o componente /mnt/MPS-WORK/work/.goenv/ipc-vicosa/src/github.com/go-rvq/rvq/js/vuetify/src/components/JSONInput.vsx com API em /mnt/MPS-WORK/work/.goenv/ipc-vicosa/src/github.com/go-rvq/rvq/x/ui/vuetify/json-input.go
   (como number-input.go). Se este componente for `:readonly=true`, ele renderiza o conteudo em codemirror-json. ele adiciona em nested para array e object. quado seu valor é vazio, ele tem flag para iniciar com `{}` ou `[]`, mas o atributo `json-type=ARRAY|MAP` tiver definido, ele já inicia pelo type e não permite o usuario alterar o tipo do objeto raiz.
