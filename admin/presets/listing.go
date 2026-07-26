@@ -112,7 +112,7 @@ func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBu
 }
 
 func (mb *ModelBuilder) newListing() (lb *ListingBuilder) {
-	mb.listing = NewListingBuilder(mb, *mb.NewFieldsBuilder(mb.listFieldBuilders.HasMode(LIST)...))
+	mb.listing = NewListingBuilder(mb, *mb.NewFieldsBuilder(LIST, mb.listFieldBuilders.HasMode(LIST)...))
 	mb.listing.DeleteFunc(mb.Deleter)
 	mb.listing.SearchFunc(mb.Searcher)
 

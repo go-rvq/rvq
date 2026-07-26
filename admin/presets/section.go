@@ -78,9 +78,9 @@ func (d *SectionsBuilder) appendNewSection(name string) (r *SectionBuilder) {
 	// other builder does (see ModelBuilder.Editing / Detailing): Only() picks
 	// from the fields a builder already has, so starting empty made
 	// Section(…).Editing("Name", …) select nothing and the section render blank.
-	r.editingFB = *d.mb.NewFieldsBuilder(d.mb.writeFieldBuilders.HasMode(WRITE)...)
+	r.editingFB = *d.mb.NewFieldsBuilder(WRITE, d.mb.writeFieldBuilders.HasMode(WRITE)...)
 	r.editingFB.defaults = d.mb.editing.defaults
-	r.viewingFB = *d.mb.NewFieldsBuilder(d.mb.detailFieldBuilders.HasMode(DETAIL)...)
+	r.viewingFB = *d.mb.NewFieldsBuilder(DETAIL, d.mb.detailFieldBuilders.HasMode(DETAIL)...)
 	r.viewingFB.defaults = d.mb.p.detailFieldDefaults
 	r.saver = r.DefaultSaveFunc
 

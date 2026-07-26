@@ -54,7 +54,7 @@ func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder
 func (mb *ModelBuilder) newDetailing() (r *DetailingBuilder) {
 	mb.detailing = NewDetailingBuilder(mb, SectionsBuilder{
 		mb:            mb,
-		FieldsBuilder: *mb.NewFieldsBuilder(mb.detailFieldBuilders.HasMode(DETAIL)...),
+		FieldsBuilder: *mb.NewFieldsBuilder(DETAIL, mb.detailFieldBuilders.HasMode(DETAIL)...),
 	})
 
 	mb.detailing.FetchFunc(mb.Fetcher)

@@ -52,7 +52,7 @@ func NewEditingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *EditingBu
 }
 
 func (mb *ModelBuilder) newEditing() (r *EditingBuilder) {
-	mb.editing = NewEditingBuilder(mb, *mb.NewFieldsBuilder(mb.writeFieldBuilders.HasMode(LIST)...))
+	mb.editing = NewEditingBuilder(mb, *mb.NewFieldsBuilder(WRITE, mb.writeFieldBuilders.HasMode(WRITE)...))
 
 	mb.editing.FetchFunc(mb.Fetcher)
 	mb.editing.SaveFunc(mb.Saver)

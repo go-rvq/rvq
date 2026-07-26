@@ -441,10 +441,14 @@ func (mb *ModelBuilder) NewModelSlice() (r interface{}) {
 	return reflect.New(reflect.SliceOf(mb.modelType)).Interface()
 }
 
-func (mb *ModelBuilder) NewFieldsBuilder(fields ...*FieldBuilder) *FieldsBuilder {
+// NewFieldsBuilder builds a fields builder for this model, taking the defaults
+// of the given mode — they are what a field created later (see
+// FieldsBuilder.NewFieldWithName) is built from, so an editing builder must not
+// hand out list components.
+func (mb *ModelBuilder) NewFieldsBuilder(mode FieldMode, fields ...*FieldBuilder) *FieldsBuilder {
 	return &FieldsBuilder{
 		model:    mb.model,
-		defaults: mb.p.listFieldDefaults,
+		defaults: mb.p.FieldDefaults(mode),
 		fields:   fields,
 	}
 }

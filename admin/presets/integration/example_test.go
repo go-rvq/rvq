@@ -79,7 +79,8 @@ func TestExample(t *testing.T) {
 				emptyCustomerData.TruncatePut(dbr)
 				return NewMultipartBuilder().
 					PageURL("/admin/my_customers").
-					EventFunc(actions.Update).
+					// creating is its own event; Update with no id fails
+					EventFunc(actions.Create).
 					AddField("Bool1", "true").
 					AddField("ID", "").
 					AddField("Int1", "42").
@@ -106,12 +107,14 @@ func TestExample(t *testing.T) {
 				return NewMultipartBuilder().
 					PageURL("/admin/credit-cards").
 					EventFunc(actions.New).
+					// a form with no overlay answers in the body; these read a portal
+					Query(presets.ParamOverlay, actions.Dialog.String()).
 					BuildEventFuncRequest()
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				partial := er.UpdatePortals[0].Body
-				if strings.Index(partial, `v-model='form["Number"]' v-assign='[form, {"Number":""}]'`) < 0 {
-					t.Error(`v-model='form["Number"]' v-assign='[form, {"Number":""}]'`, partial)
+				if strings.Index(partial, `v-model='form["Number"]' v-assign='[form, {"Number": ""}]'`) < 0 {
+					t.Error(`v-model='form["Number"]' v-assign='[form, {"Number": ""}]'`, partial)
 				}
 				return
 			},
@@ -148,6 +151,7 @@ func TestExample(t *testing.T) {
 				productData.TruncatePut(dbr)
 				return NewMultipartBuilder().
 					PageURL("/admin/products").
+					Query(presets.ParamOverlay, actions.Dialog.String()).
 					EventFunc(actions.Edit).
 					Query(presets.ParamID, "12").
 					BuildEventFuncRequest()
