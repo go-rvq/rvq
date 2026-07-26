@@ -17,6 +17,7 @@ GO_TEST_PKGS := \
 	./x/perm \
 	./x/packages/db-tools \
 	./admin/presets \
+	./admin/presets/integration \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
 	./admin/activity/... \
@@ -28,9 +29,8 @@ GO_TEST_PKGS := \
 	./admin/packages/... \
 	./thirdpart/...
 
-# Pacotes que precisam apenas compilar: sem testes próprios, ou com testes ainda
-# presos à API antiga do fork (admin/presets/integration), mais as fixtures dos
-# testes de integração.
+# Pacotes que precisam apenas compilar: sem testes próprios, mais as fixtures
+# dos testes de integração.
 GO_BUILD_PKGS := \
 	./web/... \
 	./admin/l10n/... \

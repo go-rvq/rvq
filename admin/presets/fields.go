@@ -464,24 +464,30 @@ func (b *FieldsBuilder) Unmarshal(opts *FieldsSetterOptions, toObj interface{}, 
 	// don't panic for fields that set in SetterFunc
 	_ = ctx.UnmarshalForm(fromObj)
 
-	if err := info.mb.BeforeFormUnmarshallHandlers.Handler(toObj, ctx); err != nil {
-		vErr.GlobalError(err.Error())
-		return
+	// a standalone FieldsBuilder has no model behind it (info is nil), and then
+	// there are no model handlers to run.
+	if info != nil {
+		if err := info.mb.BeforeFormUnmarshallHandlers.Handler(toObj, ctx); err != nil {
+			vErr.GlobalError(err.Error())
+			return
+		}
 	}
 
 	modifiedIndexes := ContextModifiedIndexesBuilder(ctx).FromHidden(ctx.R)
 
 	vErr = b.SetObjectFields(opts, fromObj, toObj, &FieldContext{
 		ToComponentOptions: &ToComponentOptions{
-			SkipPermVerify: opts.SkipPermVerify,
+			SkipPermVerify: opts.SkipsPermVerify(),
 		},
 		EventContext: ctx,
 		Obj:          fromObj,
 		ModelInfo:    info,
 	}, removeDeletedAndSort, modifiedIndexes, ctx)
 
-	if err := info.mb.PostFormUnmarshallHandlers.Handler(toObj, ctx); err != nil {
-		vErr.GlobalError(err.Error())
+	if info != nil {
+		if err := info.mb.PostFormUnmarshallHandlers.Handler(toObj, ctx); err != nil {
+			vErr.GlobalError(err.Error())
+		}
 	}
 	return
 }
@@ -505,6 +511,11 @@ func (b *FieldsBuilder) IsAllowed(r *http.Request, info *ModelInfo, obj interfac
 	return true
 }
 
+// SkipsPermVerify is nil-safe: these options are optional at most call sites.
+func (o *FieldsSetterOptions) SkipsPermVerify() bool {
+	return o != nil && o.SkipPermVerify
+}
+
 type FieldsSetterOptions struct {
 	SkipPermVerify bool
 }
@@ -521,7 +532,7 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 		}
 
 		info := parent.ModelInfo
-		if !opts.SkipPermVerify && info != nil {
+		if !opts.SkipsPermVerify() && info != nil {
 			if !b.IsAllowed(ctx.R, info, toObj, f.name, PermCreate, PermUpdate) {
 				continue
 			}
@@ -531,6 +542,10 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 			switch f.rt.Kind() {
 			case reflect.Slice:
 				vErr.Merge(b.setWithChildFromObjs(opts, fromObj, parent, f, info, modifiedIndexes, toObj, removeDeletedAndSort, ctx))
+				// setWithChildFromObjs only sees the items the form submitted:
+				// the deleted ones it did not send (and the new order) still
+				// have to be applied to the slice itself.
+				b.setToObjNilOrDelete(toObj, parent.ChildFieldFormKey(f.name), f, modifiedIndexes, removeDeletedAndSort)
 				continue
 			default:
 				rt := reflectutils.GetType(toObj, f.name)
@@ -556,7 +571,7 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 				}
 				continue
 			}
-		} else if !opts.SkipPermVerify && info != nil {
+		} else if !opts.SkipsPermVerify() && info != nil {
 			if !b.IsAllowed(ctx.R, info, toObj, f.name, PermCreate, PermUpdate) {
 				continue
 			}
@@ -922,6 +937,17 @@ func (b *FieldsBuilder) Except(patterns ...string) (r *FieldsBuilder) {
 		}
 		r.appendFieldAfterClone(b, f.name)
 	}
+
+	// the layout decides what is rendered, so an excluded name has to leave it
+	// too — otherwise the field is looked up again at render time (and created
+	// from the defaults if it is gone), and the exclusion has no effect.
+	if len(r.Layout) > 0 {
+		if l, err := r.Layout.Filter(func(_ FieldLayoutEntryType, name string) bool {
+			return !hasMatched(patterns, name)
+		}); err == nil {
+			r.Layout = l
+		}
+	}
 	return
 }
 
@@ -953,6 +979,11 @@ func (b *FieldsBuilder) CurrentLayout() (layout FieldsLayout) {
 		}
 	}
 	return
+}
+
+// SkipsPermVerify is nil-safe: these options are optional at most call sites.
+func (o *ToComponentOptions) SkipsPermVerify() bool {
+	return o != nil && o.SkipPermVerify
 }
 
 type ToComponentOptions struct {
@@ -1185,7 +1216,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 	fctx.Mode = mode
 	fctx.Errors = vErr.GetRemoveFieldErrors(fctx.FormKey)
 
-	if !opts.SkipPermVerify && info != nil {
+	if !opts.SkipsPermVerify() && info != nil {
 		var (
 			fqn  = fctx.Path.NoIndex().Fqn()
 			perm = PermGet

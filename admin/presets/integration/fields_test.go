@@ -6,6 +6,8 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,6 +76,11 @@ func TestFields(t *testing.T) {
 	mb := pb.Model(&User{})
 
 	ftRead := NewFieldDefaults(LIST)
+	// LIST has no built-in for time.Time: how a date shows in a table is the
+	// application's call, so the test configures it like an application would.
+	ftRead.FieldType(time.Time{}).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Td(h.Text(field.Value().(time.Time).Local().Format("2006-01-02 15:04:05")))
+	})
 
 	type testCase struct {
 		name           string
@@ -108,19 +115,13 @@ func TestFields(t *testing.T) {
 					ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
-<v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1":"2"}]' label='整数1' :disabled='false'></v-text-field>
-
-<v-text-field type='number' :variant='"underlined"' v-model='form["Float1"]' v-assign='[form, {"Float1":"23.1"}]' label='Float1' :disabled='false'></v-text-field>
-
-<v-text-field type='text' :variant='"underlined"' v-model='form["String1"]' v-assign='[form, {"String1":"hello"}]' label='String1' :error-messages='["too small"]' :disabled='false'></v-text-field>
-
-<v-checkbox v-model='form["Bool1"]' v-assign='[form, {"Bool1":true}]' label='Bool1' :disabled='false'></v-checkbox>
-
-<div v-model='form["Time1"]' v-assign='[form, {"Time1":"2019-08-29"}]' class='time-control'></div>
-
-<v-text-field type='text' :variant='"underlined"' v-model='form["Company.Name"]' v-assign='[form, {"Company.Name":"Company1"}]' label='公司名' :disabled='false'></v-text-field>
-
-<div v-model='form["Company.FoundedAt"]' v-assign='[form, {"Company.FoundedAt":"2019-08-29"}]' class='time-control'></div>
+<v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1": "2"}]' label='整数1' :disabled='false'></v-text-field>
+<v-text-field type='number' :variant='"underlined"' v-model='form["Float1"]' v-assign='[form, {"Float1": "23.1"}]' label='Float1' :disabled='false'></v-text-field>
+<v-text-field type='text' :variant='"underlined"' v-model='form["String1"]' v-assign='[form, {"String1": "hello"}]' label='String1' :error-messages='["too small"]' :disabled='false'></v-text-field>
+<v-checkbox v-model='form["Bool1"]' v-assign='[form, {"Bool1": true}]' :density='"compact"' label='Bool1' :disabled='false'></v-checkbox>
+<div v-model='form["Time1"]' v-assign='[form, {"Time1": "2019-08-29"}]' class='time-control'></div>
+<v-text-field type='text' :variant='"underlined"' v-model='form["Company.Name"]' v-assign='[form, {"Company.Name": "Company1"}]' label='公司名' :disabled='false'></v-text-field>
+<div v-model='form["Company.FoundedAt"]' v-assign='[form, {"Company.FoundedAt": "2019-08-29"}]' class='time-control'></div>
 `,
 		},
 
@@ -132,14 +133,10 @@ func TestFields(t *testing.T) {
 					ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
 			expect: `
-<v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1":"2"}]' label='Int1' :disabled='false'></v-text-field>
-
-<v-text-field type='number' :variant='"underlined"' v-model='form["Float1"]' v-assign='[form, {"Float1":"23.1"}]' label='Float1' :disabled='false'></v-text-field>
-
-<v-text-field type='text' :variant='"underlined"' v-model='form["String1"]' v-assign='[form, {"String1":"hello"}]' label='String1' :error-messages='["too small"]' :disabled='false'></v-text-field>
-
-<div v-model='form["Time1"]' v-assign='[form, {"Time1":"2019-08-29"}]' class='time-control'></div>
-`,
+<v-text-field type='number' :variant='"underlined"' v-model='form["Int1"]' v-assign='[form, {"Int1": "2"}]' label='Int1' :disabled='false'></v-text-field>
+<v-text-field type='number' :variant='"underlined"' v-model='form["Float1"]' v-assign='[form, {"Float1": "23.1"}]' label='Float1' :disabled='false'></v-text-field>
+<v-text-field type='text' :variant='"underlined"' v-model='form["String1"]' v-assign='[form, {"String1": "hello"}]' label='String1' :error-messages='["too small"]' :disabled='false'></v-text-field>
+<div v-model='form["Time1"]' v-assign='[form, {"Time1": "2019-08-29"}]' class='time-control'></div>`,
 		},
 
 		{
@@ -148,15 +145,15 @@ func TestFields(t *testing.T) {
 				return ftRead.InspectFields(&User{}).
 					Except("Float*").ToComponent(nil, mb.Info(), user, FieldModeStack{LIST}, ctx)
 			},
-			expect: `
+			expect: fmt.Sprintf(`
 <td>1</td>
-
 <td>2</td>
-
 <td>hello</td>
-
-<td>true</td>
-`,
+<td>
+	<v-icon :icon='"mdi-check"'></v-icon>
+</td>
+<td>%s</td>
+`, time1LocalFormat),
 		},
 
 		{
@@ -167,7 +164,6 @@ func TestFields(t *testing.T) {
 			},
 			expect: fmt.Sprintf(`
 <td>%s</td>
-
 <td>2</td>
 `, time1LocalFormat),
 		},
@@ -188,6 +184,12 @@ func TestFields(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			// the render consumes the flash, so each case gets a fresh one —
+			// otherwise only the first case rendering String1 sees the error.
+			vd := &web.ValidationErrors{}
+			vd.FieldError("String1", "too small")
+			ctx.Flash = vd
+
 			output := h.MustString(c.toComponentFun(), web.ContextWithEventContext(context.TODO(), ctx))
 			diff := testingutils.PrettyJsonDiff(c.expect, output)
 			if len(diff) > 0 {
@@ -234,15 +236,15 @@ func addressHTML(v Address, formKeyPrefix string) string {
 <label class='v-label theme--light text-caption'>Address</label>
 
 <v-card :variant='"outlined"' class='mx-0 mt-1 mb-4 px-4 pb-0 pt-4'>
-<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.City"]' v-assign='[form, {"%sAddress.City":"%s"}]' label='City' :disabled='false'></v-text-field>
+<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.City"]' v-assign='[form, {"%sAddress.City": "%s"}]' label='City' :disabled='false'></v-text-field>
 
 <div>
 <label class='v-label theme--light text-caption'>Detail</label>
 
 <v-card :variant='"outlined"' class='mx-0 mt-1 mb-4 px-4 pb-0 pt-4'>
-<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.Detail.Address1"]' v-assign='[form, {"%sAddress.Detail.Address1":"%s"}]' label='Address1' :disabled='false'></v-text-field>
+<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.Detail.Address1"]' v-assign='[form, {"%sAddress.Detail.Address1": "%s"}]' label='Address1' :disabled='false'></v-text-field>
 
-<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.Detail.Address2"]' v-assign='[form, {"%sAddress.Detail.Address2":"%s"}]' label='Address2' :disabled='false'></v-text-field>
+<v-text-field type='text' :variant='"underlined"' v-model='form["%sAddress.Detail.Address2"]' v-assign='[form, {"%sAddress.Detail.Address2": "%s"}]' label='Address2' :disabled='false'></v-text-field>
 </v-card>
 </div>
 </v-card>
@@ -253,20 +255,37 @@ func addressHTML(v Address, formKeyPrefix string) string {
 	)
 }
 
+// tagStream drops the whitespace BETWEEN tags and puts one tag per line: the
+// renderer indents its output (and the indentation of a nested block depends on
+// how deep it sits), while these fixtures only describe which tags come out and
+// in which order.
+var betweenTags = regexp.MustCompile(`>\s+<`)
+
+func tagStream(s string) string {
+	return strings.ReplaceAll(betweenTags.ReplaceAllString(strings.TrimSpace(s), "><"), "><", ">\n<")
+}
+
 func TestFieldsBuilder(t *testing.T) {
 	pb := New(i18n.New())
 	defaults := NewFieldDefaults(WRITE)
 
+	// nested builders are always mounted on a model (that is how the framework
+	// resolves the child's info), so the test registers one for each struct.
+	addressMB := pb.Model(&Address{})
+	addressDetailMB := pb.Model(&AddressDetail{})
+	employeeMB := pb.Model(&Employee{})
+	deptMB := pb.Model(&Department{})
+
 	addressFb := NewFieldsBuilder(pb).Model(&Address{}).Defaults(defaults).Only("City", "Detail")
 	addressDetailFb := NewFieldsBuilder(pb).Model(&AddressDetail{}).Defaults(defaults).Only("Address1", "Address2")
-	addressFb.Field("Detail").Nested(NestedStruct(nil, addressDetailFb))
+	addressFb.Field("Detail").Nested(NestedStruct(addressDetailMB, addressDetailFb))
 
 	employeeFbs := NewFieldsBuilder(pb).Model(&Employee{}).Defaults(defaults)
 	employeeFbs.Field("Number").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Input(field.FormKey).Type("text").Value(field.StringValue())
 	})
 
-	employeeFbs.Field("Address").Nested(NestedStruct(nil, addressFb))
+	employeeFbs.Field("Address").Nested(NestedStruct(addressMB, addressFb))
 
 	employeeFbs.Field("FakeNumber").ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Input(field.FormKey).Type("text").Value(fmt.Sprintf("900%v", reflectutils.MustGet(field.Obj, "Number")))
@@ -290,7 +309,7 @@ func TestFieldsBuilder(t *testing.T) {
 		return
 	})
 
-	deptFbs.Field("Employees").Nested(NestedSlice(nil, employeeFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	deptFbs.Field("Employees").Nested(NestedSlice(employeeMB, employeeFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(
 			field.Nested.FieldsBuilder().ToComponentForEach(nil, field, field.Obj.(*Department).Employees, field.Mode, ctx, nil),
 			h.Button("Add Employee"),
@@ -306,7 +325,7 @@ func TestFieldsBuilder(t *testing.T) {
 	// 	return
 	// })
 
-	fbs.Field("Departments").Nested(NestedSlice(nil, deptFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	fbs.Field("Departments").Nested(NestedSlice(deptMB, deptFbs)).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		// [0].Departments
 		return h.Div(
 			field.Nested.FieldsBuilder().ToComponentForEach(nil, field, field.Obj.(*Org).Departments, field.Mode, ctx, nil),
@@ -314,7 +333,7 @@ func TestFieldsBuilder(t *testing.T) {
 		).Class("departments")
 	})
 
-	fbs.Field("Address").Nested(NestedStruct(nil, addressFb))
+	fbs.Field("Address").Nested(NestedStruct(addressMB, addressFb))
 
 	fbs.Field("PeopleCount").SetterFunc(func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 		reflectutils.Set(obj, field.Name, ctx.R.FormValue(field.FormKey))
@@ -363,7 +382,7 @@ func TestFieldsBuilder(t *testing.T) {
 			},
 
 			expectedHTML: fmt.Sprintf(`
-<input type='hidden' v-model='form["__Deleted.Departments[0].Employees"]' v-assign='[form, {"__Deleted.Departments[0].Employees":"1,5"}]'>
+<input type='hidden' v-model='form["__Deleted.Departments[0].Employees"]' v-assign='[form, {"__Deleted.Departments[0].Employees": "1,5"}]'>
 
 <input name='Name' type='text' value='Name 1'>
 
@@ -409,7 +428,7 @@ func TestFieldsBuilder(t *testing.T) {
 
 %s
 
-<v-text-field type='number' :variant='"underlined"' v-model='form["PeopleCount"]' v-assign='[form, {"PeopleCount":"0"}]' label='People Count' :disabled='false'></v-text-field>
+<v-text-field type='number' :variant='"underlined"' v-model='form["PeopleCount"]' v-assign='[form, {"PeopleCount": "0"}]' label='People Count' :disabled='false'></v-text-field>
 `,
 				addressHTML(Address{}, "Departments[0].Employees[0]."),
 				addressHTML(Address{}, "Departments[0].Employees[2]."),
@@ -455,9 +474,9 @@ func TestFieldsBuilder(t *testing.T) {
 			},
 
 			expectedHTML: fmt.Sprintf(`
-<input type='hidden' v-model='form["__Deleted.Departments[0].Employees"]' v-assign='[form, {"__Deleted.Departments[0].Employees":"1"}]'>
+<input type='hidden' v-model='form["__Deleted.Departments[0].Employees"]' v-assign='[form, {"__Deleted.Departments[0].Employees": "1"}]'>
 
-<input type='hidden' v-model='form["__Sorted.Departments[0].Employees"]' v-assign='[form, {"__Sorted.Departments[0].Employees":"2,0,3,6"}]'>
+<input type='hidden' v-model='form["__Sorted.Departments[0].Employees"]' v-assign='[form, {"__Sorted.Departments[0].Employees": "2,0,3,6"}]'>
 
 <input name='Name' type='text' value='Name 1'>
 
@@ -515,7 +534,7 @@ func TestFieldsBuilder(t *testing.T) {
 
 %s
 
-<v-text-field type='number' :variant='"underlined"' v-model='form["PeopleCount"]' v-assign='[form, {"PeopleCount":"0"}]' label='People Count' :disabled='false'></v-text-field>
+<v-text-field type='number' :variant='"underlined"' v-model='form["PeopleCount"]' v-assign='[form, {"PeopleCount": "0"}]' label='People Count' :disabled='false'></v-text-field>
 `,
 				addressHTML(Address{}, "Departments[0].Employees[2]."),
 				addressHTML(Address{}, "Departments[0].Employees[0]."),
@@ -537,7 +556,7 @@ func TestFieldsBuilder(t *testing.T) {
 			result := fbs.ToComponent(nil, nil, c.obj, FieldModeStack{WRITE}, ctx)
 			actual1 := h.MustString(result, context.TODO())
 
-			diff := testingutils.PrettyJsonDiff(c.expectedHTML, actual1)
+			diff := testingutils.PrettyJsonDiff(tagStream(c.expectedHTML), tagStream(actual1))
 			if diff != "" {
 				t.Error(diff)
 			}

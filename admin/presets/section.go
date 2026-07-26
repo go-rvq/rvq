@@ -727,11 +727,27 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 		ctx2 := &web.EventContext{R: new(http.Request)}
 		ctx2.R.MultipartForm = newForm
 
+		// a section saves the record it is mounted on, so only the keys its own
+		// form submitted may be applied — everything else on the record (other
+		// sections included) has to survive untouched.
+		submitted := func(name string) bool {
+			for k := range newForm.Value {
+				if k == name || strings.HasPrefix(k, name+".") {
+					return true
+				}
+			}
+			return false
+		}
+
 		_ = ctx2.UnmarshalForm(formObj)
 		for _, f := range b.editingFB.fields {
 			name := f.name
 			mb := b.father.mb
 			info := mb.modelInfo
+
+			if !submitted(name) {
+				continue
+			}
 
 			if mb.permissioner.ReqCreator(ctx.R).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() && mb.permissioner.ReqObjectUpdater(ctx.R, formObj).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() {
 				continue

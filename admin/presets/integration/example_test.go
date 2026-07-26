@@ -126,7 +126,7 @@ func TestExample(t *testing.T) {
 				creditCardData.TruncatePut(dbr)
 				return NewMultipartBuilder().
 					PageURL("/admin/credit-cards").
-					EventFunc(actions.Update).
+					EventFunc(actions.Create).
 					Query("customerID", "11").
 					AddField("Number", "12345678").
 					BuildEventFuncRequest()
@@ -158,8 +158,8 @@ func TestExample(t *testing.T) {
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				partial := er.UpdatePortals[0].Body
-				if strings.Index(partial, `v-model='form["OwnerName"]' v-assign='[form, {"OwnerName":""}]'`) < 0 {
-					t.Error(`can't find v-model='form["OwnerName"]' v-assign='[form, {"OwnerName":""}]'`, partial)
+				if strings.Index(partial, `v-model='form["OwnerName"]' v-assign='[form, {"OwnerName": ""}]'`) < 0 {
+					t.Error(`can't find v-model='form["OwnerName"]' v-assign='[form, {"OwnerName": ""}]'`, partial)
 				}
 				return
 			},
@@ -203,8 +203,8 @@ func TestExample(t *testing.T) {
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				partial := er.UpdatePortals[0].Body
-				if strings.Index(partial, `v-model='form["Agree"]' v-assign='[form, {"Agree":""}]'`) < 0 {
-					t.Error(`can't find v-model='form["Agree"]' v-assign='[form, {"Agree":""}]'`, partial)
+				if strings.Index(partial, `v-model='form["Agree"]' v-assign='[form, {"Agree": ""}]'`) < 0 {
+					t.Error(`can't find v-model='form["Agree"]' v-assign='[form, {"Agree": ""}]'`, partial)
 				}
 				return
 			},

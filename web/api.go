@@ -346,10 +346,16 @@ func (e *EventContext) WithContextValue(key any, value any) {
 }
 
 func (e *EventContext) ContextValue(key any) any {
-	return e.R.Context().Value(key)
+	return e.Context().Value(key)
 }
 
+// Context falls back to the background context: an EventContext is also built
+// by hand outside a request (seeds, jobs, tests), and then there is no request
+// context to inherit.
 func (e *EventContext) Context() context.Context {
+	if e.R == nil {
+		return context.Background()
+	}
 	return e.R.Context()
 }
 

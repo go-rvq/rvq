@@ -79,7 +79,12 @@ func (i *ModelInfo) MustID(obj interface{}) (id ID) {
 	return
 }
 
+// Schema is nil-safe: a FieldsBuilder can be rendered without a model behind it
+// (ToComponent with a nil info), and then there is no schema to consult.
 func (i *ModelInfo) Schema() model.Schema {
+	if i == nil {
+		return nil
+	}
 	return i.mb.Schema()
 }
 
