@@ -144,8 +144,23 @@ Estado (validar no navegador antes de publicar):
       `admin/presets/integration/composite_app.go` (env APP=composite).
       Suite bun total: 18 pass (HTTP + DOM + composite).
 - [ ] PENDENTE: validar no NAVEGADOR (dialog/drawer teleport + closer) e commitar.
-- [ ] `pagebuilder` tem erro de build PRÉ-EXISTENTE (assinatura
-      `defaultTemplateInstall`/`categoryInstall`), não relacionado a este refactor.
+- [x] `pagebuilder` volta a compilar (`go build ./admin/pagebuilder/...` ok) — o
+      erro de assinatura `defaultTemplateInstall`/`categoryInstall` já não existe.
+
+# Porte
+
+- [x] `admin/presets/integration` portado e verde (2026-07-25); entrou no
+      `make check`. Defeitos reais que ele revelou: `setToObjNilOrDelete` sem
+      chamador (deleções/ordenação do list-editor não eram aplicadas no save) e
+      `SectionBuilder.DefaultElementUnmarshal` zerando campos que a section não
+      edita.
+- [ ] `admin/docs/docsrc/content/*` (4 pacotes) — **decisão pendente**: as
+      páginas usam `theplant/docgo`, que fala `theplant/htmlgo`, enquanto os
+      helpers do repo devolvem `go-rvq/htmlgo`. Não há como portar sem escolher
+      entre (a) fork `go-rvq/docgo` (padrão já usado para htmlgo/web/x) ou
+      (b) copiar o núcleo do docgo (~700 linhas, MIT) para `admin/docs/docgo`.
+      Há um `//replace github.com/theplant/docgo => ../../docgo/` comentado no
+      go.mod, sem checkout local correspondente.
 
 # Avaliar Manualmente
 
