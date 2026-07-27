@@ -88,6 +88,8 @@ func defaultLoginPage(vh *ViewHelper) web.PageFunc {
 							Input("token").ID("token"),
 						).Class("hidden"),
 					),
+					// with no reCAPTCHA, the built-in protection (challenge.go)
+					vh.ChallengeFields(),
 					Div(
 						Button(msgr.SignInBtn).Class(DefaultViewCommon.ButtonClass).
 							ClassIf("g-recaptcha", isRecaptchaEnabled).AttrIf("data-sitekey", vh.RecaptchaSiteKey(), isRecaptchaEnabled).AttrIf("data-callback", "onSubmit", isRecaptchaEnabled),
@@ -191,6 +193,7 @@ function onSubmit(token) {
 							Input("token").ID("token"),
 						).Class("hidden"),
 					),
+					vh.ChallengeFields(),
 					Div(
 						If(secondsToResend > 0,
 							Button(inactiveBtnTextWithInitSeconds).ID("submitBtn").Class(inactiveBtnClass).Disabled(true),

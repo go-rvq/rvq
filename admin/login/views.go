@@ -101,6 +101,8 @@ func defaultLoginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 						// recaptcha response token
 						Input("token").ID("token").Type("hidden"),
 					),
+					// with no reCAPTCHA, the built-in protection (x/login/challenge.go)
+					vh.ChallengeFields(),
 					DefaultViewCommon.FormSubmitBtn(msgr.SignInBtn).
 						ClassIf("g-recaptcha", isRecaptchaEnabled).
 						AttrIf("data-sitekey", vh.RecaptchaSiteKey(), isRecaptchaEnabled).
@@ -199,6 +201,7 @@ func defaultForgetPasswordPage(vh *login.ViewHelper, pb *presets.Builder) web.Pa
 						// recaptcha response token
 						Input("token").ID("token").Type("hidden"),
 					),
+					vh.ChallengeFields(),
 					DefaultViewCommon.FormSubmitBtn(inactiveBtnTextWithInitSeconds).
 						Attr("id", "disabledBtn").
 						ClassIf("d-none", secondsToResend <= 0),

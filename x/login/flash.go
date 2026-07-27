@@ -41,6 +41,9 @@ const (
 	FailCodeIncorrectTOTPCode
 	FailCodeTOTPCodeHasBeenUsed
 	FailCodeIncorrectRecaptchaToken
+	// the built-in protection (challenge.go), used when there is no reCAPTCHA
+	FailCodeIncorrectChallenge
+	FailCodeChallengeExpired
 )
 
 type WarnCode int

@@ -9,7 +9,10 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
+
+	rcron "github.com/robfig/cron/v3"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
@@ -69,12 +72,23 @@ type Builder struct {
 	authSecureCookieName  string
 	continueUrlCookieName string
 	// seconds
-	sessionMaxAge        int
-	cookieConfig         CookieConfig
-	totpEnabled          bool
-	totpConfig           TOTPConfig
-	recaptchaEnabled     bool
-	recaptchaConfig      RecaptchaConfig
+	sessionMaxAge    int
+	cookieConfig     CookieConfig
+	totpEnabled      bool
+	totpConfig       TOTPConfig
+	recaptchaEnabled bool
+	recaptchaConfig  RecaptchaConfig
+	// built-in protection used when there is no reCAPTCHA (see challenge.go)
+	challengeDisabled  bool
+	challengeMinAge    time.Duration
+	challengeMaxAge    time.Duration
+	challengeStore     *challengeStore
+	challengeStoreOnce sync.Once
+	// the way past the form protection for whoever operates the server
+	// (see secure_key.go)
+	secureKeyFile        string
+	secureKeyCron        *rcron.Cron
+	warnSecureKeyMode    sync.Once
 	autoExtendSession    bool
 	maxRetryCount        int
 	noForgetPasswordLink bool
@@ -967,14 +981,10 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check reCAPTCHA token
-	if b.recaptchaEnabled {
-		token := r.FormValue("token")
-		if !recaptchaTokenCheck(b, token) {
-			setFailCodeFlash(w, FailCodeIncorrectRecaptchaToken)
-			http.Redirect(w, r, b.loginPageURL, http.StatusFound)
-			return
-		}
+	if code := b.VerifyFormProtection(r); code != 0 {
+		setFailCodeFlash(w, code)
+		http.Redirect(w, r, b.loginPageURL, http.StatusFound)
+		return
 	}
 
 	var err error
@@ -1285,14 +1295,10 @@ func (b *Builder) sendResetPasswordLink(w http.ResponseWriter, r *http.Request) 
 
 	failRedirectURL := b.forgetPasswordPageURL
 
-	// check reCAPTCHA token
-	if b.recaptchaEnabled {
-		token := r.FormValue("token")
-		if !recaptchaTokenCheck(b, token) {
-			setFailCodeFlash(w, FailCodeIncorrectRecaptchaToken)
-			http.Redirect(w, r, failRedirectURL, http.StatusFound)
-			return
-		}
+	if code := b.VerifyFormProtection(r); code != 0 {
+		setFailCodeFlash(w, code)
+		http.Redirect(w, r, failRedirectURL, http.StatusFound)
+		return
 	}
 
 	account := strings.TrimSpace(r.FormValue("account"))

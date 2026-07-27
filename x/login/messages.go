@@ -135,6 +135,8 @@ type Messages struct {
 	ErrorIncorrectTOTPCode              string
 	ErrorTOTPCodeReused                 string
 	ErrorIncorrectRecaptchaToken        string
+	ErrorIncorrectChallenge             string
+	ErrorChallengeExpired               string
 	ErrorPasswordVeryEasy               string
 	ErrorPasswordChanged                string
 	ErrorUserGetLocked                  string
@@ -205,6 +207,8 @@ var Messages_en_US = &Messages{
 	ErrorIncorrectTOTPCode:              "Incorrect passcode",
 	ErrorTOTPCodeReused:                 "This passcode has been used",
 	ErrorIncorrectRecaptchaToken:        "Incorrect reCAPTCHA token",
+	ErrorIncorrectChallenge:             "Could not confirm this form was filled in by a person. Please try again.",
+	ErrorChallengeExpired:               "This page has been open for too long. Please try again.",
 	ErrorPasswordVeryEasy:               "Very easy password",
 	ErrorPasswordChanged:                "Password changed",
 	ErrorUserGetLocked:                  "User get locked",
@@ -272,6 +276,8 @@ var Messages_zh_CN = &Messages{
 	ErrorIncorrectTOTPCode:              "passcode错误",
 	ErrorTOTPCodeReused:                 "这个passcode已经被使用过了",
 	ErrorIncorrectRecaptchaToken:        "reCAPTCHA token错误",
+	ErrorIncorrectChallenge:             "无法确认此表单由本人填写，请重试。",
+	ErrorChallengeExpired:               "页面打开时间过长，请重试。",
 	ErrorPasswordVeryEasy:               "非常簡單的密碼",
 	ErrorPasswordChanged:                "密碼更改",
 	ErrorUserGetLocked:                  "用戶被鎖定",
@@ -339,6 +345,8 @@ var Messages_ja_JP = &Messages{
 	ErrorIncorrectTOTPCode:              "パスコードが間違っています",
 	ErrorTOTPCodeReused:                 "このパスコードは既に利用されています",
 	ErrorIncorrectRecaptchaToken:        "reCAPTCHAトークンが間違っています",
+	ErrorIncorrectChallenge:             "このフォームが本人によって入力されたことを確認できませんでした。もう一度お試しください。",
+	ErrorChallengeExpired:               "ページを開いてから時間が経ちすぎています。もう一度お試しください。",
 	ErrorPasswordVeryEasy:               "非常に簡単なパスワード",
 	ErrorPasswordChanged:                "パスワードが変更されました",
 	ErrorUserGetLocked:                  "ユーザーはロックされます",
