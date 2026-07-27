@@ -92,7 +92,7 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			}
 		})
 
-		if !mb.editingDisabled {
+		if !mb.creatingDisabled {
 			// the create form as a page: this is the address a create overlay
 			// shows while it is open (see FormHostBuilder.URL), so reloading or
 			// sharing it has to render the same form. Mounted before `/{id}` —

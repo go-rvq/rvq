@@ -377,7 +377,15 @@ func (b *EditingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 }
 
 func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContext) (r web.PageResponse, err error) {
-	if b.mb.editingDisabled {
+	// Creating and editing are governed by DIFFERENT flags — a model may allow
+	// one and forbid the other — so each mode checks its own, the way the events
+	// already do (see EditingBuilder.doNew and formEdit).
+	if creating {
+		if b.mb.creatingDisabled {
+			err = ErrCreateRecordNotAllowed
+			return
+		}
+	} else if b.mb.editingDisabled {
 		err = ErrUpdateRecordNotAllowed
 		return
 	}

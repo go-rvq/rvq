@@ -957,7 +957,7 @@ func (mb *ModelBuilder) SetEditingDisabled(v bool) *ModelBuilder {
 }
 
 func (mb *ModelBuilder) DeletingDisabled() bool {
-	return mb.editingDisabled
+	return mb.deletingDisabled
 }
 
 func (mb *ModelBuilder) SetDeletingDisabled(v bool) *ModelBuilder {

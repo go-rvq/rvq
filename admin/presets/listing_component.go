@@ -455,7 +455,7 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 			Query(ParamOverlay, overlay)).
 		OnSave(reload)
 
-	if !b.mb.editingDisabled {
+	if !b.mb.creatingDisabled {
 		hosts.New.URL(listingHref + "/new")
 	}
 
