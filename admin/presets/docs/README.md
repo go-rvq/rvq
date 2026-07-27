@@ -22,8 +22,9 @@ Reference notes for the `presets` admin package. See the package
   avoids duplicating them), and the clean page address an open overlay puts in
   the address bar (LIFO, Back closes the top one).
 - [Record stamp](record-stamp.md) — the edit form refuses to overwrite what
-  somebody else saved while it was open: the signed `__UpdatedAt` it carries, the
-  check before any validation, and the message naming the author (`UpdatedByID`).
+  somebody else saved while it was open: the signed `__formSign` field it
+  carries (`RVQ_FORM_SECRET`), the check before any validation, and the message
+  saying when the record changed and by whom (`UpdatedByID`).
 - [Post-save refresh](post-save-refresh.md) — what is refreshed after a
   successful save (`onSaveCallbacks`): the listing behind a NEW, the detail and
   the listing that opened it after an EDIT, the detail PAGE and its `<title>`

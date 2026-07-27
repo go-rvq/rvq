@@ -122,7 +122,7 @@ func itoa(v uint) string {
 
 // stampOf reads the stamp the rendered form carries. The body is the JSON of
 // the event response, so its quotes come escaped.
-var stampRe = regexp.MustCompile(`__UpdatedAt\\?":\s*\\?"([^"\\]+)`)
+var stampRe = regexp.MustCompile(`__formSign\\?":\s*\\?"([^"\\]+)`)
 
 func stampOf(t *testing.T, body string) string {
 	t.Helper()

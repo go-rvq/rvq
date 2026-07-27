@@ -26,11 +26,14 @@ over the record as it stands now.
 
 ## The field, and why it is signed
 
-The form carries a hidden field, `__UpdatedAt` (`presets.RecordStampFormKey`):
+The form carries a hidden field, `__formSign` (`presets.RecordStampFormKey`).
+The name says what the value IS — a signed form value — and not which model
+field it came from; the `__` prefix marks a control field, like the list
+editor's `__Deleted.…`, so it never collides with a field of the model:
 
 ```html
-<input type='hidden' v-model='form["__UpdatedAt"]'
-       v-assign='[form, {"__UpdatedAt": "1785159832202194000.bpblc9o8MiMy…"}]'>
+<input type='hidden' v-model='form["__formSign"]'
+       v-assign='[form, {"__formSign": "1785159832202194000.bpblc9o8MiMy…"}]'>
 ```
 
 The value decides whether a save is allowed, so it must not be user input: it is
@@ -49,14 +52,34 @@ type FormSigner interface {
 }
 ```
 
-The default signer is `NewHMACFormSigner(nil)` — a **random key per process**.
-That is fine for a single instance, but forms rendered before a restart stop
-being accepted, and two instances do not accept each other's forms. Give it your
-own key when either matters:
+The key comes from **`RVQ_FORM_SECRET`** (at least 32 bytes). Without it forms
+are signed with `presets.DefaultFormSecret`, so a development server works out of
+the box — forms survive a restart and instances accept each other's — and every
+process using it **logs a warning**:
+
+```
+WARNING: RVQ_FORM_SECRET is not set — forms are signed with the DEFAULT key,
+which is public in the source: anybody can forge a signed form value. Set it
+(at least 32 bytes) before this reaches anyone else.
+```
+
+A secret shorter than the minimum is a startup panic: signing with a weak key
+looks like it works, and the failure only shows up the day somebody forges a
+stamp.
+
+The key can also be given in code, and the whole signer replaced:
 
 ```go
-b.SetFormSigner(presets.NewHMACFormSigner([]byte(os.Getenv("FORM_SECRET"))))
+b.SetFormSigner(presets.NewHMACFormSigner(myKey))  // your own key
+b.SetFormSigner(mySigner)                          // your own scheme
 ```
+
+| | |
+| --- | --- |
+| `RVQ_FORM_SECRET` | the signing key; at least `presets.FormSecretMinLen` (32) bytes |
+| `presets.FormSecret` | the same value, readable in Go |
+| `presets.DefaultFormSecret` | what it falls back to — public, warned about, never for a deployment |
+| `presets.NewHMACFormSigner(key)` | key → `FormSecret`, in that order |
 
 Both "no stamp" and "bad signature" answer with the same message — to a
 good-faith user (a restarted server, another instance) the form IS out of date;
@@ -120,8 +143,10 @@ has now seen what changed.
 ## Tests
 
 - [`record_stamp_test.go`](../record_stamp_test.go) — the signer (round trip,
-  hand-edited value, another key), field detection (`time.Time`, `*time.Time`
-  nil, embedded) and the stamp value.
+  hand-edited value, another key), the secret (two signers from the same secret
+  agree, two random ones do not, a short secret panics, an explicit key wins),
+  field detection (`time.Time`, `*time.Time` nil, embedded), the stamp value and
+  the message (when, by whom, and the fallback date layout).
 - [`integration/record_stamp_test.go`](../integration/record_stamp_test.go) —
   end to end over a real database: the rendered form carries the record's stamp,
   saving it back works, saving it again after somebody else saved is refused, an

@@ -2,17 +2,20 @@ package presets
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
+	"github.com/theplant/osenv"
 )
 
 // Optimistic locking for edit forms.
@@ -31,8 +34,9 @@ import (
 
 // RecordStampFormKey is the form key of the hidden stamp. The `__` prefix marks
 // a control field (like the list editor's `__Deleted.…`), so it never collides
-// with a model field.
-const RecordStampFormKey = "__UpdatedAt"
+// with a model field; the name says what the value IS — a signed form value —
+// and not which field it came from.
+const RecordStampFormKey = "__formSign"
 
 var (
 	// ErrInvalidFormSignature is returned when a signed form value does not
@@ -49,6 +53,24 @@ var (
 	// user (and names the author when it can); this sentinel is what
 	// errors.Is matches.
 	ErrRecordChanged = errors.New("record changed after the form was rendered")
+
+	// FormSecret is the signing key, from the environment. Falls back to
+	// DefaultFormSecret, which is public — see the warning in NewHMACFormSigner.
+	FormSecret = osenv.Get("RVQ_FORM_SECRET",
+		"Key that signs the form values the user must not change (at least 32 bytes). Falls back to a PUBLIC default, which no deployment should keep",
+		DefaultFormSecret)
+)
+
+const (
+	// FormSecretMinLen is the shortest key accepted: HMAC takes any length, but
+	// a secret worth the name does not fit in less.
+	FormSecretMinLen = 32
+
+	// DefaultFormSecret keeps a development server working out of the box —
+	// forms survive a restart, and instances accept each other's. It is written
+	// right here, so ANYBODY can forge a signed form value with it: using it
+	// logs a warning, and a deployment must set RVQ_FORM_SECRET.
+	DefaultFormSecret = "rvq-insecure-default-form-signing-key"
 )
 
 // FormSigner signs the values a form carries that the user must NOT be able to
@@ -66,19 +88,35 @@ type HMACFormSigner struct {
 	key []byte
 }
 
-// NewHMACFormSigner takes the signing key. A random key is generated when key
-// is empty — good enough for a single process, but forms rendered before a
-// restart stop being accepted, and several instances will not accept each
-// other's forms, so a real deployment should pass its own key.
+// NewHMACFormSigner takes the signing key, falling back to FormSecret (which
+// itself falls back to the public DefaultFormSecret, with a warning).
+//
+// Panics on a secret shorter than FormSecretMinLen: signing with a weak key
+// looks like it works, and the failure only shows up the day somebody forges a
+// stamp.
 func NewHMACFormSigner(key []byte) *HMACFormSigner {
 	if len(key) == 0 {
-		key = make([]byte, 32)
-		if _, err := rand.Read(key); err != nil {
-			panic(err)
+		if l := len(FormSecret); l < FormSecretMinLen {
+			panic(fmt.Sprintf("RVQ_FORM_SECRET must have at least %d bytes, got %d",
+				FormSecretMinLen, l))
 		}
+
+		if FormSecret == DefaultFormSecret {
+			warnDefaultFormSecret.Do(func() {
+				log.Printf("WARNING: RVQ_FORM_SECRET is not set — forms are signed with the "+
+					"DEFAULT key, which is public in the source: anybody can forge a signed "+
+					"form value. Set it (at least %d bytes) before this reaches anyone else.",
+					FormSecretMinLen)
+			})
+		}
+
+		key = []byte(FormSecret)
 	}
 	return &HMACFormSigner{key: key}
 }
+
+// warned once per process: the signer is built for every presets.Builder
+var warnDefaultFormSecret sync.Once
 
 func (s *HMACFormSigner) sum(value string) string {
 	m := hmac.New(sha256.New, s.key)

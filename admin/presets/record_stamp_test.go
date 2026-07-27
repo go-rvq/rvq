@@ -1,9 +1,13 @@
 package presets
 
 import (
+	"bytes"
 	"errors"
+	"log"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -40,6 +44,54 @@ func TestHMACFormSigner(t *testing.T) {
 	rnd := NewHMACFormSigner(nil)
 	if got, err = rnd.Unsign(rnd.Sign("42")); err != nil || got != "42" {
 		t.Errorf("random key round trip = %q, %v", got, err)
+	}
+}
+
+func TestFormSecret(t *testing.T) {
+	original := FormSecret
+	defer func() { FormSecret = original }()
+
+	// a secret from the environment is the key: two signers accept each other's
+	// values, which is what makes forms survive a restart
+	FormSecret = strings.Repeat("s", FormSecretMinLen)
+	signed := NewHMACFormSigner(nil).Sign("42")
+	if got, err := NewHMACFormSigner(nil).Unsign(signed); err != nil || got != "42" {
+		t.Errorf("two signers built from the same secret disagree: %q, %v", got, err)
+	}
+
+	// the default keeps a development server working out of the box, and says
+	// so out loud
+	FormSecret = DefaultFormSecret
+	warnDefaultFormSecret = sync.Once{}
+
+	var warning bytes.Buffer
+	log.SetOutput(&warning)
+	defer log.SetOutput(os.Stderr)
+
+	signed = NewHMACFormSigner(nil).Sign("42")
+	if got, err := NewHMACFormSigner(nil).Unsign(signed); err != nil || got != "42" {
+		t.Errorf("the default secret does not sign: %q, %v", got, err)
+	}
+	if !strings.Contains(warning.String(), "RVQ_FORM_SECRET") {
+		t.Errorf("using the default key must warn, got %q", warning.String())
+	}
+
+	// too short (an empty secret included): a startup panic, not a weak
+	// signature nobody notices
+	FormSecret = strings.Repeat("s", FormSecretMinLen-1)
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("a secret shorter than the minimum was accepted")
+			}
+		}()
+		NewHMACFormSigner(nil)
+	}()
+
+	// an explicit key wins over the environment, whatever its length
+	FormSecret = "short"
+	if NewHMACFormSigner([]byte("my own key")) == nil {
+		t.Error("an explicit key must be taken as it is")
 	}
 }
 

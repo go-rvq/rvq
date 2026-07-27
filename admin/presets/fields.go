@@ -1447,20 +1447,40 @@ func (b *ModifiedIndexesBuilder) FromHidden(req *http.Request) (r *ModifiedIndex
 	return b
 }
 
+// sortedMapKeys keeps rendering deterministic (see ToFormHidden).
+func sortedMapKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
 func (b *ModifiedIndexesBuilder) ToFormHidden() h.HTMLComponent {
 	var hidden []h.HTMLComponent
-	for sliceFormKey, values := range b.deletedValues {
-		var keys []string
-		for k := range values {
-			keys = append(keys, fmt.Sprint(k))
+	// Both are maps, so everything here is SORTED: two renders of the same state
+	// must produce the same HTML — otherwise the form changes shape on its own
+	// between re-renders, and nothing that compares output can be trusted.
+	for _, sliceFormKey := range sortedMapKeys(b.deletedValues) {
+		var keys []int
+		for k := range b.deletedValues[sliceFormKey] {
+			keys = append(keys, k)
 		}
+		slices.Sort(keys)
+
+		var s []string
+		for _, k := range keys {
+			s = append(s, fmt.Sprint(k))
+		}
+
 		hidden = append(hidden, h.Input("").Type("hidden").
-			Attr(web.VField(deleteHiddenSliceFormKey(sliceFormKey), strings.Join(keys, ","))...))
+			Attr(web.VField(deleteHiddenSliceFormKey(sliceFormKey), strings.Join(s, ","))...))
 	}
 
-	for sliceFormKey, values := range b.sortedValues {
+	for _, sliceFormKey := range sortedMapKeys(b.sortedValues) {
 		hidden = append(hidden, h.Input("").Type("hidden").
-			Attr(web.VField(sortedHiddenSliceFormKey(sliceFormKey), strings.Join(values, ","))...))
+			Attr(web.VField(sortedHiddenSliceFormKey(sliceFormKey), strings.Join(b.sortedValues[sliceFormKey], ","))...))
 	}
 	return h.Components(hidden...)
 }
