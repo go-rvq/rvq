@@ -34,6 +34,16 @@ func (b *EditingBuilder) doUpdate(
 		return perm.PermissionDenied
 	}
 
+	// Before ANY validation: what the form says is only worth validating if it
+	// was written over the record as it stands now — this compares the record as
+	// it was when the form was rendered against the record today.
+	if err = usingB.VerifyRecordStamp(mid, ctx); err != nil {
+		// re-render with the message: the form then shows the stored values and
+		// carries a fresh stamp, so a deliberate re-save is possible.
+		usingB.UpdateOverlayContent(ctx, r, obj, "", err)
+		return
+	}
+
 	resetSaveContext := web.WithContextValue(ctx, CtxSaveContext, context.Background())
 	defer resetSaveContext()
 

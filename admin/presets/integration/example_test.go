@@ -51,6 +51,11 @@ func TestExample(t *testing.T) {
 			Name: "Update",
 			ReqFunc: func() *http.Request {
 				customerData.TruncatePut(dbr)
+				// Customer has an UpdatedAt, so its edit form carries the stamp
+				// of the record it was rendered from — and the update requires
+				// it (see presets/record_stamp.go).
+				var stored examples.Customer
+				db.First(&stored, 11)
 				return NewMultipartBuilder().
 					PageURL("/admin/my_customers").
 					EventFunc(actions.Update).
@@ -59,6 +64,8 @@ func TestExample(t *testing.T) {
 					AddField("ID", "11").
 					AddField("Int1", "42").
 					AddField("Name", "Felix11").
+					AddField(presets.RecordStampFormKey,
+						p.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))).
 					BuildEventFuncRequest()
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {

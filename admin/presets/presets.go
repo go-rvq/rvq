@@ -67,6 +67,8 @@ type Builder struct {
 	pageHandlers                          PageHandlers
 	verifiers                             perm.PermVerifiers
 	pagesRegistrator                      *PagesRegistrator
+	formSigner                            FormSigner
+	recordUserFinder                      RecordUserFinder
 
 	datafield.DataField[*Builder]
 }
@@ -108,6 +110,10 @@ func New(i18nB *i18n.Builder) *Builder {
 		},
 		wrapHandlers:        make(map[string]func(in http.Handler) (out http.Handler)),
 		ModelSetupFactories: DefaultModelSetupFactories,
+		// signs the form values the user must not change (the record stamp, see
+		// record_stamp.go). Random key: SetFormSigner to survive a restart or to
+		// share it between instances.
+		formSigner: NewHMACFormSigner(nil),
 		skipNotFoundHandler: func(r *http.Request) bool {
 			return false
 		},
@@ -400,6 +406,32 @@ func findModelByType(mb *ModelBuilder, t reflect.Type) *ModelBuilder {
 
 func (b *Builder) DataOperator(v DataOperator) (r *Builder) {
 	b.dataOperator = v
+	return b
+}
+
+// FormSigner signs the form values the user must not be able to change — today
+// the edit form's record stamp (see record_stamp.go).
+func (b *Builder) FormSigner() FormSigner {
+	return b.formSigner
+}
+
+// SetFormSigner replaces the signer. The default one is created with a random
+// key at startup, so forms rendered before a restart are no longer accepted and
+// instances do not accept each other's — pass a signer with YOUR key
+// (NewHMACFormSigner) when either matters.
+func (b *Builder) SetFormSigner(v FormSigner) (r *Builder) {
+	b.formSigner = v
+	return b
+}
+
+// RecordUserFinder loads the user an `UpdatedByID` points at, to name whoever
+// changed a record while somebody had its form open.
+func (b *Builder) RecordUserFinder() RecordUserFinder {
+	return b.recordUserFinder
+}
+
+func (b *Builder) SetRecordUserFinder(v RecordUserFinder) (r *Builder) {
+	b.recordUserFinder = v
 	return b
 }
 

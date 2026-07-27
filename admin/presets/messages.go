@@ -147,7 +147,22 @@ type Messages struct {
 	ErrPermissionDenied i18n.ErrorString
 	ErrFieldRequired    i18n.ErrorString
 
+	// Optimistic locking of the edit form (see record_stamp.go).
+	// ErrRecordChangedBy takes the author's name and e-mail.
+	ErrRecordChanged      string
+	ErrRecordChangedBy    string
+	ErrRecordStampMissing i18n.ErrorString
+
 	CopiedToClipboard string
+}
+
+// RecordChangedBy is the stale-record message naming who changed it. Falls back
+// to the anonymous one when the user has no name or e-mail to show.
+func (msgr *Messages) RecordChangedBy(name, email string) string {
+	if name == "" && email == "" {
+		return msgr.ErrRecordChanged
+	}
+	return fmt.Sprintf(msgr.ErrRecordChangedBy, name, email)
 }
 
 func (msgr *Messages) TheTitle(female bool, title string, args ...string) string {
@@ -292,10 +307,15 @@ var Messages_en_US = &Messages{
 
 	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> then {count} records?",
 
-	Error:             "ERROR",
-	ErrEmptyParamID:   "Empty param ID",
-	ErrFieldRequired:  i18n.ErrorString(ErrFieldRequired.Error()),
-	CopiedToClipboard: "Copied to clipboard",
+	Error:           "ERROR",
+	ErrEmptyParamID: "Empty param ID",
+	ErrRecordChanged: "This record was changed by someone else after you opened this form. " +
+		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
+	ErrRecordChangedBy: "This record was changed by %s (%s) after you opened this form. " +
+		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
+	ErrRecordStampMissing: "This form is out of date and cannot be saved. Reload it and make your changes again.",
+	ErrFieldRequired:      i18n.ErrorString(ErrFieldRequired.Error()),
+	CopiedToClipboard:     "Copied to clipboard",
 }
 
 var DefaultMessages = Messages_en_US
@@ -382,7 +402,12 @@ var Messages_pt_BR = &Messages{
 	Year:                                       "Ano",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",
-	ErrFieldRequired:                           "Este campo não pode ser vazio",
+	ErrRecordChanged: "Este registro foi alterado por outra pessoa depois que você abriu este formulário. " +
+		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
+	ErrRecordChangedBy: "Este registro foi alterado por %s (%s) depois que você abriu este formulário. " +
+		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
+	ErrRecordStampMissing: "Este formulário está desatualizado e não pode ser salvo. Recarregue-o e refaça suas alterações.",
+	ErrFieldRequired:      "Este campo não pode ser vazio",
 
 	PrinterOptions: PrinterOptionsMessages{
 		Title:          "Opções de Impressão",

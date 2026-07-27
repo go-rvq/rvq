@@ -23,7 +23,7 @@ func TestUpdate(t *testing.T) {
 		name      string
 		prepareDB func()
 		builder   func() *Builder
-		form      func() (*bytes.Buffer, *multipart.Writer)
+		form      func(stamp string) (*bytes.Buffer, *multipart.Writer)
 		expected  *QorSEOSetting
 		locale    string
 	}{
@@ -48,11 +48,12 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func() (*bytes.Buffer, *multipart.Writer) {
+			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Setting.Title", "productB"))
 				must(mwriter.WriteField("id", fmt.Sprintf("Product_%s", "en")))
+				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -86,11 +87,12 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func() (*bytes.Buffer, *multipart.Writer) {
+			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Setting.Title", "productB"))
 				must(mwriter.WriteField("id", "Product_"))
+				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -127,11 +129,12 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func() (*bytes.Buffer, *multipart.Writer) {
+			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Variables.varA", "B"))
 				must(mwriter.WriteField("id", fmt.Sprintf("Product_%s", "en")))
+				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -164,7 +167,14 @@ func TestUpdate(t *testing.T) {
 			builder := c.builder()
 			builder.Install(admin)
 
-			form, mwriter := c.form()
+			// QorSEOSetting has an UpdatedAt, so its edit form carries the stamp
+			// of the record it was rendered from — and the update requires it
+			// (see presets/record_stamp.go).
+			var stored QorSEOSetting
+			dbForTest.First(&stored, "name = ? and locale_code = ?", "Product", c.locale)
+			stamp := admin.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))
+
+			form, mwriter := c.form(stamp)
 			req, err := http.DefaultClient.Post(
 				server.URL+"/admin/qor-seosettings?__execute_event__=presets_Update&id="+c.id,
 				mwriter.FormDataContentType(),

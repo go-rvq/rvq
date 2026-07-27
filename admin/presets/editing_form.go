@@ -207,6 +207,16 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 	}
 
 	var hiddenComps []h.HTMLComponent
+
+	// The record as it was when this form was rendered, signed. The update
+	// refuses to run if the stored record has moved since (see
+	// EditingBuilder.VerifyRecordStamp). A creation has nothing to compare to.
+	if f.b.mode != NEW {
+		if stamp := b.recordStampField(f.b.obj); stamp != nil {
+			hiddenComps = append(hiddenComps, stamp)
+		}
+	}
+
 	for _, hf := range b.hiddenFuncs {
 		hiddenComps = append(hiddenComps, hf(f.b.obj, f.b.ctx))
 	}
