@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var dbParamsString = osenv.Get("DB_PARAMS", "database connection string", "")
+var dbParamsString = osenv.Get("RVQ_DB_PARAMS", "database connection string", "")
 
 func ConnectDB() (db *gorm.DB) {
 	var err error

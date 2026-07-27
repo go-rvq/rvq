@@ -12,7 +12,7 @@ import (
 
 const doAction1 = "doAction1"
 
-var port = osenv.Get("PORT", "The port to serve on", "9010")
+var port = osenv.Get("RVQ_PORT", "The port to serve on", "9010")
 
 func Home(ctx *web.EventContext) (r web.PageResponse, err error) {
 	r.Body = Div(

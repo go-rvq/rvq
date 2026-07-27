@@ -58,14 +58,14 @@ type Config struct {
 }
 
 var (
-	s3Bucket                  = osenv.Get("S3_Bucket", "s3-bucket for media library storage", "example")
-	s3Region                  = osenv.Get("S3_Region", "s3-region for media library storage", "ap-northeast-1")
-	s3Endpoint                = osenv.Get("S3_Endpoint", "s3-endpoint for media library storage", "https://s3.ap-northeast-1.amazonaws.com")
-	s3PublishBucket           = osenv.Get("S3_Publish_Bucket", "s3-bucket for publish", "example-publish")
-	s3PublishRegion           = osenv.Get("S3_Publish_Region", "s3-region for publish", "ap-northeast-1")
-	publishURL                = osenv.Get("PUBLISH_URL", "publish url", "")
-	awsRegion                 = osenv.Get("AWS_REGION", "aws region for show count down", "")
-	resetAndImportInitialData = osenv.GetBool("RESET_AND_IMPORT_INITIAL_DATA",
+	s3Bucket                  = osenv.Get("RVQ_S3_Bucket", "s3-bucket for media library storage", "example")
+	s3Region                  = osenv.Get("RVQ_S3_Region", "s3-region for media library storage", "ap-northeast-1")
+	s3Endpoint                = osenv.Get("RVQ_S3_Endpoint", "s3-endpoint for media library storage", "https://s3.ap-northeast-1.amazonaws.com")
+	s3PublishBucket           = osenv.Get("RVQ_S3_Publish_Bucket", "s3-bucket for publish", "example-publish")
+	s3PublishRegion           = osenv.Get("RVQ_S3_Publish_Region", "s3-region for publish", "ap-northeast-1")
+	publishURL                = osenv.Get("RVQ_PUBLISH_URL", "publish url", "")
+	awsRegion                 = osenv.Get("RVQ_AWS_REGION", "aws region for show count down", "")
+	resetAndImportInitialData = osenv.GetBool("RVQ_RESET_AND_IMPORT_INITIAL_DATA",
 		"Will reset and import initial data if set to true", false)
 )
 

@@ -7,7 +7,7 @@ import (
 	"github.com/theplant/osenv"
 )
 
-var routesDebug = osenv.GetBool("ADMIN_ROUTES_DEBUG", "Debug mounted routes", false)
+var routesDebug = osenv.GetBool("RVQ_ADMIN_ROUTES_DEBUG", "Debug mounted routes", false)
 
 func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 	var (

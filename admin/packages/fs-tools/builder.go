@@ -18,7 +18,7 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-var EnvDirs = osenv.Get("IRVQ_FSTOOLS_DIRS", "Directories available for webdav service. Values separated by "+
+var EnvDirs = osenv.Get("RVQ_FSTOOLS_DIRS", "Directories available for webdav service. Values separated by "+
 	"semi collon. Value format is MODE,MOUNT_POINT,LOCAL_PATH, when MODE=[r or w (default)]."+
 	" Example: 'r,/media,data/media;w,/writable,/x/media'", "")
 

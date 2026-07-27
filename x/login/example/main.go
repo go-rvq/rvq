@@ -25,10 +25,10 @@ type User struct {
 }
 
 var (
-	loginGoogleKey     = osenv.Get("LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
-	loginGoogleSecret  = osenv.Get("LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
-	loginTwitterKey    = osenv.Get("LOGIN_TWITTER_KEY", "Twitter client key for Login with Twitter", "")
-	loginTwitterSecret = osenv.Get("LOGIN_TWITTER_KEY", "Twitter client secret for Login with Twitter", "")
+	loginGoogleKey     = osenv.Get("RVQ_LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
+	loginGoogleSecret  = osenv.Get("RVQ_LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
+	loginTwitterKey    = osenv.Get("RVQ_LOGIN_TWITTER_KEY", "Twitter client key for Login with Twitter", "")
+	loginTwitterSecret = osenv.Get("RVQ_LOGIN_TWITTER_KEY", "Twitter client secret for Login with Twitter", "")
 )
 
 func main() {

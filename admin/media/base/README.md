@@ -23,13 +23,13 @@ Media depends on [GORM](https://github.com/go-gorm/gorm) models as it is using [
 
 ```go
 
-db, err := gorm.Open(postgres.Open(os.Getenv("DB_PARAMS")), &gorm.Config{})
+db, err := gorm.Open(postgres.Open(os.Getenv("RVQ_DB_PARAMS")), &gorm.Config{})
 media.RegisterCallbacks(db)
 
 sess := session.Must(session.NewSession())
 oss.Storage = s3.New(&s3.Config{
-    Bucket:  os.Getenv("S3_Bucket"),
-    Region:  os.Getenv("S3_Region"),
+    Bucket:  os.Getenv("RVQ_S3_Bucket"),
+    Region:  os.Getenv("RVQ_S3_Region"),
     Session: sess,
 })
 

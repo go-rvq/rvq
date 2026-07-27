@@ -42,7 +42,7 @@ type Product struct {
 	Code string
 }
 
-var dbParamsString = osenv.Get("DB_PARAMS", "database connection string", "")
+var dbParamsString = osenv.Get("RVQ_DB_PARAMS", "database connection string", "")
 
 func main() {
 	var err error

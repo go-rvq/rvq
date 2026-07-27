@@ -36,7 +36,7 @@ var PKG_DIR = func() string {
 	return workDir
 }()
 
-var InitialUserPasswordFile = osenv.Get("LOGIN_INITIAL_USER_PASSWORD_FILE", "Initial user password file", filepath.Join(PKG_DIR, ".initial_user_password"))
+var InitialUserPasswordFile = osenv.Get("RVQ_LOGIN_INITIAL_USER_PASSWORD_FILE", "Initial user password file", filepath.Join(PKG_DIR, ".initial_user_password"))
 
 const DOT_ENV = ".env"
 

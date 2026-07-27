@@ -53,10 +53,10 @@ func init() {
 }
 
 var (
-	loginGoogleKey    = osenv.Get("LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
-	loginGoogleSecret = osenv.Get("LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
-	loginGithubKey    = osenv.Get("LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
-	loginGithubSecret = osenv.Get("LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
+	loginGoogleKey    = osenv.Get("RVQ_LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
+	loginGoogleSecret = osenv.Get("RVQ_LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
+	loginGithubKey    = osenv.Get("RVQ_LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
+	loginGithubSecret = osenv.Get("RVQ_LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 	"github.com/theplant/osenv"
 )
 
-var customizeVuetifyCSS = osenv.GetBool("CUSTOMIZE_VUETIFY_CSS", "Use customized styles for vuetify", true)
+var customizeVuetifyCSS = osenv.GetBool("RVQ_CUSTOMIZE_VUETIFY_CSS", "Use customized styles for vuetify", true)
 
 func JSComponentsPack() web.ComponentsPack {
 	return web.ComponentsPackBuilder(func(ctx *web.ComponentsPackBuilderContext) {

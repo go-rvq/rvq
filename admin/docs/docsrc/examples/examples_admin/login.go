@@ -29,13 +29,13 @@ type User struct {
 }
 
 var (
-	baseURL           = osenv.Get("BASE_URL", "Base URL for Login", "")
-	loginSecret       = osenv.Get("LOGIN_SECRET", "Login secret use to sign session", "")
-	loginGoogleKey    = osenv.Get("LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
-	loginGoogleSecret = osenv.Get("LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
+	baseURL           = osenv.Get("RVQ_BASE_URL", "Base URL for Login", "")
+	loginSecret       = osenv.Get("RVQ_LOGIN_SECRET", "Login secret use to sign session", "")
+	loginGoogleKey    = osenv.Get("RVQ_LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
+	loginGoogleSecret = osenv.Get("RVQ_LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
 
-	loginGithubKey    = osenv.Get("LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
-	loginGithubSecret = osenv.Get("LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
+	loginGithubKey    = osenv.Get("RVQ_LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
+	loginGithubSecret = osenv.Get("RVQ_LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
 )
 
 func serve() {

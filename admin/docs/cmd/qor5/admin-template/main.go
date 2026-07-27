@@ -12,7 +12,7 @@ func main() {
 	// Setup project
 	mux := admin.Initialize()
 
-	port := osenv.Get("PORT", "The port to serve the admin on", "9000")
+	port := osenv.Get("RVQ_PORT", "The port to serve the admin on", "9000")
 
 	fmt.Println("Served at http://localhost:" + port + "/admin")
 

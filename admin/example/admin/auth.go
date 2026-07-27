@@ -26,18 +26,18 @@ import (
 var (
 	loginBuilder               *login.Builder
 	vh                         *login.ViewHelper
-	loginSecret                = osenv.Get("LOGIN_SECRET", "Login secret use to sign session", "")
-	loginGoogleKey             = osenv.Get("LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
-	loginGoogleSecret          = osenv.Get("LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
-	loginMicrosoftOnlineKey    = osenv.Get("LOGIN_MICROSOFTONLINE_KEY", "Microsoft online key for Login with Microsoft Online", "")
-	loginMicrosoftOnlineSecret = osenv.Get("LOGIN_MICROSOFTONLINE_SECRET", "Microsoft online secret for Login with Microsoft Online", "")
-	loginGithubKey             = osenv.Get("LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
-	loginGithubSecret          = osenv.Get("LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
-	baseURL                    = osenv.Get("BASE_URL", "Base URL for Login", "")
-	recaptchaSiteKey           = osenv.Get("RECAPTCHA_SITE_KEY", "Recaptcha site key for Login with Recaptcha", "")
-	recaptchaSecret            = osenv.Get("RECAPTCHA_SECRET_KEY", "Recaptcha secret for Login with Recaptcha", "")
-	loginInitialUserEmail      = osenv.Get("LOGIN_INITIAL_USER_EMAIL", "Initial user email for Login", "")
-	loginInitialUserPassword   = osenv.Get("LOGIN_INITIAL_USER_PASSWORD", "Initial user password for Login", "123")
+	loginSecret                = osenv.Get("RVQ_LOGIN_SECRET", "Login secret use to sign session", "")
+	loginGoogleKey             = osenv.Get("RVQ_LOGIN_GOOGLE_KEY", "Google client key for Login with Google", "")
+	loginGoogleSecret          = osenv.Get("RVQ_LOGIN_GOOGLE_SECRET", "Google client secret for Login with Google", "")
+	loginMicrosoftOnlineKey    = osenv.Get("RVQ_LOGIN_MICROSOFTONLINE_KEY", "Microsoft online key for Login with Microsoft Online", "")
+	loginMicrosoftOnlineSecret = osenv.Get("RVQ_LOGIN_MICROSOFTONLINE_SECRET", "Microsoft online secret for Login with Microsoft Online", "")
+	loginGithubKey             = osenv.Get("RVQ_LOGIN_GITHUB_KEY", "Github client key for Login with Github", "")
+	loginGithubSecret          = osenv.Get("RVQ_LOGIN_GITHUB_SECRET", "Github client secret for Login with Github", "")
+	baseURL                    = osenv.Get("RVQ_BASE_URL", "Base URL for Login", "")
+	recaptchaSiteKey           = osenv.Get("RVQ_RECAPTCHA_SITE_KEY", "Recaptcha site key for Login with Recaptcha", "")
+	recaptchaSecret            = osenv.Get("RVQ_RECAPTCHA_SECRET_KEY", "Recaptcha secret for Login with Recaptcha", "")
+	loginInitialUserEmail      = osenv.Get("RVQ_LOGIN_INITIAL_USER_EMAIL", "Initial user email for Login", "")
+	loginInitialUserPassword   = osenv.Get("RVQ_LOGIN_INITIAL_USER_PASSWORD", "Initial user password for Login", "123")
 )
 
 func getCurrentUser(r *http.Request) (u *models.User) {

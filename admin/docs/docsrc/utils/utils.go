@@ -27,7 +27,7 @@ type Example struct {
 
 var LiveExamples []*Example
 
-var envGitBranch = osenv.Get("GIT_BRANCH", "demo source code link git branch", "main")
+var envGitBranch = osenv.Get("RVQ_GIT_BRANCH", "demo source code link git branch", "main")
 
 func DemoWithSnippetLocation(title string, demoPath string, location parse.Location) HTMLComponent {
 	return Demo(title, demoPath, fmt.Sprintf("%s#L%d-L%d", location.File, location.StartLine, location.EndLine))

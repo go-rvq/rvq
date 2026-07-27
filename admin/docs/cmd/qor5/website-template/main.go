@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	port       = osenv.Get("PORT", "The port to serve on", "9001")
-	publishURL = osenv.Get("PUBLISH_URL", "Publish Target URL", "")
+	port       = osenv.Get("RVQ_PORT", "The port to serve on", "9001")
+	publishURL = osenv.Get("RVQ_PUBLISH_URL", "Publish Target URL", "")
 )
 
 func main() {

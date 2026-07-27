@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var dbParamsString = osenv.Get("DB_PARAMS", "presets example database connection string", "")
+var dbParamsString = osenv.Get("RVQ_DB_PARAMS", "presets example database connection string", "")
 
 func main() {
 	db, err := gorm.Open(postgres.Open(dbParamsString), &gorm.Config{})

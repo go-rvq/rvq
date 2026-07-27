@@ -12,7 +12,7 @@ func JSComponentsPack() ComponentsPack {
 	return ComponentsPackFromFile(rvqjs.CoreJS, "corejs/dist/index.js")
 }
 
-var webVueDebug = osenv.GetBool("WEB_VUE_DEBUG", "Use dev vue.js javascript source code to debug vue components", false)
+var webVueDebug = osenv.GetBool("RVQ_WEB_VUE_DEBUG", "Use dev vue.js javascript source code to debug vue components", false)
 
 func JSVueComponentsPack() ComponentsPack {
 	return ComponentsPackBuilder(func(ctx *ComponentsPackBuilderContext) {

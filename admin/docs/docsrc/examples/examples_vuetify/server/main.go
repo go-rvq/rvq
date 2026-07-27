@@ -10,7 +10,7 @@ import (
 	"github.com/theplant/osenv"
 )
 
-var port = osenv.Get("PORT", "The port to serve on", "7800")
+var port = osenv.Get("RVQ_PORT", "The port to serve on", "7800")
 
 func main() {
 	fmt.Println("Starting docs at :" + port)

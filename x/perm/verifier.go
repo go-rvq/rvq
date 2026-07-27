@@ -17,7 +17,7 @@ import (
 
 var ErrIsDanied = errors.New("verifier is denied")
 
-var Verbose = osenv.GetBool("PERM_VERBOSE", "Print all permissions verification", false)
+var Verbose = osenv.GetBool("RVQ_PERM_VERBOSE", "Print all permissions verification", false)
 
 type verReq struct {
 	subjects       []string

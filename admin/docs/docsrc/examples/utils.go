@@ -19,7 +19,7 @@ import (
 
 var db *gorm.DB
 
-var dbParamsString = osenv.Get("DB_PARAMS", "database connection string", "user=docs password=docs dbname=docs sslmode=disable host=localhost port=6532 TimeZone=Asia/Tokyo")
+var dbParamsString = osenv.Get("RVQ_DB_PARAMS", "database connection string", "user=docs password=docs dbname=docs sslmode=disable host=localhost port=6532 TimeZone=Asia/Tokyo")
 
 func ExampleDB() (r *gorm.DB) {
 	if db != nil {

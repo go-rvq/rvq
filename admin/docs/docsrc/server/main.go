@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	dbParamsString = osenv.Get("DB_PARAMS", "database connection string", "user=docs password=docs dbname=docs sslmode=disable host=localhost port=6532 TimeZone=Asia/Tokyo")
-	port           = osenv.Get("PORT", "The port to serve on", "8800")
-	envString      = osenv.Get("ENV", "environment flag", "development")
+	dbParamsString = osenv.Get("RVQ_DB_PARAMS", "database connection string", "user=docs password=docs dbname=docs sslmode=disable host=localhost port=6532 TimeZone=Asia/Tokyo")
+	port           = osenv.Get("RVQ_PORT", "The port to serve on", "8800")
+	envString      = osenv.Get("RVQ_ENV", "environment flag", "development")
 )
 
 func main() {
