@@ -62,9 +62,14 @@ Both "no stamp" and "bad signature" answer with the same message — to a
 good-faith user (a restarted server, another instance) the form IS out of date;
 to whoever edited the value by hand it says nothing useful.
 
-## Naming who changed it
+## When, and by whom
 
-When the model also has an `UpdatedByID`, the message can say who saved over the
+The message always says WHEN the record was changed — the stored `UpdatedAt`,
+the very value that did not match the stamp — written with the language's
+`TimeFormats.DateTime` (`Messages.FormatDateTime`, which falls back to a
+readable layout when a language defines none).
+
+When the model also has an `UpdatedByID`, it also says WHO saved over the
 form. presets cannot know the application's user model, so the application
 supplies the lookup:
 
@@ -83,13 +88,13 @@ message simply does not name anybody.
 
 | Situation | Message (pt-BR) |
 | --- | --- |
-| changed, author unknown | *Este registro foi alterado por outra pessoa depois que você abriu este formulário. Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.* |
-| changed, author known | *Este registro foi alterado por Ana Souza (ana@example.com) depois que você abriu este formulário. …* |
+| changed, author unknown | *Este registro foi alterado por outra pessoa **em 27/07/2026 10:45:12 -03:00**, depois que você abriu este formulário. Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.* |
+| changed, author known | *Este registro foi alterado por **Ana Souza (ana@example.com)** em 27/07/2026 10:45:12 -03:00, depois que você abriu este formulário. …* |
 | stamp missing or forged | *Este formulário está desatualizado e não pode ser salvo. Recarregue-o e refaça suas alterações.* |
 
-They are `Messages.ErrRecordChanged`, `ErrRecordChangedBy` and
-`ErrRecordStampMissing` (English in `Messages_en_US`), so an application can
-replace them.
+They are `Messages.ErrRecordChanged` (one `%s`: when), `ErrRecordChangedBy`
+(three: name, e-mail, when) and `ErrRecordStampMissing`, English in
+`Messages_en_US`, so an application can replace them.
 
 ## After a refusal
 
@@ -121,7 +126,8 @@ has now seen what changed.
   end to end over a real database: the rendered form carries the record's stamp,
   saving it back works, saving it again after somebody else saved is refused, an
   update with no stamp is refused, a hand-edited or foreign-key stamp is refused,
-  the message names the author, and a model with no `UpdatedAt` saves normally.
+  the message names the author AND when the change happened, and a model with no
+  `UpdatedAt` saves normally.
 
 > A test that posts `presets_Update` by hand against a guarded model has to send
 > the stamp, the way a browser does:

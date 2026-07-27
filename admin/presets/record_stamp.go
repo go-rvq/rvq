@@ -246,7 +246,7 @@ func (b *EditingBuilder) VerifyRecordStamp(mid ID, ctx *web.EventContext) error 
 		return nil
 	}
 
-	return &recordStampError{cause: ErrRecordChanged, msg: b.recordChangedMessage(stored, ctx)}
+	return &recordStampError{cause: ErrRecordChanged, msg: b.recordChangedMessage(stored, current, ctx)}
 }
 
 // recordStampError shows the reader a localized message while keeping the
@@ -259,26 +259,37 @@ type recordStampError struct {
 func (e *recordStampError) Error() string { return e.msg }
 func (e *recordStampError) Unwrap() error { return e.cause }
 
-// recordChangedMessage explains that the record moved under the form, naming
-// whoever changed it when the model records it (`UpdatedByID`) and the
-// application knows how to load a user (Builder.SetRecordUserFinder).
-func (b *EditingBuilder) recordChangedMessage(obj any, ctx *web.EventContext) string {
+// recordChangedMessage explains that the record moved under the form: WHEN it
+// was changed (the stored UpdatedAt — the very value that did not match) and,
+// when the model records it (`UpdatedByID`) and the application knows how to
+// load a user (Builder.SetRecordUserFinder), by WHOM.
+func (b *EditingBuilder) recordChangedMessage(stored any, at time.Time, ctx *web.EventContext) string {
 	msgr := MustGetMessages(ctx.Context())
 
-	id, ok := RecordUpdatedByID(obj)
+	user := b.recordUser(stored, ctx)
+	if user == nil {
+		return msgr.RecordChangedMessage("", "", at)
+	}
+	return msgr.RecordChangedMessage(user.GetName(), user.GetEmail(), at)
+}
+
+// recordUser is whoever the record's `UpdatedByID` points at, or nil when the
+// model does not record it, nobody is recorded, the application registered no
+// finder, or the lookup failed — the message then simply names no one.
+func (b *EditingBuilder) recordUser(stored any, ctx *web.EventContext) RecordUser {
+	id, ok := RecordUpdatedByID(stored)
 	if !ok {
-		return msgr.ErrRecordChanged
+		return nil
 	}
 
 	finder := b.mb.p.RecordUserFinder()
 	if finder == nil {
-		return msgr.ErrRecordChanged
+		return nil
 	}
 
 	user, err := finder(id, ctx)
-	if err != nil || user == nil {
-		return msgr.ErrRecordChanged
+	if err != nil {
+		return nil
 	}
-
-	return msgr.RecordChangedBy(user.GetName(), user.GetEmail())
+	return user
 }

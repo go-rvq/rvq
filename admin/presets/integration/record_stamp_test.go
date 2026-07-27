@@ -162,6 +162,11 @@ func TestRecordStampGuardsTheEditForm(t *testing.T) {
 	if !strings.Contains(body, "changed by someone else") {
 		t.Errorf("the answer does not explain what happened:\n%s", firstLines(body, 3))
 	}
+	// with no author to name, it still says when it happened
+	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt)
+	if !strings.Contains(body, when) {
+		t.Errorf("the answer does not say when the record changed (%s):\n%s", when, firstLines(body, 3))
+	}
 }
 
 func TestRecordStampIsRequired(t *testing.T) {
@@ -218,6 +223,13 @@ func TestRecordStampNamesTheAuthor(t *testing.T) {
 	body := app.update(t, article.ID, "Mine", stamp)
 	if !strings.Contains(body, "Ana Souza") || !strings.Contains(body, "ana@example.com") {
 		t.Errorf("the message does not name who changed the record:\n%s", firstLines(body, 3))
+	}
+
+	// and WHEN they changed it — the stored UpdatedAt, the very value that did
+	// not match the stamp
+	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt)
+	if !strings.Contains(body, when) {
+		t.Errorf("the message does not say when the record changed (%s):\n%s", when, firstLines(body, 3))
 	}
 }
 

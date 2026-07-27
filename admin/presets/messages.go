@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-rvq/rvq/x/i18n"
 )
@@ -156,13 +157,24 @@ type Messages struct {
 	CopiedToClipboard string
 }
 
-// RecordChangedBy is the stale-record message naming who changed it. Falls back
-// to the anonymous one when the user has no name or e-mail to show.
-func (msgr *Messages) RecordChangedBy(name, email string) string {
-	if name == "" && email == "" {
-		return msgr.ErrRecordChanged
+// FormatDateTime writes an instant the way this language does. Falls back to a
+// readable layout when the messages carry none — Format("") returns "".
+func (msgr *Messages) FormatDateTime(t time.Time) string {
+	layout := msgr.TimeFormats.DateTime
+	if layout == "" {
+		layout = "2006-01-02 15:04:05 Z07:00"
 	}
-	return fmt.Sprintf(msgr.ErrRecordChangedBy, name, email)
+	return t.Format(layout)
+}
+
+// RecordChangedMessage is the stale-record message: WHEN the record was changed
+// and, when the application could load it, by WHOM.
+func (msgr *Messages) RecordChangedMessage(name, email string, at time.Time) string {
+	when := msgr.FormatDateTime(at)
+	if name == "" && email == "" {
+		return fmt.Sprintf(msgr.ErrRecordChanged, when)
+	}
+	return fmt.Sprintf(msgr.ErrRecordChangedBy, name, email, when)
 }
 
 func (msgr *Messages) TheTitle(female bool, title string, args ...string) string {
@@ -307,11 +319,17 @@ var Messages_en_US = &Messages{
 
 	BulkActionConfirmationTextTemplate: "Are you sure you want to <b>{Action}</b> then {count} records?",
 
+	TimeFormats: TimeFormatMessages{
+		Time:     "15:04:05 Z07:00",
+		Date:     "2006-01-02",
+		DateTime: "2006-01-02 15:04:05 Z07:00",
+	},
+
 	Error:           "ERROR",
 	ErrEmptyParamID: "Empty param ID",
-	ErrRecordChanged: "This record was changed by someone else after you opened this form. " +
+	ErrRecordChanged: "This record was changed by someone else at %s, after you opened this form. " +
 		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
-	ErrRecordChangedBy: "This record was changed by %s (%s) after you opened this form. " +
+	ErrRecordChangedBy: "This record was changed by %s (%s) at %s, after you opened this form. " +
 		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
 	ErrRecordStampMissing: "This form is out of date and cannot be saved. Reload it and make your changes again.",
 	ErrFieldRequired:      i18n.ErrorString(ErrFieldRequired.Error()),
@@ -402,9 +420,9 @@ var Messages_pt_BR = &Messages{
 	Year:                                       "Ano",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",
-	ErrRecordChanged: "Este registro foi alterado por outra pessoa depois que você abriu este formulário. " +
+	ErrRecordChanged: "Este registro foi alterado por outra pessoa em %s, depois que você abriu este formulário. " +
 		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
-	ErrRecordChangedBy: "Este registro foi alterado por %s (%s) depois que você abriu este formulário. " +
+	ErrRecordChangedBy: "Este registro foi alterado por %s (%s) em %s, depois que você abriu este formulário. " +
 		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
 	ErrRecordStampMissing: "Este formulário está desatualizado e não pode ser salvo. Recarregue-o e refaça suas alterações.",
 	ErrFieldRequired:      "Este campo não pode ser vazio",

@@ -112,6 +112,30 @@ func TestRecordUpdatedByID(t *testing.T) {
 	}
 }
 
+func TestRecordChangedMessage(t *testing.T) {
+	at := time.Date(2026, 7, 27, 10, 45, 12, 0, time.UTC)
+	when := Messages_en_US.FormatDateTime(at)
+
+	anonymous := Messages_en_US.RecordChangedMessage("", "", at)
+	if !strings.Contains(anonymous, when) {
+		t.Errorf("the anonymous message does not say when: %q", anonymous)
+	}
+
+	named := Messages_en_US.RecordChangedMessage("Ana Souza", "ana@example.com", at)
+	for _, want := range []string{"Ana Souza", "ana@example.com", when} {
+		if !strings.Contains(named, want) {
+			t.Errorf("the message does not carry %q: %q", want, named)
+		}
+	}
+
+	// messages that define no layout must not silently print an empty instant
+	// (time.Format("") returns "")
+	empty := &Messages{}
+	if got := empty.FormatDateTime(at); got == "" {
+		t.Error("with no layout configured the instant came out empty")
+	}
+}
+
 func TestRecordStampValue(t *testing.T) {
 	if got := RecordStampValue(time.Time{}); got != "0" {
 		t.Errorf("zero time = %q, want %q", got, "0")
