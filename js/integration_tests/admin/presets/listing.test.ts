@@ -25,8 +25,8 @@ describe("listing form hosts", () => {
     const body = portalBody(r);
 
     // one host per action, each owning its overlay's closer
-    expect(body).toContain("$presetsItemDetailing: {show:false, id:null,");
-    expect(body).toContain("$presetsCreating: {show:false,");
+    expect(body).toContain("$presetsItemDetailing: $closer({show:false, id:null,");
+    expect(body).toContain("$presetsCreating: $closer({show:false,");
     // each host guards its block, so turning the scope off destroys the overlay
     expect(body).toContain("v-if='$presetsItemDetailing?.show'");
     expect(body).toContain("v-if='$presetsCreating?.show'");

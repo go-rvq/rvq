@@ -26,8 +26,12 @@ export const VxDialogStub = defineComponent({
     modelValue: { type: Boolean, default: true },
     title: { type: String, default: "" },
   },
+  emits: ["update:modelValue"],
+  // the close button stands for the real dialog's chrome: closing writes `false`
+  // through `v-model='closer.show'`, which is what turns the overlay off.
   template: `
     <div class="vx-dialog" v-if="modelValue" :data-title="title">
+      <button class="vx-dialog-close" @click="$emit('update:modelValue', false)"></button>
       <div class="vx-dialog-toolbar"><slot name="appendToolbar"></slot></div>
       <div class="vx-dialog-body"><slot name="body"></slot></div>
       <slot></slot>

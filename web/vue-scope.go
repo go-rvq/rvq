@@ -73,6 +73,24 @@ func (b *ScopeBuilder) CloserInit(vs ...interface{}) (r *ScopeBuilder) {
 	return b.init(":closer", vs...).Closer()
 }
 
+// CloserURL gives the scope's closer the clean PAGE address the overlay stands
+// for: while it is open that address is in the address bar, and closing restores
+// the previous one (LIFO — see js/corejs/src/closer-url.ts). The value is JS: a
+// string or a function of the closer.
+func (b *ScopeBuilder) CloserURL(urlExpr string) (r *ScopeBuilder) {
+	return b.CloserInit("{url: " + urlExpr + "}")
+}
+
+// CloserOnOpen / CloserOnClose append JS to the closer's callbacks, run when
+// `closer.show` turns on / off. The script receives the closer as `closer`.
+func (b *ScopeBuilder) CloserOnOpen(script string) (r *ScopeBuilder) {
+	return b.CloserInit("{openCallbacks: [(closer) => { " + script + " }]}")
+}
+
+func (b *ScopeBuilder) CloserOnClose(script string) (r *ScopeBuilder) {
+	return b.CloserInit("{closeCallbacks: [(closer) => { " + script + " }]}")
+}
+
 func (b *ScopeBuilder) FullscreenInit(vs ...interface{}) (r *ScopeBuilder) {
 	return b.init(":fullscreen", vs...).Fullscreen()
 }

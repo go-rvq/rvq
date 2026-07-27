@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"fmt"
+
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
@@ -409,7 +411,18 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 		overlay = OverlayMode(ctx).Up().String()
 		reload  = b.reloadURI(ctx)
 		hosts   = &ItemFormHosts{}
-		host    = func(scope, event string) *FormHostBuilder {
+		// this listing's own address, and the addresses of the PAGES its
+		// overlays stand for. Which record it is, is only known when a row opens
+		// the host, so the address is a function of the closer's `id`.
+		listingHref = b.mb.Info().ListingHrefCtx(ctx)
+		itemURL     = func(suffix string) string {
+			s := fmt.Sprintf(`(closer) => %s + "/" + closer.id`, h.JSONString(listingHref))
+			if suffix != "" {
+				s += " + " + h.JSONString(suffix)
+			}
+			return s
+		}
+		host = func(scope, event string) *FormHostBuilder {
 			portal := ctx.UID()
 			// whatever this host opens — a detail, an edit form — a successful save
 			// inside it changes a row of THIS listing, so the listing reloads.
@@ -417,7 +430,7 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 			// the id comes from the host's own state, whose reference depends on
 			// where it lives (`vars` on a page, a slot variable elsewhere).
 			hb.load = web.Plaid().
-				URL(b.mb.Info().ListingHrefCtx(ctx)).
+				URL(listingHref).
 				EventFunc(event).
 				Query(ParamID, web.Var(hb.ScopeVarExpr("id"))).
 				Query(ParamTargetPortal, portal).
@@ -427,10 +440,10 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 	)
 
 	if !b.mb.editingDisabled {
-		hosts.Edit = host(ListingItemEditScope, actions.Edit)
+		hosts.Edit = host(ListingItemEditScope, actions.Edit).URLExpr(itemURL("/edit"))
 	}
 	if b.mb.hasDetailing && !b.mb.detailingDisabled {
-		hosts.Detail = host(ListingItemDetailScope, actions.Detailing)
+		hosts.Detail = host(ListingItemDetailScope, actions.Detailing).URLExpr(itemURL(""))
 	}
 
 	newPortal := ctx.UID()
@@ -441,6 +454,10 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 			Query(ParamTargetPortal, newPortal).
 			Query(ParamOverlay, overlay)).
 		OnSave(reload)
+
+	if !b.mb.editingDisabled {
+		hosts.New.URL(listingHref + "/new")
+	}
 
 	WithItemFormHosts(ctx, hosts)
 	return hosts

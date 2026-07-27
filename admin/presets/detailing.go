@@ -325,6 +325,12 @@ func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, for
 			ValidQuery(ParamTargetPortal, editPortal).
 			ValidQuery(ParamOverlay, overlayMode.Up().String()))
 
+	// the edit form of THIS record is also a page — while the overlay is open,
+	// that page's address is the one in the address bar
+	if !b.mb.editingDisabled {
+		host.URL(b.mb.Info().EditingHrefCtx(ctx, id))
+	}
+
 	// What a successful edit refreshes. Both branches keep the page as it is —
 	// nothing is reloaded but the detail itself.
 	if overlayMode.Overlayed() {

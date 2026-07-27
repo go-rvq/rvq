@@ -67,6 +67,9 @@ type FormHostBuilder struct {
 	wrapsOpener bool
 	show        bool
 	onSave      string
+	url         string
+	onOpen      []string
+	onClose     []string
 	vars        map[string]string
 	portal      string
 	load        *web.VueEventTagBuilder
@@ -77,6 +80,38 @@ type FormHostBuilder struct {
 // DetailingEditScope), loading the form into portal via the load event.
 func FormHost(scope, portal string, load *web.VueEventTagBuilder) *FormHostBuilder {
 	return &FormHostBuilder{scope: scope, portal: portal, load: load}
+}
+
+// URL is the clean PAGE address this overlay stands for — the URL that renders
+// the same thing without the overlay (a record's detail, its edit form, a
+// listing). While the host is open that address is in the address bar; closing
+// restores the previous one, LIFO (see js/corejs/src/closer-url.ts).
+//
+// The value is JS, because a host serves every row of a listing and only knows
+// which record when it opens: use URLExpr for a function of the closer, or this
+// for a literal address.
+func (b *FormHostBuilder) URL(v string) *FormHostBuilder {
+	return b.URLExpr(h.JSONString(v))
+}
+
+// URLExpr sets the address as a JS expression — a string or a function of the
+// closer, e.g. `(c) => "/products/" + c.id + "/edit"`.
+func (b *FormHostBuilder) URLExpr(v string) *FormHostBuilder {
+	b.url = v
+	return b
+}
+
+// OnOpen / OnClose are JS run when the host's overlay opens / closes. They are
+// appended to the closer's `openCallbacks` / `closeCallbacks`, which receive the
+// closer itself as the single argument (named `closer` in the script).
+func (b *FormHostBuilder) OnOpen(script string) *FormHostBuilder {
+	b.onOpen = append(b.onOpen, script)
+	return b
+}
+
+func (b *FormHostBuilder) OnClose(script string) *FormHostBuilder {
+	b.onClose = append(b.onClose, script)
+	return b
 }
 
 // WrapsOpener tells whether this host renders around its OPENER (the button)
@@ -168,19 +203,47 @@ func (b *FormHostBuilder) Ref() string {
 	return b.scope
 }
 
-// init is the JS initializer of this host's state. Besides `show` (and any extra
-// Var), it carries the two functions that make a refresh possible without the
-// saving request knowing anything about its opener:
+// init is the JS initializer of this host's state — a CLOSER (`$closer(…)`, the
+// global factory of js/corejs/src/closer.ts), so that `show` fires the open and
+// close callbacks and this state is the very object the overlay binds to.
+//
+// Besides `show` (and any extra Var), it carries the two functions that make a
+// refresh possible without the saving request knowing anything about its opener:
 //
 //	reload()  re-runs what this host loads (the detail, the form) into its portal
 //	onSave()  refreshes what the change affects, as declared by the host's owner
+//
+// and, when the host stands for a page, the clean `url` that page has.
 func (b *FormHostBuilder) init() string {
-	s := fmt.Sprintf("{show:%v", b.show)
+	s := fmt.Sprintf("$closer({show:%v", b.show)
 	for _, name := range sortedKeys(b.vars) {
 		s += fmt.Sprintf(", %s:%s", name, b.vars[name])
 	}
+	if b.url != "" {
+		s += ", url: " + b.url
+	}
+	if len(b.onOpen) > 0 {
+		s += ", openCallbacks: [" + closerCallbackList(b.onOpen) + "]"
+	}
+	if len(b.onClose) > 0 {
+		s += ", closeCallbacks: [" + closerCallbackList(b.onClose) + "]"
+	}
 	s += ", reload: () => { " + b.loadScript() + " }"
-	return s + "}"
+	return s + "})"
+}
+
+// closerCallbackList turns scripts into the closer's callback functions. Each
+// receives the closer, named `closer` so a script reads like the ones that run
+// with a closer in scope.
+func closerCallbackList(scripts []string) string {
+	var s string
+	for i, script := range scripts {
+		if i > 0 {
+			s += ", "
+		}
+		s += "(closer) => { " + script + " }"
+	}
+	return s
 }
 
 // callbacks is the `onSaveCallbacks` this host passes to what it loads: the list

@@ -31,6 +31,7 @@ type EditingBuilder struct {
 	editingTitleFunc EditingTitleComponentFunc
 	onChangeAction   OnChangeActionFunc
 	pageFunc         web.PageFunc
+	creatingPageFunc web.PageFunc
 	FieldsBuilder
 	preComponents  []ModeObjectComponentFunc
 	postComponents []ModeObjectComponentFunc
@@ -455,6 +456,23 @@ func (b *EditingBuilder) GetPageFunc() web.PageFunc {
 		return b.pageFunc
 	}
 	return b.defaultPageFunc
+}
+
+// GetCreatingPageFunc renders the create form as a PAGE. It is what the `/new`
+// route serves, so the address a create overlay puts in the address bar (see
+// FormHostBuilder.URL) opens the same form when reloaded or shared.
+func (b *EditingBuilder) GetCreatingPageFunc() web.PageFunc {
+	if b.creatingPageFunc != nil {
+		return b.creatingPageFunc
+	}
+	return func(ctx *web.EventContext) (web.PageResponse, error) {
+		return b.DefaultPageFuncMode(true, ctx)
+	}
+}
+
+func (b *EditingBuilder) SetCreatingPageFunc(pageFunc web.PageFunc) *EditingBuilder {
+	b.creatingPageFunc = pageFunc
+	return b
 }
 
 func (b *EditingBuilder) SetPageFunc(pageFunc web.PageFunc) *EditingBuilder {

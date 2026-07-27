@@ -359,6 +359,8 @@ btn.Attr("@click", host.ShowExpr()) // "$presetsEditing.show = true"
 | Method | Purpose |
 | --- | --- |
 | `Show(bool)` | initial state; `true` makes the host self-opening |
+| `URL(url)` / `URLExpr(js)` | the clean PAGE address the overlay stands for, shown in the address bar while it is open (see [closer.md](closer.md)) |
+| `OnOpen(js)` / `OnClose(js)` | JS appended to the closer's open/close callbacks |
 | `Var(name, init)` | extra reactive variable (e.g. `id`), readable by the load event |
 | `WrapsOpener(bool)` | this host wraps its BUTTON, not the content — for actions the layout renders into the app bar |
 | `Ref()` | the JS expression for the host state (`$presetsEditing`) |
@@ -380,6 +382,10 @@ the host. Listings publish theirs with `WithItemFormHosts` / `GetItemFormHosts`
 publishes its edit host with `WithDetailingEditHost` / `GetDetailingEditHost`.
 They return `""`/`nil` outside a host, so the caller can fall back to the
 self-hosting events.
+
+The host's state IS a closer (`$closer({show:false, …})`, see
+[closer.md](closer.md)): besides `show` it carries the host's `reload()`, any
+`Var` and the open/close callbacks.
 
 Related: [`ParamCloserProvided`](../const.go), `DialogBuilder.SetCloserProvided`,
 `Drawer.SetCloserProvided`.

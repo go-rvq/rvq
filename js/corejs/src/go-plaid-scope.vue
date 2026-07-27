@@ -11,7 +11,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, inject, isProxy, onMounted, provide, reactive, watch} from 'vue'
+import {inject, isProxy, onMounted, provide, reactive, watch} from 'vue'
+import {createCloser} from '@/closer'
 import debounce from 'lodash/debounce'
 
 const props = defineProps<{
@@ -61,39 +62,19 @@ if (props.form !== undefined) {
 
 let closer = inject<object>('closer', {})
 
-const newBoolean = (obj: any, get: () => any) => {
-  return obj
-  obj._show = false
-  obj.show = computed({
-    get(): boolean {
-      return obj._show
-    },
-    set(v: boolean) {
-      obj._show = v
-      if (obj.openHandlers) {
-        ;(obj.openHandlers as Function[]).forEach((fn) => {
-          fn(get())
-        })
-      } else {
-        if (obj.closeHandlers) {
-          ;(obj.closeHandlers as Function[]).forEach((fn) => {
-            fn(get())
-          })
-        }
-      }
-    }
-  })
-  return obj
-}
-
 if (props.closer !== undefined) {
   let dot: object = { $parent: closer, show: false }
   if (isProxy(props.closer)) {
+    // an existing closer (a form host owns it, see ParamCloserProvided): adopt
+    // it as is — re-wrapping would give this scope a second, silent copy of the
+    // open/close callbacks.
     dot = props.closer
   } else if (Array.isArray(props.closer)) {
-    dot = reactive(newBoolean(Object.assign(dot, ...props.closer), () => closer))
+    // createCloser LAST, over the merged initializer: `show` in it is the
+    // initial state and must not fire anything.
+    dot = createCloser(Object.assign(dot, ...props.closer))
   } else {
-    dot = reactive(newBoolean({ ...dot, ...props.closer }, () => closer))
+    dot = createCloser({ ...dot, ...props.closer })
   }
   closer = dot
   provide('closer', closer)

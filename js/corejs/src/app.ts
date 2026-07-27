@@ -18,6 +18,7 @@ import {componentByTemplate} from '@/component-by-template'
 import {Builder, plaid} from '@/builder'
 import {keepScroll} from '@/keepScroll'
 import {assignOnMounted} from '@/assign'
+import {createCloser} from '@/closer'
 
 export const Root = defineComponent({
   props: {
@@ -35,7 +36,9 @@ export const Root = defineComponent({
     const locals = reactive({})
     provide('locals', locals)
 
-    const closer = reactive({})
+    // the root closer: nothing above it, but it has the same shape as every
+    // other one (callbacks included), so `closer.show = …` is always meaningful
+    const closer = createCloser()
     provide('closer', closer)
 
     // Refresh hooks a saved form calls (see presets FormHost): every scope that
@@ -96,6 +99,20 @@ export const Root = defineComponent({
 
 export const plaidPlugin = {
   install(app: App) {
+    // Globals every template expression may reach — they belong to the PLUGIN,
+    // not to createWebApp: a page rendered in a test mounts Root with the plugin
+    // alone, and `$closer(…)` (how a form host declares its state) has to
+    // resolve there too.
+    //
+    // `onSaveCallbacks` must resolve to an empty list wherever nobody provided
+    // one (see FormHost).
+    app.config.globalProperties.$closer = createCloser
+    app.config.globalProperties.onSaveCallbacks = []
+    app.config.globalProperties.presetsListing = null
+    app.config.globalProperties.presetsDetailing = null
+    app.config.globalProperties.presetsCreating = null
+    app.config.globalProperties.presetsEditing = null
+
     app.component('GoPlaidScope', GoPlaidScope)
     app.component('GoPlaidPortal', GoPlaidPortal)
     app.component('GoPlaidRunScript', GoPlaidRunScript)
@@ -127,13 +144,6 @@ export function createWebApp(template: string): App<Element> {
 
   app.config.globalProperties.copyToClipboard = copyToClipboard
   app.config.globalProperties.copiedToClipboard = copiedToClipboard
-  // the refresh hooks a saved form runs; scopes append to it and pass it on, so
-  // it must resolve to an empty list wherever nobody has (see FormHost)
-  app.config.globalProperties.onSaveCallbacks = []
-  app.config.globalProperties.presetsListing = null
-  app.config.globalProperties.presetsDetailing = null
-  app.config.globalProperties.presetsCreating = null
-  app.config.globalProperties.presetsEditing = null
   app.use(plaidPlugin)
   return app
 }

@@ -37,7 +37,7 @@ describe("EditForm wrapper", () => {
 
     // the host owns the form's closer in a scope var, already on (self-opening)
     expect(body).toContain("<user-component");
-    expect(body).toContain("$presetsEditing: {show:true,");
+    expect(body).toContain("$presetsEditing: $closer({show:true,");
     // the form block is guarded by it: turning it off destroys the form
     expect(body).toContain("v-if='$presetsEditing?.show'");
     // inside, a child `form` scope + the portal (seeded with the host's closer)

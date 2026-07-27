@@ -31,6 +31,55 @@ atualizado — sem recarregar a página.
 - [x] `make check` criado (gofmt + build + testes Go que passam + suítes bun) e
       registrado no CLAUDE.md/README como portão antes do commit.
 
+# TASK — callbacks de open/close no `closer` + URL limpa dos overlays
+
+Implementado e testado (2026-07-27). Documentação:
+`admin/presets/docs/closer.md` (+ índice em `docs/README.md` e a seção API de
+`docs/form-host.md`).
+
+- [x] Núcleo em `js/corejs/src/closer.ts`: `createCloser` / `asCloser` /
+      `isCloser`. `show` é accessor sobre `_show` e dispara
+      `openCallbacks`/`closeCallbacks` **na transição**; o estado do
+      inicializador (`{show:true}`) não dispara nada; o callback recebe o próprio
+      closer; callback que estoura é logado e os demais seguem. Açúcar
+      `onOpen`/`onClose`, que devolvem o removedor.
+      O gatilho fica no OBJETO (não num `watch` de componente) porque o mesmo
+      closer é adotado por vários componentes — um watcher por adotante
+      dispararia N vezes. `asCloser` é idempotente, então adotar não duplica
+      callbacks. Removida a tentativa morta (`newBoolean`, com `return obj` na
+      primeira linha) do `go-plaid-scope.vue`.
+- [x] Os três pontos de criação passam pela fábrica: raiz (`app.ts`),
+      `:closer` do `go-plaid-scope` e o ScopeVar do FormHost, via `$closer(…)`.
+      As globais (`$closer`, `onSaveCallbacks`, `presets*`) mudaram de
+      `createWebApp` para `plaidPlugin.install` — um teste monta o `Root` só com
+      o plugin, e sem isso `$closer` não resolvia nos templates.
+- [x] Go: `FormHostBuilder.URL/URLExpr/OnOpen/OnClose` e
+      `ScopeBuilder.CloserURL/CloserOnOpen/CloserOnClose`.
+- [x] URL limpa dos overlays (LIFO) em `js/corejs/src/closer-url.ts`: abrir
+      empilha `{closer, url, prev}` e faz `pushState`; fechar restaura o `prev`
+      DA ENTRADA e descarta as de cima (elas viviam dentro da que fechou), com
+      `replaceState` — o endereço do overlay não é lugar para voltar. `state`
+      nulo de propósito: o popstate do plaid só reage ao estado que ele mesmo
+      empilhou. **Back fecha o overlay do topo** (escrita de história suprimida,
+      o browser já andou).
+- [x] Ligado onde há rota de verdade: DETAIL `/{listing}/{id}`, EDIT
+      `/{listing}/{id}/edit` (inclusive o EDIT de um detailing e a linha de um
+      model sem detailing) e NEW `/{listing}/new` — esta rota passou a existir
+      (`EditingBuilder.GetCreatingPageFunc`, `SetCreatingPageFunc` para trocar),
+      senão o endereço não abriria nada ao ser recarregado.
+- [x] Testes (bun, 64 no total): `closer.test.ts` (11 — contrato, adoção
+      idempotente, isolamento de erro, pilha LIFO, endereço por função da linha,
+      Back) e `closer.dom.test.ts` (4 — runtime real contra o servidor Go:
+      linha → DETAIL → EDIT empilham e desempilham, NEW mostra `/new`, model sem
+      detailing abre `/edit`, e os endereços são buscados para provar que servem
+      página). O stub `vx-dialog` ganhou botão de fechar, que é como o diálogo
+      real desliga o closer (`v-model`).
+- [x] `js/corejs/dist/index.js` rebuildado e commitado (é ele que o navegador
+      carrega; as suítes bun importam o fonte). CUIDADO: o build esvazia `dist/`
+      — restaurar `vue.global.*.js` e `vue-i18n.js` com `git checkout`.
+- [ ] PENDENTE: validar no NAVEGADOR (history real, Back/Forward com o teclado,
+      drawer além do dialog).
+
 # FORM HOST (evolução do EditForm/NewForm)
 
 - [x] Conceito do usuário generalizado em `presets.FormHost` (`form_host.go`): a
@@ -175,6 +224,7 @@ Estado (validar no navegador antes de publicar):
       que esperam "Editing MyContent 1" / "Editing CampaignContent 1" no portal.
       O conteúdo do form já chega correto (inclusive o autosave com
       `@change-debounced`); falta só o título.
+- [~] https://demo.dashboardpack.com/architectui-vue-pro/dashboards/project-management
 
 # Nao prioritárias
 - [ ] crie o componente /mnt/MPS-WORK/work/.goenv/ipc-vicosa/src/github.com/go-rvq/rvq/js/vuetify/src/components/JSONInput.vsx com API em /mnt/MPS-WORK/work/.goenv/ipc-vicosa/src/github.com/go-rvq/rvq/x/ui/vuetify/json-input.go

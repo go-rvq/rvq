@@ -92,6 +92,22 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			}
 		})
 
+		if !mb.editingDisabled {
+			// the create form as a page: this is the address a create overlay
+			// shows while it is open (see FormHostBuilder.URL), so reloading or
+			// sharing it has to render the same form. Mounted before `/{id}` —
+			// a literal segment wins over the wildcard.
+			newPath := routePath + "/new"
+			mux.Handle(
+				newPath,
+				mb.p.WrapModel(mb, mb.p.detailLayoutFunc(mb.BindPageFunc(mb.editing.GetCreatingPageFunc()), mb.layoutConfig)),
+			)
+
+			if routesDebug {
+				log.Printf("mounted url: %s\n", newPath)
+			}
+		}
+
 		itemRoutePath += "/{id}"
 		mb.itemRoutePath = itemRoutePath
 
