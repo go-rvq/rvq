@@ -185,7 +185,12 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 
 	respondTargetPortal := ctx.R.FormValue(ParamTargetPortal)
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-	if overlay.IsDrawer() {
+	// Only when nobody asked for a portal — the same rule the edit form follows.
+	// A form host DOES ask for one (its own), and the drawer has to land there:
+	// in the layout's global portal the `closer` in scope is the root one, not
+	// the host's, so `v-model='closer.show'` would be false and the drawer would
+	// never open.
+	if overlay.IsDrawer() && respondTargetPortal == "" {
 		respondTargetPortal = overlay.PortalName()
 	}
 	targetPortal := respondTargetPortal

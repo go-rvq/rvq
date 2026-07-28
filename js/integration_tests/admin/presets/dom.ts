@@ -38,12 +38,33 @@ export const VxDialogStub = defineComponent({
     </div>`,
 });
 
+// Como o vx-dialog: o suficiente para o teste ver o overlay abrir e fechar.
+export const VxNavigationDrawerStub = defineComponent({
+  name: "vx-navigation-drawer",
+  props: {
+    modelValue: { type: Boolean, default: false },
+    title: { type: String, default: "" },
+  },
+  emits: ["update:modelValue"],
+  template: `
+    <div class="vx-drawer" v-if="modelValue" :data-title="title">
+      <button class="vx-drawer-close" @click="$emit('update:modelValue', false)"></button>
+      <div class="vx-drawer-toolbar"><slot name="appendToolbar"></slot></div>
+      <div class="vx-drawer-body"><slot name="body"></slot></div>
+      <slot></slot>
+    </div>`,
+});
+
 export function mountPresets(template: string, components: Record<string, any> = {}) {
   return mount(Root, {
     props: { initialTemplate: template },
     global: {
       plugins: [plaidPlugin, vuetify],
-      components: { "vx-dialog": VxDialogStub, ...components },
+      components: {
+        "vx-dialog": VxDialogStub,
+        "vx-navigation-drawer": VxNavigationDrawerStub,
+        ...components,
+      },
       // the real app declares these as global properties (see createWebApp in
       // corejs/src/app.ts); without them a rendered portal that references
       // `presetsListing` cannot resolve it and its content fails to render.

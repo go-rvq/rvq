@@ -106,6 +106,18 @@ export const plaidPlugin = {
     //
     // `onSaveCallbacks` must resolve to an empty list wherever nobody provided
     // one (see FormHost).
+    // o botão de copiar existe em páginas renderizadas por qualquer app que use
+    // o plugin, então o par vive aqui e não só no createWebApp
+    const copiedToClipboard = ref(false)
+    app.config.globalProperties.copiedToClipboard = copiedToClipboard
+    app.config.globalProperties.copyToClipboard = (text: string) => {
+      window.navigator.clipboard.writeText(text)
+      copiedToClipboard.value = true
+      window.setTimeout(() => {
+        copiedToClipboard.value = false
+      }, 1000)
+    }
+
     app.config.globalProperties.$closer = createCloser
     app.config.globalProperties.onSaveCallbacks = []
     app.config.globalProperties.presetsListing = null
@@ -133,17 +145,6 @@ export function createWebApp(template: string): App<Element> {
     initialTemplate: template
   })
 
-  const copiedToClipboard = ref(false)
-  const copyToClipboard = (text: string) => {
-    window.navigator.clipboard.writeText(text)
-    copiedToClipboard.value = true
-    window.setTimeout(() => {
-      copiedToClipboard.value = false
-    }, 1000)
-  }
-
-  app.config.globalProperties.copyToClipboard = copyToClipboard
-  app.config.globalProperties.copiedToClipboard = copiedToClipboard
   app.use(plaidPlugin)
   return app
 }
