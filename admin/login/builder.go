@@ -34,6 +34,10 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	r.TOTPValidatePageFunc(defaultTOTPValidatePage(vh, pb))
 
 	registerChangePasswordEvents(r, pb)
+
+	// A session that dies under an open page no longer throws the page away: the
+	// login comes back in a dialog over it (see dialog.go).
+	b.installLoginDialog(pb)
 	return
 }
 

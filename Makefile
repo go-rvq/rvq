@@ -16,6 +16,7 @@ GO_TEST_PKGS := \
 	./x/i18n \
 	./x/perm \
 	./x/login \
+	./admin/login \
 	./x/packages/db-tools \
 	./admin/presets \
 	./admin/presets/integration \

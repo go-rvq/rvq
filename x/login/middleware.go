@@ -256,6 +256,9 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				}
 				if path == b.loginPageURL || !b.requireForRequest(r) {
 					next.ServeHTTP(w, r)
+				} else if b.unauthorizedResponder != nil && b.unauthorizedResponder(w, r) {
+					// answered without sending the browser away — see
+					// UnauthorizedResponder
 				} else {
 					http.Redirect(w, r, b.loginPageURL, http.StatusFound)
 				}

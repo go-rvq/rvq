@@ -894,7 +894,20 @@ const (
 	ListingDialogPortalName        = "presets_ListingDialogPortalName"
 	FormPortalName                 = "presets_FormPortalName"
 	FlashPortalName                = "flash"
+
+	// LoginPortalName is where the login shows up when the session dies while a
+	// page is open. It sits at the layout root so the dialog covers everything,
+	// and the page underneath keeps whatever the user had typed.
+	LoginPortalName = "presets_LoginPortalName"
+
+	// LoginDoneURI is the tiny page the login lands on inside the dialog: it
+	// tells the page around it that the session is back, and that is the whole
+	// content — nothing heavy is loaded inside the frame.
+	LoginDoneURI = "/login-done"
 )
+
+// LoginDialogVar is the layout variable that shows the login dialog.
+const LoginDialogVar = "vars.presetsLoginDialog"
 
 const (
 	CloseRightDrawerVarScript   = "vars.presetsRightDrawer = false"

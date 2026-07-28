@@ -71,6 +71,7 @@ type Builder struct {
 	authCookieName        string
 	authSecureCookieName  string
 	continueUrlCookieName string
+	unauthorizedResponder UnauthorizedResponder
 	// seconds
 	sessionMaxAge    int
 	cookieConfig     CookieConfig
@@ -408,6 +409,32 @@ func (b *Builder) WhiteList(pth ...string) *Builder {
 		b.whiteList[s] = nil
 	}
 	return b
+}
+
+// UnauthorizedResponder answers a request whose session is gone, INSTEAD of
+// redirecting the browser to the login page. It returns true when it took care
+// of the response.
+//
+// It exists for what a redirect destroys: a request fired from a page the user
+// was working on — a form open in a dialog, say — comes back as the login page
+// and everything typed is lost. An answer that keeps the page standing (a login
+// dialog over it) can only be built by whoever owns the page, so this is where
+// that side plugs in. See admin/login, which opens the login in a dialog.
+type UnauthorizedResponder func(w http.ResponseWriter, r *http.Request) bool
+
+func (b *Builder) SetUnauthorizedResponder(v UnauthorizedResponder) (r *Builder) {
+	b.unauthorizedResponder = v
+	return b
+}
+
+// SetContinueURL makes the login send the browser to url once it succeeds.
+func (b *Builder) SetContinueURL(w http.ResponseWriter, url string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     b.continueUrlCookieName,
+		Value:    url,
+		Path:     "/",
+		HttpOnly: true,
+	})
 }
 
 func (b *Builder) Secret(v string) (r *Builder) {

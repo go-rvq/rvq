@@ -140,6 +140,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			web.Portal().Name(DeleteConfirmPortalName),
 			web.Portal().Name(DefaultConfirmDialogPortalName),
 			web.Portal().Name(ListingDialogPortalName),
+			// Where the login shows up when a session dies under an open page —
+			// at the layout root, so it covers everything (see LoginPortalName).
+			web.Portal().Name(LoginPortalName),
 			web.Portal(flash).Name(FlashPortalName),
 		)
 
