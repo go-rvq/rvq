@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
+	"golang.org/x/text/language"
 )
 
 type dialogUser struct {
@@ -28,7 +29,7 @@ func (u *dialogUser) GetAccountName() string { return u.Email }
 func newDialogApp(t *testing.T) http.Handler {
 	t.Helper()
 
-	i18nB := i18n.New()
+	i18nB := i18n.New().SupportLanguages(language.AmericanEnglish, language.BrazilianPortuguese)
 	pb := presets.New(i18nB).URIPrefix("/admin")
 
 	lb := login.New(i18nB).
@@ -150,6 +151,37 @@ func TestLoginDialogURIRendersTheDialog(t *testing.T) {
 	}
 	if !strings.HasSuffix(cont, presets.LoginDoneURI) {
 		t.Errorf("continue URL = %q, queria terminar em %q", cont, presets.LoginDoneURI)
+	}
+}
+
+// O diálogo diz por que apareceu — e no idioma de quem está usando.
+func TestLoginDialogTitleIsTranslated(t *testing.T) {
+	app := newDialogApp(t)
+
+	for lang, want := range map[string]string{
+		"en":    login.Messages_en_US.LoginAgainTitle,
+		"pt-BR": login.Messages_pt_BR.LoginAgainTitle,
+	} {
+		w := httptest.NewRecorder()
+		app.ServeHTTP(w, plaidRequest("POST", "/admin"+presets.LoginDialogURI+"?lang="+lang))
+
+		body := w.Body.String()
+		if !strings.Contains(body, want) {
+			t.Errorf("lang=%s: o diálogo não traz o título %q:\n%s", lang, want, firstLine(body))
+		}
+		// e só ele: o idioma pedido é o que sai
+		for other, s := range map[string]string{
+			"en":    login.Messages_en_US.LoginAgainTitle,
+			"pt-BR": login.Messages_pt_BR.LoginAgainTitle,
+		} {
+			if other != lang && strings.Contains(body, s) {
+				t.Errorf("lang=%s: o diálogo traz o título de %s (%q)", lang, other, s)
+			}
+		}
+	}
+
+	if login.Messages_pt_BR.LoginAgainTitle != "Faça login novamente" {
+		t.Errorf("título em pt-BR = %q", login.Messages_pt_BR.LoginAgainTitle)
 	}
 }
 

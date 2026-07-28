@@ -9,6 +9,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	xlogin "github.com/go-rvq/rvq/x/login"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
 
@@ -45,19 +46,21 @@ func (b *Builder) installLoginDialog(pb *presets.Builder) {
 		// the page the frame lands on when the login succeeds
 		mux.Handle(prefix+presets.LoginDoneURI, LoginDonePage())
 
-		// the dialog itself
-		mux.Handle(prefix+presets.LoginDialogURI, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// The dialog itself. EnsureLanguage because this handler is not a page —
+		// nothing else would put the translations in its context.
+		mux.Handle(prefix+presets.LoginDialogURI, pb.I18n().EnsureLanguage(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// where the login goes when it succeeds
 			lb.SetContinueURL(w, doneURL)
 
 			loginURL := lb.GetLoginPageURL()
+			msgr := xlogin.GetMessages(r.Context())
 
 			var res web.EventResponse
-			res.UpdatePortal(presets.LoginPortalName, loginDialog(loginURL))
+			res.UpdatePortal(presets.LoginPortalName, loginDialog(loginURL, msgr.LoginAgainTitle))
 			web.AppendRunScripts(&res, loginDialogScript(loginURL))
 
 			writeEventResponse(w, r, &res)
-		}))
+		})))
 	})
 
 	// Both are asked for exactly when there is no session — that is the whole
@@ -132,8 +135,9 @@ func loginDialogScript(loginURL string) string {
 		presets.LoginDialogVar)
 }
 
-// loginDialog is the dialog itself: the login page in a frame.
-func loginDialog(loginURL string) h.HTMLComponent {
+// loginDialog is the dialog itself: the login page in a frame, under a title
+// that says why it showed up — the session ended, sign in again.
+func loginDialog(loginURL, title string) h.HTMLComponent {
 	return h.Components(
 		// invisible, not removed: `display:none` would drop the size the dialog
 		// had, and the form inside it would come back measured from scratch
@@ -148,6 +152,7 @@ func loginDialog(loginURL string) h.HTMLComponent {
 				Attr("style", "width:100%;height:100%;min-height:60vh;border:none"),
 		).
 			Attr("v-model", presets.LoginDialogVar).
+			Title(title).
 			Width("520").
 			// the login page of an application can be tall (logo, OAuth buttons,
 			// a captcha): expanding gives it the whole window

@@ -169,7 +169,8 @@ func New(i18nB *i18n.Builder) *Builder {
 	i18nB.
 		RegisterForModule(language.English, I18nLoginKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nLoginKey, Messages_zh_CN).
-		RegisterForModule(language.Japanese, I18nLoginKey, Messages_ja_JP)
+		RegisterForModule(language.Japanese, I18nLoginKey, Messages_ja_JP).
+		RegisterForModule(language.BrazilianPortuguese, I18nLoginKey, Messages_pt_BR)
 
 	r := &Builder{
 		i18nBuilder:           i18nB,
