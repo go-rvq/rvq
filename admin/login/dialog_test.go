@@ -66,6 +66,18 @@ func TestSessionLostOnAnEventOpensTheLoginDialog(t *testing.T) {
 		t.Errorf("o diálogo não carrega a página de login:\n%s", firstLine(body))
 	}
 
+	// os diálogos que já estavam abertos saem de vista — e voltam depois
+	for _, want := range []string{
+		plogin.HiddenByLoginClass,
+		"visibility: hidden",
+		".v-overlay--active",
+		"restore()",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("a resposta não esconde/restaura os outros diálogos (%q):\n%s", want, firstLine(body))
+		}
+	}
+
 	// e o login sabe para onde voltar: a página que avisa "pronto"
 	var cont string
 	for _, c := range w.Result().Cookies() {
