@@ -20,7 +20,7 @@ const drop = (e: any) => {
   <drag-listener @drop="drop">
     <div v-for="item in list" draggable="true">{{ item.name }}</div>
     <div id="vx-drag-target-area">
-      <iframe src="https://demo.qor5.theplant-dev.com/" style="pointer-events: none"></iframe>
+      <iframe src="https://demo.rvq.theplant-dev.com/" style="pointer-events: none"></iframe>
     </div>
   </drag-listener>
 </template>

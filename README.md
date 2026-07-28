@@ -3,7 +3,7 @@
 Rebeca (do hebraico, significa mulher que prende os homens com sua grande beleza, ou união, aquela que une רִבְקָה, 
 transl. Rivqá). Uma homenagem à minha então filha caçula.
 
-Este é a unificação de [qor5/web](https://github.com/go-rvq/web), [qor5/x](https://github.com/go-rvq/x) e [qor5/admin](https://github.com/go-rvq/admin).
+Este é a unificação de [rvq/web](https://github.com/go-rvq/web), [rvq/x](https://github.com/go-rvq/x) e [rvq/admin](https://github.com/go-rvq/admin).
 com minhas alterações.
 
 ## Documentação
@@ -12,14 +12,14 @@ com minhas alterações.
 - [Referência dos pacotes do admin](admin/docs/reference.md) — presets,
   packages (perms, …) e features (activity, …).
 
-> Os docs do QOR5 em `admin/docs` são de uma versão antiga (upstream) e serão
+> Os docs do RVQ em `admin/docs` são de uma versão antiga (upstream) e serão
 > atualizados posteriormente; prefira os docs por pacote referenciados acima.
 
 ## Testes
 
 - **`make check`** — o portão antes de commitar: `gofmt -s`, build, os testes Go
   que passam e as suítes de integração de UI. Pacotes quebrados de longa data
-  (docs/examples do QOR5, pagebuilder, seo, media, libvips, testes de `web` e
+  (docs/examples do RVQ, pagebuilder, seo, media, libvips, testes de `web` e
   `x/perm`) ficam de fora de propósito.
 - Go: `go test ./...` (roda tudo, inclusive o que já está quebrado).
 - **Testes de integração de UI: `js/integration_tests/`** — rodam com `bun test`

@@ -10,7 +10,7 @@ import (
 )
 
 var SwitchPagesWithPushState = Doc(
-	Markdown(`Ways that page transition (between ~web.PageFunc~) in QOR5 web app:
+	Markdown(`Ways that page transition (between ~web.PageFunc~) in RVQ web app:
 
 - Use a traditional link to a new page by url
 - Use a push state link to a new page that only change the current page body to new page body and browser url

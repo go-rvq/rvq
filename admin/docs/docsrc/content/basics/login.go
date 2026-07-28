@@ -8,8 +8,8 @@ import (
 
 var Login = Doc(
 	Markdown(`
-Login package provides comprehensive login authentication logic and related UI interfaces. It is designed to simplify the process of adding user authentication to QOR5-based backend development project.   
-In QOR5 admin development, we recommend using [github.com/qor5/admin/login](https://github.com/qor5/admin/tree/main/login), which wraps [github.com/qor5/x/login](https://github.com/qor5/x/tree/master/login) to keep the theme of login UI consistent with Presets and provide more powerful features.
+Login package provides comprehensive login authentication logic and related UI interfaces. It is designed to simplify the process of adding user authentication to RVQ-based backend development project.   
+In RVQ admin development, we recommend using [github.com/qor5/admin/login](https://github.com/qor5/admin/tree/main/login), which wraps [github.com/qor5/x/login](https://github.com/qor5/x/tree/master/login) to keep the theme of login UI consistent with Presets and provide more powerful features.
 ## Basic Usage
 The example shows how to enable both username/password login and OAuth login.
     `),

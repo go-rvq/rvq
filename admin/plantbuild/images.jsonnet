@@ -1,6 +1,6 @@
 local k8s = import 'k8s.jsonnet';
 
-local ecr_prefix = 'public.ecr.aws/qor5/';
+local ecr_prefix = 'public.ecr.aws/rvq/';
 
 local images = [
   { type: 'deployment', name: 'docs', image: ecr_prefix + 'docs' },
@@ -10,6 +10,6 @@ local images = [
 ];
 
 k8s.set_images(
-  namespace='qor5-test',
+  namespace='rvq-test',
   images=images
 )

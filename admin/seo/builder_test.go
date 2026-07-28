@@ -13,7 +13,7 @@ import (
 )
 
 func TestBuilder_Render(t *testing.T) {
-	u, _ := url.Parse("http://dev.qor5.com/product/1")
+	u, _ := url.Parse("http://dev.rvq.com/product/1")
 	defaultRequest := &http.Request{
 		Method: "GET",
 		URL:    u,
@@ -25,7 +25,7 @@ func TestBuilder_Render(t *testing.T) {
 			Setting: Setting{
 				Title: "global | {{SiteName}}",
 			},
-			Variables: map[string]string{"SiteName": "Qor5 dev"},
+			Variables: map[string]string{"SiteName": "Rvq dev"},
 			Locale:    l10n.Locale{LocaleCode: "en"},
 		},
 		{
@@ -33,7 +33,7 @@ func TestBuilder_Render(t *testing.T) {
 			Setting: Setting{
 				Title: "全局 | {{SiteName}}",
 			},
-			Variables: map[string]string{"SiteName": "Qor5 开发"},
+			Variables: map[string]string{"SiteName": "Rvq 开发"},
 			Locale:    l10n.Locale{LocaleCode: "zh"},
 		},
 	}
@@ -59,8 +59,8 @@ func TestBuilder_Render(t *testing.T) {
 			}(),
 			obj: NewNonModelSEO(defaultGlobalSEOName, "en"),
 			want: `
-			<title>global | Qor5 dev</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<title>global | Rvq dev</title>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 			`,
 		},
 		{
@@ -72,7 +72,7 @@ func TestBuilder_Render(t *testing.T) {
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
 					},
-					Variables: map[string]string{"SiteName": "Qor5 开发"},
+					Variables: map[string]string{"SiteName": "Rvq 开发"},
 					Locale:    l10n.Locale{LocaleCode: "zh"},
 				}
 				dbForTest.Save(&product)
@@ -103,14 +103,14 @@ func TestBuilder_Render(t *testing.T) {
 						Setting: Setting{
 							Title: "global | {{SiteName}}",
 						},
-						Variables: map[string]string{"SiteName": "Qor5 dev"},
+						Variables: map[string]string{"SiteName": "Rvq dev"},
 					},
 					{
 						Name: "Product",
 						Setting: Setting{
 							Title: "product | {{SiteName}}",
 						},
-						Variables: map[string]string{"SiteName": "Qor5 开发"},
+						Variables: map[string]string{"SiteName": "Rvq 开发"},
 					},
 				}
 				dbForTest.Save(settings)
@@ -153,7 +153,7 @@ func TestBuilder_Render(t *testing.T) {
 				return builder
 			}(),
 			obj:  NewNonModelSEO("Product", "en"),
-			want: `<title>product | Qor5 dev</title>`,
+			want: `<title>product | Rvq dev</title>`,
 		},
 
 		{
@@ -186,7 +186,7 @@ func TestBuilder_Render(t *testing.T) {
 				return builder
 			}(),
 			obj:  NewNonModelSEO("Product", "zh"),
-			want: `<title>产品 | Qor5 开发</title>`,
+			want: `<title>产品 | Rvq 开发</title>`,
 		},
 
 		{
@@ -198,7 +198,7 @@ func TestBuilder_Render(t *testing.T) {
 						Setting: Setting{
 							Title: "global | {{SiteName}}",
 						},
-						Variables: map[string]string{"SiteName": "Qor5 dev"},
+						Variables: map[string]string{"SiteName": "Rvq dev"},
 					},
 					{
 						Name: "Product",
@@ -217,7 +217,7 @@ func TestBuilder_Render(t *testing.T) {
 				return builder
 			}(),
 			obj:  NewNonModelSEO("Product"),
-			want: `<title>product | Qor5 dev</title>`,
+			want: `<title>product | Rvq dev</title>`,
 		},
 		{
 			name: "Render_seo_with_setting_and_opengraph_prop_and_without_locale",
@@ -239,7 +239,7 @@ func TestBuilder_Render(t *testing.T) {
 					RegisterSettingVariables("ProductTag").
 					RegisterMetaProperty("og:image",
 						func(i interface{}, setting *Setting, request *http.Request) string {
-							return "http://dev.qor5.com/images/logo.png"
+							return "http://dev.rvq.com/images/logo.png"
 						},
 					).SetParent(builder.GetGlobalSEO())
 				return builder
@@ -249,8 +249,8 @@ func TestBuilder_Render(t *testing.T) {
 				Locale: l10n.Locale{LocaleCode: "en"},
 			},
 			want: `
-			<title>product Men | Qor5 dev</title>
-			<meta property='og:image' name='og:image' content='http://dev.qor5.com/images/logo.png'>`,
+			<title>product Men | Rvq dev</title>
+			<meta property='og:image' name='og:image' content='http://dev.rvq.com/images/logo.png'>`,
 		},
 
 		{
@@ -277,7 +277,7 @@ func TestBuilder_Render(t *testing.T) {
 				},
 				Locale: l10n.Locale{LocaleCode: "en"},
 			},
-			want: `<title>product1 | Men | Qor5 dev</title>`,
+			want: `<title>product1 | Men | Rvq dev</title>`,
 		},
 
 		{
@@ -287,7 +287,7 @@ func TestBuilder_Render(t *testing.T) {
 				product := QorSEOSetting{
 					Name: "Product",
 					Setting: Setting{
-						Title: "product | Qor5 dev",
+						Title: "product | Rvq dev",
 					},
 					Variables: map[string]string{"ProductTag": "Men"},
 					Locale:    l10n.Locale{LocaleCode: "en"},
@@ -307,7 +307,7 @@ func TestBuilder_Render(t *testing.T) {
 				},
 				Locale: l10n.Locale{LocaleCode: "en"},
 			},
-			want: `<title>product | Qor5 dev</title>`,
+			want: `<title>product | Rvq dev</title>`,
 		},
 
 		{
@@ -338,7 +338,7 @@ func TestBuilder_Render(t *testing.T) {
 				Locale: l10n.Locale{LocaleCode: "en"},
 			},
 			want: `
-			<title>global | Qor5 dev</title>
+			<title>global | Rvq dev</title>
 			<meta name='description' content='product description'>
 			<meta name='keywords' content='shoes, Men'>
 			`,
@@ -535,7 +535,7 @@ func TestBuilder_SortSEOs(t *testing.T) {
 }
 
 func TestBuilder_BatchRender(t *testing.T) {
-	u, _ := url.Parse("http://dev.qor5.com/product/1")
+	u, _ := url.Parse("http://dev.rvq.com/product/1")
 	defaultRequest := &http.Request{
 		Method: "GET",
 		URL:    u,
@@ -546,7 +546,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 			Setting: Setting{
 				Title: "global | {{SiteName}}",
 			},
-			Variables: map[string]string{"SiteName": "Qor5 dev"},
+			Variables: map[string]string{"SiteName": "Rvq dev"},
 			Locale:    l10n.Locale{LocaleCode: "en"},
 		},
 		{
@@ -554,7 +554,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 			Setting: Setting{
 				Title: "全局 | {{SiteName}}",
 			},
-			Variables: map[string]string{"SiteName": "Qor5 开发"},
+			Variables: map[string]string{"SiteName": "Rvq 开发"},
 			Locale:    l10n.Locale{LocaleCode: "zh"},
 		},
 	}
@@ -596,8 +596,8 @@ func TestBuilder_BatchRender(t *testing.T) {
 			objs: NewNonModelSEOSlice("Product"),
 			wants: []string{
 				`
-			<title>product | Qor5 dev</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<title>product | Rvq dev</title>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -616,7 +616,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 						Setting: Setting{
 							Title: "global | {{SiteName}}",
 						},
-						Variables: map[string]string{"SiteName": "Qor5 dev"},
+						Variables: map[string]string{"SiteName": "Rvq dev"},
 					},
 				}
 				if err := dbForTest.Save(&settings).Error; err != nil {
@@ -636,8 +636,8 @@ func TestBuilder_BatchRender(t *testing.T) {
 			objs: NewNonModelSEOSlice("Product"),
 			wants: []string{
 				`
-			<title>product | Qor5 dev</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<title>product | Rvq dev</title>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -693,12 +693,12 @@ func TestBuilder_BatchRender(t *testing.T) {
 			wants: []string{
 				`
 			<title>productA</title>
-			<meta name='description' content='Qor5 dev'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta name='description' content='Rvq dev'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>productB</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -754,12 +754,12 @@ func TestBuilder_BatchRender(t *testing.T) {
 			wants: []string{
 				`
 			<title>productA</title>
-			<meta name='description' content='Qor5 dev'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta name='description' content='Rvq dev'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>productB</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -777,7 +777,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 						},
 						Variables: map[string]string{
 							// override SiteName var inherited from global seo
-							"SiteName": "Qor5-PLP",
+							"SiteName": "Rvq-PLP",
 						},
 						Locale: l10n.Locale{LocaleCode: "en"},
 					},
@@ -836,16 +836,16 @@ func TestBuilder_BatchRender(t *testing.T) {
 			wants: []string{
 				`
 			<title>productA</title>
-			<meta name='description' content='Qor5-PLP'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta name='description' content='Rvq-PLP'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>productB</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
-			<title>product | Qor5-PLP</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<title>product | Rvq-PLP</title>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -928,20 +928,20 @@ func TestBuilder_BatchRender(t *testing.T) {
 			wants: []string{
 				`
 			<title>productA</title>
-			<meta name='description' content='Qor5 dev'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta name='description' content='Rvq dev'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>产品A</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>product | productB</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 				`
 			<title>产品 | 产品B</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},
@@ -993,10 +993,10 @@ func TestBuilder_BatchRender(t *testing.T) {
 			wants: []string{
 				`
 			<title>product | ProductName</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `, `
 			<title>产品 | ProductName</title>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
 `,
 			},
 		},

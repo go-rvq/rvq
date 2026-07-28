@@ -69,25 +69,25 @@ func TestSiteMapIndex(t *testing.T) {
 }
 
 func TestEncodeToXmlWithContext(t *testing.T) {
-	s := SiteMap().RegisterRawString("/admin", "https://qor5-1.dev.com/product").EncodeToXml(WithHost("https://qor5.dev.com"))
-	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https:/qor5.dev.com/admin</loc></url><url><loc>https://qor5-1.dev.com/product</loc></url></urlset>`
+	s := SiteMap().RegisterRawString("/admin", "https://rvq-1.dev.com/product").EncodeToXml(WithHost("https://rvq.dev.com"))
+	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https:/rvq.dev.com/admin</loc></url><url><loc>https://rvq-1.dev.com/product</loc></url></urlset>`
 	if s != expected {
 		t.Errorf("\n\tExpected value: %s\n \tbut got: %s", expected, s)
 	}
 }
 
 func TestRequestHost(t *testing.T) {
-	u, _ := url.Parse("https://qor5.dev.com/sitemap.xml")
-	s := EncodeToXmlByRequest(&http.Request{URL: u}, SiteMap().RegisterRawString("/admin", "https://qor5-1.dev.com/product"))
+	u, _ := url.Parse("https://rvq.dev.com/sitemap.xml")
+	s := EncodeToXmlByRequest(&http.Request{URL: u}, SiteMap().RegisterRawString("/admin", "https://rvq-1.dev.com/product"))
 
-	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https:/qor5.dev.com/admin</loc></url><url><loc>https://qor5-1.dev.com/product</loc></url></urlset>`
+	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https:/rvq.dev.com/admin</loc></url><url><loc>https://rvq-1.dev.com/product</loc></url></urlset>`
 	if s != expected {
 		t.Errorf("\n\tExpected value: %s\n \tbut got: %s", expected, s)
 	}
 }
 
 func TestServeHTTP(t *testing.T) {
-	site := SiteMap().RegisterRawString("/admin", "https://qor5-1.dev.com/product")
+	site := SiteMap().RegisterRawString("/admin", "https://rvq-1.dev.com/product")
 	serveMux := http.NewServeMux()
 	site.MountTo(serveMux)
 
@@ -102,7 +102,7 @@ func TestServeHTTP(t *testing.T) {
 		t.Error(err)
 	}
 
-	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>/admin</loc></url><url><loc>https://qor5-1.dev.com/product</loc></url></urlset>`
+	expected := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>/admin</loc></url><url><loc>https://rvq-1.dev.com/product</loc></url></urlset>`
 	if string(s) != expected {
 		t.Errorf("\n\tExpected value: %s\n \tbut got: %s", expected, s)
 	}

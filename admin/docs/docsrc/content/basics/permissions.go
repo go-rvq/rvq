@@ -11,7 +11,7 @@ import (
 
 var Permissions = Doc(
 	Markdown(`
-QOR5 permission is based on https://github.com/ory/ladon.  
+RVQ permission is based on https://github.com/ory/ladon.  
 A piece of policy looks like this:  
 **Who** is **able** to do **what** on **something** (with given some **context**)  
     `),

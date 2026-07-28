@@ -1,8 +1,8 @@
 # RVQ documentation
 
-RVQ unifies [qor5/web](https://github.com/go-rvq/web),
-[qor5/x](https://github.com/go-rvq/x) and
-[qor5/admin](https://github.com/go-rvq/admin) with local changes. This is the
+RVQ unifies [rvq/web](https://github.com/go-rvq/web),
+[rvq/x](https://github.com/go-rvq/x) and
+[rvq/admin](https://github.com/go-rvq/admin) with local changes. This is the
 top-level index of the in-tree documentation.
 
 ## Admin
@@ -15,7 +15,7 @@ top-level index of the in-tree documentation.
     manager and trash.
   - [activity](../admin/activity/README.md) — auditing and the activity log.
 
-> The QOR5 docsite under `admin/docs` (`README.md`, `docsrc/`) is an older
+> The RVQ docsite under `admin/docs` (`README.md`, `docsrc/`) is an older
 > upstream version, pending an update; prefer the per-package docs linked above.
 
 ## Modules overview

@@ -145,7 +145,7 @@ func PageWithFlashCookie(cookieName string, defaultUrl string, pr PageFunc) Page
 	}
 }
 
-const FlashCookieName = "qor5_page_flash"
+const FlashCookieName = "rvq_page_flash"
 
 func (p *PageBuilder) render(
 	w ResponseWriter,

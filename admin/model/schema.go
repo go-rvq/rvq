@@ -100,9 +100,9 @@ func (s SingleField) QuotedDBName() string {
 }
 
 func (s SingleField) FullDBName() string {
-	return "[qor5/admin/model/schema/single_field]." + string(s)
+	return "[rvq/admin/model/schema/single_field]." + string(s)
 }
 
 func (s SingleField) QuotedFullDBName() string {
-	return "[qor5/admin/model/schema/single_field]." + s.QuotedDBName()
+	return "[rvq/admin/model/schema/single_field]." + s.QuotedDBName()
 }

@@ -2,7 +2,7 @@
 
 Index of the current, in-tree documentation for the `admin` packages of RVQ.
 
-> Note: the QOR5 docsite in this folder (`README.md`, `docsrc/`) is an older
+> Note: the RVQ docsite in this folder (`README.md`, `docsrc/`) is an older
 > upstream version and is pending an update. The links below point to the
 > up-to-date per-package docs that ship with the source.
 

@@ -25,9 +25,9 @@ var Messages_zh_CN = &Messages{
 }
 
 type Messages_ModelsI18nModuleKey struct {
-	QOR5Example string
-	Roles       string
-	Users       string
+	RVQExample string
+	Roles      string
+	Users      string
 
 	Posts          string
 	PostsID        string
@@ -173,7 +173,7 @@ var Messages_zh_CN_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	PostsTitle:     "标题",
 	PostsHeroImage: "主图",
 	PostsBody:      "内容",
-	Example:        "QOR5演示",
+	Example:        "RVQ演示",
 	Settings:       "SEO 设置",
 	Post:           "帖子",
 	PostsBodyImage: "内容图片",
@@ -182,9 +182,9 @@ var Messages_zh_CN_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	SeoVariableTitle:    "标题",
 	SeoVariableSiteName: "站点名称",
 
-	QOR5Example: "QOR5 示例",
-	Roles:       "权限管理",
-	Users:       "用户管理",
+	RVQExample: "RVQ 示例",
+	Roles:      "权限管理",
+	Users:      "用户管理",
 
 	PageBuilder:              "页面管理菜单",
 	Pages:                    "页面管理",

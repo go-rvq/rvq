@@ -60,9 +60,9 @@ const (
 )
 
 const (
-	failCodeFlashCookieName = "qor5_fc_flash"
-	warnCodeFlashCookieName = "qor5_wc_flash"
-	infoCodeFlashCookieName = "qor5_ic_flash"
+	failCodeFlashCookieName = "rvq_fc_flash"
+	warnCodeFlashCookieName = "rvq_wc_flash"
+	infoCodeFlashCookieName = "rvq_ic_flash"
 )
 
 func setFailCodeFlash(w http.ResponseWriter, c FailCode) {
@@ -92,7 +92,7 @@ func setInfoCodeFlash(w http.ResponseWriter, c InfoCode) {
 	})
 }
 
-const noticeFlashCookieName = "qor5_notice_flash"
+const noticeFlashCookieName = "rvq_notice_flash"
 
 func setNoticeFlash(w http.ResponseWriter, ne *NoticeError) {
 	if ne == nil {
@@ -129,7 +129,7 @@ func setNoticeOrPanic(w http.ResponseWriter, err error) {
 	setNoticeFlash(w, ne)
 }
 
-const wrongLoginInputFlashCookieName = "qor5_wli_flash"
+const wrongLoginInputFlashCookieName = "rvq_wli_flash"
 
 type WrongLoginInputFlash struct {
 	Account  string
@@ -147,7 +147,7 @@ func setWrongLoginInputFlash(w http.ResponseWriter, f WrongLoginInputFlash) {
 	})
 }
 
-const wrongForgetPasswordInputFlashCookieName = "qor5_wfpi_flash"
+const wrongForgetPasswordInputFlashCookieName = "rvq_wfpi_flash"
 
 type WrongForgetPasswordInputFlash struct {
 	Account string
@@ -165,7 +165,7 @@ func setWrongForgetPasswordInputFlash(w http.ResponseWriter, f WrongForgetPasswo
 	})
 }
 
-const wrongResetPasswordInputFlashCookieName = "qor5_wrpi_flash"
+const wrongResetPasswordInputFlashCookieName = "rvq_wrpi_flash"
 
 type WrongResetPasswordInputFlash struct {
 	Password        string
@@ -184,7 +184,7 @@ func setWrongResetPasswordInputFlash(w http.ResponseWriter, f WrongResetPassword
 	})
 }
 
-const wrongChangePasswordInputFlashCookieName = "qor5_wcpi_flash"
+const wrongChangePasswordInputFlashCookieName = "rvq_wcpi_flash"
 
 type WrongChangePasswordInputFlash struct {
 	OldPassword     string
@@ -204,7 +204,7 @@ func setWrongChangePasswordInputFlash(w http.ResponseWriter, f WrongChangePasswo
 	})
 }
 
-const secondsToRedoFlashCookieName = "qor5_stre_flash"
+const secondsToRedoFlashCookieName = "rvq_stre_flash"
 
 func setSecondsToRedoFlash(w http.ResponseWriter, c int) {
 	http.SetCookie(w, &http.Cookie{

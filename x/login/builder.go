@@ -173,8 +173,8 @@ func New(i18nB *i18n.Builder) *Builder {
 	r := &Builder{
 		i18nBuilder:           i18nB,
 		authCookieName:        "auth",
-		authSecureCookieName:  "qor5_auth_secure",
-		continueUrlCookieName: "qor5_continue_url",
+		authSecureCookieName:  "rvq_auth_secure",
+		continueUrlCookieName: "rvq_continue_url",
 
 		homePageURLFunc: func(r *http.Request, user interface{}) string {
 			return "/"
@@ -209,7 +209,7 @@ func New(i18nB *i18n.Builder) *Builder {
 		maxRetryCount:     5,
 		totpEnabled:       true,
 		totpConfig: TOTPConfig{
-			Issuer: "QOR5",
+			Issuer: "RVQ",
 		},
 		oauthIdentifiers: make(map[string]OAuthIdentifier),
 		requireForRequest: func(r *http.Request) bool {

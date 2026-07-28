@@ -20,7 +20,7 @@ type AdminUser struct {
 }
 
 func TestRenderSameType(t *testing.T) {
-	u, _ := url.Parse("http://dev.qor5.com/product/1")
+	u, _ := url.Parse("http://dev.rvq.com/product/1")
 	defaultRequest := &http.Request{
 		Method: "GET",
 		URL:    u,
@@ -30,7 +30,7 @@ func TestRenderSameType(t *testing.T) {
 		Setting: Setting{
 			Title: "global | {{SiteName}}",
 		},
-		Variables: map[string]string{"SiteName": "Qor5 dev"},
+		Variables: map[string]string{"SiteName": "Rvq dev"},
 		Locale:    l10n.Locale{LocaleCode: "en"},
 	}
 	cases := []struct {
@@ -88,7 +88,7 @@ func TestRenderSameType(t *testing.T) {
 				},
 			},
 			want: `
-			<title>global | Qor5 dev</title>
+			<title>global | Rvq dev</title>
 			<meta name='description' content='CustomerA'>
 			`,
 		},

@@ -53,7 +53,7 @@ var Messages_en_US = &Messages{
 	LoginProviderGithubText:        "Login with Github",
 	OAuthCompleteInfoTitle:         "Complete your information",
 	OAuthCompleteInfoPositionLabel: "Position(Optional)",
-	OAuthCompleteInfoAgreeLabel:    "Subscribe to QOR5 newsletter(Optional)",
+	OAuthCompleteInfoAgreeLabel:    "Subscribe to RVQ newsletter(Optional)",
 	OAuthCompleteInfoBackLabel:     "Back to login",
 	Demo:                           "DEMO",
 	DBResetTipLabel:                "Database reset countdown",
@@ -64,7 +64,7 @@ var Messages_en_US = &Messages{
 	Status:                         "Status",
 	ChangePassword:                 "Change Password",
 	LoginSessions:                  "Login Sessions",
-	LoginSessionsTips:              "Places where you're logged into QOR5 admin.",
+	LoginSessionsTips:              "Places where you're logged into RVQ admin.",
 	SignOutAllOtherSessions:        "Sign out all other sessions",
 	Expired:                        "Expired",
 	Active:                         "Active",
@@ -88,7 +88,7 @@ var Messages_ja_JP = &Messages{
 	LoginProviderGithubText:        "Githubでログイン",
 	OAuthCompleteInfoTitle:         "情報を入力してください",
 	OAuthCompleteInfoPositionLabel: "役職（任意）",
-	OAuthCompleteInfoAgreeLabel:    "QOR5ニュースレターを購読する（任意）",
+	OAuthCompleteInfoAgreeLabel:    "RVQニュースレターを購読する（任意）",
 	OAuthCompleteInfoBackLabel:     "ログインに戻る",
 	Demo:                           "デモ",
 	DBResetTipLabel:                "データベースリセットのカウントダウン",
@@ -99,7 +99,7 @@ var Messages_ja_JP = &Messages{
 	Status:                         "ステータス",
 	ChangePassword:                 "パスワードを変更する",
 	LoginSessions:                  "ログインセッション",
-	LoginSessionsTips:              "QOR5管理者にログインしている場所。",
+	LoginSessionsTips:              "RVQ管理者にログインしている場所。",
 	SignOutAllOtherSessions:        "他のすべてのセッションをサインアウトする",
 	Expired:                        "期限切れ",
 	Active:                         "アクティブ",
@@ -123,7 +123,7 @@ var Messages_zh_CN = &Messages{
 	LoginProviderGithubText:        "使用Github登录",
 	OAuthCompleteInfoTitle:         "请填写您的信息",
 	OAuthCompleteInfoPositionLabel: "职位（可选）",
-	OAuthCompleteInfoAgreeLabel:    "订阅QOR5新闻（可选）",
+	OAuthCompleteInfoAgreeLabel:    "订阅RVQ新闻（可选）",
 	OAuthCompleteInfoBackLabel:     "返回登录",
 	Demo:                           "演示",
 	DBResetTipLabel:                "数据库重置倒计时",
@@ -134,7 +134,7 @@ var Messages_zh_CN = &Messages{
 	Status:                         "状态",
 	ChangePassword:                 "修改密码",
 	LoginSessions:                  "登录会话",
-	LoginSessionsTips:              "您在QOR5管理中登录的地方。",
+	LoginSessionsTips:              "您在RVQ管理中登录的地方。",
 	SignOutAllOtherSessions:        "退出所有其他会话",
 	Expired:                        "已过期",
 	Active:                         "活跃",
@@ -147,9 +147,9 @@ var Messages_zh_CN = &Messages{
 }
 
 type Messages_ModelsI18nModuleKey struct {
-	QOR5Example string
-	Roles       string
-	Users       string
+	RVQExample string
+	Roles      string
+	Users      string
 
 	Posts          string
 	PostsID        string
@@ -295,7 +295,7 @@ var Messages_zh_CN_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	PostsTitle:     "标题",
 	PostsHeroImage: "主图",
 	PostsBody:      "内容",
-	Example:        "QOR5演示",
+	Example:        "RVQ演示",
 	Settings:       "SEO 设置",
 	Post:           "帖子",
 	PostsBodyImage: "内容图片",
@@ -304,9 +304,9 @@ var Messages_zh_CN_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	SeoVariableTitle:    "标题",
 	SeoVariableSiteName: "站点名称",
 
-	QOR5Example: "QOR5 示例",
-	Roles:       "权限管理",
-	Users:       "用户管理",
+	RVQExample: "RVQ 示例",
+	Roles:      "权限管理",
+	Users:      "用户管理",
 
 	PageBuilder:              "页面管理菜单",
 	Pages:                    "页面管理",
@@ -438,7 +438,7 @@ var Messages_ja_JP_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	PostsTitle:     "投稿タイトル",
 	PostsHeroImage: "メイン画像",
 	PostsBody:      "コンテンツ",
-	Example:        "QOR5サンプル",
+	Example:        "RVQサンプル",
 	Settings:       "設定",
 	Post:           "投稿",
 	PostsBodyImage: "内容イメージ",
@@ -447,9 +447,9 @@ var Messages_ja_JP_ModelsI18nModuleKey = &Messages_ModelsI18nModuleKey{
 	SeoVariableTitle:    "SEO タイトル",
 	SeoVariableSiteName: "SEO サイト名",
 
-	QOR5Example: "QOR5サンプル",
-	Roles:       "ユーザー権限",
-	Users:       "ユーザー",
+	RVQExample: "RVQサンプル",
+	Roles:      "ユーザー権限",
+	Users:      "ユーザー",
 
 	PageBuilder:              "ページビルダー",
 	Pages:                    "ページ",

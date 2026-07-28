@@ -73,7 +73,7 @@ func Router(db *gorm.DB) http.Handler {
 	mux.Handle(exportOrdersURL, exportOrders(db))
 
 	// example of sitemap and robot
-	sitemap.SiteMap("product").RegisterRawString("https://dev.qor5.com/admin", "/product").MountTo(mux)
+	sitemap.SiteMap("product").RegisterRawString("https://dev.rvq.com/admin", "/product").MountTo(mux)
 	robot := sitemap.Robots()
 	robot.Agent(sitemap.AlexaAgent).Allow("/product1", "/product2").Disallow("/admin")
 	robot.Agent(sitemap.GoogleAgent).Disallow("/admin")

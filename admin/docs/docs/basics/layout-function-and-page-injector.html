@@ -2,7 +2,7 @@
 
 <html>
 <head>
-<title>Web Application - Layout Function and Page Injector - QOR5 Document</title>
+<title>Web Application - Layout Function and Page Injector - RVQ Document</title>
 
 <meta name='description'>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -227,7 +227,7 @@ javascript libraries etc. You can see we put vue.js into head, but put main.js i
 <p>Next part describe about these asset references:</p>
 
 <highlightjs :language='"go"' :code='"mux.Handle(\"/assets/main.js\",\n\tweb.PacksHandler(\"text/javascript\",\n\t\tvuetifyx.JSComponentsPack(),\n\t\tVuetify(),\n\t\tJSComponentsPack(),\n\t\tweb.JSComponentsPack(),\n\t),\n)\n\nmux.Handle(\"/assets/vue.js\",\n\tweb.PacksHandler(\"text/javascript\",\n\t\tweb.JSVueComponentsPack(),\n\t),\n)\n"'></highlightjs>
-<p><code>web.JSComponentsPack</code> is the production version of QOR5 core javascript code.
+<p><code>web.JSComponentsPack</code> is the production version of RVQ core javascript code.
 Created by using <a href="https://cli.vuejs.org/guide/creating-a-project.html" rel="nofollow">@vue/cli</a>,
 It does the basic functions like render server side returned html as vue templates.
 Provide basic event functions that call to server, and manage push state

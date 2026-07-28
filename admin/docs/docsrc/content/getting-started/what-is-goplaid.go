@@ -9,17 +9,17 @@ import (
 	"github.com/theplant/docgo/ch"
 )
 
-var WhatIsQOR5 = Doc(
+var WhatIsRVQ = Doc(
 	Markdown(`
-QOR5 is a Go library to build web applications.
-different from other MVC frameworks. the concepts in QOR5 is **Page**, **Event**, **Component**.
+RVQ is a Go library to build web applications.
+different from other MVC frameworks. the concepts in RVQ is **Page**, **Event**, **Component**.
 and doesn't include Model.
 
 A Page composite different kinds of Components, and Components trigger Events.
 A Page contains many event handlers, and renders one view, and event handlers reload the whole page,
 Or update certain part of the page, Or go to a different Page.
 
-QOR5 is opinionated in several ways:
+RVQ is opinionated in several ways:
 
 - It prefers writing HTML in static typing Go language, rather than a certain type of template language, Not even go template.
 - It try to minify the needs to write any JavaScript/Typescript for building interactive web applications
@@ -46,5 +46,5 @@ The above is the code you mostly writing. the following is the boilerplate code 
 	Markdown(`
 If you wondering why ~H1("Hello World")~ and how this worked, Please go ahead and checkout next page
 `),
-).Title("What is QOR5?").
-	Slug("getting-started/what-is-qor5")
+).Title("What is RVQ?").
+	Slug("getting-started/what-is-rvq")

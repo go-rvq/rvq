@@ -2,7 +2,7 @@
 
 <html>
 <head>
-<title>Building Admin - SEO - QOR5 Document</title>
+<title>Building Admin - SEO - RVQ Document</title>
 
 <meta name='description'>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -381,7 +381,7 @@ Render a single seo with model</h4>
   post := &amp;Post{
       Title:   &#34;TestRender&#34;,
       Author:  &#34;iBakuman&#34;,
-      Content: &#34;Hello, Qor5 SEO&#34;,
+      Content: &#34;Hello, Rvq SEO&#34;,
       SEO: Setting{
           Title:            &#34;{.{Title}}&#34;,
           Description:      &#34;post for testing&#34;,
@@ -403,7 +403,7 @@ Render a single seo with model</h4>
       },
   )
 
-  defaultReq, _ := http.NewRequest(&#34;POST&#34;, &#34;http://www.demo.qor5.com&#34;, nil)
+  defaultReq, _ := http.NewRequest(&#34;POST&#34;, &#34;http://www.demo.rvq.com&#34;, nil)
   res, err := builder.Render(post, defaultReq).MarshalHTML(context.TODO())
   if err != nil {
       panic(err)
@@ -459,7 +459,7 @@ Render multiple SEOs with model</h4>
       &amp;Post{
           Title:   &#34;TestRenderA&#34;,
           Author:  &#34;iBakuman&#34;,
-          Content: &#34;Hello, Qor5 SEO&#34;,
+          Content: &#34;Hello, Rvq SEO&#34;,
           SEO: Setting{
               Title:            &#34;{.{Title}}&#34;,
               Description:      &#34;postA for testing&#34;,
@@ -469,7 +469,7 @@ Render multiple SEOs with model</h4>
       &amp;Post{
           Title:   &#34;TestB&#34;,
           Author:  &#34;iBakuman&#34;,
-          Content: &#34;Hello, Qor5 SEO&#34;,
+          Content: &#34;Hello, Rvq SEO&#34;,
           SEO: Setting{
               Title:            &#34;{.{Title}}&#34;,
               Description:      &#34;postB for testing&#34;,
@@ -492,7 +492,7 @@ Render multiple SEOs with model</h4>
       },
   )
 
-  defaultReq, _ := http.NewRequest(&#34;POST&#34;, &#34;http://www.demo.qor5.com&#34;, nil)
+  defaultReq, _ := http.NewRequest(&#34;POST&#34;, &#34;http://www.demo.rvq.com&#34;, nil)
   SEOs := builder.BatchRender(posts, defaultReq)
   for _, seo := range SEOs {
       html, _ := seo.MarshalHTML(context.TODO())

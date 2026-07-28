@@ -18,7 +18,7 @@ func PresetsProfile(b *presets.Builder, db *gorm.DB) (
 	b.BrandTitle("Admin").
 		ProfileFunc(func(ctx *web.EventContext) h.HTMLComponent {
 			// Demo
-			name := "QOR5"
+			name := "RVQ"
 			// account := "hello@getqor.com"
 			roles := []string{"Developer"}
 			return VRow(

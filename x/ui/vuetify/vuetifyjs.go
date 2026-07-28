@@ -106,7 +106,7 @@ const defaultVuetifyOpts = `{
   },
   theme: {
 	themes: {
-	  qor5: {
+	  rvq: {
 		dark: false,
 		colors: {
 		  primary:   "#3E63DD",

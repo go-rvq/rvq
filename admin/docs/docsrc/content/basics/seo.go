@@ -178,7 +178,7 @@ seoBuilder.RegisterSEO("Product", &Product{})
   post := &Post{
       Title:   "TestRender",
       Author:  "iBakuman",
-      Content: "Hello, Qor5 SEO",
+      Content: "Hello, Rvq SEO",
       SEO: Setting{
           Title:            "{.{Title}}",
           Description:      "post for testing",
@@ -200,7 +200,7 @@ seoBuilder.RegisterSEO("Product", &Product{})
       },
   )
 
-  defaultReq, _ := http.NewRequest("POST", "http://www.demo.qor5.com", nil)
+  defaultReq, _ := http.NewRequest("POST", "http://www.demo.rvq.com", nil)
   res, err := builder.Render(post, defaultReq).MarshalHTML(context.TODO())
   if err != nil {
       panic(err)
@@ -259,7 +259,7 @@ seoBuilder.RegisterSEO("Product", &Product{})
       &Post{
           Title:   "TestRenderA",
           Author:  "iBakuman",
-          Content: "Hello, Qor5 SEO",
+          Content: "Hello, Rvq SEO",
           SEO: Setting{
               Title:            "{.{Title}}",
               Description:      "postA for testing",
@@ -269,7 +269,7 @@ seoBuilder.RegisterSEO("Product", &Product{})
       &Post{
           Title:   "TestB",
           Author:  "iBakuman",
-          Content: "Hello, Qor5 SEO",
+          Content: "Hello, Rvq SEO",
           SEO: Setting{
               Title:            "{.{Title}}",
               Description:      "postB for testing",
@@ -292,7 +292,7 @@ seoBuilder.RegisterSEO("Product", &Product{})
       },
   )
 
-  defaultReq, _ := http.NewRequest("POST", "http://www.demo.qor5.com", nil)
+  defaultReq, _ := http.NewRequest("POST", "http://www.demo.rvq.com", nil)
   SEOs := builder.BatchRender(posts, defaultReq)
   for _, seo := range SEOs {
       html, _ := seo.MarshalHTML(context.TODO())

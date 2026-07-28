@@ -9,7 +9,7 @@ import (
 func main() {
 	docgo.New().
 		Assets("/assets/", assets.Assets).
-		MainPageTitle("QOR5 Document").
+		MainPageTitle("RVQ Document").
 		SitePrefix("/docs/").
 		DocTree(docsrc.DocTree...).
 		BuildStaticSite("../docs")

@@ -49,7 +49,7 @@ type Product struct {
 ```go
 
 import (
-    media_view "github.com/qor/qor5/media/views"
+    media_view "github.com/qor/rvq/media/views"
 )
 b := presets.New()
 media_view.Configure(b, db)

@@ -19,7 +19,7 @@ Assume we have a ~status~ filed in Post. It has 2 possible values, "draft" and "
 	utils.DemoWithSnippetLocation("Basic filter", examples.URLPathByFunc(examples_presets.PresetsBasicFilter)+"/posts", generated.FilterSampleLocation),
 
 	Markdown(`
-### QOR5 now supports 7 types of filter option.
+### RVQ now supports 7 types of filter option.
 
 PLEASE NOTE THAT all below sample are required you to provide the ~SQLCondition~ you want to perform.
 

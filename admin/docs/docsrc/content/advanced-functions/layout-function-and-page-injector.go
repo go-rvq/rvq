@@ -21,7 +21,7 @@ Next part describe about these asset references:
 	ch.Code(generated.ComponentsPackSample).Language("go"),
 
 	Markdown(`
-~web.JSComponentsPack~ is the production version of QOR5 core javascript code.
+~web.JSComponentsPack~ is the production version of RVQ core javascript code.
 Created by using [@vue/cli](https://cli.vuejs.org/guide/creating-a-project.html),
 It does the basic functions like render server side returned html as vue templates.
 Provide basic event functions that call to server, and manage push state

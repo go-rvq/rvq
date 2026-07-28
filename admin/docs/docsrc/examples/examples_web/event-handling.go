@@ -72,7 +72,7 @@ func EventHandlingMergeQuery(ctx *web.EventContext) (pr web.PageResponse, err er
 	pr.Body = VContainer(
 		VCard(
 			VCardTitle(Text("MergeQuery")),
-			VCardActions(VBtn("Go").Attr("@click", web.GET().URL(EventExamplePagePath+"?address=beijing&name=qor5&email=qor5@theplant.jp").PushState(true).Query("address", "tokyo").MergeQuery(true).Go())),
+			VCardActions(VBtn("Go").Attr("@click", web.GET().URL(EventExamplePagePath+"?address=beijing&name=rvq&email=rvq@theplant.jp").PushState(true).Query("address", "tokyo").MergeQuery(true).Go())),
 		),
 	)
 	return
@@ -85,7 +85,7 @@ func EventHandlingClearMergeQueryQuery(ctx *web.EventContext) (pr web.PageRespon
 	pr.Body = VContainer(
 		VCard(
 			VCardTitle(Text("ClearMergeQuery")),
-			VCardActions(VBtn("Go").Attr("@click", web.GET().URL(EventExamplePagePath+"?address=beijing&name=qor5&email=qor5@theplant.jp").PushState(true).Query("address", "tokyo").ClearMergeQuery([]string{"name"}).Go())),
+			VCardActions(VBtn("Go").Attr("@click", web.GET().URL(EventExamplePagePath+"?address=beijing&name=rvq&email=rvq@theplant.jp").PushState(true).Query("address", "tokyo").ClearMergeQuery([]string{"name"}).Go())),
 		),
 	)
 	return
@@ -150,7 +150,7 @@ func EventHandlingFieldValue(ctx *web.EventContext) (pr web.PageResponse, err er
 	pr.Body = VContainer(
 		VCard(
 			VCardTitle(Text("FieldValue")),
-			VCardActions(VBtn("Go").Attr("@click", web.POST().EventFunc("form").FieldValue("name", "qor5").Go())),
+			VCardActions(VBtn("Go").Attr("@click", web.POST().EventFunc("form").FieldValue("name", "rvq").Go())),
 		),
 	)
 	return

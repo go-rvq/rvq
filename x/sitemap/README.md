@@ -15,13 +15,13 @@ sitemap := SiteMap("product") //  /product.xml
 
     ```go
     sitemap.RegisterRawString("/product1") // path mode
-    sitemap.RegisterRawString("https://qor5.dev.com/product1") //url mode
+    sitemap.RegisterRawString("https://rvq.dev.com/product1") //url mode
     ```
 
   - Register a regularURL
 
     ```go
-    sitemap.RegisterURL(URL{Loc: "/product1"}, URL{Loc: "https://qor5.dev.com/product1"})
+    sitemap.RegisterURL(URL{Loc: "/product1"}, URL{Loc: "https://rvq.dev.com/product1"})
     ```
 
   - Register a contextFunc
@@ -58,15 +58,15 @@ sitemap := SiteMap("product") //  /product.xml
 - Generate xml string data directly according to the host in the context
 
   ```go
-  sitemap.EncodeToXml(WithHost("https://qor5.dev.com"))
+  sitemap.EncodeToXml(WithHost("https://rvq.dev.com"))
   ```
 
 - Ping the search engine when the new sitemap is generated
 
   ```go
-  PingBing(sitemap,WithHost("https://qor5.dev.com"))
-  PingGoogle(sitemap,WithHost("https://qor5.dev.com"))
-  PingAll(sitemap,WithHost("https://qor5.dev.com"))
+  PingBing(sitemap,WithHost("https://rvq.dev.com"))
+  PingGoogle(sitemap,WithHost("https://rvq.dev.com"))
+  PingAll(sitemap,WithHost("https://rvq.dev.com"))
   ```
 
 # Sitemap Index
@@ -74,7 +74,7 @@ sitemap := SiteMap("product") //  /product.xml
 ```go
 index := SiteMapIndex().RegisterSiteMap(SiteMap(), SiteMap("product"), SiteMap("post")) // Register multiple sitemaps
 
-index.EncodeToXml(WithHost("https://qor5.dev.com")) // Generate xml string data directly
+index.EncodeToXml(WithHost("https://rvq.dev.com")) // Generate xml string data directly
 index.MountTo(serveMux) // MountTo Mux
 
 ```
@@ -94,7 +94,7 @@ robot.Agent(GoogleAgent).Allow("/product1", "/product2") // Allow
 
 robot.Agent(GoogleAgent).Disallow("/product1", "/product2") // Disallow
 
-robot.Agent(GoogleAgent).AddSitemapUrl(sitemao.ToUrl(WithHost("https://qor5.dev.com")))
+robot.Agent(GoogleAgent).AddSitemapUrl(sitemao.ToUrl(WithHost("https://rvq.dev.com")))
  // Add a sitemap
 
 ```

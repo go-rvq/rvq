@@ -131,8 +131,8 @@ func copyAndReplaceFiles(box embed.FS, dir string, template string, pkg string) 
 
 	fmt.Println("Done")
 
-	replaceInFiles(dir, "github.com/go-rvq/rvq/admin/docs/cmd/qor5/"+template, pkg)
-	replaceInFiles(dir, "QOR5PackageName", dir)
+	replaceInFiles(dir, "github.com/go-rvq/rvq/admin/docs/cmd/rvq/"+template, pkg)
+	replaceInFiles(dir, "RVQPackageName", dir)
 
 	if _, err = os.Stat(filepath.Join(dir, "go.mod")); err != nil {
 		runCmd(dir, "go", "mod", "init", pkg)

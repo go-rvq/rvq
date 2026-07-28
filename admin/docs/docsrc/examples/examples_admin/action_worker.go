@@ -49,7 +49,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 					time.Sleep(time.Second)
 				}
 			}
-			job.SetProgressText(`<a href="https://qor5-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
+			job.SetProgressText(`<a href="https://rvq-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
 			return nil
 		},
 	).Description("This test demo is used to show that an no parameter job can be executed")
@@ -68,7 +68,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 					time.Sleep(time.Second)
 				}
 			}
-			job.SetProgressText(`<a href="https://qor5-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
+			job.SetProgressText(`<a href="https://rvq-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
 			return nil
 		},
 	).Description("This test demo is used to show that an input box when there are parameters").
@@ -89,7 +89,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 					time.Sleep(time.Second)
 				}
 			}
-			job.SetProgressText(`<a href="https://qor5-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
+			job.SetProgressText(`<a href="https://rvq-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
 			return nil
 		},
 	).Description("This test demo is used to show the log section of this job").
@@ -119,7 +119,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 					time.Sleep(time.Second)
 				}
 			}
-			job.SetProgressText(`<a href="https://qor5-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
+			job.SetProgressText(`<a href="https://rvq-test.s3.ap-northeast-1.amazonaws.com/system/media_libraries/37/file.@qor_preview.png">Please download this file</a>`)
 			return nil
 		},
 	).Description("This test demo is used to show how to get the action's arguments and original page context").

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	. "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/docs/cmd/qor5/admin-template/models"
+	"github.com/go-rvq/rvq/admin/docs/cmd/rvq/admin-template/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
@@ -22,7 +22,7 @@ func Initialize() *http.ServeMux {
 func setupAdmin() (b *presets.Builder) {
 	db := ConnectDB()
 
-	// Initialize the builder of QOR5
+	// Initialize the builder of RVQ
 	b = presets.New(i18n.New())
 
 	// Set up the project name, ORM and Homepage

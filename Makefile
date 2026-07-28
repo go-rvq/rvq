@@ -1,7 +1,7 @@
 # Verificação do que está saudável hoje. Rode `make check` ANTES DE COMMITAR.
 #
 # O repositório tem pacotes quebrados de longa data — o que sobrou das
-# estruturas antigas `github.com/go-rvq/{admin,web,x}`, forks do qor5
+# estruturas antigas `github.com/go-rvq/{admin,web,x}`, forks do rvq
 # (docs/examples do admin, media, os que exigem libvips). Eles NÃO entram aqui:
 # `check` cobre o que passa, para que uma falha signifique de fato uma
 # regressão sua.

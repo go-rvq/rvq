@@ -2,7 +2,7 @@
 
 <html>
 <head>
-<title>Web Application - Event Handling - QOR5 Document</title>
+<title>Web Application - Event Handling - RVQ Document</title>
 
 <meta name='description'>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -287,7 +287,7 @@ The default http request method is <code>Post</code>, if you want to use the <co
 </h2>
 <p>Request a page with merging a query.</p>
 
-<highlightjs :language='"go"' :code='"func EventHandlingMergeQuery(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"MergeQuery\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.GET().URL(EventExamplePagePath+\"?address=beijing\u0026name=qor5\u0026email=qor5@theplant.jp\").PushState(true).Query(\"address\", \"tokyo\").MergeQuery(true).Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
+<highlightjs :language='"go"' :code='"func EventHandlingMergeQuery(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"MergeQuery\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.GET().URL(EventExamplePagePath+\"?address=beijing\u0026name=rvq\u0026email=rvq@theplant.jp\").PushState(true).Query(\"address\", \"tokyo\").MergeQuery(true).Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
 
 <div>
 <div class='demo'>
@@ -302,7 +302,7 @@ The default http request method is <code>Post</code>, if you want to use the <co
 </h2>
 <p>Request a page with clearing a query.</p>
 
-<highlightjs :language='"go"' :code='"func EventHandlingClearMergeQueryQuery(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"ClearMergeQuery\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.GET().URL(EventExamplePagePath+\"?address=beijing\u0026name=qor5\u0026email=qor5@theplant.jp\").PushState(true).Query(\"address\", \"tokyo\").ClearMergeQuery([]string{\"name\"}).Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
+<highlightjs :language='"go"' :code='"func EventHandlingClearMergeQueryQuery(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"ClearMergeQuery\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.GET().URL(EventExamplePagePath+\"?address=beijing\u0026name=rvq\u0026email=rvq@theplant.jp\").PushState(true).Query(\"address\", \"tokyo\").ClearMergeQuery([]string{\"name\"}).Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
 
 <div>
 <div class='demo'>
@@ -377,7 +377,7 @@ The default http request method is <code>Post</code>, if you want to use the <co
 </h2>
 <p>Fill in a value on form.</p>
 
-<highlightjs :language='"go"' :code='"func EventHandlingFieldValue(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"FieldValue\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.POST().EventFunc(\"form\").FieldValue(\"name\", \"qor5\").Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
+<highlightjs :language='"go"' :code='"func EventHandlingFieldValue(ctx *web.EventContext) (pr web.PageResponse, err error) {\n\tpr.Body = VContainer(\n\t\tVCard(\n\t\t\tVCardTitle(Text(\"FieldValue\")),\n\t\t\tVCardActions(VBtn(\"Go\").Attr(\"@click\", web.POST().EventFunc(\"form\").FieldValue(\"name\", \"rvq\").Go())),\n\t\t),\n\t)\n\treturn\n}\n"'></highlightjs>
 
 <div>
 <div class='demo'>

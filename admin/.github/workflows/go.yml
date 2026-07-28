@@ -52,7 +52,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-region: ap-northeast-1
-        role-to-assume: arn:aws:iam::475867236237:role/qor5-test-example-ci-github-actions-upload-assets
+        role-to-assume: arn:aws:iam::475867236237:role/rvq-test-example-ci-github-actions-upload-assets
 
     - name: Build
       run: go build -v ./...
@@ -62,7 +62,7 @@ jobs:
       env:
         DBURL: "postgres://postgres:postgres@localhost:5432/postgres"
         AWS_SDK_LOAD_CONFIG: 1
-        S3_Bucket: "qor5-test-example-ci"
+        S3_Bucket: "rvq-test-example-ci"
         S3_Region: "ap-northeast-1"
 
     - name: Upload coverage to Codecov

@@ -21,9 +21,9 @@ func TestSettingHTMLComponent(t *testing.T) {
 				Keywords:             "keyword",
 				OpenGraphTitle:       "og title",
 				OpenGraphDescription: "og description",
-				OpenGraphURL:         "http://dev.qor5.com/product/1",
+				OpenGraphURL:         "http://dev.rvq.com/product/1",
 				OpenGraphType:        "",
-				OpenGraphImageURL:    "http://dev.qor5.com/product/1/og.jpg",
+				OpenGraphImageURL:    "http://dev.rvq.com/product/1/og.jpg",
 			},
 			tags: map[string]string{},
 			want: `
@@ -33,8 +33,8 @@ func TestSettingHTMLComponent(t *testing.T) {
 			<meta property='og:title' name='og:title' content='og title'>
 			<meta property='og:description' name='og:description' content='og description'>
 			<meta property='og:type' name='og:type' content='website'>
-			<meta property='og:image' name='og:image' content='http://dev.qor5.com/product/1/og.jpg'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>`,
+			<meta property='og:image' name='og:image' content='http://dev.rvq.com/product/1/og.jpg'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>`,
 		},
 
 		{
@@ -45,13 +45,13 @@ func TestSettingHTMLComponent(t *testing.T) {
 				Keywords:             "keyword",
 				OpenGraphTitle:       "og title",
 				OpenGraphDescription: "og description",
-				OpenGraphURL:         "http://dev.qor5.com/product/1",
+				OpenGraphURL:         "http://dev.rvq.com/product/1",
 				OpenGraphType:        "",
-				OpenGraphImageURL:    "http://dev.qor5.com/product/1/og.jpg",
+				OpenGraphImageURL:    "http://dev.rvq.com/product/1/og.jpg",
 			},
 			tags: map[string]string{
 				"og:type":       "product",
-				"twitter:image": "http://dev.qor5.com/product/1/twitter.jpg",
+				"twitter:image": "http://dev.rvq.com/product/1/twitter.jpg",
 			},
 			want: `
 			<title>title</title>
@@ -60,9 +60,9 @@ func TestSettingHTMLComponent(t *testing.T) {
 			<meta property='og:title' name='og:title' content='og title'>
 			<meta property='og:description' name='og:description' content='og description'>
 			<meta property='og:type' name='og:type' content='product'>
-			<meta property='og:image' name='og:image' content='http://dev.qor5.com/product/1/og.jpg'>
-			<meta property='og:url' name='og:url' content='http://dev.qor5.com/product/1'>
-			<meta property='twitter:image' name='twitter:image' content='http://dev.qor5.com/product/1/twitter.jpg'>`,
+			<meta property='og:image' name='og:image' content='http://dev.rvq.com/product/1/og.jpg'>
+			<meta property='og:url' name='og:url' content='http://dev.rvq.com/product/1'>
+			<meta property='twitter:image' name='twitter:image' content='http://dev.rvq.com/product/1/twitter.jpg'>`,
 		},
 	}
 	for _, tt := range tests {

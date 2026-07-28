@@ -27,7 +27,7 @@ echo $output_json | jq .
 curl -XPOST -H "Content-Type: application/json" \
     -H "Accept:  application/vnd.github.everest-preview+json" \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
-    https://api.github.com/repos/theplant/qor5-provisioning/dispatches \
+    https://api.github.com/repos/theplant/rvq-provisioning/dispatches \
     -d @- <<EOF
 $output_json
 EOF

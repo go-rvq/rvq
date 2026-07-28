@@ -6,21 +6,21 @@ import (
 
 var OneMinuteQuickStart = Doc(
 	Markdown(`
-This brief tutorial aims to give you a rapid taste of QOR5's capabilities in the shortest possible time. One standout feature of QOR5 is its "presets" module, which swiftly generates [fully functional admin interfaces](/samples/presets-detail-page-cards/customers) like those you see below.
+This brief tutorial aims to give you a rapid taste of RVQ's capabilities in the shortest possible time. One standout feature of RVQ is its "presets" module, which swiftly generates [fully functional admin interfaces](/samples/presets-detail-page-cards/customers) like those you see below.
 
 To get started right away:
 
 
-1. **Install the Command Line Tool**: Run the following command to install the latest version of the QOR5 CLI tool:
+1. **Install the Command Line Tool**: Run the following command to install the latest version of the RVQ CLI tool:
 
 ~~~
-$ go install github.com/go-rvq/rvq/admin/docs/cmd/qor5@latest
+$ go install github.com/go-rvq/rvq/admin/docs/cmd/rvq@latest
 ~~~
 
-2. **Launch QOR5**: Execute the qor5 command:
+2. **Launch RVQ**: Execute the rvq command:
 
 ~~~
-$ qor5
+$ rvq
 ~~~
 
 You'll be prompted to enter a Go package name. 
@@ -48,7 +48,7 @@ $ source dev_env
 $ go run main.go
 ~~~
 
-With these quick steps, you'll have a fully operational QOR5 admin interface up and running, showcasing the remarkable speed and efficiency at which QOR5 empowers you to build sophisticated web applications. Explore the interface to witness firsthand the extent of QOR5's power and versatility, all within just one minute!
+With these quick steps, you'll have a fully operational RVQ admin interface up and running, showcasing the remarkable speed and efficiency at which RVQ empowers you to build sophisticated web applications. Explore the interface to witness firsthand the extent of RVQ's power and versatility, all within just one minute!
 
 `),
 ).Title("1 Minute Quick Start").

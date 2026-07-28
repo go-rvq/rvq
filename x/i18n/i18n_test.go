@@ -13,13 +13,13 @@ import (
 )
 
 type Messages struct {
-	Update            string
-	WelcomeToQOR5name string
+	Update           string
+	WelcomeToRVQname string
 }
 
 var Messages_zh_CN = &Messages{
-	Update:            "更新",
-	WelcomeToQOR5name: "欢迎来到QOR5, {name}",
+	Update:           "更新",
+	WelcomeToRVQname: "欢迎来到RVQ, {name}",
 }
 
 var Messages_en_US = &Messages{
@@ -39,7 +39,7 @@ func TestLanguage(t *testing.T) {
 		_, _ = fmt.Fprintln(w, "")
 		_, _ = fmt.Fprintln(w, msg.Update)
 		_, _ = fmt.Fprintln(w, i18n.T(r.Context(), mediaLibraryKey, "Welcome Home &!@*#&^*!@^#*(!@ Felix"))
-		_, _ = fmt.Fprintln(w, i18n.T(r.Context(), mediaLibraryKey, "Welcome to QOR5, {name}", "{name}", "Felix"))
+		_, _ = fmt.Fprintln(w, i18n.T(r.Context(), mediaLibraryKey, "Welcome to RVQ, {name}", "{name}", "Felix"))
 		_, _ = fmt.Fprintln(w, i18n.PT(r.Context(), mediaLibraryKey, "Customer", "Name"))
 	})
 
@@ -50,7 +50,7 @@ func TestLanguage(t *testing.T) {
 	diff := testingutils.PrettyJsonDiff(`
 更新
 Welcome Home &!@*#&^*!@^#*(!@ Felix
-欢迎来到QOR5, Felix
+欢迎来到RVQ, Felix
 Name
 `, recorder.Body.String())
 	if len(diff) > 0 {

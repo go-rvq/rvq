@@ -1,6 +1,6 @@
 FROM golang:1.22.3-alpine as builder
 RUN apk update && apk add git gcc libc-dev && rm -rf /var/cache/apk/*
-WORKDIR /qor5
+WORKDIR /rvq
 COPY . .
 RUN set -x && go get -d -v ./...
 RUN GOOS=linux GOARCH=amd64 go build -o /app/entry ./example/cmd/data-resetor/

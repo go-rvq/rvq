@@ -459,7 +459,7 @@ func configMenuOrder(b *presets.Builder) {
 func configBrand(b *presets.Builder, db *gorm.DB) {
 	b.BrandFunc(func(ctx *web.EventContext) h.HTMLComponent {
 		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nExampleKey, Messages_en_US).(*Messages)
-		logo := "https://qor5.com/img/qor-logo.png"
+		logo := "https://rvq.com/img/qor-logo.png"
 
 		now := time.Now()
 		nextEvenHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1+(now.Hour()%2), 0, 0, 0, now.Location())

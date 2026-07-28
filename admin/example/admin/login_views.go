@@ -83,7 +83,7 @@ func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 		var logoSection HTMLComponent
 		logo, _ := assets.ReadFile("assets/logo.svg")
 		logoSection = Div(
-			A(RawHTML(logo)).Href("https://qor5.com/").Target("_blank"),
+			A(RawHTML(logo)).Href("https://rvq.com/").Target("_blank"),
 		).Style("text-align: center;")
 
 		var userPassHTML HTMLComponent

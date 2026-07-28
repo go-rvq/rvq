@@ -52,7 +52,7 @@
 - **Run `make check` and only commit when it passes.** It is the gate: `gofmt -s`
   on the healthy trees, `go build` of the packages that compile, `go test` of the
   packages whose tests pass, and the bun UI integration suites. Long-broken
-  upstream packages (QOR5 docs/examples, pagebuilder, seo, media, libvips, and
+  upstream packages (RVQ docs/examples, pagebuilder, seo, media, libvips, and
   the `web` / `x/perm` tests) are deliberately out, so a failure means a
   regression you introduced.
 

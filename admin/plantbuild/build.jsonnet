@@ -3,7 +3,7 @@ local dc = c {
   dockerRegistry: 'public.ecr.aws',
 };
 
-dc.build_apps_image('theplant/qor5', [
+dc.build_apps_image('theplant/rvq', [
   { name: 'docs', dockerfile: './docs/Dockerfile', context: '.' },
   { name: 'example', dockerfile: './example/Dockerfile', context: '.' },
   { name: 'publisher', dockerfile: './example/cmd/publisher/Dockerfile', context: '.' },

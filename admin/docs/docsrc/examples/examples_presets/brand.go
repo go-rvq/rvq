@@ -17,7 +17,7 @@ func PresetsBrandTitle(b *presets.Builder, db *gorm.DB) (
 	dp *presets.DetailingBuilder,
 ) {
 	// @snippet_begin(BrandTitleSample)
-	b.BrandTitle("QOR5 Admin")
+	b.BrandTitle("RVQ Admin")
 	// @snippet_end
 	b.Model(&brand{}).Listing().PageFunc(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		r.Body = vuetify.VContainer()

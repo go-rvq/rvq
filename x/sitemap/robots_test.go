@@ -9,9 +9,9 @@ import (
 
 func TestAddSitemapUrl(t *testing.T) {
 	robot := Robots()
-	robot.Agent(AllAgents).AddSitemapUrl(SiteMap().ToUrl(WithHost("https://qor5.dev.com")))
+	robot.Agent(AllAgents).AddSitemapUrl(SiteMap().ToUrl(WithHost("https://rvq.dev.com")))
 	s := robot.ToTxt()
-	expected := "User-agent: *\nSitemap: https:/qor5.dev.com/sitemap.xml\n\n"
+	expected := "User-agent: *\nSitemap: https:/rvq.dev.com/sitemap.xml\n\n"
 	if s != expected {
 		t.Errorf("\n\tExpected value: \n%s \tbut got: \n%s", expected, s)
 	}
@@ -39,7 +39,7 @@ func TestDisallow(t *testing.T) {
 
 func TestRobotsServeHTTP(t *testing.T) {
 	robot := Robots()
-	robot.Agent(GoogleAgent).Disallow("/admin", "/product").AddSitemapUrl(SiteMap().ToUrl(WithHost("https://qor5.dev.com")))
+	robot.Agent(GoogleAgent).Disallow("/admin", "/product").AddSitemapUrl(SiteMap().ToUrl(WithHost("https://rvq.dev.com")))
 	robot.Agent(DuckDuckAgent).Allow("/admin1", "/product2").Disallow("/product1")
 
 	serveMux := http.NewServeMux()
@@ -56,7 +56,7 @@ func TestRobotsServeHTTP(t *testing.T) {
 		t.Error(err)
 	}
 
-	expected := "User-agent: Googlebot\nDisallow: /admin\nDisallow: /product\nSitemap: https:/qor5.dev.com/sitemap.xml\n\nUser-agent: DuckDuckBot\nDisallow: /product1\nAllow: /admin1\nAllow: /product2\n\n"
+	expected := "User-agent: Googlebot\nDisallow: /admin\nDisallow: /product\nSitemap: https:/rvq.dev.com/sitemap.xml\n\nUser-agent: DuckDuckBot\nDisallow: /product1\nAllow: /admin1\nAllow: /product2\n\n"
 	if string(s) != expected {
 		t.Errorf("\n\tExpected value: \n%s \tbut got: \n%s", expected, s)
 	}

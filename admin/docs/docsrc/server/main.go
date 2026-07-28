@@ -34,7 +34,7 @@ func main() {
 	examples_admin.Mux(mux, "")
 
 	mux.Handle("/", docgo.New().
-		MainPageTitle("QOR5 Document").
+		MainPageTitle("RVQ Document").
 		Assets("/assets/", assets.Assets).
 		DocTree(docsrc.DocTree...).
 		Build(),

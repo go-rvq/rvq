@@ -65,7 +65,7 @@ const (
 // theme
 // light, dark
 const (
-	ThemeQor5  = "qor5"
+	ThemeRvq   = "rvq"
 	ThemeLight = "light"
 	ThemeDark  = "dark"
 )
