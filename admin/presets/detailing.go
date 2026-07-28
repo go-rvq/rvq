@@ -468,10 +468,17 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 
 	mode := GetOverlay(ctx)
 	if mode.IsDrawer() {
+		// o portal do layout é o único lugar onde um drawer se dimensiona contra a
+		// janela; ir para lá só é possível quando o closer de quem abriu tem
+		// endereço global (ver ParamCloserRef)
+		if CloserIsGlobal(ctx) {
+			targetPortal = mode.PortalName()
+		}
 		b.mb.p.Drawer(mode).
 			SetValidPortalName(targetPortal).
 			SetScrollable(true).
 			SetCloserProvided(CloserProvided(ctx)).
+			SetCloserRef(CloserRef(ctx)).
 			Respond(&r, f)
 	} else {
 		b.mb.p.Dialog().

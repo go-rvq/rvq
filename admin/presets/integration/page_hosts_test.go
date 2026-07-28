@@ -53,10 +53,12 @@ func TestPageListingHostsAreTogether(t *testing.T) {
 	}
 
 	// os três blocos guardados ficam lado a lado, no conteúdo
+	// numa página os três vivem em vars: é o que lhes dá endereço global, sem o
+	// qual o overlay teria de ser renderizado dentro do portal do host
 	guards := []string{
 		"v-if='vars." + presets.ListingNewScope + "?.show'",
-		"v-if='" + presets.ListingItemDetailScope + "?.show'",
-		"v-if='" + presets.ListingItemEditScope + "?.show'",
+		"v-if='vars." + presets.ListingItemDetailScope + "?.show'",
+		"v-if='vars." + presets.ListingItemEditScope + "?.show'",
 	}
 	positions := make([]int, len(guards))
 	for i, g := range guards {

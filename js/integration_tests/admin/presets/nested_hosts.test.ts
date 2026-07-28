@@ -25,7 +25,7 @@ async function pageHTML(path: string) {
 }
 
 describe("nested form hosts — contract", () => {
-  it("only the page's create host lives on `vars` — the per-item ones never do", async () => {
+  it("a page's hosts live on `vars`; a dialog's never do", async () => {
     const page = await pageHTML("/admin/products");
     const detailPage = await pageHTML("/admin/products/1");
     const dialog = portalBody(
@@ -35,20 +35,19 @@ describe("nested form hosts — contract", () => {
 
     for (const body of [page, detailPage, dialog]) {
       expect(body).toContain("$presets");
-      // Sharing `vars` is what made two live listings fight over the same
-      // variable, mounting every guarded block at once. The hosts a ROW opens
-      // are the ones that exist at several levels at the same time, so they are
-      // always slot variables.
-      expect(body).not.toContain("vars.$presetsItemDetailing");
-      expect(body).not.toContain("vars.$presetsItemEditing");
     }
 
-    // The exception, on a page: the "+" is rendered by the layout into the app
-    // bar, far from the listing, so the create host has to be reachable from
-    // both sides. There is one listing per page, so the name cannot collide.
+    // On a PAGE the state goes to `vars`: that is what gives it an address any
+    // portal can reach, and without one the overlay would have to be rendered
+    // inside the host's own portal — where a drawer sizes itself against
+    // whatever box holds it and opens below the app bar.
     expect(page).toContain("vars.$presetsCreating");
-    // in a dialog the button is inline, so it goes back to a slot variable
-    expect(dialog).not.toContain("vars.$presetsCreating");
+    expect(page).toContain("vars.$presetsItemDetailing");
+    expect(page).toContain("vars.$presetsItemEditing");
+
+    // A dialog keeps slot variables: two live listings sharing `vars` is what
+    // made them fight over the same name, mounting every guarded block at once.
+    expect(dialog).not.toContain("vars.$presets");
   });
 
   it("a listing in a dialog declares its OWN state, like the page does", async () => {

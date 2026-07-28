@@ -422,11 +422,19 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 			}
 			return s
 		}
-		host = func(scope, event string) *FormHostBuilder {
+		// Numa PÁGINA o estado dos hosts vai para `vars`: é o que dá a eles um
+		// endereço alcançável de qualquer lugar, e sem isso o overlay tem de ser
+		// renderizado dentro do portal do host — onde um drawer se dimensiona
+		// contra a caixa que o contém e abre abaixo do app bar.
+		// Só a listagem da página faz isso; uma listagem em diálogo continua em
+		// variável de escopo, que é o que impede dois níveis vivos de brigarem
+		// pelo mesmo nome.
+		inVars = !IsInDialog(ctx)
+		host   = func(scope, event string) *FormHostBuilder {
 			portal := ctx.UID()
 			// whatever this host opens — a detail, an edit form — a successful save
 			// inside it changes a row of THIS listing, so the listing reloads.
-			hb := FormHost(scope, portal, nil).Var("id", "null").OnSave(reload)
+			hb := FormHost(scope, portal, nil).Var("id", "null").OnSave(reload).InVars(inVars)
 			// the id comes from the host's own state, whose reference depends on
 			// where it lives (`vars` on a page, a slot variable elsewhere).
 			hb.load = web.Plaid().
@@ -463,7 +471,7 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 	// da listagem. Guardando o estado em `vars`, o botão lá e o bloco aqui falam
 	// do mesmo host — e o formulário abre no MESMO portal do detalhe, dentro do
 	// conteúdo da página, que é onde um drawer se posiciona direito.
-	hosts.New.InVars(!IsInDialog(ctx))
+	hosts.New.InVars(inVars)
 
 	WithItemFormHosts(ctx, hosts)
 	return hosts
