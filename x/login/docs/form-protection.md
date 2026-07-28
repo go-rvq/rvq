@@ -67,7 +67,7 @@ health check, a deploy script, an operator with a terminal. That way is a FILE
 on the server, [`secure_key.go`](../secure_key.go):
 
 ```
-.secure_key            mode 0600, next to the program (SecureKeyFile to move it)
+.secure_key            mode 0600, next to the program (RVQ_SECURE_KEY_FILE to move it)
 X-Secure-Key: <value>  the header a request sends
 ```
 
@@ -78,15 +78,29 @@ included. Whoever cannot read the file has nothing to send.
 still required, and so is everything else: the retry count, the permissions.
 
 ```go
-lb.SecureKeyFile("/etc/myapp/.secure_key")   // where it lives
+lb.SecureKeyFile("/etc/myapp/.secure_key")   // where it lives (over the environment)
 key, err := lb.RenewSecureKey()              // write a fresh one now
-err = lb.StartSecureKeyRenewal()             // write one and keep renewing it
+err = lb.StartSecureKeyRenewal()             // warn if there is none, and keep it renewed
 err = lb.StartSecureKeyRenewal(appCron)      // ... on the application's cron
 lb.StopSecureKeyRenewal()
 ```
 
+**The file is never created for you.** A bypass exists because somebody decided
+it should, so an application that starts the renewal with no key file only gets
+a line on the terminal saying how to make one:
+
+```
+NOTE: no secure key at /srv/app/.secure_key, so every login goes through the
+form protection. To let automation past it, create the file with mode 0600 (it
+is ignored with any other mode) and send its content in the X-Secure-Key header:
+    (umask 177 && head -c 32 /dev/urandom | base64 | tr -d '=' > /srv/app/.secure_key)
+```
+
+From the moment the file is there, the renewal rewrites it on schedule.
+
 | | |
 | --- | --- |
+| `RVQ_SECURE_KEY_FILE` | where the key file is — `.secure_key` next to the program by default. `SecureKeyFile` in code wins over it. |
 | `RVQ_SECURE_KEY_RENEW` | how often the key is rewritten, as a cron rule — `"@daily"` by default, or `"0 */6 * * *"`, `"@every 12h"`, … (robfig/cron, the same one the worker uses). Empty turns the renewal off and leaves whatever key is on disk. |
 | mode `0600` | the file is written with it, and a file with anything wider is **ignored**, with a warning: a key the whole machine can read is not a key. |
 | no file | no bypass — the protection answers for every request. |
@@ -118,6 +132,8 @@ the property that makes it work over plain HTTP.
 [`secure_key_test.go`](../secure_key_test.go): the key holder goes past the
 protection (and past reCAPTCHA); a wrong key, no key, an empty file and a
 missing one do not; the file is written `0600` and one that others can read is
-ignored; renewing writes a fresh value and retires the previous one; and the
-renewal runs on schedule, on its own cron or on the application's, refusing a
-rule that makes no sense.
+ignored; the path comes from code, then the environment, then the default;
+renewing writes a fresh value and retires the previous one; starting the renewal
+with no key file warns (naming the path, the mode and the header) and creates
+nothing, then and on every tick; and the renewal runs on schedule, on its own
+cron or on the application's, refusing a rule that makes no sense.

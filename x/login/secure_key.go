@@ -19,7 +19,8 @@ import (
 // The secure key: a way in for whoever operates the server, past the form
 // protection (reCAPTCHA or the built-in challenge, see challenge.go).
 //
-// It is a FILE on the server — `.secure_key` next to the program. Whoever can
+// It is a FILE on the server — `.secure_key` next to the program, or wherever
+// RVQ_SECURE_KEY_FILE points. Whoever can
 // read it can send its content in the `X-Secure-Key` header and log in without
 // the form protection standing in the way: a health check, a script, an
 // operator working from a terminal. Somebody who cannot read the file has
@@ -44,24 +45,36 @@ const (
 	SecureKeyFileMode fs.FileMode = 0o600
 )
 
-// SecureKeyRenew is the cron rule that rewrites the key file. See
-// Builder.StartSecureKeyRenewal.
-var SecureKeyRenew = osenv.Get("RVQ_SECURE_KEY_RENEW",
-	"Cron rule that rewrites the .secure_key file with a fresh random value",
-	"@daily")
+var (
+	// SecureKeyPath is where the key file is, from the environment. A path given
+	// in code (Builder.SecureKeyFile) wins over it.
+	SecureKeyPath = osenv.Get("RVQ_SECURE_KEY_FILE",
+		"Path of the file holding the login secure key, which must have mode 0600",
+		DefaultSecureKeyFile)
 
-// SecureKeyFile sets where the key file is (default DefaultSecureKeyFile).
+	// SecureKeyRenew is the cron rule that rewrites the key file. See
+	// Builder.StartSecureKeyRenewal.
+	SecureKeyRenew = osenv.Get("RVQ_SECURE_KEY_RENEW",
+		"Cron rule that rewrites the secure key file with a fresh random value",
+		"@daily")
+)
+
+// SecureKeyFile sets where the key file is, over whatever the environment says.
 func (b *Builder) SecureKeyFile(path string) (r *Builder) {
 	b.secureKeyFile = path
 	return b
 }
 
-// GetSecureKeyFile is the path of the key file.
+// GetSecureKeyFile is the path of the key file: what was set in code, else
+// RVQ_SECURE_KEY_FILE, else DefaultSecureKeyFile.
 func (b *Builder) GetSecureKeyFile() string {
-	if b.secureKeyFile == "" {
-		return DefaultSecureKeyFile
+	if b.secureKeyFile != "" {
+		return b.secureKeyFile
 	}
-	return b.secureKeyFile
+	if SecureKeyPath != "" {
+		return SecureKeyPath
+	}
+	return DefaultSecureKeyFile
 }
 
 // SecureKeyMatches reports whether the request carries the key the file holds.
@@ -150,26 +163,31 @@ func (b *Builder) RenewSecureKey() (key string, err error) {
 	return key, nil
 }
 
-// StartSecureKeyRenewal writes a key now (if there is none) and rewrites it on
-// the schedule of SecureKeyRenew — RVQ_SECURE_KEY_RENEW, "@daily" by default,
-// or any rule robfig/cron understands ("0 */6 * * *", "@every 12h"). An empty
-// rule turns the renewal off, leaving whatever key is on disk.
+// StartSecureKeyRenewal rewrites the key file on the schedule of SecureKeyRenew
+// — RVQ_SECURE_KEY_RENEW, "@daily" by default, or any rule robfig/cron
+// understands ("0 */6 * * *", "@every 12h"). An empty rule turns the renewal
+// off, leaving whatever key is on disk.
+//
+// It never CREATES the file: the bypass exists because somebody decided it
+// should, so a missing key file only earns a line on the terminal saying how to
+// make one. From the moment it is there, the renewal rewrites it.
 //
 // Pass a cron to schedule it on the application's own; with none, the builder
 // keeps one of its own, started here and stopped by StopSecureKeyRenewal.
 func (b *Builder) StartSecureKeyRenewal(c ...*rcron.Cron) (err error) {
+	b.WarnSecureKeyMissing()
+
 	rule := strings.TrimSpace(SecureKeyRenew)
 	if rule == "" {
 		return nil
 	}
 
-	if _, err = os.Stat(b.GetSecureKeyFile()); os.IsNotExist(err) {
-		if _, err = b.RenewSecureKey(); err != nil {
-			return err
-		}
-	}
-
 	renew := func() {
+		// nothing to rewrite while there is no key: the file is the operator's
+		// to create
+		if _, err := os.Stat(b.GetSecureKeyFile()); err != nil {
+			return
+		}
 		if _, err := b.RenewSecureKey(); err != nil {
 			log.Printf("could not renew %s: %v", b.GetSecureKeyFile(), err)
 		}
@@ -187,6 +205,27 @@ func (b *Builder) StartSecureKeyRenewal(c ...*rcron.Cron) (err error) {
 	}
 	b.secureKeyCron.Start()
 	return nil
+}
+
+// WarnSecureKeyMissing says on the terminal that there is no secure key, and
+// what a key file has to look like. Called by StartSecureKeyRenewal; the file
+// is never created for you.
+func (b *Builder) WarnSecureKeyMissing() {
+	path := b.GetSecureKeyFile()
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+
+	abs := path
+	if p, err := filepath.Abs(path); err == nil {
+		abs = p
+	}
+
+	log.Printf("NOTE: no secure key at %s, so every login goes through the form "+
+		"protection. To let automation past it, create the file with mode %04o "+
+		"(it is ignored with any other mode) and send its content in the %s "+
+		"header:\n    (umask 177 && head -c 32 /dev/urandom | base64 | tr -d '=' > %s)",
+		abs, SecureKeyFileMode, SecureKeyHeader, abs)
 }
 
 // StopSecureKeyRenewal stops the cron StartSecureKeyRenewal started. It does

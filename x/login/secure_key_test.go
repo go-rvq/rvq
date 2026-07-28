@@ -1,6 +1,8 @@
 package login
 
 import (
+	"bytes"
+	"log"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -53,6 +55,32 @@ func TestSecureKeyLetsTheHolderPastTheProtection(t *testing.T) {
 	}
 	if code := postWithKey(b, ""); code == 0 {
 		t.Error("a POST with no key was accepted while a key file exists")
+	}
+}
+
+func TestSecureKeyFilePath(t *testing.T) {
+	original := SecureKeyPath
+	defer func() { SecureKeyPath = original }()
+
+	b := New(i18n.New())
+	b.Secret("a secret worth at least this many bytes")
+
+	// nothing set anywhere
+	SecureKeyPath = ""
+	if got := b.GetSecureKeyFile(); got != DefaultSecureKeyFile {
+		t.Errorf("path = %q, want %q", got, DefaultSecureKeyFile)
+	}
+
+	// RVQ_SECURE_KEY_FILE
+	SecureKeyPath = "/etc/myapp/.secure_key"
+	if got := b.GetSecureKeyFile(); got != SecureKeyPath {
+		t.Errorf("path = %q, want the one from the environment (%q)", got, SecureKeyPath)
+	}
+
+	// and a path given in code wins over it
+	b.SecureKeyFile("/srv/other/.secure_key")
+	if got := b.GetSecureKeyFile(); got != "/srv/other/.secure_key" {
+		t.Errorf("path = %q, want the one set in code", got)
 	}
 }
 
@@ -168,17 +196,43 @@ func TestStartSecureKeyRenewal(t *testing.T) {
 	original := SecureKeyRenew
 	defer func() { SecureKeyRenew = original }()
 
-	t.Run("writes the file when there is none", func(t *testing.T) {
+	t.Run("says there is no key, and does not write one", func(t *testing.T) {
 		b := newSecureKeyBuilder(t)
 		SecureKeyRenew = "@daily"
+
+		var out bytes.Buffer
+		log.SetOutput(&out)
+		defer log.SetOutput(os.Stderr)
 
 		if err := b.StartSecureKeyRenewal(); err != nil {
 			t.Fatal(err)
 		}
 		defer b.StopSecureKeyRenewal()
 
-		if _, err := os.Stat(b.GetSecureKeyFile()); err != nil {
-			t.Errorf("no key file after starting the renewal: %v", err)
+		if _, err := os.Stat(b.GetSecureKeyFile()); !os.IsNotExist(err) {
+			t.Error("the key file was created — it is the operator's to make")
+		}
+
+		said := out.String()
+		for _, want := range []string{b.GetSecureKeyFile(), "0600", SecureKeyHeader} {
+			if !strings.Contains(said, want) {
+				t.Errorf("the warning does not mention %q:\n%s", want, said)
+			}
+		}
+	})
+
+	t.Run("renewing does not create the file either", func(t *testing.T) {
+		b := newSecureKeyBuilder(t)
+		SecureKeyRenew = "@every 50ms"
+
+		if err := b.StartSecureKeyRenewal(); err != nil {
+			t.Fatal(err)
+		}
+		defer b.StopSecureKeyRenewal()
+
+		time.Sleep(300 * time.Millisecond)
+		if _, err := os.Stat(b.GetSecureKeyFile()); !os.IsNotExist(err) {
+			t.Error("a scheduled renewal created the key file")
 		}
 	})
 
@@ -198,6 +252,11 @@ func TestStartSecureKeyRenewal(t *testing.T) {
 	t.Run("renews on schedule", func(t *testing.T) {
 		b := newSecureKeyBuilder(t)
 		SecureKeyRenew = "@every 100ms"
+
+		// the operator's file: from here on, the renewal rewrites it
+		if _, err := b.RenewSecureKey(); err != nil {
+			t.Fatal(err)
+		}
 
 		if err := b.StartSecureKeyRenewal(); err != nil {
 			t.Fatal(err)
@@ -224,11 +283,17 @@ func TestStartSecureKeyRenewal(t *testing.T) {
 		b := newSecureKeyBuilder(t)
 		SecureKeyRenew = ""
 
-		if err := b.StartSecureKeyRenewal(); err != nil {
+		key, err := b.RenewSecureKey()
+		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := os.Stat(b.GetSecureKeyFile()); !os.IsNotExist(err) {
-			t.Error("a disabled renewal wrote a key file")
+		if err = b.StartSecureKeyRenewal(); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(100 * time.Millisecond)
+		if code := postWithKey(b, key); code != 0 {
+			t.Error("the key changed with the renewal turned off")
 		}
 	})
 
