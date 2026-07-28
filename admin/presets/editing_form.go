@@ -55,7 +55,9 @@ func (b *EditingBuilder) formNewScope(ctx *web.EventContext) (web.EventResponse,
 func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.EventResponse, err error) {
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 	overlay := actions.OverlayMode(ctx.R.FormValue(ParamOverlay))
-	if overlay.IsDrawer() && targetPortal == "" {
+	if overlay.IsDrawer() && (targetPortal == "" || CloserIsGlobal(ctx)) {
+		// see editing_new.go: the layout's portal, whenever the caller's closer is
+		// reachable from there
 		targetPortal = overlay.PortalName()
 	}
 
@@ -70,6 +72,7 @@ func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.
 			SetScrollable(true).
 			SetValidPortalName(targetPortal).
 			SetCloserProvided(CloserProvided(ctx)).
+			SetCloserRef(CloserRef(ctx)).
 			Respond(&r, comp)
 	} else if mode.IsDialog() {
 		b.mb.p.Dialog().

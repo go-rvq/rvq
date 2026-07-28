@@ -279,10 +279,19 @@ func (b *FormHostBuilder) callbacks() string {
 
 // loadScript is the plaid call that loads this host's content into its portal.
 func (b *FormHostBuilder) loadScript() string {
-	return b.load.Clone().
+	load := b.load.Clone().
 		Scope(vue.Var("{closer: "+b.Ref()+", onSaveCallbacks: "+b.callbacks()+"}")).
-		Query(ParamCloserProvided, "true").
-		Go()
+		Query(ParamCloserProvided, "true")
+
+	// State on `vars` is reachable from anywhere, so the overlay does not have to
+	// live inside this host's portal: a drawer goes to the layout's own portal
+	// and sizes itself against the window, instead of against whatever box the
+	// host happens to sit in.
+	if b.inVars {
+		load = load.Query(ParamCloserRef, b.Ref())
+	}
+
+	return load.Go()
 }
 
 // block is the guarded form block: mounting it loads the form into the host's
@@ -358,6 +367,25 @@ func PostSaveScript(id string) string {
 // owns the overlay's closer (see ParamCloserProvided).
 func CloserProvided(ctx *web.EventContext) bool {
 	return ctx != nil && ctx.R != nil && ctx.R.FormValue(ParamCloserProvided) == "true"
+}
+
+// CloserRef is how the overlay addresses the caller's closer: whatever the
+// caller sent in ParamCloserRef, or the ambient `closer` of the portal it is
+// rendered in.
+func CloserRef(ctx *web.EventContext) string {
+	if ctx != nil && ctx.R != nil {
+		if ref := ctx.R.FormValue(ParamCloserRef); ref != "" {
+			return ref
+		}
+	}
+	return "closer"
+}
+
+// CloserIsGlobal reports whether the caller's closer can be addressed from
+// anywhere — which is what lets an overlay be rendered outside the caller's
+// portal (see ParamCloserRef).
+func CloserIsGlobal(ctx *web.EventContext) bool {
+	return CloserRef(ctx) != "closer"
 }
 
 // ItemFormHosts are the hosts a listing renders once and its buttons reuse: the

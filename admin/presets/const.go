@@ -35,7 +35,14 @@ const (
 	// overlay's `closer` (a form host owns it, see FormHost), so the response must
 	// NOT wrap its content in a new closer scope — otherwise it would create a
 	// child closer and closing it would no longer destroy the host's form.
-	ParamCloserProvided            = "presets_closer_provided"
+	ParamCloserProvided = "presets_closer_provided"
+
+	// ParamCloserRef carries HOW to address the caller's closer from anywhere —
+	// `vars.$presetsCreating`, say. A host whose state is on `vars` can send it,
+	// and then the overlay does not have to be rendered inside the host's own
+	// portal to reach the closer: a drawer can go to the layout's portal, which
+	// is the only place it sizes itself against the whole window.
+	ParamCloserRef                 = "presets_closer_ref"
 	ParamPostChangeCallback        = "presets_post_change_callback"
 	ParamPostDeleteCallback        = "presets_post_delete_callback"
 	ParamPostExecuteActionCallback = "presets_post_execute_action_callback"

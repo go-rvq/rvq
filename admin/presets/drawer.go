@@ -14,6 +14,7 @@ type Drawer struct {
 	location       string
 	width          string
 	portalName     string
+	closerRef_     string
 	safeClose      bool
 	scrollable     bool
 	closerProvided bool
@@ -37,9 +38,26 @@ func (p *Drawer) closerScope(comp h.HTMLComponent) h.HTMLComponent {
 		if !ok {
 			sb = web.Scope(comp)
 		}
-		return sb.Closer().Attr(":closer", "closer")
+		// by reference, so this works both inside the caller's portal (where the
+		// ambient `closer` IS the caller's) and in the layout's portal (where it
+		// is not, and the caller sent an address like `vars.$presetsCreating`)
+		return sb.Closer().Attr(":closer", p.closerRef())
 	}
 	return web.CloserScope(comp, true)
+}
+
+func (p *Drawer) closerRef() string {
+	if p.closerRef_ != "" {
+		return p.closerRef_
+	}
+	return "closer"
+}
+
+// SetCloserRef is how the content addresses the caller's closer. Empty means the
+// ambient one.
+func (p *Drawer) SetCloserRef(v string) *Drawer {
+	p.closerRef_ = v
+	return p
 }
 
 func NewDrawer(width string, portalName string) *Drawer {

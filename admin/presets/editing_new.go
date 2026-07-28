@@ -190,7 +190,11 @@ func (b *EditingBuilder) formNew(ctx *web.EventContext) (r web.EventResponse, er
 	// in the layout's global portal the `closer` in scope is the root one, not
 	// the host's, so `v-model='closer.show'` would be false and the drawer would
 	// never open.
-	if overlay.IsDrawer() && respondTargetPortal == "" {
+	if overlay.IsDrawer() && (respondTargetPortal == "" || CloserIsGlobal(ctx)) {
+		// The layout's portal is the only place a drawer sizes itself against the
+		// window; inside the caller's portal it registers with whatever box holds
+		// it and opens below the app bar. Going there is only possible when the
+		// caller's closer can be addressed from there — see ParamCloserRef.
 		respondTargetPortal = overlay.PortalName()
 	}
 	targetPortal := respondTargetPortal

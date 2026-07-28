@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/go-rvq/rvq/x/i18n"
 )
 
@@ -78,6 +80,56 @@ func TestPageListingHostsAreTogether(t *testing.T) {
 		if p < table {
 			t.Errorf("o bloco %q ficou ANTES da tabela (na barra de ações?)", guards[i])
 		}
+	}
+}
+
+// Um drawer só se dimensiona contra a janela quando está no portal do LAYOUT;
+// dentro do portal de quem o abriu ele se registra na caixa que o contém e abre
+// abaixo do app bar. O host cujo estado está em `vars` manda o endereço do
+// closer junto (ParamCloserRef), e é isso que permite responder lá.
+func TestPageListingNewOpensInTheLayoutDrawer(t *testing.T) {
+	db := TestDB
+	if err := db.AutoMigrate(&PageHostProduct{}); err != nil {
+		t.Fatal(err)
+	}
+
+	b := presets.New(i18n.New()).URIPrefix("/admin")
+	b.DataOperator(gorm2op.DataOperator(db))
+	b.Model(&PageHostProduct{}).URIName("produtos")
+
+	ref := "vars." + presets.ListingNewScope
+	w := httptest.NewRecorder()
+	b.ServeHTTP(w, multipartestutils.NewMultipartBuilder().
+		PageURL("/admin/produtos").
+		EventFunc("presets_New").
+		Query(presets.ParamTargetPortal, "hostPortal").
+		Query(presets.ParamOverlay, "RightDrawer").
+		Query(presets.ParamCloserProvided, "true").
+		Query(presets.ParamCloserRef, ref).
+		BuildEventFuncRequest())
+
+	body := strings.ReplaceAll(w.Body.String(), `"`, `"`)
+
+	if !strings.Contains(body, `"name":"`+actions.RightDrawer.PortalName()+`"`) {
+		t.Errorf("a resposta não foi para o portal do layout:\n%s", firstMatch(body, `"name":"[^"]*"`))
+	}
+	if !strings.Contains(body, `:closer='`+ref+`'`) {
+		t.Errorf("o drawer não ligou no closer do host:\n%s", firstMatch(body, `:closer='[^']*'`))
+	}
+
+	// e sem a referência continua respondendo no portal de quem pediu
+	w = httptest.NewRecorder()
+	b.ServeHTTP(w, multipartestutils.NewMultipartBuilder().
+		PageURL("/admin/produtos").
+		EventFunc("presets_New").
+		Query(presets.ParamTargetPortal, "hostPortal").
+		Query(presets.ParamOverlay, "RightDrawer").
+		Query(presets.ParamCloserProvided, "true").
+		BuildEventFuncRequest())
+
+	if !strings.Contains(w.Body.String(), `"name":"hostPortal"`) {
+		t.Errorf("sem referência, a resposta deveria ficar no portal de quem pediu:\n%s",
+			firstMatch(w.Body.String(), `"name":"[^"]*"`))
 	}
 }
 
