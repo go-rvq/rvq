@@ -232,7 +232,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	pb.I18n().
 		RegisterForModule(language.English, I18nPublishKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nPublishKey, Messages_zh_CN).
-		RegisterForModule(language.Japanese, I18nPublishKey, Messages_ja_JP)
+		RegisterForModule(language.Japanese, I18nPublishKey, Messages_ja_JP).
+		RegisterForModule(language.BrazilianPortuguese, I18nPublishKey, Messages_pt_BR)
 
 	utils.Install(pb)
 	for _, f := range b.afterInstallFuncs {

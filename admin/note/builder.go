@@ -34,7 +34,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	pb.I18n().
 		RegisterForModule(language.English, I18nNoteKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nNoteKey, Messages_zh_CN).
-		RegisterForModule(language.Japanese, I18nNoteKey, Messages_ja_JP)
+		RegisterForModule(language.Japanese, I18nNoteKey, Messages_ja_JP).
+		RegisterForModule(language.BrazilianPortuguese, I18nNoteKey, Messages_pt_BR)
 	return nil
 }
 

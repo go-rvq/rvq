@@ -114,3 +114,42 @@ var Messages_zh_CN = &Messages{
 	DiffNow:         "当前的值",
 	DiffValue:       "值",
 }
+
+var Messages_pt_BR = &Messages{
+	ActivityLogs: "Registros de atividade",
+	Activities:   "Atividades",
+	ActionAll:    "Todas",
+	ActionView:   "Consulta",
+	ActionEdit:   "Alteração",
+	ActionCreate: "Criação",
+	ActionDelete: "Exclusão",
+
+	ModelUserID:    "ID do autor",
+	ModelCreatedAt: "Data e hora",
+	ModelAction:    "Ação",
+	ModelCreator:   "Autor",
+	ModelKeys:      "Chaves",
+	ModelName:      "Tabela",
+	ModelLabel:     "Menu",
+	ModelLink:      "Link",
+	ModelDiffs:     "Diferenças",
+	ModelIP:        "Endereço IP",
+	ModelUserAgent: "Navegador",
+
+	LogAction: "Registro de atividade",
+	LogEmpty:  "Nenhuma atividade registrada para este registro.",
+
+	FilterAction:    "Ação",
+	FilterCreatedAt: "Data",
+	FilterCreator:   "Autor",
+	FilterModel:     "Modelo",
+
+	DiffDetail:  "Detalhe",
+	DiffNew:     "Novo",
+	DiffDelete:  "Excluído",
+	DiffChanges: "Alterações",
+	DiffField:   "Campo",
+	DiffOld:     "Antes",
+	DiffNow:     "Agora",
+	DiffValue:   "Valor",
+}

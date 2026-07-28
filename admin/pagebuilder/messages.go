@@ -111,3 +111,28 @@ var Messages_ja_JP = &Messages{
 	PageOverView:                   "ページ概要",
 	ErrPermissionDenied:            "許可が拒否されました",
 }
+
+var Messages_pt_BR = &Messages{
+	Category:                       "Categoria",
+	Preview:                        "Visualizar",
+	Containers:                     "Blocos",
+	AddContainers:                  "Adicionar blocos",
+	New:                            "Novo",
+	Shared:                         "Compartilhado",
+	Select:                         "Selecionar",
+	SelectedTemplateLabel:          "Modelo",
+	CreateFromTemplate:             "Criar a partir de um modelo",
+	ChangeTemplate:                 "Trocar o modelo",
+	RelatedOnlinePages:             "Páginas no ar relacionadas",
+	RepublishAllRelatedOnlinePages: "Republicar todas",
+	Unnamed:                        "Sem nome",
+	NotDescribed:                   "Sem descrição",
+	Blank:                          "Em branco",
+	NewPage:                        "Nova página",
+	FilterTabAllVersions:           "Todas as versões",
+	FilterTabOnlineVersion:         "Versões no ar",
+	FilterTabNamedVersions:         "Versões nomeadas",
+	Rename:                         "Renomear",
+	PageOverView:                   "Visão geral da página",
+	ErrPermissionDenied:            "Permissão negada",
+}

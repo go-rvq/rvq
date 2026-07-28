@@ -68,7 +68,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 
 	pb.I18n().
 		RegisterForModule(language.English, I18nSeoKey, Messages_en_US).
-		RegisterForModule(language.SimplifiedChinese, I18nSeoKey, Messages_zh_CN)
+		RegisterForModule(language.SimplifiedChinese, I18nSeoKey, Messages_zh_CN).
+		RegisterForModule(language.BrazilianPortuguese, I18nSeoKey, Messages_pt_BR)
 
 	permVerifier = perm.NewVerifier("seo", pb.GetPermission())
 	return nil

@@ -69,6 +69,18 @@ Always run native Go tooling to verify compliance and correctness:
 ## Code Style & Naming Conventions
 - **Idiomatic Go**: Follow standard `golang/go` conventions (Receiver names short, explicit error handling as returning values).
 - **Error Wrapping**: Use `fmt.Errorf("...: %w", err)` for contextual errors in parsing/compilation steps.
+- **Language**: **everything written for developers is in English** — code
+  comments, doc comments, `docs/**.md`, `README.md`, test names and test
+  comments. **What the end user reads is translated**: every i18n module ships
+  `Messages_en_US` AND `Messages_pt_BR`, both registered on the `i18n.Builder`
+  (`RegisterForModule(language.English, …)` and
+  `RegisterForModule(language.BrazilianPortuguese, …)`). Other languages
+  (zh-CN, ja-JP) are inherited from upstream: keep them when they are there, do
+  not add new ones.
+  - A language's module messages are stored **whole**, with no per-field
+    fallback: a partial `Messages_pt_BR` renders as blanks, not as English. When
+    adding a field to a `Messages` struct, fill it in every translation the
+    module already has.
 
 ## Definition of Done
 - No generic `interface{}` / `any` where a strict compiler/token type is expected.

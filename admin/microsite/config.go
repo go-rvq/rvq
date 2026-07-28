@@ -31,7 +31,8 @@ func (mib *Builder) Install(b *presets.Builder) error {
 
 	b.I18n().
 		RegisterForModule(language.English, I18nMicrositeKey, Messages_en_US).
-		RegisterForModule(language.SimplifiedChinese, I18nMicrositeKey, Messages_zh_CN)
+		RegisterForModule(language.SimplifiedChinese, I18nMicrositeKey, Messages_zh_CN).
+		RegisterForModule(language.BrazilianPortuguese, I18nMicrositeKey, Messages_pt_BR)
 
 	model := b.Model(&MicroSite{}).Use(publisher.ContextValueFuncs(mib.ContextValueProvider))
 

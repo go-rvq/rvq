@@ -25,7 +25,8 @@ const (
 func (ab *Builder) Install(b *presets.Builder) error {
 	b.I18n().
 		RegisterForModule(language.English, I18nActivityKey, Messages_en_US).
-		RegisterForModule(language.SimplifiedChinese, I18nActivityKey, Messages_zh_CN)
+		RegisterForModule(language.SimplifiedChinese, I18nActivityKey, Messages_zh_CN).
+		RegisterForModule(language.BrazilianPortuguese, I18nActivityKey, Messages_pt_BR)
 
 	if permB := b.GetPermission(); permB != nil {
 		permB.CreatePolicies(ab.permPolicy)

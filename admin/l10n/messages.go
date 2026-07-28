@@ -79,3 +79,19 @@ func MustGetTranslation(ctx context.Context, key string) string {
 func MustGetMessages(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, I18nLocalizeKey, Messages_en_US).(*Messages)
 }
+
+var Messages_pt_BR = &Messages{
+	Localize:                         "Localizar",
+	LocalizeFrom:                     "De",
+	LocalizeTo:                       "Para",
+	CurrentLocalizations:             "Localizações atuais",
+	Actions:                          "Ações",
+	Localizations:                    "Localizações",
+	SuccessfullyLocalized:            "Localizado com sucesso",
+	Location:                         "Local",
+	Colon:                            ":",
+	International:                    "Internacional",
+	China:                            "China",
+	Japan:                            "Japão",
+	ErrDeleteInternationalizedRecord: "Não é possível excluir o registro do idioma padrão enquanto ele estiver internacionalizado.",
+}

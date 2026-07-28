@@ -27,3 +27,10 @@ var Messages_ja_JP = &Messages{
 	Notes:               "ノート",
 	NewNote:             "新規ノート",
 }
+
+var Messages_pt_BR = &Messages{
+	SuccessfullyCreated: "Criado com sucesso",
+	Item:                "Item",
+	Notes:               "Anotações",
+	NewNote:             "Nova anotação",
+}

@@ -54,3 +54,21 @@ var Messages_zh_CN = &Messages{
 	Seo:                  "搜索引擎优化",
 	Customize:            "自定义",
 }
+
+var Messages_pt_BR = &Messages{
+	Variable:             "Configuração das variáveis",
+	Basic:                "Básico",
+	Title:                "Título",
+	Description:          "Descrição",
+	Keywords:             "Palavras-chave",
+	OpenGraphInformation: "Informações do Open Graph",
+	OpenGraphTitle:       "Título do Open Graph",
+	OpenGraphDescription: "Descrição do Open Graph",
+	OpenGraphURL:         "URL do Open Graph",
+	OpenGraphType:        "Tipo do Open Graph",
+	OpenGraphImageURL:    "URL da imagem do Open Graph",
+	OpenGraphImage:       "Imagem do Open Graph",
+	OpenGraphMetadata:    "Metadados do Open Graph",
+	Seo:                  "SEO",
+	Customize:            "Personalizar",
+}

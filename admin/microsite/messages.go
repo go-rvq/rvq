@@ -11,3 +11,7 @@ var Messages_en_US = &Messages{
 var Messages_zh_CN = &Messages{
 	CurrentPackage: "当前压缩包",
 }
+
+var Messages_pt_BR = &Messages{
+	CurrentPackage: "Pacote atual",
+}

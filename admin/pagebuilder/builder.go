@@ -297,7 +297,8 @@ func (b *Builder) installAsset(pb *presets.Builder) {
 	pb.I18n().
 		RegisterForModule(language.English, I18nPageBuilderKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nPageBuilderKey, Messages_zh_CN).
-		RegisterForModule(language.Japanese, I18nPageBuilderKey, Messages_ja_JP)
+		RegisterForModule(language.Japanese, I18nPageBuilderKey, Messages_ja_JP).
+		RegisterForModule(language.BrazilianPortuguese, I18nPageBuilderKey, Messages_pt_BR)
 
 	pb.ExtraAsset("/redactor.js", "text/javascript", richeditor.JSComponentsPack())
 	pb.ExtraAsset("/redactor.css", "text/css", richeditor.CSSComponentsPack())
