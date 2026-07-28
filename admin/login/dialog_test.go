@@ -65,6 +65,10 @@ func TestSessionLostOnAnEventOpensTheLoginDialog(t *testing.T) {
 	if !strings.Contains(body, "iframe") {
 		t.Errorf("o diálogo não carrega a página de login:\n%s", firstLine(body))
 	}
+	// dá para ampliar: a tela de login de uma aplicação pode ser alta
+	if !strings.Contains(body, "expandable") {
+		t.Errorf("o diálogo não é expansível:\n%s", firstLine(body))
+	}
 
 	// os diálogos que já estavam abertos saem de vista — e voltam depois
 	for _, want := range []string{

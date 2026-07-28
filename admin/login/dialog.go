@@ -111,10 +111,15 @@ func loginDialog(loginURL, doneURL string) h.HTMLComponent {
 			h.Tag("iframe").
 				Attr("src", loginURL).
 				Attr("title", "login").
-				Attr("style", "width:100%;height:70vh;border:none"),
+				// takes whatever room the dialog has, so expanding it gives the
+				// login page the whole window
+				Attr("style", "width:100%;height:100%;min-height:60vh;border:none"),
 		).
 			Attr("v-model", presets.LoginDialogVar).
-			Attr("width", "520").
+			Width("520").
+			// the login page of an application can be tall (logo, OAuth buttons,
+			// a captcha): expanding gives it the whole window
+			Expandable(true).
 			// no way out but logging in: the page underneath is waiting for the
 			// session, and closing this would only lead to another redirect
 			Attr("persistent", true),
