@@ -14,6 +14,7 @@ type Drawer struct {
 	location       string
 	width          string
 	portalName     string
+	mode           actions.OverlayMode
 	safeClose      bool
 	scrollable     bool
 	closerProvided bool
@@ -41,6 +42,13 @@ func (p *Drawer) closerScope(comp h.HTMLComponent) h.HTMLComponent {
 	}
 	return web.CloserScope(comp, true)
 }
+
+// DrawerTeleportTarget is where a drawer rendered inside somebody else's portal
+// has its DOM moved to. `body` because it is the one element certain to be
+// there: a temporary drawer is positioned fixed, so it floats at the side from
+// anywhere — while inside a portal in the page (the app bar, say) it would be
+// laid out inline, right there. An application may point it elsewhere.
+var DrawerTeleportTarget = "body"
 
 func NewDrawer(width string, portalName string) *Drawer {
 	return &Drawer{location: v.LocationRight, width: width, portalName: portalName}
@@ -171,10 +179,22 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 		comp = p.rootWrap(comp)
 	}
 
+	// A drawer positions itself against the LAYOUT, so its DOM has to sit at the
+	// layout root. When the content goes to a portal of the caller — a form host
+	// owns its portal, and that portal may be anywhere, e.g. the app bar — the
+	// drawer would render inline, right there. Teleporting moves the DOM without
+	// moving the COMPONENT: it stays under the portal, where `closer` is the
+	// host's, and shows up where a drawer belongs.
+	if p.portalName != p.mode.PortalName() {
+		comp = h.Tag("teleport").Attr("to", DrawerTeleportTarget).Children(comp)
+	}
+
 	r.UpdatePortal(p.portalName, comp)
 }
 
 func (p *Builder) Drawer(drawerMode actions.OverlayMode) *Drawer {
-	return NewDrawer(p.rightDrawerWidth, drawerMode.PortalName()).
+	d := NewDrawer(p.rightDrawerWidth, drawerMode.PortalName()).
 		SetLocation(strings.ToLower(strings.TrimRight(drawerMode.String(), "Drawer")))
+	d.mode = drawerMode
+	return d
 }

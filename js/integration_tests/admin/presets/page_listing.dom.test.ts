@@ -71,9 +71,12 @@ describe("NEW a partir de uma listagem em página", () => {
     const btn = wrapper.find('[data-event="new"]');
     expect(btn.exists()).toBe(true);
 
-    // o layout já tem o seu (o menu), então o que conta é o do FORMULÁRIO
+    // o layout já tem o seu (o menu), então o que conta é o do FORMULÁRIO — e ele
+    // é TELEPORTADO para a raiz do layout, fora da árvore do wrapper
     const formDrawer = () =>
-      wrapper.findAll(".vx-drawer").find((d: any) => d.find("form").exists() || d.text().includes("Title"));
+      Array.from(document.querySelectorAll(".vx-drawer")).find((d) =>
+        (d.textContent || "").includes("Title"),
+      );
     expect(formDrawer()).toBeUndefined();
 
     requests.length = 0;
@@ -91,7 +94,11 @@ describe("NEW a partir de uma listagem em página", () => {
     // da raiz, e o drawer ficaria fechado para sempre.
     const opened = formDrawer();
     expect(opened).toBeDefined();
-    expect(opened!.text()).toContain("Title");
+    expect(opened!.textContent).toContain("Title");
+    // e saiu do portal do host (a barra de ações), senão abriria embutida nela
+    expect(opened!.closest("[data-event=\"new\"]")).toBeNull();
+    expect(opened!.parentElement).not.toBeNull();
+
 
     wrapper.unmount();
   }, 40000);
@@ -100,7 +107,9 @@ describe("NEW a partir de uma listagem em página", () => {
     const wrapper = await mountPage("/admin/articles");
 
     const formDrawer = () =>
-      wrapper.findAll(".vx-drawer").find((d: any) => d.text().includes("Title"));
+      Array.from(document.querySelectorAll(".vx-drawer")).find((d) =>
+        (d.textContent || "").includes("Title"),
+      );
     expect(formDrawer()).toBeUndefined();
 
     requests.length = 0;
