@@ -535,14 +535,10 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		}
 	}
 
-	// Out of a dialog these actions are rendered by the LAYOUT into the app bar,
-	// outside the listing the create host wraps — so the host travels with them:
-	// variable, guarded block and button together (see hostForms).
-	if host := GetItemFormHosts(ctx).New; !inDialog && host != nil && len(actionBtns) > 0 {
-		host.WrapsOpener(true)
-		return host.Children(actionBtns...).Component()
-	}
-
+	// Fora de um diálogo estas ações vão para a barra do layout, longe da
+	// listagem — e não precisam levar o host junto: o de criação guarda o estado
+	// em `vars` (ver itemFormHosts), então o botão daqui e o bloco lá falam do
+	// mesmo objeto.
 	return actionBtns
 }
 

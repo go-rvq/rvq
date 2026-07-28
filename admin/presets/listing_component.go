@@ -459,6 +459,12 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 		hosts.New.URL(listingHref + "/new")
 	}
 
+	// Numa PÁGINA o botão "+" é renderizado pelo layout na barra de ações, longe
+	// da listagem. Guardando o estado em `vars`, o botão lá e o bloco aqui falam
+	// do mesmo host — e o formulário abre no MESMO portal do detalhe, dentro do
+	// conteúdo da página, que é onde um drawer se posiciona direito.
+	hosts.New.InVars(!IsInDialog(ctx))
+
 	WithItemFormHosts(ctx, hosts)
 	return hosts
 }
@@ -475,9 +481,9 @@ func (lcb *ListingComponentBuilder) itemFormHosts(ctx *web.EventContext) *ItemFo
 // `<template v-slot>`, and one nested in another is not compiled by the runtime
 // template parser — the listing inside would render inert.
 func (lcb *ListingComponentBuilder) hostForms(ctx *web.EventContext, comp h.HTMLComponent, hosts *ItemFormHosts) h.HTMLComponent {
-	all := []*FormHostBuilder{hosts.Detail, hosts.Edit}
-	if IsInDialog(ctx) {
-		all = append(all, hosts.New)
-	}
-	return FormHosts(h.HTMLComponents{comp}, all...)
+	// Os três juntos: o de criação também, mesmo numa página, onde o botão dele
+	// mora na barra de ações — ele guarda o estado em `vars` justamente para
+	// isso (ver itemFormHosts), e assim o formulário abre no mesmo portal do
+	// detalhe, dentro do conteúdo.
+	return FormHosts(h.HTMLComponents{comp}, hosts.Detail, hosts.Edit, hosts.New)
 }

@@ -64,6 +64,7 @@ const DetailPagePortalName = "presets_detail_page"
 
 type FormHostBuilder struct {
 	scope       string
+	inVars      bool
 	wrapsOpener bool
 	show        bool
 	onSave      string
@@ -112,6 +113,24 @@ func (b *FormHostBuilder) OnOpen(script string) *FormHostBuilder {
 func (b *FormHostBuilder) OnClose(script string) *FormHostBuilder {
 	b.onClose = append(b.onClose, script)
 	return b
+}
+
+// InVars keeps this host's state on `vars` instead of on a slot variable.
+//
+// It is what a PAGE needs: the layout renders the primary action into the app
+// bar, far from the listing, so button and guarded block end up in different
+// components — and a slot variable only exists inside the one that declares it.
+// `vars` is reachable from both, and on a page there is exactly one listing, so
+// the name cannot collide with anything (which is why an overlay keeps using a
+// slot variable — see the nesting note on FormHosts).
+func (b *FormHostBuilder) InVars(v bool) *FormHostBuilder {
+	b.inVars = v
+	return b
+}
+
+// InVarsMode reports the InVars setting (nil-safe).
+func (b *FormHostBuilder) InVarsMode() bool {
+	return b != nil && b.inVars
 }
 
 // WrapsOpener tells whether this host renders around its OPENER (the button)
@@ -200,6 +219,9 @@ func sortedKeys(m map[string]string) []string {
 // the host declares. It is per-render, so nested levels — a listing opened in a
 // dialog, a record's detail opened from THAT listing — never share state.
 func (b *FormHostBuilder) Ref() string {
+	if b.inVars {
+		return "vars." + b.scope
+	}
 	return b.scope
 }
 
@@ -305,7 +327,13 @@ func FormHosts(children h.HTMLComponents, hosts ...*FormHostBuilder) h.HTMLCompo
 		if host == nil {
 			continue
 		}
-		uc.ScopeVar(host.scope, host.init())
+		if host.inVars {
+			// on `vars`, so that a button rendered somewhere else entirely (the
+			// app bar) reaches the same state this block guards
+			uc.AssignMany(vue.Var("vars"), "{"+strconv.Quote(host.scope)+": "+host.init()+"}")
+		} else {
+			uc.ScopeVar(host.scope, host.init())
+		}
 		blocks = append(blocks, host.block())
 	}
 

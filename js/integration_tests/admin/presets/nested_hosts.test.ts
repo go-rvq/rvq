@@ -25,7 +25,7 @@ async function pageHTML(path: string) {
 }
 
 describe("nested form hosts — contract", () => {
-  it("no host state is published on `vars` (page or overlay)", async () => {
+  it("only the page's create host lives on `vars` — the per-item ones never do", async () => {
     const page = await pageHTML("/admin/products");
     const detailPage = await pageHTML("/admin/products/1");
     const dialog = portalBody(
@@ -35,10 +35,20 @@ describe("nested form hosts — contract", () => {
 
     for (const body of [page, detailPage, dialog]) {
       expect(body).toContain("$presets");
-      // sharing `vars` is exactly what made two live listings fight over the
-      // same variable, mounting every guarded block at once
-      expect(body).not.toContain("vars.$presets");
+      // Sharing `vars` is what made two live listings fight over the same
+      // variable, mounting every guarded block at once. The hosts a ROW opens
+      // are the ones that exist at several levels at the same time, so they are
+      // always slot variables.
+      expect(body).not.toContain("vars.$presetsItemDetailing");
+      expect(body).not.toContain("vars.$presetsItemEditing");
     }
+
+    // The exception, on a page: the "+" is rendered by the layout into the app
+    // bar, far from the listing, so the create host has to be reachable from
+    // both sides. There is one listing per page, so the name cannot collide.
+    expect(page).toContain("vars.$presetsCreating");
+    // in a dialog the button is inline, so it goes back to a slot variable
+    expect(dialog).not.toContain("vars.$presetsCreating");
   });
 
   it("a listing in a dialog declares its OWN state, like the page does", async () => {
