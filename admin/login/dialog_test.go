@@ -1,6 +1,7 @@
 package login_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,8 +23,8 @@ type dialogUser struct {
 func (u *dialogUser) GetAccountName() string { return u.Email }
 
 // Uma sessão que morre embaixo de uma página aberta não pode levar a página
-// embora: o request da própria página (um evento) volta com o login em diálogo,
-// e não com um redirecionamento.
+// embora: o request da própria página (plaid) volta com 401 e o endereço do
+// diálogo de login, e não com um redirecionamento.
 func newDialogApp(t *testing.T) http.Handler {
 	t.Helper()
 
@@ -44,15 +45,67 @@ func newDialogApp(t *testing.T) http.Handler {
 	return lb.Middleware()(mux)
 }
 
-func TestSessionLostOnAnEventOpensTheLoginDialog(t *testing.T) {
+// plaidRequest é o que plaid() manda: o cabeçalho que diz "quem está pedindo é
+// a página, não o navegador".
+func plaidRequest(method, url string) *http.Request {
+	r := httptest.NewRequest(method, url, nil)
+	r.Header.Set(web.PlaidRequestHeader, "1")
+	return r
+}
+
+func TestSessionLostOnAPlaidRequestAnswers401WithLoginURI(t *testing.T) {
+	app := newDialogApp(t)
+
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, plaidRequest("POST", "/admin/products?"+web.EventFuncIDName+"=presets_Update"))
+
+	// 401 é o que o log do servidor precisa registrar
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401 (um redirecionamento levaria a página embora)", w.Code)
+	}
+
+	var res struct {
+		LoginURI      string `json:"loginURI"`
+		UpdatePortals []any  `json:"updatePortals"`
+		RunScript     string `json:"runScript"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("resposta não é JSON: %v\n%s", err, w.Body.String())
+	}
+
+	if want := "/admin" + presets.LoginDialogURI; res.LoginURI != want {
+		t.Errorf("loginURI = %q, want %q", res.LoginURI, want)
+	}
+	// nada mais: quem monta o diálogo é o request seguinte
+	if len(res.UpdatePortals) > 0 || res.RunScript != "" {
+		t.Errorf("a resposta do 401 não deve trazer nada além do loginURI:\n%s", w.Body.String())
+	}
+}
+
+// Sem o cabeçalho não há página aberta para preservar — vale o redirecionamento
+// de sempre, mesmo em um request de evento.
+func TestEventRequestWithoutThePlaidHeaderStillRedirects(t *testing.T) {
 	app := newDialogApp(t)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/admin/products?"+web.EventFuncIDName+"=presets_Update", nil)
 	app.ServeHTTP(w, r)
 
+	if w.Code != http.StatusFound {
+		t.Errorf("status = %d, want 302", w.Code)
+	}
+}
+
+// O endereço que o 401 devolveu monta o diálogo — e responde sem sessão, que é
+// exatamente quando ele é pedido.
+func TestLoginDialogURIRendersTheDialog(t *testing.T) {
+	app := newDialogApp(t)
+
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, plaidRequest("POST", "/admin"+presets.LoginDialogURI+"?"+web.EventFuncIDName+"=__reload__"))
+
 	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (um redirecionamento levaria a página embora)", w.Code)
+		t.Fatalf("status = %d, want 200", w.Code)
 	}
 	body := w.Body.String()
 
@@ -75,11 +128,17 @@ func TestSessionLostOnAnEventOpensTheLoginDialog(t *testing.T) {
 		plogin.HiddenByLoginClass,
 		"visibility: hidden",
 		".v-overlay--active",
-		"restore()",
+		"classList.remove",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("a resposta não esconde/restaura os outros diálogos (%q):\n%s", want, firstLine(body))
 		}
+	}
+
+	// e, ao final, o request interrompido segue: onLoginSuccess vem no escopo de
+	// quem pediu o diálogo (js/corejs/src/builder.ts, login())
+	if !strings.Contains(body, "onLoginSuccess()") {
+		t.Errorf("a resposta não retoma o request interrompido:\n%s", firstLine(body))
 	}
 
 	// e o login sabe para onde voltar: a página que avisa "pronto"

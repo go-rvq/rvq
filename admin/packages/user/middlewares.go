@@ -27,6 +27,14 @@ func (b *Builder) Middlewares(db *gorm.DB, logoutURL string, checkIsTokenValidFr
 	}
 }
 
+// loginBuilder is the login these middlewares belong to, when there is one.
+func (b *Middlewares) loginBuilder() *login.Builder {
+	if b.b == nil {
+		return nil
+	}
+	return b.b.lb
+}
+
 func (b *Middlewares) SetDevMode(v bool) *Middlewares {
 	b.dev = v
 	return b
@@ -89,10 +97,25 @@ func (b *Middlewares) ValidateSessionToken(next http.Handler) http.Handler {
 			return
 		}
 
+		// the login page and its neighbours have no session to validate, and
+		// checking one there would leave nowhere to go
+		if b.loginBuilder() != nil && b.loginBuilder().WhiteListed(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		valid, err := b.checkIsTokenValidFromRequest(b.db, r, user.GetID())
 		if err != nil || !valid {
 			if r.URL.Path == b.logoutURL {
 				next.ServeHTTP(w, r)
+				return
+			}
+			// The token is still good but the session behind it ended (an expiry,
+			// a logout from somewhere else). For a request fired by a page the
+			// user is working on, going to the login page would take the page —
+			// and everything typed into it — along, so that one is answered in
+			// place. See login.UnauthorizedResponder.
+			if b.loginBuilder() != nil && b.loginBuilder().RespondUnauthorized(w, r) {
 				return
 			}
 			http.Redirect(w, r, b.logoutURL, http.StatusFound)

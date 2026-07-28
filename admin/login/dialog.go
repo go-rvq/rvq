@@ -18,11 +18,16 @@ import (
 // list reload — comes back from the middleware as a redirect to the login page,
 // and the browser replaces everything: the form, and whatever was typed in it.
 //
-// So an EVENT request whose session is gone is answered differently: the page
-// stays exactly as it is and the login opens in a DIALOG over it, in a portal of
-// its own at the layout root (presets.LoginPortalName). Logging in there closes
-// the dialog and leaves the page — and the form — untouched, ready for the user
-// to press save again.
+// So a request made BY THE PAGE (plaid — see web.PlaidRequestHeader) is answered
+// differently. It gets 401, which is what the server log should show anyway, and
+// a single instruction: web.EventResponse.LoginURI, the address of the dialog.
+// Nothing on the page is touched.
+//
+// plaid() then asks for that URI, mounts what comes back in the layout's login
+// portal (presets.LoginPortalName) — the login page in a dialog over everything
+// — and hands the way back in its scope: onLoginSuccess. Logging in closes the
+// dialog, calls it, and the request the user originally made runs again, so the
+// click that hit the dead session finally goes through.
 //
 // The dialog holds the real login page in a frame, so everything that page does
 // keeps working (the form protection, reCAPTCHA when configured, OAuth buttons,
@@ -32,28 +37,47 @@ import (
 // installLoginDialog wires the answer above into the login middleware.
 func (b *Builder) installLoginDialog(pb *presets.Builder) {
 	lb := b.Builder()
-	doneURL := pb.GetURIPrefix() + presets.LoginDoneURI
+	uriPrefix := pb.GetURIPrefix()
+	doneURL := uriPrefix + presets.LoginDoneURI
+	dialogURL := uriPrefix + presets.LoginDialogURI
 
-	// the page the frame lands on when the login succeeds
 	pb.MuxSetup(func(prefix string, mux *http.ServeMux) {
+		// the page the frame lands on when the login succeeds
 		mux.Handle(prefix+presets.LoginDoneURI, LoginDonePage())
+
+		// the dialog itself
+		mux.Handle(prefix+presets.LoginDialogURI, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// where the login goes when it succeeds
+			lb.SetContinueURL(w, doneURL)
+
+			loginURL := lb.GetLoginPageURL()
+
+			var res web.EventResponse
+			res.UpdatePortal(presets.LoginPortalName, loginDialog(loginURL))
+			web.AppendRunScripts(&res, loginDialogScript(loginURL))
+
+			writeEventResponse(w, r, &res)
+		}))
 	})
+
+	// Both are asked for exactly when there is no session — that is the whole
+	// point of them — so nothing may turn them away.
+	lb.WhiteList(dialogURL, doneURL)
 
 	lb.SetUnauthorizedResponder(func(w http.ResponseWriter, r *http.Request) bool {
 		// Only for the page's own requests. A plain navigation still goes to the
 		// login page: there is no page to keep standing.
-		if r.FormValue(web.EventFuncIDName) == "" {
+		if !web.IsPlaidRequest(r) {
 			return false
 		}
 
-		// where the login goes when it succeeds
-		lb.SetContinueURL(w, doneURL)
+		res := web.EventResponse{LoginURI: dialogURL}
 
-		var res web.EventResponse
-		res.UpdatePortal(presets.LoginPortalName, loginDialog(lb.GetLoginPageURL(), doneURL))
-		web.AppendRunScripts(&res, presets.LoginDialogVar+" = true")
-
-		writeEventResponse(w, r, &res)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusUnauthorized)
+		if err := json.NewEncoder(w).Encode(&res); err != nil {
+			panic(err)
+		}
 		return true
 	})
 }
@@ -64,19 +88,22 @@ func (b *Builder) installLoginDialog(pb *presets.Builder) {
 // returns.
 const HiddenByLoginClass = "rvq-hidden-by-login"
 
-// loginDialog is the dialog itself: the login page in a frame, the overlays
-// that were already open put out of sight, and a listener that undoes both when
-// that page reports the session is back.
-func loginDialog(loginURL, doneURL string) h.HTMLComponent {
-	// The message comes from our own origin and says exactly one thing, so no
-	// other page can close this dialog.
-	script := fmt.Sprintf(`
-(scope) => {
+// loginDialogScript runs in the scope of the request that asked for the dialog,
+// which is where onLoginSuccess lives (see js/corejs/src/builder.ts, login()).
+// It puts the dialogs already open out of sight, opens this one, and waits for
+// the frame to report that the session is back — then undoes all of it and lets
+// the interrupted request go through.
+//
+// The message comes from our own origin and says exactly one thing, so no other
+// page can close this dialog.
+func loginDialogScript(loginURL string) string {
+	return fmt.Sprintf(strings.TrimSpace(`
+(function () {
 	const loginURL = %s;
 
 	// Dialogs already open — the form the user was filling in — step aside so
-	// only the login is on screen. Anything holding the login frame is skipped,
-	// and so is anything hidden by an earlier round.
+	// only the login is on screen. Anything hidden by an earlier round stays as
+	// it is, and so does anything already holding the login frame.
 	const hidden = [];
 	document.querySelectorAll(".v-overlay--active").forEach((el) => {
 		if (el.classList.contains(%s)) { return }
@@ -85,24 +112,29 @@ func loginDialog(loginURL, doneURL string) h.HTMLComponent {
 		hidden.push(el);
 	});
 
-	const restore = () => hidden.forEach((el) => el.classList.remove(%s));
-
 	const onMessage = (e) => {
 		if (e.origin !== window.location.origin || e.data !== "rvq:login-done") { return }
 		window.removeEventListener("message", onMessage);
-		restore();
+		hidden.forEach((el) => el.classList.remove(%s));
 		%s = false;
+		// back to what the user was doing
+		if (typeof onLoginSuccess === "function") { onLoginSuccess() }
 	};
 
 	window.addEventListener("message", onMessage);
-}`,
+	%s = true;
+})()`),
 		h.JSONString(loginURL),
 		h.JSONString(HiddenByLoginClass),
 		h.JSONString(HiddenByLoginClass),
 		h.JSONString(HiddenByLoginClass),
+		presets.LoginDialogVar,
 		presets.LoginDialogVar)
+}
 
-	return web.Scope(
+// loginDialog is the dialog itself: the login page in a frame.
+func loginDialog(loginURL string) h.HTMLComponent {
+	return h.Components(
 		// invisible, not removed: `display:none` would drop the size the dialog
 		// had, and the form inside it would come back measured from scratch
 		h.Style("."+HiddenByLoginClass+" { visibility: hidden !important; pointer-events: none !important; }"),
@@ -123,8 +155,6 @@ func loginDialog(loginURL, doneURL string) h.HTMLComponent {
 			// no way out but logging in: the page underneath is waiting for the
 			// session, and closing this would only lead to another redirect
 			Attr("persistent", true),
-
-		web.RunScript(strings.TrimSpace(script)),
 	)
 }
 

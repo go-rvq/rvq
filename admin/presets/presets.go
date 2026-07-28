@@ -904,6 +904,12 @@ const (
 	// tells the page around it that the session is back, and that is the whole
 	// content — nothing heavy is loaded inside the frame.
 	LoginDoneURI = "/login-done"
+
+	// LoginDialogURI answers with the dialog itself. It is what a page asks for
+	// after being told its session is gone (web.EventResponse.LoginURI), so it
+	// must be reachable WITHOUT a session — it is whitelisted in the login
+	// middleware.
+	LoginDialogURI = "/login-dialog"
 )
 
 // LoginDialogVar is the layout variable that shows the login dialog.

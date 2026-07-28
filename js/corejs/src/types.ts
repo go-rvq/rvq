@@ -45,4 +45,7 @@ export interface EventResponse {
   reloadPortals?: string[]
   updatePortals?: PortalUpdate[]
   runScript?: string
+  // comes with 401: the session is gone. Where to ask for the login — see
+  // Builder.login()
+  loginURI?: string
 }

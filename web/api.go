@@ -95,6 +95,12 @@ type EventResponse struct {
 	RunScript     string           `json:"runScript,omitempty"`
 	// used with InitContextVars to set values for example vars.show to used by v-model
 
+	// LoginURI says the session behind this request is gone. It goes out with
+	// 401, and it is the ONLY thing the client acts on in such a response: it
+	// requests this URI to bring the login up (over the page, which stays as it
+	// is), and replays the original request once the login succeeds.
+	LoginURI string `json:"loginURI,omitempty"`
+
 	deferedPortals map[string]bool
 }
 

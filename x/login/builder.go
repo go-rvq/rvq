@@ -427,6 +427,21 @@ func (b *Builder) SetUnauthorizedResponder(v UnauthorizedResponder) (r *Builder)
 	return b
 }
 
+// RespondUnauthorized gives the responder above a go at r, for the OTHER places
+// that turn a request away for want of a session — the session-token check in
+// admin/packages/user, for one. Reports whether the response was written.
+func (b *Builder) RespondUnauthorized(w http.ResponseWriter, r *http.Request) bool {
+	return b.unauthorizedResponder != nil && b.unauthorizedResponder(w, r)
+}
+
+// WhiteListed reports whether pth is one of the paths that go through without a
+// session — the login page and its neighbours. Anything else that guards
+// requests has to let these through too, or logging in becomes impossible.
+func (b *Builder) WhiteListed(pth string) bool {
+	_, ok := b.whiteList[pth]
+	return ok
+}
+
 // SetContinueURL makes the login send the browser to url once it succeeds.
 func (b *Builder) SetContinueURL(w http.ResponseWriter, url string) {
 	http.SetCookie(w, &http.Cookie{

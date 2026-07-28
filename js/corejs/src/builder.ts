@@ -72,6 +72,30 @@ export class Builder {
     return r
   }
 
+  // The session ended under a page that is still standing — a form half filled
+  // in, a list the user was working through. The server said so with 401 and
+  // loginURI (web.EventResponse.LoginURI), and nothing else in that response is
+  // meant for us.
+  //
+  // So the page is left alone and a NEW request brings the login up. It carries
+  // `vars` — enough for the login to show itself — and, in its scope, the way
+  // back: onLoginSuccess. Whatever the login renders calls that once the session
+  // is back, and THIS request runs again, so the click the user made goes
+  // through as if nothing had happened.
+  login = (r: EventResponse): EventResponse => {
+    plaid()
+      .vars(this._vars)
+      .updateRootTemplate(this._updateRootTemplate)
+      .parseUrl(r.loginURI!)
+      .scope({
+        onLoginSuccess: () => {
+          this.go()
+        }
+      })
+      .go()
+    return r
+  }
+
   public parseUrl(url: string): Builder {
     const data = querystring.parseUrl(url, {
       arrayFormat: 'comma',
@@ -315,7 +339,11 @@ export class Builder {
 
     const fetchOpts: RequestInit = {
       method: 'POST',
-      redirect: 'follow'
+      redirect: 'follow',
+      // says this is the page asking, not the browser navigating: a middleware
+      // that finds the session gone answers 401 + loginURI instead of sending
+      // the browser away — see web.PlaidRequestHeader
+      headers: { 'X-Plaid-Request': '1' }
     }
 
     if (this._method) {
@@ -373,6 +401,16 @@ export class Builder {
       }
 
       if (!r.ok) {
+        // 401 with a login URI is not an error to show: the session simply
+        // ended. The body tells where the login is; goPre() takes it from
+        // there and the page stays as it is.
+        if (r.status === 401) {
+          const unauthorized = await r.json().catch(() => null)
+          if (unauthorized && unauthorized.loginURI) {
+            return unauthorized
+          }
+        }
+
         this._vars.presetsMessage = {
           show: true,
           message: `Server Response Error: <code>${r.status}</code> (${r.statusText}). See window console for detail.`,
@@ -406,8 +444,13 @@ export class Builder {
     this.runPushState()
 
     return this.fetch()
-      .then(this.runScript)
+      .then((r: EventResponse) => (r.loginURI ? this.login(r) : this.runScript(r)))
       .then((r: EventResponse) => {
+        // nothing else in a login response is for us — see login()
+        if (r.loginURI) {
+          return r
+        }
+
         if (r.pageTitle) {
           document.title = r.pageTitle
         }

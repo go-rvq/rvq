@@ -236,6 +236,21 @@ func (p *PageBuilder) parseForm(r *http.Request) *multipart.Form {
 
 const EventFuncIDName = "__execute_event__"
 
+// PlaidRequestHeader marks every request made by plaid() — see
+// js/corejs/src/builder.ts, which sets it on all of them.
+//
+// It tells a middleware WHO is asking. A browser navigating somewhere has to be
+// sent to the login page when the session is gone; a plaid request must not be,
+// because the page it came from is still standing, with the user's work in it.
+// That one is answered with 401 and an EventResponse.LoginURI instead.
+const PlaidRequestHeader = "X-Plaid-Request"
+
+// IsPlaidRequest reports whether r was made by plaid(), rather than by the
+// browser navigating.
+func IsPlaidRequest(r *http.Request) bool {
+	return r.Header.Get(PlaidRequestHeader) != ""
+}
+
 func (p *PageBuilder) executeEvent(w ResponseWriter, r *http.Request) {
 	ctx := new(EventContext)
 	ctx.R = r
