@@ -19,17 +19,26 @@ afterAll(() => {
   server?.stop();
 });
 
-// hostAssertions holds what every detailing entry point must render.
-function expectEditHost(body: string) {
-  // the host owns the edit overlay's closer, closed by default
-  expect(body).toContain("$presetsEditing: $closer({show:false,");
+// What every detailing entry point must render. `ref` is how the state is
+// addressed: a slot variable in an overlay, and `vars.…` on a PAGE — there the
+// Edit button is rendered by the layout into the app bar, far from the body the
+// host wraps, and only `vars` is reachable from both (it also gives the overlay
+// an address to bind to from the layout's portal, which is where a drawer sizes
+// itself against the window).
+function expectEditHost(body: string, ref = "$presetsEditing") {
+  // the host owns the edit overlay's closer, closed by default — declared as a
+  // slot variable, or as a key of `vars`
+  const declaration = ref.startsWith("vars.")
+    ? '"$presetsEditing": $closer({show:false,'
+    : "$presetsEditing: $closer({show:false,";
+  expect(body).toContain(declaration);
   // the form block is guarded by it (turning it off destroys the form)
-  expect(body).toContain("v-if='$presetsEditing?.show'");
+  expect(body).toContain(`v-if='${ref}?.show'`);
   // the Edit button only turns it on — it carries no plaid of its own
-  expect(body).toContain("@click='$presetsEditing.show = true'");
+  expect(body).toContain(`@click='${ref}.show = true'`);
   // the host loads the form itself, binding the overlay to its closer
   expect(body).toContain('eventFunc("presets_Edit")');
-  expect(body).toContain("scope({closer: $presetsEditing");
+  expect(body).toContain(`scope({closer: ${ref}`);
   expect(body).toContain('query("presets_closer_provided", "true")');
 }
 
@@ -52,6 +61,9 @@ describe("detailing edit-form host", () => {
       .replaceAll("&quot;", '"')
       .replaceAll("\\u003e", ">")
       .replaceAll('\\"', '"');
-    expectEditHost(html);
+    expectEditHost(html, "vars.$presetsEditing");
+    // e, por estar em vars, a página manda o endereço do closer junto — é o que
+    // permite ao drawer responder no portal do layout
+    expect(html).toContain('query("presets_closer_ref", "vars.$presetsEditing")');
   });
 });

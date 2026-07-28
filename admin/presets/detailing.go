@@ -353,20 +353,17 @@ func (b *DetailingBuilder) hostedComponent(ctx *web.EventContext, id string, for
 			Go())
 	}
 
-	// On a PAGE the host wraps its own opener (the Edit button, see configureForm)
-	// because the layout renders that button into the app bar, outside the page
-	// body. In an event the button is inline, so the host wraps the content and
-	// everything inside it can open the form.
-	host.WrapsOpener(!overlayMode.Overlayed())
+	// On a PAGE the Edit button is rendered by the layout into the app bar, far
+	// from the body this host wraps — so the state goes to `vars`, which both
+	// sides can reach. That also gives the overlay an address to bind to from
+	// the layout's own portal, which is where a drawer sizes itself against the
+	// window (see ParamCloserRef); hosted in an overlay it stays a slot variable.
+	host.InVars(!overlayMode.Overlayed())
 
-	// published BEFORE the form is built, so the button can wrap itself with it
+	// published BEFORE the form is built, so the button can address it
 	WithDetailingEditHost(ctx, host)
 
-	comp := b.configureForm(form.Build()).Component()
-	if host.OpenerWrapped() {
-		return comp
-	}
-	return host.Children(comp).Component()
+	return host.Children(b.configureForm(form.Build()).Component()).Component()
 }
 
 func (b *DetailingBuilder) buildPage(vf *perm.PermVerifierBuilder, builder func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error)) func(ctx *web.EventContext) (r web.PageResponse, err error) {
@@ -574,8 +571,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 		}
 
 		if host.OpenerWrapped() {
-			// the button carries the host: variable, guarded block and opener
-			// travel together to wherever the layout renders the action.
+			// (kept for a host that still wraps its opener)
 			f.PrimaryAction = h.HTMLComponents{host.Children(editBtn...).Component()}
 		} else {
 			f.PrimaryAction = editBtn
