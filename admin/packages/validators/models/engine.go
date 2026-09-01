@@ -21,11 +21,11 @@ import (
 // default builtins and the `value` param) into bytecode.
 func compileScript(script string) (*gad.Bytecode, error) {
 	st := gad.NewSymbolTable(gad.NewBuiltins().Build().Builtins().NameSet)
-	_, bc, err := gad.Compile(st, []byte(script), gad.CompileOptions{})
+	res, err := gad.Compile(st, []byte(script), gad.CompileOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("validator script: %w", err)
 	}
-	return bc, nil
+	return res.Bytecode, nil
 }
 
 // EncodeScript compiles script and returns its serialized bytecode, for caching

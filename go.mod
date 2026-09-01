@@ -1,6 +1,6 @@
 module github.com/go-rvq/rvq
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1
@@ -15,7 +15,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
-	github.com/gad-lang/gad v0.0.2-0.20260704234103-6f1f84ab611d
+	github.com/gad-lang/gad v0.1.0-rc.26
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1
@@ -52,7 +52,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/shurcooL/sanitized_anchor_name v1.0.0
 	github.com/spf13/cast v1.6.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/sunfmin/reflectutils v1.0.4
 	github.com/sunfmin/snippetgo v0.0.2
 	github.com/theplant/bimg v1.1.1

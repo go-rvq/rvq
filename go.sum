@@ -150,6 +150,8 @@ github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7z
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gad-lang/gad v0.0.2-0.20260704234103-6f1f84ab611d h1:w/5kL42XDuU9yps3kqdP7ubo2vLUi+XgLo7HgQkjA9Q=
 github.com/gad-lang/gad v0.0.2-0.20260704234103-6f1f84ab611d/go.mod h1:3v3lHTA2CxDrwza5oDdac69v+4IPpMTdtPCkxLEuWlU=
+github.com/gad-lang/gad v0.1.0-rc.26 h1:R5YiUC6FPnUqvNogWiU1+ZzXPD69iihDwxBAvDCWODk=
+github.com/gad-lang/gad v0.1.0-rc.26/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
 github.com/go-chi/chi/v5 v5.0.12 h1:9euLV5sTrTNTRUU9POmDUvfxyj6LAABLUcEWO+JJb4s=
 github.com/go-chi/chi/v5 v5.0.12/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
@@ -448,6 +450,8 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/sunfmin/reflectutils v1.0.4 h1:H3Py82ZE/XW4fi2/nXObxuNv4jkvd3lfz6ZZT30jw4I=
 github.com/sunfmin/reflectutils v1.0.4/go.mod h1:ao2bbF4RZrTe2PboJKdZoC3BA71gdU6rFkCuUjoeqMw=
 github.com/sunfmin/snippetgo v0.0.2 h1:BBpLO1/xljQi9cAqZPZVsMitiGfX4i9mczkB8R7pQTs=

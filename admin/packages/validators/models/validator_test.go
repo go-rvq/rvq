@@ -16,7 +16,7 @@ digits := []
 for i := 0; i < len(value); i++ {
     c := value[i]
     if c >= '0' && c <= '9' {
-        digits = append(digits, int(c) - int('0'))
+        digits += int(c) - int('0')
     }
 }
 if len(digits) != 11 {
@@ -57,7 +57,7 @@ digits := []
 for i := 0; i < len(value); i++ {
     c := value[i]
     if c >= '0' && c <= '9' {
-        digits = append(digits, int(c) - int('0'))
+        digits += int(c) - int('0')
     }
 }
 if len(digits) != 14 {

@@ -28,15 +28,17 @@ func Parse(s string) (vm *gad.VM, kva gad.KeyValueArray, err error) {
 
 	src := "return (;" + s + ")"
 
-	var bc *gad.Bytecode
+	var res *gad.CompileResult
 
-	if _, bc, err = gad.Compile(symbols, []byte(src), gad.CompileOptions{
+	if res, err = gad.Compile(symbols, []byte(src), gad.CompileOptions{
 		ScannerOptions: parser.ScannerOptions{
 			Mode: parser.ScanCharAsString,
 		},
 	}); err != nil {
 		return
 	}
+
+	bc := res.Bytecode
 
 	var ret gad.Object
 	vm = gad.NewVM(staticBuiltins, bc)

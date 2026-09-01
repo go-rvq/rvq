@@ -508,13 +508,15 @@ func (b *ScriptRunBuilder) Run() (err error) {
 	b.co.ParserOptions.Mode.Set(parser.ParseMixed | parser.ParseConfigDisabled).Clear(parser.ParseComments)
 	b.co.ScannerOptions.MixedDelimiter = b.r.delimiter
 
-	var bc *gad.Bytecode
+	var res *gad.CompileResult
 
 	builtins := gad.NewBuiltins().Build()
 	symbols := gad.NewSymbolTable(builtins.Builtins().NameSet)
-	if _, bc, err = gad.Compile(symbols, []byte(compatGadScript(b.r.Script)), *b.co); err != nil {
+	if res, err = gad.Compile(symbols, []byte(compatGadScript(b.r.Script)), *b.co); err != nil {
 		return
 	}
+
+	bc := res.Bytecode
 
 	vm := gad.NewVM(builtins, bc)
 
