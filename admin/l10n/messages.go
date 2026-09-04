@@ -22,6 +22,10 @@ type Messages struct {
 	China                            string
 	Japan                            string
 	ErrDeleteInternationalizedRecord string
+	ChangeLocale                     string
+	SuccessfullyChangedLocale        string
+	ErrChangeLocaleEmpty             string
+	ErrChangeLocaleUnavailable       string
 }
 
 var Messages_en_US = &Messages{
@@ -38,6 +42,10 @@ var Messages_en_US = &Messages{
 	China:                            "China",
 	Japan:                            "Japan",
 	ErrDeleteInternationalizedRecord: "It is not possible to delete the standard language record when it has is internationalized.",
+	ChangeLocale:                     "Change Location",
+	SuccessfullyChangedLocale:        "Location changed",
+	ErrChangeLocaleEmpty:             "Choose the location to move this record to.",
+	ErrChangeLocaleUnavailable:       "This location is no longer available: the record already exists there.",
 }
 
 var Messages_zh_CN = &Messages{
@@ -54,6 +62,10 @@ var Messages_zh_CN = &Messages{
 	China:                            "中国",
 	Japan:                            "日本",
 	ErrDeleteInternationalizedRecord: Messages_en_US.ErrDeleteInternationalizedRecord,
+	ChangeLocale:                     Messages_en_US.ChangeLocale,
+	SuccessfullyChangedLocale:        Messages_en_US.SuccessfullyChangedLocale,
+	ErrChangeLocaleEmpty:             Messages_en_US.ErrChangeLocaleEmpty,
+	ErrChangeLocaleUnavailable:       Messages_en_US.ErrChangeLocaleUnavailable,
 }
 
 var Messages_ja_JP = &Messages{
@@ -70,6 +82,10 @@ var Messages_ja_JP = &Messages{
 	China:                            "中国",
 	Japan:                            "日本",
 	ErrDeleteInternationalizedRecord: Messages_en_US.ErrDeleteInternationalizedRecord,
+	ChangeLocale:                     Messages_en_US.ChangeLocale,
+	SuccessfullyChangedLocale:        Messages_en_US.SuccessfullyChangedLocale,
+	ErrChangeLocaleEmpty:             Messages_en_US.ErrChangeLocaleEmpty,
+	ErrChangeLocaleUnavailable:       Messages_en_US.ErrChangeLocaleUnavailable,
 }
 
 func MustGetTranslation(ctx context.Context, key string) string {
@@ -94,4 +110,8 @@ var Messages_pt_BR = &Messages{
 	China:                            "China",
 	Japan:                            "Japão",
 	ErrDeleteInternationalizedRecord: "Não é possível excluir o registro do idioma padrão enquanto ele estiver internacionalizado.",
+	ChangeLocale:                     "Alterar local",
+	SuccessfullyChangedLocale:        "Local alterado",
+	ErrChangeLocaleEmpty:             "Escolha o local para onde mover este registro.",
+	ErrChangeLocaleUnavailable:       "Este local não está mais disponível: o registro já existe nele.",
 }
