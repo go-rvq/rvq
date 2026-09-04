@@ -265,6 +265,22 @@ func (b *Builder) GetCorrectLocaleCode(r *http.Request) string {
 		}
 	}
 
+	if len(supportLocaleCodes) == 0 {
+		return ""
+	}
+
+	// The request named no locale, or named one that is not supported — a
+	// disabled one, say. The default locale answers for it, not whichever
+	// happens to sit first in the list: registration order is an accident of
+	// how the builder was set up, while the default is a decision. Falling back
+	// to the first is what put "pt-BR" on records created while the default was
+	// another locale.
+	for _, v := range supportLocaleCodes {
+		if v == b.defaultLocaleCode {
+			return v
+		}
+	}
+
 	return supportLocaleCodes[0]
 }
 
