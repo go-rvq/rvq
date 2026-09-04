@@ -366,7 +366,10 @@ done:
 
 	switch b.typ {
 	case ActionTypeDetailing:
-		if !IsInDialog(ctx) {
+		// An update func that already chose where to go keeps its choice: an
+		// action that moves the record — to another locale, say — leaves the
+		// current URL pointing at a record that is no longer there.
+		if !IsInDialog(ctx) && ctx.Resp.PushState == nil {
 			ctx.Resp.PushState = web.Location(url.Values{})
 		}
 		ctx.Resp.AppendRunScript("closer.show = false; presetsListing?.loader?.go()")
