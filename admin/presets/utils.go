@@ -36,7 +36,10 @@ func ShowMessage(r *web.EventResponse, msg any, color ...string) {
 	)
 	if len(text) == 0 {
 		if m.HtmlText != "" {
-			textKey = "htmlText"
+			// The snackbar binds vars.presetsMessage.htmlMessage for the HTML
+			// body (see presets_layout.go); "htmlText" is the JSON name of the
+			// field, and writing that key left the snackbar open and empty.
+			textKey = "htmlMessage"
 			text = m.HtmlText
 		} else {
 			return
