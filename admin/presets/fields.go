@@ -863,6 +863,20 @@ func (b *FieldsBuilder) Only(vs ...interface{}) (r *FieldsBuilder) {
 		}
 	}
 
+	// A hidden field is rendered outside the layout (see ToComponent), so
+	// dropping its builder here does not keep it hidden — it makes it VISIBLE:
+	// the render looks the name up again, finds nothing, and builds a default
+	// field for it, which is an ordinary input. Carry those builders over.
+	for _, name := range r.hiddenFields {
+		if _, ok := exists[name]; ok {
+			continue
+		}
+		if field := b.GetField(name); field != nil {
+			exists[name] = nil
+			newFields = append(newFields, field)
+		}
+	}
+
 	r.fields = newFields
 	return
 }
@@ -936,6 +950,19 @@ func (b *FieldsBuilder) Except(patterns ...string) (r *FieldsBuilder) {
 			continue
 		}
 		r.appendFieldAfterClone(b, f.name)
+	}
+
+	// A hidden field is rendered outside the layout, from this list, so an
+	// excluded name has to leave it too — otherwise the same lookup rebuilds it
+	// from the defaults and the field turns up visible instead of gone.
+	if len(r.hiddenFields) > 0 {
+		var kept []string
+		for _, name := range r.hiddenFields {
+			if !hasMatched(patterns, name) {
+				kept = append(kept, name)
+			}
+		}
+		r.hiddenFields = kept
 	}
 
 	// the layout decides what is rendered, so an excluded name has to leave it
