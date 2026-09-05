@@ -160,6 +160,8 @@ github.com/gad-lang/gad v0.1.0-rc.29 h1:5Xmhbi05tbPVeEbujPw7+9/7REYtKWUvh5z/rwD4
 github.com/gad-lang/gad v0.1.0-rc.29/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
 github.com/gad-lang/gad v0.1.0-rc.29.0.20260904170114-e14baa593f2b h1:pGExwBCyOE0TYE79YM8zXIdSgWg89KFxnhK2s+zF9yk=
 github.com/gad-lang/gad v0.1.0-rc.29.0.20260904170114-e14baa593f2b/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
+github.com/gad-lang/gad v0.1.0-rc.30 h1:DSp61uriBl3FJb3dlhnfkdhqFoNVVF0QXaBj7/vVZk4=
+github.com/gad-lang/gad v0.1.0-rc.30/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
 github.com/go-chi/chi/v5 v5.0.12 h1:9euLV5sTrTNTRUU9POmDUvfxyj6LAABLUcEWO+JJb4s=
 github.com/go-chi/chi/v5 v5.0.12/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
