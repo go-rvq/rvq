@@ -22,6 +22,7 @@ import (
 	"github.com/markbates/goth"
 	google2 "github.com/markbates/goth/providers/google"
 	"golang.org/x/oauth2"
+	gmail "google.golang.org/api/gmail/v1"
 	"gorm.io/gorm"
 )
 
@@ -58,6 +59,16 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		InMenu(true).
 		MenuIcon("mdi-email-fast")
 
+	// The URL Google will call back into. A Desktop app client accepts any
+	// loopback address, so it follows wherever the admin happens to be mounted.
+	callbackURL := func(r *http.Request) string {
+		scheme := "https"
+		if r.TLS == nil {
+			scheme = "http"
+		}
+		return fmt.Sprintf("%s://%s%s/%s", scheme, r.Host, mb.Info().DetailingHref(model.ID{}), oauthCallbackUri)
+	}
+
 	nested.New(mb).
 		Field("SMTP").
 		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
@@ -68,6 +79,18 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	nested.New(mb).
 		Field("Gmail").
 		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+			b.
+				Field("Setup").
+				ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+					var g GmailSender
+					switch obj := field.Obj.(type) {
+					case *GmailSender:
+						g = *obj
+					case *MailSender:
+						g = obj.Gmail
+					}
+					return gmailSetupComponent(GetMessages(ctx.Context()), g.CallbackURIOr(callbackURL(ctx.R)))
+				})
 			b.
 				Field("CredentialsFile").
 				ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -118,13 +141,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			return
 		}
 
-		scheme := "https"
-		if r.TLS == nil {
-			scheme = "http"
-		}
-
-		callbackUrl := fmt.Sprintf("%s://%s%s/%s", scheme, r.Host, mb.Info().DetailingHref(model.ID{}), oauthCallbackUri)
-		config.RedirectURL = callbackUrl
+		config.RedirectURL = c.CallbackURIOr(callbackURL(r))
 		return
 	}
 
@@ -188,10 +205,11 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	reset := func(crendentials bool) error {
 		var (
 			obj MailSender
-			m   = map[string]any{
-				"gmail__callback_uri": nil,
-				"gmail__user":         nil,
-				"gmail__token":        nil,
+			// CallbackURI is configuration, not session state: it survives the
+			// sign out, otherwise a pinned URL would be lost on every logout.
+			m = map[string]any{
+				"gmail__user":  nil,
+				"gmail__token": nil,
 			}
 		)
 
@@ -261,7 +279,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		if config, err = getConfig(&c, ctx.R); err != nil {
 			return err
 		}
-		r.RedirectURL = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		r.RedirectURL = gmailAuthCodeURL(config)
 		return
 	})
 
@@ -295,7 +313,15 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			RefreshToken: tok.RefreshToken,
 			Expiry:       tok.Expiry,
 			ExpiresIn:    tok.ExpiresIn,
-			IDToken:      tok.Extra("id_token").(string),
+		}
+		// Both are absent from some responses, and a bare assertion panics.
+		token.IDToken, _ = tok.Extra("id_token").(string)
+		token.Scope, _ = tok.Extra("scope").(string)
+
+		// Refuse a token that cannot send, instead of storing it and failing
+		// later with a 403 from the Gmail API.
+		if !token.HasScope(gmail.GmailSendScope) {
+			return fmt.Errorf(GetMessages(ctx.Context()).ErrGmailSenderScopeNotGranted, gmail.GmailSendScope)
 		}
 
 		s := &google2.Session{

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-rvq/rvq/thirdpart/gorm/datatypes"
@@ -46,6 +47,27 @@ type GmailToken struct {
 	ExpiresIn int64 `json:"expires_in,omitempty"`
 
 	IDToken string `json:"id_token,omitempty"`
+
+	// Scope is what Google actually granted, which can be less than what was
+	// requested: a scope missing from the consent screen is dropped silently,
+	// and granular consent lets the user untick one. Without it the failure
+	// only shows up later, as a 403 ACCESS_TOKEN_SCOPE_INSUFFICIENT on send.
+	Scope string `json:"scope,omitempty"`
+}
+
+// HasScope reports whether Google granted scope to this token. A token stored
+// before Scope was recorded has none, so it answers true rather than condemn a
+// working token.
+func (t *GmailToken) HasScope(scope string) bool {
+	if t.Scope == "" {
+		return true
+	}
+	for _, granted := range strings.Fields(t.Scope) {
+		if granted == scope {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *GmailToken) Token() (ot *oauth2.Token) {
@@ -120,14 +142,30 @@ func (e *GmailSender) String() string {
 	return ""
 }
 
+// GmailScopes are the OAuth scopes this sender asks for, and the ones to add
+// under "Data access" on the consent screen. Send is the only Gmail call it
+// makes, so gmail.send is the only Gmail scope it needs: mail.google.com,
+// gmail.modify and gmail.compose would put the app in Google's "restricted"
+// tier, whose verification requires a security assessment, while gmail.send is
+// merely "sensitive". The setup dialog lists these, so the two never drift.
+var GmailScopes = []string{
+	"email",
+	"profile",
+	gmail.GmailSendScope,
+}
+
+// CallbackURIOr returns the CallbackURI pinned by the user, falling back to def
+// when the field is empty. A pinned value always wins: it is the only way to
+// point Google at a URL other than the one the admin happens to be mounted on.
+func (e *GmailSender) CallbackURIOr(def string) string {
+	if e.CallbackURI != "" {
+		return e.CallbackURI
+	}
+	return def
+}
+
 func (e *GmailSender) Config() (config *oauth2.Config, err error) {
-	config, err = google.ConfigFromJSON(e.Credentials.Data.Raw,
-		"email", "profile",
-		gmail.MailGoogleComScope,
-		gmail.GmailModifyScope,
-		gmail.GmailComposeScope,
-		gmail.GmailSendScope,
-	)
+	config, err = google.ConfigFromJSON(e.Credentials.Data.Raw, GmailScopes...)
 
 	if err != nil {
 		err = fmt.Errorf("Unable to parse client credentials to config: %v", err)
