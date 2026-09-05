@@ -29,6 +29,7 @@ type Builder struct {
 	ab                *activity.Builder
 	ctxValueProviders []ContextValueFunc
 	afterInstallFuncs []func()
+	onChange          ChangeCallback
 }
 
 type ContextValueFunc func(ctx context.Context) context.Context
@@ -242,6 +243,23 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	return nil
 }
 
+// OnChange sets the callback told when a record of a model marked with
+// WithChangeNotify goes online or offline.
+func (b *Builder) OnChange(f ChangeCallback) *Builder {
+	b.onChange = f
+	return b
+}
+
+// notifyChange runs the change callback, if the model asked for one. It runs
+// inside the publishing transaction on purpose: what it does — a NOTIFY, a
+// cache write — must not outlive a publication that fails after it.
+func (b *Builder) notifyChange(tx *gorm.DB, ctx context.Context, mb *presets.ModelBuilder, record any, change Change) error {
+	if b.onChange == nil || !ChangeNotifyEnabled(mb) {
+		return nil
+	}
+	return b.onChange(tx, ctx, mb, record, change)
+}
+
 func (b *Builder) ContextValueFuncs(vs ...ContextValueFunc) *Builder {
 	b.ctxValueProviders = append(b.ctxValueProviders, vs...)
 	return b
@@ -328,7 +346,7 @@ func (b *Builder) Publish(mb *presets.ModelBuilder, record interface{}, ctx cont
 				return
 			}
 		}
-		return
+		return b.notifyChange(tx, ctx, mb, record, ChangePublished)
 	})
 	return
 }
@@ -384,7 +402,7 @@ func (b *Builder) UnPublish(mb *presets.ModelBuilder, record interface{}, ctx co
 				return
 			}
 		}
-		return
+		return b.notifyChange(tx, ctx, mb, record, ChangeUnpublished)
 	})
 	return
 }

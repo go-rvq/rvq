@@ -55,15 +55,22 @@ func (p PublishExecutor) Execute(mb *presets.ModelBuilder, publisher *Builder, a
 	return
 }
 
+// Accept reports whether the executor has anything to do with a record in this
+// state. It answers for the same cases Do acts on, and the two are read
+// together: what Accept lets through is what Do carries out.
 func (p PublishExecutor) Accept(status string) (ok bool) {
 	switch status {
 	case StatusDraft, StatusOffline:
+		// Republishing means replacing what is being served, and an offline
+		// record is serving nothing.
 		if p.opts.Flag == FlagPublishRepublish {
 			return
 		}
 	case StatusOnline:
 		switch p.opts.Flag {
-		case FlagPublishOrRepublish:
+		// Republish is exactly this case: Do takes the record off and puts it
+		// back. Leaving the flag out here refused the one state it is for.
+		case FlagPublishRepublish, FlagPublishOrRepublish:
 		default:
 			return
 		}

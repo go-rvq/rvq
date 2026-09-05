@@ -29,7 +29,25 @@ type ContextKey string
 const (
 	ModelPublishCallbackKey   ContextKey = "mode_publish_callback"
 	ModelUnpublishCallbackKey ContextKey = "mode_unpublish_callback"
+	ModelChangeNotifyKey      ContextKey = "model_change_notify"
 )
+
+// Change says what happened to a record's published state.
+type Change string
+
+const (
+	ChangePublished   Change = "published"
+	ChangeUnpublished Change = "unpublished"
+)
+
+// ChangeCallback is told that a record went online or offline, inside the same
+// transaction that made it so — a failure here rolls the publication back, and
+// nothing outside sees a change that did not happen.
+//
+// It is what an application hangs a side effect on: refreshing a cache it keeps
+// in memory, telling the other processes serving the same database. The builder
+// calls it only for models that asked, with WithChangeNotify.
+type ChangeCallback func(tx *gorm.DB, ctx context.Context, mb *presets.ModelBuilder, record any, change Change) error
 
 type ModelPublishCallback func(db *gorm.DB, ctx context.Context, obj interface{}) (done func(err error) error, err error)
 type ModelUnpublishCallback func(db *gorm.DB, ctx context.Context, obj interface{}) (done func(err error) error, err error)
@@ -40,4 +58,17 @@ func WithPublishCallback(b *presets.ModelBuilder, f ModelPublishCallback) {
 
 func WithUnpublishCallback(b *presets.ModelBuilder, f ModelUnpublishCallback) {
 	b.SetData(ModelUnpublishCallbackKey, f)
+}
+
+// WithChangeNotify marks a model whose publications the builder's ChangeCallback
+// should hear about. It is off by default: most models are read from the
+// database on every request and have nothing to be told about.
+func WithChangeNotify(b *presets.ModelBuilder) {
+	b.SetData(ModelChangeNotifyKey, true)
+}
+
+// ChangeNotifyEnabled reports whether a model asked for the callback.
+func ChangeNotifyEnabled(b *presets.ModelBuilder) bool {
+	enabled, _ := b.GetData(ModelChangeNotifyKey).(bool)
+	return enabled
 }
