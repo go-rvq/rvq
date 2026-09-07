@@ -34,6 +34,14 @@ func cropField(config *Config, field *schema.Field, db *gorm.DB) (cropped bool, 
 		return
 	}
 
+	// Nothing was uploaded and nothing is stored: there is no image to crop.
+	// Going on would call Retrieve(""), which resolves to the storage directory
+	// itself — os.Open succeeds on a directory, and the copy then fails with
+	// "is a directory", naming the destination and hiding the real cause.
+	if media.GetFileHeader() == nil && media.URL() == "" {
+		return
+	}
+
 	var (
 		mediaFile    FileInterface
 		saveOriginal bool

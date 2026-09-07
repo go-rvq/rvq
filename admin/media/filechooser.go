@@ -2,6 +2,7 @@ package media
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"sort"
@@ -17,6 +18,7 @@ import (
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"gorm.io/gorm"
 )
 
 func fileChooser(p *presets.Builder, mb *Builder) web.EventFunc {
@@ -533,14 +535,27 @@ func mergeNewSizes(m *media_library.MediaLibrary, cfg *media_library.MediaBoxCon
 
 func chooseFile(b *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 		db := b.db
 		field := ctx.R.FormValue("field")
-		id := ctx.ParamAsInt("id")
+		// The id of the chosen file comes from the event's own query, as it does
+		// in every other handler here. ctx.Param would read the route's {id}
+		// first, and this dialog opens from inside a model's edit page: the path
+		// there already carries an id — of the record being edited, not of the
+		// file being picked.
+		id := ctx.R.FormValue("id")
 		cfg := stringToCfg(ctx.R.FormValue("cfg"))
 
 		var m media_library.MediaLibrary
-		err = db.Find(&m, id).Error
-		if err != nil {
+		// First, not Find: Find leaves the record zeroed and reports no error
+		// when nothing matches, and a zeroed record has no ID — the Save below
+		// would insert an empty one instead of updating the file that was
+		// chosen, and cropping it would then read the storage directory itself.
+		if err = db.First(&m, "id = ?", id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				presets.ShowMessage(&r, msgr.ChosenFileIsGone, "error")
+				return r, nil
+			}
 			return
 		}
 		sizes, needCrop := mergeNewSizes(&m, cfg)
