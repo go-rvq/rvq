@@ -406,9 +406,12 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 		}
 	}
 
+	// The group's own title, not its own back: this read g.Title, which left
+	// every group in the permission tree titleless. TTitle answers for a group
+	// that was never given one, humanizing its name.
 	for _, group := range b.menuGroups.menuGroups {
 		if g := menus[group.name]; g != nil {
-			g.Title = g.Title
+			g.Title = group.TTitle
 		}
 	}
 

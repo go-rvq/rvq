@@ -111,7 +111,7 @@ func (b *FieldsBuilder) BeginComponent(f func(info *ModelInfo, obj interface{}, 
 
 func (b *FieldsBuilder) HiddenField(f ...string) *FieldsBuilder {
 	b.hiddenFields = append(b.hiddenFields, f...)
-	unique.Sort(unique.StringSlice{&b.hiddenFields})
+	unique.Sort(unique.StringSlice{P: &b.hiddenFields})
 	for _, name := range f {
 		b.Field(name).ComponentFunc(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			return h.Input("").Type("hidden").
