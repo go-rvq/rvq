@@ -24,8 +24,10 @@ type ArchivedBackuper interface {
 }
 
 type Backup struct {
-	OpenFunc   func() (io.ReadCloser, error) `json:"-" gorm:"-"`
-	DetailFunc func(ctx context.Context) string
+	// Both are behaviour, not columns: Scan parses this struct as a schema, and
+	// a func field it is asked to map is an "unsupported data type".
+	OpenFunc   func() (io.ReadCloser, error)    `json:"-" gorm:"-"`
+	DetailFunc func(ctx context.Context) string `json:"-" gorm:"-"`
 	CreatedAt  time.Time
 	DbName     string
 	Message    string
