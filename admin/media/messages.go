@@ -20,6 +20,7 @@ type Messages struct {
 	Download                    string
 	ChooseAFile                 string
 	ChosenFileIsGone            string
+	RecommendedOriginalSize     string
 	Search                      string
 	UploadFiles                 string
 	Cropping                    string
@@ -47,6 +48,7 @@ var Messages_en_US = &Messages{
 	Delete:                      "Delete",
 	ChooseAFile:                 "Choose a File",
 	ChosenFileIsGone:            "That file is no longer in the media library. Close this dialog and open it again.",
+	RecommendedOriginalSize:     "Recommended original: at least %d×%d px.",
 	CopyLink:                    "Copy Link",
 	LinkCopied:                  "Link Copied!",
 	Download:                    "Download",
@@ -75,6 +77,7 @@ var Messages_zh_CN = &Messages{
 	Delete:                      "删除",
 	ChooseAFile:                 "选择一个文件",
 	ChosenFileIsGone:            "该文件已不在媒体库中。请关闭此对话框后重新打开。",
+	RecommendedOriginalSize:     "建议原图：至少 %d×%d 像素。",
 	Search:                      "搜索",
 	UploadFiles:                 "上传多个文件",
 	Cropping:                    "正在剪裁...",
@@ -96,6 +99,7 @@ var Messages_ja_JP = &Messages{
 	Delete:                      "削除",
 	ChooseAFile:                 "ファイルを選択",
 	ChosenFileIsGone:            "そのファイルはメディアライブラリにありません。ダイアログを閉じて開き直してください。",
+	RecommendedOriginalSize:     "推奨する元画像: %d×%d px 以上。",
 	Search:                      "検索",
 	UploadFiles:                 "ファイルをアップロード",
 	Cropping:                    "トリミング中",
@@ -117,6 +121,7 @@ var Messages_pt_BR = &Messages{
 	Delete:                      "Excluir",
 	ChooseAFile:                 "Escolha um arquivo",
 	ChosenFileIsGone:            "Este arquivo não está mais na biblioteca de mídia. Feche esta janela e abra de novo.",
+	RecommendedOriginalSize:     "Original recomendada: pelo menos %d×%d px.",
 	CopyLink:                    "Copiar link",
 	LinkCopied:                  "Link copiado!",
 	Download:                    "Baixar",

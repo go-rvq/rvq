@@ -1,6 +1,7 @@
 package media
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -70,14 +71,55 @@ func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFun
 			cfg = &media_library.MediaBoxConfig{}
 		}
 		mediaBox := field.Value().(media_library.MediaBox)
+
+		// A hint written for the field wins; otherwise the configured sizes
+		// answer for themselves.
+		hint := field.Hint
+		if hint == "" {
+			hint = originalSizeHint(ctx.Context(), cfg)
+		}
+
 		return QMediaBox(db).
 			FieldName(field.FormKey).
 			Value(&mediaBox).
 			Label(field.Label).
+			Hint(hint).
 			Config(cfg).
 			Disabled(field.ReadOnly).
 			Readonly(readonly)
 	}
+}
+
+// originalSizeHint says how large the uploaded image has to be, read from the
+// sizes the field was configured with. Nobody has to keep a sentence in step
+// with those numbers: change a size and the hint changes with it.
+//
+// The two dimensions are taken separately, and on purpose. What the original
+// must cover is every configured crop, and a set of sizes need not be
+// proportional — the widest and the tallest can be different entries.
+func originalSizeHint(ctx context.Context, cfg *media_library.MediaBoxConfig) string {
+	if cfg == nil || len(cfg.Sizes) == 0 {
+		return ""
+	}
+
+	var w, h int
+	for _, size := range cfg.Sizes {
+		if size == nil {
+			continue
+		}
+		if size.Width > w {
+			w = size.Width
+		}
+		if size.Height > h {
+			h = size.Height
+		}
+	}
+	if w == 0 || h == 0 {
+		return ""
+	}
+
+	msgr := i18n.MustGetModuleMessages(ctx, I18nMediaLibraryKey, Messages_en_US).(*Messages)
+	return fmt.Sprintf(msgr.RecommendedOriginalSize, w, h)
 }
 
 func MediaBoxSetterFunc(db *gorm.DB) presets.FieldSetterFunc {
@@ -102,6 +144,7 @@ func MediaBoxSetterFunc(db *gorm.DB) presets.FieldSetterFunc {
 type QMediaBoxBuilder struct {
 	fieldName string
 	label     string
+	hint      string
 	value     *media_library.MediaBox
 	config    *media_library.MediaBoxConfig
 	db        *gorm.DB
@@ -141,6 +184,13 @@ func (b *QMediaBoxBuilder) Label(v string) (r *QMediaBoxBuilder) {
 	return b
 }
 
+// Hint is the note shown under the label — what the field expects of an image,
+// which for a media box is usually its size.
+func (b *QMediaBoxBuilder) Hint(v string) (r *QMediaBoxBuilder) {
+	b.hint = v
+	return b
+}
+
 func (b *QMediaBoxBuilder) Config(v *media_library.MediaBoxConfig) (r *QMediaBoxBuilder) {
 	b.config = v
 	return b
@@ -162,6 +212,9 @@ func (b *QMediaBoxBuilder) Write(c *h.Context) (err error) {
 		VSheet(
 			h.If(len(b.label) > 0,
 				h.Label(b.label).Class("v-label theme--light"),
+			),
+			h.If(len(b.hint) > 0,
+				h.Div(h.Text(b.hint)).Class("text-caption text-medium-emphasis mb-2"),
 			),
 			web.Portal(
 				mediaBoxThumbnails(ctx, b.value, b.fieldName, b.config, b.disabled, b.readonly),
