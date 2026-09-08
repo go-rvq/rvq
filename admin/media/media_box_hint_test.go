@@ -25,17 +25,26 @@ func TestOriginalSizeHint(t *testing.T) {
 		"site.middle": {Width: 900, Height: 385},
 		"site.full":   {Width: 1800, Height: 771},
 	}}
-	if got := originalSizeHint(ctx, cover); !strings.Contains(got, "1800×771") {
-		t.Errorf("hint = %q, want it to name 1800×771", got)
+	got := originalSizeHint(ctx, cover)
+	for _, want := range []string{"1800×771", "≈7:3"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("hint = %q, want it to name %q", got, want)
+		}
+	}
+	// Only the largest: the smaller crops are covered by it.
+	for _, unwanted := range []string{"900", "500"} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("hint = %q names the smaller size %q", got, unwanted)
+		}
 	}
 
-	// Widest and tallest in different entries: the original has to cover both.
+	// The largest is the one with the most pixels, not the widest.
 	mixed := &media_library.MediaBoxConfig{Sizes: map[string]*base.Size{
 		"wide": {Width: 1600, Height: 400},
-		"tall": {Width: 600, Height: 1200},
+		"tall": {Width: 900, Height: 1200},
 	}}
-	if got := originalSizeHint(ctx, mixed); !strings.Contains(got, "1600×1200") {
-		t.Errorf("hint = %q, want it to name 1600×1200", got)
+	if got := originalSizeHint(ctx, mixed); !strings.Contains(got, "900×1200") {
+		t.Errorf("hint = %q, want it to name 900×1200", got)
 	}
 
 	for name, cfg := range map[string]*media_library.MediaBoxConfig{
@@ -74,5 +83,25 @@ func TestMediaBoxRendersTheHint(t *testing.T) {
 	}
 	if !strings.Contains(out, "Original recomendada: pelo menos 1800×771 px.") {
 		t.Errorf("the hint is missing from:\n%s", out)
+	}
+}
+
+func TestAspectRatio(t *testing.T) {
+	for _, c := range []struct {
+		w, h int
+		want string
+	}{
+		{1920, 1080, "16:9"},
+		{800, 600, "4:3"},
+		{1000, 1000, "1:1"},
+		{1500, 1000, "3:2"},
+		// Reduces to 600:257, which says nothing: the nearest small ratio is
+		// given instead, and it is the proportion sold as 21:9.
+		{1800, 771, "≈7:3"},
+		{900, 1200, "3:4"},
+	} {
+		if got := aspectRatio(c.w, c.h); got != c.want {
+			t.Errorf("aspectRatio(%d, %d) = %q, want %q", c.w, c.h, got, c.want)
+		}
 	}
 }

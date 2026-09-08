@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"path"
 	"sort"
 	"time"
@@ -94,32 +95,66 @@ func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFun
 // sizes the field was configured with. Nobody has to keep a sentence in step
 // with those numbers: change a size and the hint changes with it.
 //
-// The two dimensions are taken separately, and on purpose. What the original
-// must cover is every configured crop, and a set of sizes need not be
-// proportional — the widest and the tallest can be different entries.
+// It names the largest configured crop and its proportion — the one the
+// original has to cover, and the shape to frame the photograph in.
 func originalSizeHint(ctx context.Context, cfg *media_library.MediaBoxConfig) string {
 	if cfg == nil || len(cfg.Sizes) == 0 {
 		return ""
 	}
 
-	var w, h int
+	var largest *base.Size
 	for _, size := range cfg.Sizes {
-		if size == nil {
+		if size == nil || size.Width <= 0 || size.Height <= 0 {
 			continue
 		}
-		if size.Width > w {
-			w = size.Width
-		}
-		if size.Height > h {
-			h = size.Height
+		if largest == nil || size.Width*size.Height > largest.Width*largest.Height {
+			largest = size
 		}
 	}
-	if w == 0 || h == 0 {
+	if largest == nil {
 		return ""
 	}
 
 	msgr := i18n.MustGetModuleMessages(ctx, I18nMediaLibraryKey, Messages_en_US).(*Messages)
-	return fmt.Sprintf(msgr.RecommendedOriginalSize, w, h)
+	return fmt.Sprintf(msgr.RecommendedOriginalSize,
+		largest.Width, largest.Height, aspectRatio(largest.Width, largest.Height))
+}
+
+// aspectRatio writes w:h the way a person reads it.
+//
+// The exact reduction is used when it is small enough to mean something — 16:9,
+// 4:3. It often is not: 1800×771 reduces to 600:257, which says nothing. Then
+// the nearest ratio with a small denominator is given instead, marked with ≈
+// because it is not the exact shape — 1800×771 is ≈7:3, the same proportion
+// sold as 21:9.
+func aspectRatio(w, h int) string {
+	g := gcd(w, h)
+	if a, b := w/g, h/g; a <= 32 && b <= 32 {
+		return fmt.Sprintf("%d:%d", a, b)
+	}
+
+	want := float64(w) / float64(h)
+	bestA, bestB, bestErr := 0, 0, math.MaxFloat64
+	for b := 1; b <= 32; b++ {
+		a := int(math.Round(want * float64(b)))
+		if a < 1 {
+			continue
+		}
+		if err := math.Abs(float64(a)/float64(b) - want); err < bestErr {
+			bestA, bestB, bestErr = a, b, err
+		}
+	}
+	return fmt.Sprintf("≈%d:%d", bestA, bestB)
+}
+
+func gcd(a, b int) int {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	if a == 0 {
+		return 1
+	}
+	return a
 }
 
 func MediaBoxSetterFunc(db *gorm.DB) presets.FieldSetterFunc {
