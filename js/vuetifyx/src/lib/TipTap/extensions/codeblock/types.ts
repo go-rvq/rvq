@@ -41,6 +41,15 @@ export interface CodeBlockOptions {
    * @example { class: 'foo' }
    */
   HTMLAttributes: Record<string, any>
+  /**
+   * Whether the template script nodes (`script`, `scriptValue`) are registered
+   * in the schema. Only then may a code block contain them; otherwise it holds
+   * plain text. Must match whether the editor loads the template extensions
+   * (`InlineTemplateCode` / `TemplateCodeValue`), or ProseMirror throws
+   * "No node type or group 'script' found".
+   * @default false
+   */
+  template: boolean | null | undefined
 }
 
 declare module '@tiptap/core' {
@@ -88,10 +97,15 @@ export const CodeBlock = Node.create<CodeBlockOptions>({
       enableTabIndentation: true,
       tabSize: DEFAULT_TAB_SIZE,
       HTMLAttributes: {},
+      template: false,
     }
   },
 
-  content: '(text | script | scriptValue)*',
+  content() {
+    // The `script` / `scriptValue` nodes only exist when the template
+    // extensions are loaded; referencing them otherwise breaks the schema.
+    return this.options.template ? '(text | script | scriptValue)*' : 'text*'
+  },
 
   marks: '',
 

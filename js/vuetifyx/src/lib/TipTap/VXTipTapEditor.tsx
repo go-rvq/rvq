@@ -208,7 +208,7 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
           TemplateCodeValue.configure({ divider: true })
         ] : []),
         TiptapHeading,
-        CodeBlock,
+        CodeBlock.configure({ template: props.template }),
         TiptapBlockquote,
         ScriptBlock,
         TextAlign,
@@ -340,7 +340,7 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
           <VuetifyTiptap
             class={props.label ? 'rounded-t-0' : (detailComp ? 'rounded-b-0' : undefined)}
             model-value={model.value}
-            onUpdate:modelValue={(v) => emit('update:modelValue', v)}
+            onUpdate:modelValue={(v: any) => emit('update:modelValue', v)}
             output={props.output}
             dense={props.dense}
             max-height={props.maxHeight}

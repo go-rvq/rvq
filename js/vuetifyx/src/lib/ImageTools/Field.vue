@@ -54,7 +54,7 @@ const $attrs = useAttrs(),
     return fileInputEl.value as HTMLInputElement
   }),
   dotStyle = computed((): any => {
-    let s = $attrs.style || {}
+    let s = ($attrs.style || {}) as Record<string, any>
 
     return {
       width: $attrs.width,

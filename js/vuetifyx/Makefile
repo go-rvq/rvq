@@ -8,9 +8,14 @@ dev:
 install:
 	$(BUN) install
 
+.PHONY: deps
+deps:
+	BUN=$(BUN) bash scripts/prepare-deps.sh
+
 .PHONY: build
 build:
 	$(BUN) install
+	$(MAKE) deps
 	$(BUN) run build
 
 .PHONY: dist-clean

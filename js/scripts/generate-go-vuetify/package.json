@@ -6,6 +6,6 @@
     "generate": "bun run index.ts"
   },
   "devDependencies": {
-    "@types/node": "^20.11.30"
+    "@types/node": "^20.14.8"
   }
 }

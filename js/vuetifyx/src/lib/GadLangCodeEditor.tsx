@@ -6,11 +6,14 @@ import 'vue-prism-editor/dist/prismeditor.min.css'
 
 import Prism from 'prismjs'
 import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-gad';
+import {registerGad} from '@gad-lang/prism-gad';
 import 'prismjs/themes/prism-coy.css'; // import syntax highlighting styles
 import "./styles/GadLangCodeEditor.scss"
 
 import {useI18n} from '@/lib/locale'
+
+// Install Prism.languages.gad from the published grammar package.
+registerGad(Prism)
 
 const { highlight, languages } = Prism
 
