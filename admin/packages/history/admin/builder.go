@@ -26,6 +26,7 @@ func NewBuilder(db *gorm.DB) *Builder {
 // Configure mounts the history plugin on b (starts the access recorder) and
 // returns it. Activate per model with New(db).Model(mb).Build().
 func Configure(b *presets.Builder, db *gorm.DB) *Builder {
+	ConfigureMessages(b.I18n())
 	hb := NewBuilder(db)
 	b.Use(hb)
 	return hb

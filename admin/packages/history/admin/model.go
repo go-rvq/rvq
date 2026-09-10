@@ -101,6 +101,7 @@ func (h *ModelHistory) Build() *ModelHistory {
 		}
 	})
 	h.installPublishTag()
+	h.installUI()
 	return h
 }
 
