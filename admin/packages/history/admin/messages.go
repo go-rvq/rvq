@@ -35,6 +35,7 @@ type Messages struct {
 	Merged         string
 	Revert         string
 	Reverted       string
+	Field          string
 }
 
 var (
@@ -59,6 +60,7 @@ var (
 		Merged:          "Merged",
 		Revert:          "Revert to this revision",
 		Reverted:        "Reverted to the selected revision",
+		Field:           "Field",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -82,6 +84,7 @@ var (
 		Merged:          "Mesclado",
 		Revert:          "Reverter para esta revisão",
 		Reverted:        "Revertido para a revisão selecionada",
+		Field:           "Campo",
 	}
 )
 

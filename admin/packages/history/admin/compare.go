@@ -45,11 +45,14 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 		return nil, err
 	}
 
-	oldHTML, err := mh.detailHTML(oldObj, recordKey, ctx)
+	// When the revisions view is scoped to one field (?field=), compare only it.
+	field := fieldParam(ctx)
+
+	oldHTML, err := mh.detailHTML(oldObj, recordKey, field, ctx)
 	if err != nil {
 		return nil, err
 	}
-	newHTML, err := mh.detailHTML(newObj, recordKey, ctx)
+	newHTML, err := mh.detailHTML(newObj, recordKey, field, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,10 +117,15 @@ func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 // DetailingBuilder. It renders as if the request were on the parent's detail
 // path (/…/posts/{id}) — the builder derives its URLs/events from the request
 // path, so rendering from the nested /…/revisions subpath would point them at
-// the wrong route.
-func (mh *ModelHistory) detailComponent(obj any, recordKey string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
+// the wrong route. When field is non-empty, only that field is rendered
+// (the per-field history view).
+func (mh *ModelHistory) detailComponent(obj any, recordKey, field string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
 	pctx := detailRequestCtx(ctx, mh.mb.Info().DetailingHref(recordKey))
-	comp := mh.mb.Detailing().FieldsBuilder.ToComponent(
+	fb := mh.mb.Detailing().FieldsBuilder
+	if field != "" {
+		fb = *fb.Only(field)
+	}
+	comp := fb.ToComponent(
 		&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, pctx)
 	return comp, pctx
 }
@@ -135,12 +143,16 @@ func detailRequestCtx(ctx *web.EventContext, detailPath string) *web.EventContex
 }
 
 // detailHTML renders obj's detail to an HTML string (the input to the visual
-// diff).
-func (mh *ModelHistory) detailHTML(obj any, recordKey string, ctx *web.EventContext) (string, error) {
-	comp, pctx := mh.detailComponent(obj, recordKey, ctx)
+// diff). When field is non-empty, only that field is rendered.
+func (mh *ModelHistory) detailHTML(obj any, recordKey, field string, ctx *web.EventContext) (string, error) {
+	comp, pctx := mh.detailComponent(obj, recordKey, field, ctx)
 	var buf bytes.Buffer
 	if err := h.Fprint(&buf, comp, pctx.Context()); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
 }
+
+// fieldParam is the ?field= query — the single field the revisions view is
+// scoped to (empty = the whole record).
+func fieldParam(ctx *web.EventContext) string { return ctx.R.FormValue("field") }

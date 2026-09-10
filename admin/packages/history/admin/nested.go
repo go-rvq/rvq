@@ -30,8 +30,24 @@ func (mh *ModelHistory) installChild() {
 			WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
 				cb.Pre(func(state *gorm2op.CallbackState) error {
 					state.DB = state.DB.Table(mh.table)
-					if key := parentRecordKey(state.Ctx); key != "" {
+					key := parentRecordKey(state.Ctx)
+					if key != "" {
 						state.DB = state.DB.Where("record_key = ?", key)
+					}
+					// Listing scoped to one field (?field=): keep only the
+					// revisions in which that field actually changed.
+					if state.SearchParams != nil && key != "" {
+						if field := fieldParam(state.Ctx); field != "" {
+							hist, err := mh.FieldHistory(key, field)
+							if err != nil {
+								return err
+							}
+							hashes := make([]histmodels.Hash, len(hist))
+							for i, fr := range hist {
+								hashes[i] = fr.Revision.Hash
+							}
+							state.DB = state.DB.Where("hash IN ?", hashes)
+						}
 					}
 					return nil
 				})
@@ -109,6 +125,27 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 		return h.Td(h.Code(shortHash(rev.Hash)))
 	})
 
+	// A "Field" select scopes the listing to one field's history (the actual
+	// filtering — keeping only revisions where that field changed — is done in
+	// the read callback via FieldHistory; this only provides the picker).
+	l.FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
+		opts := make([]*vx.SelectItem, len(mh.resolved))
+		for i, f := range mh.resolved {
+			opts[i] = &vx.SelectItem{Text: f, Value: f}
+		}
+		return vx.FilterData{
+			{
+				Key:      "field",
+				Label:    getMessages(ctx.Context()).Field,
+				ItemType: vx.ItemTypeSelect,
+				Options:  opts,
+				SQLConditionFunc: func(val, mod string) (bool, string, []any) {
+					return false, "", nil // filtered in the read callback
+				},
+			},
+		}
+	})
+
 	msgr := func(ctx *web.EventContext) *Messages { return getMessages(ctx.Context()) }
 
 	// Two selected → field-by-field diff between them.
@@ -166,7 +203,7 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		if err != nil {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
-		comp, _ := mh.detailComponent(obj, rev.RecordKey, ctx)
+		comp, _ := mh.detailComponent(obj, rev.RecordKey, fieldParam(ctx), ctx)
 		msgr := getMessages(ctx.Context())
 		revertBtn := v.VBtn(msgr.Revert).
 			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
