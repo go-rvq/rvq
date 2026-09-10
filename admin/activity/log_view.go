@@ -96,12 +96,12 @@ func (mb *ModelBuilder) logTimeline(ctx *web.EventContext, logs []ActivityLogInt
 		Class("pa-4")
 
 	for _, log := range logs {
-		timeline.AppendChild(mb.logItem(msgr, log))
+		timeline.AppendChild(mb.logItem(ctx, msgr, log))
 	}
 	return timeline
 }
 
-func (mb *ModelBuilder) logItem(msgr *Messages, log ActivityLogInterface) h.HTMLComponent {
+func (mb *ModelBuilder) logItem(ctx *web.EventContext, msgr *Messages, log ActivityLogInterface) h.HTMLComponent {
 	head := h.Div(
 		h.Strong(actionLabel(msgr, log.GetAction())),
 		h.Span(" · "+log.GetCreator()).Class("text-medium-emphasis"),
@@ -120,7 +120,16 @@ func (mb *ModelBuilder) logItem(msgr *Messages, log ActivityLogInterface) h.HTML
 	if len(meta) > 0 {
 		body = append(body, h.Div(meta...).Class("d-flex flex-wrap ga-1 mt-1"))
 	}
-	if diff := diffTable(msgr, log.GetModelDiffs()); diff != nil {
+	// When the log references a history revision, render the diff from the
+	// revision (see RevisionDiffFunc) instead of the duplicated ModelDiffs.
+	if rl, ok := log.(interface {
+		GetRevisionTable() string
+		GetRevisionHash() []byte
+	}); ok && len(rl.GetRevisionHash()) > 0 && RevisionDiffFunc != nil {
+		if diff := RevisionDiffFunc(rl.GetRevisionTable(), rl.GetRevisionHash(), ctx); diff != nil {
+			body = append(body, diff)
+		}
+	} else if diff := diffTable(msgr, log.GetModelDiffs()); diff != nil {
 		body = append(body, diff)
 	}
 

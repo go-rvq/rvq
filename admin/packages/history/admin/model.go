@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/activity"
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 	"github.com/go-rvq/rvq/admin/packages/user"
 
@@ -92,6 +93,7 @@ func (h *ModelHistory) Build() *ModelHistory {
 		panic(err)
 	}
 	h.resolved = h.resolveFields()
+	revisionsByTable[h.table] = h
 
 	h.mb.Editing().WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) error {
@@ -207,5 +209,13 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		rev.CreatorID = u.GetID()
 		rev.Creator = u.GetName()
 	}
-	return h.db.Table(h.table).Create(&rev).Error
+	if err = h.db.Table(h.table).Create(&rev).Error; err != nil {
+		return err
+	}
+	// Tell the activity log (if any is being written for this save) to reference
+	// this revision instead of duplicating its diff.
+	if ctx != nil && ctx.R != nil {
+		ctx.R = activity.WithRevisionRef(ctx.R, h.table, rev.Hash)
+	}
+	return nil
 }

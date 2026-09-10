@@ -211,7 +211,7 @@ func (mb *ModelBuilder) AddRecords(action string, ctx context.Context, vs ...int
 	switch action {
 	case ActivityView, ActivityDelete, ActivityCreate:
 		for _, v := range vs {
-			if err := mb.saveWithInfo(info, creator, action, v, db, ""); err != nil {
+			if err := mb.saveWithInfo(info, creator, action, v, db, "", nil); err != nil {
 				return err
 			}
 		}
@@ -238,7 +238,7 @@ func (mb *ModelBuilder) AddCustomizedRecord(action string, diff bool, ctx contex
 	)
 
 	if !diff {
-		return mb.saveWithInfo(info, creator, action, obj, db, "")
+		return mb.saveWithInfo(info, creator, action, obj, db, "", nil)
 	}
 
 	old, ok := findOld(obj, db)
@@ -289,13 +289,18 @@ func (mb *ModelBuilder) AddEditRecordWithOld(creator interface{}, old, now inter
 // AddEditRecordWithOldCtx is AddEditRecordWithOld resolving creator, db and
 // request info (IP, user agent) from ctx.
 func (mb *ModelBuilder) AddEditRecordWithOldCtx(ctx context.Context, old, now interface{}) error {
-	return mb.addDiffWithInfo(
-		RequestInfoFromContext(ctx),
-		ActivityEdit,
-		mb.activity.getCreatorFromContext(ctx),
-		old, now,
-		mb.activity.getDBFromContext(ctx),
-	)
+	info := RequestInfoFromContext(ctx)
+	creator := mb.activity.getCreatorFromContext(ctx)
+	db := mb.activity.getDBFromContext(ctx)
+
+	// When the history plugin recorded a revision for this change, reference it
+	// instead of duplicating the diff — the log carries the revision, whose diff
+	// is derived on render (see RevisionDiffFunc), and ModelDiffs stays empty.
+	if ref := revisionRefFromContext(ctx); ref != nil {
+		return mb.saveWithInfo(info, creator, ActivityEdit, now, db, "", ref)
+	}
+
+	return mb.addDiffWithInfo(info, ActivityEdit, creator, old, now, db)
 }
 
 func (mb *ModelBuilder) addDiff(action string, creator, old, now interface{}, db *gorm.DB) error {
@@ -317,7 +322,7 @@ func (mb *ModelBuilder) addDiffWithInfo(info *RequestInfo, action string, creato
 		return err
 	}
 
-	return mb.saveWithInfo(info, creator, ActivityEdit, now, db, string(b))
+	return mb.saveWithInfo(info, creator, ActivityEdit, now, db, string(b), nil)
 }
 
 // Diff get diffs between old and now value
@@ -327,12 +332,12 @@ func (mb *ModelBuilder) Diff(old, now interface{}) ([]Diff, error) {
 
 // save log into db
 func (mb *ModelBuilder) save(creator interface{}, action string, v interface{}, db *gorm.DB, diffs string) error {
-	return mb.saveWithInfo(nil, creator, action, v, db, diffs)
+	return mb.saveWithInfo(nil, creator, action, v, db, diffs, nil)
 }
 
 // saveWithInfo saves the log, persisting the request origin when both info is
 // available and the log model implements RequestInfoSetter.
-func (mb *ModelBuilder) saveWithInfo(info *RequestInfo, creator interface{}, action string, v interface{}, db *gorm.DB, diffs string) error {
+func (mb *ModelBuilder) saveWithInfo(info *RequestInfo, creator interface{}, action string, v interface{}, db *gorm.DB, diffs string, ref *RevisionRef) error {
 	m := mb.activity.NewLogModelData()
 	log, ok := m.(ActivityLogInterface)
 	if !ok {
@@ -371,12 +376,21 @@ func (mb *ModelBuilder) saveWithInfo(info *RequestInfo, creator interface{}, act
 		log.SetModelLink(f(v))
 	}
 
-	if diffs == "" && action == ActivityEdit {
-		return nil
-	}
-
-	if action == ActivityEdit {
-		log.SetModelDiffs(diffs)
+	if ref != nil {
+		// Reference the revision; its diff is derived on render, ModelDiffs stays
+		// empty. The log is kept even with no ModelDiffs (the change is real).
+		if s, ok := log.(interface {
+			SetRevisionRef(table string, hash []byte)
+		}); ok {
+			s.SetRevisionRef(ref.Table, ref.Hash)
+		}
+	} else {
+		if diffs == "" && action == ActivityEdit {
+			return nil
+		}
+		if action == ActivityEdit {
+			log.SetModelDiffs(diffs)
+		}
 	}
 
 	if db.Save(log).Error != nil {

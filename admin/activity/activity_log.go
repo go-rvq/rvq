@@ -53,10 +53,28 @@ type ActivityLog struct {
 	ModelLink  string
 	ModelDiffs string `sql:"type:text;"`
 
+	// RevisionTable/RevisionHash point at the history revision this change
+	// produced, when the history plugin is active on the model. The diff is then
+	// derived from the revision (see RevisionDiffFunc) instead of duplicated into
+	// ModelDiffs, which stays empty.
+	RevisionTable string `gorm:"index"`
+	RevisionHash  []byte `gorm:"type:bytea"`
+
 	// request origin of the action (see RequestInfoSetter)
 	IP        string `gorm:"index"`
 	UserAgent string `sql:"type:text;"`
 }
+
+// SetRevisionRef points the log at a history revision (its table and hash), so
+// its diff is derived from the revision rather than stored in ModelDiffs.
+func (al *ActivityLog) SetRevisionRef(table string, hash []byte) {
+	al.RevisionTable = table
+	al.RevisionHash = hash
+}
+
+func (al *ActivityLog) GetRevisionTable() string { return al.RevisionTable }
+
+func (al *ActivityLog) GetRevisionHash() []byte { return al.RevisionHash }
 
 func (al *ActivityLog) SetIP(s string) { al.IP = s }
 
