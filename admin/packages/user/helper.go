@@ -11,10 +11,23 @@ import (
 
 func GetCurrentUser(r *http.Request) (u User) {
 	u, _ = login.CurrentUserFromRequest(r).(User)
+	// A request always has a user: with no one in the session, the static
+	// anonymous user stands in, so saves and activity logs never lack an author.
+	if u == nil && anonymousFactory != nil {
+		u = anonymousFactory(r)
+	}
 	return
 }
 
 func (b *Builder) GenInitialUser(db *gorm.DB) (user User) {
+	// The anonymous user must exist so foreign keys to users.id (activity logs,
+	// revisions, …) always resolve — seed it regardless of the initial-account
+	// configuration. The stored name is a placeholder; the runtime name is
+	// translated per request.
+	if err := SeedAnonymous(db, func() User { return b.mb.NewModel().(User) }, Messages_en_US.AnonymousUserName); err != nil {
+		panic(err)
+	}
+
 	initialAccount := b.lb.GetInitialUserAccount()
 	password := b.lb.GetInitialPassword()
 

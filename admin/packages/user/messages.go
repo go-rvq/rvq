@@ -31,6 +31,10 @@ type Messages struct {
 	Inactive             string
 	Actives              string
 	Inactives            string
+
+	// AnonymousUserName is the display name of the static anonymous user,
+	// resolved per request from its language.
+	AnonymousUserName string
 }
 
 var (
@@ -50,6 +54,7 @@ var (
 		Inactive:                          "Inactive",
 		Actives:                           "Actives",
 		Inactives:                         "Inactives",
+		AnonymousUserName:                 "Anonymous",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -68,6 +73,7 @@ var (
 		Inactive:                          "Inativo",
 		Actives:                           "Ativos",
 		Inactives:                         "Inativos",
+		AnonymousUserName:                 "Anônimo",
 	}
 )
 

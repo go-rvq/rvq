@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -66,6 +67,13 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		LoginInitialUserEmail: loginInitialUserEmail,
 		Roles:                 []string{RoleAdministrador},
 		UserManagerRoles:      []string{},
+	}
+
+	// The request always resolves to a user: when the session carries none,
+	// GetCurrentUser returns this anonymous user — the app's concrete model with
+	// AnonymousID and a name translated for the request.
+	anonymousFactory = func(r *http.Request) User {
+		return NewAnonymous(func() User { return c.mb.NewModel().(User) }, GetMessages(r.Context()).AnonymousUserName)
 	}
 
 	mb.Listing().SearchFunc(func(model interface{}, params *presets.SearchParams, ctx *web.EventContext) (r interface{}, totalCount int, err error) {
@@ -174,7 +182,9 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 	})
 
 	mb.DeletingRestriction.ObjHandler(presets.OkObjHandlerFuncT(func(u User, ctx *web.EventContext) (ok, handled bool) {
-		if u.GetAccountName() == c.LoginInitialUserEmail {
+		// The anonymous user is referenced by foreign keys across the system
+		// (activity, revisions); it is a fixed row and must never be deleted.
+		if u.Anonymous() || u.GetAccountName() == c.LoginInitialUserEmail {
 			return true, true
 		}
 		return
