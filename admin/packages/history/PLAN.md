@@ -114,6 +114,16 @@ Segue o padrão de `packages/people` (Builder que é `presets.Plugin`):
   memória; goroutine faz flush em lote (`UPDATE <table> SET access_count = …`)
   a cada N segundos. Expõe consultas por tabela: `MostAccessed(table, n)` e
   `Latest(table, n)` (a fase 2 usa).
+- **Render do diff do model (seccionado como o detail form)**: monta um HTML no
+  layout do detail, campo a campo, mostrando OLD/NEW. Por tipo de campo:
+  - **texto puro (string)**: diff de texto puro (`diffmatchpatch`).
+  - **HTML** (ex. `Body`, marcados via `.HTMLFields(...)`): diff de HTML.
+  - **chave estrangeira / referência a outro Model, e outros complexos**:
+    renderiza OLD e NEW **usando o componente do field no Detailing** (o mesmo
+    do detail form) — reconstrói um obj com o valor antigo e outro com o novo e
+    chama o `ComponentFunc` do field; avalia o tipo (relação no schema gorm,
+    media, time, etc.) para escolher o render certo.
+  - **sem alteração**: renderiza só o **label** do field com `line-through`.
 - `admin/diff.go` — comparação em dois níveis:
   - **entre revisões (todos os campos)**: reusa `activity.DiffBuilder` →
     `[]Diff{Field,Old,Now}`; campos HTML (ex. `Body`) com diff inline via

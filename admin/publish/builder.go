@@ -275,15 +275,15 @@ func (b *Builder) WithContextValues(ctx context.Context) context.Context {
 // 幂等
 func (b *Builder) Publish(mb *presets.ModelBuilder, record interface{}, ctx context.Context) (err error) {
 	err = utils2.Transact(b.db, func(tx *gorm.DB) (err error) {
-		if cb, ok := mb.GetData(ModelPublishCallbackKey).(ModelPublishCallback); ok {
+		for _, cb := range PublishCallbacks(mb) {
 			var done func(err error) error
 			if done, err = cb(tx, ctx, record); err != nil {
 				return
 			}
 			if done != nil {
-				defer func() {
+				defer func(done func(err error) error) {
 					err = done(err)
-				}()
+				}(done)
 			}
 		}
 		// publish content
@@ -353,15 +353,15 @@ func (b *Builder) Publish(mb *presets.ModelBuilder, record interface{}, ctx cont
 
 func (b *Builder) UnPublish(mb *presets.ModelBuilder, record interface{}, ctx context.Context) (err error) {
 	err = utils2.Transact(b.db, func(tx *gorm.DB) (err error) {
-		if cb, ok := mb.GetData(ModelUnpublishCallbackKey).(ModelUnpublishCallback); ok {
+		for _, cb := range UnpublishCallbacks(mb) {
 			var done func(err error) error
 			if done, err = cb(tx, ctx, record); err != nil {
 				return
 			}
 			if done != nil {
-				defer func() {
+				defer func(done func(err error) error) {
 					err = done(err)
-				}()
+				}(done)
 			}
 		}
 

@@ -30,6 +30,7 @@ type ModelHistory struct {
 	fields      []string
 	allFields   bool
 	wholeFields map[string]bool
+	htmlFields  map[string]bool
 
 	table    string
 	resolved []string
@@ -37,7 +38,7 @@ type ModelHistory struct {
 
 // New starts a per-model history activation on db.
 func New(db *gorm.DB) *ModelHistory {
-	return &ModelHistory{db: db, wholeFields: map[string]bool{}}
+	return &ModelHistory{db: db, wholeFields: map[string]bool{}, htmlFields: map[string]bool{}}
 }
 
 func (h *ModelHistory) Model(mb *presets.ModelBuilder) *ModelHistory { h.mb = mb; return h }
@@ -58,8 +59,23 @@ func (h *ModelHistory) WholeFields(names ...string) *ModelHistory {
 	return h
 }
 
+// HTMLFields marks fields whose value is HTML (e.g. Body), so the diff UI uses
+// an HTML diff for them instead of a plain-text one.
+func (h *ModelHistory) HTMLFields(names ...string) *ModelHistory {
+	for _, n := range names {
+		h.htmlFields[n] = true
+	}
+	return h
+}
+
 // Table is the model's revisions table name (<model table>_revisions).
 func (h *ModelHistory) Table() string { return h.table }
+
+// IsHTML reports whether a field was declared as HTML (see HTMLFields).
+func (h *ModelHistory) IsHTML(field string) bool { return h.htmlFields[field] }
+
+// Fields returns the resolved versioned field names.
+func (h *ModelHistory) ResolvedFields() []string { return h.resolved }
 
 // AcceptsPartial reports whether a field accepts partial (content-level) revert.
 func (h *ModelHistory) AcceptsPartial(field string) bool { return !h.wholeFields[field] }
@@ -84,6 +100,7 @@ func (h *ModelHistory) Build() *ModelHistory {
 			return h.capture(obj, ctx)
 		}
 	})
+	h.installPublishTag()
 	return h
 }
 

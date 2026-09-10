@@ -52,12 +52,31 @@ type ChangeCallback func(tx *gorm.DB, ctx context.Context, mb *presets.ModelBuil
 type ModelPublishCallback func(db *gorm.DB, ctx context.Context, obj interface{}) (done func(err error) error, err error)
 type ModelUnpublishCallback func(db *gorm.DB, ctx context.Context, obj interface{}) (done func(err error) error, err error)
 
+// WithPublishCallback registers a callback to run when a record is published.
+// Callbacks accumulate — several packages (e.g. an app's cache refresh and the
+// history plugin's tag) can each add one, and Publish calls them all in order.
 func WithPublishCallback(b *presets.ModelBuilder, f ModelPublishCallback) {
-	b.SetData(ModelPublishCallbackKey, f)
+	b.SetData(ModelPublishCallbackKey, append(PublishCallbacks(b), f))
 }
 
+// PublishCallbacks returns the registered publish callbacks, in registration
+// order.
+func PublishCallbacks(b *presets.ModelBuilder) []ModelPublishCallback {
+	cbs, _ := b.GetData(ModelPublishCallbackKey).([]ModelPublishCallback)
+	return cbs
+}
+
+// WithUnpublishCallback registers a callback to run when a record is
+// unpublished. Callbacks accumulate, like WithPublishCallback.
 func WithUnpublishCallback(b *presets.ModelBuilder, f ModelUnpublishCallback) {
-	b.SetData(ModelUnpublishCallbackKey, f)
+	b.SetData(ModelUnpublishCallbackKey, append(UnpublishCallbacks(b), f))
+}
+
+// UnpublishCallbacks returns the registered unpublish callbacks, in registration
+// order.
+func UnpublishCallbacks(b *presets.ModelBuilder) []ModelUnpublishCallback {
+	cbs, _ := b.GetData(ModelUnpublishCallbackKey).([]ModelUnpublishCallback)
+	return cbs
 }
 
 // WithChangeNotify marks a model whose publications the builder's ChangeCallback

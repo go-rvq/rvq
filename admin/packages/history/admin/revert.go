@@ -1,0 +1,109 @@
+package admin
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+
+	"github.com/go-rvq/rvq/web"
+	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/sunfmin/reflectutils"
+)
+
+// Revert applies a past revision to a loaded record and saves it, recording a
+// NEW revision (git-revert style: the history chain is never rewritten). The
+// obj is the record as loaded by the admin (Detailing), so no re-fetch is
+// needed. Four granularities:
+//
+//   RevertRecord       — every versioned field, to `hash`.
+//   RevertFields       — only the named fields, to `hash`.
+//   RevertField        — one field's whole content, to `hash` (always allowed).
+//   RevertFieldPartial — only selected hunks of one field (AcceptsPartial only).
+
+// RevertRecord restores every versioned field of obj to revision `hash`.
+func (h *ModelHistory) RevertRecord(obj any, hash []byte, ctx *web.EventContext) error {
+	return h.RevertFields(obj, hash, h.resolved, ctx)
+}
+
+// RevertFields restores only the named fields of obj to revision `hash`.
+func (h *ModelHistory) RevertFields(obj any, hash []byte, fields []string, ctx *web.EventContext) error {
+	recordKey := h.mb.MustRecordID(obj).String()
+	rev, err := h.Revision(recordKey, hash)
+	if err != nil {
+		return err
+	}
+	m, err := fieldMap(rev)
+	if err != nil {
+		return err
+	}
+	for _, f := range fields {
+		raw, ok := m[f]
+		if !ok {
+			continue
+		}
+		if err := setFieldFromJSON(obj, f, raw); err != nil {
+			return fmt.Errorf("history: revert field %q: %w", f, err)
+		}
+	}
+	return h.saveAndCapture(obj, ctx)
+}
+
+// RevertField restores one field's whole content to revision `hash`. Always
+// available, including for whole-only fields.
+func (h *ModelHistory) RevertField(obj any, hash []byte, field string, ctx *web.EventContext) error {
+	return h.RevertFields(obj, hash, []string{field}, ctx)
+}
+
+// RevertFieldPartial restores only part of a field's content: it applies the
+// given diffmatchpatch patch text (the hunks the user selected) to the field's
+// current value. Only for fields that accept partial revert.
+func (h *ModelHistory) RevertFieldPartial(obj any, field, patchText string, ctx *web.EventContext) error {
+	if !h.AcceptsPartial(field) {
+		return fmt.Errorf("history: field %q does not accept partial revert", field)
+	}
+	cur, err := reflectutils.Get(obj, field)
+	if err != nil {
+		return err
+	}
+	curStr, _ := cur.(string)
+	dmp := diffmatchpatch.New()
+	patches, err := dmp.PatchFromText(patchText)
+	if err != nil {
+		return fmt.Errorf("history: bad patch: %w", err)
+	}
+	res, _ := dmp.PatchApply(patches, curStr)
+	if err := reflectutils.Set(obj, field, res); err != nil {
+		return err
+	}
+	return h.saveAndCapture(obj, ctx)
+}
+
+// setFieldFromJSON sets obj.field from the field's JSON snapshot value,
+// unmarshaling into the field's own Go type.
+func setFieldFromJSON(obj any, field string, raw json.RawMessage) error {
+	cur, err := reflectutils.Get(obj, field)
+	if err != nil {
+		return err
+	}
+	if cur == nil {
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return err
+		}
+		return reflectutils.Set(obj, field, v)
+	}
+	ptr := reflect.New(reflect.TypeOf(cur))
+	if err := json.Unmarshal(raw, ptr.Interface()); err != nil {
+		return err
+	}
+	return reflectutils.Set(obj, field, ptr.Elem().Interface())
+}
+
+// saveAndCapture persists the reverted record and records the resulting new
+// revision.
+func (h *ModelHistory) saveAndCapture(obj any, ctx *web.EventContext) error {
+	if err := h.db.Save(obj).Error; err != nil {
+		return err
+	}
+	return h.capture(obj, ctx)
+}
