@@ -26,14 +26,12 @@ func (h *ModelHistory) Revision(recordKey string, hash []byte) (*histmodels.Revi
 	return &rev, nil
 }
 
-// fieldMap decodes a revision's Fields snapshot into raw JSON per field.
+// fieldMap returns a revision's field→raw-JSON snapshot.
 func fieldMap(rev *histmodels.Revision) (map[string]json.RawMessage, error) {
-	m := map[string]json.RawMessage{}
-	if len(rev.Fields) == 0 {
-		return m, nil
+	if rev.Fields.Data == nil {
+		return map[string]json.RawMessage{}, nil
 	}
-	err := json.Unmarshal(rev.Fields, &m)
-	return m, err
+	return rev.Fields.Data, nil
 }
 
 // fieldValue returns a field's value as a display string: a JSON string is

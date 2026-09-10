@@ -2,10 +2,17 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/go-rvq/rvq/thirdpart/gorm/datatypes"
 	"github.com/google/uuid"
 )
+
+// Fields is the per-revision snapshot: each versioned field's value as raw JSON,
+// stored as a JSONB column (datatypes.NullJSONType keeps the map and round-trips
+// it), so a diff can tell a plain string from a structured/foreign-key value.
+type Fields = datatypes.NullJSONType[map[string]json.RawMessage]
 
 // Revision is one point in a model record's history — a git-like commit of the
 // versioned fields. One table per versioned model, named
@@ -18,7 +25,7 @@ type Revision struct {
 	// scoped to the record. Folding the record key in keeps it unique per record
 	// (so it can be the sole PK, giving a clean /…/revisions/<hash> route) while
 	// still collapsing an unchanged save to the same hash (no duplicate revision).
-	Hash []byte `gorm:"primaryKey;type:bytea"`
+	Hash Hash `gorm:"primaryKey;type:bytea"`
 
 	// RecordKey identifies the record this revision belongs to: its primary key
 	// serialized (e.g. "12" or "12|pt-BR" for id + locale). Indexed for the
@@ -27,10 +34,10 @@ type Revision struct {
 
 	// Parent is the hash of the previous revision of the same record — the chain
 	// (a git-like DAG). NULL on the first revision.
-	Parent []byte `gorm:"type:bytea"`
+	Parent Hash `gorm:"type:bytea"`
 
-	// Fields is the snapshot {field: value} of just the versioned fields, JSON.
-	Fields []byte `gorm:"type:jsonb"`
+	// Fields is the snapshot {field: raw JSON value} of just the versioned fields.
+	Fields Fields `gorm:"type:jsonb"`
 
 	CreatedAt time.Time
 

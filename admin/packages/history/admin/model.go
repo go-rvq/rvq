@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/thirdpart/gorm/datatypes"
 	"github.com/go-rvq/rvq/web"
 	"github.com/sunfmin/reflectutils"
 	"gorm.io/gorm"
@@ -101,7 +102,7 @@ func (h *ModelHistory) Build() *ModelHistory {
 		}
 	})
 	h.installPublishTag()
-	h.installUI()
+	h.installChild()
 	return h
 }
 
@@ -140,17 +141,22 @@ func (h *ModelHistory) resolveFields() []string {
 	return names
 }
 
-// snapshot serializes the versioned fields of obj to canonical JSON (json.Marshal
-// sorts map keys, so the bytes are deterministic for the same values).
-func (h *ModelHistory) snapshot(obj interface{}) (map[string]any, []byte, error) {
-	snap := make(map[string]any, len(h.resolved))
+// snapshot captures the versioned fields of obj as a field→raw-JSON map, plus
+// its canonical bytes (json.Marshal sorts map keys, so the bytes are
+// deterministic for the same values — the basis of the content hash).
+func (h *ModelHistory) snapshot(obj interface{}) (map[string]json.RawMessage, []byte, error) {
+	snap := make(map[string]json.RawMessage, len(h.resolved))
 	for _, f := range h.resolved {
 		v, err := reflectutils.Get(obj, f)
 		if err != nil {
 			// virtual/non-struct field (e.g. an action column) — skip it.
 			continue
 		}
-		snap[f] = v
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return nil, nil, err
+		}
+		snap[f] = raw
 	}
 	data, err := json.Marshal(snap)
 	return snap, data, err
@@ -160,7 +166,7 @@ func (h *ModelHistory) snapshot(obj interface{}) (map[string]any, []byte, error)
 // the pure content hash; a revision with the same (hash, record) already stored
 // means nothing changed, so none is created.
 func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
-	_, data, err := h.snapshot(obj)
+	snap, data, err := h.snapshot(obj)
 	if err != nil {
 		return err
 	}
@@ -194,7 +200,7 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		Hash:      hash,
 		RecordKey: recordKey,
 		Parent:    parent,
-		Fields:    data,
+		Fields:    datatypes.NewJSONType(snap),
 		CreatedAt: time.Now(),
 	}
 	if u := user.GetCurrentUser(ctx.R); u != nil {
