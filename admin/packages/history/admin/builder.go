@@ -42,3 +42,14 @@ func (b *Builder) Install(pb *presets.Builder) error {
 // Recorder is the shared access recorder — the site calls Recorder().Hit(table,
 // recordKey) on a public render.
 func (b *Builder) Recorder() *Recorder { return b.recorder }
+
+// DefaultRecorder returns the process-wide access recorder set by Configure (nil
+// until then). The public site uses it to count per-revision accesses:
+//
+//	history.DefaultRecorder().Hit("posts_revisions", recordKey)
+func DefaultRecorder() *Recorder { return defaultRecorder }
+
+// RevisionTableFor returns the revisions table name for a model value
+// ("<model table>_revisions"), so callers outside the plugin (e.g. the site)
+// can name it without hardcoding.
+func RevisionTableFor(db *gorm.DB, m any) string { return revisionTable(db, m) }
