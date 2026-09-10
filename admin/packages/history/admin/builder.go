@@ -58,7 +58,7 @@ func revisionDiff(table string, hash []byte, ctx *web.EventContext) h.HTMLCompon
 	if len(rev.Parent) == 0 {
 		return nil
 	}
-	comp, err := mh.diffSection(rev.RecordKey, rev.Parent, rev.Hash, getMessages(ctx.Context()))
+	comp, err := mh.compare(rev.RecordKey, rev.Parent, rev.Hash, ctx)
 	if err != nil {
 		return nil
 	}

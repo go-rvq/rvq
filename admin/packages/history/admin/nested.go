@@ -119,11 +119,11 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 }
 
 func (mh *ModelHistory) diffDialog(recordKey string, a, b histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
-	sec, err := mh.diffSection(recordKey, a, b, getMessages(ctx.Context()))
+	sec, err := mh.compare(recordKey, a, b, ctx)
 	if err != nil {
 		return nil, err
 	}
-	return vx.VXDialog().Title(getMessages(ctx.Context()).History).Width("1000").SlotBody(sec), nil
+	return vx.VXDialog().Title(getMessages(ctx.Context()).History).Width("1200").SlotBody(sec), nil
 }
 
 // configChildDetailing makes /<parent>/{id}/revisions/{hash} render the record
