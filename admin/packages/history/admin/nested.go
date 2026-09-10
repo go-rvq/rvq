@@ -137,8 +137,8 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		if err != nil {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
-		return mh.mb.Detailing().FieldsBuilder.ToComponent(
-			&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, ctx)
+		comp, _ := mh.detailComponent(obj, rev.RecordKey, ctx)
+		return comp
 	})
 }
 

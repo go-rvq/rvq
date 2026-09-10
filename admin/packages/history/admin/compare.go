@@ -45,11 +45,11 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 		return nil, err
 	}
 
-	oldHTML, err := mh.detailHTML(oldObj, ctx)
+	oldHTML, err := mh.detailHTML(oldObj, recordKey, ctx)
 	if err != nil {
 		return nil, err
 	}
-	newHTML, err := mh.detailHTML(newObj, ctx)
+	newHTML, err := mh.detailHTML(newObj, recordKey, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -110,13 +110,36 @@ func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 	return h.Div(meta...).Class("text-caption d-flex align-center flex-wrap")
 }
 
-// detailHTML renders obj through the historized model's DetailingBuilder to an
-// HTML string (the input to the visual diff).
-func (mh *ModelHistory) detailHTML(obj any, ctx *web.EventContext) (string, error) {
+// detailComponent renders obj through the historized model's own
+// DetailingBuilder. It renders as if the request were on the parent's detail
+// path (/…/posts/{id}) — the builder derives its URLs/events from the request
+// path, so rendering from the nested /…/revisions subpath would point them at
+// the wrong route.
+func (mh *ModelHistory) detailComponent(obj any, recordKey string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
+	pctx := detailRequestCtx(ctx, mh.mb.Info().DetailingHref(recordKey))
 	comp := mh.mb.Detailing().FieldsBuilder.ToComponent(
-		&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, ctx)
+		&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, pctx)
+	return comp, pctx
+}
+
+// detailRequestCtx clones ctx with the request URL set to detailPath.
+func detailRequestCtx(ctx *web.EventContext, detailPath string) *web.EventContext {
+	c := *ctx
+	r := ctx.R.Clone(ctx.R.Context())
+	u := *r.URL
+	u.Path = detailPath
+	u.RawQuery = ""
+	r.URL = &u
+	c.R = r
+	return &c
+}
+
+// detailHTML renders obj's detail to an HTML string (the input to the visual
+// diff).
+func (mh *ModelHistory) detailHTML(obj any, recordKey string, ctx *web.EventContext) (string, error) {
+	comp, pctx := mh.detailComponent(obj, recordKey, ctx)
 	var buf bytes.Buffer
-	if err := h.Fprint(&buf, comp, ctx.Context()); err != nil {
+	if err := h.Fprint(&buf, comp, pctx.Context()); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
