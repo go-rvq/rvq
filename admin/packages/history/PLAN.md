@@ -185,6 +185,21 @@ revisão** em vez de duplicar o conteúdo do diff:
   **derivado da revisão** (parent → revisão) via `admin/diff.go`, em vez de ler
   `ModelDiffs`. Assim o conteúdo mora só em `<tabela>_revisions`.
 
+## Rota de detail por revisão
+
+`<prefix>/<model>/<id>/revisions/<HASH>` renderiza a revisão **no próprio
+detail** — o mesmo layout do Detailing, mas com os campos versionados carregados
+com os valores daquela revisão (obj carregado + `Fields` aplicados). Ex.:
+`/posts/12/revisions/ab12…` mostra o post como estava naquela revisão. A UI da
+action linka para essa rota; a tabela/diff continua no dialog.
+
+**Montagem: como NestedModel** — via `parentMb.AddChild(revisionChildMb)` (padrão
+`orgs/admin/mount.go` → `AddChild`, rota `/parent/{id}/revisions/...`). O child é
+um `ModelBuilder` do `Revision` escopado ao registro-pai (RecordKey = id do pai);
+seu **Detailing** carrega o registro-pai, aplica o snapshot `Fields` da revisão e
+renderiza usando o **FieldsBuilder do Detailing do pai** (mostra o registro como
+estava, não os campos da tabela de revisão).
+
 ## Reuso (não reimplementar)
 
 - `admin/activity/diff.go` — `NewDiffBuilder(mb).Diff(old,now) []Diff{Field,Old,Now}`
