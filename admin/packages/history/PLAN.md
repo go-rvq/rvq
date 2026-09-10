@@ -158,6 +158,23 @@ Segue o padrão de `packages/people` (Builder que é `presets.Plugin`):
     (`FieldDiff`), revert do **campo inteiro** (sempre) e — quando o campo aceita
     parcial — revert **parcial-de-conteúdo** por seleção de hunks.
 
+## Ligação com o activity_log (sem duplicar o diff)
+
+Quando o `activity` também está ativo no model, o `activity_log` **aponta para a
+revisão** em vez de duplicar o conteúdo do diff:
+
+- `activity.ActivityLog` ganha `RevisionHash []byte` (+ `RevisionTable string`
+  para saber qual `<tabela>_revisions`) e os acessores na interface.
+- O plugin de histórico é o único a criar a revisão no save. Quando presente,
+  ele registra a revisão e faz o log de edição **referenciar** essa revisão
+  (`RevisionHash`/`RevisionTable` setados) e **não** grava `ModelDiffs` (fica
+  vazio). Para não gerar diff duas vezes, o histórico desliga o diff-log do
+  activity para aquele model (o activity já tem flags `skip`) e cria/anota o log
+  apontando para a revisão.
+- Na renderização (log view), quando o log tem `RevisionHash`, o diff é
+  **derivado da revisão** (parent → revisão) via `admin/diff.go`, em vez de ler
+  `ModelDiffs`. Assim o conteúdo mora só em `<tabela>_revisions`.
+
 ## Reuso (não reimplementar)
 
 - `admin/activity/diff.go` — `NewDiffBuilder(mb).Diff(old,now) []Diff{Field,Old,Now}`
