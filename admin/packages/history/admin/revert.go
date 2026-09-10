@@ -99,11 +99,10 @@ func setFieldFromJSON(obj any, field string, raw json.RawMessage) error {
 	return reflectutils.Set(obj, field, ptr.Elem().Interface())
 }
 
-// saveAndCapture persists the reverted record and records the resulting new
-// revision.
+// saveAndCapture persists the reverted record through the model's editing save
+// pipeline, so the change is recorded in BOTH the activity log and the history
+// (activity's and history's save wraps fire, exactly as a normal edit) — the new
+// revision is created by history's wrap, not here.
 func (h *ModelHistory) saveAndCapture(obj any, ctx *web.EventContext) error {
-	if err := h.db.Save(obj).Error; err != nil {
-		return err
-	}
-	return h.capture(obj, ctx)
+	return h.mb.Editing().Saver(obj, h.mb.MustRecordID(obj), ctx)
 }
