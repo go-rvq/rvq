@@ -13,17 +13,17 @@ import (
 // column: the table already means the model. A single Go type is mapped to each
 // such table with db.Table(name).
 type Revision struct {
-	// Hash is the primary key: sha256 (32 bytes, bytea) of the canonical
-	// serialization of the versioned fields — like a git blob id. Identical
-	// field states collapse to the same hash (no duplicate revision), so saving
-	// without changing a versioned field creates none.
+	// Hash is the primary key: sha256 (32 bytes, bytea) of the record key plus
+	// the canonical serialization of the versioned fields — like a git blob id,
+	// scoped to the record. Folding the record key in keeps it unique per record
+	// (so it can be the sole PK, giving a clean /…/revisions/<hash> route) while
+	// still collapsing an unchanged save to the same hash (no duplicate revision).
 	Hash []byte `gorm:"primaryKey;type:bytea"`
 
 	// RecordKey identifies the record this revision belongs to: its primary key
-	// serialized (e.g. "12" or "12|pt-BR" for id + locale). Part of the primary
-	// key together with Hash, so the content hash stays pure (a git-like blob id)
-	// while two different records that happen to share content don't collide.
-	RecordKey string `gorm:"primaryKey;index;type:varchar(255)"`
+	// serialized (e.g. "12" or "12|pt-BR" for id + locale). Indexed for the
+	// per-record history walk and to scope the nested revisions listing.
+	RecordKey string `gorm:"index;type:varchar(255)"`
 
 	// Parent is the hash of the previous revision of the same record — the chain
 	// (a git-like DAG). NULL on the first revision.

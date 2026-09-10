@@ -164,9 +164,11 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 	if err != nil {
 		return err
 	}
-	sum := sha256.Sum256(data)
-	hash := sum[:]
 	recordKey := h.mb.MustRecordID(obj).String()
+	// Fold the record key into the hash so it is unique per record (sole PK,
+	// clean nested route) yet still collapses an unchanged save.
+	sum := sha256.Sum256(append([]byte(recordKey+"\x00"), data...))
+	hash := sum[:]
 
 	var exists int64
 	if err = h.db.Table(h.table).
