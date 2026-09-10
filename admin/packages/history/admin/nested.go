@@ -55,6 +55,7 @@ func (mh *ModelHistory) installChild() {
 	})
 
 	child.RegisterEventFunc(mh.revertEventName(), mh.revertEvent)
+	child.RegisterEventFunc(mh.revertHunksEventName(), mh.revertHunksEvent)
 
 	mh.mb.AddChild(child)
 	mh.configChildListing(child)
@@ -203,7 +204,8 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		if err != nil {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
-		comp, _ := mh.detailComponent(obj, rev.RecordKey, fieldParam(ctx), ctx)
+		fieldName := fieldParam(ctx)
+		comp, _ := mh.detailComponent(obj, rev.RecordKey, fieldName, ctx)
 		msgr := getMessages(ctx.Context())
 		revertBtn := v.VBtn(msgr.Revert).
 			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
@@ -211,11 +213,36 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 				EventFunc(mh.revertEventName()).
 				Query("hash", rev.Hash.String()).
 				Go())
-		return h.Div(
+
+		out := h.HTMLComponents{
 			h.Div(revertBtn).Class("d-flex justify-end mb-3"),
 			comp,
-		)
+		}
+		// Scoped to a single partial-capable field: offer hunk-level revert
+		// against the live current value.
+		if fieldName != "" && mh.AcceptsPartial(fieldName) {
+			if cur, cerr := mh.currentRecord(rev.RecordKey); cerr == nil {
+				m, _ := fieldMap(rev)
+				out = append(out, mh.hunkSelectPanel(
+					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), ctx))
+			}
+		}
+		return h.Div(out...)
 	})
+}
+
+// currentRecord loads the live parent record for recordKey.
+func (mh *ModelHistory) currentRecord(recordKey string) (any, error) {
+	id, err := mh.mb.ParseRecordID(recordKey)
+	if err != nil {
+		return nil, err
+	}
+	obj := mh.mb.NewModel()
+	id.SetTo(obj)
+	if err := mh.db.First(obj).Error; err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 // applied loads the parent record and overlays the revision's versioned-field

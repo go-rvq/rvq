@@ -36,6 +36,9 @@ type Messages struct {
 	Revert         string
 	Reverted       string
 	Field          string
+	RevertSelected string
+	PartialRevert  string
+	NoHunks        string
 }
 
 var (
@@ -61,6 +64,9 @@ var (
 		Revert:          "Revert to this revision",
 		Reverted:        "Reverted to the selected revision",
 		Field:           "Field",
+		RevertSelected:  "Revert selected hunks",
+		PartialRevert:   "Partial revert",
+		NoHunks:         "This field is identical to the current value.",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -85,6 +91,9 @@ var (
 		Revert:          "Reverter para esta revisão",
 		Reverted:        "Revertido para a revisão selecionada",
 		Field:           "Campo",
+		RevertSelected:  "Reverter trechos selecionados",
+		PartialRevert:   "Reversão parcial",
+		NoHunks:         "Este campo é idêntico ao valor atual.",
 	}
 )
 
