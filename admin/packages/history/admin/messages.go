@@ -33,6 +33,8 @@ type Messages struct {
 	SelectTwoHint  string
 	PickToCompare  string
 	Merged         string
+	Revert         string
+	Reverted       string
 }
 
 var (
@@ -55,6 +57,8 @@ var (
 		SelectTwoHint:   "Select two revisions to compare, or use “Compare with current”.",
 		PickToCompare:   "Pick revisions above to see the differences here.",
 		Merged:          "Merged",
+		Revert:          "Revert to this revision",
+		Reverted:        "Reverted to the selected revision",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -76,6 +80,8 @@ var (
 		SelectTwoHint:   "Selecione duas revisões para comparar, ou use “Comparar com a atual”.",
 		PickToCompare:   "Escolha revisões acima para ver as diferenças aqui.",
 		Merged:          "Mesclado",
+		Revert:          "Reverter para esta revisão",
+		Reverted:        "Revertido para a revisão selecionada",
 	}
 )
 

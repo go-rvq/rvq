@@ -38,9 +38,38 @@ func (mh *ModelHistory) installChild() {
 			})
 	})
 
+	child.RegisterEventFunc(mh.revertEventName(), mh.revertEvent)
+
 	mh.mb.AddChild(child)
 	mh.configChildListing(child)
 	mh.configChildDetailing(child)
+}
+
+func (mh *ModelHistory) revertEventName() string { return "history_revert_" + mh.table }
+
+// revertEvent restores the parent record to the chosen revision (git-revert:
+// records a new revision), then navigates to the parent's detail showing it.
+func (mh *ModelHistory) revertEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
+	recordKey := parentRecordKey(ctx)
+	hash, err := decodeHash(ctx.R.FormValue("hash"))
+	if err != nil {
+		return
+	}
+	id, err := mh.mb.ParseRecordID(recordKey)
+	if err != nil {
+		return
+	}
+	obj := mh.mb.NewModel()
+	id.SetTo(obj)
+	if err = mh.db.First(obj).Error; err != nil {
+		return
+	}
+	if err = mh.RevertRecord(obj, hash, ctx); err != nil {
+		return
+	}
+	presets.ShowMessage(&r, getMessages(ctx.Context()).Reverted, "success")
+	r.PushState = web.Location(nil).URL(mh.mb.Info().DetailingHref(recordKey))
+	return
 }
 
 // parentRecordKey is the id of the parent record in the request path — the
@@ -138,7 +167,17 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
 		comp, _ := mh.detailComponent(obj, rev.RecordKey, ctx)
-		return comp
+		msgr := getMessages(ctx.Context())
+		revertBtn := v.VBtn(msgr.Revert).
+			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
+			Attr("@click", web.Plaid().
+				EventFunc(mh.revertEventName()).
+				Query("hash", rev.Hash.String()).
+				Go())
+		return h.Div(
+			h.Div(revertBtn).Class("d-flex justify-end mb-3"),
+			comp,
+		)
 	})
 }
 
