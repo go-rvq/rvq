@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -110,11 +111,11 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 
 	msgr := getMessages(ctx.Context())
 
-	// ?field= scopes to a single field; otherwise every versioned field. Only the
-	// ones that actually changed between the two revisions are shown.
+	// ?field= scopes to the given fields (possibly nested paths); otherwise every
+	// versioned field. Only the ones that actually changed are shown.
 	fields := mh.resolved
-	if only := fieldParam(ctx); only != "" {
-		fields = []string{only}
+	if sel := fieldsParam(ctx); len(sel) > 0 {
+		fields = sel
 	}
 
 	// Invert swaps OLD and NEW: re-render the portal with a/b exchanged.
@@ -146,8 +147,8 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 	var panels h.HTMLComponents
 	var open []string
 	for _, f := range fields {
-		if string(am[f]) == string(bm[f]) {
-			continue // unchanged — omit
+		if fieldValue(am, f) == fieldValue(bm, f) {
+			continue // unchanged — omit (fieldValue follows nested paths)
 		}
 		panels = append(panels, mh.fieldPanel(f, oldObj, newObj, am, bm, recordKey, ctx, msgr))
 		open = append(open, strconv.Itoa(len(panels)-1))
@@ -182,8 +183,13 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		).Class("flex-1-1-0 " + cls)
 	}
 
+	nested := strings.Contains(f, ".")
+
 	var oldC, newC, mergedC h.HTMLComponent
-	if mh.fieldIsSimple(f) {
+	switch {
+	case mh.fieldIsSimple(f) && !nested:
+		// Top-level text/HTML field: render through the DetailingBuilder (so the
+		// TipTap field emits diff-friendly HTML) and diff that.
 		oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
 		newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
 		// The detail render wraps the value in form scaffold (hidden inputs with
@@ -191,15 +197,23 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		// parser — strip it so the diff is computed on the clean content.
 		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
 		oldC, newC = h.RawHTML(oldHTML), h.RawHTML(newHTML)
-		// documize/html-diff returns one merged result (common text + <del> +
-		// <ins>). The merged view shows it whole (red removals + green additions);
-		// OLD keeps deletions (red), NEW keeps insertions (green).
 		if diffs, err := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); err == nil && len(diffs) > 0 {
 			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
 			mergedC = h.RawHTML(diffs[0])
 		}
-	} else {
-		oldC, newC = jsonBlock(prettyJSON(am[f])), jsonBlock(prettyJSON(bm[f]))
+	case mh.fieldIsSimple(f):
+		// Nested text value (e.g. PageOptions.Layout): diff the plain text
+		// (escaped, wrapped so html-diff parses it as content).
+		ov := "<p>" + html.EscapeString(fieldValue(am, f)) + "</p>"
+		nv := "<p>" + html.EscapeString(fieldValue(bm, f)) + "</p>"
+		oldC, newC = h.RawHTML(ov), h.RawHTML(nv)
+		if diffs, err := htmlDiffConfig.HTMLdiff([]string{ov, nv}); err == nil && len(diffs) > 0 {
+			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
+			mergedC = h.RawHTML(diffs[0])
+		}
+	default:
+		// Structured value: before/after JSON, following the path.
+		oldC, newC = jsonBlock(prettyJSONPath(am, f)), jsonBlock(prettyJSONPath(bm, f))
 	}
 
 	children := h.HTMLComponents{
@@ -220,15 +234,16 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 }
 
 // splitFields separates the fields to compare into text/HTML (rendered through
-// the DetailingBuilder) and structured (rendered as a JSON summary). With a
-// single field (?field=) it classifies just that one.
-func (mh *ModelHistory) splitFields(only string) (simple, structured []string) {
-	fields := mh.resolved
-	if only != "" {
-		fields = []string{only}
+// the DetailingBuilder) and structured (rendered as a JSON summary). Empty means
+// every versioned field.
+func (mh *ModelHistory) splitFields(fields []string) (simple, structured []string) {
+	if len(fields) == 0 {
+		fields = mh.resolved
 	}
 	for _, f := range fields {
-		if mh.fieldIsSimple(f) {
+		// Only top-level string fields render cleanly through the DetailingBuilder;
+		// nested/indexed paths and non-strings show as a JSON/text summary.
+		if mh.fieldIsSimple(f) && !strings.ContainsAny(f, ".[") {
 			simple = append(simple, f)
 		} else {
 			structured = append(structured, f)
@@ -260,7 +275,7 @@ func structuredRows(m map[string]json.RawMessage, fields []string) h.HTMLCompone
 	for _, f := range fields {
 		rows = append(rows, h.Div(
 			h.Div(h.Strong(f)).Class("text-caption text-medium-emphasis"),
-			jsonBlock(prettyJSON(m[f])),
+			jsonBlock(prettyJSONPath(m, f)),
 		).Class("mb-2"))
 	}
 	return h.Div(rows...).Class("mt-2")
@@ -276,6 +291,16 @@ func stripScaffold(s string) string { return scaffoldRe.ReplaceAllString(s, "") 
 func jsonBlock(s string) h.HTMLComponent {
 	return h.Pre(s).Class("text-caption pa-1").
 		Style("white-space:pre-wrap;overflow-x:auto;background-color:rgba(0,0,0,.03);border-radius:4px")
+}
+
+// prettyJSONPath renders the value at a (possibly nested/indexed) path as
+// readable JSON.
+func prettyJSONPath(m map[string]json.RawMessage, path string) string {
+	raw, ok := navigateRaw(m, path)
+	if !ok {
+		return ""
+	}
+	return prettyJSON(raw)
 }
 
 // prettyJSON renders a snapshot value for reading: a JSON string is unquoted, an
@@ -371,6 +396,67 @@ func (mh *ModelHistory) detailHTML(obj any, recordKey string, fields []string, c
 	return buf.String(), nil
 }
 
-// fieldParam is the ?field= query — the single field the revisions view is
-// scoped to (empty = the whole record).
-func fieldParam(ctx *web.EventContext) string { return ctx.R.FormValue("field") }
+// fieldsParam is the ?field= query — the fields the revisions view is scoped to
+// (comma-separated, may include nested paths like "PageOptions.Layout"). Empty
+// means the whole record.
+func fieldsParam(ctx *web.EventContext) []string {
+	var out []string
+	for _, raw := range ctx.R.Form["field"] {
+		for _, f := range strings.Split(raw, ",") {
+			if f = strings.TrimSpace(f); f != "" {
+				out = append(out, f)
+			}
+		}
+	}
+	return out
+}
+
+// fieldPaths lists the versioned fields plus, for struct fields, their nested
+// sub-paths (e.g. "PageOptions", "PageOptions.Layout"). Slices, maps and the
+// media/time value types are left whole. It is the option list for the field
+// filter.
+func (mh *ModelHistory) fieldPaths() []string {
+	var paths []string
+	model := mh.mb.NewModel()
+	var walk func(prefix string, t reflect.Type, depth int)
+	walk = func(prefix string, t reflect.Type, depth int) {
+		paths = append(paths, prefix)
+		if depth <= 0 {
+			return
+		}
+		for t != nil && t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		// Only plain structs are expanded; a media box / time / other value type
+		// is compared whole.
+		if t == nil || t.Kind() != reflect.Struct || isWholeValueType(t) {
+			return
+		}
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			if !f.IsExported() {
+				continue
+			}
+			walk(prefix+"."+f.Name, f.Type, depth-1)
+		}
+	}
+	for _, f := range mh.resolved {
+		if ft, ok := structFieldType(model, f); ok {
+			walk(f, ft, 2)
+		} else {
+			paths = append(paths, f)
+		}
+	}
+	return paths
+}
+
+// isWholeValueType reports whether a struct type is one that should be compared
+// as a whole (a media box, a time), not expanded into its internal fields.
+func isWholeValueType(t reflect.Type) bool {
+	switch t.String() {
+	case "time.Time", "media_library.MediaBox", "slug.Slug":
+		return true
+	}
+	// A type that marshals itself specially (implements json.Marshaler) is opaque.
+	return t.Implements(reflect.TypeOf((*json.Marshaler)(nil)).Elem())
+}

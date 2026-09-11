@@ -42,17 +42,23 @@ func (mh *ModelHistory) installChild() {
 					if key != "" {
 						state.DB = state.DB.Where("record_key = ?", key)
 					}
-					// Listing scoped to one field (?field=): keep only the
-					// revisions in which that field actually changed.
+					// Listing scoped to fields (?field=): keep only the revisions
+					// in which ANY of those fields changed.
 					if state.SearchParams != nil && key != "" {
-						if field := fieldParam(state.Ctx); field != "" {
-							hist, err := mh.FieldHistory(key, field)
-							if err != nil {
-								return err
+						if fields := fieldsParam(state.Ctx); len(fields) > 0 {
+							seen := map[string]histmodels.Hash{}
+							for _, field := range fields {
+								hist, err := mh.FieldHistory(key, field)
+								if err != nil {
+									return err
+								}
+								for _, fr := range hist {
+									seen[string(fr.Revision.Hash)] = fr.Revision.Hash
+								}
 							}
-							hashes := make([]histmodels.Hash, len(hist))
-							for i, fr := range hist {
-								hashes[i] = fr.Revision.Hash
+							hashes := make([]histmodels.Hash, 0, len(seen))
+							for _, hh := range seen {
+								hashes = append(hashes, hh)
 							}
 							state.DB = state.DB.Where("hash IN ?", hashes)
 						}
@@ -152,15 +158,16 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 	// filtering — keeping only revisions where that field changed — is done in
 	// the read callback via FieldHistory; this only provides the picker).
 	l.FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
-		opts := make([]*vx.SelectItem, len(mh.resolved))
-		for i, f := range mh.resolved {
+		paths := mh.fieldPaths()
+		opts := make([]*vx.SelectItem, len(paths))
+		for i, f := range paths {
 			opts[i] = &vx.SelectItem{Text: f, Value: f}
 		}
 		return vx.FilterData{
 			{
 				Key:      "field",
 				Label:    getMessages(ctx.Context()).Field,
-				ItemType: vx.ItemTypeSelect,
+				ItemType: vx.ItemTypeMultipleSelect,
 				Options:  opts,
 				SQLConditionFunc: func(val, mod string) (bool, string, []any) {
 					return false, "", nil // filtered in the read callback
@@ -226,11 +233,11 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		if err != nil {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
-		fieldName := fieldParam(ctx)
+		fields := fieldsParam(ctx)
 		// Text/HTML fields render through the detail; structured fields render a
 		// readable JSON summary (their interactive detail widgets don't belong in
 		// this reconstructed view).
-		simple, structured := mh.splitFields(fieldName)
+		simple, structured := mh.splitFields(fields)
 		comp, _ := mh.detailComponent(obj, rev.RecordKey, simple, ctx)
 		m, _ := fieldMap(rev)
 		msgr := getMessages(ctx.Context())
@@ -248,7 +255,8 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		}
 		// Scoped to a single partial-capable field: offer hunk-level revert
 		// against the live current value.
-		if fieldName != "" && mh.AcceptsPartial(fieldName) {
+		if len(fields) == 1 && mh.AcceptsPartial(fields[0]) {
+			fieldName := fields[0]
 			if cur, cerr := mh.currentRecord(rev.RecordKey); cerr == nil {
 				out = append(out, mh.hunkSelectPanel(
 					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), ctx))

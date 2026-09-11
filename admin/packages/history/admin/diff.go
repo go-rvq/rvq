@@ -2,6 +2,8 @@ package admin
 
 import (
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 
@@ -36,8 +38,77 @@ func fieldMap(rev *histmodels.Revision) (map[string]json.RawMessage, error) {
 
 // fieldValue returns a field's value as a display string: a JSON string is
 // unquoted (so HTML/text reads naturally), anything else is its raw JSON.
+// pathToken is one step of a field path: a struct-field key or an array index.
+type pathToken struct {
+	key   string
+	idx   int
+	isIdx bool
+}
+
+// parsePath breaks a field path into tokens, supporting nested struct fields and
+// array indices: "PageOptions.Layout", "Galleries[0].Title", "a[0][1].b".
+func parsePath(path string) (toks []pathToken) {
+	for _, seg := range strings.Split(path, ".") {
+		for seg != "" {
+			i := strings.IndexByte(seg, '[')
+			if i < 0 {
+				toks = append(toks, pathToken{key: seg})
+				break
+			}
+			if i > 0 {
+				toks = append(toks, pathToken{key: seg[:i]})
+			}
+			j := strings.IndexByte(seg, ']')
+			if j < 0 {
+				return
+			}
+			n, err := strconv.Atoi(seg[i+1 : j])
+			if err != nil {
+				return
+			}
+			toks = append(toks, pathToken{idx: n, isIdx: true})
+			seg = seg[j+1:]
+		}
+	}
+	return
+}
+
+// navigateRaw follows a field path into a snapshot map, descending struct fields
+// (objects) and array indices. It returns the raw JSON at the path.
+func navigateRaw(m map[string]json.RawMessage, path string) (json.RawMessage, bool) {
+	toks := parsePath(path)
+	if len(toks) == 0 || toks[0].isIdx {
+		return nil, false
+	}
+	raw, ok := m[toks[0].key]
+	if !ok {
+		return nil, false
+	}
+	for _, t := range toks[1:] {
+		if t.isIdx {
+			var arr []json.RawMessage
+			if json.Unmarshal(raw, &arr) != nil || t.idx < 0 || t.idx >= len(arr) {
+				return nil, false
+			}
+			raw = arr[t.idx]
+			continue
+		}
+		var obj map[string]json.RawMessage
+		if json.Unmarshal(raw, &obj) != nil {
+			return nil, false
+		}
+		if raw, ok = obj[t.key]; !ok {
+			return nil, false
+		}
+	}
+	return raw, true
+}
+
+// fieldValue returns a field's value as a display string, following a path
+// (nested fields and array indices — "PageOptions.Layout", "Tags[0].Name"). A
+// JSON string is unquoted; anything else is its raw JSON.
 func fieldValue(m map[string]json.RawMessage, field string) string {
-	raw, ok := m[field]
+	raw, ok := navigateRaw(m, field)
 	if !ok {
 		return ""
 	}
