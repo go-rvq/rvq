@@ -184,7 +184,7 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 			if err != nil {
 				return nil, err
 			}
-			return mh.diffDialog(parentRecordKey(ctx), a, bb, ctx)
+			return mh.compare(parentRecordKey(ctx), a, bb, ctx)
 		})
 
 	// One selected → compare it with the current revision.
@@ -201,16 +201,8 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 			if err != nil {
 				return nil, err
 			}
-			return mh.diffDialog(key, a, cur, ctx)
+			return mh.compare(key, a, cur, ctx)
 		})
-}
-
-func (mh *ModelHistory) diffDialog(recordKey string, a, b histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
-	sec, err := mh.compare(recordKey, a, b, ctx)
-	if err != nil {
-		return nil, err
-	}
-	return vx.VXDialog().Title(getMessages(ctx.Context()).History).Width("1200").SlotBody(sec), nil
 }
 
 // configChildDetailing makes /<parent>/{id}/revisions/{hash} render the record
