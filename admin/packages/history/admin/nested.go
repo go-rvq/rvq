@@ -214,22 +214,6 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 			return mh.compare(parentRecordKey(ctx), a, bb, ctx)
 		})
 
-	// One selected → compare it with the current revision.
-	l.ItemAction("CompareCurrent").
-		Icon("mdi-compare").
-		SetI18nLabel(func(c context.Context) string { return getMessages(c).CompareCurrent }).
-		ComponentFunc(func(id string, ctx *web.EventContext) (h.HTMLComponent, error) {
-			a, err := decodeHash(id)
-			if err != nil {
-				return nil, err
-			}
-			key := parentRecordKey(ctx)
-			cur, err := mh.latestHash(key)
-			if err != nil {
-				return nil, err
-			}
-			return mh.compare(key, a, cur, ctx)
-		})
 }
 
 // configChildDetailing makes /<parent>/{id}/revisions/{hash} render the record
@@ -274,6 +258,30 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		}
 		return h.Div(out...)
 	})
+
+	// "Compare with current" as a per-row action. It must be a Detailing action
+	// with ShowInList, not a listing ItemAction: the row menu fires the shared
+	// presets_Action event, which the detailing resolves against its OWN actions
+	// (formAction → parseRequestAction). A listing ItemAction there faults with
+	// "action required" because that handler never looks at the listing's item
+	// actions. View() wraps the returned component in the dialog itself.
+	child.Detailing().
+		Action("CompareCurrent").
+		ShowInList().
+		Icon("mdi-compare").
+		SetI18nLabel(func(c context.Context) string { return getMessages(c).CompareCurrent }).
+		ComponentFunc(func(id string, ctx *web.EventContext) (h.HTMLComponent, error) {
+			a, err := decodeHash(id)
+			if err != nil {
+				return nil, err
+			}
+			key := parentRecordKey(ctx)
+			cur, err := mh.latestHash(key)
+			if err != nil {
+				return nil, err
+			}
+			return mh.compare(key, a, cur, ctx)
+		})
 }
 
 // currentRecord loads the live parent record for recordKey.
