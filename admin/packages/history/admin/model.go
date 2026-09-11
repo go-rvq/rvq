@@ -188,13 +188,8 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		return nil
 	}
 
-	var parent []byte
-	if err = h.db.Table(h.table).
-		Select("hash").
-		Where("record_key = ?", recordKey).
-		Order("created_at DESC").
-		Limit(1).
-		Scan(&parent).Error; err != nil {
+	parent, err := h.latestHash(recordKey)
+	if err != nil {
 		return err
 	}
 

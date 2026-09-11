@@ -30,19 +30,16 @@ func (h *ModelHistory) markPublished(db *gorm.DB, recordKey, tag string) error {
 		Update("published", false).Error; err != nil {
 		return err
 	}
-	var hash []byte
-	if err := db.Table(h.table).
-		Select("hash").
-		Where("record_key = ?", recordKey).
-		Order("created_at DESC").
-		Limit(1).
-		Scan(&hash).Error; err != nil {
+	// Use the publish transaction's db; scanLatestHash reads the bytea through
+	// Hash's sql.Scanner (a gorm .Scan into a []byte would misread it).
+	hash, err := scanLatestHash(db, h.table, recordKey)
+	if err != nil {
 		return err
 	}
 	if hash == nil {
 		return nil
 	}
 	return db.Table(h.table).
-		Where("record_key = ? AND hash = ?", recordKey, hash).
+		Where("record_key = ? AND hash = ?", recordKey, []byte(hash)).
 		Updates(map[string]any{"published": true, "tag": tag}).Error
 }

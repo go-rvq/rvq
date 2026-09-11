@@ -2,7 +2,9 @@ package admin
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -12,6 +14,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"gorm.io/gorm"
 )
 
 // installChild mounts the revisions as a nested model under the versioned model
@@ -109,15 +112,28 @@ func decodeHash(s string) (histmodels.Hash, error) {
 }
 
 // latestHash is the record's current (newest) revision — what "compare with
-// current" compares against.
+// current" compares against; nil when the record has no revision yet.
 func (mh *ModelHistory) latestHash(recordKey string) (histmodels.Hash, error) {
+	return scanLatestHash(mh.db, mh.table, recordKey)
+}
+
+// scanLatestHash reads the newest revision's hash of a record from a given db
+// (so it works inside a publish transaction). It scans through database/sql's
+// Row, so the bytea runs through Hash's sql.Scanner. A gorm .Scan(&hash) would
+// instead see Hash's []byte kind as a slice of rows and try to scan the 32-byte
+// value into a single byte ("converting []uint8 to a uint8: invalid syntax").
+func scanLatestHash(db *gorm.DB, table, recordKey string) (histmodels.Hash, error) {
 	var hash histmodels.Hash
-	err := mh.db.Table(mh.table).
+	err := db.Table(table).
 		Select("hash").
 		Where("record_key = ?", recordKey).
 		Order("created_at DESC").
 		Limit(1).
-		Scan(&hash).Error
+		Row().
+		Scan(&hash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
 	return hash, err
 }
 
