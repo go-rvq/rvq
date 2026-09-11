@@ -47,7 +47,9 @@ func (b *Middlewares) DevMode() bool {
 func (b *Middlewares) WithRoles(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u := GetCurrentUser(r)
-		if u == nil {
+		// The anonymous user carries no roles (it is "not logged in"); skip the
+		// role lookup as for a nil user.
+		if u == nil || u.Anonymous() {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -88,7 +90,10 @@ func (b *Middlewares) SecurityMD() func(next http.Handler) http.Handler {
 func (b *Middlewares) ValidateSessionToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := GetCurrentUser(r)
-		if user == nil {
+		// The anonymous user means "nobody is logged in" — it has no session to
+		// validate, so treat it like nil here (otherwise validation fails and the
+		// request is bounced to logout, looping the login page).
+		if user == nil || user.Anonymous() {
 			next.ServeHTTP(w, r)
 			return
 		}

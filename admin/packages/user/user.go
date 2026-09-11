@@ -37,7 +37,10 @@ type Builder struct {
 }
 
 func (b *Builder) UserRoles(u User) (roles []string) {
-	if u == nil {
+	// The anonymous user stands in for "nobody is logged in" (GetCurrentUser
+	// never returns nil now), so it carries no roles — not even RoleLogged —
+	// exactly as a nil user did.
+	if u == nil || u.Anonymous() {
 		return
 	}
 	if u.GetAccountName() == b.lb.GetInitialUserAccount() {
