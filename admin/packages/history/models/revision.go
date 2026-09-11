@@ -59,3 +59,12 @@ type Revision struct {
 	AccessCount int64
 	LastAccess  time.Time
 }
+
+// PrimarySlug is the revision's id in a URL and in the listing's row selection:
+// the hash as hex. The primary key is Hash (there is no "ID" field), so without
+// this the admin data table would read a non-existent "ID" and give every row an
+// empty id — breaking selection and the compare bulk action. It round-trips
+// through Hash.Parse in ParseRecordID.
+func (r Revision) PrimarySlug() string {
+	return r.Hash.String()
+}
