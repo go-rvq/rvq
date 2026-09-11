@@ -17,15 +17,28 @@ import (
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-// htmlDiffConfig marks changes in the merged view: green insertions, red struck
-// deletions, amber replacements.
+// htmlDiffConfig marks changes: green insertions, red struck deletions, amber
+// replacements. Each change span also gets a class (hist-ins / hist-del) so the
+// merged diff can be projected onto the OLD side (deletions only) and the NEW
+// side (insertions only).
 var htmlDiffConfig = &htmldiff.Config{
 	Granularity:  5,
-	InsertedSpan: []htmldiff.Attribute{{Key: "style", Val: "background-color:#e6ffed;"}},
-	DeletedSpan:  []htmldiff.Attribute{{Key: "style", Val: "background-color:#ffeef0;text-decoration:line-through;"}},
-	ReplacedSpan: []htmldiff.Attribute{{Key: "style", Val: "background-color:#fff5b1;"}},
+	InsertedSpan: []htmldiff.Attribute{{Key: "class", Val: "hist-ins"}, {Key: "style", Val: "background-color:#e6ffed;"}},
+	DeletedSpan:  []htmldiff.Attribute{{Key: "class", Val: "hist-del"}, {Key: "style", Val: "background-color:#ffeef0;text-decoration:line-through;"}},
+	ReplacedSpan: []htmldiff.Attribute{{Key: "class", Val: "hist-ins"}, {Key: "style", Val: "background-color:#fff5b1;"}},
 	CleanTags:    []string{},
 }
+
+var (
+	histInsRe = regexp.MustCompile(`(?s)<span class="hist-ins"[^>]*>.*?</span>`)
+	histDelRe = regexp.MustCompile(`(?s)<span class="hist-del"[^>]*>.*?</span>`)
+)
+
+// oldSide is the merged diff with insertions dropped: the OLD content with its
+// removed parts highlighted (red). newSide drops the deletions: the NEW content
+// with its added parts highlighted (green).
+func oldSide(merged string) string { return histInsRe.ReplaceAllString(merged, "") }
+func newSide(merged string) string { return histDelRe.ReplaceAllString(merged, "") }
 
 // compare shows the differences between revision aHash (OLD) and bHash (NEW),
 // one collapsible panel per CHANGED field (unchanged fields are omitted). Each
@@ -98,12 +111,19 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 	), nil
 }
 
-// fieldPanel is one collapsible field diff. A text/HTML field shows a single
-// merged view with removals highlighted red and additions green
-// (documize/html-diff returns one merged result, not one per version). A
-// structured field shows its before/after JSON side by side.
+// fieldPanel is one collapsible field diff: OLD and NEW side by side, plus — for
+// a text/HTML field — a merged view below with removals highlighted red (struck)
+// and additions green (documize/html-diff returns one merged result, not one per
+// version). A structured field shows its before/after JSON.
 func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, ctx *web.EventContext, msgr *Messages) h.HTMLComponent {
-	var content h.HTMLComponent
+	side := func(label string, body h.HTMLComponent, cls string) *h.HTMLTagBuilder {
+		return h.Div(
+			h.Div(h.Strong(label)).Class("text-caption text-medium-emphasis mb-1"),
+			body,
+		).Class("flex-1-1-0 " + cls)
+	}
+
+	var oldC, newC h.HTMLComponent
 	if mh.fieldIsSimple(f) {
 		oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
 		newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
@@ -111,27 +131,25 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		// Vue directives) that carries no content and breaks html-diff's HTML
 		// parser — strip it so the diff is computed on the clean content.
 		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
-		merged := newHTML
+		oldC, newC = h.RawHTML(oldHTML), h.RawHTML(newHTML)
+		// documize/html-diff returns one merged result (common text + <del> +
+		// <ins>). Project it: OLD keeps deletions (red), NEW keeps insertions
+		// (green).
 		if diffs, err := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); err == nil && len(diffs) > 0 {
-			merged = diffs[0]
+			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
 		}
-		content = h.Div(h.RawHTML(merged)).Class("pa-1")
 	} else {
-		side := func(label string, body h.HTMLComponent, cls string) *h.HTMLTagBuilder {
-			return h.Div(
-				h.Div(h.Strong(label)).Class("text-caption text-medium-emphasis mb-1"),
-				body,
-			).Class("flex-1-1-0 " + cls)
-		}
-		content = h.Div(
-			side(msgr.Old, jsonBlock(prettyJSON(am[f])), "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
-			side(msgr.New, jsonBlock(prettyJSON(bm[f])), "ps-2"),
-		).Class("d-flex align-start")
+		oldC, newC = jsonBlock(prettyJSON(am[f])), jsonBlock(prettyJSON(bm[f]))
 	}
 
 	return v.VExpansionPanel(
 		v.VExpansionPanelTitle().Children(h.Strong(f)),
-		v.VExpansionPanelText().Children(content),
+		v.VExpansionPanelText().Children(
+			h.Div(
+				side(msgr.Old, oldC, "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
+				side(msgr.New, newC, "ps-2"),
+			).Class("d-flex align-start"),
+		),
 	)
 }
 
