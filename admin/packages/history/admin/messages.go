@@ -16,6 +16,7 @@ func getMessages(ctx context.Context) *Messages {
 type Messages struct {
 	History         string
 	HistoryEmpty    string
+	Hash            string
 	Published       string
 	Tag             string
 	Accesses        string
@@ -47,6 +48,7 @@ var (
 	Messages_en_US = &Messages{
 		History:         "History",
 		HistoryEmpty:    "No revisions yet.",
+		Hash:            "Hash",
 		Published:       "Published",
 		Tag:             "Tag",
 		Accesses:        "Accesses",
@@ -76,6 +78,7 @@ var (
 	Messages_pt_BR = &Messages{
 		History:         "Histórico",
 		HistoryEmpty:    "Ainda não há revisões.",
+		Hash:            "Hash",
 		Published:       "Publicada",
 		Tag:             "Tag",
 		Accesses:        "Acessos",

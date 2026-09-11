@@ -112,6 +112,15 @@ const showValueComputed = computed(() => {
         }
         break
       }
+      case 'TreeSelectItem': {
+        // valuesAre are the selected paths themselves ("PageOptions.Layout", …).
+        const mod = props.op.modifier || 'in'
+        if (props.op.valuesAre && props.op.valuesAre.length > 0) {
+          const label = props.compTranslations?.[mod] || mod
+          showValue = ` ${label} [ ${props.op.valuesAre.join(', ')} ]`
+        }
+        break
+      }
       case 'LinkageSelectItem': {
         const textsAre = props.op.valuesAre.map((o, i) => {
           const item = props.op.linkageSelectData?.items[i].find((x: any) => {

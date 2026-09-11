@@ -149,10 +149,20 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 	l := child.Listing("Hash", "Creator", "CreatedAt", "Published", "Tag", "AccessCount").
 		OrderBy("created_at DESC")
 
-	l.Field("Hash").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		rev := field.Obj.(*histmodels.Revision)
-		return h.Td(h.Code(shortHash(rev.Hash)))
-	})
+	// Column labels: the Revision struct's fields have no app-level
+	// (ModelsI18nModuleKey) translations, so set them from this plugin's own
+	// i18n messages instead of leaving the framework to warn about missing keys.
+	l.Field("Hash").
+		SetI18nLabel(func(c context.Context) string { return getMessages(c).Hash }).
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			rev := field.Obj.(*histmodels.Revision)
+			return h.Td(h.Code(shortHash(rev.Hash)))
+		})
+	l.Field("Creator").SetI18nLabel(func(c context.Context) string { return getMessages(c).Author })
+	l.Field("CreatedAt").SetI18nLabel(func(c context.Context) string { return getMessages(c).When })
+	l.Field("Published").SetI18nLabel(func(c context.Context) string { return getMessages(c).Published })
+	l.Field("Tag").SetI18nLabel(func(c context.Context) string { return getMessages(c).Tag })
+	l.Field("AccessCount").SetI18nLabel(func(c context.Context) string { return getMessages(c).Accesses })
 
 	// A "Field" select scopes the listing to one field's history (the actual
 	// filtering — keeping only revisions where that field changed — is done in

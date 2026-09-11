@@ -80,6 +80,7 @@ const trans: any = {
   StringItem: t.string,
   SelectItem: {},
   MultipleSelectItem: t.multipleSelect,
+  TreeSelectItem: t.multipleSelect,
   LinkageSelectItem: {}
 }
 
