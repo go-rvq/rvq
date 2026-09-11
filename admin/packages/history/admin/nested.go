@@ -63,6 +63,7 @@ func (mh *ModelHistory) installChild() {
 
 	child.RegisterEventFunc(mh.revertEventName(), mh.revertEvent)
 	child.RegisterEventFunc(mh.revertHunksEventName(), mh.revertHunksEvent)
+	child.RegisterEventFunc(mh.compareEventName(), mh.compareEvent)
 
 	mh.mb.AddChild(child)
 	mh.configChildListing(child)

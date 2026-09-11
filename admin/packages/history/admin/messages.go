@@ -40,6 +40,7 @@ type Messages struct {
 	PartialRevert  string
 	NoHunks        string
 	NoChanges      string
+	Invert         string
 }
 
 var (
@@ -69,6 +70,7 @@ var (
 		PartialRevert:   "Partial revert",
 		NoHunks:         "This field is identical to the current value.",
 		NoChanges:       "No differences between the selected revisions.",
+		Invert:          "Invert comparison",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -97,6 +99,7 @@ var (
 		PartialRevert:   "Reversão parcial",
 		NoHunks:         "Este campo é idêntico ao valor atual.",
 		NoChanges:       "Sem diferenças entre as revisões selecionadas.",
+		Invert:          "Inverter comparação",
 	}
 )
 

@@ -40,13 +40,49 @@ var (
 func oldSide(merged string) string { return histInsRe.ReplaceAllString(merged, "") }
 func newSide(merged string) string { return histDelRe.ReplaceAllString(merged, "") }
 
-// compare shows the differences between revision aHash (OLD) and bHash (NEW),
-// one collapsible panel per CHANGED field (unchanged fields are omitted). Each
-// panel shows OLD (removals highlighted red) beside NEW (additions highlighted
-// green): text/HTML fields through the model's DetailingBuilder with
-// documize/html-diff, structured fields (struct, foreign key, slice) as a
-// readable JSON summary.
+const comparePortal = "historyComparePortal"
+
+// compare wraps the comparison in a portal, so the "invert" button can re-render
+// it (OLD ↔ NEW swapped) in place.
 func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
+	inner, err := mh.compareInner(recordKey, aHash, bHash, ctx)
+	if err != nil {
+		return nil, err
+	}
+	return web.Portal(inner).Name(comparePortal), nil
+}
+
+// compareEventName is the per-model event that re-renders the comparison (used
+// by the invert button).
+func (mh *ModelHistory) compareEventName() string { return "history_compare_" + mh.table }
+
+// compareEvent re-renders the comparison into its portal with the a/b the button
+// passed (swapped, to invert).
+func (mh *ModelHistory) compareEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
+	recordKey := ctx.R.FormValue("record")
+	a, err := decodeHash(ctx.R.FormValue("a"))
+	if err != nil {
+		return
+	}
+	b, err := decodeHash(ctx.R.FormValue("b"))
+	if err != nil {
+		return
+	}
+	inner, err := mh.compareInner(recordKey, a, b, ctx)
+	if err != nil {
+		return
+	}
+	r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{Name: comparePortal, Body: inner})
+	return
+}
+
+// compareInner shows the differences between revision aHash (OLD) and bHash
+// (NEW), one collapsible panel per CHANGED field (unchanged fields are omitted).
+// Each panel shows OLD (removals highlighted red) beside NEW (additions
+// highlighted green): text/HTML fields through the model's DetailingBuilder with
+// documize/html-diff, structured fields (struct, foreign key, slice) as a
+// readable JSON summary. A top "invert" button swaps OLD and NEW.
+func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
 	revA, err := mh.Revision(recordKey, aHash)
 	if err != nil {
 		return nil, err
@@ -81,11 +117,25 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 		fields = []string{only}
 	}
 
+	// Invert swaps OLD and NEW: re-render the portal with a/b exchanged.
+	invertBtn := v.VBtn(msgr.Invert).
+		PrependIcon("mdi-swap-horizontal").
+		Variant(v.VariantTonal).Size(v.SizeSmall).
+		Attr("@click", web.Plaid().
+			EventFunc(mh.compareEventName()).
+			Query("record", recordKey).
+			Query("a", bHash.String()).
+			Query("b", aHash.String()).
+			Go())
+
 	head := h.Div(
-		revInfoHeader(revA, msgr),
-		h.Span(" → ").Class("mx-2 text-medium-emphasis"),
-		revInfoHeader(revB, msgr),
-	).Class("d-flex align-center flex-wrap mb-3")
+		h.Div(
+			revInfoHeader(revA, msgr),
+			h.Span(" → ").Class("mx-2 text-medium-emphasis"),
+			revInfoHeader(revB, msgr),
+		).Class("d-flex align-center flex-wrap"),
+		h.Div(invertBtn).Class("ms-auto"),
+	).Class("d-flex align-center justify-space-between mb-3")
 
 	var panels h.HTMLComponents
 	var open []string
