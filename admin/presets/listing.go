@@ -1414,6 +1414,12 @@ func (b *ListingBuilder) updateListingDialog(ctx *web.EventContext) (r web.Event
 		UpdatePortal(
 			lcb.portals.DataTableAdditions(),
 			dataTableAdditions,
+		).
+		// Refresh the top-right actions too, so bulk-action buttons pick up the
+		// current selected_ids (their click carries the selection).
+		UpdatePortal(
+			lcb.portals.Actions(),
+			lcb.actionsComponent(MustGetMessages(ctx.Context()), ctx, true),
 		)
 	r.RunScript = fmt.Sprintf(`presetsListing.loader.parseUrl(%q)`, ctx.R.RequestURI)
 	return

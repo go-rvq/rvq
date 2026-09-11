@@ -49,6 +49,13 @@ func (p *ListingPortals) DataTableAdditions() string {
 	return p.DataTable() + "Additions"
 }
 
+// Actions is the portal holding the listing's top-right actions (bulk-action
+// buttons included). It is refreshed on selection changes in a dialog so those
+// buttons carry the current selected_ids.
+func (p *ListingPortals) Actions() string {
+	return p.New("Actions")
+}
+
 func (p *ListingPortals) Temp() string {
 	return p.New("Temp")
 }

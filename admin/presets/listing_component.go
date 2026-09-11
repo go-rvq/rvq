@@ -153,6 +153,12 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 	if !inDialog {
 		WithActionsComponent(ctx, actionsComponent)
+	} else {
+		// In a dialog, the top-right actions hold the bulk-action buttons, whose
+		// click carries the selected_ids. Selection changes go through
+		// updateListingDialog, which re-renders this portal so those buttons pick
+		// up the current selection (otherwise they keep the initial, empty one).
+		actionsComponent = web.Portal(actionsComponent).Name(lcb.portals.Actions())
 	}
 
 	var filterBar h.HTMLComponent
