@@ -122,12 +122,26 @@ func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 func (mh *ModelHistory) detailComponent(obj any, recordKey, field string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
 	pctx := detailRequestCtx(ctx, mh.mb.Info().DetailingHref(recordKey))
 	fb := mh.mb.Detailing().FieldsBuilder
+	// Show only the versioned fields (a single one when scoped by ?field=). The
+	// full detailing carries context-heavy, non-versioned components (publish bar,
+	// locale links, nested resources) that make no sense for a reconstructed
+	// revision and can break the compare dialog's render.
 	if field != "" {
 		fb = *fb.Only(field)
+	} else {
+		fb = *fb.Only(anySlice(mh.resolved)...)
 	}
 	comp := fb.ToComponent(
 		&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, pctx)
 	return comp, pctx
+}
+
+func anySlice(ss []string) []any {
+	r := make([]any, len(ss))
+	for i, s := range ss {
+		r[i] = s
+	}
+	return r
 }
 
 // detailRequestCtx clones ctx with the request URL set to detailPath.
