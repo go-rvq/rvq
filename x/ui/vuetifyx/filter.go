@@ -424,7 +424,7 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 						it.Modifier = ModifierEquals
 					}
 
-					if it.ItemType == ItemTypeMultipleSelect {
+					if it.ItemType == ItemTypeMultipleSelect || it.ItemType == ItemTypeTreeSelect {
 						switch mod {
 						case "in":
 							it.Modifier = ModifierIn
