@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
 
 	htmldiff "github.com/documize/html-diff"
 	h "github.com/go-rvq/htmlgo"
@@ -24,13 +27,12 @@ var htmlDiffConfig = &htmldiff.Config{
 	CleanTags:    []string{},
 }
 
-// compare renders the record at revision aHash (OLD, left) and bHash (NEW,
-// right). Text/HTML fields go through the historized model's DetailingBuilder;
-// structured fields (a struct, foreign key, slice, …) render a readable JSON
-// summary instead — their detail components are interactive Vue widgets (media
-// box, nested sub-resource) that do not survive being injected as diff HTML. A
-// top toggle reveals a MERGED column with the visual diff (documize/html-diff)
-// of the text/HTML side.
+// compare shows the differences between revision aHash (OLD) and bHash (NEW),
+// one collapsible panel per CHANGED field (unchanged fields are omitted). Each
+// panel shows OLD (removals highlighted red) beside NEW (additions highlighted
+// green): text/HTML fields through the model's DetailingBuilder with
+// documize/html-diff, structured fields (struct, foreign key, slice) as a
+// readable JSON summary.
 func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
 	revA, err := mh.Revision(recordKey, aHash)
 	if err != nil {
@@ -57,46 +59,80 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 		return nil, err
 	}
 
-	// ?field= scopes to a single field; otherwise all versioned fields, split
-	// into text/HTML (DetailBuilder) and structured (JSON summary).
-	simple, structured := mh.splitFields(fieldParam(ctx))
-
-	oldHTML, err := mh.detailHTML(oldObj, recordKey, simple, ctx)
-	if err != nil {
-		return nil, err
-	}
-	newHTML, err := mh.detailHTML(newObj, recordKey, simple, ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	merged := newHTML
-	if len(simple) > 0 {
-		if diffs, derr := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); derr == nil && len(diffs) > 0 {
-			merged = diffs[len(diffs)-1]
-		}
-	}
-
 	msgr := getMessages(ctx.Context())
 
-	return web.Scope(
-		h.Div(
-			h.Div(
-				v.VBtn(msgr.Merged).
-					PrependIcon("mdi-vector-difference").
-					Variant(v.VariantTonal).Size(v.SizeSmall).
-					Attr("@click", "locals.showMerged = !locals.showMerged"),
-			).Class("d-flex justify-end mb-2"),
-			h.Div(
-				diffColumn(msgr.Old, revA, oldHTML, structuredRows(am, structured), msgr),
-				diffColumn(msgr.New, revB, newHTML, structuredRows(bm, structured), msgr),
-				h.Div(diffColumn(msgr.Merged, revB, merged, structuredDiffRows(am, bm, structured, msgr), msgr)).
-					Attr("v-if", "locals.showMerged").
-					Class("flex-1-1-0 ps-3").
-					Style("border-left:1px solid rgba(0,0,0,.12)"),
-			).Class("d-flex align-start"),
-		),
-	).LocalsInit("{ showMerged: false }"), nil
+	// ?field= scopes to a single field; otherwise every versioned field. Only the
+	// ones that actually changed between the two revisions are shown.
+	fields := mh.resolved
+	if only := fieldParam(ctx); only != "" {
+		fields = []string{only}
+	}
+
+	head := h.Div(
+		revInfoHeader(revA, msgr),
+		h.Span(" → ").Class("mx-2 text-medium-emphasis"),
+		revInfoHeader(revB, msgr),
+	).Class("d-flex align-center flex-wrap mb-3")
+
+	var panels h.HTMLComponents
+	var open []string
+	for _, f := range fields {
+		if string(am[f]) == string(bm[f]) {
+			continue // unchanged — omit
+		}
+		panels = append(panels, mh.fieldPanel(f, oldObj, newObj, am, bm, recordKey, ctx, msgr))
+		open = append(open, strconv.Itoa(len(panels)-1))
+	}
+
+	if len(panels) == 0 {
+		return h.Div(head, v.VAlert(h.Text(msgr.NoChanges)).
+			Type("info").Variant(v.VariantTonal).Density(v.DensityComfortable)), nil
+	}
+
+	// Open every changed field by default; each can be collapsed/expanded.
+	return h.Div(
+		head,
+		v.VExpansionPanels(panels...).
+			Attr("multiple", true).
+			Attr(":model-value", "["+strings.Join(open, ",")+"]"),
+	), nil
+}
+
+// fieldPanel is one collapsible field diff. A text/HTML field shows a single
+// merged view with removals highlighted red and additions green
+// (documize/html-diff returns one merged result, not one per version). A
+// structured field shows its before/after JSON side by side.
+func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, ctx *web.EventContext, msgr *Messages) h.HTMLComponent {
+	var content h.HTMLComponent
+	if mh.fieldIsSimple(f) {
+		oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
+		newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
+		// The detail render wraps the value in form scaffold (hidden inputs with
+		// Vue directives) that carries no content and breaks html-diff's HTML
+		// parser — strip it so the diff is computed on the clean content.
+		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
+		merged := newHTML
+		if diffs, err := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); err == nil && len(diffs) > 0 {
+			merged = diffs[0]
+		}
+		content = h.Div(h.RawHTML(merged)).Class("pa-1")
+	} else {
+		side := func(label string, body h.HTMLComponent, cls string) *h.HTMLTagBuilder {
+			return h.Div(
+				h.Div(h.Strong(label)).Class("text-caption text-medium-emphasis mb-1"),
+				body,
+			).Class("flex-1-1-0 " + cls)
+		}
+		content = h.Div(
+			side(msgr.Old, jsonBlock(prettyJSON(am[f])), "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
+			side(msgr.New, jsonBlock(prettyJSON(bm[f])), "ps-2"),
+		).Class("d-flex align-start")
+	}
+
+	return v.VExpansionPanel(
+		v.VExpansionPanelTitle().Children(h.Strong(f)),
+		v.VExpansionPanelText().Children(content),
+	)
 }
 
 // splitFields separates the fields to compare into text/HTML (rendered through
@@ -131,17 +167,6 @@ func (mh *ModelHistory) fieldIsSimple(field string) bool {
 	return ft.Kind() == reflect.String
 }
 
-// diffColumn is one side of the comparison: a title, the revision-info header,
-// the rendered text/HTML detail and the structured-field summary.
-func diffColumn(title string, rev *histmodels.Revision, html string, structured h.HTMLComponent, msgr *Messages) h.HTMLComponent {
-	return h.Div(
-		h.Div(h.Strong(title)).Class("text-subtitle-2 mb-1"),
-		revInfoHeader(rev, msgr),
-		h.Div(h.RawHTML(html)).Class("pa-2 mt-2"),
-		structured,
-	).Class("flex-1-1-0 px-2")
-}
-
 // structuredRows renders each structured field's value as a readable JSON block.
 func structuredRows(m map[string]json.RawMessage, fields []string) h.HTMLComponent {
 	if len(fields) == 0 {
@@ -157,31 +182,12 @@ func structuredRows(m map[string]json.RawMessage, fields []string) h.HTMLCompone
 	return h.Div(rows...).Class("mt-2")
 }
 
-// structuredDiffRows renders the structured fields for the merged view: an
-// unchanged field is just its label, struck through; a changed one shows the
-// before and after JSON.
-func structuredDiffRows(am, bm map[string]json.RawMessage, fields []string, msgr *Messages) h.HTMLComponent {
-	if len(fields) == 0 {
-		return h.Div()
-	}
-	var rows h.HTMLComponents
-	for _, f := range fields {
-		ov, nv := string(am[f]), string(bm[f])
-		if ov == nv {
-			rows = append(rows, h.Div(
-				h.Span(f).Style("text-decoration: line-through"),
-				h.Span(" "+msgr.Unchanged).Class("text-medium-emphasis text-caption ms-1"),
-			).Class("mb-1"))
-			continue
-		}
-		rows = append(rows, h.Div(
-			h.Div(h.Strong(f)).Class("text-caption text-medium-emphasis"),
-			h.Div(h.Strong(msgr.Old+": "), jsonBlock(prettyJSON(am[f]))),
-			h.Div(h.Strong(msgr.New+": "), jsonBlock(prettyJSON(bm[f]))),
-		).Class("mb-2"))
-	}
-	return h.Div(rows...).Class("mt-2")
-}
+// scaffoldRe matches the hidden form inputs the detail render emits around a
+// field's value (Vue directives, no content).
+var scaffoldRe = regexp.MustCompile(`(?s)<input\b[^>]*>`)
+
+// stripScaffold removes those hidden inputs, leaving the field's clean content.
+func stripScaffold(s string) string { return scaffoldRe.ReplaceAllString(s, "") }
 
 func jsonBlock(s string) h.HTMLComponent {
 	return h.Pre(s).Class("text-caption pa-1").
