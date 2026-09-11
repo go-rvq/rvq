@@ -111,6 +111,8 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 	)
 
 	if sd, _ := s.Model().(SlugDecoder); sd != nil {
+		// Resolve the decoder's parts (it names them freely) to schema fields.
+		byField := make(map[string]string, len(s.PrimaryFields()))
 		for fieldName, value := range sd.PrimaryColumnValuesBySlug(v) {
 			// the decoder names its parts freely; an unknown one is an error, not
 			// an index panic
@@ -118,8 +120,18 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 			if len(f) == 0 {
 				return id, fmt.Errorf("slug %q refers to unknown field %q", v, fieldName)
 			}
-			fields = append(fields, f[0])
-			parts = append(parts, value)
+			byField[f[0].Name()] = value
+		}
+		// Emit the fields/values in the schema's primary-key order — NOT the map's
+		// random iteration order — so the resulting ID and its String() are stable
+		// and match MustRecordID().String(). Otherwise a composite slug like
+		// "2_en-US" could round-trip to "en-US_2", and re-decoding that would feed
+		// "en-US" to the uint ID field (strconv.ParseUint: invalid syntax).
+		for _, pf := range s.PrimaryFields() {
+			if value, ok := byField[pf.Name()]; ok {
+				fields = append(fields, pf)
+				parts = append(parts, value)
+			}
 		}
 	} else {
 		parts = strings.Split(v, "_")
