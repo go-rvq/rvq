@@ -231,6 +231,9 @@ func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 // the wrong route.
 func (mh *ModelHistory) detailComponent(obj any, recordKey string, fields []string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
 	pctx := detailRequestCtx(ctx, mh.mb.Info().DetailingHref(recordKey))
+	// Tell field detail components they are rendering a diff, so e.g. the TipTap
+	// field emits plain HTML instead of its interactive editor.
+	presets.SetDiff(pctx)
 	if len(fields) == 0 {
 		return h.Div(), pctx
 	}

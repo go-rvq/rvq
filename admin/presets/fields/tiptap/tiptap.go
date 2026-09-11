@@ -109,6 +109,24 @@ func (b *Builder) DetailComponentFunc(field *presets.FieldContext, ctx *web.Even
 		return nil
 	}
 
+	if b.wrapReadonlyValue != nil {
+		var err error
+		if value, err = b.wrapReadonlyValue(field, value); err != nil {
+			panic(err)
+		}
+	}
+
+	// In a diff/comparison, render the content as plain HTML instead of the
+	// interactive TipTap editor: the editor is a Vue widget that does not survive
+	// being injected as diff markup, and a visual diff wants the raw HTML anyway.
+	if presets.IsDiff(ctx) {
+		r = h.Div(h.RawHTML(value)).Class(web.StdContentClass)
+		if b.wrapComp != nil {
+			r = b.wrapComp(field, r)
+		}
+		return r
+	}
+
 	var (
 		comp = vx.VXTipTapEditor().
 			Label(field.Label).
@@ -126,13 +144,6 @@ func (b *Builder) DetailComponentFunc(field *presets.FieldContext, ctx *web.Even
 		defer func() {
 			r = b.wrapComp(field, r)
 		}()
-	}
-
-	if b.wrapReadonlyValue != nil {
-		var err error
-		if value, err = b.wrapReadonlyValue(field, value); err != nil {
-			panic(err)
-		}
 	}
 
 	comp = comp.Attr("model-value", value)

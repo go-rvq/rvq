@@ -33,7 +33,22 @@ const (
 	parentsRecordKey
 	CtxEventHandlerWrapperNoFlash
 	CtxSkipAutoBreadcrumb
+	ctxDiffMode
 )
+
+// SetDiff marks ctx as rendering a diff/comparison. A field's detail
+// ComponentFunc can then produce plain, diff-friendly HTML/text (readable and
+// safe to run through a visual diff) instead of an interactive widget. See
+// IsDiff.
+func SetDiff(ctx *web.EventContext) {
+	ctx.WithContextValue(ctxDiffMode, true)
+}
+
+// IsDiff reports whether ctx is rendering a diff/comparison (see SetDiff).
+func IsDiff(ctx *web.EventContext) bool {
+	v, _ := ctx.ContextValue(ctxDiffMode).(bool)
+	return v
+}
 
 func IsInDialog(ctx *web.EventContext) bool {
 	return actions.OverlayMode(ctx.R.FormValue(ParamOverlay)).IsDialog()
