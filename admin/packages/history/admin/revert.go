@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/go-rvq/rvq/web"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -79,24 +80,47 @@ func (h *ModelHistory) RevertFieldPartial(obj any, field, patchText string, ctx 
 }
 
 // setFieldFromJSON sets obj.field from the field's JSON snapshot value,
-// unmarshaling into the field's own Go type.
+// unmarshaling into the field's own Go type (taken from the struct, so a struct
+// or foreign-key field is rebuilt as itself — not left as the generic
+// map[string]any that a plain unmarshal into `any` would give, which is not
+// assignable to e.g. models.PageOptions).
 func setFieldFromJSON(obj any, field string, raw json.RawMessage) error {
-	cur, err := reflectutils.Get(obj, field)
-	if err != nil {
-		return err
-	}
-	if cur == nil {
+	ft, ok := structFieldType(obj, field)
+	if !ok {
+		// Not a struct field we can type (virtual/dotted): best-effort into any.
 		var v any
 		if err := json.Unmarshal(raw, &v); err != nil {
 			return err
 		}
 		return reflectutils.Set(obj, field, v)
 	}
-	ptr := reflect.New(reflect.TypeOf(cur))
+	ptr := reflect.New(ft)
 	if err := json.Unmarshal(raw, ptr.Interface()); err != nil {
 		return err
 	}
 	return reflectutils.Set(obj, field, ptr.Elem().Interface())
+}
+
+// structFieldType returns the reflect.Type of obj's field (following pointers
+// and promoted embedded fields), even when the field's current value is nil. It
+// walks a dotted path so a nested struct field resolves too (e.g.
+// "PageOptions.Layout").
+func structFieldType(obj any, field string) (reflect.Type, bool) {
+	t := reflect.TypeOf(obj)
+	for _, name := range strings.Split(field, ".") {
+		for t != nil && t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		if t == nil || t.Kind() != reflect.Struct {
+			return nil, false
+		}
+		sf, ok := t.FieldByName(name)
+		if !ok {
+			return nil, false
+		}
+		t = sf.Type
+	}
+	return t, true
 }
 
 // saveAndCapture persists the reverted record through the model's editing save
