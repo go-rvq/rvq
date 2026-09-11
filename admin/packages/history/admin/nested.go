@@ -225,7 +225,12 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 			return v.VAlert(h.Text(err.Error())).Type(v.TypeError).Variant(v.VariantTonal)
 		}
 		fieldName := fieldParam(ctx)
-		comp, _ := mh.detailComponent(obj, rev.RecordKey, fieldName, ctx)
+		// Text/HTML fields render through the detail; structured fields render a
+		// readable JSON summary (their interactive detail widgets don't belong in
+		// this reconstructed view).
+		simple, structured := mh.splitFields(fieldName)
+		comp, _ := mh.detailComponent(obj, rev.RecordKey, simple, ctx)
+		m, _ := fieldMap(rev)
 		msgr := getMessages(ctx.Context())
 		revertBtn := v.VBtn(msgr.Revert).
 			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
@@ -237,12 +242,12 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		out := h.HTMLComponents{
 			h.Div(revertBtn).Class("d-flex justify-end mb-3"),
 			comp,
+			structuredRows(m, structured),
 		}
 		// Scoped to a single partial-capable field: offer hunk-level revert
 		// against the live current value.
 		if fieldName != "" && mh.AcceptsPartial(fieldName) {
 			if cur, cerr := mh.currentRecord(rev.RecordKey); cerr == nil {
-				m, _ := fieldMap(rev)
 				out = append(out, mh.hunkSelectPanel(
 					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), ctx))
 			}

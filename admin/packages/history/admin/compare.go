@@ -2,7 +2,9 @@ package admin
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"reflect"
 
 	htmldiff "github.com/documize/html-diff"
 	h "github.com/go-rvq/htmlgo"
@@ -23,9 +25,12 @@ var htmlDiffConfig = &htmldiff.Config{
 }
 
 // compare renders the record at revision aHash (OLD, left) and bHash (NEW,
-// right), each through the historized model's own DetailingBuilder, with a
-// revision-info header on each. A top button reveals a third MERGED column (to
-// the right of NEW) with the visual diff of the two, via documize/html-diff.
+// right). Text/HTML fields go through the historized model's DetailingBuilder;
+// structured fields (a struct, foreign key, slice, …) render a readable JSON
+// summary instead — their detail components are interactive Vue widgets (media
+// box, nested sub-resource) that do not survive being injected as diff HTML. A
+// top toggle reveals a MERGED column with the visual diff (documize/html-diff)
+// of the text/HTML side.
 func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, ctx *web.EventContext) (h.HTMLComponent, error) {
 	revA, err := mh.Revision(recordKey, aHash)
 	if err != nil {
@@ -35,7 +40,6 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 	if err != nil {
 		return nil, err
 	}
-
 	oldObj, err := mh.applied(revA)
 	if err != nil {
 		return nil, err
@@ -44,22 +48,33 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 	if err != nil {
 		return nil, err
 	}
-
-	// When the revisions view is scoped to one field (?field=), compare only it.
-	field := fieldParam(ctx)
-
-	oldHTML, err := mh.detailHTML(oldObj, recordKey, field, ctx)
+	am, err := fieldMap(revA)
 	if err != nil {
 		return nil, err
 	}
-	newHTML, err := mh.detailHTML(newObj, recordKey, field, ctx)
+	bm, err := fieldMap(revB)
+	if err != nil {
+		return nil, err
+	}
+
+	// ?field= scopes to a single field; otherwise all versioned fields, split
+	// into text/HTML (DetailBuilder) and structured (JSON summary).
+	simple, structured := mh.splitFields(fieldParam(ctx))
+
+	oldHTML, err := mh.detailHTML(oldObj, recordKey, simple, ctx)
+	if err != nil {
+		return nil, err
+	}
+	newHTML, err := mh.detailHTML(newObj, recordKey, simple, ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	merged := newHTML
-	if diffs, derr := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); derr == nil && len(diffs) > 0 {
-		merged = diffs[len(diffs)-1]
+	if len(simple) > 0 {
+		if diffs, derr := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); derr == nil && len(diffs) > 0 {
+			merged = diffs[len(diffs)-1]
+		}
 	}
 
 	msgr := getMessages(ctx.Context())
@@ -73,9 +88,9 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 					Attr("@click", "locals.showMerged = !locals.showMerged"),
 			).Class("d-flex justify-end mb-2"),
 			h.Div(
-				diffColumn(msgr.Old, revA, oldHTML, msgr),
-				diffColumn(msgr.New, revB, newHTML, msgr),
-				h.Div(diffColumn(msgr.Merged, revB, merged, msgr)).
+				diffColumn(msgr.Old, revA, oldHTML, structuredRows(am, structured), msgr),
+				diffColumn(msgr.New, revB, newHTML, structuredRows(bm, structured), msgr),
+				h.Div(diffColumn(msgr.Merged, revB, merged, structuredDiffRows(am, bm, structured, msgr), msgr)).
 					Attr("v-if", "locals.showMerged").
 					Class("flex-1-1-0 ps-3").
 					Style("border-left:1px solid rgba(0,0,0,.12)"),
@@ -84,14 +99,110 @@ func (mh *ModelHistory) compare(recordKey string, aHash, bHash histmodels.Hash, 
 	).LocalsInit("{ showMerged: false }"), nil
 }
 
-// diffColumn is one side of the comparison: a title, the revision-info header
-// (hash, time, author, status) and the rendered detail HTML.
-func diffColumn(title string, rev *histmodels.Revision, html string, msgr *Messages) h.HTMLComponent {
+// splitFields separates the fields to compare into text/HTML (rendered through
+// the DetailingBuilder) and structured (rendered as a JSON summary). With a
+// single field (?field=) it classifies just that one.
+func (mh *ModelHistory) splitFields(only string) (simple, structured []string) {
+	fields := mh.resolved
+	if only != "" {
+		fields = []string{only}
+	}
+	for _, f := range fields {
+		if mh.fieldIsSimple(f) {
+			simple = append(simple, f)
+		} else {
+			structured = append(structured, f)
+		}
+	}
+	return
+}
+
+// fieldIsSimple reports whether a field's value is a plain string (text or HTML)
+// — the kind the detail render handles cleanly. Everything else (struct, slice,
+// map, foreign key) is "structured".
+func (mh *ModelHistory) fieldIsSimple(field string) bool {
+	ft, ok := structFieldType(mh.mb.NewModel(), field)
+	if !ok {
+		return true
+	}
+	for ft.Kind() == reflect.Ptr {
+		ft = ft.Elem()
+	}
+	return ft.Kind() == reflect.String
+}
+
+// diffColumn is one side of the comparison: a title, the revision-info header,
+// the rendered text/HTML detail and the structured-field summary.
+func diffColumn(title string, rev *histmodels.Revision, html string, structured h.HTMLComponent, msgr *Messages) h.HTMLComponent {
 	return h.Div(
 		h.Div(h.Strong(title)).Class("text-subtitle-2 mb-1"),
 		revInfoHeader(rev, msgr),
 		h.Div(h.RawHTML(html)).Class("pa-2 mt-2"),
+		structured,
 	).Class("flex-1-1-0 px-2")
+}
+
+// structuredRows renders each structured field's value as a readable JSON block.
+func structuredRows(m map[string]json.RawMessage, fields []string) h.HTMLComponent {
+	if len(fields) == 0 {
+		return h.Div()
+	}
+	var rows h.HTMLComponents
+	for _, f := range fields {
+		rows = append(rows, h.Div(
+			h.Div(h.Strong(f)).Class("text-caption text-medium-emphasis"),
+			jsonBlock(prettyJSON(m[f])),
+		).Class("mb-2"))
+	}
+	return h.Div(rows...).Class("mt-2")
+}
+
+// structuredDiffRows renders the structured fields for the merged view: an
+// unchanged field is just its label, struck through; a changed one shows the
+// before and after JSON.
+func structuredDiffRows(am, bm map[string]json.RawMessage, fields []string, msgr *Messages) h.HTMLComponent {
+	if len(fields) == 0 {
+		return h.Div()
+	}
+	var rows h.HTMLComponents
+	for _, f := range fields {
+		ov, nv := string(am[f]), string(bm[f])
+		if ov == nv {
+			rows = append(rows, h.Div(
+				h.Span(f).Style("text-decoration: line-through"),
+				h.Span(" "+msgr.Unchanged).Class("text-medium-emphasis text-caption ms-1"),
+			).Class("mb-1"))
+			continue
+		}
+		rows = append(rows, h.Div(
+			h.Div(h.Strong(f)).Class("text-caption text-medium-emphasis"),
+			h.Div(h.Strong(msgr.Old+": "), jsonBlock(prettyJSON(am[f]))),
+			h.Div(h.Strong(msgr.New+": "), jsonBlock(prettyJSON(bm[f]))),
+		).Class("mb-2"))
+	}
+	return h.Div(rows...).Class("mt-2")
+}
+
+func jsonBlock(s string) h.HTMLComponent {
+	return h.Pre(s).Class("text-caption pa-1").
+		Style("white-space:pre-wrap;overflow-x:auto;background-color:rgba(0,0,0,.03);border-radius:4px")
+}
+
+// prettyJSON renders a snapshot value for reading: a JSON string is unquoted, an
+// object/array is indented, anything else is its raw form.
+func prettyJSON(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	var buf bytes.Buffer
+	if json.Indent(&buf, raw, "", "  ") == nil {
+		return buf.String()
+	}
+	return string(raw)
 }
 
 // revInfoHeader shows a revision's hash, time, author and status badges.
@@ -113,24 +224,17 @@ func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 	return h.Div(meta...).Class("text-caption d-flex align-center flex-wrap")
 }
 
-// detailComponent renders obj through the historized model's own
+// detailComponent renders obj's given fields through the historized model's own
 // DetailingBuilder. It renders as if the request were on the parent's detail
 // path (/…/posts/{id}) — the builder derives its URLs/events from the request
 // path, so rendering from the nested /…/revisions subpath would point them at
-// the wrong route. When field is non-empty, only that field is rendered
-// (the per-field history view).
-func (mh *ModelHistory) detailComponent(obj any, recordKey, field string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
+// the wrong route.
+func (mh *ModelHistory) detailComponent(obj any, recordKey string, fields []string, ctx *web.EventContext) (h.HTMLComponent, *web.EventContext) {
 	pctx := detailRequestCtx(ctx, mh.mb.Info().DetailingHref(recordKey))
-	fb := mh.mb.Detailing().FieldsBuilder
-	// Show only the versioned fields (a single one when scoped by ?field=). The
-	// full detailing carries context-heavy, non-versioned components (publish bar,
-	// locale links, nested resources) that make no sense for a reconstructed
-	// revision and can break the compare dialog's render.
-	if field != "" {
-		fb = *fb.Only(field)
-	} else {
-		fb = *fb.Only(anySlice(mh.resolved)...)
+	if len(fields) == 0 {
+		return h.Div(), pctx
 	}
+	fb := *mh.mb.Detailing().FieldsBuilder.Only(anySlice(fields)...)
 	comp := fb.ToComponent(
 		&presets.ToComponentOptions{}, mh.mb.Info(), obj, presets.FieldModeStack{presets.DETAIL}, pctx)
 	return comp, pctx
@@ -156,10 +260,13 @@ func detailRequestCtx(ctx *web.EventContext, detailPath string) *web.EventContex
 	return &c
 }
 
-// detailHTML renders obj's detail to an HTML string (the input to the visual
-// diff). When field is non-empty, only that field is rendered.
-func (mh *ModelHistory) detailHTML(obj any, recordKey, field string, ctx *web.EventContext) (string, error) {
-	comp, pctx := mh.detailComponent(obj, recordKey, field, ctx)
+// detailHTML renders obj's given (text/HTML) fields to an HTML string — the
+// input to the visual diff. Empty when there are no such fields.
+func (mh *ModelHistory) detailHTML(obj any, recordKey string, fields []string, ctx *web.EventContext) (string, error) {
+	if len(fields) == 0 {
+		return "", nil
+	}
+	comp, pctx := mh.detailComponent(obj, recordKey, fields, ctx)
 	var buf bytes.Buffer
 	// Render with the EventContext in the context: detail field components (e.g. a
 	// media box, QMediaBoxBuilder.Write) look it up via web.MustGetEventContext,
