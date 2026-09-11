@@ -118,9 +118,9 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 	}
 
 	// Invert swaps OLD and NEW: re-render the portal with a/b exchanged.
-	invertBtn := v.VBtn(msgr.Invert).
-		PrependIcon("mdi-swap-horizontal").
+	invertBtn := v.VBtn("").Icon("mdi-swap-horizontal").
 		Variant(v.VariantTonal).Size(v.SizeSmall).
+		Attr("title", msgr.Invert).
 		Attr("@click", web.Plaid().
 			EventFunc(mh.compareEventName()).
 			Query("record", recordKey).
@@ -129,9 +129,9 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 			Go())
 
 	// Merged toggles each field between OLD | NEW and a single merged diff.
-	mergedBtn := v.VBtn(msgr.Merged).
-		PrependIcon("mdi-vector-difference").
+	mergedBtn := v.VBtn("").Icon("mdi-vector-difference").
 		Variant(v.VariantTonal).Size(v.SizeSmall).Class("me-2").
+		Attr("title", msgr.Merged).
 		Attr("@click", "locals.showMerged = !locals.showMerged")
 
 	head := h.Div(

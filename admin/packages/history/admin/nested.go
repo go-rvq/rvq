@@ -29,6 +29,7 @@ func (mh *ModelHistory) installChild() {
 	// conflicting. AddChild registers it under the parent only.
 	child := presets.NewModelBuilder(b, &histmodels.Revision{}, presets.ModelWithID(mh.table))
 	child.URIName("revisions")
+	child.MenuIcon("mdi-history")
 
 	// One Revision Go type is mapped to every model's own <table>_revisions: force
 	// the table on each query, and scope reads to the parent record from the path.
@@ -170,9 +171,17 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 
 	msgr := func(ctx *web.EventContext) *Messages { return getMessages(ctx.Context()) }
 
-	// Two selected → field-by-field diff between them.
+	// Two selected → field-by-field diff between them. Icon-only trigger, its
+	// label as the tooltip.
 	l.BulkAction("Diff").
+		Icon("mdi-compare").
 		SetI18nLabel(func(c context.Context) string { return getMessages(c).Compare }).
+		ButtonCompFunc(func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
+			return v.VBtn("").Icon("mdi-compare").
+				Color(v.ColorSecondary).Variant(v.VariantFlat).Density(v.DensityComfortable).Class("ml-2").
+				Attr("title", title()).
+				Attr("@click", onclick.Go())
+		}).
 		ComponentFunc(func(selectedIds []string, ctx *web.EventContext) (h.HTMLComponent, error) {
 			if len(selectedIds) != 2 {
 				return v.VAlert(h.Text(msgr(ctx).SelectTwoHint)).Type("warning").Variant(v.VariantTonal), nil
