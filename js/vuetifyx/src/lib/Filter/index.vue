@@ -11,6 +11,7 @@ import StringItem from '@/lib/Filter/components/StringItem.vue'
 import LinkageSelectItem from '@/lib/Filter/components/LinkageSelectItem.vue'
 import MultipleSelectItem from '@/lib/Filter/components/MultipleSelectItem.vue'
 import SelectItem from '@/lib/Filter/components/SelectItem.vue'
+import TreeSelectItem from '@/lib/Filter/components/TreeSelectItem.vue'
 import MonthRangeItem from '@/lib/Filter/components/MonthRangeItem.vue'
 import MonthItem from '@/lib/Filter/components/MonthItem.vue'
 
@@ -65,7 +66,8 @@ const itemTypes: any = {
   StringItem,
   LinkageSelectItem,
   MultipleSelectItem,
-  SelectItem
+  SelectItem,
+  TreeSelectItem
 }
 
 const trans: any = {

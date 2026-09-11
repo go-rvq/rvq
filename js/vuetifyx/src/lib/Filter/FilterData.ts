@@ -178,7 +178,7 @@ export function filterData(data: any): any {
       if (op.itemType === 'SelectItem') {
         pushSelectItem(r, op)
       }
-      if (op.itemType === 'MultipleSelectItem') {
+      if (op.itemType === 'MultipleSelectItem' || op.itemType === 'TreeSelectItem') {
         pushMultipleSelectItem(r, op)
       }
       if (op.itemType === 'LinkageSelectItem') {

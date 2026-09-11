@@ -167,7 +167,7 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 			{
 				Key:      "field",
 				Label:    getMessages(ctx.Context()).Field,
-				ItemType: vx.ItemTypeMultipleSelect,
+				ItemType: vx.ItemTypeTreeSelect,
 				Options:  opts,
 				SQLConditionFunc: func(val, mod string) (bool, string, []any) {
 					return false, "", nil // filtered in the read callback

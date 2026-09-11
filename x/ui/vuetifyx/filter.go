@@ -142,6 +142,10 @@ const (
 	ItemTypeLinkageSelect  FilterItemType = "LinkageSelectItem"
 	ItemTypeNumber         FilterItemType = "NumberItem"
 	ItemTypeString         FilterItemType = "StringItem"
+	// ItemTypeTreeSelect is a tree of checkbox-selectable options. The options
+	// are flat paths (e.g. "PageOptions.Layout", "Tags[0].Name"); the component
+	// builds the tree from them. The selected values are the chosen paths.
+	ItemTypeTreeSelect FilterItemType = "TreeSelectItem"
 )
 
 type FilterItemModifier string

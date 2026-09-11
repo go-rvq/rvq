@@ -396,15 +396,19 @@ func (mh *ModelHistory) detailHTML(obj any, recordKey string, fields []string, c
 	return buf.String(), nil
 }
 
-// fieldsParam is the ?field= query — the fields the revisions view is scoped to
-// (comma-separated, may include nested paths like "PageOptions.Layout"). Empty
-// means the whole record.
+// fieldsParam is the fields the revisions view is scoped to. It reads the
+// "field" filter, whose value carries comma-separated paths (possibly nested,
+// like "PageOptions.Layout") under "field", "field.in" or "field.notIn"
+// depending on how the filter serialized it. Empty means the whole record.
 func fieldsParam(ctx *web.EventContext) []string {
+	_ = ctx.R.ParseForm()
 	var out []string
-	for _, raw := range ctx.R.Form["field"] {
-		for _, f := range strings.Split(raw, ",") {
-			if f = strings.TrimSpace(f); f != "" {
-				out = append(out, f)
+	for _, key := range []string{"field", "field.in", "field.notIn"} {
+		for _, raw := range ctx.R.Form[key] {
+			for _, f := range strings.Split(raw, ",") {
+				if f = strings.TrimSpace(f); f != "" {
+					out = append(out, f)
+				}
 			}
 		}
 	}
