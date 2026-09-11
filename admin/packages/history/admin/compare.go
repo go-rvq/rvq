@@ -147,7 +147,11 @@ func detailRequestCtx(ctx *web.EventContext, detailPath string) *web.EventContex
 func (mh *ModelHistory) detailHTML(obj any, recordKey, field string, ctx *web.EventContext) (string, error) {
 	comp, pctx := mh.detailComponent(obj, recordKey, field, ctx)
 	var buf bytes.Buffer
-	if err := h.Fprint(&buf, comp, pctx.Context()); err != nil {
+	// Render with the EventContext in the context: detail field components (e.g. a
+	// media box, QMediaBoxBuilder.Write) look it up via web.MustGetEventContext,
+	// which panics ("EventContext required") when it is missing.
+	c := web.ContextWithEventContext(pctx.Context(), pctx)
+	if err := h.Fprint(&buf, comp, c); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
