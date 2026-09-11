@@ -20,7 +20,11 @@ import (
 func (mh *ModelHistory) installChild() {
 	b := mh.mb.Builder()
 
-	child := b.Model(&histmodels.Revision{}, presets.ModelWithID(mh.table))
+	// NewModelBuilder (not b.Model): a child must NOT join the builder's
+	// top-level models, or its nested routes would be set up twice — once by the
+	// top-level loop and once by the parent (which registers its children),
+	// conflicting. AddChild registers it under the parent only.
+	child := presets.NewModelBuilder(b, &histmodels.Revision{}, presets.ModelWithID(mh.table))
 	child.URIName("revisions")
 
 	// One Revision Go type is mapped to every model's own <table>_revisions: force
