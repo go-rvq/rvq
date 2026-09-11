@@ -128,13 +128,19 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 			Query("b", aHash.String()).
 			Go())
 
+	// Merged toggles each field between OLD | NEW and a single merged diff.
+	mergedBtn := v.VBtn(msgr.Merged).
+		PrependIcon("mdi-vector-difference").
+		Variant(v.VariantTonal).Size(v.SizeSmall).Class("me-2").
+		Attr("@click", "locals.showMerged = !locals.showMerged")
+
 	head := h.Div(
 		h.Div(
 			revInfoHeader(revA, msgr),
 			h.Span(" → ").Class("mx-2 text-medium-emphasis"),
 			revInfoHeader(revB, msgr),
 		).Class("d-flex align-center flex-wrap"),
-		h.Div(invertBtn).Class("ms-auto"),
+		h.Div(mergedBtn, invertBtn).Class("ms-auto d-flex align-center"),
 	).Class("d-flex align-center justify-space-between mb-3")
 
 	var panels h.HTMLComponents
@@ -152,13 +158,16 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 			Type("info").Variant(v.VariantTonal).Density(v.DensityComfortable)), nil
 	}
 
-	// Open every changed field by default; each can be collapsed/expanded.
-	return h.Div(
-		head,
-		v.VExpansionPanels(panels...).
-			Attr("multiple", true).
-			Attr(":model-value", "["+strings.Join(open, ",")+"]"),
-	), nil
+	// The scope holds showMerged (the merged-view toggle); open every changed
+	// field by default, each collapsible.
+	return web.Scope(
+		h.Div(
+			head,
+			v.VExpansionPanels(panels...).
+				Attr("multiple", true).
+				Attr(":model-value", "["+strings.Join(open, ",")+"]"),
+		),
+	).LocalsInit("{ showMerged: false }"), nil
 }
 
 // fieldPanel is one collapsible field diff: OLD and NEW side by side, plus — for
@@ -173,7 +182,7 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		).Class("flex-1-1-0 " + cls)
 	}
 
-	var oldC, newC h.HTMLComponent
+	var oldC, newC, mergedC h.HTMLComponent
 	if mh.fieldIsSimple(f) {
 		oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
 		newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
@@ -183,23 +192,30 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
 		oldC, newC = h.RawHTML(oldHTML), h.RawHTML(newHTML)
 		// documize/html-diff returns one merged result (common text + <del> +
-		// <ins>). Project it: OLD keeps deletions (red), NEW keeps insertions
-		// (green).
+		// <ins>). The merged view shows it whole (red removals + green additions);
+		// OLD keeps deletions (red), NEW keeps insertions (green).
 		if diffs, err := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); err == nil && len(diffs) > 0 {
 			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
+			mergedC = h.RawHTML(diffs[0])
 		}
 	} else {
 		oldC, newC = jsonBlock(prettyJSON(am[f])), jsonBlock(prettyJSON(bm[f]))
 	}
 
+	children := h.HTMLComponents{
+		// OLD | NEW, hidden while the merged view is shown.
+		h.Div(
+			side(msgr.Old, oldC, "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
+			side(msgr.New, newC, "ps-2"),
+		).Class("d-flex align-start").Attr("v-if", "!locals.showMerged"),
+	}
+	if mergedC != nil {
+		children = append(children, h.Div(mergedC).Class("pa-1").Attr("v-if", "locals.showMerged"))
+	}
+
 	return v.VExpansionPanel(
 		v.VExpansionPanelTitle().Children(h.Strong(f)),
-		v.VExpansionPanelText().Children(
-			h.Div(
-				side(msgr.Old, oldC, "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
-				side(msgr.New, newC, "ps-2"),
-			).Class("d-flex align-start"),
-		),
+		v.VExpansionPanelText().Children(children...),
 	)
 }
 
