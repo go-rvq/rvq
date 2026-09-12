@@ -85,20 +85,69 @@ func (h *ModelHistory) RevertFieldPartial(obj any, field, patchText string, ctx 
 // map[string]any that a plain unmarshal into `any` would give, which is not
 // assignable to e.g. models.PageOptions).
 func setFieldFromJSON(obj any, field string, raw json.RawMessage) error {
-	ft, ok := structFieldType(obj, field)
+	fv, ok := settableFieldValue(obj, field)
 	if !ok {
-		// Not a struct field we can type (virtual/dotted): best-effort into any.
-		var v any
-		if err := json.Unmarshal(raw, &v); err != nil {
+		// Not a resolvable struct field (virtual/dotted): best-effort via reflectutils.
+		ft, typed := structFieldType(obj, field)
+		if !typed {
+			var v any
+			if err := json.Unmarshal(raw, &v); err != nil {
+				return err
+			}
+			return reflectutils.Set(obj, field, v)
+		}
+		ptr := reflect.New(ft)
+		if err := json.Unmarshal(raw, ptr.Interface()); err != nil {
 			return err
 		}
-		return reflectutils.Set(obj, field, v)
+		return reflectutils.Set(obj, field, ptr.Elem().Interface())
 	}
-	ptr := reflect.New(ft)
+	// Unmarshal into the field's own type and assign through the addressable,
+	// settable reflect.Value — this handles a promoted pointer field (e.g.
+	// Page.PageOptions *PageOptions via an embedded struct), which reflectutils
+	// cannot set ("reflect.Value.Set on zero Value").
+	ptr := reflect.New(fv.Type())
 	if err := json.Unmarshal(raw, ptr.Interface()); err != nil {
 		return err
 	}
-	return reflectutils.Set(obj, field, ptr.Elem().Interface())
+	fv.Set(ptr.Elem())
+	return nil
+}
+
+// settableFieldValue resolves the addressable, settable reflect.Value of obj's
+// field, walking a dotted path, following pointers (allocating a nil one so a
+// nested field can be set) and promoted embedded fields. Returns ok=false when
+// the path can't be resolved to a settable field.
+func settableFieldValue(obj any, field string) (reflect.Value, bool) {
+	v := reflect.ValueOf(obj)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return reflect.Value{}, false
+	}
+	v = v.Elem()
+	parts := strings.Split(field, ".")
+	for i, name := range parts {
+		for v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				if !v.CanSet() {
+					return reflect.Value{}, false
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			v = v.Elem()
+		}
+		if v.Kind() != reflect.Struct {
+			return reflect.Value{}, false
+		}
+		fv := v.FieldByName(name)
+		if !fv.IsValid() || !fv.CanSet() {
+			return reflect.Value{}, false
+		}
+		if i == len(parts)-1 {
+			return fv, true
+		}
+		v = fv
+	}
+	return reflect.Value{}, false
 }
 
 // structFieldType returns the reflect.Type of obj's field (following pointers

@@ -128,7 +128,7 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 		SetI18nLabel(func(c context.Context) string { return getMessages(c).Changes }).
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			rev := field.Obj.(*histmodels.Revision)
-			label := mh.ChangedFieldsLabel(rev)
+			label := mh.ChangedFieldsLabel(rev, ctx)
 			return h.Td(
 				web.Scope(
 					h.Div(h.Text(label)).

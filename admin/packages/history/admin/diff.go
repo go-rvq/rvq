@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
+	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -127,7 +129,7 @@ func fieldValue(m map[string]json.RawMessage, field string) string {
 // sub-fields is shown with those sub-fields (recursively) in brackets, computed
 // by comparing this revision's value against the parent's. The first revision
 // (no parent) lists the top-level fields only (everything is new).
-func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision) string {
+func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision, ctx *web.EventContext) string {
 	changed := map[string]bool{}
 	for _, f := range rev.ChangedFields.Data {
 		changed[f] = true
@@ -141,38 +143,48 @@ func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision) string {
 		}
 	}
 
+	// Translate each field/sub-field name through the model's field translator
+	// (keys <Model><Field>), falling back to the raw name when untranslated.
+	tr := h.mb.FieldTranslator()
+	label := func(name string) string {
+		if s := i18n.Translate(tr, ctx.Context(), name); s != "" && s != name {
+			return s
+		}
+		return name
+	}
+
 	var parts []string
 	for _, f := range h.resolved {
 		if !changed[f] {
 			continue
 		}
 		if parentMap == nil {
-			parts = append(parts, f) // root revision: top-level names only
+			parts = append(parts, label(f)) // root revision: top-level labels only
 			continue
 		}
-		parts = append(parts, formatChangedField(f, parentMap[f], m[f]))
+		parts = append(parts, formatChangedField(label, f, parentMap[f], m[f]))
 	}
 	return strings.Join(parts, ", ")
 }
 
-// formatChangedField renders one changed field, descending into a structured
-// value to show only the sub-fields that differ: "Name" for a leaf change,
-// "Name [ sub1, sub2 ]" when it is an object whose sub-keys changed.
-func formatChangedField(name string, oldRaw, newRaw json.RawMessage) string {
+// formatChangedField renders one changed field (label-translated), descending
+// into a structured value to show only the sub-fields that differ: "Name" for a
+// leaf change, "Name [ sub1, sub2 ]" when it is an object whose sub-keys changed.
+func formatChangedField(label func(string) string, name string, oldRaw, newRaw json.RawMessage) string {
 	var oldObj, newObj map[string]json.RawMessage
 	if json.Unmarshal(oldRaw, &oldObj) == nil && json.Unmarshal(newRaw, &newObj) == nil {
 		keys := sortedUnionKeys(oldObj, newObj)
 		var subs []string
 		for _, k := range keys {
 			if rawChanged(oldObj[k], newObj[k]) {
-				subs = append(subs, formatChangedField(k, oldObj[k], newObj[k]))
+				subs = append(subs, formatChangedField(label, k, oldObj[k], newObj[k]))
 			}
 		}
 		if len(subs) > 0 {
-			return name + " [ " + strings.Join(subs, ", ") + " ]"
+			return label(name) + " [ " + strings.Join(subs, ", ") + " ]"
 		}
 	}
-	return name
+	return label(name)
 }
 
 // sortedUnionKeys is the sorted union of two maps' keys.

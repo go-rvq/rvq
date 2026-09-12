@@ -13,15 +13,17 @@ func TestFormatChangedField(t *testing.T) {
 		return b
 	}
 
+	id := func(s string) string { return s } // identity label (no i18n in the test)
+
 	// Leaf change: just the name.
-	if got := formatChangedField("Title", mustJSON("a"), mustJSON("b")); got != "Title" {
+	if got := formatChangedField(id, "Title", mustJSON("a"), mustJSON("b")); got != "Title" {
 		t.Fatalf("leaf = %q, want Title", got)
 	}
 
 	// Structured change: only the changed sub-keys, sorted, in brackets.
 	old := mustJSON(map[string]any{"Layout": "x", "Config": 1, "Galleries": []int{1}})
 	neu := mustJSON(map[string]any{"Layout": "y", "Config": 1, "Galleries": []int{1, 2}})
-	got := formatChangedField("PageOptions", old, neu)
+	got := formatChangedField(id, "PageOptions", old, neu)
 	want := "PageOptions [ Galleries, Layout ]"
 	if got != want {
 		t.Fatalf("structured = %q, want %q", got, want)
@@ -30,7 +32,7 @@ func TestFormatChangedField(t *testing.T) {
 	// Nested structured change recurses.
 	old2 := mustJSON(map[string]any{"Seo": map[string]any{"Title": "a", "Desc": "d"}})
 	neu2 := mustJSON(map[string]any{"Seo": map[string]any{"Title": "b", "Desc": "d"}})
-	got2 := formatChangedField("Meta", old2, neu2)
+	got2 := formatChangedField(id, "Meta", old2, neu2)
 	want2 := "Meta [ Seo [ Title ] ]"
 	if got2 != want2 {
 		t.Fatalf("nested = %q, want %q", got2, want2)
