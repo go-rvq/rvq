@@ -135,6 +135,16 @@ func (h *ModelHistory) Build() *ModelHistory {
 			return h.capture(obj, ctx)
 		}
 	})
+	// Create uses a separate Creator (not the Saver), so wrap it too — otherwise
+	// the first save of a new record records no initial revision.
+	h.mb.Editing().WrapCreateFunc(func(in presets.CreateFunc) presets.CreateFunc {
+		return func(obj interface{}, ctx *web.EventContext) error {
+			if err := in(obj, ctx); err != nil {
+				return err
+			}
+			return h.capture(obj, ctx)
+		}
+	})
 	h.installPublishTag()
 	h.installChild()
 	return h
@@ -274,6 +284,19 @@ func (h *ModelHistory) changedFields(recordKey string, parent histmodels.Hash, s
 // the pure content hash; a revision with the same (hash, record) already stored
 // means nothing changed, so none is created.
 func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
+	// Reload through the model's fetcher (which applies the configured preloads)
+	// so associations — e.g. PageOptions and its Galleries — are present in the
+	// snapshot. The just-saved obj may carry them nil, which would store a null
+	// value and later show a false "changed" diff. Best-effort: keep obj on failure.
+	if id := h.mb.MustRecordID(obj); !id.IsZero() {
+		if fetch := h.mb.Editing().Fetcher; fetch != nil {
+			fresh := h.mb.NewModel()
+			if fetch(fresh, id, ctx) == nil {
+				obj = fresh
+			}
+		}
+	}
+
 	snap, data, err := h.snapshot(obj)
 	if err != nil {
 		return err
