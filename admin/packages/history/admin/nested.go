@@ -118,8 +118,26 @@ func scanLatestHash(db *gorm.DB, table, recordKey string) (histmodels.Hash, erro
 }
 
 func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
-	l := child.Listing("Hash", "Creator", "CreatedAt", "Published", "Tag", "AccessCount").
+	l := child.Listing("Hash", "ChangedFields", "Creator", "CreatedAt", "Published", "Tag", "AccessCount").
 		OrderBy("created_at DESC")
+
+	// Changed fields: the nested label of what changed in this revision. The
+	// column takes the remaining width and truncates with an ellipsis on one
+	// line; clicking it toggles to wrap and show the rest.
+	l.Field("ChangedFields").
+		SetI18nLabel(func(c context.Context) string { return getMessages(c).Changes }).
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			rev := field.Obj.(*histmodels.Revision)
+			label := mh.ChangedFieldsLabel(rev)
+			return h.Td(
+				web.Scope(
+					h.Div(h.Text(label)).
+						Attr("title", label).
+						Attr("@click", "locals.expanded = !locals.expanded").
+						Attr(":style", "locals.expanded ? 'white-space:normal;word-break:break-word;cursor:pointer' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer'"),
+				).LocalsInit("{ expanded: false }"),
+			).Style("max-width:0;width:100%")
+		})
 
 	// Column labels: the Revision struct's fields have no app-level
 	// (ModelsI18nModuleKey) translations, so set them from this plugin's own

@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"bytes"
 	"encoding/json"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -117,6 +119,94 @@ func fieldValue(m map[string]json.RawMessage, field string) string {
 		return s
 	}
 	return string(raw)
+}
+
+// ChangedFieldsLabel formats a revision's changed fields as a nested label:
+// "Field1, Field2, Field3 [ Sub1, Sub2 [ sub ] ]". Top-level fields are in the
+// model's versioned order; a structured field that only changed in some of its
+// sub-fields is shown with those sub-fields (recursively) in brackets, computed
+// by comparing this revision's value against the parent's. The first revision
+// (no parent) lists the top-level fields only (everything is new).
+func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision) string {
+	changed := map[string]bool{}
+	for _, f := range rev.ChangedFields.Data {
+		changed[f] = true
+	}
+	m, _ := fieldMap(rev)
+
+	var parentMap map[string]json.RawMessage
+	if len(rev.Parent) > 0 {
+		if p, err := h.Revision(rev.RecordKey, rev.Parent); err == nil {
+			parentMap, _ = fieldMap(p)
+		}
+	}
+
+	var parts []string
+	for _, f := range h.resolved {
+		if !changed[f] {
+			continue
+		}
+		if parentMap == nil {
+			parts = append(parts, f) // root revision: top-level names only
+			continue
+		}
+		parts = append(parts, formatChangedField(f, parentMap[f], m[f]))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// formatChangedField renders one changed field, descending into a structured
+// value to show only the sub-fields that differ: "Name" for a leaf change,
+// "Name [ sub1, sub2 ]" when it is an object whose sub-keys changed.
+func formatChangedField(name string, oldRaw, newRaw json.RawMessage) string {
+	var oldObj, newObj map[string]json.RawMessage
+	if json.Unmarshal(oldRaw, &oldObj) == nil && json.Unmarshal(newRaw, &newObj) == nil {
+		keys := sortedUnionKeys(oldObj, newObj)
+		var subs []string
+		for _, k := range keys {
+			if rawChanged(oldObj[k], newObj[k]) {
+				subs = append(subs, formatChangedField(k, oldObj[k], newObj[k]))
+			}
+		}
+		if len(subs) > 0 {
+			return name + " [ " + strings.Join(subs, ", ") + " ]"
+		}
+	}
+	return name
+}
+
+// sortedUnionKeys is the sorted union of two maps' keys.
+func sortedUnionKeys(a, b map[string]json.RawMessage) []string {
+	set := map[string]bool{}
+	for k := range a {
+		set[k] = true
+	}
+	for k := range b {
+		set[k] = true
+	}
+	keys := make([]string, 0, len(set))
+	for k := range set {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// rawChanged reports whether two raw JSON values differ (compared compacted, so
+// formatting never counts as a change).
+func rawChanged(a, b json.RawMessage) bool {
+	return !bytes.Equal(compactJSON(a), compactJSON(b))
+}
+
+func compactJSON(r json.RawMessage) []byte {
+	if len(r) == 0 {
+		return nil
+	}
+	var buf bytes.Buffer
+	if json.Compact(&buf, r) != nil {
+		return r
+	}
+	return buf.Bytes()
 }
 
 // topField reduces a (possibly nested/indexed) path to its top-level versioned

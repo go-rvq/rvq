@@ -37,6 +37,7 @@ type Messages struct {
 	Revert            string
 	Reverted          string
 	Field             string
+	Changes           string
 	RevertSelected    string
 	PartialRevert     string
 	PartialRevertHint string
@@ -72,6 +73,7 @@ var (
 		Revert:            "Revert to this revision",
 		Reverted:          "Reverted to the selected revision",
 		Field:             "Field",
+		Changes:           "Changes",
 		RevertSelected:    "Revert selected",
 		PartialRevert:     "Partial revert",
 		PartialRevertHint: "Click the highlighted changes to select what to revert; the selected regions are restored to this revision.",
@@ -106,6 +108,7 @@ var (
 		Revert:            "Reverter para esta revisão",
 		Reverted:          "Revertido para a revisão selecionada",
 		Field:             "Campo",
+		Changes:           "Alterações",
 		RevertSelected:    "Reverter selecionados",
 		PartialRevert:     "Reversão parcial",
 		PartialRevertHint: "Clique nas alterações destacadas para escolher o que reverter; as regiões marcadas voltam ao valor desta revisão.",

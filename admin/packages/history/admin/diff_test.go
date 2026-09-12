@@ -7,6 +7,36 @@ import (
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 )
 
+func TestFormatChangedField(t *testing.T) {
+	mustJSON := func(v any) json.RawMessage {
+		b, _ := json.Marshal(v)
+		return b
+	}
+
+	// Leaf change: just the name.
+	if got := formatChangedField("Title", mustJSON("a"), mustJSON("b")); got != "Title" {
+		t.Fatalf("leaf = %q, want Title", got)
+	}
+
+	// Structured change: only the changed sub-keys, sorted, in brackets.
+	old := mustJSON(map[string]any{"Layout": "x", "Config": 1, "Galleries": []int{1}})
+	neu := mustJSON(map[string]any{"Layout": "y", "Config": 1, "Galleries": []int{1, 2}})
+	got := formatChangedField("PageOptions", old, neu)
+	want := "PageOptions [ Galleries, Layout ]"
+	if got != want {
+		t.Fatalf("structured = %q, want %q", got, want)
+	}
+
+	// Nested structured change recurses.
+	old2 := mustJSON(map[string]any{"Seo": map[string]any{"Title": "a", "Desc": "d"}})
+	neu2 := mustJSON(map[string]any{"Seo": map[string]any{"Title": "b", "Desc": "d"}})
+	got2 := formatChangedField("Meta", old2, neu2)
+	want2 := "Meta [ Seo [ Title ] ]"
+	if got2 != want2 {
+		t.Fatalf("nested = %q, want %q", got2, want2)
+	}
+}
+
 func rawMap(t *testing.T, m map[string]any) map[string]json.RawMessage {
 	t.Helper()
 	out := map[string]json.RawMessage{}
