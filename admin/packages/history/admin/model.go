@@ -33,10 +33,12 @@ type ModelHistory struct {
 	allFields    bool
 	wholeFields  map[string]bool
 	htmlFields   map[string]bool
+	refFields    map[string]bool
 	fieldDiffers map[string]FieldDiffFunc
 
-	table    string
-	resolved []string
+	table      string
+	resolved   []string
+	schemaRefs map[string]bool // lazily-detected relation fields (nil until computed)
 }
 
 // New starts a per-model history activation on db.
@@ -45,6 +47,7 @@ func New(db *gorm.DB) *ModelHistory {
 		db:           db,
 		wholeFields:  map[string]bool{},
 		htmlFields:   map[string]bool{},
+		refFields:    map[string]bool{},
 		fieldDiffers: map[string]FieldDiffFunc{},
 	}
 }
@@ -76,6 +79,18 @@ func (h *ModelHistory) HTMLFields(names ...string) *ModelHistory {
 	return h
 }
 
+// ReferenceFields marks fields that select another model (a ModelSelector /
+// foreign-key field, e.g. an author). Their diff compares the whole value (never
+// partial) and shows the referenced record rendered — its title with the id
+// beside it. Relation fields are auto-detected from the gorm schema; this is the
+// manual override for cases the schema does not surface.
+func (h *ModelHistory) ReferenceFields(names ...string) *ModelHistory {
+	for _, n := range names {
+		h.refFields[n] = true
+	}
+	return h
+}
+
 // Table is the model's revisions table name (<model table>_revisions).
 func (h *ModelHistory) Table() string { return h.table }
 
@@ -86,7 +101,10 @@ func (h *ModelHistory) IsHTML(field string) bool { return h.htmlFields[field] }
 func (h *ModelHistory) ResolvedFields() []string { return h.resolved }
 
 // AcceptsPartial reports whether a field accepts partial (content-level) revert.
-func (h *ModelHistory) AcceptsPartial(field string) bool { return !h.wholeFields[field] }
+// A reference/relation field never does: a hunk-level patch would corrupt it.
+func (h *ModelHistory) AcceptsPartial(field string) bool {
+	return !h.wholeFields[field] && !h.isReferenceField(field)
+}
 
 // Build resolves the table and versioned fields, migrates the revisions table,
 // and wraps the model's save to capture a revision.

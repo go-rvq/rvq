@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"bytes"
 	"encoding/json"
 	"html"
 	"reflect"
@@ -9,101 +10,359 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	"gorm.io/gorm"
 )
 
-// FieldDiffFunc renders the diff of one field from its OLD and NEW values,
-// returning the OLD side, the NEW side and an optional merged view. handled=false
-// falls through to the built-in handler for the field's type. Registered per
-// field with ModelHistory.FieldDiff — the escape hatch for a field whose real
-// value must drive the comparison, not its rendered form.
-type FieldDiffFunc func(old, new any, ctx *web.EventContext) (oldC, newC, mergedC h.HTMLComponent, handled bool)
+// FieldDiffInput carries everything a field-diff handler needs: the field, both
+// records (rebuilt with each revision applied) and their raw snapshots, plus the
+// request context. Handlers are reusable across fields and models.
+type FieldDiffInput struct {
+	MH        *ModelHistory
+	Field     string
+	OldObj    any
+	NewObj    any
+	OldSnap   map[string]json.RawMessage
+	NewSnap   map[string]json.RawMessage
+	RecordKey string
+	Ctx       *web.EventContext
+	Msgr      *Messages
+}
 
-// FieldDiffHandler registers a custom diff renderer for one field (by name),
-// overriding the type-based default. See FieldDiffFunc.
+// FieldDiffFunc renders one field's diff: the OLD side, the NEW side and an
+// optional merged view. handled=false lets the dispatcher fall through to the
+// next handler. Handlers are reusable — register one for a field with
+// ModelHistory.FieldDiffHandler, or let the dispatcher pick a built-in.
+type FieldDiffFunc func(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool)
+
+// FieldDiffHandler registers a reusable diff handler for one field (by name),
+// overriding the built-in chosen by type. e.g. FieldDiffHandler("Author",
+// history.ReferenceDiff).
 func (mh *ModelHistory) FieldDiffHandler(field string, fn FieldDiffFunc) *ModelHistory {
 	mh.fieldDiffers[field] = fn
 	return mh
 }
 
-// diffKind is how a field is compared: the model diff is the summary of its
-// fields' diffs, and each field is diffed by the handler its kind selects.
-type diffKind int
-
-const (
-	kindText diffKind = iota // plain text / numbers / time — escaped text diff
-	kindHTML                 // declared HTML (e.g. Body) — HTML diff of the value
-	kindBool                 // boolean — before/after icons
-	kindJSON                 // struct / slice / map — JSON diff of the real value
-)
-
-// fieldDiffKind classifies a (possibly nested) field. HTMLFields win; then the
-// Go type decides. time.Time is shown as text, not expanded as a struct.
-func (mh *ModelHistory) fieldDiffKind(field string) diffKind {
-	if mh.IsHTML(field) {
-		return kindHTML
-	}
-	ft, ok := structFieldType(mh.mb.NewModel(), field)
-	if !ok {
-		return kindText
-	}
-	for ft.Kind() == reflect.Ptr {
-		ft = ft.Elem()
-	}
-	switch {
-	case ft.Kind() == reflect.Bool:
-		return kindBool
-	case ft.String() == "time.Time":
-		return kindText
-	case ft.Kind() == reflect.Struct, ft.Kind() == reflect.Slice,
-		ft.Kind() == reflect.Map, ft.Kind() == reflect.Array:
-		return kindJSON
-	default:
-		return kindText
-	}
-}
-
-// diffField computes a field's OLD/NEW/merged diff components, dispatching to the
-// handler its kind selects (or a per-field override). A field with no declared
-// kind falls back to the generic "diff the rendered value" path.
+// diffField computes a field's OLD/NEW/merged diff components: a per-field
+// override if registered, otherwise the built-in handler its value selects. The
+// model diff is the summary of its fields' diffs (one panel per changed field).
 func (mh *ModelHistory) diffField(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, ctx *web.EventContext, msgr *Messages) (oldC, newC, mergedC h.HTMLComponent) {
+	in := &FieldDiffInput{
+		MH: mh, Field: f, OldObj: oldObj, NewObj: newObj,
+		OldSnap: am, NewSnap: bm, RecordKey: recordKey, Ctx: ctx, Msgr: msgr,
+	}
 	if fn := mh.fieldDiffers[f]; fn != nil {
-		if o, n, m, ok := fn(navigateAny(am, f), navigateAny(bm, f), ctx); ok {
+		if o, n, m, ok := fn(in); ok {
 			return o, n, m
 		}
 	}
-	switch mh.fieldDiffKind(f) {
-	case kindHTML:
-		// The value IS HTML: diff the value itself (rendering can hide the real
-		// value). Top-level fields render through the DetailingBuilder (so the
-		// TipTap field emits diff-friendly HTML); nested ones use the raw value.
-		if !strings.ContainsAny(f, ".[") {
-			oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
-			newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
-			return htmlSideDiff(stripScaffold(oldHTML), stripScaffold(newHTML))
+	o, n, m, _ := mh.builtinHandler(f)(in)
+	return o, n, m
+}
+
+// builtinHandler picks the reusable handler for a field by its nature: declared
+// HTML, a model reference (ModelSelector / relation), boolean, structured
+// (JSON), or the generic rendered-value diff.
+func (mh *ModelHistory) builtinHandler(f string) FieldDiffFunc {
+	if mh.IsHTML(f) {
+		return HTMLValueDiff
+	}
+	if mh.isReferenceField(f) {
+		return ReferenceDiff
+	}
+	if ft, ok := structFieldType(mh.mb.NewModel(), f); ok {
+		for ft.Kind() == reflect.Ptr {
+			ft = ft.Elem()
 		}
-		return htmlSideDiff(fieldValue(am, f), fieldValue(bm, f))
-	case kindBool:
-		return boolSide(fieldValue(am, f)), boolSide(fieldValue(bm, f)), nil
-	case kindJSON:
-		// Compare the real value as JSON (the rendered form may not reflect it —
-		// e.g. Page.LayoutConfig renders as JSON and must be compared as JSON).
-		oj := "<pre>" + html.EscapeString(prettyJSONPath(am, f)) + "</pre>"
-		nj := "<pre>" + html.EscapeString(prettyJSONPath(bm, f)) + "</pre>"
-		return htmlSideDiff(oj, nj)
-	default: // kindText
-		// A top-level non-HTML field: the generic path — diff the rendered value.
-		if !strings.ContainsAny(f, ".[") {
-			oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
-			newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
-			if strings.TrimSpace(stripScaffold(oldHTML)) != "" || strings.TrimSpace(stripScaffold(newHTML)) != "" {
-				return htmlSideDiff(stripScaffold(oldHTML), stripScaffold(newHTML))
+		switch {
+		case ft.Kind() == reflect.Bool:
+			return BoolDiff
+		case ft.String() == "time.Time":
+			return RenderedDiff
+		case ft.Kind() == reflect.Struct, ft.Kind() == reflect.Slice,
+			ft.Kind() == reflect.Map, ft.Kind() == reflect.Array:
+			return JSONDiff
+		}
+	}
+	return RenderedDiff
+}
+
+// HTMLValueDiff diffs an HTML field by its own value (rendering can hide the real
+// value). Top-level fields render through the DetailingBuilder (so the TipTap
+// field emits diff-friendly HTML); nested ones use the raw value.
+func HTMLValueDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	f := in.Field
+	if !strings.ContainsAny(f, ".[") {
+		oldHTML, _ := in.MH.detailHTML(in.OldObj, in.RecordKey, []string{f}, in.Ctx)
+		newHTML, _ := in.MH.detailHTML(in.NewObj, in.RecordKey, []string{f}, in.Ctx)
+		oldC, newC, mergedC = htmlSideDiff(stripScaffold(oldHTML), stripScaffold(newHTML))
+		return oldC, newC, mergedC, true
+	}
+	oldC, newC, mergedC = htmlSideDiff(fieldValue(in.OldSnap, f), fieldValue(in.NewSnap, f))
+	return oldC, newC, mergedC, true
+}
+
+// BoolDiff shows a boolean field's before/after as check/cross icons.
+func BoolDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	return boolSide(fieldValue(in.OldSnap, in.Field)), boolSide(fieldValue(in.NewSnap, in.Field)), nil, true
+}
+
+// JSONDiff compares a structured field (struct / slice / map) as JSON — the real
+// value, because the rendered form may not reflect it (e.g. Page.LayoutConfig
+// renders as JSON and must be compared as JSON).
+func JSONDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	oj := "<pre>" + html.EscapeString(prettyJSONPath(in.OldSnap, in.Field)) + "</pre>"
+	nj := "<pre>" + html.EscapeString(prettyJSONPath(in.NewSnap, in.Field)) + "</pre>"
+	oldC, newC, mergedC = htmlSideDiff(oj, nj)
+	return oldC, newC, mergedC, true
+}
+
+// ReferenceDiff compares a field that selects another model (ModelSelector /
+// foreign key) by EXACT value — never a partial text diff — and shows the
+// referenced record rendered: its title with the id highlighted beside it. When
+// the value changed the whole side is highlighted (OLD red, NEW green). A
+// to-many relation (a list value, e.g. Post.Tags) is compared as a set: each
+// side lists its items, with removed items highlighted red on OLD and added
+// items green on NEW.
+func ReferenceDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	oldRaw, _ := navigateRaw(in.OldSnap, in.Field)
+	newRaw, _ := navigateRaw(in.NewSnap, in.Field)
+	if isJSONArray(oldRaw) || isJSONArray(newRaw) {
+		return manyReferenceDiff(oldRaw, newRaw)
+	}
+	changed := fieldValue(in.OldSnap, in.Field) != fieldValue(in.NewSnap, in.Field)
+	oldC = referenceSide(in, in.OldObj, in.OldSnap, changed, false)
+	newC = referenceSide(in, in.NewObj, in.NewSnap, changed, true)
+	return oldC, newC, nil, true
+}
+
+// manyReferenceDiff renders a to-many relation (e.g. Post.Tags) as two lists,
+// diffed as whole lists: OLD lists its items with the removed ones marked (red,
+// struck), NEW lists its items with the added ones marked (green). Membership is
+// by id, so the diff says exactly which item was added or removed. Each item is a
+// VListItem with the id as a VChip.
+func manyReferenceDiff(oldRaw, newRaw json.RawMessage) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	oldItems, newItems, removed, added := manyRefChanges(oldRaw, newRaw)
+	oldC = refList(oldItems, func(it refItem) refState {
+		if removed[it.id] {
+			return refRemovedState
+		}
+		return refKept
+	})
+	newC = refList(newItems, func(it refItem) refState {
+		if added[it.id] {
+			return refAddedState
+		}
+		return refKept
+	})
+	return oldC, newC, nil, true
+}
+
+// refItem is one referenced record: its id and a display label.
+type refItem struct {
+	id, label string
+}
+
+// refItems decodes a to-many snapshot value (a JSON array) into display items.
+func refItems(raw json.RawMessage) []refItem {
+	if !isJSONArray(raw) {
+		return nil
+	}
+	var arr []json.RawMessage
+	if json.Unmarshal(raw, &arr) != nil {
+		return nil
+	}
+	out := make([]refItem, 0, len(arr))
+	for _, el := range arr {
+		id, label := refElemLabel(el)
+		out = append(out, refItem{id: id, label: label})
+	}
+	return out
+}
+
+// manyRefChanges compares two to-many snapshot values by id, returning both item
+// lists and the sets of ids removed (in OLD, not NEW) and added (in NEW, not
+// OLD) — the whole-list diff that says which item changed.
+func manyRefChanges(oldRaw, newRaw json.RawMessage) (oldItems, newItems []refItem, removed, added map[string]bool) {
+	oldItems, newItems = refItems(oldRaw), refItems(newRaw)
+	oldIDs := map[string]bool{}
+	for _, it := range oldItems {
+		oldIDs[it.id] = true
+	}
+	newIDs := map[string]bool{}
+	for _, it := range newItems {
+		newIDs[it.id] = true
+	}
+	removed, added = map[string]bool{}, map[string]bool{}
+	for _, it := range oldItems {
+		if !newIDs[it.id] {
+			removed[it.id] = true
+		}
+	}
+	for _, it := range newItems {
+		if !oldIDs[it.id] {
+			added[it.id] = true
+		}
+	}
+	return
+}
+
+// refState is how a to-many item changed on its side of the diff.
+type refState int
+
+const (
+	refKept refState = iota
+	refRemovedState
+	refAddedState
+)
+
+// refList renders a to-many item list as a VList, each item a VListItem with the
+// id as a VChip and colored by its state.
+func refList(items []refItem, state func(refItem) refState) h.HTMLComponent {
+	if len(items) == 0 {
+		return h.Span("—").Class("text-medium-emphasis")
+	}
+	lis := make(h.HTMLComponents, 0, len(items))
+	for _, it := range items {
+		lis = append(lis, refListItem(it, state(it)))
+	}
+	return v.VList(lis...).Density(v.DensityCompact).Class("py-0 bg-transparent")
+}
+
+// refListItem is one item of a to-many list: its label, the id as a VChip, and a
+// theme color per state (removed → error struck, added → success, kept → none).
+func refListItem(it refItem, state refState) h.HTMLComponent {
+	row := h.HTMLComponents{h.Span(it.label)}
+	if it.id != "" {
+		row = append(row, v.VChip(h.Text("#"+it.id)).Size(v.SizeXSmall).Variant(v.VariantTonal).Class("ms-2"))
+	}
+	cls := "px-0"
+	switch state {
+	case refRemovedState:
+		cls += " text-error text-decoration-line-through"
+	case refAddedState:
+		cls += " text-success"
+	}
+	return v.VListItem(h.Div(row...).Class("d-flex align-center")).Density(v.DensityCompact).Class(cls)
+}
+
+// refElemLabel pulls a display label and id from one referenced record's JSON:
+// a common title field (Name/Title/Label/…) for the label, an id field for the
+// id, falling back to the id when there is no title.
+func refElemLabel(raw json.RawMessage) (id, label string) {
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(raw, &obj) != nil {
+		return "", strings.Trim(string(raw), `"`)
+	}
+	for _, k := range []string{"ID", "Id", "id"} {
+		if r, ok := obj[k]; ok {
+			id = strings.Trim(string(r), `"`)
+			break
+		}
+	}
+	for _, k := range []string{"Name", "Title", "Label", "Nome", "Titulo", "Slug", "Code"} {
+		if r, ok := obj[k]; ok {
+			var s string
+			if json.Unmarshal(r, &s) == nil && s != "" {
+				label = s
+				break
 			}
 		}
-		// Nested/plain value: escaped text diff.
-		ov := "<p>" + html.EscapeString(fieldValue(am, f)) + "</p>"
-		nv := "<p>" + html.EscapeString(fieldValue(bm, f)) + "</p>"
-		return htmlSideDiff(ov, nv)
 	}
+	if label == "" {
+		label = "#" + id
+	}
+	return
+}
+
+// isJSONArray reports whether raw is a JSON array value.
+func isJSONArray(raw json.RawMessage) bool {
+	t := bytes.TrimSpace(raw)
+	return len(t) > 0 && t[0] == '['
+}
+
+// RenderedDiff is the generic default: diff the value as rendered by the
+// DetailingBuilder (top-level), falling back to an escaped-text diff.
+func RenderedDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+	f := in.Field
+	if !strings.ContainsAny(f, ".[") {
+		oldHTML, _ := in.MH.detailHTML(in.OldObj, in.RecordKey, []string{f}, in.Ctx)
+		newHTML, _ := in.MH.detailHTML(in.NewObj, in.RecordKey, []string{f}, in.Ctx)
+		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
+		if strings.TrimSpace(oldHTML) != "" || strings.TrimSpace(newHTML) != "" {
+			oldC, newC, mergedC = htmlSideDiff(oldHTML, newHTML)
+			return oldC, newC, mergedC, true
+		}
+	}
+	ov := "<p>" + html.EscapeString(fieldValue(in.OldSnap, f)) + "</p>"
+	nv := "<p>" + html.EscapeString(fieldValue(in.NewSnap, f)) + "</p>"
+	oldC, newC, mergedC = htmlSideDiff(ov, nv)
+	return oldC, newC, mergedC, true
+}
+
+// referenceSide renders one side of a reference field: the record as the model
+// renders it (its title chip), the id highlighted beside it, and — when the
+// value changed — the whole side highlighted (red for OLD, green for NEW).
+func referenceSide(in *FieldDiffInput, obj any, snap map[string]json.RawMessage, changed, isNew bool) h.HTMLComponent {
+	rendered, _ := in.MH.detailHTML(obj, in.RecordKey, []string{in.Field}, in.Ctx)
+	body := h.HTMLComponents{h.RawHTML(stripScaffold(rendered))}
+	if id := referenceID(snap, in.Field); id != "" {
+		body = append(body, v.VChip(h.Text("#"+id)).Size(v.SizeXSmall).Variant(v.VariantTonal).Class("ms-2"))
+	}
+	cls := "d-flex align-center"
+	if changed {
+		if isNew {
+			cls += " text-success"
+		} else {
+			cls += " text-error"
+		}
+	}
+	return h.Div(body...).Class(cls)
+}
+
+// referenceID extracts the referenced record's id from a snapshot value — the
+// "ID" field of the embedded object, or the raw scalar when the value is the id.
+func referenceID(m map[string]json.RawMessage, field string) string {
+	raw, ok := navigateRaw(m, field)
+	if !ok {
+		return ""
+	}
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(raw, &obj) == nil {
+		for _, k := range []string{"ID", "Id", "id"} {
+			if idRaw, ok := obj[k]; ok {
+				return strings.Trim(string(idRaw), `"`)
+			}
+		}
+		return ""
+	}
+	return strings.Trim(string(raw), `"`)
+}
+
+// isReferenceField reports whether a field selects another model — a manual
+// ReferenceFields override, or a relation detected from the gorm schema.
+func (mh *ModelHistory) isReferenceField(field string) bool {
+	top := topField(field)
+	if mh.refFields[top] {
+		return true
+	}
+	return mh.relationFields()[top]
+}
+
+// relationFields is the set of the model's relation field names (belongs-to,
+// has-one, …) from the gorm schema, computed once.
+func (mh *ModelHistory) relationFields() map[string]bool {
+	if mh.schemaRefs != nil {
+		return mh.schemaRefs
+	}
+	set := map[string]bool{}
+	stmt := &gorm.Statement{DB: mh.db}
+	if stmt.Parse(mh.mb.NewModel()) == nil && stmt.Schema.Relationships.Relations != nil {
+		for name := range stmt.Schema.Relationships.Relations {
+			set[name] = true
+		}
+	}
+	mh.schemaRefs = set
+	return set
 }
 
 // htmlSideDiff runs the visual HTML diff of two HTML fragments and projects the
@@ -125,18 +384,4 @@ func boolSide(raw string) h.HTMLComponent {
 		return v.VIcon("mdi-check-circle").Color("success")
 	}
 	return v.VIcon("mdi-close-circle").Color("error")
-}
-
-// navigateAny returns the value at a field path in a snapshot as a decoded Go
-// value (for a per-field FieldDiffFunc override).
-func navigateAny(m map[string]json.RawMessage, field string) any {
-	raw, ok := navigateRaw(m, field)
-	if !ok {
-		return nil
-	}
-	var v any
-	if json.Unmarshal(raw, &v) != nil {
-		return nil
-	}
-	return v
 }
