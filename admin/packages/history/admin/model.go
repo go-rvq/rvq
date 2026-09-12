@@ -27,12 +27,13 @@ import (
 // whose value would be corrupted by a hunk-level patch (foreign keys, JSON,
 // relations). By default such fields are inferred; WholeFields adds overrides.
 type ModelHistory struct {
-	db          *gorm.DB
-	mb          *presets.ModelBuilder
-	fields      []string
-	allFields   bool
-	wholeFields map[string]bool
-	htmlFields  map[string]bool
+	db           *gorm.DB
+	mb           *presets.ModelBuilder
+	fields       []string
+	allFields    bool
+	wholeFields  map[string]bool
+	htmlFields   map[string]bool
+	fieldDiffers map[string]FieldDiffFunc
 
 	table    string
 	resolved []string
@@ -40,7 +41,12 @@ type ModelHistory struct {
 
 // New starts a per-model history activation on db.
 func New(db *gorm.DB) *ModelHistory {
-	return &ModelHistory{db: db, wholeFields: map[string]bool{}, htmlFields: map[string]bool{}}
+	return &ModelHistory{
+		db:           db,
+		wholeFields:  map[string]bool{},
+		htmlFields:   map[string]bool{},
+		fieldDiffers: map[string]FieldDiffFunc{},
+	}
 }
 
 func (h *ModelHistory) Model(mb *presets.ModelBuilder) *ModelHistory { h.mb = mb; return h }

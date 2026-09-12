@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -194,38 +193,9 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		).Class("flex-1-1-0 " + cls)
 	}
 
-	nested := strings.Contains(f, ".")
-
-	var oldC, newC, mergedC h.HTMLComponent
-	switch {
-	case mh.fieldIsSimple(f) && !nested:
-		// Top-level text/HTML field: render through the DetailingBuilder (so the
-		// TipTap field emits diff-friendly HTML) and diff that.
-		oldHTML, _ := mh.detailHTML(oldObj, recordKey, []string{f}, ctx)
-		newHTML, _ := mh.detailHTML(newObj, recordKey, []string{f}, ctx)
-		// The detail render wraps the value in form scaffold (hidden inputs with
-		// Vue directives) that carries no content and breaks html-diff's HTML
-		// parser — strip it so the diff is computed on the clean content.
-		oldHTML, newHTML = stripScaffold(oldHTML), stripScaffold(newHTML)
-		oldC, newC = h.RawHTML(oldHTML), h.RawHTML(newHTML)
-		if diffs, err := htmlDiffConfig.HTMLdiff([]string{oldHTML, newHTML}); err == nil && len(diffs) > 0 {
-			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
-			mergedC = h.RawHTML(diffs[0])
-		}
-	case mh.fieldIsSimple(f):
-		// Nested text value (e.g. PageOptions.Layout): diff the plain text
-		// (escaped, wrapped so html-diff parses it as content).
-		ov := "<p>" + html.EscapeString(fieldValue(am, f)) + "</p>"
-		nv := "<p>" + html.EscapeString(fieldValue(bm, f)) + "</p>"
-		oldC, newC = h.RawHTML(ov), h.RawHTML(nv)
-		if diffs, err := htmlDiffConfig.HTMLdiff([]string{ov, nv}); err == nil && len(diffs) > 0 {
-			oldC, newC = h.RawHTML(oldSide(diffs[0])), h.RawHTML(newSide(diffs[0]))
-			mergedC = h.RawHTML(diffs[0])
-		}
-	default:
-		// Structured value: before/after JSON, following the path.
-		oldC, newC = jsonBlock(prettyJSONPath(am, f)), jsonBlock(prettyJSONPath(bm, f))
-	}
+	// Each field is diffed by the handler its kind selects (HTML / bool / JSON /
+	// text, or a per-field override) — the model diff is the summary of these.
+	oldC, newC, mergedC := mh.diffField(f, oldObj, newObj, am, bm, recordKey, ctx, msgr)
 
 	children := h.HTMLComponents{
 		// OLD | NEW, hidden while the merged view is shown.
