@@ -139,11 +139,7 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 	revertAllBtn := v.VBtn("").Icon("mdi-history").
 		Variant(v.VariantTonal).Size(v.SizeSmall).Color("warning").Class("me-2").
 		Attr("title", msgr.Revert).
-		Attr("@click", web.Plaid().
-			EventFunc(mh.revertEventName()).
-			Query("record", recordKey).
-			Query("hash", aHash.String()).
-			Go())
+		Attr("@click", mh.revertButtonClick(recordKey, aHash.String(), "", "", ""))
 
 	head := h.Div(
 		h.Div(
@@ -192,12 +188,7 @@ func revertFieldButton(mh *ModelHistory, f, recordKey string, aHash histmodels.H
 	btn := v.VBtn("").Icon("mdi-history").
 		Variant(v.VariantText).Size(v.SizeSmall).Color("warning").
 		Attr("title", msgr.Revert)
-	click := web.Plaid().
-		EventFunc(mh.revertEventName()).
-		Query("record", recordKey).
-		Query("hash", aHash.String()).
-		Query("field", f).
-		Go()
+	click := mh.revertButtonClick(recordKey, aHash.String(), f, "", "")
 	if inTitle {
 		btn.Class("ms-auto me-2").Attr("@click.stop", click)
 	} else {

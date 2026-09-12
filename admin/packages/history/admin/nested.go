@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
@@ -69,60 +68,12 @@ func (mh *ModelHistory) installChild() {
 			})
 	})
 
-	child.RegisterEventFunc(mh.revertEventName(), mh.revertEvent)
-	child.RegisterEventFunc(mh.revertHunksEventName(), mh.revertHunksEvent)
 	child.RegisterEventFunc(mh.compareEventName(), mh.compareEvent)
 
 	mh.mb.AddChild(child)
 	mh.configChildListing(child)
 	mh.configChildDetailing(child)
-}
-
-func (mh *ModelHistory) revertEventName() string { return "history_revert_" + mh.table }
-
-// revertEvent restores the parent record to the chosen revision (git-revert:
-// records a new revision), then navigates to the parent's detail showing it.
-// Scope: "field" reverts a single field, "fields" (csv) a subset, neither the
-// whole record. recordKey comes from the "record" query (the compare dialog
-// passes it) and falls back to the parent id in the request path.
-func (mh *ModelHistory) revertEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
-	recordKey := ctx.R.FormValue("record")
-	if recordKey == "" {
-		recordKey = parentRecordKey(ctx)
-	}
-	hash, err := decodeHash(ctx.R.FormValue("hash"))
-	if err != nil {
-		return
-	}
-	id, err := mh.mb.ParseRecordID(recordKey)
-	if err != nil {
-		return
-	}
-	obj := mh.mb.NewModel()
-	id.SetTo(obj)
-	if err = mh.db.First(obj).Error; err != nil {
-		return
-	}
-	switch {
-	case ctx.R.FormValue("field") != "":
-		err = mh.RevertField(obj, hash, ctx.R.FormValue("field"), ctx)
-	case ctx.R.FormValue("fields") != "":
-		var fields []string
-		for _, f := range strings.Split(ctx.R.FormValue("fields"), ",") {
-			if f = strings.TrimSpace(f); f != "" {
-				fields = append(fields, f)
-			}
-		}
-		err = mh.RevertFields(obj, hash, fields, ctx)
-	default:
-		err = mh.RevertRecord(obj, hash, ctx)
-	}
-	if err != nil {
-		return
-	}
-	presets.ShowMessage(&r, getMessages(ctx.Context()).Reverted, "success")
-	r.PushState = web.Location(nil).URL(mh.mb.Info().DetailingHref(recordKey))
-	return
+	mh.installRevertConfirm(child)
 }
 
 // parentRecordKey is the id of the parent record in the request path — the
@@ -259,11 +210,7 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		revertBtn := v.VBtn(msgr.Revert).
 			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
 			Attr("title", msgr.Revert).
-			Attr("@click", web.Plaid().
-				EventFunc(mh.revertEventName()).
-				Query("record", rev.RecordKey).
-				Query("hash", rev.Hash.String()).
-				Go())
+			Attr("@click", mh.revertButtonClick(rev.RecordKey, rev.Hash.String(), "", "", ""))
 
 		out := h.HTMLComponents{
 			h.Div(revertBtn).Class("d-flex justify-end mb-3"),
@@ -279,12 +226,7 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 				leading := v.VBtn("").Icon("mdi-history").
 					Variant(v.VariantText).Size(v.SizeSmall).Color("warning").
 					Attr("title", msgr.Revert).
-					Attr("@click", web.Plaid().
-						EventFunc(mh.revertEventName()).
-						Query("record", rev.RecordKey).
-						Query("hash", rev.Hash.String()).
-						Query("field", fieldName).
-						Go())
+					Attr("@click", mh.revertButtonClick(rev.RecordKey, rev.Hash.String(), fieldName, "", ""))
 				out = append(out, mh.hunkSelectPanel(
 					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), leading, ctx))
 			}

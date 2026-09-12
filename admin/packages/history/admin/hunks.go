@@ -3,11 +3,9 @@ package admin
 import (
 	"fmt"
 	stdhtml "html"
-	"strconv"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
@@ -166,8 +164,6 @@ func (mh *ModelHistory) RevertFieldContent(obj any, field, value string, ctx *we
 	return mh.saveAndCapture(obj, ctx)
 }
 
-func (mh *ModelHistory) revertHunksEventName() string { return "history_revert_hunks_" + mh.table }
-
 // fieldStringValue is the live field value of the loaded record as a string.
 func fieldStringValue(obj any, field string) string {
 	v, err := reflectutils.Get(obj, field)
@@ -252,13 +248,9 @@ func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target
 
 	apply := v.VBtn(msgr.RevertSelected).
 		Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
+		Attr("title", msgr.RevertSelected).
 		Attr(":disabled", "!locals.hunks.length").
-		Attr("@click", web.Plaid().
-			EventFunc(mh.revertHunksEventName()).
-			Query("field", field).
-			Query("hash", targetHash).
-			Query("hunks", web.Var("locals.hunks")).
-			Go())
+		Attr("@click", mh.revertButtonClick(recordKey, targetHash, field, "", "locals.hunks"))
 
 	return web.Scope(
 		h.Div(
@@ -273,54 +265,4 @@ func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target
 			h.Div(apply).Class("d-flex justify-end mt-3"),
 		).Class("mt-4"),
 	).LocalsInit("{ hunks: [] }")
-}
-
-// revertHunksEvent reverts only the selected hunks of a field to the target
-// revision, recomputing the hunks from the live current value + target so the
-// ordering matches what was shown.
-func (mh *ModelHistory) revertHunksEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
-	recordKey := parentRecordKey(ctx)
-	field := ctx.R.FormValue("field")
-	hash, err := decodeHash(ctx.R.FormValue("hash"))
-	if err != nil {
-		return
-	}
-
-	rev, err := mh.Revision(recordKey, hash)
-	if err != nil {
-		return
-	}
-	m, err := fieldMap(rev)
-	if err != nil {
-		return
-	}
-	target := fieldValue(m, field)
-
-	id, err := mh.mb.ParseRecordID(recordKey)
-	if err != nil {
-		return
-	}
-	obj := mh.mb.NewModel()
-	id.SetTo(obj)
-	if err = mh.db.First(obj).Error; err != nil {
-		return
-	}
-	current := fieldStringValue(obj, field)
-
-	selected := map[int]bool{}
-	if e := ctx.R.ParseForm(); e == nil {
-		for _, s := range ctx.R.Form["hunks"] {
-			if n, ne := strconv.Atoi(s); ne == nil {
-				selected[n] = true
-			}
-		}
-	}
-
-	value := applyHunks(current, target, selected, mh.IsHTML(field))
-	if err = mh.RevertFieldContent(obj, field, value, ctx); err != nil {
-		return
-	}
-	presets.ShowMessage(&r, getMessages(ctx.Context()).Reverted, "success")
-	r.PushState = web.Location(nil).URL(mh.mb.Info().DetailingHref(recordKey))
-	return
 }
