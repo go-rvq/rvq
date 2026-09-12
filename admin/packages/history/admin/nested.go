@@ -129,14 +129,17 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			rev := field.Obj.(*histmodels.Revision)
 			label := mh.ChangedFieldsLabel(rev, ctx)
+			// A truncating inline-block (not td width:100%, which would collapse the
+			// other columns and let Hash overlap the selection checkbox): wide cap,
+			// ellipsis on one line; clicking toggles to wrap and show the rest.
 			return h.Td(
 				web.Scope(
 					h.Div(h.Text(label)).
 						Attr("title", label).
 						Attr("@click", "locals.expanded = !locals.expanded").
-						Attr(":style", "locals.expanded ? 'white-space:normal;word-break:break-word;cursor:pointer' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer'"),
+						Attr(":style", "locals.expanded ? 'white-space:normal;word-break:break-word;cursor:pointer' : 'display:inline-block;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;cursor:pointer'"),
 				).LocalsInit("{ expanded: false }"),
-			).Style("max-width:0;width:100%")
+			)
 		})
 
 	// Column labels: the Revision struct's fields have no app-level
