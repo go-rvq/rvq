@@ -40,6 +40,7 @@ type Messages struct {
 	RevertSelected    string
 	PartialRevert     string
 	PartialRevertHint string
+	ToggleAll         string
 	Current           string
 	NoHunks           string
 	NoChanges         string
@@ -73,6 +74,7 @@ var (
 		RevertSelected:    "Revert selected",
 		PartialRevert:     "Partial revert",
 		PartialRevertHint: "Click the highlighted changes to select what to revert; the selected regions are restored to this revision.",
+		ToggleAll:         "Select / clear all changes",
 		Current:           "Current",
 		NoHunks:           "This field is identical to the current value.",
 		NoChanges:         "No differences between the selected revisions.",
@@ -105,6 +107,7 @@ var (
 		RevertSelected:    "Reverter selecionados",
 		PartialRevert:     "Reversão parcial",
 		PartialRevertHint: "Clique nas alterações destacadas para escolher o que reverter; as regiões marcadas voltam ao valor desta revisão.",
+		ToggleAll:         "Marcar / desmarcar todas as alterações",
 		Current:           "Atual",
 		NoHunks:           "Este campo é idêntico ao valor atual.",
 		NoChanges:         "Sem diferenças entre as revisões selecionadas.",

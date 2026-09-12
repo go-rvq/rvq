@@ -185,6 +185,27 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 // a text/HTML field — a merged view below with removals highlighted red (struck)
 // and additions green (documize/html-diff returns one merged result, not one per
 // version). A structured field shows its before/after JSON.
+// revertFieldButton is the whole-field "revert to this (OLD) revision" button.
+// In the panel title it needs @click.stop (so it doesn't toggle the panel) and
+// ms-auto; in a content top bar it uses a plain @click.
+func revertFieldButton(mh *ModelHistory, f, recordKey string, aHash histmodels.Hash, msgr *Messages, inTitle bool) h.HTMLComponent {
+	btn := v.VBtn("").Icon("mdi-history").
+		Variant(v.VariantText).Size(v.SizeSmall).Color("warning").
+		Attr("title", msgr.Revert)
+	click := web.Plaid().
+		EventFunc(mh.revertEventName()).
+		Query("record", recordKey).
+		Query("hash", aHash.String()).
+		Query("field", f).
+		Go()
+	if inTitle {
+		btn.Class("ms-auto me-2").Attr("@click.stop", click)
+	} else {
+		btn.Attr("@click", click)
+	}
+	return btn
+}
+
 func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, aHash histmodels.Hash, ctx *web.EventContext, msgr *Messages) h.HTMLComponent {
 	side := func(label string, body h.HTMLComponent, cls string) *h.HTMLTagBuilder {
 		return h.Div(
@@ -208,32 +229,24 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		children = append(children, h.Div(mergedC).Class("pa-1").Attr("v-if", "locals.showMerged"))
 	}
 
-	// A partial-capable field also offers hunk-level revert (current value → OLD),
-	// reusing the same panel as the single-field revisions view.
+	// A partial-capable field also offers hunk-level revert (current value → OLD).
+	// Its whole-field Revert button leads that panel's top bar (beside the
+	// select-all toggle and the counter) instead of sitting in the title.
+	var titleExtra h.HTMLComponent = revertFieldButton(mh, f, recordKey, aHash, msgr, true)
 	if mh.AcceptsPartial(f) {
 		if cur, cerr := mh.currentRecord(recordKey); cerr == nil {
+			leading := revertFieldButton(mh, f, recordKey, aHash, msgr, false)
 			children = append(children, mh.hunkSelectPanel(
-				recordKey, f, fieldStringValue(cur, f), fieldValue(am, f), aHash.String(), ctx))
+				recordKey, f, fieldStringValue(cur, f), fieldValue(am, f), aHash.String(), leading, ctx))
+			titleExtra = nil
 		}
 	}
-
-	// Revert just this field to the OLD revision. @click.stop so the button does
-	// not toggle the panel. Placed on the right of the field label.
-	revertFieldBtn := v.VBtn("").Icon("mdi-history").
-		Variant(v.VariantText).Size(v.SizeSmall).Color("warning").Class("ms-auto me-2").
-		Attr("title", msgr.Revert).
-		Attr("@click.stop", web.Plaid().
-			EventFunc(mh.revertEventName()).
-			Query("record", recordKey).
-			Query("hash", aHash.String()).
-			Query("field", f).
-			Go())
 
 	return v.VExpansionPanel(
 		v.VExpansionPanelTitle().Children(
 			h.Div(
 				h.Strong(f),
-				revertFieldBtn,
+				titleExtra,
 			).Class("d-flex align-center flex-grow-1"),
 		),
 		v.VExpansionPanelText().Children(children...),

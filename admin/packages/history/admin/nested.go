@@ -258,8 +258,10 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 		msgr := getMessages(ctx.Context())
 		revertBtn := v.VBtn(msgr.Revert).
 			Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
+			Attr("title", msgr.Revert).
 			Attr("@click", web.Plaid().
 				EventFunc(mh.revertEventName()).
+				Query("record", rev.RecordKey).
 				Query("hash", rev.Hash.String()).
 				Go())
 
@@ -269,12 +271,22 @@ func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
 			structuredRows(m, structured),
 		}
 		// Scoped to a single partial-capable field: offer hunk-level revert
-		// against the live current value.
+		// against the live current value. The field's whole-field Revert button
+		// leads the panel's top bar (beside the select-all toggle and counter).
 		if len(fields) == 1 && mh.AcceptsPartial(fields[0]) {
 			fieldName := fields[0]
 			if cur, cerr := mh.currentRecord(rev.RecordKey); cerr == nil {
+				leading := v.VBtn("").Icon("mdi-history").
+					Variant(v.VariantText).Size(v.SizeSmall).Color("warning").
+					Attr("title", msgr.Revert).
+					Attr("@click", web.Plaid().
+						EventFunc(mh.revertEventName()).
+						Query("record", rev.RecordKey).
+						Query("hash", rev.Hash.String()).
+						Query("field", fieldName).
+						Go())
 				out = append(out, mh.hunkSelectPanel(
-					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), ctx))
+					rev.RecordKey, fieldName, fieldStringValue(cur, fieldName), fieldValue(m, fieldName), rev.Hash.String(), leading, ctx))
 			}
 		}
 		return h.Div(out...)

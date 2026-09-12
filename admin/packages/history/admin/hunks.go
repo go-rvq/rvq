@@ -224,17 +224,31 @@ func renderHunkSides(current, target string, htmlMode bool) (leftHTML, rightHTML
 }
 
 // hunkSelectPanel renders, for a partial-capable field, the change regions
-// between the current value and the revision's value as a clickable diff: an
-// instruction on top, then the current | revision split whose highlighted
-// regions the user clicks to select (super-highlight + check). An apply button
-// reverts the selected regions to the revision.
-func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target string, targetHash string, ctx *web.EventContext) h.HTMLComponent {
+// between the current value and the revision's value as a clickable diff. Its top
+// bar carries the leading action (the field's whole-field Revert button), a
+// select/clear-all toggle and a selected/total counter; below is the instruction
+// and the current | revision split whose highlighted regions the user clicks to
+// select (super-highlight + check); an apply button reverts the selected regions.
+func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target string, targetHash string, leading h.HTMLComponent, ctx *web.EventContext) h.HTMLComponent {
 	msgr := getMessages(ctx.Context())
 	htmlMode := mh.IsHTML(field)
 	left, right, n := renderHunkSides(current, target, htmlMode)
 	if n == 0 {
 		return v.VAlert(h.Text(msgr.NoHunks)).Type("info").Variant(v.VariantTonal).Density(v.DensityCompact)
 	}
+
+	// Select/clear all: toggles locals.hunks between empty and every hunk index.
+	toggleAll := v.VBtn("").Icon("mdi-checkbox-multiple-marked-outline").
+		Variant(v.VariantText).Size(v.SizeSmall).
+		Attr("title", msgr.ToggleAll).
+		Attr("@click", fmt.Sprintf(
+			"locals.hunks = locals.hunks.length === %d ? [] : Array.from({length: %d}, (_, i) => i)", n, n))
+
+	// selected / total counter (reactive).
+	counter := h.Span("").Class("text-caption text-medium-emphasis ms-1").
+		Attr("v-text", fmt.Sprintf("locals.hunks.length + '/%d'", n))
+
+	topBar := h.Div(leading, toggleAll, counter).Class("d-flex align-center ga-1 mb-2")
 
 	apply := v.VBtn(msgr.RevertSelected).
 		Color("warning").Variant(v.VariantTonal).PrependIcon("mdi-history").
@@ -248,6 +262,7 @@ func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target
 
 	return web.Scope(
 		h.Div(
+			topBar,
 			vx.VXDiffHunks().
 				Instruction(msgr.PartialRevertHint).
 				LeftLabel(msgr.Current).
