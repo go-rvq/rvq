@@ -36,6 +36,7 @@ type ModelHistory struct {
 	htmlFields   map[string]bool
 	refFields    map[string]bool
 	fieldDiffers map[string]FieldDiffFunc
+	fetcher      presets.FetchFunc
 
 	table      string
 	resolved   []string
@@ -89,6 +90,16 @@ func (h *ModelHistory) ReferenceFields(names ...string) *ModelHistory {
 	for _, n := range names {
 		h.refFields[n] = true
 	}
+	return h
+}
+
+// Fetcher overrides how a record is (re)loaded before snapshotting it, with the
+// same signature as ModelBuilder's fetch (presets.FetchFunc). By default the
+// model's own Editing fetcher is used, which applies its configured preloads so
+// associations are present in the snapshot; set this to control loading (e.g. to
+// add preloads the model's fetcher does not).
+func (h *ModelHistory) Fetcher(fn presets.FetchFunc) *ModelHistory {
+	h.fetcher = fn
 	return h
 }
 
@@ -284,12 +295,17 @@ func (h *ModelHistory) changedFields(recordKey string, parent histmodels.Hash, s
 // the pure content hash; a revision with the same (hash, record) already stored
 // means nothing changed, so none is created.
 func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
-	// Reload through the model's fetcher (which applies the configured preloads)
-	// so associations — e.g. PageOptions and its Galleries — are present in the
-	// snapshot. The just-saved obj may carry them nil, which would store a null
-	// value and later show a false "changed" diff. Best-effort: keep obj on failure.
-	if id := h.mb.MustRecordID(obj); !id.IsZero() {
-		if fetch := h.mb.Editing().Fetcher; fetch != nil {
+	// Reload through the fetcher (the configured one, else the model's Editing
+	// fetcher) so associations — e.g. PageOptions and its Galleries — are present
+	// in the snapshot. The just-saved obj may carry them nil, which would store a
+	// null value and later show a false "changed" diff. Best-effort: keep obj on
+	// failure.
+	fetch := h.fetcher
+	if fetch == nil {
+		fetch = h.mb.Editing().Fetcher
+	}
+	if fetch != nil {
+		if id := h.mb.MustRecordID(obj); !id.IsZero() {
 			fresh := h.mb.NewModel()
 			if fetch(fresh, id, ctx) == nil {
 				obj = fresh
