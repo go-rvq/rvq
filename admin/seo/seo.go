@@ -359,6 +359,15 @@ func (seo *SEO) checkConflict(varName string, isContextVar bool) {
 	}
 }
 
+// MergeSetting fills empty fields of over (the higher-priority setting) with the
+// values of base (the lower-priority one) — the same inheritance the SEO
+// hierarchy uses. Exported so an application can compose a custom parent chain,
+// e.g. a post inheriting the SEO of its post-list page before the built-in
+// Global-SEO merge runs.
+func MergeSetting(base, over *Setting) {
+	mergeSetting(base, over)
+}
+
 func mergeSetting(lowPSetting, highPSetting *Setting) {
 	if lowPSetting == nil {
 		return
