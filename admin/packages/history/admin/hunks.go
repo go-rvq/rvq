@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -22,18 +23,77 @@ type hunk struct {
 }
 
 // diffOps is the op list turning current into target (deterministic, so render
-// and apply agree on hunk ordering).
-func diffOps(current, target string) []diffmatchpatch.Diff {
+// and apply agree on hunk ordering). For HTML the diff runs over whole-tag /
+// word tokens (never inside a tag), so a hunk is a run of complete markup+text
+// and renders as valid HTML instead of exposing raw `</p><p>` fragments.
+func diffOps(current, target string, htmlMode bool) []diffmatchpatch.Diff {
 	d := diffmatchpatch.New()
+	if htmlMode {
+		return diffTokens(d, current, target)
+	}
 	diffs := d.DiffMain(current, target, false)
 	return d.DiffCleanupSemantic(diffs)
 }
 
+// htmlTokenRe splits HTML into whole tags (`<…>`) and the text runs between them.
+var htmlTokenRe = regexp.MustCompile(`<[^>]+>|[^<]+`)
+
+// wordRe splits a text run into words and whitespace runs (each an atomic token).
+var wordRe = regexp.MustCompile(`\s+|[^\s]+`)
+
+// tokenizeHTML breaks s into atomic tokens: each whole tag is one token, and the
+// text between tags is split into word / whitespace tokens. Diffing over these
+// keeps change boundaries on tag and word edges.
+func tokenizeHTML(s string) []string {
+	var toks []string
+	for _, seg := range htmlTokenRe.FindAllString(s, -1) {
+		if strings.HasPrefix(seg, "<") {
+			toks = append(toks, seg)
+			continue
+		}
+		toks = append(toks, wordRe.FindAllString(seg, -1)...)
+	}
+	return toks
+}
+
+// diffTokens diffs current vs target at HTML-token granularity, using the
+// rune-mapping trick (each distinct token ↦ one rune) so diffmatchpatch's
+// character diff operates on whole tokens; the result carries the token text.
+func diffTokens(d *diffmatchpatch.DiffMatchPatch, current, target string) []diffmatchpatch.Diff {
+	arr := []string{}
+	index := map[string]rune{}
+	encode := func(s string) []rune {
+		toks := tokenizeHTML(s)
+		rs := make([]rune, len(toks))
+		for i, tk := range toks {
+			r, ok := index[tk]
+			if !ok {
+				r = rune(len(arr))
+				index[tk] = r
+				arr = append(arr, tk)
+			}
+			rs[i] = r
+		}
+		return rs
+	}
+	r1, r2 := encode(current), encode(target)
+	diffs := d.DiffCleanupSemantic(d.DiffMainRunes(r1, r2, false))
+	out := make([]diffmatchpatch.Diff, len(diffs))
+	for i, df := range diffs {
+		var b strings.Builder
+		for _, r := range df.Text {
+			b.WriteString(arr[r])
+		}
+		out[i] = diffmatchpatch.Diff{Type: df.Type, Text: b.String()}
+	}
+	return out
+}
+
 // fieldHunks groups the diff between current and target into change hunks.
-func fieldHunks(current, target string) []hunk {
+func fieldHunks(current, target string, htmlMode bool) []hunk {
 	var hunks []hunk
 	inHunk := false
-	for _, df := range diffOps(current, target) {
+	for _, df := range diffOps(current, target, htmlMode) {
 		if df.Type == diffmatchpatch.DiffEqual {
 			inHunk = false
 			continue
@@ -56,11 +116,11 @@ func fieldHunks(current, target string) []hunk {
 // applyHunks rebuilds the field value from current, adopting the target only for
 // the selected hunks (git checkout -p): a selected hunk takes the target side,
 // an unselected one keeps the current side.
-func applyHunks(current, target string, selected map[int]bool) string {
+func applyHunks(current, target string, selected map[int]bool, htmlMode bool) string {
 	var b strings.Builder
 	hunkIdx := -1
 	inHunk := false
-	for _, df := range diffOps(current, target) {
+	for _, df := range diffOps(current, target, htmlMode) {
 		if df.Type == diffmatchpatch.DiffEqual {
 			b.WriteString(df.Text)
 			inHunk = false
@@ -117,19 +177,29 @@ func fieldStringValue(obj any, field string) string {
 // apply button that reverts only the selected hunks.
 func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target string, targetHash string, ctx *web.EventContext) h.HTMLComponent {
 	msgr := getMessages(ctx.Context())
-	hunks := fieldHunks(current, target)
+	htmlMode := mh.IsHTML(field)
+	hunks := fieldHunks(current, target, htmlMode)
 	if len(hunks) == 0 {
 		return v.VAlert(h.Text(msgr.NoHunks)).Type("info").Variant(v.VariantTonal).Density(v.DensityCompact)
+	}
+
+	// For HTML fields render the hunk as HTML (so markup shows as formatting, not
+	// as literal `</p><p>` text); for plain text escape it.
+	cell := func(s string) h.HTMLComponent {
+		if htmlMode {
+			return h.RawHTML(s)
+		}
+		return h.Text(s)
 	}
 
 	rows := make(h.HTMLComponents, 0, len(hunks))
 	for _, hk := range hunks {
 		var change h.HTMLComponents
 		if hk.Old != "" {
-			change = append(change, h.Div(h.Text(hk.Old)).Style("background-color:#ffeef0;text-decoration:line-through;").Class("pa-1"))
+			change = append(change, h.Div(cell(hk.Old)).Style("background-color:#ffeef0;text-decoration:line-through;").Class("pa-1"))
 		}
 		if hk.New != "" {
-			change = append(change, h.Div(h.Text(hk.New)).Style("background-color:#e6ffed;").Class("pa-1"))
+			change = append(change, h.Div(cell(hk.New)).Style("background-color:#e6ffed;").Class("pa-1"))
 		}
 		rows = append(rows, h.Div(
 			v.VCheckbox().
@@ -199,7 +269,7 @@ func (mh *ModelHistory) revertHunksEvent(ctx *web.EventContext) (r web.EventResp
 		}
 	}
 
-	value := applyHunks(current, target, selected)
+	value := applyHunks(current, target, selected, mh.IsHTML(field))
 	if err = mh.RevertFieldContent(obj, field, value, ctx); err != nil {
 		return
 	}
