@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
@@ -81,8 +82,14 @@ func (mh *ModelHistory) revertEventName() string { return "history_revert_" + mh
 
 // revertEvent restores the parent record to the chosen revision (git-revert:
 // records a new revision), then navigates to the parent's detail showing it.
+// Scope: "field" reverts a single field, "fields" (csv) a subset, neither the
+// whole record. recordKey comes from the "record" query (the compare dialog
+// passes it) and falls back to the parent id in the request path.
 func (mh *ModelHistory) revertEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
-	recordKey := parentRecordKey(ctx)
+	recordKey := ctx.R.FormValue("record")
+	if recordKey == "" {
+		recordKey = parentRecordKey(ctx)
+	}
 	hash, err := decodeHash(ctx.R.FormValue("hash"))
 	if err != nil {
 		return
@@ -96,7 +103,21 @@ func (mh *ModelHistory) revertEvent(ctx *web.EventContext) (r web.EventResponse,
 	if err = mh.db.First(obj).Error; err != nil {
 		return
 	}
-	if err = mh.RevertRecord(obj, hash, ctx); err != nil {
+	switch {
+	case ctx.R.FormValue("field") != "":
+		err = mh.RevertField(obj, hash, ctx.R.FormValue("field"), ctx)
+	case ctx.R.FormValue("fields") != "":
+		var fields []string
+		for _, f := range strings.Split(ctx.R.FormValue("fields"), ",") {
+			if f = strings.TrimSpace(f); f != "" {
+				fields = append(fields, f)
+			}
+		}
+		err = mh.RevertFields(obj, hash, fields, ctx)
+	default:
+		err = mh.RevertRecord(obj, hash, ctx)
+	}
+	if err != nil {
 		return
 	}
 	presets.ShowMessage(&r, getMessages(ctx.Context()).Reverted, "success")
