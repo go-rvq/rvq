@@ -31,6 +31,7 @@ type ModelHistory struct {
 	db           *gorm.DB
 	mb           *presets.ModelBuilder
 	fields       []string
+	extraFields  []string
 	allFields    bool
 	wholeFields  map[string]bool
 	htmlFields   map[string]bool
@@ -62,6 +63,14 @@ func (h *ModelHistory) Fields(names ...string) *ModelHistory { h.fields = names;
 
 // AllFields versions every struct field of the model.
 func (h *ModelHistory) AllFields() *ModelHistory { h.allFields = true; return h }
+
+// ExtraFields versions additional fields beyond the resolved set (EDIT fields by
+// default) — for values edited outside the model's own form, e.g. a SEO Setting
+// managed by a nested model, so changing them still records a revision.
+func (h *ModelHistory) ExtraFields(names ...string) *ModelHistory {
+	h.extraFields = append(h.extraFields, names...)
+	return h
+}
 
 // WholeFields marks fields that only accept whole-field (not partial content)
 // revert.
@@ -171,29 +180,44 @@ func revisionTable(db *gorm.DB, m any) string {
 }
 
 // resolveFields picks the versioned field names: explicit Fields, else every
-// struct field (AllFields), else the model's EDIT fields.
+// struct field (AllFields), else the model's EDIT fields; then any ExtraFields
+// are appended (deduplicated) — so a field edited outside the form (e.g. a SEO
+// Setting managed by a nested model) can still be versioned.
 func (h *ModelHistory) resolveFields() []string {
-	if len(h.fields) > 0 {
-		return h.fields
-	}
-	if h.allFields {
+	var names []string
+	switch {
+	case len(h.fields) > 0:
+		names = append(names, h.fields...)
+	case h.allFields:
 		stmt := &gorm.Statement{DB: h.db}
 		if err := stmt.Parse(h.mb.NewModel()); err != nil {
 			panic(err)
 		}
-		names := make([]string, 0, len(stmt.Schema.Fields))
 		for _, f := range stmt.Schema.Fields {
 			names = append(names, f.Name)
 		}
-		return names
+	default:
+		for _, n := range h.mb.Editing().FieldNames() {
+			if s, ok := n.(string); ok {
+				names = append(names, s)
+			}
+		}
 	}
-	var names []string
-	for _, n := range h.mb.Editing().FieldNames() {
-		if s, ok := n.(string); ok {
-			names = append(names, s)
+	for _, e := range h.extraFields {
+		if !slicesContains(names, e) {
+			names = append(names, e)
 		}
 	}
 	return names
+}
+
+func slicesContains(ss []string, v string) bool {
+	for _, s := range ss {
+		if s == v {
+			return true
+		}
+	}
+	return false
 }
 
 // snapshot captures the versioned fields of obj as a field→raw-JSON map, plus
