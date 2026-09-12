@@ -147,45 +147,15 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	})
 
 	// configure variables field
-	{
-		const formKeyForVariablesField = "Variables"
-		editing.Field("Variables").ComponentFunc(
-			func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-				seoSetting := field.Obj.(*QorSEOSetting)
-				msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
-				settingVars := b.GetSEO(seoSetting.Name).settingVars
-				var variablesComps h.HTMLComponents
-				if len(settingVars) > 0 {
-					variablesComps = append(variablesComps, h.H3(msgr.Variable).Style("margin-top:15px;font-weight: 500"))
-					for varName := range settingVars {
-						fieldComp := VTextField().
-							Attr(web.VField(fmt.Sprintf("%s.%s", formKeyForVariablesField, varName), seoSetting.Variables[varName])...).
-							Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName))
-						variablesComps = append(variablesComps, fieldComp)
-					}
-				}
-				return variablesComps
-			},
-		)
-		// Because the Variables type is of map type, you need to configure the setter func by yourself.
-		// If not configured, it will cause the updated valued to not be written to the database.
-		editing.Field("Variables").SetterFunc(
-			func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-				seoSetting := obj.(*QorSEOSetting)
-				if seoSetting.Variables == nil {
-					seoSetting.Variables = make(Variables)
-				}
-				for fieldName := range ctx.R.Form {
-					if strings.HasPrefix(fieldName, formKeyForVariablesField) {
-						varName := strings.TrimPrefix(fieldName, formKeyForVariablesField+".")
-						val := ctx.R.Form[fieldName][0]
-						seoSetting.Variables[varName] = val
-					}
-				}
-				return nil
-			},
-		)
-	}
+	// Variables editor: its component resolves the variable set per row's Name,
+	// and its setter writes back the map. (Reused by application-mounted SEO
+	// models via VariablesComponentFunc/VariablesSetterFunc.)
+	editing.Field("Variables").
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			ss := field.Obj.(*QorSEOSetting)
+			return b.VariablesComponentFunc(ss.Name)(field, ctx)
+		}).
+		SetterFunc(VariablesSetterFunc)
 
 	editing.Field("Setting").ComponentFunc(
 		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -208,6 +178,55 @@ func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.Field
 		}
 		return b.vseo(field.Name, b.GetSEO(seoName), &ss.Setting, ctx.R)
 	}
+}
+
+// formKeyForVariablesField is the form prefix of the SEO setting variables.
+const formKeyForVariablesField = "Variables"
+
+// VariablesComponentFunc returns the editor for a QorSEOSetting's setting
+// variables (e.g. SiteName), resolving the variable set by seoName. Pair it with
+// VariablesSetterFunc. Exposed so an application can mount its own SEO model.
+func (b *Builder) VariablesComponentFunc(seoName string) func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ss, ok := field.Obj.(*QorSEOSetting)
+		if !ok {
+			return h.Div()
+		}
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
+		theSEO := b.GetSEO(seoName)
+		if theSEO == nil {
+			return h.Div()
+		}
+		settingVars := theSEO.settingVars
+		var comps h.HTMLComponents
+		if len(settingVars) > 0 {
+			comps = append(comps, h.H3(msgr.Variable).Style("margin-top:15px;font-weight: 500"))
+			for varName := range settingVars {
+				comps = append(comps, VTextField().
+					Attr(web.VField(fmt.Sprintf("%s.%s", formKeyForVariablesField, varName), ss.Variables[varName])...).
+					Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)))
+			}
+		}
+		return comps
+	}
+}
+
+// VariablesSetterFunc writes the submitted setting variables back to the
+// QorSEOSetting (its Variables is a map, so it needs an explicit setter).
+func VariablesSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
+	ss, ok := obj.(*QorSEOSetting)
+	if !ok {
+		return nil
+	}
+	if ss.Variables == nil {
+		ss.Variables = make(Variables)
+	}
+	for fieldName := range ctx.R.Form {
+		if strings.HasPrefix(fieldName, formKeyForVariablesField+".") {
+			ss.Variables[strings.TrimPrefix(fieldName, formKeyForVariablesField+".")] = ctx.R.Form[fieldName][0]
+		}
+	}
+	return nil
 }
 
 func EditSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
