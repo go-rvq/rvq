@@ -3,6 +3,7 @@ package admin
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/activity"
@@ -119,6 +120,13 @@ func (h *ModelHistory) Build() *ModelHistory {
 	h.resolved = h.resolveFields()
 	revisionsByTable[h.table] = h
 
+	// Migrate legacy rows: fill ChangedFields on revisions saved before the
+	// column existed. Idempotent and cheap when there is nothing to do; a failure
+	// must not block boot.
+	if err := h.Backfill(); err != nil {
+		log.Printf("history: backfill %s: %v", h.table, err)
+	}
+
 	h.mb.Editing().WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) error {
 			if err := in(obj, id, ctx); err != nil {
@@ -186,6 +194,54 @@ func (h *ModelHistory) snapshot(obj interface{}) (map[string]json.RawMessage, []
 	}
 	data, err := json.Marshal(snap)
 	return snap, data, err
+}
+
+// Backfill fills ChangedFields on revisions that predate the column (stored
+// NULL): for each such record it walks the chain oldest→newest and records, per
+// revision, the fields that changed from the previous one (all on the first).
+// Idempotent — it only reads records that still have a NULL row and only writes
+// the rows still missing the list, so re-running (every boot) is a no-op once
+// done.
+func (h *ModelHistory) Backfill() error {
+	var keys []string
+	if err := h.db.Table(h.table).
+		Where("changed_fields IS NULL").
+		Distinct().
+		Pluck("record_key", &keys).Error; err != nil {
+		return err
+	}
+	for _, key := range keys {
+		revs, err := h.Chain(key) // oldest → newest
+		if err != nil {
+			return err
+		}
+		var prev map[string]json.RawMessage
+		for i := range revs {
+			snap, err := fieldMap(&revs[i])
+			if err != nil {
+				return err
+			}
+			var changed []string
+			if prev == nil {
+				changed = append(changed, h.resolved...)
+			} else {
+				for _, f := range h.resolved {
+					if fieldValue(snap, f) != fieldValue(prev, f) {
+						changed = append(changed, f)
+					}
+				}
+			}
+			if revs[i].ChangedFields.Data == nil {
+				if err := h.db.Table(h.table).
+					Where("hash = ? AND record_key = ?", []byte(revs[i].Hash), key).
+					Update("changed_fields", datatypes.NewJSONType(changed)).Error; err != nil {
+					return err
+				}
+			}
+			prev = snap
+		}
+	}
+	return nil
 }
 
 // changedFields lists the versioned fields of snap whose value differs from the

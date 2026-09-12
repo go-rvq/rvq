@@ -143,6 +143,42 @@ func TestChangedFieldsAndFieldHistory(t *testing.T) {
 	}
 }
 
+// TestBackfillFillsLegacyRows: revisions saved before the ChangedFields column
+// (simulated by nulling it) are filled by Backfill, computing each from its
+// parent, and it is idempotent.
+func TestBackfillFillsLegacyRows(t *testing.T) {
+	db, mb, mh := setupHistory(t)
+
+	obj := &histDoc{Title: "A", Body: "<p>one</p>"}
+	save(t, mb, obj, model.ID{})
+	key := mb.MustRecordID(obj).String()
+	obj.Title = "B"
+	save(t, mb, obj, mb.MustRecordID(obj))
+
+	// Simulate legacy rows: clear the column on every revision.
+	if err := db.Table(mh.Table()).Where("record_key = ?", key).
+		Update("changed_fields", nil).Error; err != nil {
+		t.Fatalf("null out: %v", err)
+	}
+
+	if err := mh.Backfill(); err != nil {
+		t.Fatalf("backfill: %v", err)
+	}
+
+	revs, _ := mh.Chain(key)
+	if len(revs[0].ChangedFields.Data) != 2 {
+		t.Fatalf("first ChangedFields = %v, want both fields", revs[0].ChangedFields.Data)
+	}
+	if len(revs[1].ChangedFields.Data) != 1 || revs[1].ChangedFields.Data[0] != "Title" {
+		t.Fatalf("second ChangedFields = %v, want [Title]", revs[1].ChangedFields.Data)
+	}
+
+	// Idempotent: a second run changes nothing and errors nothing.
+	if err := mh.Backfill(); err != nil {
+		t.Fatalf("backfill (2nd): %v", err)
+	}
+}
+
 // TestLatestHashReadsBytea exercises the exact query that regressed: reading the
 // newest hash back through Hash's sql.Scanner (a gorm .Scan would misread it).
 func TestLatestHashReadsBytea(t *testing.T) {
