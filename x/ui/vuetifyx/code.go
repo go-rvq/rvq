@@ -45,3 +45,50 @@ func (b *VXCodeBuilder) Attr(vs ...interface{}) *VXCodeBuilder {
 func (b *VXCodeBuilder) Write(ctx *h.Context) error {
 	return b.tag.Write(ctx)
 }
+
+// VXDiffHunksBuilder renders the <vx-diff-hunks> component: a clickable
+// partial-revert diff. It shows an instruction, then a current | revision split
+// whose change regions (marked with data-h="<hunk index>") the user clicks to
+// select (super-highlight + a check). The selected hunk indexes are the model
+// value (bind with v-model to a locals array the revert button reads).
+type VXDiffHunksBuilder struct {
+	tag *h.HTMLTagBuilder
+}
+
+func VXDiffHunks() *VXDiffHunksBuilder {
+	return &VXDiffHunksBuilder{tag: h.Tag("vx-diff-hunks")}
+}
+
+func (b *VXDiffHunksBuilder) Instruction(v string) *VXDiffHunksBuilder {
+	b.tag.Attr("instruction", v)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) LeftLabel(v string) *VXDiffHunksBuilder {
+	b.tag.Attr("left-label", v)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) RightLabel(v string) *VXDiffHunksBuilder {
+	b.tag.Attr("right-label", v)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) LeftHTML(v string) *VXDiffHunksBuilder {
+	b.tag.Attr("left-html", v)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) RightHTML(v string) *VXDiffHunksBuilder {
+	b.tag.Attr("right-html", v)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) Attr(vs ...interface{}) *VXDiffHunksBuilder {
+	b.tag.Attr(vs...)
+	return b
+}
+
+func (b *VXDiffHunksBuilder) Write(ctx *h.Context) error {
+	return b.tag.Write(ctx)
+}

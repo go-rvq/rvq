@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	stdhtml "html"
 	"strconv"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sunfmin/reflectutils"
 	"golang.org/x/net/html"
@@ -176,41 +178,62 @@ func fieldStringValue(obj any, field string) string {
 	return s
 }
 
-// hunkSelectPanel renders, for a partial-capable field, the change hunks between
-// the current value and the revision's value, each with a checkbox, plus an
-// apply button that reverts only the selected hunks.
+// renderHunkSides builds the two sides of the partial-revert diff, tagging every
+// change region with its hunk index (data-h) so the viewer can toggle it by
+// clicking and the revert applies exactly those hunks. Left is the current value
+// (removed regions marked), right is the target revision (added regions marked).
+// The indexing matches applyHunks — both walk diffOps in the same order.
+func renderHunkSides(current, target string, htmlMode bool) (leftHTML, rightHTML string, n int) {
+	esc := func(s string) string {
+		if htmlMode {
+			return s
+		}
+		return stdhtml.EscapeString(s)
+	}
+	tag := "span"
+	if htmlMode {
+		tag = "div"
+	}
+	region := func(class string, idx int, text string) string {
+		return fmt.Sprintf(`<%s class="%s" data-h="%d">%s</%s>`, tag, class, idx, esc(text), tag)
+	}
+	var left, right strings.Builder
+	idx := -1
+	inHunk := false
+	for _, df := range diffOps(current, target, htmlMode) {
+		switch df.Type {
+		case diffmatchpatch.DiffEqual:
+			left.WriteString(esc(df.Text))
+			right.WriteString(esc(df.Text))
+			inHunk = false
+		case diffmatchpatch.DiffDelete:
+			if !inHunk {
+				idx++
+				inHunk = true
+			}
+			left.WriteString(region("hist-del", idx, df.Text))
+		case diffmatchpatch.DiffInsert:
+			if !inHunk {
+				idx++
+				inHunk = true
+			}
+			right.WriteString(region("hist-ins", idx, df.Text))
+		}
+	}
+	return left.String(), right.String(), idx + 1
+}
+
+// hunkSelectPanel renders, for a partial-capable field, the change regions
+// between the current value and the revision's value as a clickable diff: an
+// instruction on top, then the current | revision split whose highlighted
+// regions the user clicks to select (super-highlight + check). An apply button
+// reverts the selected regions to the revision.
 func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target string, targetHash string, ctx *web.EventContext) h.HTMLComponent {
 	msgr := getMessages(ctx.Context())
 	htmlMode := mh.IsHTML(field)
-	hunks := fieldHunks(current, target, htmlMode)
-	if len(hunks) == 0 {
+	left, right, n := renderHunkSides(current, target, htmlMode)
+	if n == 0 {
 		return v.VAlert(h.Text(msgr.NoHunks)).Type("info").Variant(v.VariantTonal).Density(v.DensityCompact)
-	}
-
-	// For HTML fields render the hunk as HTML (so markup shows as formatting, not
-	// as literal `</p><p>` text); for plain text escape it.
-	cell := func(s string) h.HTMLComponent {
-		if htmlMode {
-			return h.RawHTML(s)
-		}
-		return h.Text(s)
-	}
-
-	rows := make(h.HTMLComponents, 0, len(hunks))
-	for _, hk := range hunks {
-		var change h.HTMLComponents
-		if hk.Old != "" {
-			change = append(change, h.Div(cell(hk.Old)).Style("background-color:#ffeef0;text-decoration:line-through;").Class("pa-1"))
-		}
-		if hk.New != "" {
-			change = append(change, h.Div(cell(hk.New)).Style("background-color:#e6ffed;").Class("pa-1"))
-		}
-		rows = append(rows, h.Div(
-			v.VCheckbox().
-				Attr("v-model", "locals.hunks").Attr(":value", hk.Index).
-				HideDetails(true).Density(v.DensityCompact),
-			h.Div(change...).Class("flex-1-1-0"),
-		).Class("d-flex align-start ga-2 mb-2"))
 	}
 
 	apply := v.VBtn(msgr.RevertSelected).
@@ -224,11 +247,16 @@ func (mh *ModelHistory) hunkSelectPanel(recordKey, field string, current, target
 			Go())
 
 	return web.Scope(
-		v.VCard(
-			v.VCardTitle(h.Text(msgr.PartialRevert)),
-			v.VCardText(rows...),
-			v.VCardActions(apply),
-		).Variant(v.VariantOutlined).Class("mt-4"),
+		h.Div(
+			vx.VXDiffHunks().
+				Instruction(msgr.PartialRevertHint).
+				LeftLabel(msgr.Current).
+				RightLabel(msgr.Revision).
+				LeftHTML(left).
+				RightHTML(right).
+				Attr("v-model", "locals.hunks"),
+			h.Div(apply).Class("d-flex justify-end mt-3"),
+		).Class("mt-4"),
 	).LocalsInit("{ hunks: [] }")
 }
 
