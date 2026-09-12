@@ -152,6 +152,36 @@ func (b *Builder) RegisterSEO(name string, model ...interface{}) *SEO {
 	return seo
 }
 
+// RegisterModel associates an additional model type with an already-registered
+// SEO, so Render/GetSEO recognize records of that type too. Use it when the same
+// SEO applies to more than one type — e.g. the editable model and its published
+// snapshot (models.Page and models.PublishedPage). The model must have a field
+// of type Setting.
+func (b *Builder) RegisterModel(s *SEO, model interface{}) *SEO {
+	modelType := reflect.Indirect(reflect.ValueOf(model)).Type()
+	if !hasSettingField(modelType) {
+		panic("model must be of struct type that has a Setting field")
+	}
+	if _, isExist := b.registeredSEO[modelType]; isExist {
+		panic(fmt.Sprintf("the seo for %v model has been registered", modelType.Name()))
+	}
+	b.registeredSEO[modelType] = s
+	return s
+}
+
+// hasSettingField reports whether a struct type has a field of type Setting.
+func hasSettingField(modelType reflect.Type) bool {
+	if modelType.Kind() != reflect.Struct {
+		return false
+	}
+	for i := 0; i < modelType.NumField(); i++ {
+		if modelType.Field(i).Type == reflect.TypeOf(Setting{}) {
+			return true
+		}
+	}
+	return false
+}
+
 // RemoveSEO removes the specified SEO,
 // if the SEO has children, the parent of the children will
 // be the parent of the SEO
