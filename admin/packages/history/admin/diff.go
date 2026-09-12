@@ -119,6 +119,33 @@ func fieldValue(m map[string]json.RawMessage, field string) string {
 	return string(raw)
 }
 
+// topField reduces a (possibly nested/indexed) path to its top-level versioned
+// field name ("PageOptions.Layout" → "PageOptions", "Tags[0].Name" → "Tags").
+func topField(path string) string {
+	if i := strings.IndexAny(path, ".["); i >= 0 {
+		return path[:i]
+	}
+	return path
+}
+
+// revisionChanged reports whether a revision recorded a change to the given
+// (possibly nested) field, from its ChangedFields list (matched on the
+// top-level field). A revision with no list (legacy) is treated as changed so it
+// is never hidden.
+func revisionChanged(rev *histmodels.Revision, field string) bool {
+	cf := rev.ChangedFields.Data
+	if cf == nil {
+		return true
+	}
+	top := topField(field)
+	for _, c := range cf {
+		if c == top {
+			return true
+		}
+	}
+	return false
+}
+
 // Diff compares every versioned field between two revisions of a record,
 // returning only the fields that differ.
 func (h *ModelHistory) Diff(recordKey string, aHash, bHash []byte) ([]FieldChange, error) {

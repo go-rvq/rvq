@@ -98,6 +98,51 @@ func TestUpdateChainsRevision(t *testing.T) {
 	}
 }
 
+// TestChangedFieldsAndFieldHistory: the first revision lists every versioned
+// field; a later one lists only the fields that actually changed, and
+// FieldHistory returns exactly the revisions that touched a given field.
+func TestChangedFieldsAndFieldHistory(t *testing.T) {
+	_, mb, mh := setupHistory(t)
+
+	obj := &histDoc{Title: "A", Body: "<p>one</p>"}
+	save(t, mb, obj, model.ID{})
+	key := mb.MustRecordID(obj).String()
+
+	// Change only Title.
+	obj.Title = "B"
+	save(t, mb, obj, mb.MustRecordID(obj))
+
+	revs, _ := mh.Chain(key)
+	if len(revs) != 2 {
+		t.Fatalf("revisions = %d, want 2", len(revs))
+	}
+	// First revision: both fields are "changed" (initial state).
+	first := revs[0].ChangedFields.Data
+	if len(first) != 2 {
+		t.Fatalf("first ChangedFields = %v, want [Title Body]", first)
+	}
+	// Second revision: only Title.
+	second := revs[1].ChangedFields.Data
+	if len(second) != 1 || second[0] != "Title" {
+		t.Fatalf("second ChangedFields = %v, want [Title]", second)
+	}
+
+	titleHist, err := mh.FieldHistory(key, "Title")
+	if err != nil {
+		t.Fatalf("FieldHistory(Title): %v", err)
+	}
+	if len(titleHist) != 2 {
+		t.Fatalf("Title history = %d, want 2", len(titleHist))
+	}
+	bodyHist, err := mh.FieldHistory(key, "Body")
+	if err != nil {
+		t.Fatalf("FieldHistory(Body): %v", err)
+	}
+	if len(bodyHist) != 1 {
+		t.Fatalf("Body history = %d, want 1 (only the first touched Body)", len(bodyHist))
+	}
+}
+
 // TestLatestHashReadsBytea exercises the exact query that regressed: reading the
 // newest hash back through Hash's sql.Scanner (a gorm .Scan would misread it).
 func TestLatestHashReadsBytea(t *testing.T) {

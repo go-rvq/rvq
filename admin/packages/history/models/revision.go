@@ -39,6 +39,12 @@ type Revision struct {
 	// Fields is the snapshot {field: raw JSON value} of just the versioned fields.
 	Fields Fields `gorm:"type:jsonb"`
 
+	// ChangedFields lists the versioned fields whose value differs from the parent
+	// revision (all versioned fields on the first revision). The snapshot above is
+	// still complete; this is what makes the history queryable by field — a
+	// field's timeline is exactly the revisions that list it.
+	ChangedFields datatypes.NullJSONType[[]string] `gorm:"type:jsonb"`
+
 	CreatedAt time.Time
 
 	// CreatorID is the author's user id (FK users.id) — never nil: the logged-in

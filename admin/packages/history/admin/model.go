@@ -164,6 +164,32 @@ func (h *ModelHistory) snapshot(obj interface{}) (map[string]json.RawMessage, []
 	return snap, data, err
 }
 
+// changedFields lists the versioned fields of snap whose value differs from the
+// parent revision. With no parent (the first revision) every versioned field is
+// "changed" — the record's initial state.
+func (h *ModelHistory) changedFields(recordKey string, parent histmodels.Hash, snap map[string]json.RawMessage) ([]string, error) {
+	if parent == nil {
+		out := make([]string, len(h.resolved))
+		copy(out, h.resolved)
+		return out, nil
+	}
+	prev, err := h.Revision(recordKey, parent)
+	if err != nil {
+		return nil, err
+	}
+	pm, err := fieldMap(prev)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, f := range h.resolved {
+		if fieldValue(snap, f) != fieldValue(pm, f) {
+			out = append(out, f)
+		}
+	}
+	return out, nil
+}
+
 // capture writes a revision of obj if the versioned fields changed. The hash is
 // the pure content hash; a revision with the same (hash, record) already stored
 // means nothing changed, so none is created.
@@ -193,12 +219,21 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		return err
 	}
 
+	// The fields whose value changed from the parent (all of them on the first
+	// revision). Kept alongside the full snapshot so the history is queryable by
+	// field without walking the chain or re-diffing.
+	changed, err := h.changedFields(recordKey, parent, snap)
+	if err != nil {
+		return err
+	}
+
 	rev := histmodels.Revision{
-		Hash:      hash,
-		RecordKey: recordKey,
-		Parent:    parent,
-		Fields:    datatypes.NewJSONType(snap),
-		CreatedAt: time.Now(),
+		Hash:          hash,
+		RecordKey:     recordKey,
+		Parent:        parent,
+		Fields:        datatypes.NewJSONType(snap),
+		ChangedFields: datatypes.NewJSONType(changed),
+		CreatedAt:     time.Now(),
 	}
 	if u := user.GetCurrentUser(ctx.R); u != nil {
 		rev.CreatorID = u.GetID()

@@ -20,28 +20,25 @@ type FieldRevision struct {
 	Value    string
 }
 
-// FieldHistory returns the revisions in which a given field's value changed —
-// the timeline of just that field (e.g. every edit of Post.Body). Consecutive
-// revisions that left the field untouched are collapsed.
+// FieldHistory returns the revisions in which a given field changed — the
+// timeline of just that field (e.g. every edit of Post.Body). A revision is
+// included when its ChangedFields list names the field (top-level), which is
+// exactly where the value changed from the parent.
 func (h *ModelHistory) FieldHistory(recordKey, field string) ([]FieldRevision, error) {
 	revs, err := h.Chain(recordKey)
 	if err != nil {
 		return nil, err
 	}
 	var out []FieldRevision
-	var prev string
-	first := true
 	for i := range revs {
+		if !revisionChanged(&revs[i], field) {
+			continue
+		}
 		m, err := fieldMap(&revs[i])
 		if err != nil {
 			return nil, err
 		}
-		v := fieldValue(m, field)
-		if first || v != prev {
-			out = append(out, FieldRevision{Revision: revs[i], Value: v})
-			prev = v
-			first = false
-		}
+		out = append(out, FieldRevision{Revision: revs[i], Value: fieldValue(m, field)})
 	}
 	return out, nil
 }
