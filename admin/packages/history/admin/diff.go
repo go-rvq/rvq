@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
+	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 
@@ -143,48 +144,77 @@ func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision, ctx *web.Eve
 		}
 	}
 
-	// Translate each field/sub-field name through the model's field translator
-	// (keys <Model><Field>), falling back to the raw name when untranslated.
-	tr := h.mb.FieldTranslator()
-	label := func(name string) string {
-		if s := i18n.Translate(tr, ctx.Context(), name); s != "" && s != name {
-			return s
-		}
-		return name
-	}
-
 	var parts []string
 	for _, f := range h.resolved {
 		if !changed[f] {
 			continue
 		}
 		if parentMap == nil {
-			parts = append(parts, label(f)) // root revision: top-level labels only
+			parts = append(parts, fieldLabelOf(h.mb, f, ctx)) // root: top-level labels only
 			continue
 		}
-		parts = append(parts, formatChangedField(label, f, parentMap[f], m[f]))
+		parts = append(parts, formatChangedField(h.mb, f, parentMap[f], m[f], ctx))
 	}
 	return strings.Join(parts, ", ")
 }
 
-// formatChangedField renders one changed field (label-translated), descending
-// into a structured value to show only the sub-fields that differ: "Name" for a
-// leaf change, "Name [ sub1, sub2 ]" when it is an object whose sub-keys changed.
-func formatChangedField(label func(string) string, name string, oldRaw, newRaw json.RawMessage) string {
+// formatChangedField renders one changed field (label-translated via mb's field
+// translator), descending into a structured value to show only the sub-fields
+// that differ: "Name" for a leaf change, "Name [ sub1, sub2 ]" when it is an
+// object whose sub-keys changed. Sub-fields are translated with the child model
+// builder of the field (mb.GetChildByID(name)) when there is one.
+func formatChangedField(mb *presets.ModelBuilder, name string, oldRaw, newRaw json.RawMessage, ctx *web.EventContext) string {
+	label := fieldLabelOf(mb, name, ctx)
+	var child *presets.ModelBuilder
+	if mb != nil {
+		child = mb.GetChildByID(name)
+	}
 	var oldObj, newObj map[string]json.RawMessage
 	if json.Unmarshal(oldRaw, &oldObj) == nil && json.Unmarshal(newRaw, &newObj) == nil {
 		keys := sortedUnionKeys(oldObj, newObj)
 		var subs []string
 		for _, k := range keys {
 			if rawChanged(oldObj[k], newObj[k]) {
-				subs = append(subs, formatChangedField(label, k, oldObj[k], newObj[k]))
+				subs = append(subs, formatChangedField(child, k, oldObj[k], newObj[k], ctx))
 			}
 		}
 		if len(subs) > 0 {
-			return label(name) + " [ " + strings.Join(subs, ", ") + " ]"
+			return label + " [ " + strings.Join(subs, ", ") + " ]"
 		}
 	}
-	return label(name)
+	return label
+}
+
+// fieldLabelOf translates a field name through mb's field translator (keys
+// <Model><Field>), falling back to the raw name. A nil mb or ctx yields the name.
+func fieldLabelOf(mb *presets.ModelBuilder, name string, ctx *web.EventContext) string {
+	if mb == nil || ctx == nil {
+		return name
+	}
+	if s := i18n.Translate(mb.FieldTranslator(), ctx.Context(), name); s != "" && s != name {
+		return s
+	}
+	return name
+}
+
+// fieldLabelPath translates a (possibly nested/indexed) field path to a readable
+// label, descending child model builders for each segment: "PageOptions.Layout"
+// → "Opções da Página / Layout"; "Tags[0].Name" keeps the index on the segment.
+func (h *ModelHistory) fieldLabelPath(path string, ctx *web.EventContext) string {
+	mb := h.mb
+	parts := strings.Split(path, ".")
+	out := make([]string, len(parts))
+	for i, p := range parts {
+		name, idx := p, ""
+		if j := strings.IndexByte(p, '['); j >= 0 {
+			name, idx = p[:j], p[j:]
+		}
+		out[i] = fieldLabelOf(mb, name, ctx) + idx
+		if mb != nil {
+			mb = mb.GetChildByID(name)
+		}
+	}
+	return strings.Join(out, " / ")
 }
 
 // sortedUnionKeys is the sorted union of two maps' keys.

@@ -117,6 +117,13 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 		fields = sel
 	}
 
+	// Whether NEW (bHash) is the record's current revision — "compare with
+	// current". Then the sides read Current | Revision; otherwise Before | After.
+	withCurrent := false
+	if latest, lerr := mh.latestHash(recordKey); lerr == nil && len(latest) > 0 {
+		withCurrent = bytes.Equal(bHash, latest)
+	}
+
 	// Invert swaps OLD and NEW: re-render the portal with a/b exchanged.
 	invertBtn := v.VBtn("").Icon("mdi-swap-horizontal").
 		Variant(v.VariantTonal).Size(v.SizeSmall).
@@ -156,7 +163,7 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 		if fieldValue(am, f) == fieldValue(bm, f) {
 			continue // unchanged — omit (fieldValue follows nested paths)
 		}
-		panels = append(panels, mh.fieldPanel(f, oldObj, newObj, am, bm, recordKey, aHash, ctx, msgr))
+		panels = append(panels, mh.fieldPanel(f, oldObj, newObj, am, bm, recordKey, aHash, withCurrent, ctx, msgr))
 		open = append(open, strconv.Itoa(len(panels)-1))
 	}
 
@@ -197,7 +204,7 @@ func revertFieldButton(mh *ModelHistory, f, recordKey string, aHash histmodels.H
 	return btn
 }
 
-func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, aHash histmodels.Hash, ctx *web.EventContext, msgr *Messages) h.HTMLComponent {
+func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[string]json.RawMessage, recordKey string, aHash histmodels.Hash, withCurrent bool, ctx *web.EventContext, msgr *Messages) h.HTMLComponent {
 	side := func(label string, body h.HTMLComponent, cls string) *h.HTMLTagBuilder {
 		return h.Div(
 			h.Div(h.Strong(label)).Class("text-caption text-medium-emphasis mb-1"),
@@ -205,26 +212,15 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		).Class("flex-1-1-0 " + cls)
 	}
 
-	// Each field is diffed by the handler its kind selects (HTML / bool / JSON /
-	// text, or a per-field override) — the model diff is the summary of these.
-	oldC, newC, mergedC := mh.diffField(f, oldObj, newObj, am, bm, recordKey, ctx, msgr)
+	var (
+		children   h.HTMLComponents
+		titleExtra = revertFieldButton(mh, f, recordKey, aHash, msgr, true)
+	)
 
-	children := h.HTMLComponents{
-		// OLD | NEW, hidden while the merged view is shown.
-		h.Div(
-			side(msgr.Old, oldC, "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
-			side(msgr.New, newC, "ps-2"),
-		).Class("d-flex align-start").Attr("v-if", "!locals.showMerged"),
-	}
-	if mergedC != nil {
-		children = append(children, h.Div(mergedC).Class("pa-1").Attr("v-if", "locals.showMerged"))
-	}
-
-	// A partial-capable field also offers hunk-level revert (current value → OLD).
-	// Its whole-field Revert button leads that panel's top bar (beside the
-	// select-all toggle and the counter) instead of sitting in the title.
-	var titleExtra h.HTMLComponent = revertFieldButton(mh, f, recordKey, aHash, msgr, true)
-	if mh.AcceptsPartial(f) {
+	// A partial-capable field compared against the current revision shows only the
+	// clickable partial-revert diff (Current | Revision), whose whole-field Revert
+	// button leads its top bar — so there is a single side-by-side, not a second.
+	if withCurrent && mh.AcceptsPartial(f) {
 		if cur, cerr := mh.currentRecord(recordKey); cerr == nil {
 			leading := revertFieldButton(mh, f, recordKey, aHash, msgr, false)
 			children = append(children, mh.hunkSelectPanel(
@@ -233,10 +229,30 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 		}
 	}
 
+	// Otherwise the plain side-by-side diff: Current | Revision when comparing with
+	// the current revision, Before | After when comparing two past revisions.
+	if children == nil {
+		oldC, newC, mergedC := mh.diffField(f, oldObj, newObj, am, bm, recordKey, ctx, msgr)
+		leftLabel, rightLabel, leftC, rightC := msgr.Old, msgr.New, oldC, newC
+		if withCurrent {
+			// NEW is the current; OLD is the selected revision.
+			leftLabel, rightLabel, leftC, rightC = msgr.Current, msgr.Revision, newC, oldC
+		}
+		children = h.HTMLComponents{
+			h.Div(
+				side(leftLabel, leftC, "pe-2").Style("border-right:1px solid rgba(0,0,0,.12)"),
+				side(rightLabel, rightC, "ps-2"),
+			).Class("d-flex align-start").Attr("v-if", "!locals.showMerged"),
+		}
+		if mergedC != nil {
+			children = append(children, h.Div(mergedC).Class("pa-1").Attr("v-if", "locals.showMerged"))
+		}
+	}
+
 	return v.VExpansionPanel(
 		v.VExpansionPanelTitle().Children(
 			h.Div(
-				h.Strong(f),
+				h.Strong(mh.fieldLabelPath(f, ctx)),
 				titleExtra,
 			).Class("d-flex align-center flex-grow-1"),
 		),
