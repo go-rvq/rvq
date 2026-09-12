@@ -195,6 +195,21 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	)
 }
 
+// SettingComponentFunc returns the editor component for a Setting field of a
+// QorSEOSetting, resolving the SEO by name (seoName) rather than by the object's
+// type — so an application can mount its own model builder for a specific SEO
+// (e.g. a singleton "Global SEO" scoped by locale) and still get the full SEO
+// editor. Pair it with EditSetterFunc on the same field.
+func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ss, ok := field.Obj.(*QorSEOSetting)
+		if !ok {
+			return h.Div()
+		}
+		return b.vseo(field.Name, b.GetSEO(seoName), &ss.Setting, ctx.R)
+	}
+}
+
 func EditSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 	var setting Setting
 	mediaBox := media_library.MediaBox{}
