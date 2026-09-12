@@ -165,10 +165,7 @@ func (h *ModelHistory) ChangedFieldsLabel(rev *histmodels.Revision, ctx *web.Eve
 // builder of the field (mb.GetChildByID(name)) when there is one.
 func formatChangedField(mb *presets.ModelBuilder, name string, oldRaw, newRaw json.RawMessage, ctx *web.EventContext) string {
 	label := fieldLabelOf(mb, name, ctx)
-	var child *presets.ModelBuilder
-	if mb != nil {
-		child = mb.GetChildByID(name)
-	}
+	child := nestedModelOf(mb, name)
 	var oldObj, newObj map[string]json.RawMessage
 	if json.Unmarshal(oldRaw, &oldObj) == nil && json.Unmarshal(newRaw, &newObj) == nil {
 		keys := sortedUnionKeys(oldObj, newObj)
@@ -197,6 +194,33 @@ func fieldLabelOf(mb *presets.ModelBuilder, name string, ctx *web.EventContext) 
 	return name
 }
 
+// nestedModelOf returns the model builder that describes a field's sub-fields —
+// the field's Nested (NestedStruct / NestedSlice) Model — so sub-field labels
+// translate with the right model. Looks in the Editing then Detailing fields
+// builders. nil when the field is not nested.
+func nestedModelOf(mb *presets.ModelBuilder, name string) *presets.ModelBuilder {
+	if mb == nil {
+		return nil
+	}
+	fbs := []*presets.FieldsBuilder{&mb.Editing().FieldsBuilder}
+	if mb.HasDetailing() {
+		fbs = append(fbs, &mb.Detailing().FieldsBuilder)
+	}
+	for _, fb := range fbs {
+		if fb == nil {
+			continue
+		}
+		if f := fb.GetField(name); f != nil {
+			if n := f.GetNested(); n != nil {
+				if cm := n.Model(); cm != nil {
+					return cm
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // fieldLabelPath translates a (possibly nested/indexed) field path to a readable
 // label, descending child model builders for each segment: "PageOptions.Layout"
 // → "Opções da Página / Layout"; "Tags[0].Name" keeps the index on the segment.
@@ -210,9 +234,7 @@ func (h *ModelHistory) fieldLabelPath(path string, ctx *web.EventContext) string
 			name, idx = p[:j], p[j:]
 		}
 		out[i] = fieldLabelOf(mb, name, ctx) + idx
-		if mb != nil {
-			mb = mb.GetChildByID(name)
-		}
+		mb = nestedModelOf(mb, name)
 	}
 	return strings.Join(out, " / ")
 }
