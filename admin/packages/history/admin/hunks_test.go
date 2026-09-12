@@ -1,9 +1,6 @@
 package admin
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // selectAll returns a selection covering every hunk between current and target.
 func selectAll(current, target string, htmlMode bool) map[int]bool {
@@ -67,21 +64,30 @@ func TestApplyHunksPureInsertAndDelete(t *testing.T) {
 	}
 }
 
-// In HTML mode a hunk must never split a tag: the change is expressed with whole
-// tags/words, so a hunk's text is renderable HTML rather than a `</p><p>` shard.
-func TestFieldHunksHTMLKeepsTagsWhole(t *testing.T) {
+// In HTML mode a hunk is a whole top-level block: changing text inside a <p>
+// yields the entire `<p>…</p>` on each side, not a bare word or a tag shard.
+func TestFieldHunksHTMLWholeBlocks(t *testing.T) {
 	current := "<p>hello world</p>"
 	target := "<p>hello there</p>"
 	hunks := fieldHunks(current, target, true)
 	if len(hunks) != 1 {
 		t.Fatalf("hunks = %d, want 1 (%+v)", len(hunks), hunks)
 	}
-	// Only the changed word is in the hunk — no tag fragments.
-	if strings.Contains(hunks[0].Old, "<") || strings.Contains(hunks[0].New, "<") {
-		t.Fatalf("hunk contains tag fragments: old=%q new=%q", hunks[0].Old, hunks[0].New)
+	if hunks[0].Old != "<p>hello world</p>" || hunks[0].New != "<p>hello there</p>" {
+		t.Fatalf("hunk = old %q new %q, want whole blocks", hunks[0].Old, hunks[0].New)
 	}
-	if strings.TrimSpace(hunks[0].Old) != "world" || strings.TrimSpace(hunks[0].New) != "there" {
-		t.Fatalf("hunk = old %q new %q, want old %q new %q", hunks[0].Old, hunks[0].New, "world", "there")
+}
+
+// A block that did not change is not part of any hunk; only the changed block is.
+func TestFieldHunksHTMLOnlyChangedBlock(t *testing.T) {
+	current := "<p>a</p><p>keep</p>"
+	target := "<p>B</p><p>keep</p>"
+	hunks := fieldHunks(current, target, true)
+	if len(hunks) != 1 {
+		t.Fatalf("hunks = %d, want 1 (%+v)", len(hunks), hunks)
+	}
+	if hunks[0].Old != "<p>a</p>" || hunks[0].New != "<p>B</p>" {
+		t.Fatalf("hunk = old %q new %q, want the changed <p> only", hunks[0].Old, hunks[0].New)
 	}
 }
 

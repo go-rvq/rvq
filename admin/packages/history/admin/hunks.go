@@ -2,7 +2,6 @@ package admin
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,6 +11,8 @@ import (
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sunfmin/reflectutils"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 // hunk is one change region turning the field's current value into the target
@@ -23,47 +24,50 @@ type hunk struct {
 }
 
 // diffOps is the op list turning current into target (deterministic, so render
-// and apply agree on hunk ordering). For HTML the diff runs over whole-tag /
-// word tokens (never inside a tag), so a hunk is a run of complete markup+text
-// and renders as valid HTML instead of exposing raw `</p><p>` fragments.
+// and apply agree on hunk ordering). For HTML the diff runs over whole top-level
+// blocks (each `<p>…</p>` / text node is one unit), so a hunk is a run of
+// complete blocks — `<p>asd,</p>`, never a `</p><p>` shard.
 func diffOps(current, target string, htmlMode bool) []diffmatchpatch.Diff {
 	d := diffmatchpatch.New()
 	if htmlMode {
-		return diffTokens(d, current, target)
+		return diffTokens(d, htmlBlocks(current), htmlBlocks(target))
 	}
 	diffs := d.DiffMain(current, target, false)
 	return d.DiffCleanupSemantic(diffs)
 }
 
-// htmlTokenRe splits HTML into whole tags (`<…>`) and the text runs between them.
-var htmlTokenRe = regexp.MustCompile(`<[^>]+>|[^<]+`)
-
-// wordRe splits a text run into words and whitespace runs (each an atomic token).
-var wordRe = regexp.MustCompile(`\s+|[^\s]+`)
-
-// tokenizeHTML breaks s into atomic tokens: each whole tag is one token, and the
-// text between tags is split into word / whitespace tokens. Diffing over these
-// keeps change boundaries on tag and word edges.
-func tokenizeHTML(s string) []string {
-	var toks []string
-	for _, seg := range htmlTokenRe.FindAllString(s, -1) {
-		if strings.HasPrefix(seg, "<") {
-			toks = append(toks, seg)
-			continue
+// htmlBlocks parses an HTML fragment and returns its top-level nodes serialized,
+// one string per node (a block element with its whole subtree, or a text run).
+// Diffing over these keeps a change a whole block; concatenating them back is
+// the exact fragment, so applyHunks stays lossless. Falls back to the raw string
+// when it does not parse.
+func htmlBlocks(s string) []string {
+	nodes, err := html.ParseFragment(strings.NewReader(s), &html.Node{
+		Type: html.ElementNode, Data: "body", DataAtom: atom.Body,
+	})
+	if err != nil || len(nodes) == 0 {
+		return []string{s}
+	}
+	toks := make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		var b strings.Builder
+		if html.Render(&b, n) == nil {
+			toks = append(toks, b.String())
 		}
-		toks = append(toks, wordRe.FindAllString(seg, -1)...)
+	}
+	if len(toks) == 0 {
+		return []string{s}
 	}
 	return toks
 }
 
-// diffTokens diffs current vs target at HTML-token granularity, using the
-// rune-mapping trick (each distinct token ↦ one rune) so diffmatchpatch's
-// character diff operates on whole tokens; the result carries the token text.
-func diffTokens(d *diffmatchpatch.DiffMatchPatch, current, target string) []diffmatchpatch.Diff {
+// diffTokens diffs two token slices using the rune-mapping trick (each distinct
+// token ↦ one rune) so diffmatchpatch's character diff operates on whole tokens;
+// the result carries the token text.
+func diffTokens(d *diffmatchpatch.DiffMatchPatch, curToks, tgtToks []string) []diffmatchpatch.Diff {
 	arr := []string{}
 	index := map[string]rune{}
-	encode := func(s string) []rune {
-		toks := tokenizeHTML(s)
+	encode := func(toks []string) []rune {
 		rs := make([]rune, len(toks))
 		for i, tk := range toks {
 			r, ok := index[tk]
@@ -76,7 +80,7 @@ func diffTokens(d *diffmatchpatch.DiffMatchPatch, current, target string) []diff
 		}
 		return rs
 	}
-	r1, r2 := encode(current), encode(target)
+	r1, r2 := encode(curToks), encode(tgtToks)
 	diffs := d.DiffCleanupSemantic(d.DiffMainRunes(r1, r2, false))
 	out := make([]diffmatchpatch.Diff, len(diffs))
 	for i, df := range diffs {
