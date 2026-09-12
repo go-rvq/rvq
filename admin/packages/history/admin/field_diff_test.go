@@ -59,6 +59,28 @@ func TestManyRefChangesAddedRemoved(t *testing.T) {
 	}
 }
 
+// lineDiffSides drives the Prism handler's per-line marks: which lines are
+// removed on OLD and added on NEW.
+func TestLineDiffSides(t *testing.T) {
+	old := "a\nb\nc"
+	neu := "a\nB\nc"
+	removed, added := lineDiffSides(old, neu)
+	if len(removed) != 1 || removed[0] != 2 {
+		t.Fatalf("removed = %v, want [2]", removed)
+	}
+	if len(added) != 1 || added[0] != 2 {
+		t.Fatalf("added = %v, want [2]", added)
+	}
+	// A pure insertion at the end marks only the new line.
+	removed, added = lineDiffSides("a\nb", "a\nb\nc")
+	if len(removed) != 0 {
+		t.Fatalf("removed = %v, want none", removed)
+	}
+	if len(added) != 1 || added[0] != 3 {
+		t.Fatalf("added = %v, want [3]", added)
+	}
+}
+
 func TestIsJSONArray(t *testing.T) {
 	if !isJSONArray(json.RawMessage(`  [1,2]`)) {
 		t.Fatal("array not detected")

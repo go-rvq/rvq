@@ -10,6 +10,8 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"gorm.io/gorm"
 )
 
@@ -76,14 +78,13 @@ func (mh *ModelHistory) builtinHandler(f string) FieldDiffFunc {
 		switch {
 		case ft.Kind() == reflect.Bool:
 			return BoolDiff
-		case ft.String() == "time.Time":
-			return RenderedDiff
 		case ft.Kind() == reflect.Struct, ft.Kind() == reflect.Slice,
 			ft.Kind() == reflect.Map, ft.Kind() == reflect.Array:
-			return JSONDiff
+			return PrismDiff("json")
 		}
 	}
-	return RenderedDiff
+	// Plain text / numbers / time / unknown: Prism plaintext with line numbers.
+	return PrismDiff("")
 }
 
 // HTMLValueDiff diffs an HTML field by its own value (rendering can hide the real
@@ -108,12 +109,84 @@ func BoolDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled 
 
 // JSONDiff compares a structured field (struct / slice / map) as JSON — the real
 // value, because the rendered form may not reflect it (e.g. Page.LayoutConfig
-// renders as JSON and must be compared as JSON).
+// renders as JSON and must be compared as JSON). Rendered with Prism (json).
 func JSONDiff(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
-	oj := "<pre>" + html.EscapeString(prettyJSONPath(in.OldSnap, in.Field)) + "</pre>"
-	nj := "<pre>" + html.EscapeString(prettyJSONPath(in.NewSnap, in.Field)) + "</pre>"
-	oldC, newC, mergedC = htmlSideDiff(oj, nj)
-	return oldC, newC, mergedC, true
+	return PrismDiff("json")(in)
+}
+
+// PrismDiff returns a reusable handler that renders both sides with Prism: syntax
+// highlighting for the given language (a Prism grammar name such as "json",
+// "gad", "markup"; empty renders escaped plain text), numbered lines, and the
+// changed lines marked (removed on OLD, added on NEW), computed line by line. It
+// is the handler for JSON and plain-text fields, and can be registered for any
+// field whose value is code — FieldDiffHandler("Config", history.PrismDiff("yaml")).
+func PrismDiff(language string) FieldDiffFunc {
+	return func(in *FieldDiffInput) (oldC, newC, mergedC h.HTMLComponent, handled bool) {
+		oldTxt := prismText(in.OldSnap, in.Field, language)
+		newTxt := prismText(in.NewSnap, in.Field, language)
+		removed, added := lineDiffSides(oldTxt, newTxt)
+		oldC = vx.VXCode(oldTxt).Language(language).MarkKind("del").MarkLines(removed)
+		newC = vx.VXCode(newTxt).Language(language).MarkKind("add").MarkLines(added)
+		return oldC, newC, nil, true
+	}
+}
+
+// prismText extracts the field value for Prism: pretty JSON for the json
+// language, the plain value otherwise.
+func prismText(m map[string]json.RawMessage, field, language string) string {
+	if language == "json" {
+		return prettyJSONPath(m, field)
+	}
+	return fieldValue(m, field)
+}
+
+// lineDiffSides reports which 1-based lines were removed (present in old, not
+// new) and added (present in new, not old), from a line-level diff.
+func lineDiffSides(oldStr, newStr string) (removed, added []int) {
+	// A trailing final line without "\n" is a different token from the same line
+	// with one; normalize so an appended last line is an insert, not a change.
+	if oldStr != "" && !strings.HasSuffix(oldStr, "\n") {
+		oldStr += "\n"
+	}
+	if newStr != "" && !strings.HasSuffix(newStr, "\n") {
+		newStr += "\n"
+	}
+	dmp := diffmatchpatch.New()
+	a, b, lineArray := dmp.DiffLinesToChars(oldStr, newStr)
+	diffs := dmp.DiffCharsToLines(dmp.DiffMain(a, b, false), lineArray)
+	oldLine, newLine := 0, 0
+	for _, d := range diffs {
+		n := countLines(d.Text)
+		switch d.Type {
+		case diffmatchpatch.DiffEqual:
+			oldLine += n
+			newLine += n
+		case diffmatchpatch.DiffDelete:
+			for i := 0; i < n; i++ {
+				oldLine++
+				removed = append(removed, oldLine)
+			}
+		case diffmatchpatch.DiffInsert:
+			for i := 0; i < n; i++ {
+				newLine++
+				added = append(added, newLine)
+			}
+		}
+	}
+	return
+}
+
+// countLines counts the lines in a line-diff text chunk (each token is a line,
+// the last possibly without a trailing newline).
+func countLines(s string) int {
+	if s == "" {
+		return 0
+	}
+	n := strings.Count(s, "\n")
+	if !strings.HasSuffix(s, "\n") {
+		n++
+	}
+	return n
 }
 
 // ReferenceDiff compares a field that selects another model (ModelSelector /

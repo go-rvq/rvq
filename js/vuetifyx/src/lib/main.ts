@@ -28,6 +28,7 @@ import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
 import Portal from '@/lib/Portal/Portal.vue'
 import Messages from '@/lib/Messages'
+import CodeView from '@/lib/CodeView.vue'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -58,6 +59,7 @@ const vuetifyx = {
     app.component('vx-array-sorter', VXArraySorter)
     app.component('vx-portal', Portal)
     app.component('vx-messages', Messages)
+    app.component('vx-code', CodeView)
   }
 }
 declare const window: any
