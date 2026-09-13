@@ -17,6 +17,12 @@ type Messages struct {
 	OpenGraphMetadata    string
 	Seo                  string
 	Customize            string
+
+	// Setting-variable labels: the label of a setting variable is looked up as
+	// strcase.ToCamel("SettingVar " + varName), so the built-in SiteName variable
+	// maps to SettingVarSiteName. An app that adds variables adds fields here (or
+	// registers them in this module).
+	SettingVarSiteName string
 }
 
 var Messages_en_US = &Messages{
@@ -35,6 +41,7 @@ var Messages_en_US = &Messages{
 	OpenGraphMetadata:    "Open Graph Metadata",
 	Seo:                  "SEO",
 	Customize:            "Customize",
+	SettingVarSiteName:   "Site Name",
 }
 
 var Messages_zh_CN = &Messages{
@@ -53,6 +60,7 @@ var Messages_zh_CN = &Messages{
 	OpenGraphMetadata:    "OG 元数据",
 	Seo:                  "搜索引擎优化",
 	Customize:            "自定义",
+	SettingVarSiteName:   "站点名称",
 }
 
 var Messages_pt_BR = &Messages{
@@ -71,4 +79,5 @@ var Messages_pt_BR = &Messages{
 	OpenGraphMetadata:    "Metadados do Open Graph",
 	Seo:                  "SEO",
 	Customize:            "Personalizar",
+	SettingVarSiteName:   "Nome do Site",
 }

@@ -217,7 +217,7 @@ func (b *Builder) VariablesComponentFunc(seoName string) func(field *presets.Fie
 			for varName := range settingVars {
 				comps = append(comps, VTextField().
 					Attr(web.VField(fmt.Sprintf("%s.%s", formKeyForVariablesField, varName), ss.Variables[varName])...).
-					Label(i18n.PT(ctx.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)))
+					Label(i18n.PT(ctx.Context(), I18nSeoKey, "SettingVar", varName)))
 			}
 		}
 		return comps
@@ -355,7 +355,7 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http
 		varComps = append(varComps,
 			VChip(
 				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)),
+				h.Text(i18n.PT(req.Context(), I18nSeoKey, "SettingVar", varName)),
 			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
 		)
 	}
@@ -434,7 +434,7 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 		varComps = append(varComps,
 			VChip(
 				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req.Context(), presets.ModelsI18nModuleKey, "Seo Variable", varName)),
+				h.Text(i18n.PT(req.Context(), I18nSeoKey, "SettingVar", varName)),
 			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
 		)
 	}
