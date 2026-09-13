@@ -56,10 +56,17 @@ history.New(db).
     Build()
 ```
 
-`Build()` resolve a tabela `<tabela>_revisions`, migra-a, faz backfill do
-`ChangedFields` em revisões legadas, e embrulha o save (create **e** update) do
-model para capturar a revisão. Também monta o NestedModel de revisões
-(`/<model>/{id}/revisions`) e o gancho de publicação.
+`Build()`, na ordem, faz:
+1. resolve a tabela `<tabela>_revisions` e a migra (`AutoMigrate`);
+2. **backfill** do `ChangedFields` em revisões legadas (anteriores à coluna);
+3. **seed inicial** — para cada registro do model sem revisão, cria a primeira
+   como espelho do registro atual (ver "Seed inicial");
+4. embrulha o save (create **e** update) do model para capturar a revisão;
+5. monta o NestedModel de revisões (`/<model>/{id}/revisions`) e o gancho de
+   publicação.
+
+Os passos 2 e 3 são idempotentes e best-effort (uma falha é logada, não bloqueia
+o boot), então rodam a cada boot sem efeito depois de aplicados.
 
 ### API fluente (`*ModelHistory`)
 
@@ -86,6 +93,22 @@ A cada save (create ou update), `capture`:
 3. se já existe revisão com aquele (hash, recordKey), não faz nada (**dedup**);
 4. calcula `ChangedFields` vs o pai e grava a `Revision` com `Parent` = revisão atual;
 5. anota no request (`activity.WithRevisionRef`) para o `activity_log` referenciar a revisão em vez de duplicar o diff.
+
+A criação e a atualização são capturadas (o admin usa `Saver` e `Creator`
+separados; ambos são embrulhados), então criar um registro já grava sua 1ª
+revisão.
+
+---
+
+## Seed inicial (BD já populado)
+
+Ao ativar o history sobre um banco **que já tem registros** (anteriores à tabela
+de revisões), esses registros não teriam baseline para comparar/reverter. No
+boot, `SeedInitialRevisions()` (chamada por `Build`) cria, para cada registro
+**sem nenhuma revisão**, a primeira como **espelho do registro atual** (root),
+carregando as associações pelo `Fetcher` para um snapshot fiel. É idempotente
+(registros que já têm revisão são pulados) e best-effort por registro. O autor
+fica vazio (seed de sistema).
 
 ---
 
@@ -157,7 +180,7 @@ o diff da revisão (via `activity.RevisionDiffFunc`, setado por `Configure`).
 ## Arquivos
 
 - `models/` — `Revision`, `Hash`.
-- `admin/model.go` — API fluente, captura, backfill.
+- `admin/model.go` — API fluente, captura, backfill e seed inicial.
 - `admin/builder.go` — plugin (`Configure`/`Install`), Recorder, linkage.
 - `admin/diff.go`, `admin/field_diff.go`, `admin/compare.go` — diff e comparação.
 - `admin/field_history.go` — histórico por campo.
