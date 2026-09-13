@@ -443,72 +443,48 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 	if image.ID.String() == "0" {
 		image.ID = json.Number("")
 	}
+	// Two sections, each a VCard with a title (VCardTitle, so it never wraps like
+	// the old fixed-width chip did): "Basic" and "Open Graph information".
 	return h.Components(
 		VCard(
-			h.Span(msgr.Basic).Class("text-subtitle-1"),
-		).Class("px-2 py-1").Variant(VariantTonal).Width(60),
-		h.Div(h.Span("Search Result Preview")).Class("mt-6"),
-		VCard(
+			VCardTitle(h.Text(msgr.Basic)),
 			VCardText(
-				h.Span(setting.Title).Class("text-subtitle-1"),
+				detailingRow(msgr.Title, h.Text(setting.Title)),
+				detailingRow(msgr.Description, h.Text(setting.Description)),
+				detailingRow(msgr.Keywords, h.Text(setting.Keywords)),
 			),
+		).Variant(VariantOutlined).Class("mb-4"),
+
+		VCard(
+			VCardTitle(h.Text(msgr.OpenGraphInformation)),
 			VCardText(
-				h.Span(setting.Keywords).Class("mt-2"),
+				detailingRow(msgr.OpenGraphTitle, h.Text(setting.OpenGraphTitle)),
+				detailingRow(msgr.OpenGraphDescription, h.Text(setting.OpenGraphDescription)),
+				detailingRow(msgr.OpenGraphURL, h.Text(setting.OpenGraphURL)),
+				detailingRow(msgr.OpenGraphType, h.Text(setting.OpenGraphType)),
+				detailingRow(msgr.OpenGraphImageURL, h.Text(setting.OpenGraphImageURL)),
+				h.Div(
+					h.Div(h.Text(msgr.OpenGraphImage)).Class("text-subtitle-2 mb-1"),
+					VRow(
+						VCol(media.QMediaBox(db).
+							Readonly(true).
+							FieldName(fmt.Sprintf("%s.%s", fieldPrefix, "OpenGraphImageFromMediaLibrary")).
+							Value(image).
+							Config(&media_library.MediaBoxConfig{
+								AllowType: "image",
+								Sizes: map[string]*base.Size{
+									"og":            {Width: 1200, Height: 630},
+									"twitter-large": {Width: 1200, Height: 600},
+									"twitter-small": {Width: 630, Height: 630},
+								},
+							})).Cols(12)),
+				).Class("mt-2"),
+				h.Div(
+					h.Div(h.Text(msgr.OpenGraphMetadata)).Class("text-subtitle-2 mb-1"),
+					h.Text(GetOpenGraphMetadataString(setting.OpenGraphMetadata)),
+				).Class("mt-2"),
 			),
-			VCardText(
-				h.Span(setting.Description).Class("text-body-2 mt-2"),
-			),
-		).Class("pa-6").Variant(VariantTonal),
-
-		detailingRow(msgr.Title, h.Text(setting.Title)),
-		detailingRow(msgr.Description, h.Text(setting.Description)),
-		detailingRow(msgr.Keywords, h.Text(setting.Keywords)),
-
-		VCard(
-			h.Span(msgr.OpenGraphInformation).Class("text-subtitle-1"),
-		).Class("px-2 py-1").Variant(VariantTonal).Width(200),
-		h.Div(h.Span("Open Graph Preview")).Class("mt-6"),
-		VCard(
-			VCardText(h.Span(setting.OpenGraphTitle).Class("text-subtitle-1")),
-			VCardText(h.Span(setting.OpenGraphDescription).Class("text-body-2 mt-2")),
-			VCardText(h.A().Text(setting.OpenGraphURL).Href(setting.OpenGraphURL).Class("text-body-2 mt-2")),
-		).Class("pa-6").Variant(VariantTonal),
-
-		detailingRow(msgr.OpenGraphTitle, h.Text(setting.OpenGraphTitle)),
-		detailingRow(msgr.OpenGraphDescription, h.Text(setting.OpenGraphDescription)),
-		detailingRow(msgr.OpenGraphURL, h.Text(setting.OpenGraphURL)),
-		detailingRow(msgr.OpenGraphType, h.Text(setting.OpenGraphType)),
-		detailingRow(msgr.OpenGraphImageURL, h.Text(setting.OpenGraphImageURL)),
-
-		VCard(
-			h.Span(msgr.OpenGraphImage).Class("text-subtitle-1"),
-		).Class("px-2 py-1").Variant(VariantTonal).Width(160),
-		VRow(
-			VCol(media.QMediaBox(db).
-				Readonly(true).
-				FieldName(fmt.Sprintf("%s.%s", fieldPrefix, "OpenGraphImageFromMediaLibrary")).
-				Value(image).
-				Config(&media_library.MediaBoxConfig{
-					AllowType: "image",
-					Sizes: map[string]*base.Size{
-						"og": {
-							Width:  1200,
-							Height: 630,
-						},
-						"twitter-large": {
-							Width:  1200,
-							Height: 600,
-						},
-						"twitter-small": {
-							Width:  630,
-							Height: 630,
-						},
-					},
-				})).Cols(12)),
-		VCard(
-			h.Span(msgr.OpenGraphMetadata).Class("text-subtitle-1"),
-		).Class("px-2 py-1").Variant(VariantTonal).Width(184),
-		h.Text(GetOpenGraphMetadataString(setting.OpenGraphMetadata)),
+		).Variant(VariantOutlined),
 	)
 }
 
