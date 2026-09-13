@@ -236,7 +236,10 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 
 	WalkModels(b.Models(), func(mb *ModelBuilder) (state ModelWalkState, err error) {
 		if !mb.IsInMenu() {
-			return
+			// Skip this model's children too: they are not added to m here, so a
+			// child that later looked up m[parent] would dereference a nil menu
+			// (panic). A model hidden from the menu hides its children with it.
+			return ModelWalkStateSkipChildren, nil
 		}
 
 		p := &ModelPerm{
