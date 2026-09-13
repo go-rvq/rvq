@@ -337,13 +337,6 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 		Slot("{ locals }")
 }
 
-func detailingRow(label string, showComp h.HTMLComponent) (r *h.HTMLTagBuilder) {
-	return h.Div(
-		h.Div(h.Text(label)).Class("text-subtitle-2").Style("width:200px;height:20px"),
-		h.Div(showComp).Class("text-body-1 ml-2 w-100"),
-	).Class("d-flex align-center ma-2").Style("height:40px")
-}
-
 func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http.Request) h.HTMLComponent {
 	var (
 		msgr = i18n.MustGetModuleMessages(req.Context(), I18nSeoKey, Messages_en_US).(*Messages)
@@ -449,22 +442,21 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 		VCard(
 			VCardTitle(h.Text(msgr.Basic)),
 			VCardText(
-				detailingRow(msgr.Title, h.Text(setting.Title)),
-				detailingRow(msgr.Description, h.Text(setting.Description)),
-				detailingRow(msgr.Keywords, h.Text(setting.Keywords)),
+				presets.FieldComponentContainer(msgr.Title, h.Text(setting.Title)),
+				presets.FieldComponentContainer(msgr.Description, h.Text(setting.Description)),
+				presets.FieldComponentContainer(msgr.Keywords, h.Text(setting.Keywords)),
 			),
 		).Variant(VariantOutlined).Class("mb-4"),
 
 		VCard(
 			VCardTitle(h.Text(msgr.OpenGraphInformation)),
 			VCardText(
-				detailingRow(msgr.OpenGraphTitle, h.Text(setting.OpenGraphTitle)),
-				detailingRow(msgr.OpenGraphDescription, h.Text(setting.OpenGraphDescription)),
-				detailingRow(msgr.OpenGraphURL, h.Text(setting.OpenGraphURL)),
-				detailingRow(msgr.OpenGraphType, h.Text(setting.OpenGraphType)),
-				detailingRow(msgr.OpenGraphImageURL, h.Text(setting.OpenGraphImageURL)),
-				h.Div(
-					h.Div(h.Text(msgr.OpenGraphImage)).Class("text-subtitle-2 mb-1"),
+				presets.FieldComponentContainer(msgr.OpenGraphTitle, h.Text(setting.OpenGraphTitle)),
+				presets.FieldComponentContainer(msgr.OpenGraphDescription, h.Text(setting.OpenGraphDescription)),
+				presets.FieldComponentContainer(msgr.OpenGraphURL, h.Text(setting.OpenGraphURL)),
+				presets.FieldComponentContainer(msgr.OpenGraphType, h.Text(setting.OpenGraphType)),
+				presets.FieldComponentContainer(msgr.OpenGraphImageURL, h.Text(setting.OpenGraphImageURL)),
+				presets.FieldComponentContainer(msgr.OpenGraphImage,
 					VRow(
 						VCol(media.QMediaBox(db).
 							Readonly(true).
@@ -477,12 +469,9 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 									"twitter-large": {Width: 1200, Height: 600},
 									"twitter-small": {Width: 630, Height: 630},
 								},
-							})).Cols(12)),
-				).Class("mt-2"),
-				h.Div(
-					h.Div(h.Text(msgr.OpenGraphMetadata)).Class("text-subtitle-2 mb-1"),
-					h.Text(GetOpenGraphMetadataString(setting.OpenGraphMetadata)),
-				).Class("mt-2"),
+							})).Cols(12))),
+				presets.FieldComponentContainer(msgr.OpenGraphMetadata,
+					h.Text(GetOpenGraphMetadataString(setting.OpenGraphMetadata))),
 			),
 		).Variant(VariantOutlined),
 	)
