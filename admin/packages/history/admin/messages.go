@@ -13,8 +13,13 @@ func getMessages(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, MessagesKey, Messages_en_US).(*Messages)
 }
 
+// GetMessages exposes this package's localized messages so an application can
+// reuse the same labels (e.g. link to a model's revisions from elsewhere).
+func GetMessages(ctx context.Context) *Messages { return getMessages(ctx) }
+
 type Messages struct {
 	History         string
+	Revisions       string
 	HistoryEmpty    string
 	Hash            string
 	Published       string
@@ -52,6 +57,7 @@ type Messages struct {
 var (
 	Messages_en_US = &Messages{
 		History:           "History",
+		Revisions:         "Revisions",
 		HistoryEmpty:      "No revisions yet.",
 		Hash:              "Hash",
 		Published:         "Published",
@@ -87,6 +93,7 @@ var (
 
 	Messages_pt_BR = &Messages{
 		History:           "Histórico",
+		Revisions:         "Revisões",
 		HistoryEmpty:      "Ainda não há revisões.",
 		Hash:              "Hash",
 		Published:         "Publicada",

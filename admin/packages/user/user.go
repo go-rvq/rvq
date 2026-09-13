@@ -312,7 +312,7 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			return strings.Contains(obj.(User).GetAccountName(), "@"), nil
 		}).
 		SetI18nLabel(func(ctx context.Context) string {
-			return "Enviar email para alterar a senha"
+			return GetMessages(ctx).SendResetPasswordEmail
 		}).
 		OnClick(func(ctx *web.EventContext, id string, obj any) string {
 			return web.Plaid().EventFunc("eventSendResetPasswordEmail").
@@ -325,7 +325,7 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			return obj.(User).GetLocked(), nil
 		}).
 		SetI18nLabel(func(ctx context.Context) string {
-			return "Desbloquear"
+			return GetMessages(ctx).Unlock
 		}).
 		OnClick(func(ctx *web.EventContext, id string, obj any) string {
 			return web.Plaid().EventFunc("eventUnlockUser").
@@ -338,7 +338,7 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			return obj.(User).GetIsTOTPSetup(), nil
 		}).
 		SetI18nLabel(func(ctx context.Context) string {
-			return "Revogar TOTP"
+			return GetMessages(ctx).RevokeTOTP
 		}).
 		OnClick(func(ctx *web.EventContext, id string, obj any) string {
 			return web.Plaid().EventFunc("eventRevokeTOTP").

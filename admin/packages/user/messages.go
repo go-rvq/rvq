@@ -35,6 +35,10 @@ type Messages struct {
 	// AnonymousUserName is the display name of the static anonymous user,
 	// resolved per request from its language.
 	AnonymousUserName string
+
+	SendResetPasswordEmail string
+	Unlock                 string
+	RevokeTOTP             string
 }
 
 var (
@@ -55,6 +59,9 @@ var (
 		Actives:                           "Actives",
 		Inactives:                         "Inactives",
 		AnonymousUserName:                 "Anonymous",
+		SendResetPasswordEmail:            "Send password reset email",
+		Unlock:                            "Unlock",
+		RevokeTOTP:                        "Revoke TOTP",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -74,6 +81,9 @@ var (
 		Actives:                           "Ativos",
 		Inactives:                         "Inativos",
 		AnonymousUserName:                 "Anônimo",
+		SendResetPasswordEmail:            "Enviar email para alterar a senha",
+		Unlock:                            "Desbloquear",
+		RevokeTOTP:                        "Revogar TOTP",
 	}
 )
 
