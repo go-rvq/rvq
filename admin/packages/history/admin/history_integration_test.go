@@ -179,6 +179,50 @@ func TestBackfillFillsLegacyRows(t *testing.T) {
 	}
 }
 
+// TestSeedInitialRevisions: records that predate history (inserted directly, no
+// revision) get an initial mirror revision seeded, and it is idempotent.
+func TestSeedInitialRevisions(t *testing.T) {
+	db, mb, mh := setupHistory(t)
+
+	// Two records inserted straight into the table (as a pre-existing database),
+	// with no revisions.
+	if err := db.Create(&histDoc{Title: "A", Body: "<p>a</p>"}).Error; err != nil {
+		t.Fatalf("insert A: %v", err)
+	}
+	if err := db.Create(&histDoc{Title: "B", Body: "<p>b</p>"}).Error; err != nil {
+		t.Fatalf("insert B: %v", err)
+	}
+
+	if err := mh.SeedInitialRevisions(); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	// Each record now has exactly one (root) revision mirroring it.
+	for _, id := range []uint{1, 2} {
+		obj := &histDoc{ID: id}
+		key := mb.MustRecordID(obj).String()
+		revs, err := mh.Chain(key)
+		if err != nil {
+			t.Fatalf("chain %d: %v", id, err)
+		}
+		if len(revs) != 1 {
+			t.Fatalf("record %d: %d revisions, want 1", id, len(revs))
+		}
+		if len(revs[0].Parent) != 0 {
+			t.Fatalf("record %d: seed revision should be root", id)
+		}
+	}
+
+	// Idempotent: a second run adds nothing.
+	if err := mh.SeedInitialRevisions(); err != nil {
+		t.Fatalf("seed (2nd): %v", err)
+	}
+	revs, _ := mh.Chain(mb.MustRecordID(&histDoc{ID: 1}).String())
+	if len(revs) != 1 {
+		t.Fatalf("record 1 after 2nd seed: %d revisions, want 1", len(revs))
+	}
+}
+
 // TestLatestHashReadsBytea exercises the exact query that regressed: reading the
 // newest hash back through Hash's sql.Scanner (a gorm .Scan would misread it).
 func TestLatestHashReadsBytea(t *testing.T) {

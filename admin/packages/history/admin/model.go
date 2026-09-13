@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"log"
+	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/activity"
@@ -14,6 +16,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/thirdpart/gorm/datatypes"
 	"github.com/go-rvq/rvq/web"
+	"github.com/google/uuid"
 	"github.com/sunfmin/reflectutils"
 	"gorm.io/gorm"
 )
@@ -147,6 +150,12 @@ func (h *ModelHistory) Build() *ModelHistory {
 		log.Printf("history: backfill %s: %v", h.table, err)
 	}
 
+	// Seed the initial revision for records that predate history (a database
+	// populated before revisions were configured). Idempotent; must not block boot.
+	if err := h.SeedInitialRevisions(); err != nil {
+		log.Printf("history: seed %s: %v", h.table, err)
+	}
+
 	h.mb.Editing().WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) error {
 			if err := in(obj, id, ctx); err != nil {
@@ -247,6 +256,66 @@ func (h *ModelHistory) snapshot(obj interface{}) (map[string]json.RawMessage, []
 // Idempotent — it only reads records that still have a NULL row and only writes
 // the rows still missing the list, so re-running (every boot) is a no-op once
 // done.
+// SeedInitialRevisions creates the first revision (a mirror of the current
+// record) for every record of the model that has no revision yet. This is the
+// case of configuring history on an already-populated database: existing records
+// predate the revisions table, so without a seed they would have no baseline to
+// compare or revert to. Idempotent: a record that already has any revision is
+// skipped, so it is a no-op on every boot after the first. Best-effort per
+// record — one failure is logged, the rest proceed.
+func (h *ModelHistory) SeedInitialRevisions() error {
+	slicePtr := h.mb.NewModelSlice() // *[]Model
+	if err := h.db.Session(&gorm.Session{}).Find(slicePtr).Error; err != nil {
+		return err
+	}
+	sliceVal := reflect.ValueOf(slicePtr).Elem() // []Model
+
+	// A synthetic context so the fetcher (which applies the model's preloads) can
+	// load each record's associations for a complete snapshot.
+	req, _ := http.NewRequest(http.MethodGet, "/", nil)
+	ctx := &web.EventContext{R: req}
+	fetch := h.fetcher
+	if fetch == nil {
+		fetch = h.mb.Editing().Fetcher
+	}
+
+	var firstErr error
+	for i := 0; i < sliceVal.Len(); i++ {
+		// The addressable pointer to the element, so MustRecordID and the fetcher
+		// see the concrete record.
+		obj := sliceVal.Index(i).Addr().Interface()
+
+		id := h.mb.MustRecordID(obj)
+		if id.IsZero() {
+			continue
+		}
+		recordKey := id.String()
+
+		var n int64
+		if err := h.db.Table(h.table).Where("record_key = ?", recordKey).Count(&n).Error; err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if n > 0 {
+			continue // already has history
+		}
+
+		// Reload with associations for a faithful mirror.
+		if fetch != nil {
+			fresh := h.mb.NewModel()
+			if fetch(fresh, id, ctx) == nil {
+				obj = fresh
+			}
+		}
+		if _, _, err := h.createRevision(obj, uuid.Nil, ""); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
 func (h *ModelHistory) Backfill() error {
 	var keys []string
 	if err := h.db.Table(h.table).
@@ -337,29 +406,55 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		}
 	}
 
+	var creatorID uuid.UUID
+	var creator string
+	if ctx != nil && ctx.R != nil {
+		if u := user.GetCurrentUser(ctx.R); u != nil {
+			creatorID = u.GetID()
+			creator = u.GetName()
+		}
+	}
+
+	hash, created, err := h.createRevision(obj, creatorID, creator)
+	if err != nil || !created {
+		return err
+	}
+	// Tell the activity log (if any is being written for this save) to reference
+	// this revision instead of duplicating its diff.
+	if ctx != nil && ctx.R != nil {
+		ctx.R = activity.WithRevisionRef(ctx.R, h.table, hash)
+	}
+	return nil
+}
+
+// createRevision snapshots obj (already loaded, with its associations) and
+// creates its revision unless an identical one already exists (dedup). It needs
+// no request context, so it also serves the boot-time seed. Returns the hash and
+// whether a new revision was created.
+func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, creator string) (histmodels.Hash, bool, error) {
 	snap, data, err := h.snapshot(obj)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 	recordKey := h.mb.MustRecordID(obj).String()
 	// Fold the record key into the hash so it is unique per record (sole PK,
 	// clean nested route) yet still collapses an unchanged save.
 	sum := sha256.Sum256(append([]byte(recordKey+"\x00"), data...))
-	hash := sum[:]
+	hash := histmodels.Hash(sum[:])
 
 	var exists int64
 	if err = h.db.Table(h.table).
 		Where("hash = ? AND record_key = ?", hash, recordKey).
 		Count(&exists).Error; err != nil {
-		return err
+		return nil, false, err
 	}
 	if exists > 0 {
-		return nil
+		return hash, false, nil
 	}
 
 	parent, err := h.latestHash(recordKey)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
 	// The fields whose value changed from the parent (all of them on the first
@@ -367,7 +462,7 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 	// field without walking the chain or re-diffing.
 	changed, err := h.changedFields(recordKey, parent, snap)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
 	rev := histmodels.Revision{
@@ -377,18 +472,11 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 		Fields:        datatypes.NewJSONType(snap),
 		ChangedFields: datatypes.NewJSONType(changed),
 		CreatedAt:     time.Now(),
-	}
-	if u := user.GetCurrentUser(ctx.R); u != nil {
-		rev.CreatorID = u.GetID()
-		rev.Creator = u.GetName()
+		CreatorID:     creatorID,
+		Creator:       creator,
 	}
 	if err = h.db.Table(h.table).Create(&rev).Error; err != nil {
-		return err
+		return nil, false, err
 	}
-	// Tell the activity log (if any is being written for this save) to reference
-	// this revision instead of duplicating its diff.
-	if ctx != nil && ctx.R != nil {
-		ctx.R = activity.WithRevisionRef(ctx.R, h.table, rev.Hash)
-	}
-	return nil
+	return hash, true, nil
 }
