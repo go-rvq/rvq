@@ -25,6 +25,13 @@ type RvqSEOSetting struct {
 	l10n.Locale
 }
 
+// TableName stores the settings in `global_seo`: with Page/Post SEO edited on
+// each record (the model's own Setting field) and the hierarchy merged by the
+// application, the only rows here are the Global SEO (one per locale).
+func (RvqSEOSetting) TableName() string {
+	return "global_seo"
+}
+
 func (s *RvqSEOSetting) PrimarySlug() string {
 	return fmt.Sprintf("%v_%v", s.Name, s.LocaleCode)
 }
@@ -79,7 +86,7 @@ func (setting *Setting) Scan(value interface{}) error {
 // Do not changed it to pointer receiver method, If you
 // change it to a pointer receiver, GORM may encounter
 // errors "cannot found encode plan" when operating the
-// rvq_seo_settings table.
+// global_seo table.
 func (setting Setting) Value() (driver.Value, error) {
 	result, err := json.Marshal(setting)
 	return string(result), err
@@ -112,7 +119,7 @@ func (setting *Variables) Scan(value interface{}) error {
 // Do not changed it to pointer receiver method, If you
 // change it to a pointer receiver, GORM may encounter
 // errors "cannot found encode plan" when operating the
-// rvq_seo_settings table.
+// global_seo table.
 func (setting Variables) Value() (driver.Value, error) {
 	result, err := json.Marshal(setting)
 	return string(result), err
