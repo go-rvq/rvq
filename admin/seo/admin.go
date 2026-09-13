@@ -180,6 +180,19 @@ func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.Field
 	}
 }
 
+// SettingDetailComponentFunc is the read-only counterpart of
+// SettingComponentFunc: it renders the Setting for a detail view, resolving the
+// SEO by name. Use it in an application-mounted model's Detailing.
+func (b *Builder) SettingDetailComponentFunc(seoName string) func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		ss, ok := field.Obj.(*RvqSEOSetting)
+		if !ok {
+			return h.Div()
+		}
+		return b.vseoReadonly(field.Name, b.GetSEO(seoName), &ss.Setting, ctx.R)
+	}
+}
+
 // formKeyForVariablesField is the form prefix of the SEO setting variables.
 const formKeyForVariablesField = "Variables"
 
