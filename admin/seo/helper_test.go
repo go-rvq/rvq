@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 	}
 	defer env.TearDown()
 	dbForTest = env.DB
-	err = dbForTest.AutoMigrate(&QorSEOSetting{})
+	err = dbForTest.AutoMigrate(&RvqSEOSetting{})
 	if err != nil {
 		panic("failed to migrate db")
 	}
@@ -40,7 +40,7 @@ type Product struct {
 // @snippet_end
 
 func resetDB() {
-	dbForTest.Exec("truncate qor_seo_settings;")
+	dbForTest.Exec("truncate rvq_seo_settings;")
 }
 
 func metaEqual(got, want string) bool {

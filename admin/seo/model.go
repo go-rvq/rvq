@@ -14,7 +14,7 @@ import (
 	"github.com/go-rvq/rvq/admin/media/media_library"
 )
 
-type QorSEOSetting struct {
+type RvqSEOSetting struct {
 	Name      string `gorm:"primary_key"`
 	Setting   Setting
 	Variables Variables `sql:"type:text"`
@@ -25,11 +25,11 @@ type QorSEOSetting struct {
 	l10n.Locale
 }
 
-func (s *QorSEOSetting) PrimarySlug() string {
+func (s *RvqSEOSetting) PrimarySlug() string {
 	return fmt.Sprintf("%v_%v", s.Name, s.LocaleCode)
 }
 
-func (s *QorSEOSetting) PrimaryColumnValuesBySlug(slug string) map[string]string {
+func (s *RvqSEOSetting) PrimaryColumnValuesBySlug(slug string) map[string]string {
 	segs := strings.Split(slug, "_")
 	if len(segs) != 2 {
 		panic("wrong slug")
@@ -79,7 +79,7 @@ func (setting *Setting) Scan(value interface{}) error {
 // Do not changed it to pointer receiver method, If you
 // change it to a pointer receiver, GORM may encounter
 // errors "cannot found encode plan" when operating the
-// qor_seo_settings table.
+// rvq_seo_settings table.
 func (setting Setting) Value() (driver.Value, error) {
 	result, err := json.Marshal(setting)
 	return string(result), err
@@ -112,7 +112,7 @@ func (setting *Variables) Scan(value interface{}) error {
 // Do not changed it to pointer receiver method, If you
 // change it to a pointer receiver, GORM may encounter
 // errors "cannot found encode plan" when operating the
-// qor_seo_settings table.
+// rvq_seo_settings table.
 func (setting Variables) Value() (driver.Value, error) {
 	result, err := json.Marshal(setting)
 	return string(result), err

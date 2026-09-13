@@ -371,18 +371,18 @@ func TestSEO_RegisterMetaProperty(t *testing.T) {
 	}
 }
 
-func TestSEO_getLocaleFinalQorSEOSetting(t *testing.T) {
+func TestSEO_getLocaleFinalRvqSEOSetting(t *testing.T) {
 	cases := []struct {
 		name      string
 		prepareDB func()
 		seo       *SEO
-		expected  *QorSEOSetting
+		expected  *RvqSEOSetting
 	}{
 		{
 			name: "override_setting_var_from_parent",
 			prepareDB: func() {
 				resetDB()
-				seoSettings := []*QorSEOSetting{
+				seoSettings := []*RvqSEOSetting{
 					{
 						Name:    "nodeA",
 						Setting: Setting{Title: "{{varA}}"},
@@ -422,7 +422,7 @@ func TestSEO_getLocaleFinalQorSEOSetting(t *testing.T) {
 				seoRoot.AppendChildren(nodeA.AppendChildren(nodeB.AppendChildren(nodeC)))
 				return nodeC
 			}(),
-			expected: &QorSEOSetting{
+			expected: &RvqSEOSetting{
 				Name:    "nodeC",
 				Setting: Setting{Title: "{{varB}}"},
 				Variables: map[string]string{
@@ -438,8 +438,8 @@ func TestSEO_getLocaleFinalQorSEOSetting(t *testing.T) {
 			if c.prepareDB != nil {
 				c.prepareDB()
 			}
-			actual := &QorSEOSetting{}
-			seoSetting := c.seo.getLocaleFinalQorSEOSetting("", dbForTest)
+			actual := &RvqSEOSetting{}
+			seoSetting := c.seo.getLocaleFinalRvqSEOSetting("", dbForTest)
 			actual.Name = seoSetting.Name
 			actual.Setting = seoSetting.Setting
 			actual.Variables = seoSetting.Variables
@@ -451,18 +451,18 @@ func TestSEO_getLocaleFinalQorSEOSetting(t *testing.T) {
 	}
 }
 
-func TestSEO_getFinalQorSEOSetting(t *testing.T) {
+func TestSEO_getFinalRvqSEOSetting(t *testing.T) {
 	cases := []struct {
 		name      string
 		prepareDB func()
 		seo       *SEO
-		expected  map[string]*QorSEOSetting
+		expected  map[string]*RvqSEOSetting
 	}{
 		{
 			name: "override_setting_var_from_parent",
 			prepareDB: func() {
 				resetDB()
-				seoSets := []*QorSEOSetting{
+				seoSets := []*RvqSEOSetting{
 					{
 						Name:    "nodeA",
 						Setting: Setting{Title: "{{Greeting}}"},
@@ -506,7 +506,7 @@ func TestSEO_getFinalQorSEOSetting(t *testing.T) {
 				nodeB.SetParent(nodeA)
 				return nodeB
 			}(),
-			expected: map[string]*QorSEOSetting{
+			expected: map[string]*RvqSEOSetting{
 				"en": {
 					Name:    "nodeB",
 					Setting: Setting{Title: "{{Greeting}}"},
@@ -532,7 +532,7 @@ func TestSEO_getFinalQorSEOSetting(t *testing.T) {
 			if c.prepareDB != nil {
 				c.prepareDB()
 			}
-			seoSets := c.seo.getFinalQorSEOSetting(dbForTest)
+			seoSets := c.seo.getFinalRvqSEOSetting(dbForTest)
 			if len(seoSets) != len(c.expected) {
 				t.Errorf("The number of configuration does not match expetations")
 			}
@@ -540,7 +540,7 @@ func TestSEO_getFinalQorSEOSetting(t *testing.T) {
 				if expectedSets, isExist := c.expected[locale]; !isExist {
 					t.Errorf("There is no SEO configuration available for %v", locale)
 				} else {
-					actual := &QorSEOSetting{}
+					actual := &RvqSEOSetting{}
 					actual.Setting = actualSets.Setting
 					actual.Variables = actualSets.Variables
 					actual.Name = actualSets.Name

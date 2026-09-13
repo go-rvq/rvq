@@ -65,7 +65,7 @@ func New(db *gorm.DB, ops ...Option) *Builder {
 		opFunc(b)
 	}
 
-	if err := db.AutoMigrate(&QorSEOSetting{}); err != nil {
+	if err := db.AutoMigrate(&RvqSEOSetting{}); err != nil {
 		panic(err)
 	}
 
@@ -228,7 +228,7 @@ func (b *Builder) GetSEOPriority(name string) int {
 
 // SortSEOs sorts the SEOs in the order of their priority.
 // The global SEO is always the first element in the sorted slice.
-func (b *Builder) SortSEOs(SEOs []*QorSEOSetting) {
+func (b *Builder) SortSEOs(SEOs []*RvqSEOSetting) {
 	orders := make(map[string]int)
 	order := 0
 	var dfs func(root *SEO)
@@ -352,7 +352,7 @@ func (b *Builder) Render(obj interface{}, req *http.Request) h.HTMLComponent {
 	if locale == "" && len(b.locales) == 1 {
 		locale = b.locales[0]
 	}
-	localeFinalSeoSetting := seo.getLocaleFinalQorSEOSetting(locale, b.db)
+	localeFinalSeoSetting := seo.getLocaleFinalRvqSEOSetting(locale, b.db)
 	return b.render(obj, localeFinalSeoSetting, seo, req)
 }
 
@@ -390,7 +390,7 @@ func (b *Builder) BatchRender(objs interface{}, req *http.Request) []h.HTMLCompo
 		return nil
 	}
 
-	finalSeoSettings := seo.getFinalQorSEOSetting(b.db)
+	finalSeoSettings := seo.getFinalRvqSEOSetting(b.db)
 	comps := make([]h.HTMLComponent, 0, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		objV := reflect.Indirect(v.Index(i))
@@ -425,7 +425,7 @@ func (b *Builder) BatchRender(objs interface{}, req *http.Request) []h.HTMLCompo
 	return comps
 }
 
-func (b *Builder) render(obj interface{}, defaultSEOSetting *QorSEOSetting, seo *SEO, req *http.Request) h.HTMLComponent {
+func (b *Builder) render(obj interface{}, defaultSEOSetting *RvqSEOSetting, seo *SEO, req *http.Request) h.HTMLComponent {
 	// get setting
 	var setting Setting
 	{
@@ -518,15 +518,15 @@ func isAbsoluteURL(str string) bool {
 // insertIfNotExists inserts the specified seo with the specified locales into the database.
 // if the seo already exists, it will not be inserted into the database.
 func insertIfNotExists(db *gorm.DB, seoName string, locales []string) error {
-	settings := make([]QorSEOSetting, 0, len(locales))
+	settings := make([]RvqSEOSetting, 0, len(locales))
 	for _, locale := range locales {
-		settings = append(settings, QorSEOSetting{
+		settings = append(settings, RvqSEOSetting{
 			Name:   seoName,
 			Locale: l10n.Locale{LocaleCode: locale},
 		})
 	}
 	if len(locales) == 0 {
-		settings = append(settings, QorSEOSetting{
+		settings = append(settings, RvqSEOSetting{
 			Name: seoName,
 		})
 	}

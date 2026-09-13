@@ -197,7 +197,7 @@ func NewConfig(db *gorm.DB) Config {
 			{Text: "InputHarnesses", Value: "*:input_harnesses:*"},
 			{Text: "Posts", Value: "*:posts:*"},
 			{Text: "Settings", Value: "*:settings:*,*:site_management:"},
-			{Text: "SEO", Value: "*:qor_seo_settings:*,*:site_management:"},
+			{Text: "SEO", Value: "*:rvq_seo_settings:*,*:site_management:"},
 			{Text: "Customers", Value: "*:customers:*"},
 			{Text: "Products", Value: "*:products:*,*:product_management:"},
 			{Text: "Categories", Value: "*:categories:*,*:product_management:"},
@@ -434,7 +434,7 @@ func configMenuOrder(b *presets.Builder) {
 		).Icon("mdi-cart"),
 		// b.MenuGroup("Site Management").SubItems(
 		// 	"Setting",
-		// 	"QorSEOSetting",
+		// 	"RvqSEOSetting",
 		// ).Icon("settings"),
 		b.MenuGroup("User Management").SubItems(
 			"User",
@@ -443,7 +443,7 @@ func configMenuOrder(b *presets.Builder) {
 		b.MenuGroup("Featured Models Management").SubItems(
 			"InputDemo",
 			"Post",
-			"qor-seo-settings",
+			"rvq-seosettings",
 			"List Editor Example",
 			"nested-field-demos",
 			"ListModels",

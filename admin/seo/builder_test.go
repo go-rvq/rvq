@@ -19,7 +19,7 @@ func TestBuilder_Render(t *testing.T) {
 		URL:    u,
 	}
 
-	globalSeoSetting := []*QorSEOSetting{
+	globalSeoSetting := []*RvqSEOSetting{
 		{
 			Name: defaultGlobalSEOName,
 			Setting: Setting{
@@ -67,7 +67,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_model_seo_with_locale",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
@@ -97,7 +97,7 @@ func TestBuilder_Render(t *testing.T) {
 		{
 			name: "Render_model_seo_without_locale",
 			prepareDB: func() {
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: defaultGlobalSEOName,
 						Setting: Setting{
@@ -135,8 +135,8 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_non-model_seo_with_global_setting_variables",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				var product []*QorSEOSetting
-				product = append(product, &QorSEOSetting{
+				var product []*RvqSEOSetting
+				product = append(product, &RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
@@ -160,7 +160,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_non-model_seo_with_locale",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := []*QorSEOSetting{
+				product := []*RvqSEOSetting{
 					{
 						Name: "Product",
 						Setting: Setting{
@@ -192,7 +192,7 @@ func TestBuilder_Render(t *testing.T) {
 		{
 			name: "Render_non-model_seo_without_locale",
 			prepareDB: func() {
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: defaultGlobalSEOName,
 						Setting: Setting{
@@ -223,7 +223,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_seo_with_setting_and_opengraph_prop_and_without_locale",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product {{ProductTag}} | {{SiteName}}",
@@ -257,7 +257,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_model_setting_with_global_and_SEO_setting_variables",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name:      "Product",
 					Variables: map[string]string{"ProductTag": "Men"},
 					Locale:    l10n.Locale{LocaleCode: "en"},
@@ -284,7 +284,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_model_setting_with_default_SEO_setting",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | Rvq dev",
@@ -314,7 +314,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_model_setting_with_inherit_global_and_SEO_setting",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Description: "product description",
@@ -348,7 +348,7 @@ func TestBuilder_Render(t *testing.T) {
 			name: "Render_model_setting_without_inherit_global_and_SEO_setting",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Description: "product description",
@@ -486,8 +486,8 @@ func TestBuilder_SortSEOs(t *testing.T) {
 	cases := []struct {
 		name     string
 		builder  *Builder
-		data     []*QorSEOSetting
-		expected []*QorSEOSetting
+		data     []*RvqSEOSetting
+		expected []*RvqSEOSetting
 	}{
 		{
 			name: "with global seo",
@@ -502,7 +502,7 @@ func TestBuilder_SortSEOs(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			}(),
-			data: []*QorSEOSetting{
+			data: []*RvqSEOSetting{
 				{Name: "Post"},
 				{Name: "Region"},
 				{Name: "PLP"},
@@ -511,7 +511,7 @@ func TestBuilder_SortSEOs(t *testing.T) {
 				{Name: "Prefecture"},
 				{Name: "Product"},
 			},
-			expected: []*QorSEOSetting{
+			expected: []*RvqSEOSetting{
 				{Name: defaultGlobalSEOName},
 				{Name: "PLP"},
 				{Name: "Region"},
@@ -540,7 +540,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 		Method: "GET",
 		URL:    u,
 	}
-	globalSeoSetting := []*QorSEOSetting{
+	globalSeoSetting := []*RvqSEOSetting{
 		{
 			Name: defaultGlobalSEOName,
 			Setting: Setting{
@@ -572,7 +572,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
@@ -604,7 +604,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 		{
 			name: "render_non-model_seo_without_locale",
 			prepareDB: func() {
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: "Product",
 						Setting: Setting{
@@ -647,7 +647,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
@@ -708,7 +708,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				product := QorSEOSetting{
+				product := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "product | {{SiteName}}",
@@ -769,7 +769,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: "Default PLP",
 						Setting: Setting{
@@ -855,7 +855,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: "Product",
 						Setting: Setting{
@@ -951,7 +951,7 @@ func TestBuilder_BatchRender(t *testing.T) {
 				if err := dbForTest.Save(&globalSeoSetting).Error; err != nil {
 					panic(err)
 				}
-				settings := []*QorSEOSetting{
+				settings := []*RvqSEOSetting{
 					{
 						Name: "Product",
 						Setting: Setting{

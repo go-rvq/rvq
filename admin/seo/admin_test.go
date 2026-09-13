@@ -24,14 +24,14 @@ func TestUpdate(t *testing.T) {
 		prepareDB func()
 		builder   func() *Builder
 		form      func(stamp string) (*bytes.Buffer, *multipart.Writer)
-		expected  *QorSEOSetting
+		expected  *RvqSEOSetting
 		locale    string
 	}{
 		{
 			name: "update_setting",
 			id:   "Product_en",
 			prepareDB: func() {
-				seoSetting := QorSEOSetting{
+				seoSetting := RvqSEOSetting{
 					Name:   "Product",
 					Locale: l10n.Locale{LocaleCode: "en"},
 					Setting: Setting{
@@ -57,7 +57,7 @@ func TestUpdate(t *testing.T) {
 				must(mwriter.Close())
 				return form, mwriter
 			},
-			expected: &QorSEOSetting{
+			expected: &RvqSEOSetting{
 				Name:   "Product",
 				Locale: l10n.Locale{LocaleCode: "en"},
 				Setting: Setting{
@@ -71,7 +71,7 @@ func TestUpdate(t *testing.T) {
 			name: "update_setting_without_locale",
 			id:   "Product_",
 			prepareDB: func() {
-				seoSetting := QorSEOSetting{
+				seoSetting := RvqSEOSetting{
 					Name: "Product",
 					Setting: Setting{
 						Title: "productA",
@@ -96,7 +96,7 @@ func TestUpdate(t *testing.T) {
 				must(mwriter.Close())
 				return form, mwriter
 			},
-			expected: &QorSEOSetting{
+			expected: &RvqSEOSetting{
 				Name: "Product",
 				Setting: Setting{
 					Title: "productB",
@@ -109,7 +109,7 @@ func TestUpdate(t *testing.T) {
 			name: "update_variables",
 			id:   "Product_en",
 			prepareDB: func() {
-				seoSetting := QorSEOSetting{
+				seoSetting := RvqSEOSetting{
 					Name:   "Product",
 					Locale: l10n.Locale{LocaleCode: "en"},
 					Setting: Setting{
@@ -138,7 +138,7 @@ func TestUpdate(t *testing.T) {
 				must(mwriter.Close())
 				return form, mwriter
 			},
-			expected: &QorSEOSetting{
+			expected: &RvqSEOSetting{
 				Name:   "Product",
 				Locale: l10n.Locale{LocaleCode: "en"},
 				Setting: Setting{
@@ -167,16 +167,16 @@ func TestUpdate(t *testing.T) {
 			builder := c.builder()
 			builder.Install(admin)
 
-			// QorSEOSetting has an UpdatedAt, so its edit form carries the stamp
+			// RvqSEOSetting has an UpdatedAt, so its edit form carries the stamp
 			// of the record it was rendered from — and the update requires it
 			// (see presets/record_stamp.go).
-			var stored QorSEOSetting
+			var stored RvqSEOSetting
 			dbForTest.First(&stored, "name = ? and locale_code = ?", "Product", c.locale)
 			stamp := admin.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))
 
 			form, mwriter := c.form(stamp)
 			req, err := http.DefaultClient.Post(
-				server.URL+"/admin/qor-seosettings?__execute_event__=presets_Update&id="+c.id,
+				server.URL+"/admin/rvq-seosettings?__execute_event__=presets_Update&id="+c.id,
 				mwriter.FormDataContentType(),
 				form)
 			if err != nil {
@@ -186,12 +186,12 @@ func TestUpdate(t *testing.T) {
 				t.Errorf("Update should be processed successfully, status code is %v", req.StatusCode)
 			}
 
-			seoSetting := &QorSEOSetting{}
+			seoSetting := &RvqSEOSetting{}
 			err = dbForTest.First(seoSetting, "name = ? and locale_code = ?", "Product", c.locale).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				t.Errorf("SEO Setting should be updated successfully")
 			}
-			var actualSetting QorSEOSetting
+			var actualSetting RvqSEOSetting
 			actualSetting.Name = seoSetting.Name
 			actualSetting.Setting = seoSetting.Setting
 			actualSetting.LocaleCode = seoSetting.LocaleCode

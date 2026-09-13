@@ -112,7 +112,7 @@ func GetNonIgnoredTableNames(db *gorm.DB) []string {
 		"roles":            {},
 		"user_role_join":   {},
 		"login_sessions":   {},
-		"qor_seo_settings": {},
+		"rvq_seo_settings": {},
 	}
 
 	var rawTableNames []string

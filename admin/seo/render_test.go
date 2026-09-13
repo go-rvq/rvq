@@ -25,7 +25,7 @@ func TestRenderSameType(t *testing.T) {
 		Method: "GET",
 		URL:    u,
 	}
-	globalSeoSetting := QorSEOSetting{
+	globalSeoSetting := RvqSEOSetting{
 		Name: "Global SEO",
 		Setting: Setting{
 			Title: "global | {{SiteName}}",
@@ -44,7 +44,7 @@ func TestRenderSameType(t *testing.T) {
 			name: "render_seo_in_the_case_of_types_with_the_same_name_in_different_packages",
 			prepareDB: func() {
 				dbForTest.Save(&globalSeoSetting)
-				seoSettings := []*QorSEOSetting{
+				seoSettings := []*RvqSEOSetting{
 					{
 						Name: "Customer",
 						Setting: Setting{
@@ -96,7 +96,7 @@ func TestRenderSameType(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			dbForTest.Exec("truncate qor_seo_settings;")
+			dbForTest.Exec("truncate rvq_seo_settings;")
 			c.prepareDB()
 			if got, _ := h.Marshal(c.builder.Render(c.obj, defaultRequest), context.TODO()); !metaEqual(string(got), c.want) {
 				t.Errorf("Render = %v\nExpected = %v", string(got), c.want)

@@ -46,13 +46,13 @@ func (mtd *myTd) Write(ctx *h.Context) (err error) {
 
 func (b *Builder) Install(pb *presets.Builder) error {
 	// The registration of FieldDefaults for writing Setting here
-	// must be executed before `pb.Model(&QorSEOSetting{})...`,
+	// must be executed before `pb.Model(&RvqSEOSetting{})...`,
 	pb.FieldDefaults(presets.WRITE).
 		FieldType(Setting{}).
 		ComponentFunc(b.EditingComponentFunc).
 		SetterFunc(EditSetterFunc)
 
-	seoModel := pb.Model(&QorSEOSetting{}).
+	seoModel := pb.Model(&RvqSEOSetting{}).
 		Label("SEO").
 		RightDrawerWidth("1000").
 		LayoutConfig(&presets.LayoutConfig{
@@ -89,7 +89,7 @@ func (b *Builder) configListing(seoModel *presets.ModelBuilder) {
 	// Configure the indentation for Name field to display hierarchy.
 	listing.Field("Name").ComponentFunc(
 		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			seoSetting := field.Obj.(*QorSEOSetting)
+			seoSetting := field.Obj.(*RvqSEOSetting)
 			icon := "mdi-folder"
 			priority := b.GetSEOPriority(seoSetting.Name)
 			return &myTd{
@@ -122,7 +122,7 @@ func (b *Builder) configListing(seoModel *presets.ModelBuilder) {
 				panic("The localization of SEO is not configured correctly. " +
 					"Please check if you correctly configured the `WithLocales` option when initializing the SEO Builder.")
 			}
-			b.SortSEOs(r.([]*QorSEOSetting))
+			b.SortSEOs(r.([]*RvqSEOSetting))
 			return
 		}
 	})
@@ -134,7 +134,7 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	// Customize the Saver to trigger the invocation of the `afterSave` hook function (if available)
 	// when updating the global seo.
 	editing.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
-		seoSetting := obj.(*QorSEOSetting)
+		seoSetting := obj.(*RvqSEOSetting)
 		if err = b.db.Updates(obj).Error; err != nil {
 			return err
 		}
@@ -152,27 +152,27 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	// models via VariablesComponentFunc/VariablesSetterFunc.)
 	editing.Field("Variables").
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			ss := field.Obj.(*QorSEOSetting)
+			ss := field.Obj.(*RvqSEOSetting)
 			return b.VariablesComponentFunc(ss.Name)(field, ctx)
 		}).
 		SetterFunc(VariablesSetterFunc)
 
 	editing.Field("Setting").ComponentFunc(
 		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			seoSetting := field.Obj.(*QorSEOSetting)
+			seoSetting := field.Obj.(*RvqSEOSetting)
 			return b.vseo("Setting", b.GetSEO(seoSetting.Name), &seoSetting.Setting, ctx.R)
 		},
 	)
 }
 
 // SettingComponentFunc returns the editor component for a Setting field of a
-// QorSEOSetting, resolving the SEO by name (seoName) rather than by the object's
+// RvqSEOSetting, resolving the SEO by name (seoName) rather than by the object's
 // type — so an application can mount its own model builder for a specific SEO
 // (e.g. a singleton "Global SEO" scoped by locale) and still get the full SEO
 // editor. Pair it with EditSetterFunc on the same field.
 func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		ss, ok := field.Obj.(*QorSEOSetting)
+		ss, ok := field.Obj.(*RvqSEOSetting)
 		if !ok {
 			return h.Div()
 		}
@@ -183,12 +183,12 @@ func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.Field
 // formKeyForVariablesField is the form prefix of the SEO setting variables.
 const formKeyForVariablesField = "Variables"
 
-// VariablesComponentFunc returns the editor for a QorSEOSetting's setting
+// VariablesComponentFunc returns the editor for a RvqSEOSetting's setting
 // variables (e.g. SiteName), resolving the variable set by seoName. Pair it with
 // VariablesSetterFunc. Exposed so an application can mount its own SEO model.
 func (b *Builder) VariablesComponentFunc(seoName string) func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		ss, ok := field.Obj.(*QorSEOSetting)
+		ss, ok := field.Obj.(*RvqSEOSetting)
 		if !ok {
 			return h.Div()
 		}
@@ -212,9 +212,9 @@ func (b *Builder) VariablesComponentFunc(seoName string) func(field *presets.Fie
 }
 
 // VariablesSetterFunc writes the submitted setting variables back to the
-// QorSEOSetting (its Variables is a map, so it needs an explicit setter).
+// RvqSEOSetting (its Variables is a map, so it needs an explicit setter).
 func VariablesSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-	ss, ok := obj.(*QorSEOSetting)
+	ss, ok := obj.(*RvqSEOSetting)
 	if !ok {
 		return nil
 	}
@@ -284,7 +284,7 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 		}
 	}
 	if !setting.EnabledCustomize && setting.IsEmpty() {
-		modelSetting := &QorSEOSetting{}
+		modelSetting := &RvqSEOSetting{}
 		db.Where("name = ? AND locale_code = ?", seo.name, locale).First(modelSetting)
 		setting = modelSetting.Setting
 	}
@@ -534,7 +534,7 @@ func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.Even
 		}
 	}
 	if !setting.EnabledCustomize && setting.IsEmpty() {
-		modelSetting := &QorSEOSetting{}
+		modelSetting := &RvqSEOSetting{}
 		db.Where("name = ? AND locale_code = ?", seo.name, locale).First(modelSetting)
 		setting = modelSetting.Setting
 	}

@@ -253,12 +253,12 @@ func (seo *SEO) getAvailableVars() map[string]struct{} {
 	}
 }
 
-func (seo *SEO) getLocaleFinalQorSEOSetting(locale string, db *gorm.DB) *QorSEOSetting {
+func (seo *SEO) getLocaleFinalRvqSEOSetting(locale string, db *gorm.DB) *RvqSEOSetting {
 	if seo == nil || seo.name == "" {
-		return &QorSEOSetting{}
+		return &RvqSEOSetting{}
 	}
-	seoSetting := &QorSEOSetting{}
-	seoSettingOfParent := seo.parent.getLocaleFinalQorSEOSetting(locale, db)
+	seoSetting := &RvqSEOSetting{}
+	seoSettingOfParent := seo.parent.getLocaleFinalRvqSEOSetting(locale, db)
 	err := db.Where("name = ? and locale_code = ?", seo.name, locale).First(seoSetting).Error
 	if err != nil {
 		panic(err)
@@ -279,20 +279,20 @@ func (seo *SEO) getLocaleFinalQorSEOSetting(locale string, db *gorm.DB) *QorSEOS
 	return seoSetting
 }
 
-func (seo *SEO) getFinalQorSEOSetting(db *gorm.DB) map[string]*QorSEOSetting {
+func (seo *SEO) getFinalRvqSEOSetting(db *gorm.DB) map[string]*RvqSEOSetting {
 	if seo == nil || seo.name == "" {
 		return nil
 	}
 
-	var seoSets []*QorSEOSetting
-	seoSetsOfParent := seo.parent.getFinalQorSEOSetting(db)
+	var seoSets []*RvqSEOSetting
+	seoSetsOfParent := seo.parent.getFinalRvqSEOSetting(db)
 	if err := db.Where("name = ?", seo.name).Find(&seoSets).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			panic(err)
 		}
 	}
 
-	r := make(map[string]*QorSEOSetting)
+	r := make(map[string]*RvqSEOSetting)
 	for _, seoSet := range seoSets {
 		locale := seoSet.Locale.LocaleCode
 		setsOfParent := seoSetsOfParent[locale]
