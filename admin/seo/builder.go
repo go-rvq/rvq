@@ -478,6 +478,26 @@ func (b *Builder) render(obj interface{}, defaultSEOSetting *RvqSEOSetting, seo 
 	return setting.HTMLComponent(metaProperties)
 }
 
+// RenderSetting generates the SEO <head> tags from a fully-composed Setting:
+// it replaces {{var}} placeholders with variables, makes the Open Graph URL
+// absolute against req, and returns the tags component. Use it when the caller
+// composes the SEO hierarchy itself (e.g. Global → page → record) instead of
+// letting Render read the per-name rows from the settings table.
+func (b *Builder) RenderSetting(setting Setting, variables map[string]string, req *http.Request) h.HTMLComponent {
+	setting = replaceVariables(setting, variables)
+	if setting.OpenGraphURL != "" && !isAbsoluteURL(setting.OpenGraphURL) {
+		var u url.URL
+		u.Host = req.Host
+		if req.URL != nil && req.URL.Scheme != "" {
+			u.Scheme = req.URL.Scheme
+		} else {
+			u.Scheme = "http"
+		}
+		setting.OpenGraphURL = path.Join(u.String(), setting.OpenGraphURL)
+	}
+	return setting.HTMLComponent(map[string]string{})
+}
+
 var regex = regexp.MustCompile("{{([a-zA-Z0-9]*)}}")
 
 func replaceVariables(setting Setting, values map[string]string) Setting {
