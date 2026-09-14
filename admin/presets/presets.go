@@ -847,7 +847,9 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		Density(DensityCompact).
 		Variant(VariantOutlined).
 		HideDetails(true).
-		Class("mx-3")
+		// mt-2 gives the floating outlined label room at the top so it is not
+		// clipped by the drawer's edge.
+		Class("mx-3 mt-2")
 }
 
 func (b *Builder) AddMenuTopItemFunc(key string, v ComponentFunc) (r *Builder) {
