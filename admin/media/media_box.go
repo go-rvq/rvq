@@ -73,6 +73,13 @@ func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFun
 		}
 		mediaBox := field.Value().(media_library.MediaBox)
 
+		// On a read-only view (the detail), an empty media box has nothing to
+		// show: omit the field entirely (a nil component drops its row), like an
+		// empty text field, instead of rendering an empty box.
+		if readonly && mediaBox.Url == "" && mediaBox.VideoLink == "" {
+			return nil
+		}
+
 		// A hint written for the field wins; otherwise the configured sizes
 		// answer for themselves.
 		hint := field.Hint
