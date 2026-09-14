@@ -3,6 +3,7 @@ package presets
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
@@ -807,36 +808,46 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 
 	accept := ctx.R.Header.Get("Accept-Language")
 
-	_, i := language.MatchStrings(matcher, lang, accept)
-	current := supportLanguages[i]
+	_, mi := language.MatchStrings(matcher, lang, accept)
 
-	var items []map[string]string
-	for _, tag := range supportLanguages {
-		items = append(items, map[string]string{
-			"title": display.Self.Name(tag),
-			"value": tag.String(),
-		})
+	// Each item's value is the full URL that switches to that language (same page,
+	// with ?lang=…). Selecting it navigates there — a full page reload, so the
+	// whole admin (the side menu included) re-renders in the chosen language, and
+	// the i18n middleware persists it in the "lang" cookie. This mirrors the login
+	// page's language select, which is the proven idiom.
+	type langItem struct {
+		Label string `json:"Label"`
+		Value string `json:"Value"`
+	}
+	var items []langItem
+	var currentURL string
+	for i, tag := range supportLanguages {
+		u, _ := url.Parse(ctx.R.RequestURI)
+		qs := u.Query()
+		qs.Set(queryName, tag.String())
+		u.RawQuery = qs.Encode()
+		if i == mi {
+			currentURL = u.String()
+		}
+		items = append(items, langItem{Label: display.Self.Name(tag), Value: u.String()})
 	}
 
-	// A select that reloads the page on the chosen language (?lang=…); the i18n
-	// middleware persists it in the "lang" cookie.
 	return VSelect().
 		Label(msgr.Language).
 		Items(items).
-		ItemTitle("title").
-		ItemValue("value").
-		ModelValue(current.String()).
+		ItemTitle("Label").
+		ItemValue("Value").
+		ModelValue(currentURL).
+		// The emitted value is the selected item's Value — the URL that switches to
+		// that language. Navigating to it is a full page reload, so the whole admin
+		// (side menu included) re-renders in the chosen language; the i18n
+		// middleware persists it in the "lang" cookie.
+		Attr("@update:model-value", "$event && (window.location.href = $event)").
 		PrependInnerIcon("mdi-translate").
 		Density(DensityCompact).
 		Variant(VariantOutlined).
 		HideDetails(true).
-		Class("mx-3").
-		// A full page reload (not a Plaid ajax update) so the whole admin —
-		// including the side menu — re-renders in the chosen language. The i18n
-		// middleware reads ?lang=… and persists it in the "lang" cookie.
-		Attr("@update:model-value", fmt.Sprintf(
-			`(v) => { const u = new URL(window.location.href); u.searchParams.set(%q, v); window.location.href = u.toString(); }`,
-			queryName))
+		Class("mx-3")
 }
 
 func (b *Builder) AddMenuTopItemFunc(key string, v ComponentFunc) (r *Builder) {
