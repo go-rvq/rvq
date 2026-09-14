@@ -182,5 +182,7 @@ func RenderFlash(msg any, color ...string) h.HTMLComponent {
 	}
 
 	snack.TagBuilder.Children(text, actions)
-	return vue.UserComponent(append(comps, snack)...).Scope("flash", flash)
+	// snack is already in comps (added above); rendering append(comps, snack)
+	// would emit the snackbar — and thus its text — twice.
+	return vue.UserComponent(comps...).Scope("flash", flash)
 }
