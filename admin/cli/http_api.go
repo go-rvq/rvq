@@ -49,6 +49,10 @@ type Config struct {
 // In the response, the flash portal (see flashPortalName) is handled specially:
 // its snackbar text is stripped of HTML and reported under "flash", and the
 // portal is dropped from the encoded response.
+//
+// A spec may carry "expectedResponse" to assert the result (status code, body
+// equal/contains/starts/ends, and required JSON keys); a failed assertion stops
+// the run and exits non-zero before the next request.
 func HttpApiCommand(cfg Config) *cli.Command {
 	var (
 		method      string
@@ -106,17 +110,35 @@ type httpApiOptions struct {
 // needs — the user login, the HTTP method and the URI — so no command flag is
 // required; any omitted field falls back to the corresponding flag default.
 type requestSpec struct {
-	Method      string          `json:"method"`
-	URI         string          `json:"uri"`
-	Login       string          `json:"login"`
-	User        string          `json:"user"` // alias for login
-	ContentType string          `json:"contentType"`
-	Body        json.RawMessage `json:"body"`
+	Method           string            `json:"method"`
+	URI              string            `json:"uri"`
+	Login            string            `json:"login"`
+	User             string            `json:"user"` // alias for login
+	ContentType      string            `json:"contentType"`
+	Body             json.RawMessage   `json:"body"`
+	ExpectedResponse *expectedResponse `json:"expectedResponse"`
 }
 
 // account returns the user login for this spec: "login", or the "user" alias.
 func (s requestSpec) account() string {
 	return coalesce(s.Login, s.User)
+}
+
+// expectedResponse validates a served response. Every field set must hold, or
+// the command fails (non-zero exit).
+type expectedResponse struct {
+	Status *int       `json:"status"` // exact HTTP status code
+	Body   *bodyMatch `json:"body"`   // string checks on the raw response body
+	Keys   []string   `json:"keys"`   // dot-paths that must exist in the JSON response
+}
+
+// bodyMatch holds the string checks for the response body; each set field must
+// hold.
+type bodyMatch struct {
+	Equal    *string `json:"equal"`
+	Contains *string `json:"contains"`
+	Starts   *string `json:"starts"`
+	Ends     *string `json:"ends"`
 }
 
 // dispatchResult is what one served request reports back.
@@ -138,7 +160,7 @@ func runSingle(ctx *cli.CommandContext, cfg Config, o httpApiOptions) error {
 		return fmt.Errorf("read body: %w", err)
 	}
 
-	res, err := serve(ctx.Context, cfg, o.method, o.uri, o.userAccount, o.contentType, rawBody, o.raw)
+	res, err := serve(ctx.Context, cfg, o.method, o.uri, o.userAccount, o.contentType, rawBody, o.raw, nil)
 	if err != nil {
 		return err
 	}
@@ -173,7 +195,7 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 			body = spec.Body
 		}
 
-		res, err := serve(ctx.Context, cfg, method, spec.URI, user, ct, body, o.raw)
+		res, err := serve(ctx.Context, cfg, method, spec.URI, user, ct, body, o.raw, spec.ExpectedResponse)
 		if err != nil {
 			return fmt.Errorf("request %d (%s): %w", i, spec.URI, err)
 		}
@@ -194,7 +216,7 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 // serve builds one request, dispatches it into the app handler in-process, and
 // returns the processed result. rawBody is the request body before wire
 // encoding: when it is JSON it is flattened into multipart form fields.
-func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType string, rawBody []byte, raw bool) (*dispatchResult, error) {
+func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType string, rawBody []byte, raw bool, expected *expectedResponse) (*dispatchResult, error) {
 	wireBody, wireContentType, err := prepareBody(contentType, rawBody)
 	if err != nil {
 		return nil, err
@@ -233,10 +255,76 @@ func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType s
 	respBody := rec.Body.Bytes()
 	respType := rec.Result().Header.Get("Content-Type")
 
+	// Validate before continuing: a failed expectation ends the run with an
+	// error (non-zero exit).
+	if err := validateResponse(expected, rec.Code, respBody); err != nil {
+		return nil, err
+	}
+
 	if raw || !isJSONContentType(respType) {
 		return &dispatchResult{Status: rec.Code, Raw: string(respBody)}, nil
 	}
 	return processResponse(rec.Code, respBody), nil
+}
+
+// validateResponse checks a served response against expected. It reports the
+// first failed check; nil expected always passes.
+func validateResponse(expected *expectedResponse, status int, respBody []byte) error {
+	if expected == nil {
+		return nil
+	}
+
+	if expected.Status != nil && status != *expected.Status {
+		return fmt.Errorf("status = %d, expected %d", status, *expected.Status)
+	}
+
+	if b := expected.Body; b != nil {
+		s := string(respBody)
+		if b.Equal != nil && s != *b.Equal {
+			return fmt.Errorf("body != expected (equal)")
+		}
+		if b.Contains != nil && !strings.Contains(s, *b.Contains) {
+			return fmt.Errorf("body does not contain %q", *b.Contains)
+		}
+		if b.Starts != nil && !strings.HasPrefix(s, *b.Starts) {
+			return fmt.Errorf("body does not start with %q", *b.Starts)
+		}
+		if b.Ends != nil && !strings.HasSuffix(s, *b.Ends) {
+			return fmt.Errorf("body does not end with %q", *b.Ends)
+		}
+	}
+
+	if len(expected.Keys) > 0 {
+		var root any
+		if err := json.Unmarshal(respBody, &root); err != nil {
+			return fmt.Errorf("cannot check keys: response is not JSON: %w", err)
+		}
+		for _, k := range expected.Keys {
+			if !keyExists(root, k) {
+				return fmt.Errorf("expected key %q not found in response", k)
+			}
+		}
+	}
+
+	return nil
+}
+
+// keyExists reports whether the dot-separated path exists in a decoded JSON
+// value, walking object members segment by segment.
+func keyExists(root any, path string) bool {
+	cur := root
+	for _, seg := range strings.Split(path, ".") {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return false
+		}
+		v, ok := m[seg]
+		if !ok {
+			return false
+		}
+		cur = v
+	}
+	return true
 }
 
 // prepareBody turns a request body into its wire form. A JSON body is flattened

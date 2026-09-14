@@ -137,6 +137,75 @@ func TestParseSpecsMode(t *testing.T) {
 	}
 }
 
+func strptr(s string) *string { return &s }
+func intptr(i int) *int       { return &i }
+
+func TestValidateResponseStatus(t *testing.T) {
+	if err := validateResponse(&expectedResponse{Status: intptr(200)}, 200, nil); err != nil {
+		t.Fatalf("status match should pass: %v", err)
+	}
+	if err := validateResponse(&expectedResponse{Status: intptr(200)}, 500, nil); err == nil {
+		t.Fatal("status mismatch should fail")
+	}
+	if err := validateResponse(nil, 500, nil); err != nil {
+		t.Fatalf("nil expected should always pass: %v", err)
+	}
+}
+
+func TestValidateResponseBody(t *testing.T) {
+	body := []byte("hello world")
+	cases := []struct {
+		name string
+		m    bodyMatch
+		ok   bool
+	}{
+		{"equal ok", bodyMatch{Equal: strptr("hello world")}, true},
+		{"equal fail", bodyMatch{Equal: strptr("nope")}, false},
+		{"contains ok", bodyMatch{Contains: strptr("lo wo")}, true},
+		{"contains fail", bodyMatch{Contains: strptr("xyz")}, false},
+		{"starts ok", bodyMatch{Starts: strptr("hello")}, true},
+		{"starts fail", bodyMatch{Starts: strptr("world")}, false},
+		{"ends ok", bodyMatch{Ends: strptr("world")}, true},
+		{"ends fail", bodyMatch{Ends: strptr("hello")}, false},
+	}
+	for _, c := range cases {
+		err := validateResponse(&expectedResponse{Body: &c.m}, 200, body)
+		if (err == nil) != c.ok {
+			t.Errorf("%s: err=%v want ok=%v", c.name, err, c.ok)
+		}
+	}
+}
+
+func TestValidateResponseKeys(t *testing.T) {
+	body := []byte(`{"response":{"updatePortals":[]},"flash":[]}`)
+	if err := validateResponse(&expectedResponse{Keys: []string{"flash", "response.updatePortals"}}, 200, body); err != nil {
+		t.Fatalf("existing keys should pass: %v", err)
+	}
+	if err := validateResponse(&expectedResponse{Keys: []string{"response.missing"}}, 200, body); err == nil {
+		t.Fatal("missing key should fail")
+	}
+	if err := validateResponse(&expectedResponse{Keys: []string{"x"}}, 200, []byte("not json")); err == nil {
+		t.Fatal("non-JSON response with key check should fail")
+	}
+}
+
+func TestExpectedResponseParsesFromSpec(t *testing.T) {
+	specs, _, err := parseSpecsMode([]byte(`{"uri":"/a","expectedResponse":{"status":200,"body":{"contains":"ok"},"keys":["flash"]}}`))
+	if err != nil || len(specs) != 1 {
+		t.Fatalf("parse: %v", err)
+	}
+	exp := specs[0].ExpectedResponse
+	if exp == nil || exp.Status == nil || *exp.Status != 200 {
+		t.Fatalf("status not parsed: %#v", exp)
+	}
+	if exp.Body == nil || exp.Body.Contains == nil || *exp.Body.Contains != "ok" {
+		t.Fatalf("body.contains not parsed: %#v", exp)
+	}
+	if len(exp.Keys) != 1 || exp.Keys[0] != "flash" {
+		t.Fatalf("keys not parsed: %#v", exp.Keys)
+	}
+}
+
 func TestRequestSpecAccountAlias(t *testing.T) {
 	if got := (requestSpec{Login: "a"}).account(); got != "a" {
 		t.Fatalf("login field: got %q", got)
