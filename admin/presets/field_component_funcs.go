@@ -178,6 +178,13 @@ func RuneFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 }
 
 func ReadonlyComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
+	// A zero value has nothing to show on a read-only view: omit the field's row
+	// entirely (a nil component drops it). This already dropped empty strings —
+	// the zero value of a string — and now covers every zero value the same way
+	// (a 0 number, a zero time), instead of printing "0".
+	if zeroer.IsZero(field.Value()) {
+		return nil
+	}
 	if v := field.StringValue(); len(v) > 0 {
 		return vx.VXReadonlyField().
 			Label(field.InputLabel()).
