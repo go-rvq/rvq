@@ -28,8 +28,13 @@ func (m *Messages) WebDavAccess(url string) h.RawHTML {
 
 var (
 	Messages_en_US = &Messages{
-		FileSystem:          "File System",
+		FileSystem: "File System",
+		WebDavAccessTemplate: "Access the files through the WEBDAV protocol at the URL: <code class='text-primary'>%s" +
+			"</code>, using your user login and password.",
 		WebDavProtocolTitle: "WEBDAV Protocol",
+		WebDavProtocolSoftwareExample: "<div class='mt-2'>Some programs for WEBDAV protocol access: " +
+			"<a href='https://winscp.net/eng/index.php' target='_blank'>WinSCP</a> (Windows); " +
+			"Dolphin and Nautilus (Linux). </div>",
 	}
 
 	Messages_pt_BR = &Messages{

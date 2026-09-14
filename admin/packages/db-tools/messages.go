@@ -149,6 +149,12 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		PersistenceEnabled:                   "Enabled",
+		PersistenceYears:                     "Years",
+		PersistenceMonths:                    "Months",
+		PersistenceWeeks:                     "Weeks",
+		PersistenceDays:                      "Days",
+		PersistenceOther:                     "Other",
 		Auto:                                 "Auto",
 		AutoBackup:                           "Auto Backup",
 		DatabaseAutoBackup:                   "Database Auto Backup",
@@ -169,17 +175,19 @@ var (
 		BackupRemoveConfirmTemplate:          "Backup Remove Confirm: %s",
 		ConfigureBackupPersistence:           "Configure Backup Persistence",
 		Persistence: MessagesPersistence{
+			Enabled:     "<b class='text-primary'>ENABLED</b>",
+			Disabled:    "<b class='text-warning'>NOT ENABLED</b>",
 			Title:       "Persistence",
 			Days:        "%d days",
 			Weeks:       "%d weeks",
 			Months:      "%d months",
 			Years:       "%d years",
-			NoOther:     "Não definido",
+			NoOther:     "Not defined",
 			OtherDays:   "other days",
 			OtherWeeks:  "other weeks",
 			OtherMonths: "other months",
 			OtherYears:  "other years",
-			Template:    `{{if .valid}}Persists for {{- join_and " " ", " " e " .enabled .days .weeks .months .years .other}}{{else}}Not persists{{end}}.`,
+			Template:    `{{if .valid}}{{.enabled}}, keep for {{join_and ", " " and " .days .weeks .months .years .other}}{{else}}<span class='text-warning'>Do not keep</span>{{end}}.`,
 		},
 	}
 

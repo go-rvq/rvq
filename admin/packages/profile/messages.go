@@ -18,7 +18,9 @@ type Messages struct {
 }
 
 var (
-	Messages_en_US = &Messages{}
+	Messages_en_US = &Messages{
+		ChangePassword: "Change Password",
+	}
 
 	Messages_pt_BR = &Messages{
 		ChangePassword: "Alterar Senha",
