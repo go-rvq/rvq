@@ -861,6 +861,11 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 	for i, tag := range supportLanguages {
 		u, _ := url.Parse(ctx.R.RequestURI)
 		qs := u.Query()
+		// Drop the ajax event params from the current URL — the request may be a
+		// Plaid reload (…?__execute_event__=__reload__), and the language link must
+		// land on the plain page, not re-fire that event.
+		qs.Del("__execute_event__")
+		qs.Del("__reload__")
 		qs.Set(queryName, tag.String())
 		u.RawQuery = qs.Encode()
 		if i == mi {
