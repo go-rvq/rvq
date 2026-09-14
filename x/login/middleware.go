@@ -228,6 +228,15 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// A request whose user was set in-process by trusted Go code
+			// (WithTrustedUser — CLI dispatch, never a header) is already
+			// authenticated: honour it verbatim and skip the cookie/session
+			// resolution below, which would otherwise overwrite UserKey.
+			if u, ok := trustedUserFromContext(r.Context()); ok {
+				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserKey, u)))
+				return
+			}
+
 			if staticFileRe.MatchString(strings.ToLower(r.URL.Path)) {
 				next.ServeHTTP(w, r)
 				return

@@ -837,6 +837,16 @@ func (b *Builder) newUserObject() interface{} {
 	return reflect.New(b.tUser).Interface()
 }
 
+// FindUserByAccount looks a user up by account name, building the user object
+// from the registered user model. It lets trusted in-process callers (e.g. a
+// CLI command) resolve a user without a login session.
+func (b *Builder) FindUserByAccount(account string) (user interface{}, err error) {
+	if b.userModel == nil {
+		return nil, ErrUserNotFound
+	}
+	return b.userModel.(UserPasser).FindUser(b.db, b.newUserObject(), account)
+}
+
 func (b *Builder) findUserByID(id string) (user interface{}, err error) {
 	m := b.newUserObject()
 	err = b.db.Where(fmt.Sprintf("%s = ?", b.snakePrimaryField), id).
