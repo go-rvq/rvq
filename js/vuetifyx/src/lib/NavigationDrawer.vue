@@ -343,15 +343,9 @@ export default defineComponent({
   > .v-navigation-drawer__content
   > .vx-navigation-drawer__content
   > .v-list {
-  & > .v-list-group.v-list-group--open > .v-list-group__items .v-list-item {
-    padding-inline-start: calc(-25px + var(--indent-padding)) !important;
-
-    & > .v-list-item__prepend {
-      padding-left: 5px;
-      border-inline-start: 1px dotted rgba(var(--v-border-color), 0.25);
-    }
-  }
-
+  // The menu is a VTreeview, which draws its own tree indentation and guides;
+  // the old per-item prepend indent hack and its dotted left border (from the
+  // former VList menu) are gone — they made a stray dotted border on the tree.
   & .v-list-item {
     min-height: 30px;
 

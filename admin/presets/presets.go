@@ -765,8 +765,15 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	// The side menu is a VTreeview: it filters (search, bound to vars.menuFilter)
 	// and auto-expands matches natively, and a leaf's value is its path — so
 	// activating one navigates there (SPA push-state). openedGroups pre-expands the
-	// active item's ancestor chain; activated pre-highlights it.
-	tree := VTreeview().
+	// active item's ancestor chain; activated pre-highlights it. The prepend slot
+	// draws each item's icon (item-props does not carry it to the row).
+	tree := VTreeview(
+		h.Template(
+			VIcon("").Attr(":icon", "item.props.prependIcon").
+				Attr("v-if", "item.props && item.props.prependIcon").
+				Size(SizeSmall),
+		).Attr("v-slot:prepend", "{ item }"),
+	).
 		Items(nodes).
 		ItemTitle("title").
 		ItemValue("value").
