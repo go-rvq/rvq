@@ -710,7 +710,8 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 			return nil, false
 		}
 		if active {
-			openedGroups = append(openedGroups, v.name)
+			// opened is keyed by the item value, which for a group is "group:<name>".
+			openedGroups = append(openedGroups, "group:"+v.name)
 		}
 		return &menuNode{
 			Title:    title,
