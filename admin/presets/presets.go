@@ -144,13 +144,20 @@ func New(i18nB *i18n.Builder) *Builder {
 		return r.layoutFunc(f, config)
 	})
 
-	// The admin-language selector is a default pre-menu item (first in the side
-	// menu), invisible when a single language is supported.
-	r.AddPreMenuItem(&SideMenuItem{
-		Name:    PreMenuItemLanguageSwitch,
-		Enabled: true,
-		Handler: r.RunSwitchLanguageFunc,
-	})
+	// Default pre-menu items (first in the side menu): the language selector
+	// (invisible with a single language) and, below it, a menu filter.
+	r.AddPreMenuItem(
+		&SideMenuItem{
+			Name:    PreMenuItemLanguageSwitch,
+			Enabled: true,
+			Handler: r.RunSwitchLanguageFunc,
+		},
+		&SideMenuItem{
+			Name:    PreMenuItemMenuFilter,
+			Enabled: true,
+			Handler: r.RunMenuFilterFunc,
+		},
+	)
 	return r
 }
 
@@ -584,6 +591,16 @@ const (
 	subMenuFontWeight = "400"
 )
 
+// menuNode is one node of the data-driven side menu (a VTreeview item): a group
+// (has Children) or a leaf (Value is the target path). Props carries the item's
+// component props (the prepend icon, and href on leaves).
+type menuNode struct {
+	Title    string         `json:"title"`
+	Value    string         `json:"value"`
+	Props    map[string]any `json:"props,omitempty"`
+	Children []*menuNode    `json:"children,omitempty"`
+}
+
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	var (
 		mMap = make(map[string]*ModelBuilder)
@@ -604,191 +621,173 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 
 	var (
 		openedGroups = []string{} // groups to auto-expand: the active item's ancestor chain
-		selection    string
-		menus        []h.HTMLComponent
+		activated    = []string{} // the active leaf's value (its path), for the highlight
 		inOrderMap   = make(map[string]struct{})
 	)
 
-	// renderGroup renders a menu group (and its nested sub-groups) as a VListGroup.
-	// It returns the component, how many sub-items it actually rendered, and
-	// whether it (or a descendant) holds the active item — used to auto-expand the
-	// whole ancestor chain. A group with no visible sub-items renders nothing.
-	var renderGroup func(v *MenuGroupBuilder) (comp h.HTMLComponent, subCount int, active bool)
-	renderGroup = func(v *MenuGroupBuilder) (comp h.HTMLComponent, subCount int, active bool) {
+	// pageNode / modelNode build a leaf node (or nil when hidden/denied), record
+	// it as placed, and flag the active one.
+	pageNode := func(p *HttpPageBuilder) *menuNode {
+		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
+			return nil
+		}
+		inOrderMap[p.path] = struct{}{}
+		if p.isMenuItemActive(ctx) {
+			activated = []string{p.fullPath}
+		}
+		props := map[string]any{"href": p.fullPath}
+		if p.menuIcon != "" {
+			props["prependIcon"] = p.menuIcon
+		}
+		return &menuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
+	}
+	modelNode := func(m *ModelBuilder) *menuNode {
+		if m == nil || m.notInMenu || m.permissioner.ReqLister(ctx.R).Denied() {
+			return nil
+		}
+		inOrderMap[m.id] = struct{}{}
+		href := m.Info().ListingHref(ParentsModelID(ctx.R)...)
+		if m.link != "" {
+			href = m.link
+		}
+		if m.defaultURLQueryFunc != nil {
+			href = fmt.Sprintf("%s?%s", href, m.defaultURLQueryFunc(ctx.R).Encode())
+		}
+		if m.isMenuItemActive(ctx) {
+			activated = []string{href}
+		}
+		icon := m.menuIcon
+		if icon == "" {
+			icon = defaultMenuIcon(m.label)
+		}
+		return &menuNode{
+			Title: m.TPageLabel(ctx.Context()),
+			Value: href,
+			Props: map[string]any{"href": href, "prependIcon": icon},
+		}
+	}
+
+	// groupNode builds a group node (and its nested sub-groups) recursively. It
+	// returns nil when the group has no visible child. active reports whether the
+	// group (or a descendant) holds the active item, so each ancestor adds itself
+	// to openedGroups and the whole chain auto-expands.
+	var groupNode func(v *MenuGroupBuilder) (node *menuNode, active bool)
+	groupNode = func(v *MenuGroupBuilder) (node *menuNode, active bool) {
 		groupIcon := v.icon
 		if groupIcon == "" {
 			groupIcon = defaultMenuIcon(v.name)
 		}
+		title := v.TTitle(ctx.Context())
 
-		var title string
-		if v.title != nil {
-			title = v.TTitle(ctx.Context())
-		} else {
-			title = i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)
-		}
-
-		subMenus := []h.HTMLComponent{
-			h.Template(
-				VListItem(
-					web.Slot(
-						VIcon(groupIcon),
-					).Name("prepend"),
-					VListItemTitle().Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 14px;", menuFontWeight)),
-				).Attr("v-bind", "props").
-					Title(title).
-					Class("rounded-lg"),
-			).Attr("v-slot:activator", "{ props }"),
-		}
-
+		var children []*menuNode
 		for _, subOm := range v.subMenuItems {
 			switch it := subOm.(type) {
 			case string:
+				var child *menuNode
 				if it[0] == '/' {
-					p := pMap[it]
-					if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
-						continue
-					}
-					subMenus = append(subMenus, p.menuItem(ctx, true))
-					subCount++
-					inOrderMap[p.path] = struct{}{}
-					if p.isMenuItemActive(ctx) {
-						active = true
-						selection = p.path
-					}
+					child = pageNode(pMap[it])
 				} else {
-					m := mMap[it]
-					if m == nil || m.notInMenu || m.permissioner.ReqLister(ctx.R).Denied() {
-						continue
-					}
-					subMenus = append(subMenus, m.menuItem(ctx, true))
-					subCount++
-					inOrderMap[m.id] = struct{}{}
-					if m.isMenuItemActive(ctx) {
+					child = modelNode(mMap[it])
+				}
+				if child != nil {
+					children = append(children, child)
+					if len(activated) > 0 && activated[0] == child.Value {
 						active = true
-						selection = m.label
 					}
 				}
 			case *MenuGroupBuilder:
-				childComp, childCount, childActive := renderGroup(it)
-				if childCount == 0 {
+				child, childActive := groupNode(it)
+				if child == nil {
 					continue
 				}
-				subMenus = append(subMenus, childComp)
-				subCount++
+				children = append(children, child)
 				if childActive {
 					active = true
 				}
 			}
 		}
-		if subCount == 0 {
-			return nil, 0, false
+		if len(children) == 0 {
+			return nil, false
 		}
-		// Auto-expand this group when it holds the active item (each ancestor adds
-		// itself, so the whole chain opens).
 		if active {
 			openedGroups = append(openedGroups, v.name)
 		}
-		return VListGroup(subMenus...).Value(v.name), subCount, active
+		return &menuNode{
+			Title:    title,
+			Value:    "group:" + v.name,
+			Props:    map[string]any{"prependIcon": groupIcon},
+			Children: children,
+		}, active
 	}
 
+	var nodes []*menuNode
 	for _, om := range b.menuOrder {
 		switch v := om.(type) {
 		case *MenuGroupBuilder:
-			comp, subCount, _ := renderGroup(v)
-			if subCount == 0 {
-				continue
+			if node, _ := groupNode(v); node != nil {
+				nodes = append(nodes, node)
 			}
-			menus = append(menus, comp)
 		case string:
+			var node *menuNode
 			if v[0] == '/' {
-				p := pMap[v]
-				if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
-					continue
-				}
-
-				menuItem := p.menuItem(ctx, false)
-				menus = append(menus, menuItem)
-				inOrderMap[p.path] = struct{}{}
-
-				if p.isMenuItemActive(ctx) {
-					selection = p.path
-				}
+				node = pageNode(pMap[v])
 			} else {
 				m, ok := mMap[v]
 				if !ok {
 					m = mMap[inflection.Plural(strcase.ToKebab(v))]
 				}
-				if m == nil {
-					continue
-				}
-				if m.permissioner.ReqLister(ctx.R).Denied() {
-					continue
-				}
-
-				if m.notInMenu {
-					continue
-				}
-				menuItem := m.menuItem(ctx, false)
-				menus = append(menus, menuItem)
-				inOrderMap[m.id] = struct{}{}
-
-				if m.isMenuItemActive(ctx) {
-					selection = m.label
-				}
+				node = modelNode(m)
+			}
+			if node != nil {
+				nodes = append(nodes, node)
 			}
 		}
 	}
 
+	// Models and pages not placed by the order above, in their own order.
 	for _, m := range b.models {
-		_, ok := inOrderMap[m.id]
-		if ok {
+		if _, ok := inOrderMap[m.id]; ok {
 			continue
 		}
-
-		if m.permissioner.ReqLister(ctx.R).Denied() {
-			continue
+		if node := modelNode(m); node != nil {
+			nodes = append(nodes, node)
 		}
-
-		if m.notInMenu {
-			continue
-		}
-
-		if m.isMenuItemActive(ctx) {
-			selection = m.label
-		}
-		menus = append(menus, m.menuItem(ctx, false))
 	}
-
 	for _, p := range b.pagesRegistrator.httpPages {
-		_, ok := inOrderMap[p.path]
-		if ok {
+		if _, ok := inOrderMap[p.path]; ok {
 			continue
 		}
-
-		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
-			continue
+		if node := pageNode(p); node != nil {
+			nodes = append(nodes, node)
 		}
-
-		if p.isMenuItemActive(ctx) {
-			selection = p.path
-		}
-
-		menus = append(menus, p.menuItem(ctx, false))
 	}
 
-	r = web.Scope(
-		VList(menus...).Class("main-menu").
-			OpenStrategy("single").
-			Class("primary--text").
-			Density(DensityCompact).
-			Attr("v-model:opened", "locals.menuOpened").
-			Attr("v-model:selected", "locals.selection"),
-		// .Attr("v-model:selected", h.JSONString([]string{"Pages"})),
-	).Slot("{ locals }").LocalsInit(
-		// menuOpened is the active item's whole ancestor-group chain, so a match
-		// deep in a nested sub-group auto-expands every group above it.
-		fmt.Sprintf(`{ menuOpened: %s}`, h.JSONString(openedGroups)),
-		fmt.Sprintf(`{ selection:  ["%s"]}`, selection),
+	// The side menu is a VTreeview: it filters (search, bound to vars.menuFilter)
+	// and auto-expands matches natively, and a leaf's value is its path — so
+	// activating one navigates there (SPA push-state). openedGroups pre-expands the
+	// active item's ancestor chain; activated pre-highlights it.
+	tree := VTreeview().
+		Items(nodes).
+		ItemTitle("title").
+		ItemValue("value").
+		ItemChildren("children").
+		ItemProps(true).
+		Activatable(true).
+		ActiveStrategy("single").
+		OpenStrategy("multiple").
+		Density(DensityCompact).
+		Slim(true).
+		Class("main-menu primary--text").
+		Attr("v-model:opened", "locals.opened").
+		Attr("v-model:activated", "locals.activated").
+		Attr(":search", "vars.menuFilter").
+		// Navigate when a leaf (value is a path) is activated; group values are
+		// "group:<name>" and are ignored.
+		Attr("@update:activated", `(v) => { const p = Array.isArray(v) ? v[v.length-1] : v; if (p && String(p).charAt(0) === '/') { plaid().vars(vars).pushStateURL(String(p)).go(); } }`)
+
+	r = web.Scope(tree).Slot("{ locals }").LocalsInit(
+		fmt.Sprintf(`{ opened: %s}`, h.JSONString(openedGroups)),
+		fmt.Sprintf(`{ activated: %s}`, h.JSONString(activated)),
 	)
 	return
 }
@@ -880,6 +879,22 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		// mt-2 gives the floating outlined label room at the top so it is not
 		// clipped by the drawer's edge.
 		Class("mx-3 mt-2")
+}
+
+// RunMenuFilterFunc renders the side-menu text filter (a pre-menu item). It binds
+// to the global vars.menuFilter, which the VTreeview menu reads as its search —
+// filtering and auto-expanding matches natively.
+func (b *Builder) RunMenuFilterFunc(ctx *web.EventContext) (r h.HTMLComponent) {
+	msgr := MustGetMessages(ctx.Context())
+	return VTextField().
+		Attr("v-model", "vars.menuFilter").
+		Attr("placeholder", msgr.Search).
+		PrependInnerIcon("mdi-magnify").
+		Clearable(true).
+		Density(DensityCompact).
+		Variant(VariantOutlined).
+		HideDetails(true).
+		Class("mx-3 mt-2 mb-1")
 }
 
 func (b *Builder) AddMenuTopItemFunc(key string, v ComponentFunc) (r *Builder) {

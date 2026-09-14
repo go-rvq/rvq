@@ -10,6 +10,9 @@ const (
 	// PreMenuItemLanguageSwitch is the admin-language selector, registered as a
 	// pre-menu item by New.
 	PreMenuItemLanguageSwitch = "LanguageSwitch"
+	// PreMenuItemMenuFilter is the side-menu text filter, registered as a pre-menu
+	// item by New.
+	PreMenuItemMenuFilter = "MenuFilter"
 )
 
 // SideMenuItem is a component rendered before (pre) or after (post) the model

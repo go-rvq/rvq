@@ -328,6 +328,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 	presetsListingDialog: false,
 	navDrawer: true,
 	contentPageMenu: false,
+	menuFilter: "",
 	printer: {show:false},
 	print: (vars, selector) => {
 		const d = window.document;
