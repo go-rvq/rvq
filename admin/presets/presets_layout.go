@@ -246,9 +246,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Location(LocationTop),
 
 			vx.VXNavigationDrawer(
-				// b.RunBrandProfileSwitchLanguageDisplayFunc(b.RunBrandFunc(ctx), profile, b.RunSwitchLanguageFunc(ctx), ctx),
-				// b.RunBrandFunc(ctx),
-				// profile,
+				// The admin-language selector, as the first drawer item (nil, and so
+				// invisible, when a single language is supported).
+				b.RunSwitchLanguageFunc(ctx),
 				menu,
 				// ).Class("ma-2").
 				// 	Style("height: calc(100% - 20px); border: 1px solid grey"),

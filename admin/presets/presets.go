@@ -795,55 +795,30 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 
 	accept := ctx.R.Header.Get("Accept-Language")
 
-	var displayLanguage language.Tag
 	_, i := language.MatchStrings(matcher, lang, accept)
-	displayLanguage = supportLanguages[i]
+	current := supportLanguages[i]
 
-	var languages []h.HTMLComponent
+	var items []map[string]string
 	for _, tag := range supportLanguages {
-		languages = append(languages,
-			h.Div(
-				VListItem(
-					VListItemTitle(
-						h.Div(h.Text(display.Self.Name(tag))),
-					),
-				).Attr("@click", web.Plaid().Query(queryName, tag.String()).Go()),
-			),
-		)
+		items = append(items, map[string]string{
+			"title": display.Self.Name(tag),
+			"value": tag.String(),
+		})
 	}
 
-	oldIcon := VMenu().Children(
-		h.Template().Attr("v-slot:activator", "{isActive, props}").Children(
-			h.Div(
-				VList(
-					VListItem(
-						VListItemTitle(
-							h.Text(fmt.Sprintf("%s%s %s", msgr.Language, msgr.Colon, display.Self.Name(displayLanguage))),
-						).Class("text-subtitle-2 font-weight-regular"),
-						web.Slot(
-							VIcon("mdi-translate-variant").Size(SizeSmall).Class(""),
-						).Name("append"),
-					).Class("pa-0").Density(DensityCompact),
-				).Class("pa-0 ma-n4 mt-n6"),
-			).Attr("v-bind", "props"),
-		),
-		VList(
-			languages...,
-		).Density(DensityCompact),
-	)
-	_ = oldIcon
-	return VMenu().Children(
-		h.Template().Attr("v-slot:activator", "{isActive, props}").Children(
-			VRow(
-				VCol(
-					VIcon("mdi-translate")).Cols(1),
-				VCol(VIcon("mdi-menu-down")).Cols(1),
-			).Attr("v-bind", "props"),
-		),
-		VList(
-			languages...,
-		).Density(DensityCompact),
-	)
+	// A select that reloads the page on the chosen language (?lang=…); the i18n
+	// middleware persists it in the "lang" cookie.
+	return VSelect().
+		Label(msgr.Language).
+		Items(items).
+		ItemTitle("title").
+		ItemValue("value").
+		ModelValue(current.String()).
+		PrependInnerIcon("mdi-translate").
+		Density(DensityCompact).
+		Variant(VariantOutlined).
+		HideDetails(true).
+		Attr("@update:model-value", web.Plaid().Query(queryName, web.Var("$event")).Go())
 }
 
 func (b *Builder) AddMenuTopItemFunc(key string, v ComponentFunc) (r *Builder) {
