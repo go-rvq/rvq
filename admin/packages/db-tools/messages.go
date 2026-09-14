@@ -244,6 +244,6 @@ func (m *Messages) BackupRemoveConfirm(detail string) h.RawHTML {
 }
 
 func ConfigureMessages(b *i18n.Builder) {
-	b.RegisterForModules(language.English, MessagesKey, Messages_pt_BR).
+	b.RegisterForModules(language.English, MessagesKey, Messages_en_US).
 		RegisterForModules(language.BrazilianPortuguese, MessagesKey, Messages_pt_BR)
 }

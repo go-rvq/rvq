@@ -11,7 +11,7 @@ import (
 const MessagesKey i18n.ModuleKey = "presets/admin/i18n"
 
 func ConfigureMessages(b *i18n.Builder) {
-	b.RegisterForModules(language.English, MessagesKey, Messages_pt_BR).
+	b.RegisterForModules(language.English, MessagesKey, Messages_en_US).
 		RegisterForModules(language.SimplifiedChinese, MessagesKey, Messages_zh_CN).
 		RegisterForModules(language.BrazilianPortuguese, MessagesKey, Messages_pt_BR)
 }
