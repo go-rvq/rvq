@@ -494,6 +494,15 @@ func (mb *ModelBuilder) Label(v string) (r *ModelBuilder) {
 	return mb
 }
 
+// BothLabel sets the singular and the plural label to the same value — handy for
+// a singleton (or an uncountable name) so the menu, page title and breadcrumb
+// all read (and translate) the same.
+func (mb *ModelBuilder) BothLabel(v string) (r *ModelBuilder) {
+	mb.label = v
+	mb.pluralLabel = v
+	return mb
+}
+
 func (mb *ModelBuilder) GetLabel() string {
 	return mb.label
 }
