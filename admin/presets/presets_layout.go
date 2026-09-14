@@ -246,10 +246,11 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Location(LocationTop),
 
 			vx.VXNavigationDrawer(
-				// The admin-language selector, as the first drawer item (nil, and so
-				// invisible, when a single language is supported).
-				b.RunSwitchLanguageFunc(ctx),
+				// Configurable items before and after the model menu (the language
+				// selector is a default pre-menu item).
+				b.preMenu(ctx),
 				menu,
+				b.postMenu(ctx),
 				// ).Class("ma-2").
 				// 	Style("height: calc(100% - 20px); border: 1px solid grey"),
 			).

@@ -43,6 +43,10 @@ type Builder struct {
 	switchLanguageFunc                    ComponentFunc
 	brandProfileSwitchLanguageDisplayFunc func(brand, profile, switchLanguage h.HTMLComponent) h.HTMLComponent
 	menuTopItems                          map[string]ComponentFunc
+	preMenuItems                          []*SideMenuItem
+	postMenuItems                         []*SideMenuItem
+	preMenuOrder                          []string
+	postMenuOrder                         []string
 	notificationCountFunc                 func(ctx *web.EventContext) int
 	notificationContentFunc               ComponentFunc
 	brandTitle                            string
@@ -137,6 +141,14 @@ func New(i18nB *i18n.Builder) *Builder {
 			config = r.homePageLayoutConfig
 		}
 		return r.layoutFunc(f, config)
+	})
+
+	// The admin-language selector is a default pre-menu item (first in the side
+	// menu), invisible when a single language is supported.
+	r.AddPreMenuItem(&SideMenuItem{
+		Name:    PreMenuItemLanguageSwitch,
+		Enabled: true,
+		Handler: r.RunSwitchLanguageFunc,
 	})
 	return r
 }
@@ -818,6 +830,7 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		Density(DensityCompact).
 		Variant(VariantOutlined).
 		HideDetails(true).
+		Class("mx-3").
 		Attr("@update:model-value", web.Plaid().Query(queryName, web.Var("$event")).Go())
 }
 
