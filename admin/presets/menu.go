@@ -53,10 +53,10 @@ type MenuGroupBuilder struct {
 	title func(ctx context.Context) string
 	name  string
 	icon  string
-	// item can be Slug name, model name
-	// the underlying logic is using Slug name,
-	// so if the Slug name is customized, item must be the Slug name
-	subMenuItems []string
+	// item can be a Slug/model name (string) or a nested *MenuGroupBuilder for a
+	// sub-group. The underlying logic uses the Slug name, so if the Slug name is
+	// customized, the item must be the Slug name.
+	subMenuItems []interface{}
 }
 
 func (b *MenuGroupBuilder) TitleFunc(f func(ctx context.Context) string) *MenuGroupBuilder {
@@ -84,7 +84,18 @@ func (b *MenuGroupBuilder) Icon(v string) (r *MenuGroupBuilder) {
 }
 
 func (b *MenuGroupBuilder) SubItems(ss ...string) (r *MenuGroupBuilder) {
-	b.subMenuItems = ss
+	b.subMenuItems = make([]interface{}, len(ss))
+	for i, s := range ss {
+		b.subMenuItems[i] = s
+	}
+	return b
+}
+
+// SubItemsAny sets the group's sub-items, each either a model/page name (string)
+// or a nested *MenuGroupBuilder (a sub-group), preserving order. Use it to nest a
+// group inside another group.
+func (b *MenuGroupBuilder) SubItemsAny(items ...interface{}) (r *MenuGroupBuilder) {
+	b.subMenuItems = items
 	return b
 }
 

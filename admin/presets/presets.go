@@ -508,17 +508,32 @@ func (b *Builder) MenuOrder(items ...interface{}) {
 				b.removeMenuGroupInOrder(v)
 			}
 			b.menuOrder = append(b.menuOrder, v)
-			for _, item := range v.subMenuItems {
-				if item[0] == '/' {
-					if p := b.pagesRegistrator.GetHttpPage(item); p != nil {
-						p.MenuGroup(v.name)
-					}
-				} else if mb := b.GetModelByID(item); mb != nil {
-					mb.menuGroupName = v.name
-				}
-			}
+			b.assignMenuGroup(v)
 		default:
 			panic(fmt.Sprintf("unknown menu order item type: %T\n", item))
+		}
+	}
+}
+
+// assignMenuGroup records, for each of the group's items, which group it belongs
+// to — recursing into nested sub-groups so a model/page keeps the name of its
+// innermost group.
+func (b *Builder) assignMenuGroup(v *MenuGroupBuilder) {
+	for _, item := range v.subMenuItems {
+		switch it := item.(type) {
+		case string:
+			if it[0] == '/' {
+				if p := b.pagesRegistrator.GetHttpPage(it); p != nil {
+					p.MenuGroup(v.name)
+				}
+			} else if mb := b.GetModelByID(it); mb != nil {
+				mb.menuGroupName = v.name
+			}
+		case *MenuGroupBuilder:
+			// A nested sub-group: MenuGroup() added it to the top-level order on
+			// creation; take it out so it renders only inside its parent.
+			b.removeMenuGroupInOrder(it)
+			b.assignMenuGroup(it)
 		}
 	}
 }
@@ -588,47 +603,48 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	}
 
 	var (
-		activeMenuItem string
-		selection      string
-		menus          []h.HTMLComponent
-		inOrderMap     = make(map[string]struct{})
+		openedGroups = []string{} // groups to auto-expand: the active item's ancestor chain
+		selection    string
+		menus        []h.HTMLComponent
+		inOrderMap   = make(map[string]struct{})
 	)
 
-	for _, om := range b.menuOrder {
-		switch v := om.(type) {
-		case *MenuGroupBuilder:
-			disabled := false
-			groupIcon := v.icon
-			if groupIcon == "" {
-				groupIcon = defaultMenuIcon(v.name)
-			}
+	// renderGroup renders a menu group (and its nested sub-groups) as a VListGroup.
+	// It returns the component, how many sub-items it actually rendered, and
+	// whether it (or a descendant) holds the active item — used to auto-expand the
+	// whole ancestor chain. A group with no visible sub-items renders nothing.
+	var renderGroup func(v *MenuGroupBuilder) (comp h.HTMLComponent, subCount int, active bool)
+	renderGroup = func(v *MenuGroupBuilder) (comp h.HTMLComponent, subCount int, active bool) {
+		groupIcon := v.icon
+		if groupIcon == "" {
+			groupIcon = defaultMenuIcon(v.name)
+		}
 
-			var title string
-			if v.title != nil {
-				title = v.TTitle(ctx.Context())
-			} else {
-				title = i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)
-			}
+		var title string
+		if v.title != nil {
+			title = v.TTitle(ctx.Context())
+		} else {
+			title = i18n.T(ctx.Context(), ModelsI18nModuleKey, v.name)
+		}
 
-			subMenus := []h.HTMLComponent{
-				h.Template(
-					VListItem(
-						web.Slot(
-							VIcon(groupIcon),
-						).Name("prepend"),
-						VListItemTitle().Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 14px;", menuFontWeight)),
-						// VListItemTitle(h.Text(i18n.T(ctx.R, ModelsI18nModuleKey, v.name))).
-					).Attr("v-bind", "props").
-						Title(title).
-						Class("rounded-lg"),
-					// Value(i18n.T(ctx.R, ModelsI18nModuleKey, v.name)),
-				).Attr("v-slot:activator", "{ props }"),
-			}
+		subMenus := []h.HTMLComponent{
+			h.Template(
+				VListItem(
+					web.Slot(
+						VIcon(groupIcon),
+					).Name("prepend"),
+					VListItemTitle().Attr("style", fmt.Sprintf("white-space: normal; font-weight: %s;font-size: 14px;", menuFontWeight)),
+				).Attr("v-bind", "props").
+					Title(title).
+					Class("rounded-lg"),
+			).Attr("v-slot:activator", "{ props }"),
+		}
 
-			subCount := 0
-			for _, subOm := range v.subMenuItems {
-				if subOm[0] == '/' {
-					p := pMap[subOm]
+		for _, subOm := range v.subMenuItems {
+			switch it := subOm.(type) {
+			case string:
+				if it[0] == '/' {
+					p := pMap[it]
 					if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
 						continue
 					}
@@ -636,41 +652,53 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 					subCount++
 					inOrderMap[p.path] = struct{}{}
 					if p.isMenuItemActive(ctx) {
-						// activeMenuItem = m.label
-						activeMenuItem = v.name
+						active = true
 						selection = p.path
 					}
 				} else {
-					m, _ := mMap[subOm]
-					if m == nil {
-						continue
-					}
-					if m.notInMenu {
-						continue
-					}
-					if m.permissioner.ReqLister(ctx.R).Denied() {
+					m := mMap[it]
+					if m == nil || m.notInMenu || m.permissioner.ReqLister(ctx.R).Denied() {
 						continue
 					}
 					subMenus = append(subMenus, m.menuItem(ctx, true))
 					subCount++
 					inOrderMap[m.id] = struct{}{}
 					if m.isMenuItemActive(ctx) {
-						// activeMenuItem = m.label
-						activeMenuItem = v.name
+						active = true
 						selection = m.label
 					}
 				}
+			case *MenuGroupBuilder:
+				childComp, childCount, childActive := renderGroup(it)
+				if childCount == 0 {
+					continue
+				}
+				subMenus = append(subMenus, childComp)
+				subCount++
+				if childActive {
+					active = true
+				}
 			}
+		}
+		if subCount == 0 {
+			return nil, 0, false
+		}
+		// Auto-expand this group when it holds the active item (each ancestor adds
+		// itself, so the whole chain opens).
+		if active {
+			openedGroups = append(openedGroups, v.name)
+		}
+		return VListGroup(subMenus...).Value(v.name), subCount, active
+	}
+
+	for _, om := range b.menuOrder {
+		switch v := om.(type) {
+		case *MenuGroupBuilder:
+			comp, subCount, _ := renderGroup(v)
 			if subCount == 0 {
 				continue
 			}
-			if disabled {
-				continue
-			}
-
-			menus = append(menus,
-				VListGroup(subMenus...).Value(v.name),
-			)
+			menus = append(menus, comp)
 		case string:
 			if v[0] == '/' {
 				p := pMap[v]
@@ -757,7 +785,9 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 			Attr("v-model:selected", "locals.selection"),
 		// .Attr("v-model:selected", h.JSONString([]string{"Pages"})),
 	).Slot("{ locals }").LocalsInit(
-		fmt.Sprintf(`{ menuOpened:  ["%s"]}`, activeMenuItem),
+		// menuOpened is the active item's whole ancestor-group chain, so a match
+		// deep in a nested sub-group auto-expands every group above it.
+		fmt.Sprintf(`{ menuOpened: %s}`, h.JSONString(openedGroups)),
 		fmt.Sprintf(`{ selection:  ["%s"]}`, selection),
 	)
 	return
