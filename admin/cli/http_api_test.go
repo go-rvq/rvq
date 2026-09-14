@@ -162,10 +162,10 @@ func strptr(s string) *string { return &s }
 func intptr(i int) *int       { return &i }
 
 func TestValidateResponseStatus(t *testing.T) {
-	if err := validateResponse(&expectedResponse{Status: intptr(200)}, 200, nil); err != nil {
+	if err := validateResponse(&ExpectedResponse{Status: intptr(200)}, 200, nil); err != nil {
 		t.Fatalf("status match should pass: %v", err)
 	}
-	if err := validateResponse(&expectedResponse{Status: intptr(200)}, 500, nil); err == nil {
+	if err := validateResponse(&ExpectedResponse{Status: intptr(200)}, 500, nil); err == nil {
 		t.Fatal("status mismatch should fail")
 	}
 	if err := validateResponse(nil, 500, nil); err != nil {
@@ -177,20 +177,20 @@ func TestValidateResponseBody(t *testing.T) {
 	body := []byte("hello world")
 	cases := []struct {
 		name string
-		m    bodyMatch
+		m    BodyMatch
 		ok   bool
 	}{
-		{"equal ok", bodyMatch{Equal: strptr("hello world")}, true},
-		{"equal fail", bodyMatch{Equal: strptr("nope")}, false},
-		{"contains ok", bodyMatch{Contains: strptr("lo wo")}, true},
-		{"contains fail", bodyMatch{Contains: strptr("xyz")}, false},
-		{"starts ok", bodyMatch{Starts: strptr("hello")}, true},
-		{"starts fail", bodyMatch{Starts: strptr("world")}, false},
-		{"ends ok", bodyMatch{Ends: strptr("world")}, true},
-		{"ends fail", bodyMatch{Ends: strptr("hello")}, false},
+		{"equal ok", BodyMatch{Equal: strptr("hello world")}, true},
+		{"equal fail", BodyMatch{Equal: strptr("nope")}, false},
+		{"contains ok", BodyMatch{Contains: strptr("lo wo")}, true},
+		{"contains fail", BodyMatch{Contains: strptr("xyz")}, false},
+		{"starts ok", BodyMatch{Starts: strptr("hello")}, true},
+		{"starts fail", BodyMatch{Starts: strptr("world")}, false},
+		{"ends ok", BodyMatch{Ends: strptr("world")}, true},
+		{"ends fail", BodyMatch{Ends: strptr("hello")}, false},
 	}
 	for _, c := range cases {
-		err := validateResponse(&expectedResponse{Body: &c.m}, 200, body)
+		err := validateResponse(&ExpectedResponse{Body: &c.m}, 200, body)
 		if (err == nil) != c.ok {
 			t.Errorf("%s: err=%v want ok=%v", c.name, err, c.ok)
 		}
@@ -199,13 +199,13 @@ func TestValidateResponseBody(t *testing.T) {
 
 func TestValidateResponseKeys(t *testing.T) {
 	body := []byte(`{"response":{"updatePortals":[]},"flash":[]}`)
-	if err := validateResponse(&expectedResponse{Keys: []string{"flash", "response.updatePortals"}}, 200, body); err != nil {
+	if err := validateResponse(&ExpectedResponse{Keys: []string{"flash", "response.updatePortals"}}, 200, body); err != nil {
 		t.Fatalf("existing keys should pass: %v", err)
 	}
-	if err := validateResponse(&expectedResponse{Keys: []string{"response.missing"}}, 200, body); err == nil {
+	if err := validateResponse(&ExpectedResponse{Keys: []string{"response.missing"}}, 200, body); err == nil {
 		t.Fatal("missing key should fail")
 	}
-	if err := validateResponse(&expectedResponse{Keys: []string{"x"}}, 200, []byte("not json")); err == nil {
+	if err := validateResponse(&ExpectedResponse{Keys: []string{"x"}}, 200, []byte("not json")); err == nil {
 		t.Fatal("non-JSON response with key check should fail")
 	}
 }

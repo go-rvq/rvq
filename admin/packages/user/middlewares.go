@@ -97,6 +97,13 @@ func (b *Middlewares) ValidateSessionToken(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// A trusted in-process user (WithTrustedUser — e.g. a CLI command) is
+		// pre-authenticated and has no login session, so there is no session token
+		// to validate; skipping it here avoids bouncing the request to logout.
+		if login.HasTrustedUser(r.Context()) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if login.IsLoginWIP(r) {
 			next.ServeHTTP(w, r)
 			return

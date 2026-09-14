@@ -76,6 +76,8 @@ SPEC FIELDS (an omitted field falls back to the matching flag)
                       {"Tags":["a","b"]}          -> Tags[0]=a, Tags[1]=b
                       {"file:Cover":"/img.png"}   -> file field "Cover", read from
                                                      disk and left in place
+  skipFormSign      true skips the admin form-stamp (optimistic-lock) check, so
+                    a save runs without first fetching the rendered signed stamp
   expectedResponse  assertions on the result; the first failure stops the run
                     and exits non-zero (before the next request):
                       status            exact HTTP status code
@@ -108,11 +110,12 @@ EXAMPLE SPEC
 
 func HttpApiCommand(cfg Config) *cli.Command {
 	var (
-		method      string
-		userAccount string
-		dataArg     string
-		contentType string
-		rawOut      bool
+		method       string
+		userAccount  string
+		dataArg      string
+		contentType  string
+		rawOut       bool
+		skipFormSign bool
 	)
 
 	return &cli.Command{
@@ -126,6 +129,7 @@ func HttpApiCommand(cfg Config) *cli.Command {
 			fs.StringVar(&dataArg, "data", "", "request body; '@FILE' reads a file, '@-' or omitted reads piped stdin")
 			fs.StringVar(&contentType, "content-type", "application/json", "request Content-Type (default for JSON specs)")
 			fs.BoolVar(&rawOut, "raw", false, "print the raw response body without extracting the flash portal")
+			fs.BoolVar(&skipFormSign, "skip-form-sign", false, "skip the admin form-stamp (optimistic-lock) check on saves")
 			return nil
 		},
 		Help: func(ctx *cli.CommandContext) error {
@@ -134,11 +138,12 @@ func HttpApiCommand(cfg Config) *cli.Command {
 		},
 		Run: func(ctx *cli.CommandContext) error {
 			o := httpApiOptions{
-				method:      strings.ToUpper(method),
-				userAccount: userAccount,
-				data:        dataArg,
-				contentType: contentType,
-				raw:         rawOut,
+				method:       strings.ToUpper(method),
+				userAccount:  userAccount,
+				data:         dataArg,
+				contentType:  contentType,
+				raw:          rawOut,
+				skipFormSign: skipFormSign,
 			}
 			args := ctx.Args
 			// A single positional that is not an existing file is the URI: the
@@ -155,12 +160,13 @@ func HttpApiCommand(cfg Config) *cli.Command {
 }
 
 type httpApiOptions struct {
-	method      string
-	userAccount string
-	data        string
-	contentType string
-	uri         string
-	raw         bool
+	method       string
+	userAccount  string
+	data         string
+	contentType  string
+	uri          string
+	raw          bool
+	skipFormSign bool
 }
 
 // requestSpec is one request described in JSON. It carries everything a request
@@ -173,7 +179,11 @@ type requestSpec struct {
 	User             string            `json:"user"` // alias for login
 	ContentType      string            `json:"contentType"`
 	Body             json.RawMessage   `json:"body"`
-	ExpectedResponse *expectedResponse `json:"expectedResponse"`
+	ExpectedResponse *ExpectedResponse `json:"expectedResponse"`
+	// SkipFormSign opts this request out of the admin's form-stamp
+	// (optimistic-lock) check, so a save can be submitted without first
+	// fetching the rendered signed stamp. Only honoured for the in-process CLI.
+	SkipFormSign bool `json:"skipFormSign"`
 }
 
 // account returns the user login for this spec: "login", or the "user" alias.
@@ -181,25 +191,25 @@ func (s requestSpec) account() string {
 	return coalesce(s.Login, s.User)
 }
 
-// expectedResponse validates a served response. Every field set must hold, or
+// ExpectedResponse validates a served response. Every field set must hold, or
 // the command fails (non-zero exit).
-type expectedResponse struct {
+type ExpectedResponse struct {
 	Status *int       `json:"status"` // exact HTTP status code
-	Body   *bodyMatch `json:"body"`   // string checks on the raw response body
+	Body   *BodyMatch `json:"body"`   // string checks on the raw response body
 	Keys   []string   `json:"keys"`   // dot-paths that must exist in the JSON response
 }
 
-// bodyMatch holds the string checks for the response body; each set field must
+// BodyMatch holds the string checks for the response body; each set field must
 // hold.
-type bodyMatch struct {
+type BodyMatch struct {
 	Equal    *string `json:"equal"`
 	Contains *string `json:"contains"`
 	Starts   *string `json:"starts"`
 	Ends     *string `json:"ends"`
 }
 
-// dispatchResult is what one served request reports back.
-type dispatchResult struct {
+// DispatchResult is what one served request reports back.
+type DispatchResult struct {
 	Status   int      `json:"status"`
 	URI      string   `json:"uri,omitempty"`
 	Flash    []string `json:"flash"`
@@ -217,7 +227,15 @@ func runSingle(ctx *cli.CommandContext, cfg Config, o httpApiOptions) error {
 		return fmt.Errorf("read body: %w", err)
 	}
 
-	res, err := serve(ctx.Context, cfg, o.method, o.uri, o.userAccount, o.contentType, rawBody, o.raw, nil)
+	res, err := Serve(ctx.Context, cfg, Dispatch{
+		Method:       o.method,
+		URI:          o.uri,
+		User:         o.userAccount,
+		ContentType:  o.contentType,
+		RawBody:      rawBody,
+		Raw:          o.raw,
+		SkipFormSign: o.skipFormSign,
+	})
 	if err != nil {
 		return err
 	}
@@ -238,7 +256,7 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 		return fmt.Errorf("no request given (provide a URI, a JSON file, or JSON on stdin)")
 	}
 
-	results := make([]*dispatchResult, 0, len(specs))
+	results := make([]*DispatchResult, 0, len(specs))
 	for i, spec := range specs {
 		method := strings.ToUpper(coalesce(spec.Method, o.method))
 		user := coalesce(spec.account(), o.userAccount)
@@ -252,7 +270,16 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 			body = spec.Body
 		}
 
-		res, err := serve(ctx.Context, cfg, method, spec.URI, user, ct, body, o.raw, spec.ExpectedResponse)
+		res, err := Serve(ctx.Context, cfg, Dispatch{
+			Method:       method,
+			URI:          spec.URI,
+			User:         user,
+			ContentType:  ct,
+			RawBody:      body,
+			Raw:          o.raw,
+			SkipFormSign: spec.SkipFormSign || o.skipFormSign,
+			Expected:     spec.ExpectedResponse,
+		})
 		if err != nil {
 			return fmt.Errorf("request %d (%s): %w", i, spec.URI, err)
 		}
@@ -273,8 +300,25 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 // serve builds one request, dispatches it into the app handler in-process, and
 // returns the processed result. rawBody is the request body before wire
 // encoding: when it is JSON it is flattened into multipart form fields.
-func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType string, rawBody []byte, raw bool, expected *expectedResponse) (*dispatchResult, error) {
-	wireBody, wireContentType, err := prepareBody(contentType, rawBody)
+// Dispatch describes one request to serve in-process. It is exported so other
+// commands can drive the same in-process request flow (see Serve).
+type Dispatch struct {
+	Method       string
+	URI          string
+	User         string
+	ContentType  string
+	RawBody      []byte
+	Raw          bool
+	SkipFormSign bool
+	Expected     *ExpectedResponse
+}
+
+// Serve builds one request from d, dispatches it into the app handler in-process
+// (tagging it as CLI-originated, optionally as a trusted user and/or skipping the
+// form-stamp check), validates the response against d.Expected, and returns the
+// processed result. It is exported for reuse by other in-process commands.
+func Serve(baseCtx context.Context, cfg Config, d Dispatch) (*DispatchResult, error) {
+	wireBody, wireContentType, err := prepareBody(d.ContentType, d.RawBody)
 	if err != nil {
 		return nil, err
 	}
@@ -284,14 +328,17 @@ func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType s
 		c = context.Background()
 	}
 	c = web.WithRequestSource(c, web.RequestSourceCLI)
+	if d.SkipFormSign {
+		c = web.WithSkipFormSign(c)
+	}
 
-	if user != "" {
+	if d.User != "" {
 		if cfg.FindUser == nil {
 			return nil, fmt.Errorf("http_api: --user given but no user finder configured")
 		}
-		u, err := cfg.FindUser(user)
+		u, err := cfg.FindUser(d.User)
 		if err != nil {
-			return nil, fmt.Errorf("user %q: %w", user, err)
+			return nil, fmt.Errorf("user %q: %w", d.User, err)
 		}
 		c = login.WithTrustedUser(c, u)
 	}
@@ -301,7 +348,7 @@ func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType s
 		bodyReader = bytes.NewReader(wireBody)
 	}
 
-	req := httptest.NewRequest(method, uri, bodyReader).WithContext(c)
+	req := httptest.NewRequest(d.Method, d.URI, bodyReader).WithContext(c)
 	if wireContentType != "" && len(wireBody) > 0 {
 		req.Header.Set("Content-Type", wireContentType)
 	}
@@ -314,19 +361,19 @@ func serve(baseCtx context.Context, cfg Config, method, uri, user, contentType s
 
 	// Validate before continuing: a failed expectation ends the run with an
 	// error (non-zero exit).
-	if err := validateResponse(expected, rec.Code, respBody); err != nil {
+	if err := validateResponse(d.Expected, rec.Code, respBody); err != nil {
 		return nil, err
 	}
 
-	if raw || !isJSONContentType(respType) {
-		return &dispatchResult{Status: rec.Code, Raw: string(respBody)}, nil
+	if d.Raw || !isJSONContentType(respType) {
+		return &DispatchResult{Status: rec.Code, Raw: string(respBody)}, nil
 	}
 	return processResponse(rec.Code, respBody), nil
 }
 
 // validateResponse checks a served response against expected. It reports the
 // first failed check; nil expected always passes.
-func validateResponse(expected *expectedResponse, status int, respBody []byte) error {
+func validateResponse(expected *ExpectedResponse, status int, respBody []byte) error {
 	if expected == nil {
 		return nil
 	}
@@ -403,8 +450,8 @@ func prepareBody(contentType string, rawBody []byte) (body []byte, wireContentTy
 
 // processResponse decodes the JSON EventResponse, lifts the flash portal text out
 // (HTML stripped) into Flash and removes that portal from the response.
-func processResponse(status int, respBody []byte) *dispatchResult {
-	res := &dispatchResult{Status: status, Flash: []string{}}
+func processResponse(status int, respBody []byte) *DispatchResult {
+	res := &DispatchResult{Status: status, Flash: []string{}}
 
 	var resp map[string]any
 	if err := json.Unmarshal(respBody, &resp); err != nil {

@@ -35,3 +35,25 @@ func RequestSource(r *http.Request) string {
 func IsCLIRequest(r *http.Request) bool {
 	return RequestSource(r) == RequestSourceCLI
 }
+
+// skipFormSignKey carries an opt-in from trusted in-process code that a form's
+// signed/optimistic-lock stamp need not be present. Like requestSourceKey it
+// lives only in the Go context — never a header — so a network request can never
+// set it; only in-process code holding this package's key can.
+type skipFormSignContextKey int
+
+const skipFormSignKey skipFormSignContextKey = 0
+
+// WithSkipFormSign marks ctx so that form-stamp verification is skipped. It is
+// meant for a trusted in-process caller (e.g. a CLI command explicitly opting
+// in) that submits a form without the rendered signed stamp.
+func WithSkipFormSign(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipFormSignKey, true)
+}
+
+// SkipFormSign reports whether trusted in-process code asked to skip form-stamp
+// verification for r (see WithSkipFormSign).
+func SkipFormSign(r *http.Request) bool {
+	v, _ := r.Context().Value(skipFormSignKey).(bool)
+	return v
+}

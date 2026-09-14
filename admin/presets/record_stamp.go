@@ -254,6 +254,14 @@ func (b *EditingBuilder) recordStampField(obj any) h.HTMLComponent {
 //	ErrInvalidFormSignature  the stamp was changed after the server wrote it
 //	ErrRecordChanged         the record moved under the form
 func (b *EditingBuilder) VerifyRecordStamp(mid ID, ctx *web.EventContext) error {
+	// Trusted in-process code may opt out of the optimistic-lock stamp (see
+	// web.WithSkipFormSign) when it submits a form without the rendered signed
+	// stamp. The opt-in lives only in the request context, so a network request
+	// can never set it.
+	if web.SkipFormSign(ctx.R) {
+		return nil
+	}
+
 	stored := b.mb.NewModel()
 	if _, ok := RecordUpdatedAt(stored); !ok {
 		return nil

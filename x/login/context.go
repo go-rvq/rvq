@@ -35,3 +35,11 @@ func trustedUserFromContext(ctx context.Context) (any, bool) {
 	u := ctx.Value(trustedUserKey)
 	return u, u != nil
 }
+
+// HasTrustedUser reports whether ctx carries a pre-authenticated user set by
+// trusted in-process code (WithTrustedUser). Such a user has no login session,
+// so session-token validation must be skipped for it.
+func HasTrustedUser(ctx context.Context) bool {
+	_, ok := trustedUserFromContext(ctx)
+	return ok
+}
