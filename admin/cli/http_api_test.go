@@ -1,13 +1,34 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/go-rvq/rvq/cli"
 )
+
+func TestHttpApiHelp(t *testing.T) {
+	cmd := HttpApiCommand(Config{})
+	if cmd.Help == nil {
+		t.Fatal("command has no Help handler")
+	}
+	var buf bytes.Buffer
+	if err := cmd.Help(&cli.CommandContext{Err: &buf}); err != nil {
+		t.Fatal(err)
+	}
+	s := buf.String()
+	for _, want := range []string{"login", "method", "uri", "body", "file:", "expectedResponse", "keys"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("help text missing %q", want)
+		}
+	}
+}
 
 func TestStripHTML(t *testing.T) {
 	in := `<div class="v-snackbar"><div class="v-snackbar__content">Post &amp; salvo</div></div>`

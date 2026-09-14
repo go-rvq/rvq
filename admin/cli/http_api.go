@@ -53,6 +53,59 @@ type Config struct {
 // A spec may carry "expectedResponse" to assert the result (status code, body
 // equal/contains/starts/ends, and required JSON keys); a failed assertion stops
 // the run and exits non-zero before the next request.
+// httpApiHelp is printed after the usage/flags on `http_api --help`.
+const httpApiHelp = `
+REQUEST INPUT
+  Simple form — a single positional URI (body from --data or piped stdin):
+    app http_api --http-method POST --user admin \
+      --data '{"Title":"Hi"}' '/admin/posts?__execute_event__=presets_Update'
+
+  JSON form — spec(s) from stdin or FILE(s). A JSON array runs many requests,
+  a JSON object runs one; several files are several requests:
+    echo '{"login":"admin","method":"POST","uri":"/admin/...","body":{...}}' | app http_api
+    app http_api requests.json
+    app http_api a.json b.json
+
+SPEC FIELDS (an omitted field falls back to the matching flag)
+  login             user login to run the request as (alias: "user")
+  method            HTTP method (default GET)
+  uri               request URI (required)
+  contentType       request Content-Type (default application/json)
+  body              request body; a JSON body is flattened into form fields:
+                      {"Config":{"TypeID":2}}     -> Config.TypeID=2
+                      {"Tags":["a","b"]}          -> Tags[0]=a, Tags[1]=b
+                      {"file:Cover":"/img.png"}   -> file field "Cover", read from
+                                                     disk and left in place
+  expectedResponse  assertions on the result; the first failure stops the run
+                    and exits non-zero (before the next request):
+                      status            exact HTTP status code
+                      body.equal        response body equals this string
+                      body.contains     response body contains this string
+                      body.starts       response body starts with this string
+                      body.ends         response body ends with this string
+                      keys              JSON dot-paths that must exist
+                                        (e.g. "response.updatePortals")
+
+OUTPUT
+  One result object {status, flash, response} per request (a JSON array input
+  yields a JSON array of results). The flash portal text is extracted (HTML
+  stripped) into "flash" and that portal is removed from "response".
+  --raw prints the untouched response body instead.
+
+EXAMPLE SPEC
+  {
+    "login": "admin",
+    "method": "POST",
+    "uri": "/admin/posts?__execute_event__=presets_Update",
+    "body": { "Title": "Oi", "file:Cover": "/tmp/capa.png" },
+    "expectedResponse": {
+      "status": 200,
+      "body": { "contains": "salvo" },
+      "keys": ["flash", "response.updatePortals"]
+    }
+  }
+`
+
 func HttpApiCommand(cfg Config) *cli.Command {
 	var (
 		method      string
@@ -74,6 +127,10 @@ func HttpApiCommand(cfg Config) *cli.Command {
 			fs.StringVar(&contentType, "content-type", "application/json", "request Content-Type (default for JSON specs)")
 			fs.BoolVar(&rawOut, "raw", false, "print the raw response body without extracting the flash portal")
 			return nil
+		},
+		Help: func(ctx *cli.CommandContext) error {
+			_, err := fmt.Fprint(ctx.Err, httpApiHelp)
+			return err
 		},
 		Run: func(ctx *cli.CommandContext) error {
 			o := httpApiOptions{
