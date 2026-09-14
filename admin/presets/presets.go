@@ -831,7 +831,12 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		Variant(VariantOutlined).
 		HideDetails(true).
 		Class("mx-3").
-		Attr("@update:model-value", web.Plaid().Query(queryName, web.Var("$event")).Go())
+		// A full page reload (not a Plaid ajax update) so the whole admin —
+		// including the side menu — re-renders in the chosen language. The i18n
+		// middleware reads ?lang=… and persists it in the "lang" cookie.
+		Attr("@update:model-value", fmt.Sprintf(
+			`(v) => { const u = new URL(window.location.href); u.searchParams.set(%q, v); window.location.href = u.toString(); }`,
+			queryName))
 }
 
 func (b *Builder) AddMenuTopItemFunc(key string, v ComponentFunc) (r *Builder) {
