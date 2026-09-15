@@ -81,16 +81,49 @@ func (sb *Builder) ModelInstall(b *presets.Builder, mb *presets.ModelBuilder) er
 	return nil
 }
 
+// HideSlugConditionKey names a field context value (a JS boolean expression,
+// e.g. "form.Index") that hides the slug input and its Sync toggle while true,
+// keeping the related text field visible. Set it with
+// FieldBuilder.WithContextValue on the related field (the one this component is
+// attached to).
+type slugCtxKey int
+
+const HideSlugConditionKey slugCtxKey = 0
+
 func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSlugKey, Messages_en_US).(*Messages)
 	slugFieldName := field.Name + "WithSlug"
 	slugLabel := strings.TrimSpace(strings.TrimSuffix(field.Label, "*")) + " Slug"
 	ckbName := checkBoxName(slugFieldName)
 
+	hideCond, _ := field.ContextValue(HideSlugConditionKey).(string)
+
 	sync := true
 
 	if field.Mode.Dot().Is(presets.EDIT) {
 		sync = false
+	}
+
+	// The slug input and its Sync toggle; hidden reactively when hideCond holds.
+	slugRow := VRow(
+		VCol(
+			web.Portal(
+				VTextField().
+					Type("text").
+					Attr(web.VField(slugFieldName, reflectutils.MustGet(field.Obj, slugFieldName).(Slug))...).
+					Label(slugLabel),
+			).Name(portalName(slugFieldName)),
+		).Cols(8),
+		VCol(
+			VCheckbox().
+				Attr("v-model", fmt.Sprintf("form[%q]", ckbName)).
+				Label(fmt.Sprintf(msgr.Sync, strings.ToLower(field.Label))),
+		).Cols(4),
+	)
+
+	var slugPart h.HTMLComponent = slugRow
+	if hideCond != "" {
+		slugPart = h.Template(slugRow).Attr("v-if", "!("+hideCond+")")
 	}
 
 	return vue.UserComponent().
@@ -111,21 +144,7 @@ func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext
 				Label(field.Label).
 				Attr("@update:modelValue", `(e) => sync(e)`),
 
-			VRow(
-				VCol(
-					web.Portal(
-						VTextField().
-							Type("text").
-							Attr(web.VField(slugFieldName, reflectutils.MustGet(field.Obj, slugFieldName).(Slug))...).
-							Label(slugLabel),
-					).Name(portalName(slugFieldName)),
-				).Cols(8),
-				VCol(
-					VCheckbox().
-						Attr("v-model", fmt.Sprintf("form[%q]", ckbName)).
-						Label(fmt.Sprintf(msgr.Sync, strings.ToLower(field.Label))),
-				).Cols(4),
-			),
+			slugPart,
 		))
 }
 
