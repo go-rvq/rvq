@@ -10,6 +10,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/utils/bcp47"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
 	"github.com/go-rvq/rvq/x/i18n"
@@ -19,7 +20,6 @@ import (
 	"github.com/jinzhu/inflection"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
-	"golang.org/x/text/language/display"
 )
 
 type Builder struct {
@@ -828,7 +828,7 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 							VIcon("mdi-widget-translate").Size(SizeSmall).Class("mr-4 ml-1"),
 						).Name("prepend"),
 						VListItemTitle(
-							h.Div(h.Text(fmt.Sprintf("%s%s %s", msgr.Language, msgr.Colon, display.Self.Name(supportLanguages[0])))).Role("button"),
+							h.Div(h.Text(fmt.Sprintf("%s%s %s", msgr.Language, msgr.Colon, bcp47.FlagLabel(supportLanguages[0].String())))).Role("button"),
 						),
 					).Class("pa-0").Density(DensityCompact),
 				).Class("pa-0 ma-n4 mt-n6"),
@@ -871,10 +871,12 @@ func (b *Builder) RunSwitchLanguageFunc(ctx *web.EventContext) (r h.HTMLComponen
 		if i == mi {
 			currentURL = u.String()
 		}
-		items = append(items, langItem{Label: display.Self.Name(tag), Value: u.String()})
+		// Label as "🏳 name (code)" (the flag, then the name and the code), so the admin-language selector reads the same way; the items
+		// are already limited to the registered i18n languages.
+		items = append(items, langItem{Label: bcp47.FlagLabel(tag.String()), Value: u.String()})
 	}
 
-	return VSelect().
+	return VAutocomplete().
 		Label(msgr.Language).
 		Items(items).
 		ItemTitle("Label").

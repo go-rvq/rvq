@@ -1,20 +1,37 @@
-// Package bcp47 offers helpers for BCP-47 language tags: validation, display
-// names in the language's own tongue (autonyms), and admin field components (a
-// searchable select and read-only renderers). The offered tag list is the full
-// CLDR set (golang.org/x/text) plus the common language-region variants.
+// Package bcp47 offers pure helpers for BCP-47 language tags: validation, display
+// names in the language's own tongue (autonyms), region flags, and the select
+// item list. The offered tag list is the full CLDR set (golang.org/x/text) plus
+// the common language-region variants. The admin field components that render
+// these live in the bcp47field subpackage (which imports presets), keeping this
+// package dependency-light so anything — presets included — can import it.
 package bcp47
 
 import (
 	"sort"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
-	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/presets"
-	"github.com/go-rvq/rvq/web"
-	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 )
+
+// capFirst upper-cases the first rune. CLDR autonyms follow each language's own
+// casing — Portuguese and others lower-case their language name ("português"),
+// English capitalizes it ("English") — so a label made of them reads
+// inconsistently. Capitalizing just the first rune (not title-casing every word,
+// which would wrongly upper-case "de"/"do") gives "Português", "Español de
+// México", while leaving non-cased scripts ("中文") untouched.
+func capFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	r, size := utf8.DecodeRuneInString(s)
+	if !unicode.IsLetter(r) || unicode.IsUpper(r) {
+		return s
+	}
+	return string(unicode.ToUpper(r)) + s[size:]
+}
 
 // commonRegionVariants are language-region tags people actually store as a
 // locale (en-US, pt-BR, …). display.Supported.Tags() lists base languages and a
@@ -50,12 +67,20 @@ type entry struct {
 // (zh-CN)". The code disambiguates variants that share an autonym (pt / pt-BR are
 // both "português"). Falls back to the English name, then to the bare code. Works
 // for tags outside the offered list too, so a stored value still shows a name.
-func nameOf(code string) string {
+// nameOnly resolves the language name (autonym, then English), first rune
+// capitalized. No lazy build — the namers must already be set (it is called from
+// build itself and from NameOnly after once.Do).
+func nameOnly(code string) string {
 	t := language.Make(code)
 	name := selfNamer.Name(t)
 	if name == "" {
 		name = enNamer.Name(t)
 	}
+	return capFirst(name)
+}
+
+func nameOf(code string) string {
+	name := nameOnly(code)
 	if name == "" {
 		return code
 	}
@@ -99,11 +124,7 @@ func build() {
 // separately. Empty when the namer has none.
 func NameOnly(code string) string {
 	once.Do(build)
-	t := language.Make(code)
-	if n := selfNamer.Name(t); n != "" {
-		return n
-	}
-	return enNamer.Name(t)
+	return nameOnly(code)
 }
 
 // CodeLabel returns a tag as "CODE - name" (e.g. "pt-BR - português"), the code
@@ -117,6 +138,26 @@ func CodeLabel(code string) string {
 		return code + " - " + name
 	}
 	return code
+}
+
+// FlagCodeLabel is CodeLabel prefixed with the region flag when the tag has one
+// (e.g. "🇧🇷 pt-BR - português"); without a region it is just CodeLabel.
+func FlagCodeLabel(code string) string {
+	label := CodeLabel(code)
+	if flag := Flag(code); flag != "" {
+		return flag + " " + label
+	}
+	return label
+}
+
+// FlagLabel is Label prefixed with the region flag when the tag has one (e.g.
+// "🇧🇷 Português (pt-BR)"); without a region it is just Label.
+func FlagLabel(code string) string {
+	label := Label(code)
+	if flag := Flag(code); flag != "" {
+		return flag + " " + label
+	}
+	return label
 }
 
 // Codes returns every offered tag code, ordered by display name.
@@ -143,22 +184,53 @@ func Label(code string) string {
 	return nameOf(code)
 }
 
-// Items returns the select items ([{value,title}]) for the autocomplete. A
-// non-empty include code not already in the list is prepended (named from the
-// CLDR namer), so the current value always has a matching item and the select
-// shows its label instead of a blank.
+// Items returns the select items ([{value,title}]) for the autocomplete, each
+// title as "🏳 name (code)" (the region flag, when the tag has one). A non-empty
+// include code not already in the list is prepended (named from the CLDR namer),
+// so the current value always has a matching item and the select shows its label
+// instead of a blank.
 func Items(include string) []map[string]string {
 	once.Do(build)
+	flagged := func(code, label string) string {
+		if f := Flag(code); f != "" {
+			return f + " " + label
+		}
+		return label
+	}
 	items := make([]map[string]string, 0, len(sorted)+1)
 	if include != "" {
 		if _, ok := byCode[include]; !ok {
-			items = append(items, map[string]string{"value": include, "title": nameOf(include)})
+			items = append(items, map[string]string{"value": include, "title": flagged(include, nameOf(include))})
 		}
 	}
 	for _, e := range sorted {
-		items = append(items, map[string]string{"value": e.Code, "title": e.Label})
+		items = append(items, map[string]string{"value": e.Code, "title": flagged(e.Code, e.Label)})
 	}
 	return items
+}
+
+// Flag returns the flag emoji for a tag's region subtag (e.g. "pt-BR" → "🇧🇷",
+// "en-US" → "🇺🇸"), built from the two regional-indicator symbols. It is empty
+// when the tag names no two-letter region (a bare "pt", or a numeric UN M49
+// region): a language is not a country, so there is nothing to show. The flag
+// stands for the tag's region, not for where the language is spoken.
+func Flag(code string) string {
+	t := language.Make(code)
+	region, conf := t.Region()
+	if conf == language.No {
+		return ""
+	}
+	s := region.String()
+	if len(s) != 2 {
+		return "" // numeric M49 region (e.g. "419"): no flag
+	}
+	r := []rune(s)
+	for _, c := range r {
+		if c < 'A' || c > 'Z' {
+			return ""
+		}
+	}
+	return string([]rune{0x1F1E6 + (r[0] - 'A'), 0x1F1E6 + (r[1] - 'A')})
 }
 
 // Valid reports whether code is a non-empty, parseable BCP-47 language tag (the
@@ -169,69 +241,4 @@ func Valid(code string) bool {
 	}
 	tag, err := language.Parse(code)
 	return err == nil && tag != language.Und
-}
-
-// AutocompleteComponentFunc renders a searchable BCP-47 select (a VAutocomplete
-// over the full tag list) bound to the field, so a language is picked by typing.
-func AutocompleteComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	current := field.StringValue()
-
-	ac := v.VAutocomplete().
-		Label(field.InputLabel()).
-		Items(Items(current)).
-		ItemValue("value").
-		ItemTitle("title").
-		Variant("underlined").
-		Clearable(true).
-		Attr(web.VField(field.FormKey, current)...)
-
-	if len(field.Errors) > 0 {
-		ac.Attr(":error-messages", h.JSONString(field.Errors))
-	}
-	if hint := field.CheckHint().Hint; hint != "" {
-		ac.Hint(hint).PersistentHint(true)
-	}
-	if field.Disabled {
-		ac.Attr("disabled", true)
-	}
-	return ac
-}
-
-// ReadonlyComponentFunc renders a BCP-47 field read-only: the tag's display label
-// ("name (code)"), or empty when unset. Mode-aware — a table cell in a listing,
-// plain text in a detail view (which is not a table).
-func ReadonlyComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	var (
-		body h.HTMLComponent
-		code = field.StringValue()
-	)
-	if code != "" {
-		body = h.Text(Label(code))
-	}
-	if field.Mode.Dot().IsList() {
-		return h.Td(body)
-	}
-	return h.Div(body)
-}
-
-// CodeLabelReadonlyComponentFunc renders a BCP-47 field read-only as "CODE - name"
-// (e.g. "pt-BR - português"). Mode-aware (a table cell in a listing, plain text in
-// a detail view).
-func CodeLabelReadonlyComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	var (
-		body h.HTMLComponent
-		code = field.StringValue()
-	)
-
-	if code != "" {
-		text := code
-		if name := NameOnly(code); name != "" {
-			text = code + " - " + name
-		}
-		body = h.Text(text)
-	}
-	if field.Mode.Dot().IsList() {
-		return h.Td(body)
-	}
-	return h.Div(body)
 }
