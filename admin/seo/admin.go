@@ -52,6 +52,9 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		ComponentFunc(b.EditingComponentFunc).
 		SetterFunc(EditSetterFunc)
 
+	// The help overlay event (the "?" button next to Save in any SEO editor).
+	b.registerHelpEvent(pb)
+
 	seoModel := pb.Model(&RvqSEOSetting{}).
 		Label("SEO").
 		RightDrawerWidth("1000").
@@ -130,6 +133,9 @@ func (b *Builder) configListing(seoModel *presets.ModelBuilder) {
 
 func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	editing := seoModel.Editing("Variables", "Setting")
+
+	// The "?" help button next to Save, for the Global SEO context.
+	b.AddEditingHelpButton(editing, HelpContextGlobal)
 
 	// Customize the Saver to trigger the invocation of the `afterSave` hook function (if available)
 	// when updating the global seo.

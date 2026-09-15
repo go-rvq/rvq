@@ -200,6 +200,12 @@ func (b *EditingBuilder) ConfigureForm(f *Form) *Form {
 		f.PrimaryAction = b.SaveBtn(f.b.ctx, f.b.id, f.b.mode != NEW, f.Portal)
 	}
 
+	if b.topRightActionsFunc != nil {
+		if c := b.topRightActionsFunc(f.Obj, f.b.ctx); c != nil {
+			f.TopRightActions = append(f.TopRightActions, c)
+		}
+	}
+
 	if b.actionsFunc != nil {
 		actions := b.actionsFunc(f.Obj, f.b.ctx)
 		if comps, ok := actions.(h.HTMLComponents); ok {

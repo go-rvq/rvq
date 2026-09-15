@@ -88,6 +88,11 @@ type Builder struct {
 	seoRoot   *SEO
 	inherited bool
 	afterSave func(ctx context.Context, settingName string, locale string) error // hook called after saving
+
+	// helpSections holds the context-specific help body (Global/Page/Post + the
+	// merge) mounted inside the common help frame, keyed by help context (see
+	// help.go). The application registers them with RegisterHelpSection.
+	helpSections map[string]HelpSectionFunc
 }
 
 // @snippet_end

@@ -12,26 +12,27 @@ import (
 )
 
 type EditingBuilder struct {
-	mb               *ModelBuilder
-	Fetcher          FetchFunc
-	Setter           SetterFunc
-	PostSetter       SetterFunc
-	Saver            SaveFunc
-	Creator          CreateFunc
-	New              func(ctx *web.EventContext, obj any) (err error)
-	preValidate      func(ctx *web.EventContext, obj any) (err error)
-	postValidate     func(ctx *web.EventContext, obj any) (err error)
-	preSaveCallback  SaveCallbackFunc
-	postSaveCallback SaveCallbackFunc
-	Validators       Validators
-	tabPanels        []TabComponentFunc
-	hiddenFuncs      []ObjectComponentFunc
-	sidePanel        ObjectComponentFunc
-	actionsFunc      ObjectComponentFunc
-	editingTitleFunc EditingTitleComponentFunc
-	onChangeAction   OnChangeActionFunc
-	pageFunc         web.PageFunc
-	creatingPageFunc web.PageFunc
+	mb                  *ModelBuilder
+	Fetcher             FetchFunc
+	Setter              SetterFunc
+	PostSetter          SetterFunc
+	Saver               SaveFunc
+	Creator             CreateFunc
+	New                 func(ctx *web.EventContext, obj any) (err error)
+	preValidate         func(ctx *web.EventContext, obj any) (err error)
+	postValidate        func(ctx *web.EventContext, obj any) (err error)
+	preSaveCallback     SaveCallbackFunc
+	postSaveCallback    SaveCallbackFunc
+	Validators          Validators
+	tabPanels           []TabComponentFunc
+	hiddenFuncs         []ObjectComponentFunc
+	sidePanel           ObjectComponentFunc
+	actionsFunc         ObjectComponentFunc
+	topRightActionsFunc ObjectComponentFunc
+	editingTitleFunc    EditingTitleComponentFunc
+	onChangeAction      OnChangeActionFunc
+	pageFunc            web.PageFunc
+	creatingPageFunc    web.PageFunc
 	FieldsBuilder
 	preComponents  []ModeObjectComponentFunc
 	postComponents []ModeObjectComponentFunc
@@ -253,6 +254,14 @@ func (b *EditingBuilder) AppendHiddenFunc(v ObjectComponentFunc) (r *EditingBuil
 
 func (b *EditingBuilder) ActionsFunc(v ObjectComponentFunc) (r *EditingBuilder) {
 	b.actionsFunc = v
+	return b
+}
+
+// TopRightActionsFunc adds a component to the form's top-right action area, next
+// to the Save button (the same place the detailing Edit button sits), as opposed
+// to ActionsFunc which fills the bottom action bar.
+func (b *EditingBuilder) TopRightActionsFunc(v ObjectComponentFunc) (r *EditingBuilder) {
+	b.topRightActionsFunc = v
 	return b
 }
 
