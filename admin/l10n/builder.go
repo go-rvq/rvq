@@ -27,6 +27,7 @@ type Builder struct {
 	// models                               []*presets.ModelBuilder
 	locales                                          Locales
 	getSupportLocaleCodesFromRequestFunc             func(R *http.Request) []string
+	fallbackLocaleFunc                               func(r *http.Request) string
 	cookieName                                       string
 	queryName                                        string
 	defaultLocaleCode                                string
@@ -284,12 +285,25 @@ func (b *Builder) GetCorrectLocaleCode(r *http.Request) string {
 		return ""
 	}
 
-	// The request named no locale, or named one that is not supported — a
-	// disabled one, say. The default locale answers for it, not whichever
-	// happens to sit first in the list: registration order is an accident of
-	// how the builder was set up, while the default is a decision. Falling back
-	// to the first is what put "pt-BR" on records created while the default was
-	// another locale.
+	// The request named no locale, or named one that is not supported. Before the
+	// default, an application-provided fallback gets a say — e.g. "follow the admin
+	// UI language when it is a registered locale" — so switching the interface
+	// language also switches which locale's records are shown, and only a UI
+	// language with no matching locale falls through to the default.
+	if b.fallbackLocaleFunc != nil {
+		if code := b.fallbackLocaleFunc(r); code != "" {
+			for _, v := range supportLocaleCodes {
+				if code == v {
+					return v
+				}
+			}
+		}
+	}
+
+	// Still nothing: the default locale answers for it, not whichever happens to
+	// sit first in the list: registration order is an accident of how the builder
+	// was set up, while the default is a decision. Falling back to the first is
+	// what put "pt-BR" on records created while the default was another locale.
 	for _, v := range supportLocaleCodes {
 		if v == b.defaultLocaleCode {
 			return v
@@ -297,6 +311,14 @@ func (b *Builder) GetCorrectLocaleCode(r *http.Request) string {
 	}
 
 	return supportLocaleCodes[0]
+}
+
+// FallbackLocaleFunc sets the resolver consulted by GetCorrectLocaleCode when the
+// request names no supported locale, before the default. It returns a locale
+// code (honored only if it is a supported locale) or "" to defer to the default.
+func (b *Builder) FallbackLocaleFunc(f func(r *http.Request) string) *Builder {
+	b.fallbackLocaleFunc = f
+	return b
 }
 
 type l10nContextKey int
