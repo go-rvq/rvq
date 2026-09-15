@@ -485,17 +485,33 @@ func (b *Builder) render(obj interface{}, defaultSEOSetting *RvqSEOSetting, seo 
 // letting Render read the per-name rows from the settings table.
 func (b *Builder) RenderSetting(setting Setting, variables map[string]string, req *http.Request) h.HTMLComponent {
 	setting = replaceVariables(setting, variables)
-	if setting.OpenGraphURL != "" && !isAbsoluteURL(setting.OpenGraphURL) {
-		var u url.URL
-		u.Host = req.Host
-		if req.URL != nil && req.URL.Scheme != "" {
-			u.Scheme = req.URL.Scheme
-		} else {
-			u.Scheme = "http"
-		}
-		setting.OpenGraphURL = path.Join(u.String(), setting.OpenGraphURL)
-	}
+	// Open Graph consumers (Facebook, LinkedIn, …) require absolute URLs, so a
+	// site-relative og:url or og:image is made absolute against the request.
+	setting.OpenGraphURL = absoluteURL(setting.OpenGraphURL, req)
+	setting.OpenGraphImageURL = absoluteURL(setting.OpenGraphImageURL, req)
 	return setting.HTMLComponent(map[string]string{})
+}
+
+// absoluteURL turns a site-relative reference into an absolute URL against req.
+// An empty or already-absolute reference is returned unchanged. The scheme
+// follows X-Forwarded-Proto (the site runs behind a TLS-terminating proxy), then
+// the request's own scheme, defaulting to http.
+func absoluteURL(ref string, req *http.Request) string {
+	if ref == "" || isAbsoluteURL(ref) || req == nil || req.Host == "" {
+		return ref
+	}
+	scheme := "http"
+	if fwd := req.Header.Get("X-Forwarded-Proto"); fwd != "" {
+		scheme = fwd
+	} else if req.URL != nil && req.URL.Scheme != "" {
+		scheme = req.URL.Scheme
+	} else if req.TLS != nil {
+		scheme = "https"
+	}
+	if !strings.HasPrefix(ref, "/") {
+		ref = "/" + ref
+	}
+	return scheme + "://" + req.Host + ref
 }
 
 var regex = regexp.MustCompile("{{([a-zA-Z0-9]*)}}")
