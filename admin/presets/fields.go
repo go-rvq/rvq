@@ -520,6 +520,42 @@ type FieldsSetterOptions struct {
 	SkipPermVerify bool
 }
 
+// formCarriesField reports whether the submitted form carried the given field
+// key — as the key itself, or as a structured sub-key (key.sub, key[i]) for
+// media boxes, nested structs and slices. An empty key (nothing to look up)
+// counts as carried, so behaviour is unchanged for fields without a form key.
+func formCarriesField(ctx *web.EventContext, formKey string) bool {
+	if formKey == "" {
+		return true
+	}
+	dot, brk := formKey+".", formKey+"["
+	match := func(vals map[string][]string) bool {
+		if _, ok := vals[formKey]; ok {
+			return true
+		}
+		for k := range vals {
+			if strings.HasPrefix(k, dot) || strings.HasPrefix(k, brk) {
+				return true
+			}
+		}
+		return false
+	}
+	if mf := ctx.R.MultipartForm; mf != nil {
+		if match(mf.Value) {
+			return true
+		}
+		for k := range mf.File {
+			if k == formKey || strings.HasPrefix(k, dot) || strings.HasPrefix(k, brk) {
+				return true
+			}
+		}
+	}
+	if ctx.R.Form != nil && match(ctx.R.Form) {
+		return true
+	}
+	return false
+}
+
 func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj interface{}, toObj interface{}, parent *FieldContext, removeDeletedAndSort bool, modifiedIndexes *ModifiedIndexesBuilder, ctx *web.EventContext) (vErr web.ValidationErrors) {
 	if err := b.BeforeSetObjectFieldsHandler.Handler(fromObj, toObj, parent); err != nil {
 		vErr.FieldError(parent.FormKey, err.Error())
@@ -578,6 +614,14 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 		}
 
 		fctx := f.NewContext(info, ctx, parent, toObj)
+
+		// A field the form did not carry keeps its fetched value: an update is a
+		// merge, so an absent field is "unchanged", not "set to empty". Only a
+		// field actually submitted (even with an empty value) is written. This
+		// makes partial updates safe — omitting a field no longer wipes it.
+		if !formCarriesField(ctx, fctx.FormKey) {
+			continue
+		}
 
 		val, err1 := reflectutils.Get(fromObj, f.name)
 		if err1 != nil {
