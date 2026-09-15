@@ -61,8 +61,23 @@ func (l *LocaleInfo) Path() string {
 	return l.path
 }
 
+// SetPath updates the locale's URL path, normalizing it like RegisterLocale. Use
+// it to keep an already-registered locale in step with a changed source (e.g. a
+// renamed/relocalized locale record) without unregistering it.
+func (l *LocaleInfo) SetPath(p string) *LocaleInfo {
+	l.path = path.Join("/", p)
+	return l
+}
+
 func (l *LocaleInfo) Label() string {
 	return l.label
+}
+
+// SetLabel updates the locale's display label. Use it to refresh an
+// already-registered locale's label from its source.
+func (l *LocaleInfo) SetLabel(label string) *LocaleInfo {
+	l.label = label
+	return l
 }
 
 func (l *LocaleInfo) Export() *PublicLocaleInfo {
