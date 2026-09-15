@@ -511,15 +511,30 @@ func (b *ModelSelectorBuilder) ReadonlyComponent(field *presets.FieldContext, ct
 			texts = append(texts, b.RecordToString(ctx, item, b.foreignModel.MustRecordID(item)))
 		})
 	} else {
-		var id model.ID
-		id = b.foreignModel.MustRecordID(value)
+		id := b.foreignModel.MustRecordID(value)
 
 		if id.IsZero() {
 			v := reflectutils.MustGet(field.Obj, b.Field+"ID")
-			if id.IsZero() {
+			if v == nil {
 				return nil
 			}
 			id = b.foreignModel.MustParseRecordID(fmt.Sprint(v))
+			if id.IsZero() {
+				return nil
+			}
+		}
+
+		// Outside a listing, fetch the record through the foreign model so its
+		// data-operator callbacks load whatever the title needs — associations the
+		// parent fetch did not bring (e.g. a PageConfig's Page). Without this the
+		// detail view shows the record's placeholder title. Skipped in LIST mode
+		// to avoid an extra query per row.
+		if !field.Mode.Dot().Has(presets.LIST) {
+			fresh := b.foreignModel.NewModel()
+			id.SetTo(fresh)
+			if err := b.foreignModel.Fetcher(fresh, id, ctx); err == nil {
+				value = fresh
+			}
 		}
 
 		texts = []string{b.RecordToString(ctx, value, id)}
