@@ -38,9 +38,28 @@
 //     m2mParentFilter / associationAppend / associationDeleter, and
 //     TestM2MParentFilter_CompositeRelatedKey).
 //   - ModelSelectorBuilder resolves every foreign-key column of the belongs-to
-//     relationship (foreignKeyFieldsOf) and writes them all when a record is
-//     selected, so a composite foreign key is persisted in full (see
-//     TestForeignKeyFieldsOf_Composite).
+//     relationship (foreignKeyFields, backed by gormutils.ForeignKeyFields) and
+//     writes them all when a record is selected, so a composite foreign key is
+//     persisted in full — a record chosen by its multi-field slug ("1_pt-BR")
+//     included (see TestForeignKeyFields_Composite and
+//     TestModelSelector_SlugMultiFieldKey).
+//
+// # ModelSelectorBuilder: the foreign key is authoritative on save
+//
+// The select input binds the foreign-key column (form["<Field>ID"]); the
+// association struct (<Field>) is loaded (joined) only for rendering — its
+// label, hints and detail view. On a MERGE-based partial update (see
+// presets.FieldsBuilder.SetObjectFields) the fetched association can outlive a
+// changed foreign key, and GORM, saving the belongs-to, would then write the FK
+// from the stale related record instead of the submitted column.
+//
+// To prevent that, the selector's data operator OMITS the association on Create
+// and Update (joining it only on reads), so the foreign-key column is always
+// authoritative on save (see TestModelSelector_OmitsAssociationOnSave). This
+// guards a model saved through its OWN operator. A model saved as a NESTED
+// association of a parent cascades through the PARENT's operator, which the
+// selector does not control; the parent must omit the nested association itself
+// (hermon-cms does this for Post → Config.Type).
 //
 // See README.md and docs/ in this package for a fuller guide.
 package helper

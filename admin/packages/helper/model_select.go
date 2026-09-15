@@ -80,6 +80,18 @@ func SetRecordEncoderFactory(mb *presets.ModelBuilder, enc *RecordEncodeFactory)
 	mb.SetData(ModelSelectorEncoderKey, enc)
 }
 
+// ModelSelectorBuilder turns a belongs-to field into a searchable single-select
+// of the related model. Model is the owner model builder and Field the name of
+// its association field (e.g. "Type" on a model that also has "TypeID"): the
+// select binds the foreign-key column (form["<Field>ID"]) while the association
+// struct is loaded only for rendering.
+//
+// The foreign model is auto-detected from the field's type, or set with
+// SetForeignModel. Composite foreign keys are supported: every FK column is
+// written when a record is selected, and a record may be chosen by its
+// multi-field slug ("<id>_<locale>"). On save the FK column is authoritative —
+// the association is omitted so a stale loaded relation never overrides it (see
+// the package doc). Configure with the SetXxx methods, then call Build.
 type ModelSelectorBuilder struct {
 	Model               *presets.ModelBuilder
 	Field               string
@@ -94,6 +106,8 @@ type ModelSelectorBuilder struct {
 	many                bool
 }
 
+// NewModelSelectorBuilder starts a selector for the belongs-to field on model.
+// Call Build (or the ModelSelect shortcut) once configured.
 func NewModelSelectorBuilder(model *presets.ModelBuilder, field string) *ModelSelectorBuilder {
 	return &ModelSelectorBuilder{Model: model, Field: field}
 }
@@ -179,6 +193,11 @@ func (b *ModelSelectorBuilder) Many() bool {
 	return b.many
 }
 
+// Build wires the selector into the owner model: it resolves the foreign model
+// and foreign-key columns, registers the edit/detail/list components and the
+// setter, and installs the data operator that joins the association on reads and
+// omits it on save (so the FK column stays authoritative). It is idempotent per
+// builder and returns b.
 func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 	if b.foreignModel == nil {
 		field, _ := b.Model.ModelType().Elem().FieldByName(b.Field)
@@ -188,7 +207,25 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 	b.Model.UpdateDataOperator(func(dataOperator presets.DataOperator) presets.DataOperator {
 		return dataOperator.(*gorm2op.DataOperatorBuilder).WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
 			return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
-				return old(db, mode, obj, id, params, ctx).Joins(b.Field)
+				db = old(db, mode, obj, id, params, ctx)
+				switch mode {
+				case gorm2op.Create, gorm2op.Update:
+					// On save the foreign-key column is authoritative: the input
+					// binds it (form["<Field>ID"]), while the association struct is
+					// loaded (joined) only for rendering and can be stale after a
+					// partial update. Omit the association so GORM writes the FK
+					// from the column, never from the loaded related record.
+					//
+					// This guards a model that is saved through its OWN operator
+					// (a top-level belongs-to selector). A model saved as a nested
+					// association of a parent cascades through the PARENT's operator
+					// instead, so the parent must omit the nested association there
+					// (see hermon-cms Post → Config.Type).
+					return db.Omit(b.Field)
+				default:
+					// Load the association for rendering (label/hints) and detail.
+					return db.Joins(b.Field)
+				}
 			}
 		})
 	})
