@@ -193,6 +193,17 @@ func (b *Builder) SettingDetailComponentFunc(seoName string) func(field *presets
 	}
 }
 
+// SettingModelDetailComponentFunc renders a record's Setting field read-only for
+// a detail view — the read-only counterpart of the WRITE FieldDefaults editor,
+// resolving the SEO from the record's own type (via GetSEO) rather than requiring
+// a *RvqSEOSetting like SettingDetailComponentFunc. Use it for an app-mounted
+// per-record SEO detailing whose model is the record itself (a Page/Post), which
+// has no DETAIL FieldDefaults counterpart to the WRITE editor. The record's type
+// must be registered (RegisterModel) or GetSEO is nil and this renders empty.
+func (b *Builder) SettingModelDetailComponentFunc() presets.FieldComponentFunc {
+	return b.detailShowComponent
+}
+
 // formKeyForVariablesField is the form prefix of the SEO setting variables.
 const formKeyForVariablesField = "Variables"
 
