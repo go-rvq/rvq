@@ -383,6 +383,19 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		}
 		if val != nil {
 			loadVal()
+			// The value may be a record loaded partially by the parent's fetch
+			// (e.g. a PageConfig without its Page), which would encode to an empty
+			// title and leave the selected item blank. Re-fetch it through the
+			// foreign model so its callbacks load what the title needs.
+			if !b.many {
+				if id, _ := b.foreignModel.RecordID(val); !id.IsZero() {
+					fresh := b.foreignModel.NewModel()
+					id.SetTo(fresh)
+					if err := b.foreignModel.Fetcher(fresh, id, ctx); err == nil {
+						val = fresh
+					}
+				}
+			}
 		} else {
 			assign = ""
 			if b.many {
