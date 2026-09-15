@@ -375,6 +375,12 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			}
 		)
 
+		// A typed-nil association (e.g. *T(nil), when the fetch did not load it)
+		// is not a usable record: treat it like an unset value so the foreign-key
+		// column is used instead. Calling RecordID on it would nil-dereference.
+		if val != nil && zeroer.IsNil(val) {
+			val = nil
+		}
 		if val != nil {
 			loadVal()
 		} else {
