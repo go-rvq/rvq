@@ -319,38 +319,20 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 		setting = modelSetting.Setting
 	}
 
-	hideActions := false
-	if ctx.R.FormValue("hideActionsIconForSEOForm") == "true" {
-		hideActions = true
-	}
-	openCustomizePanel := 1
-	if setting.EnabledCustomize {
-		openCustomizePanel = 0
-	}
-
 	return web.Scope(
 		h.Div(
 			h.Div(h.Text(msgr.Seo)).Class("text-h4 mb-10"),
-			VExpansionPanels(
-				VExpansionPanel(
-
-					VExpansionPanelTitle(
-						VSwitch().
-							Label(msgr.Customize).Attr("ref", "switchComp").Color("primary").
-							Bind("input-value", "locals.enabledCustomize").
-							Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "EnabledCustomize"), setting.EnabledCustomize)...),
-					).
-						Attr("style", "padding: 0px 24px;").HideActions(hideActions).
-						Attr("@click", "locals.enabledCustomize=!locals.enabledCustomize;$refs.switchComp.$emit('change', locals.enabledCustomize)"),
-					VExpansionPanelText(
-						VCardText(
-							b.vseo(fieldPrefix, seo, &setting, ctx.R),
-						),
-					).Eager(true),
-				),
-			).Flat(true).Attr("v-model", "locals.openCustomizePanel"),
+			// The Customize switch stands alone; the SEO fields below render only
+			// while it is on — a v-if template rather than an expansion panel.
+			VSwitch().
+				Label(msgr.Customize).Color("primary").
+				Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "EnabledCustomize"), setting.EnabledCustomize)...).
+				Attr("@update:modelValue", "locals.enabledCustomize = $event"),
+			h.Template(
+				b.vseo(fieldPrefix, seo, &setting, ctx.R),
+			).Attr("v-if", "locals.enabledCustomize"),
 		).Class("pb-4"),
-	).LocalsInit(fmt.Sprintf(`{enabledCustomize: %t, openCustomizePanel: %d}`, setting.EnabledCustomize, openCustomizePanel)).
+	).LocalsInit(fmt.Sprintf(`{enabledCustomize: %t}`, setting.EnabledCustomize)).
 		Slot("{ locals }")
 }
 
