@@ -13,6 +13,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -93,6 +94,11 @@ type Builder struct {
 	// merge) mounted inside the common help frame, keyed by help context (see
 	// help.go). The application registers them with RegisterHelpSection.
 	helpSections map[string]HelpSectionFunc
+
+	// variableGroups provides the "+ Variable" menu groups for the editor (the
+	// template globals and their fields/methods, with translated labels). The
+	// app supplies them because the globals are the app's; see variables.go.
+	variableGroups func(ctx *web.EventContext) []VariableGroup
 }
 
 // @snippet_end

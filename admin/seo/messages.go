@@ -17,6 +17,8 @@ type Messages struct {
 	OpenGraphMetadata    string
 	Seo                  string
 	Customize            string
+	// AddVariable labels the "+ Variable" menu button in the SEO editor.
+	AddVariable string
 
 	// Help overlay (see help.go). Body fields are HTML.
 	HelpTooltip          string
@@ -51,6 +53,7 @@ var Messages_en_US = &Messages{
 	OpenGraphMetadata:    "Open Graph Metadata",
 	Seo:                  "SEO",
 	Customize:            "Customize",
+	AddVariable:          "Variable",
 
 	HelpTooltip:          "How SEO works",
 	HelpTitle:            "How SEO works",
@@ -80,6 +83,7 @@ var Messages_zh_CN = &Messages{
 	OpenGraphMetadata:    "OG 元数据",
 	Seo:                  "搜索引擎优化",
 	Customize:            "自定义",
+	AddVariable:          "变量",
 
 	HelpTooltip:          "SEO 工作原理",
 	HelpTitle:            "SEO 工作原理",
@@ -109,6 +113,7 @@ var Messages_pt_BR = &Messages{
 	OpenGraphMetadata:    "Metadados do Open Graph",
 	Seo:                  "SEO",
 	Customize:            "Personalizar",
+	AddVariable:          "Variável",
 
 	HelpTooltip:          "Como o SEO funciona",
 	HelpTitle:            "Como o SEO funciona",

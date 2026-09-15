@@ -166,7 +166,7 @@ func (b *Builder) configEditing(seoModel *presets.ModelBuilder) {
 	editing.Field("Setting").ComponentFunc(
 		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			seoSetting := field.Obj.(*RvqSEOSetting)
-			return b.vseo("Setting", b.GetSEO(seoSetting.Name), &seoSetting.Setting, ctx.R)
+			return b.vseo("Setting", b.GetSEO(seoSetting.Name), &seoSetting.Setting, ctx)
 		},
 	)
 }
@@ -182,7 +182,7 @@ func (b *Builder) SettingComponentFunc(seoName string) func(field *presets.Field
 		if !ok {
 			return h.Div()
 		}
-		return b.vseo(field.Name, b.GetSEO(seoName), &ss.Setting, ctx.R)
+		return b.vseo(field.Name, b.GetSEO(seoName), &ss.Setting, ctx)
 	}
 }
 
@@ -329,30 +329,18 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 				Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "EnabledCustomize"), setting.EnabledCustomize)...).
 				Attr("@update:modelValue", "locals.enabledCustomize = $event"),
 			h.Template(
-				b.vseo(fieldPrefix, seo, &setting, ctx.R),
+				b.vseo(fieldPrefix, seo, &setting, ctx),
 			).Attr("v-if", "locals.enabledCustomize"),
 		).Class("pb-4"),
 	).LocalsInit(fmt.Sprintf(`{enabledCustomize: %t}`, setting.EnabledCustomize)).
 		Slot("{ locals }")
 }
 
-func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http.Request) h.HTMLComponent {
+func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, ctx *web.EventContext) h.HTMLComponent {
 	var (
-		msgr = i18n.MustGetModuleMessages(req.Context(), I18nSeoKey, Messages_en_US).(*Messages)
+		msgr = i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		db   = b.db
 	)
-
-	var varComps []h.HTMLComponent
-	for varName := range seo.getAvailableVars() {
-		varComps = append(varComps,
-			VChip(
-				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req.Context(), I18nSeoKey, "SettingVar", varName)),
-			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
-		)
-	}
-	var variablesEle []h.HTMLComponent
-	variablesEle = append(variablesEle, VChipGroup(varComps...).Column(true).Class("ma-4"))
 
 	image := &setting.OpenGraphImageFromMediaLibrary
 	if image.ID.String() == "0" {
@@ -361,9 +349,9 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http
 	refPrefix := strings.ReplaceAll(strings.ToLower(fieldPrefix), " ", "_")
 	return VSeo(
 		h.H4(msgr.Basic).Style("margin-top:15px;font-weight: 500"),
-		VRow(
-			variablesEle...,
-		),
+		// The "+ Variable" menu (app-registered groups). A plain div, not a VRow,
+		// so its margins do not overlap the "Basic" heading above.
+		h.Div(b.variablesMenu(ctx)).Class("mt-2 mb-2"),
 		VCard(
 			VCardText(
 				VTextField().Variant(FieldVariantUnderlined).Attr("counter", true).Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "Title"), setting.Title)...).Label(msgr.Title).Attr("@focus", fmt.Sprintf("$refs.seo.tagInputsFocus($refs.%s)", fmt.Sprintf("%s_title", refPrefix))).Attr("ref", fmt.Sprintf("%s_title", refPrefix)),
@@ -412,7 +400,9 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, req *http
 				),
 			),
 		).Variant(VariantOutlined).Flat(true),
-	).Attr("ref", "seo")
+	).Attr("ref", "seo").
+		// SEO templates use single braces, so a clicked variable inserts `{expr}`.
+		Template(`(tag) => "{" + tag + "}"`)
 }
 
 func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, req *http.Request) h.HTMLComponent {

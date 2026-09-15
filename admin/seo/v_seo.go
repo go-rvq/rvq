@@ -20,6 +20,15 @@ func (b *VSeoBuilder) Value(v string) (r *VSeoBuilder) {
 	return b
 }
 
+// Template sets the JS function (as a bound `:template` prop) that wraps a
+// clicked tag into the text inserted at the cursor. jsFunc is a JS expression
+// evaluating to a `(tag) => string` function, e.g. `(tag) => "{" + tag + "}"`.
+// Without it the component keeps its default `{{tag}}` form.
+func (b *VSeoBuilder) Template(jsFunc string) (r *VSeoBuilder) {
+	b.tag.Attr(":template", jsFunc)
+	return b
+}
+
 func (b *VSeoBuilder) Placeholder(v string) (r *VSeoBuilder) {
 	b.tag.Attr(":placeholder", h.JSONString(v))
 	return b
