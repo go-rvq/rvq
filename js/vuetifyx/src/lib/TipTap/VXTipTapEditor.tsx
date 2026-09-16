@@ -22,7 +22,6 @@ import {
   Bold,
   BulletList,
   Clear,
-  Code,
   CodeBlockMenuItem,
   Color,
   defaultBubbleList,
@@ -51,6 +50,7 @@ import './VXTipTapEditor.scss'
 
 import preview from './extensions/preview'
 import help from './extensions/help'
+import sourcecode from './extensions/sourcecode'
 import LinkDialog from './components/LinkDialog.vue'
 import {default as ImageTab} from './components/Image'
 
@@ -200,7 +200,7 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
         Italic,
         Underline,
         Strike,
-        Code.configure({
+        sourcecode.configure({
           divider: true
         }),
         ...(props.template ? [

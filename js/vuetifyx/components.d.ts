@@ -60,6 +60,7 @@ declare module 'vue' {
     SelectItem: typeof import('./src/lib/Filter/components/SelectItem.vue')['default']
     SendVariables: typeof import('./src/lib/SendVariables.vue')['default']
     SendVariablesExample: typeof import('./src/demo/components/SendVariablesExample.vue')['default']
+    SourceCodeActionButton: typeof import('./src/lib/TipTap/components/SourceCodeActionButton.vue')['default']
     StringItem: typeof import('./src/lib/Filter/components/StringItem.vue')['default']
     TextDatepicker: typeof import('./src/lib/TextDatepicker.vue')['default']
     TextDatepickerExample: typeof import('./src/demo/components/TextDatepickerExample.vue')['default']

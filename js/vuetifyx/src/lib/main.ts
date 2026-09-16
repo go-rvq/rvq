@@ -29,6 +29,7 @@ import VXArraySorter from '@/lib/VXArraySorter'
 import Portal from '@/lib/Portal/Portal.vue'
 import Messages from '@/lib/Messages'
 import CodeView from '@/lib/CodeView.vue'
+import CodeMirror from '@/lib/CodeMirror'
 import DiffHunks from '@/lib/DiffHunks.vue'
 
 const vuetifyx = {
@@ -61,6 +62,7 @@ const vuetifyx = {
     app.component('vx-portal', Portal)
     app.component('vx-messages', Messages)
     app.component('vx-code', CodeView)
+    app.component('vx-codemirror', CodeMirror)
     app.component('vx-diff-hunks', DiffHunks)
   }
 }
