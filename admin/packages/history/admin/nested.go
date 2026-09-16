@@ -30,6 +30,8 @@ func (mh *ModelHistory) installChild() {
 	child := presets.NewModelBuilder(b, &histmodels.Revision{}, presets.ModelWithID(mh.table))
 	child.URIName("revisions")
 	child.MenuIcon("mdi-history")
+	// Revisions are recorded automatically on save; they are never created by hand.
+	child.SetCreatingDisabled(true)
 
 	// One Revision Go type is mapped to every model's own <table>_revisions: force
 	// the table on each query, and scope reads to the parent record from the path.
