@@ -32,6 +32,7 @@ type Builder struct {
 	queryName                                        string
 	defaultLocaleCode                                string
 	disableDeletionForDefaultInternationalizedRecord bool
+	messageInits                                     []messageInitializer
 }
 
 func (b *Builder) DisableDeletionForDefaultInternationalizedRecord() bool {
