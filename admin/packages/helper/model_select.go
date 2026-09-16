@@ -414,7 +414,13 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		is := itemsSearcher(field, searcher)
 		selector := vx.VXSelectOne().
 			Label(field.Label).
-			Attr(web.VField(field.FormKey+"ID", assign)...).
+			// The submitted form key must match what setter reads: the belongs-to
+			// case binds the "<Field>ID" column (formKeySufix "ID"), while a
+			// many-to-many has no such column (formKeySufix "") and setter reads
+			// the association field key itself. A hardcoded "ID" here breaks the
+			// many case (the values arrive under an unread key and the association
+			// is cleared on save).
+			Attr(web.VField(field.FormKey+formKeySufix, assign)...).
 			ItemValue("ID").
 			ItemText("Text").
 			ItemsSearcher(is).

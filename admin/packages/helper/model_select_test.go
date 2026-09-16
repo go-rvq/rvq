@@ -2,8 +2,12 @@ package helper
 
 import (
 	"net/http"
+	"net/url"
+
 	"strings"
 	"testing"
+
+	h "github.com/go-rvq/htmlgo"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
@@ -20,6 +24,14 @@ func selEventContext() *web.EventContext {
 
 func httptestRequest() *http.Request {
 	r, _ := http.NewRequest(http.MethodPost, "/", nil)
+	return r
+}
+
+// postFormRequest builds a POST request whose urlencoded body carries the given
+// form values, so EditingBuilder.RunSetterFunc → ParseForm populates PostForm.
+func postFormRequest(vals url.Values) *http.Request {
+	r, _ := http.NewRequest(http.MethodPost, "/", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return r
 }
 
@@ -49,6 +61,17 @@ type selOwner struct {
 	Type           *selType `gorm:"foreignKey:TypeID,TypeLocaleCode;references:ID,LocaleCode"`
 	TypeID         uint
 	TypeLocaleCode string
+}
+
+// selManyType and selManyOwner model a many-to-many with NO "<Field>ID" column.
+type selManyType struct {
+	ID   uint `gorm:"primaryKey"`
+	Name string
+}
+
+type selManyOwner struct {
+	ID    uint           `gorm:"primaryKey"`
+	Types []*selManyType `gorm:"many2many:selmany_owner_types"`
 }
 
 // selSimpleType is a foreign model with a single integer primary key.
@@ -125,6 +148,58 @@ func TestModelSelector_SlugMultiFieldKey(t *testing.T) {
 	}
 	if owner.TypeLocaleCode != "pt-BR" {
 		t.Errorf("owner.TypeLocaleCode = %q, want %q", owner.TypeLocaleCode, "pt-BR")
+	}
+}
+
+// TestModelSelector_ManyReadsAssociationKey is the regression for the
+// many-to-many form key. A many selector has no "<Field>ID" column, so its
+// values are submitted under the association field key itself ("Types") and the
+// setter reads exactly that key. A hardcoded "ID" suffix in the component put the
+// values under "TypesID" (which the setter never reads), so a selection was never
+// applied and the association was cleared on save. The submitted "Types" values
+// must land in owner.Types.
+func TestModelSelector_ManyReadsAssociationKey(t *testing.T) {
+	db := newSelDB(t, &selManyType{}, &selManyOwner{})
+	b := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	mb := b.Model(&selManyOwner{})
+	NewModelSelectorBuilder(mb, "Types").SetMany(true).
+		SetForeignModel(b.Model(&selManyType{})).Build()
+
+	ctx := &web.EventContext{R: postFormRequest(url.Values{"Types": {"1", "2"}})}
+
+	owner := &selManyOwner{ID: 10}
+	if vErr := mb.Editing().RunSetterFunc(&presets.FieldsSetterOptions{}, ctx, false, owner); vErr.HaveErrors() {
+		t.Fatalf("setter: %s", vErr.Error())
+	}
+
+	if len(owner.Types) != 2 {
+		t.Fatalf("owner.Types = %d entries, want 2 (values must be read under %q, not %q)",
+			len(owner.Types), "Types", "TypesID")
+	}
+	got := map[uint]bool{}
+	for _, ty := range owner.Types {
+		got[ty.ID] = true
+	}
+	if !got[1] || !got[2] {
+		t.Fatalf("owner.Types ids = %v, want {1,2}", got)
+	}
+
+	// The other half of the contract: the rendered editor must submit under the
+	// same key the setter reads. web.VField binds v-model="form[\"<key>\"]"; a
+	// many field must bind form["Types"], never form["TypesID"] — otherwise the
+	// selection is submitted under a key the setter ignores.
+	var buf strings.Builder
+	comp := mb.Editing().ToComponent(&presets.ToComponentOptions{SkipPermVerify: true},
+		&selManyOwner{ID: 10}, presets.FieldModeStack{presets.EDIT}, ctx)
+	if err := h.Fprint(&buf, comp, ctx.Context()); err != nil {
+		t.Fatalf("render edit form: %v", err)
+	}
+	html := buf.String()
+	if !strings.Contains(html, `form["Types"]`) {
+		t.Errorf("edit form does not bind form[%q]", "Types")
+	}
+	if strings.Contains(html, `form["TypesID"]`) {
+		t.Errorf("edit form binds form[%q]; a many field has no such column and the setter never reads it", "TypesID")
 	}
 }
 
