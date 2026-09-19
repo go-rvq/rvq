@@ -270,6 +270,9 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		RowWrapperFunc(func(row h.MutableAttrHTMLComponent, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 			row.SetAttr(":class", fmt.Sprintf(`{"vx-list-item--active primary--text": vars.presetsRightDrawer && locals.currEditingListItemID==="%s-%s"}`, dataTableID, id))
 
+			if b.rowWrapperFunc != nil {
+				return b.rowWrapperFunc(row, id, obj, dataTableID, ctx)
+			}
 			return row
 		}).
 		RowMenuItemFuncs(b.RowMenuOfItems(ctx).ToRowMenuItemFuncs(tempPortal, func(rctx *RecordMenuItemContext, name string) string {

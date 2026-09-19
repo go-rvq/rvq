@@ -33,6 +33,7 @@ type ListingBuilder struct {
 	newBtnFunc                            ComponentFunc
 	pageFunc                              web.PageFunc
 	cellWrapperFunc                       vx.CellWrapperFunc
+	rowWrapperFunc                        vx.RowWrapperFunc
 	Searcher                              SearchFunc
 	Deleter                               DeleteFunc
 	showRelatedItensForDeletionActionFunc ShowRelatedItensFormDeletionFunc
@@ -163,6 +164,14 @@ func (b *ListingBuilder) PageFunc(pf web.PageFunc) (r *ListingBuilder) {
 
 func (b *ListingBuilder) CellWrapperFunc(cwf vx.CellWrapperFunc) (r *ListingBuilder) {
 	b.cellWrapperFunc = cwf
+	return b
+}
+
+// RowWrapperFunc customizes each listing row's <tr> (e.g. to set a class on a
+// particular record's row). It runs after the framework's own row wrapper, so
+// the class/attributes it sets are additive.
+func (b *ListingBuilder) RowWrapperFunc(rwf vx.RowWrapperFunc) (r *ListingBuilder) {
+	b.rowWrapperFunc = rwf
 	return b
 }
 

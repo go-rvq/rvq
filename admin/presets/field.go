@@ -375,6 +375,18 @@ func (b *FieldBuilder) SetterFunc(v FieldSetterFunc) (r *FieldBuilder) {
 	return b
 }
 
+func (b *FieldBuilder) WrapSetterFunc(f func(old FieldSetterFunc) FieldSetterFunc) (r *FieldBuilder) {
+	old := b.setterFunc
+	if old == nil {
+		old = func(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
+			return nil
+		}
+	}
+
+	b.setterFunc = f(old)
+	return b
+}
+
 func (b *FieldBuilder) GetSetterFunc() FieldSetterFunc {
 	return b.setterFunc
 }
