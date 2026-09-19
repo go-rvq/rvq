@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
+	"gorm.io/gorm"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -25,9 +26,13 @@ type FieldChange struct {
 // Revision loads one revision of a record by its hash.
 func (h *ModelHistory) Revision(recordKey string, hash []byte) (*histmodels.Revision, error) {
 	var rev histmodels.Revision
-	if err := h.db.Table(h.table).
+	// A fresh session with an explicit ORDER (First would otherwise order by the
+	// Revision schema's table "revisions", which is not the FROM — the model maps
+	// to <table>_revisions via .Table): both avoid a leaked scope and the wrong
+	// table qualifier.
+	if err := h.db.Session(&gorm.Session{}).Table(h.table).
 		Where("record_key = ? AND hash = ?", recordKey, hash).
-		First(&rev).Error; err != nil {
+		Order("created_at").Take(&rev).Error; err != nil {
 		return nil, err
 	}
 	return &rev, nil

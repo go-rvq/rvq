@@ -223,8 +223,19 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 	if withCurrent && mh.AcceptsPartial(f) {
 		if cur, cerr := mh.currentRecord(recordKey); cerr == nil {
 			leading := revertFieldButton(mh, f, recordKey, aHash, msgr, false)
-			children = append(children, mh.hunkSelectPanel(
-				recordKey, f, fieldStringValue(cur, f), fieldValue(am, f), aHash.String(), leading, ctx))
+			curVal, tgtVal := mh.currentText(cur, f), mh.snapshotText(am, f)
+			if mh.IsHTML(f) {
+				// HTML: block-level hunks (vx-diff-hunks), so a hunk is a whole
+				// <p>…</p>, not a shard.
+				children = append(children, mh.hunkSelectPanel(
+					recordKey, f, curVal, tgtVal, aHash.String(), leading, ctx))
+			} else {
+				// Text (and codec-backed fields like a JSON map edited as YAML):
+				// the Prism code panel — syntax highlighting with the changed spans
+				// clickable to select their hunk for partial revert.
+				children = append(children, mh.prismCodeHunkPanel(
+					recordKey, f, mh.fieldLanguage(f), curVal, tgtVal, aHash.String(), leading, ctx))
+			}
 			titleExtra = nil
 		}
 	}

@@ -40,11 +40,22 @@ type ModelHistory struct {
 	htmlFields   map[string]bool
 	refFields    map[string]bool
 	fieldDiffers map[string]FieldDiffFunc
+	fieldCodecs  map[string]FieldContentCodec
+	fieldLangs   map[string]string
 	fetcher      presets.FetchFunc
 
 	table      string
 	resolved   []string
 	schemaRefs map[string]bool // lazily-detected relation fields (nil until computed)
+}
+
+// FieldContentCodec adapts a non-string field (e.g. a JSON map) to the text-based
+// partial-revert flow: ToText turns the field's stored JSON into the editable
+// text form (e.g. YAML), and Apply sets the field back from patched text (e.g.
+// parse YAML into the map and assign it). Register one with FieldContentHandler.
+type FieldContentCodec struct {
+	ToText func(rawJSON string) string
+	Apply  func(obj any, text string) error
 }
 
 // New starts a per-model history activation on db.
@@ -55,8 +66,26 @@ func New(db *gorm.DB) *ModelHistory {
 		htmlFields:   map[string]bool{},
 		refFields:    map[string]bool{},
 		fieldDiffers: map[string]FieldDiffFunc{},
+		fieldCodecs:  map[string]FieldContentCodec{},
+		fieldLangs:   map[string]string{},
 	}
 }
+
+// FieldContentHandler registers a text codec (and a Prism language) for a field,
+// so a non-string field (e.g. a JSON map) can take part in the text-based partial
+// revert: it is diffed/edited as text (language), and patched text is applied
+// back through the codec. Registering a codec is what lets such a field accept
+// partial revert.
+func (h *ModelHistory) FieldContentHandler(field, language string, codec FieldContentCodec) *ModelHistory {
+	h.fieldCodecs[field] = codec
+	if language != "" {
+		h.fieldLangs[field] = language
+	}
+	return h
+}
+
+// fieldLanguage is the Prism language registered for a field (empty = plain).
+func (h *ModelHistory) fieldLanguage(field string) string { return h.fieldLangs[field] }
 
 func (h *ModelHistory) Model(mb *presets.ModelBuilder) *ModelHistory { h.mb = mb; return h }
 
@@ -125,8 +154,13 @@ func (h *ModelHistory) IsHTML(field string) bool { return h.htmlFields[field] }
 func (h *ModelHistory) ResolvedFields() []string { return h.resolved }
 
 // AcceptsPartial reports whether a field accepts partial (content-level) revert.
-// A reference/relation field never does: a hunk-level patch would corrupt it.
+// A field with a registered content codec always does (it is patched as text —
+// e.g. a JSON map edited as YAML). Otherwise a reference/relation or whole-only
+// field never does: a hunk-level patch would corrupt it.
 func (h *ModelHistory) AcceptsPartial(field string) bool {
+	if _, ok := h.fieldCodecs[field]; ok {
+		return true
+	}
 	return !h.wholeFields[field] && !h.isReferenceField(field)
 }
 

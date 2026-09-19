@@ -172,6 +172,38 @@ func structFieldType(obj any, field string) (reflect.Type, bool) {
 	return t, true
 }
 
+// snapshotText is a field's revision value as editable text: the codec's text
+// form (e.g. YAML) when registered, else the raw stored value.
+func (h *ModelHistory) snapshotText(m map[string]json.RawMessage, field string) string {
+	if c, ok := h.fieldCodecs[field]; ok {
+		return c.ToText(fieldValue(m, field))
+	}
+	return fieldValue(m, field)
+}
+
+// currentText is the live field value as editable text: the codec's text form
+// (from the field's JSON) when registered, else the plain string value.
+func (h *ModelHistory) currentText(obj any, field string) string {
+	if c, ok := h.fieldCodecs[field]; ok {
+		v, _ := reflectutils.Get(obj, field)
+		b, _ := json.Marshal(v)
+		return c.ToText(string(b))
+	}
+	return fieldStringValue(obj, field)
+}
+
+// applyFieldText sets a field from patched text and saves: through the codec's
+// Apply (e.g. parse YAML into the map) when registered, else as the string value.
+func (h *ModelHistory) applyFieldText(obj any, field, text string, ctx *web.EventContext) error {
+	if c, ok := h.fieldCodecs[field]; ok {
+		if err := c.Apply(obj, text); err != nil {
+			return err
+		}
+		return h.saveAndCapture(obj, ctx)
+	}
+	return h.RevertFieldContent(obj, field, text, ctx)
+}
+
 // saveAndCapture persists the reverted record through the model's editing save
 // pipeline, so the change is recorded in BOTH the activity log and the history
 // (activity's and history's save wraps fire, exactly as a normal edit) — the new

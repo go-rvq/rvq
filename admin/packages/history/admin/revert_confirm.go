@@ -89,7 +89,7 @@ func (mh *ModelHistory) applyRevert(ctx *web.EventContext) (err error) {
 		var target string
 		if rev, rerr := mh.Revision(recordKey, hash); rerr == nil {
 			if m, merr := fieldMap(rev); merr == nil {
-				target = fieldValue(m, field)
+				target = mh.snapshotText(m, field)
 			}
 		}
 		selected := map[int]bool{}
@@ -101,8 +101,8 @@ func (mh *ModelHistory) applyRevert(ctx *web.EventContext) (err error) {
 				}
 			}
 		}
-		value := applyHunks(fieldStringValue(obj, field), target, selected, mh.IsHTML(field))
-		err = mh.RevertFieldContent(obj, field, value, ctx)
+		value := applyHunks(mh.currentText(obj, field), target, selected, mh.IsHTML(field))
+		err = mh.applyFieldText(obj, field, value, ctx)
 	case field != "":
 		err = mh.RevertField(obj, hash, field, ctx)
 	case ctx.R.FormValue("fields") != "":
@@ -190,11 +190,13 @@ func (mh *ModelHistory) revertChanges(ctx *web.EventContext) (recordKey string, 
 	}
 
 	for _, f := range fields {
-		curVal := fieldValue(curMap, f)
-		var newVal string
+		var curVal, newVal string
 		if partial && f == field {
-			newVal = applyHunks(fieldStringValue(cur, f), fieldValue(targetMap, f), hunksSel, mh.IsHTML(f))
+			// Codec-aware: diff/apply happen on the text form (e.g. YAML).
+			curVal = mh.currentText(cur, f)
+			newVal = applyHunks(curVal, mh.snapshotText(targetMap, f), hunksSel, mh.IsHTML(f))
 		} else {
+			curVal = fieldValue(curMap, f)
 			newVal = fieldValue(targetMap, f)
 		}
 		if curVal == newVal {

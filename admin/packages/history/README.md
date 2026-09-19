@@ -80,8 +80,11 @@ o boot), então rodam a cada boot sem efeito depois de aplicados.
 | `WholeFields("Cover")` | só revert inteiro (nunca por trechos) — para FK/estruturados. |
 | `ReferenceFields("Author")` | força tratamento de referência (ver Diff); relações são autodetectadas do schema gorm. |
 | `FieldDiffHandler(field, fn)` | handler de diff próprio para um campo (ver Diff). |
+| `FieldContentHandler(field, lang, codec)` | codec de texto para um campo estruturado (ver Revert parcial de campo estruturado): faz um map JSON participar do revert parcial, editado como texto (ex. YAML). Registrar um codec habilita `AcceptsPartial` no campo. |
 | `Fetcher(fn)` | como recarregar o registro antes do snapshot (default: o fetcher de Editing do model, que aplica os preloads). |
 | `Build()` | aplica tudo. |
+
+`Build()` devolve o `*ModelHistory` — encadeie `FieldDiffHandler`/`FieldContentHandler` **depois** de `Build()`.
 
 ---
 
@@ -122,11 +125,21 @@ Handlers reutilizáveis (assinatura `FieldDiffFunc`):
 
 | Handler | Quando (default) | O que faz |
 |---------|------------------|-----------|
-| `HTMLValueDiff` | `HTMLFields` | diff HTML do valor (top-level via DetailingBuilder). |
+| `PrismDiff(lang)` | HTML, JSON (struct/slice/map), texto puro e templates gad | **default de todo campo com forma de texto**. Render lado a lado com Prism (`json`, `html`/`markup`, `yaml`, `gad`/`gadt`/`gadx`, `css`, …): números de linha, linhas add/removidas marcadas e — estilo GoLand/IntelliJ — o **conteúdo alterado destacado dentro de cada linha** (char-a-char). `JSONDiff` = `PrismDiff("json")`. |
 | `BoolDiff` | campo bool | ícones antes/depois. |
-| `PrismDiff(lang)` | JSON (struct/slice/map) e texto puro | render com Prism (números de linha + realce), linhas add/removidas marcadas. `JSONDiff` = `PrismDiff("json")`. |
 | `ReferenceDiff` | FK/relação (autodetectada) e M2M | compara por valor exato; belongs-to mostra o registro renderizado + id (chip); to-many lista os itens marcando adicionados/removidos. |
-| `RenderedDiff` | default | diff do valor renderizado pelo DetailingBuilder. |
+
+`PrismDiffComponents(lang, oldTxt, newTxt) (oldC, newC)` é o núcleo reutilizável:
+recebe os dois textos já prontos (ex. YAML) e devolve os dois lados. Útil num
+`FieldDiffHandler` para mostrar um campo com outra linguagem — ex. um map JSON
+como YAML:
+
+```go
+mh.FieldDiffHandler("Data", func(in *history.FieldDiffInput) (o, n, m h.HTMLComponent, ok bool) {
+    o, n = history.PrismDiffComponents("yaml", jsonToYAML(in.OldSnap["Data"]), jsonToYAML(in.NewSnap["Data"]))
+    return o, n, nil, true
+})
+```
 
 Consultas programáticas:
 - `Diff(recordKey, aHash, bHash) []FieldChange` — campos que diferem.
@@ -147,12 +160,44 @@ alterações a reverter (+ adição / − remoção).
 - `RevertFields(obj, hash, fields, ctx)` — um subconjunto.
 - `RevertField(obj, hash, field, ctx)` — um campo inteiro (sempre disponível).
 - `RevertFieldPartial` / hunks — só trechos selecionados de um campo que aceita
-  parcial (texto char-a-char; HTML por bloco). Fields em `WholeFields` ou
-  reference/relação recusam parcial (`AcceptsPartial(field) == false`).
+  parcial. Fields em `WholeFields` ou reference/relação recusam parcial
+  (`AcceptsPartial(field) == false`) — **exceto** quando têm um codec registrado
+  (ver abaixo), que sempre aceita.
 
-Na UI, o diff por trechos é **clicável**: cada região destacada alterna
-seleção (super-highlight + ✓), com botão "marcar todas" e contador
-selecionados/total.
+Na UI, o diff por trechos é **clicável**:
+- **HTML** (ex. `Post.Body`): `vx-diff-hunks`, hunks por bloco (`<p>…</p>`).
+- **texto / campos com codec**: o painel **`vx-code`** (Prism) — cada trecho
+  alterado é um segmento do slot `changed`, clicável, com ✓ + super-highlight ao
+  selecionar. Botão "marcar todas" e contador selecionados/total.
+
+O `vx-code` expõe o slot `changed` (`ChangedSlot`) com escopo
+`{ text, line, start, end, hunk, kind, added }`, o que permite tornar cada trecho
+interativo (é assim que o revert parcial monta os toggles de hunk).
+
+### Revert parcial de um campo estruturado (map JSON como YAML)
+
+Um campo cujo valor é um **map JSON** não é string, então por padrão é whole-only.
+Um **`FieldContentCodec`** o adapta ao fluxo de texto do revert parcial:
+
+- `ToText(rawJSON)` → texto editável (ex. YAML);
+- `Apply(obj, text)` → escreve o campo de volta a partir do texto (ex. parse do
+  YAML no map).
+
+Registrado com `FieldContentHandler(field, "yaml", codec)`, o campo passa a
+aceitar parcial: é diffado/editado como YAML (Prism + realce intra-linha), e ao
+aplicar os hunks selecionados o texto é reparseado para o map e salvo (nova
+revisão). Todo o fluxo (painel, preview e apply) fica codec-aware.
+
+O exemplo completo (`history.ExampleYAMLConfigHistory`, em `admin/example.go`)
+ativa history + diff YAML + codec num model singleton de configuração — está na
+documentação docgo (grupo *Building Admin → History*, via o snippet
+`HistoryYAMLConfigExample`).
+
+### Singleton
+
+Um model singleton (sem `{id}` na rota) é suportado: o comparador resolve a
+`record_key` pelo próprio model (`GetSingleton()` + fetcher → `MustRecordID`),
+não pelo path.
 
 ---
 
@@ -182,12 +227,18 @@ o diff da revisão (via `activity.RevisionDiffFunc`, setado por `Configure`).
 - `models/` — `Revision`, `Hash`.
 - `admin/model.go` — API fluente, captura, backfill e seed inicial.
 - `admin/builder.go` — plugin (`Configure`/`Install`), Recorder, linkage.
-- `admin/diff.go`, `admin/field_diff.go`, `admin/compare.go` — diff e comparação.
+- `admin/diff.go`, `admin/field_diff.go`, `admin/compare.go` — diff e comparação
+  (`PrismDiff`/`PrismDiffComponents`, realce de linha e intra-linha).
 - `admin/field_history.go` — histórico por campo.
-- `admin/revert.go`, `admin/hunks.go`, `admin/revert_confirm.go` — revert.
+- `admin/revert.go`, `admin/hunks.go`, `admin/hunks_code.go`,
+  `admin/revert_confirm.go` — revert (whole/fields/field/parcial). `hunks.go` é o
+  parcial HTML (`vx-diff-hunks`); `hunks_code.go` é o parcial em `vx-code` (texto
+  e campos com codec) + os codecs de conteúdo.
 - `admin/nested.go` — NestedModel de revisões, listing (coluna "Alterações",
-  filtro de campos em árvore), detail por revisão.
+  filtro de campos em árvore), detail por revisão, resolução de `record_key`
+  (inclui singleton).
 - `admin/access.go` — Recorder. `admin/publish.go` — tag na publicação.
+- `admin/example.go` — exemplo documentado (YAML config), extraído por snippetgo.
 - `admin/messages.go` — i18n (en, pt-BR).
 
 Ver `PLAN.md` para o desenho original e as decisões.
