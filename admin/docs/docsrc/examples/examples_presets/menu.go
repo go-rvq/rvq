@@ -46,9 +46,9 @@ func PresetsOrderMenu(b *presets.Builder, db *gorm.DB) (
 	})
 	// @snippet_begin(MenuOrderSample)
 	b.MenuOrder(
-		"books",
-		"videos",
-		"musics",
+		presets.ModelItem("books"),
+		presets.ModelItem("videos"),
+		presets.ModelItem("musics"),
 	)
 	// @snippet_end
 	return
@@ -89,11 +89,11 @@ func PresetsGroupMenu(b *presets.Builder, db *gorm.DB) (
 	})
 
 	b.MenuOrder(
-		"books",
-		b.MenuGroup("Media").SubItems(
-			"videos",
-			"musics",
-		).Icon("mdi-video"),
+		presets.ModelItem("books"),
+		b.MenuGroup("Media").Icon("mdi-video").Add(
+			presets.ModelItem("videos"),
+			presets.ModelItem("musics"),
+		),
 	)
 	// @snippet_end
 	return

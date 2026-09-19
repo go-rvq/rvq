@@ -7,6 +7,9 @@ Reference notes for the `presets` admin package. See the package
   `Model`, installing plugins with `Use`, and wiring the data operator.
 - [Models](models.md) — `ModelBuilder` and its `Listing` / `Editing` /
   `Creating` / `Detailing` builders.
+- [Menu](menu.md) — the side menu as one tree: the key of an entry
+  (`model:`/`page:`/`group:`), reserving a place before registration, moving an
+  entry, and the group chain that is also the URL and the permission.
 - [Fields](fields.md) — `FieldsBuilder`, `FieldBuilder`, `FieldContext`, the
   default component funcs, and `MustInput` (bare inputs for table cells).
 - [List editor & tables](list-editor.md) — nested slices, the client-side list

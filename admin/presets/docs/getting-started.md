@@ -13,7 +13,8 @@ default data operator. Configure cross-cutting concerns on it:
 
 - `b.DataOperator(op)` — the default persistence (usually `gorm2op.DataOperator(db)`).
 - `b.Permission(perm.New()...)` — the permission policies.
-- `b.URIPrefix("/admin")`, `b.BrandFunc(...)`, `b.MenuOrder(...)`, layout hooks, etc.
+- `b.URIPrefix("/admin")`, `b.BrandFunc(...)`, `b.MenuOrder(...)` (see
+  [Menu](menu.md)), layout hooks, etc.
 
 The builder is an `http.Handler`; mount it on your router.
 

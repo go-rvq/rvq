@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"maps"
 	"strings"
 	"testing"
 
@@ -196,5 +197,38 @@ func TestNestedPageFullPath(t *testing.T) {
 	page.Build("admin")
 	if got, want := page.FullPath(), "/admin/a/inner/report"; got != want {
 		t.Errorf("FullPath() = %q, want %q", got, want)
+	}
+}
+
+// The group-chain example of docs/menu.md, kept honest.
+func TestMenuDocGroupChainExample(t *testing.T) {
+	b := menuBuilder()
+	mb := b.Model(&menuAlpha{}, ModelWithID("seo_config")).URIName("seo_config")
+	b.MenuGroup("site").Add(b.MenuGroup("seo").Add(ModelItem("seo_config")))
+
+	if got, want := mb.MenuGroupName(), "site/seo"; got != want {
+		t.Errorf("MenuGroupName() = %q, want %q", got, want)
+	}
+	if got, want := mb.URI(), "site/seo/seo_config"; got != want {
+		t.Errorf("URI() = %q, want %q", got, want)
+	}
+}
+
+// A model's menu name is its registration id, not its URI name: URIName does
+// not rename the menu entry, and ModelWithID is what does.
+func TestModelMenuNameIsTheRegistrationID(t *testing.T) {
+	b := menuBuilder()
+
+	byLabel := b.Model(&menuAlpha{}).URIName("outro")
+	if _, ok := b.MenuItems()[menuKey(MenuItemModel, "menu_alphas")]; !ok {
+		t.Errorf("a chave do modelo não é o id de registro: %v", maps.Keys(b.MenuItems()))
+	}
+	if byLabel.MenuGroup() != nil {
+		t.Error("o modelo deveria estar na raiz")
+	}
+
+	b.Model(&menuBeta{}, ModelWithID("outros"))
+	if _, ok := b.MenuItems()[menuKey(MenuItemModel, "outros")]; !ok {
+		t.Error("ModelWithID não renomeou a chave do menu")
 	}
 }
