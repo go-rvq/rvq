@@ -18,6 +18,7 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	"golang.org/x/text/language"
 )
@@ -55,18 +56,33 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	// The help overlay event (the "?" button next to Save in any SEO editor).
 	b.registerHelpEvent(pb)
 
-	seoModel := pb.Model(&RvqSEOSetting{}).
+	b.configureGlobalModel(pb)
+	b.configureConfigModel(pb)
+
+	pb.MenuGroup("seo").
+		Title("SEO").
+		Icon("mdi-google").
+		SubItems(
+			"seo_config",
+			"seo_global",
+		)
+	return nil
+}
+
+func (b *Builder) configureGlobalModel(pb *presets.Builder) {
+	b.GlobalModel = Model(pb, &RvqSEOSetting{}, presets.ModelConfig().SetId("seo_global")).
 		Label("SEO").
 		RightDrawerWidth("1000").
+		Singleton(true).
 		LayoutConfig(&presets.LayoutConfig{
 			SearchBoxInvisible:          true,
 			NotificationCenterInvisible: true,
 		})
 
 	// Configure Listing Page
-	b.configListing(seoModel)
+	b.configListing(b.GlobalModel)
 	// Configure Editing Page
-	b.configEditing(seoModel)
+	b.configEditing(b.GlobalModel)
 	// b.ConfigDetailing(pb)
 
 	pb.I18n().
@@ -75,7 +91,29 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		RegisterForModule(language.BrazilianPortuguese, I18nSeoKey, Messages_pt_BR)
 
 	permVerifier = perm.NewVerifier("seo", pb.GetPermission())
-	return nil
+}
+
+func (b *Builder) configureConfigModel(pb *presets.Builder) {
+	b.ConfigModel = Model(pb, &SEOConfig{},
+		presets.ModelConfig().
+			SetSingleton(true).
+			SetId("seo_config")).
+		InMenu(true).
+		MenuIcon("mdi-cog-outline").
+		URIName("seo_config").
+		Label("SEOConfig")
+
+	// The detail shows the whole config as YAML (prismjs highlighting). The
+	// history revision detail renders through this same Detailing, so a revision
+	// is shown as the YAML of its stored Data.
+	b.ConfigModel.Detailing("Data")
+	b.ConfigModel.Detailing().Field("Data").
+		Label("YAML").
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			c := field.Obj.(*SEOConfig)
+			return vx.VXCode(configDataYAML(c)).Language("yaml")
+		})
+
 }
 
 func (b *Builder) configListing(seoModel *presets.ModelBuilder) {
@@ -285,6 +323,15 @@ func EditSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.Event
 			setting.OpenGraphMetadata = metadata
 			continue
 		}
+		// The custom variables editor submits the whole list as a JSON string.
+		if fieldWithPrefix == fmt.Sprintf("%s.%s", field.Name, "VarsJSON") {
+			var vars []SettingVar
+			if s := ctx.R.Form.Get(fieldWithPrefix); strings.TrimSpace(s) != "" {
+				_ = json.Unmarshal([]byte(s), &vars)
+			}
+			setting.Vars = vars
+			continue
+		}
 		if strings.HasPrefix(fieldWithPrefix, fmt.Sprintf("%s.", field.Name)) {
 			reflectutils.Set(&setting, strings.TrimPrefix(fieldWithPrefix, fmt.Sprintf("%s.", field.Name)), ctx.R.Form.Get(fieldWithPrefix))
 		}
@@ -349,9 +396,10 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, ctx *web.
 	refPrefix := strings.ReplaceAll(strings.ToLower(fieldPrefix), " ", "_")
 	return VSeo(
 		h.H4(msgr.Basic).Style("margin-top:15px;font-weight: 500"),
-		// The "+ Variable" menu (app-registered groups). A plain div, not a VRow,
-		// so its margins do not overlap the "Basic" heading above.
-		h.Div(b.variablesMenu(ctx)).Class("mt-2 mb-2"),
+		// The "+ Variable" menu (app-registered groups + this setting's custom
+		// variables). A plain div, not a VRow, so its margins do not overlap the
+		// "Basic" heading above.
+		h.Div(b.variablesMenuWithVars(ctx, setting)).Class("mt-2 mb-2"),
 		VCard(
 			VCardText(
 				VTextField().Variant(FieldVariantUnderlined).Attr("counter", true).Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "Title"), setting.Title)...).Label(msgr.Title).Attr("@focus", fmt.Sprintf("$refs.seo.tagInputsFocus($refs.%s)", fmt.Sprintf("%s_title", refPrefix))).Attr("ref", fmt.Sprintf("%s_title", refPrefix)),
@@ -359,6 +407,11 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, ctx *web.
 				VTextarea().Variant(FieldVariantUnderlined).Attr("counter", true).Rows(2).AutoGrow(true).Attr(web.VField(fmt.Sprintf("%s.%s", fieldPrefix, "Keywords"), setting.Keywords)...).Label(msgr.Keywords).Attr("@focus", fmt.Sprintf("$refs.seo.tagInputsFocus($refs.%s)", fmt.Sprintf("%s_keywords", refPrefix))).Attr("ref", fmt.Sprintf("%s_keywords", refPrefix)),
 			),
 		).Variant(VariantOutlined).Flat(true),
+
+		// Custom variables editor: declare variables (name/description/value) that
+		// this setting and its descendants can use as {Name}.
+		h.H4(msgr.CustomVars).Class("mt-4 mb-0 font-weight-medium"),
+		b.varsEditor(fieldPrefix, setting),
 
 		h.H4(msgr.OpenGraphInformation).Style("margin-top:15px;margin-bottom:15px;font-weight: 500"),
 		VCard(

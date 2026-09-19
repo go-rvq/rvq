@@ -41,10 +41,33 @@ func (b *Builder) RegisterVariableGroups(f func(ctx *web.EventContext) []Variabl
 // (its Template wraps it into the `{expr}` form). Returns nil when no groups are
 // registered.
 func (b *Builder) variablesMenu(ctx *web.EventContext) h.HTMLComponent {
-	if b.variableGroups == nil {
-		return nil
+	var groups []VariableGroup
+	if b.variableGroups != nil {
+		groups = b.variableGroups(ctx)
 	}
-	groups := b.variableGroups(ctx)
+	return b.renderVariablesMenu(ctx, groups)
+}
+
+// variablesMenuWithVars is variablesMenu plus a group for the setting's own
+// custom variables, so a field can insert `{Name}` for a declared variable (and
+// a descendant sees the inherited ones once merged — here it shows the setting's
+// own).
+func (b *Builder) variablesMenuWithVars(ctx *web.EventContext, setting *Setting) h.HTMLComponent {
+	var groups []VariableGroup
+	if b.variableGroups != nil {
+		groups = b.variableGroups(ctx)
+	}
+	if g := customVarsMenuGroup(setting); g != nil {
+		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
+		if msgr.CustomVarsGroup != "" {
+			g.Label = msgr.CustomVarsGroup
+		}
+		groups = append(groups, *g)
+	}
+	return b.renderVariablesMenu(ctx, groups)
+}
+
+func (b *Builder) renderVariablesMenu(ctx *web.EventContext, groups []VariableGroup) h.HTMLComponent {
 	if len(groups) == 0 {
 		return nil
 	}

@@ -13,6 +13,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
+	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -66,7 +67,18 @@ func New(db *gorm.DB, ops ...Option) *Builder {
 		opFunc(b)
 	}
 
-	if err := db.AutoMigrate(&RvqSEOSetting{}); err != nil {
+	// The built-in "zipcodes" variable type ships with the package: a variable of
+	// this type is edited with a Google-map place picker whose selected places'
+	// postal codes become the value. It works once a Google Maps API key is set
+	// (SetGoogleMapsAPIKey); without one the editor stays a plain text field.
+	b.RegisterVarType(SettingVarType{
+		Name:        "zipcodes",
+		Label:       "CEPs (mapa)",
+		Description: "Selecione lugares no mapa; os CEPs viram o valor.",
+		Component:   "vx-seo-var-zipcodes",
+	})
+
+	if err := db.AutoMigrate(&RvqSEOSetting{}, &SEOConfig{}); err != nil {
 		panic(err)
 	}
 
@@ -99,6 +111,19 @@ type Builder struct {
 	// template globals and their fields/methods, with translated labels). The
 	// app supplies them because the globals are the app's; see variables.go.
 	variableGroups func(ctx *web.EventContext) []VariableGroup
+
+	// varTypes are the registered custom-variable types (Type → editor component
+	// and action). See vars.go and RegisterVarType.
+	varTypes map[string]SettingVarType
+
+	ConfigModel *presets.ModelBuilder
+	GlobalModel *presets.ModelBuilder
+}
+
+// GoogleMapsAPIKey is the Maps API key from the SEOConfig singleton (used by the
+// built-in "zipcodes" variable's map picker); empty when unset.
+func (b *Builder) GoogleMapsAPIKey() string {
+	return LoadSEOConfig(b.db).GoogleMapsAPIKey()
 }
 
 // @snippet_end
