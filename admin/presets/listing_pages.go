@@ -44,3 +44,15 @@ func (b *ListingBuilder) setupPagesRegistrator() {
 func (b *ListingBuilder) PagesRegistrator() *PagesRegistrator {
 	return b.pagesRegistrator
 }
+
+// registeredPagePaths are the paths of the pages registered on the listing, by
+// either door: AddPageFunc/AddRawPageFunc and the registrator.
+func (b *ListingBuilder) registeredPagePaths() (paths []string) {
+	for _, ph := range b.pages {
+		paths = append(paths, ph.Path())
+	}
+	for _, p := range b.pagesRegistrator.httpPages {
+		paths = append(paths, p.Path())
+	}
+	return
+}

@@ -78,7 +78,7 @@ func (pr *PagesRegistrator) FetchFunc(f FetchFunc) *PagesRegistrator {
 
 func (pr *PagesRegistrator) New(page *HttpPageBuilder) *PageBuilder {
 	pr.httpPages = append(pr.httpPages, page)
-	page.registerMenu(pr.b)
+	pr.registerMenu(page)
 	pg := Page(pr, page)
 	pr.pages = append(pr.pages, pg)
 	return pg
@@ -96,8 +96,20 @@ func (pr *PagesRegistrator) Get(pth string) *PageBuilder {
 func (pr *PagesRegistrator) AddHttpPage(page ...*HttpPageBuilder) {
 	pr.httpPages = append(pr.httpPages, page...)
 	for _, p := range page {
-		p.registerMenu(pr.b)
+		pr.registerMenu(p)
 	}
+}
+
+// registerMenu gives the page its place in the side menu — but only a page of
+// the builder itself has one. A model's page is a child of the listing or of
+// the detailing: it hangs under the model's route and shows up in the model's
+// own page menu, so it takes no key in the tree, and two models are free to
+// have a page of the same path.
+func (pr *PagesRegistrator) registerMenu(page *HttpPageBuilder) {
+	if pr.mb != nil {
+		return
+	}
+	page.registerMenu(pr.b)
 }
 
 func (pr *PagesRegistrator) GetHttpPage(pth string) *HttpPageBuilder {

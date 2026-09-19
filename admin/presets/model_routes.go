@@ -1,8 +1,10 @@
 package presets
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/theplant/osenv"
 )
@@ -16,6 +18,10 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 		listingPageFunc = mb.listing.GetPageFunc()
 		itemRoutePath   = routePath
 	)
+
+	// The listing route, read by the pages registered on the listing to know
+	// where they hang. Set before anything is mounted.
+	mb.routePath = routePath
 
 	if mb.singleton {
 		mb.itemRoutePath = itemRoutePath
@@ -49,11 +55,16 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			log.Printf("mounted url: %s\n", editPath)
 		}
 
-		mb.listing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
-			if routesDebug {
-				log.Printf("mounted url: %s\n", pattern)
-			}
-		})
+		// Only the detailing: a singleton has one record and no listing, so the
+		// menu it shows is the record's. A page registered on the listing has
+		// no menu to appear in and nothing to be a child of, so it would be
+		// mounted nowhere — a page that looks registered and answers 404. That
+		// is a mistake in the setup, and the boot stops on it.
+		if paths := mb.listing.registeredPagePaths(); len(paths) > 0 {
+			panic(fmt.Sprintf("presets: %q is a singleton and has no listing, so the page(s) "+
+				"registered on its Listing() would be mounted nowhere and appear in no menu: %s. "+
+				"Register them on Detailing() instead.", mb.id, strings.Join(paths, ", ")))
+		}
 
 		mb.detailing.pageHandlers.WithPathPrefix(routePath).SetupRoutes(mux, func(pattern string, ph *PageHandler) {
 			if routesDebug {
@@ -61,16 +72,12 @@ func (mb *ModelBuilder) SetupRoutes(mux *http.ServeMux) {
 			}
 		})
 
-		/*
-			mb.detailing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
-				if routesDebug {
-					log.Printf("mounted url: %s\n", pattern)
-				}
-			})
-		*/
+		mb.detailing.pagesRegistrator.Build().SetupRoutes(mux, func(pattern string, ph *PageHandler) {
+			if routesDebug {
+				log.Printf("mounted url: %s\n", pattern)
+			}
+		})
 	} else {
-		mb.routePath = routePath
-
 		mux.Handle(
 			routePath,
 			mb.p.WrapModel(mb, mb.p.layoutFunc(mb.BindPageFunc(listingPageFunc), mb.layoutConfig)),

@@ -91,9 +91,16 @@ func (b *HttpPageBuilder) registerMenu(bd *Builder) {
 	}
 }
 
-// SetMenuGroup puts the page in the group, moving its menu entry with it.
+// SetMenuGroup puts the page in the group, moving its menu entry with it. A
+// page with no entry in the tree — a model's page, which is a child of the
+// listing or of the detailing — has nothing to move: it keeps the name, which
+// is what shapes its URL.
 func (b *HttpPageBuilder) SetMenuGroup(g *MenuGroupBuilder) *HttpPageBuilder {
 	if g == nil {
+		return b
+	}
+	b.menuGroupName = g.Path()
+	if b.b == nil {
 		return b
 	}
 	if err := g.b.MoveMenuItem(PageItem(b.path), g); err != nil {
@@ -115,7 +122,24 @@ func (b *HttpPageBuilder) GetMenuGroupBuilder() *MenuGroupBuilder {
 // GetMenuGroup returns the page's menu-group path — "a/b/c" for a page in a
 // group c nested in b nested in a. It is the page's URL prefix.
 func (b *HttpPageBuilder) GetMenuGroup() string {
-	return b.GetMenuGroupBuilder().Path()
+	return path.Join(b.menuGroupPathNames()...)
+}
+
+// menuGroupPathNames is where the page sits, group by group. A page of the
+// builder reads it from the tree, which is the only place that knows about
+// moves. A page of a model has no entry there — it is a child of the listing
+// or of the detailing, not a side-menu item — so it keeps the name it was
+// given, which still shapes its URL and its permission.
+func (b *HttpPageBuilder) menuGroupPathNames() []string {
+	if b.b != nil {
+		// In the tree, and the tree is the only authority: a page moved back to
+		// the root has no group, whatever name it was given before.
+		return b.GetMenuGroupBuilder().PathNames()
+	}
+	if b.menuGroupName == "" {
+		return nil
+	}
+	return strings.Split(strings.Trim(b.menuGroupName, "/"), "/")
 }
 
 func (b *HttpPageBuilder) Perm(v *perm.PermVerifierBuilder) *HttpPageBuilder {
@@ -244,11 +268,12 @@ func (b *HttpPageBuilder) FullPath() string {
 }
 
 func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
+	groups := b.menuGroupPathNames()
+
 	if b.autoPerm {
 		// The whole chain of groups, not only the innermost: the permission
 		// follows the same path the URL does.
-		parts := b.GetMenuGroupBuilder().PathNames()
-		parts = append(parts, b.path)
+		parts := append(append([]string{}, groups...), b.path)
 		b.verififer.Func(func(v *perm.Verifier) *perm.Verifier {
 			return v.On(parts...)
 		})
@@ -258,7 +283,7 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 		b.verififer.Title(b.titleFunc)
 	}
 
-	b.fullPath = path.Join("/", prefix, b.GetMenuGroupBuilder().Path(), b.path)
+	b.fullPath = path.Join("/", prefix, path.Join(groups...), b.path)
 	ph := NewPageHandler(b.fullPath, b.handler, b.methods...)
 	for _, f := range b.postBuild {
 		f(ph)
