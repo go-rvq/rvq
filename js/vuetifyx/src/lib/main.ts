@@ -31,6 +31,8 @@ import Messages from '@/lib/Messages'
 import CodeView from '@/lib/CodeView.vue'
 import CodeMirror from '@/lib/CodeMirror'
 import DiffHunks from '@/lib/DiffHunks.vue'
+import SeoVars from '@/lib/SeoVars.vue'
+import SeoVarZipcodes from '@/lib/SeoVarZipcodes.vue'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -64,6 +66,8 @@ const vuetifyx = {
     app.component('vx-code', CodeView)
     app.component('vx-codemirror', CodeMirror)
     app.component('vx-diff-hunks', DiffHunks)
+    app.component('vx-seo-vars', SeoVars)
+    app.component('vx-seo-var-zipcodes', SeoVarZipcodes)
   }
 }
 declare const window: any

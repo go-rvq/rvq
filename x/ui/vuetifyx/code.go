@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/web"
 )
 
 // VXCodeBuilder renders the <vx-code> component: a readonly code viewer with
@@ -34,6 +35,32 @@ func (b *VXCodeBuilder) MarkKind(v string) *VXCodeBuilder {
 func (b *VXCodeBuilder) MarkLines(lines []int) *VXCodeBuilder {
 	j, _ := json.Marshal(lines)
 	b.tag.Attr(":mark-lines", string(j))
+	return b
+}
+
+// ChangeRanges highlights, within a line, the exact changed character spans
+// (GoLand/IntelliJ-style). The map is keyed by 1-based line number; each value is
+// a list of [start,end,hunk) triples — start/end are rune offsets in that line
+// and hunk is the change region's index (-1 when there is no hunk grouping, e.g.
+// a plain compare). Used with MarkLines/MarkKind so a changed line is tinted and
+// its changed content is emphasized; the hunk index lets the `changed` slot make
+// each span interactive (e.g. a partial-revert toggle).
+func (b *VXCodeBuilder) ChangeRanges(ranges map[int][][3]int) *VXCodeBuilder {
+	if len(ranges) == 0 {
+		return b
+	}
+	j, _ := json.Marshal(ranges)
+	b.tag.Attr(":change-ranges", string(j))
+	return b
+}
+
+// ChangedSlot fills the `changed` scoped slot: each changed span is rendered by
+// these children instead of the default highlight mark. The slot scope exposes
+// { text, line, start, end, hunk, kind, added } — added is true on the NEW side
+// (an insertion) and false on the OLD side (a deletion) — so a caller can render,
+// say, a clickable partial-revert toggle bound to the hunk index.
+func (b *VXCodeBuilder) ChangedSlot(children ...h.HTMLComponent) *VXCodeBuilder {
+	b.tag.Children(web.Slot(children...).Name("changed").Scope("{ text, line, start, end, hunk, kind, added }"))
 	return b
 }
 
