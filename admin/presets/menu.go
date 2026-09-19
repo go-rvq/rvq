@@ -50,9 +50,10 @@ func (b *Menu) removeMenuGroupInOrder(mgb *MenuGroupBuilder) {
 }
 
 type MenuGroupBuilder struct {
-	title func(ctx context.Context) string
-	name  string
-	icon  string
+	parent *MenuGroupBuilder
+	title  func(ctx context.Context) string
+	name   string
+	icon   string
 	// item can be a Slug/model name (string) or a nested *MenuGroupBuilder for a
 	// sub-group. The underlying logic uses the Slug name, so if the Slug name is
 	// customized, the item must be the Slug name.

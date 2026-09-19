@@ -37,8 +37,8 @@ func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
 		} else {
 			mb := p.mb.GetVerifierModel()
 			v = mb.p.verifier.Spawn()
-			if mb.menuGroupName != "" {
-				v.SnakeOn(mb.menuGroupName)
+			if mb.menuGroup != "" {
+				v.SnakeOn(mb.menuGroup)
 			}
 		}
 	}
@@ -64,8 +64,8 @@ func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
 	} else {
 		mb := p.mb.GetVerifierModel()
 		v = mb.p.verifier.Spawn()
-		if mb.menuGroupName != "" {
-			v.SnakeOn(mb.menuGroupName)
+		if mb.menuGroup != "" {
+			v.SnakeOn(mb.menuGroup)
 		}
 	}
 

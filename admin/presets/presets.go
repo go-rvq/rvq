@@ -526,15 +526,39 @@ func (b *Builder) MenuOrder(items ...interface{}) {
 // to — recursing into nested sub-groups so a model/page keeps the name of its
 // innermost group.
 func (b *Builder) assignMenuGroup(v *MenuGroupBuilder) {
-	for _, item := range v.subMenuItems {
+	for i, item := range v.subMenuItems {
 		switch it := item.(type) {
 		case string:
 			if it[0] == '/' {
 				if p := b.pagesRegistrator.GetHttpPage(it); p != nil {
 					p.MenuGroup(v.name)
 				}
-			} else if mb := b.GetModelByID(it); mb != nil {
-				mb.menuGroupName = v.name
+			} else {
+				for mi, item := range b.menuOrder {
+					switch item := item.(type) {
+					case *MenuGroupBuilder:
+						if item.name == it {
+							v.subMenuItems[i] = item
+							b.menuOrder = append(b.menuOrder[:mi], b.menuOrder[mi+1:]...)
+							item.parent = v
+							goto done
+						}
+					case string:
+						if item == it {
+							b.menuOrder = append(b.menuOrder[:mi], b.menuOrder[mi+1:]...)
+							goto done
+						}
+						if mb := b.GetModelByID(it); mb != nil {
+							mb.menuGroup = v.name
+							goto done
+						}
+					}
+				}
+
+				if mb := b.GetModelByID(it); mb != nil {
+					mb.menuGroup = v.name
+				}
+			done:
 			}
 		case *MenuGroupBuilder:
 			// A nested sub-group: MenuGroup() added it to the top-level order on

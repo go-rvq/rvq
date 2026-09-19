@@ -1,3 +1,5 @@
+- [ ] Faça com que ModelBuilder.menuGroup seja *MenuGroupBuilder, faça teste com multinivel do menu group (3 niveis) para um modelBuilder no nivel 4, valid se a URI do model vai estar sub path do path do menu, em nivel 4.
+
 # TASK — refresh pós-save (LISTING / DETAIL / EDIT / SINGLETON)
 
 Quando um formulário é salvo com sucesso, só o que reflete a mudança é

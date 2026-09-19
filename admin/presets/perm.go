@@ -399,11 +399,11 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 
 	v := b.verifier.Spawn()
 	for _, r := range roots {
-		if m := menus[r.Model.menuGroupName]; m != nil {
+		if m := menus[r.Model.menuGroup]; m != nil {
 			m.Resources = append(m.Resources, r)
 		} else {
-			menus[r.Model.menuGroupName] = &PermMenu{
-				Name:      v.Spawn().SnakeOn(r.Model.menuGroupName).Resource(),
+			menus[r.Model.menuGroup] = &PermMenu{
+				Name:      v.Spawn().SnakeOn(r.Model.menuGroup).Resource(),
 				Resources: []*ModelPerm{r},
 			}
 		}

@@ -48,7 +48,7 @@ type ModelBuilder struct {
 	detailFieldBuilders FieldBuilders
 
 	modelType           reflect.Type
-	menuGroupName       string
+	menuGroup           string
 	notInMenu           bool
 	menuIcon            string
 	defaultURLQueryFunc func(*http.Request) url.Values
@@ -261,14 +261,14 @@ func (mb *ModelBuilder) SetUriName(uriName string) *ModelBuilder {
 
 // MenuGroupName returns the model's menu-group path segment (also used as a URI
 // segment).
-func (mb *ModelBuilder) MenuGroupName() string { return mb.menuGroupName }
+func (mb *ModelBuilder) MenuGroupName() string { return mb.menuGroup }
 
 // SetMenuGroupName sets the model's menu-group path segment. The menu-order
 // mechanism sets this for top-level models; nested models (added via AddChild)
 // are not reached by it, so a module mounting a resource under a parent can set
 // the segment explicitly to place it at parent/{id}/<group>/<uri>.
 func (mb *ModelBuilder) SetMenuGroupName(v string) *ModelBuilder {
-	mb.menuGroupName = v
+	mb.menuGroup = v
 	return mb
 }
 
@@ -707,9 +707,9 @@ func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, e
 	parentsID := ParentsModelID(ctx.R)
 
 	if len(parentsID) == 0 {
-		if root := mb.Root(); root.menuGroupName != "" {
+		if root := mb.Root(); root.menuGroup != "" {
 			bc.Append(&Breadcrumb{
-				Label: mb.p.menuGroups.MenuGroup(root.menuGroupName).TTitle(ctx.Context()),
+				Label: mb.p.menuGroups.MenuGroup(root.menuGroup).TTitle(ctx.Context()),
 			})
 		}
 	} else {
@@ -737,8 +737,8 @@ func (mb *ModelBuilder) Children() []*ModelBuilder {
 
 func (mb *ModelBuilder) URI() string {
 	dotUri := mb.uriName
-	if mb.menuGroupName != "" {
-		dotUri = mb.menuGroupName + "/" + dotUri
+	if mb.menuGroup != "" {
+		dotUri = mb.menuGroup + "/" + dotUri
 	}
 	if mb.parent != nil {
 		pth := []string{mb.parent.URI()}
@@ -980,6 +980,15 @@ func (mb *ModelBuilder) CreatingDisabled() bool {
 
 func (mb *ModelBuilder) SetCreatingDisabled(v bool) *ModelBuilder {
 	mb.creatingDisabled = v
+	return mb
+}
+
+// SetReadonly makes the model read-only in the admin: it disables both creating
+// and editing (so a listing row opens the detail, not an edit form). Use it for
+// models that are only viewed — e.g. an audit/revisions listing.
+func (mb *ModelBuilder) SetReadonly(v bool) *ModelBuilder {
+	mb.creatingDisabled = v
+	mb.editingDisabled = v
 	return mb
 }
 
