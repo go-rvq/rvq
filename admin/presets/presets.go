@@ -17,7 +17,6 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/iancoleman/strcase"
-	"github.com/jinzhu/inflection"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 )
@@ -60,8 +59,8 @@ type Builder struct {
 	detailFieldDefaults                   *FieldDefaults
 	extraAssets                           []*extraAsset
 	assetFunc                             AssetFunc
-	menuGroups                            MenuGroups
-	menuOrder                             []interface{}
+	menuTree                              *MenuGroupBuilder
+	menuItems                             map[string]*MenuItem
 	wrapHandlers                          map[string]func(in http.Handler) (out http.Handler)
 	plugins                               []Plugin
 	ModelConfigurators                    ModelConfigurators
@@ -362,6 +361,9 @@ func (b *Builder) Model(v interface{}, opts ...ModelBuilderOption) (r *ModelBuil
 	r = NewModelBuilder(b, v, opts...)
 	b.ModelConfigurators.ConfigureModel(r)
 	b.models = append(b.models, r)
+	if _, err := b.RegisterMenuItem(MenuItemModel, r.id, r); err != nil {
+		panic(err)
+	}
 	return r
 }
 
@@ -466,35 +468,140 @@ func modelNames(ms []*ModelBuilder) (r []string) {
 	return
 }
 
+// MenuTree is the root of the menu: every model, page and group hangs from it,
+// directly or through a group. The root is a sentinel — it has no entry of its
+// own and never renders as a group.
+func (b *Builder) MenuTree() *MenuGroupBuilder {
+	if b.menuTree == nil {
+		b.menuTree = &MenuGroupBuilder{b: b}
+		b.menuItems = map[string]*MenuItem{}
+	}
+	return b.menuTree
+}
+
+// MenuItems is the key registry: one entry per key, whether or not its value
+// has arrived.
+func (b *Builder) MenuItems() map[string]*MenuItem {
+	b.MenuTree()
+	return b.menuItems
+}
+
+// MenuItemOf is the item a key names, creating the placeholder when the key has
+// only been referenced so far. The placeholder goes to the root, in
+// registration order, until something moves it.
+//
+// Moving is always done through the key: whether the item already carries its
+// value or is still waiting for one, there is a single item per key, and that
+// item is what moves.
+func (b *Builder) MenuItemOf(ref MenuRef) *MenuItem {
+	root := b.MenuTree()
+	key := ref.Key()
+	if it := b.menuItems[key]; it != nil {
+		return it
+	}
+	it := &MenuItem{Type: ref.Type, Name: ref.Name}
+	b.menuItems[key] = it
+	it.parent = root
+	root.items = append(root.items, it)
+	return it
+}
+
+// RegisterMenuItem gives a key its value.
+//
+// A key is unique. Registering a value for a key that already has one is a
+// mistake — two models with the same id, a page registered twice — and is
+// reported instead of one silently replacing the other. A key that exists
+// without a value is a place someone reserved: registering fills it where it
+// stands, keeping the position the reservation gave it.
+func (b *Builder) RegisterMenuItem(typ MenuItemType, name string, value any) (*MenuItem, error) {
+	if value == nil {
+		return nil, fmt.Errorf("presets: register menu item %s: no value", menuKey(typ, name))
+	}
+
+	it := b.MenuItemOf(MenuRef{Type: typ, Name: name})
+	if it.Value != nil {
+		if it.Value == value {
+			return it, nil
+		}
+		return nil, fmt.Errorf("presets: menu item %s is already registered", it.Key())
+	}
+	it.Value = value
+	return it, nil
+}
+
+// MoveMenuItem puts the item a key names inside dst, at index when given.
+//
+// The key need not be registered: an unregistered key is placed as a
+// reservation and waits there for its value, so a group may name what does not
+// exist yet and the order of configuration stops mattering. Calling it again
+// for the same key moves the item — the last call wins, and an item is in
+// exactly one place at a time.
+func (b *Builder) MoveMenuItem(ref MenuRef, dst *MenuGroupBuilder, index ...int) error {
+	root := b.MenuTree()
+	if dst == nil {
+		dst = root
+	}
+
+	it := b.MenuItemOf(ref)
+
+	// A group cannot be moved into itself or into one of its own descendants:
+	// the tree would stop being one.
+	if g := it.Group(); g != nil && g.contains(dst) {
+		return fmt.Errorf("presets: moving menu item %s into %q would make a cycle", it.Key(), dst.Path())
+	}
+
+	if p := it.parent; p != nil {
+		if i := p.indexOf(it.Key()); i >= 0 {
+			p.items = append(p.items[:i], p.items[i+1:]...)
+		}
+	}
+
+	at := len(dst.items)
+	if len(index) > 0 && index[0] >= 0 && index[0] < at {
+		at = index[0]
+	}
+	dst.items = append(dst.items, nil)
+	copy(dst.items[at+1:], dst.items[at:])
+	dst.items[at] = it
+	it.parent = dst
+	return nil
+}
+
+// menuGroupOf is the group a key sits in, or nil when it sits at the root. The
+// root sentinel is not a group anyone is in.
+func (b *Builder) menuGroupOf(ref MenuRef) *MenuGroupBuilder {
+	it := b.MenuItems()[ref.Key()]
+	if it == nil {
+		return nil
+	}
+	if p := it.Parent(); p != nil && p.item != nil {
+		return p
+	}
+	return nil
+}
+
+// MenuGroup finds or registers the group of that name. A group named by another
+// group before this call already exists as a reservation, and this fills it.
 func (b *Builder) MenuGroup(name string) *MenuGroupBuilder {
-	mgb := b.menuGroups.MenuGroup(name)
-	if !b.isMenuGroupInOrder(mgb) {
-		b.menuOrder = append(b.menuOrder, mgb)
-	}
-	return mgb
-}
-
-func (b *Builder) isMenuGroupInOrder(mgb *MenuGroupBuilder) bool {
-	for _, v := range b.menuOrder {
-		if v == mgb {
-			return true
+	b.MenuTree()
+	if it := b.menuItems[menuKey(MenuItemGroup, name)]; it != nil {
+		if g := it.Group(); g != nil {
+			return g
 		}
 	}
-	return false
-}
 
-func (b *Builder) removeMenuGroupInOrder(mgb *MenuGroupBuilder) {
-	for i, om := range b.menuOrder {
-		if om == mgb {
-			b.menuOrder = append(b.menuOrder[:i], b.menuOrder[i+1:]...)
-			break
-		}
+	g := &MenuGroupBuilder{name: name, b: b}
+	it, err := b.RegisterMenuItem(MenuItemGroup, name, g)
+	if err != nil {
+		panic(err)
 	}
+	g.item = it
+	return g
 }
 
-// item can be Slug name, model name, *MenuGroupBuilder
-// the underlying logic is using Slug name,
-// so if the Slug name is customized, item must be the Slug name
+// MenuOrder places items at the root, in the order given. Each is a MenuRef, a
+// *MenuGroupBuilder or — in the older form — a name.
+//
 // example:
 // b.MenuOrder(
 //
@@ -506,68 +613,29 @@ func (b *Builder) removeMenuGroupInOrder(mgb *MenuGroupBuilder) {
 //
 // )
 func (b *Builder) MenuOrder(items ...interface{}) {
+	root := b.MenuTree()
 	for _, item := range items {
-		switch v := item.(type) {
-		case string:
-			b.menuOrder = append(b.menuOrder, v)
-		case *MenuGroupBuilder:
-			if b.isMenuGroupInOrder(v) {
-				b.removeMenuGroupInOrder(v)
-			}
-			b.menuOrder = append(b.menuOrder, v)
-			b.assignMenuGroup(v)
-		default:
-			panic(fmt.Sprintf("unknown menu order item type: %T\n", item))
+		if err := b.MoveMenuItem(menuRefOf(item), root); err != nil {
+			panic(err)
 		}
 	}
 }
 
-// assignMenuGroup records, for each of the group's items, which group it belongs
-// to — recursing into nested sub-groups so a model/page keeps the name of its
-// innermost group.
-func (b *Builder) assignMenuGroup(v *MenuGroupBuilder) {
-	for i, item := range v.subMenuItems {
-		switch it := item.(type) {
-		case string:
-			if it[0] == '/' {
-				if p := b.pagesRegistrator.GetHttpPage(it); p != nil {
-					p.MenuGroup(v.name)
-				}
-			} else {
-				for mi, item := range b.menuOrder {
-					switch item := item.(type) {
-					case *MenuGroupBuilder:
-						if item.name == it {
-							v.subMenuItems[i] = item
-							b.menuOrder = append(b.menuOrder[:mi], b.menuOrder[mi+1:]...)
-							item.parent = v
-							goto done
-						}
-					case string:
-						if item == it {
-							b.menuOrder = append(b.menuOrder[:mi], b.menuOrder[mi+1:]...)
-							goto done
-						}
-						if mb := b.GetModelByID(it); mb != nil {
-							mb.menuGroup = v.name
-							goto done
-						}
-					}
-				}
-
-				if mb := b.GetModelByID(it); mb != nil {
-					mb.menuGroup = v.name
-				}
-			done:
-			}
-		case *MenuGroupBuilder:
-			// A nested sub-group: MenuGroup() added it to the top-level order on
-			// creation; take it out so it renders only inside its parent.
-			b.removeMenuGroupInOrder(it)
-			b.assignMenuGroup(it)
+func defaultMenuIcon(mLabel string) string {
+	ws := strings.Join(strings.Split(strcase.ToSnake(mLabel), "_"), " ")
+	for _, v := range defaultMenuIconREs {
+		if v.re.MatchString(ws) {
+			return v.icon
 		}
 	}
+
+	return "mdi-alert-octagon-outline"
 }
+
+const (
+	menuFontWeight    = "500"
+	subMenuFontWeight = "400"
+)
 
 type defaultMenuIconRE struct {
 	re   *regexp.Regexp
@@ -598,22 +666,6 @@ var defaultMenuIconREs = []defaultMenuIconRE{
 	// setting
 	{re: regexp.MustCompile(`\bsettings?\b`), icon: "mdi-cog"},
 }
-
-func defaultMenuIcon(mLabel string) string {
-	ws := strings.Join(strings.Split(strcase.ToSnake(mLabel), "_"), " ")
-	for _, v := range defaultMenuIconREs {
-		if v.re.MatchString(ws) {
-			return v.icon
-		}
-	}
-
-	return "mdi-alert-octagon-outline"
-}
-
-const (
-	menuFontWeight    = "500"
-	subMenuFontWeight = "400"
-)
 
 // menuNode is one node of the data-driven side menu (a VTreeview item): a group
 // (has Children) or a leaf (Value is the target path). Props carries the item's
@@ -695,7 +747,10 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	// returns nil when the group has no visible child. active reports whether the
 	// group (or a descendant) holds the active item, so each ancestor adds itself
 	// to openedGroups and the whole chain auto-expands.
-	var groupNode func(v *MenuGroupBuilder) (node *menuNode, active bool)
+	var (
+		groupNode func(v *MenuGroupBuilder) (node *menuNode, active bool)
+		itemNodes func(items []*MenuItem) (nodes []*menuNode, active bool)
+	)
 	groupNode = func(v *MenuGroupBuilder) (node *menuNode, active bool) {
 		groupIcon := v.icon
 		if groupIcon == "" {
@@ -703,89 +758,53 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		}
 		title := v.TTitle(ctx.Context())
 
-		var children []*menuNode
-		for _, subOm := range v.subMenuItems {
-			switch it := subOm.(type) {
-			case string:
-				var child *menuNode
-				if it[0] == '/' {
-					child = pageNode(pMap[it])
-				} else {
-					child = modelNode(mMap[it])
-				}
-				if child != nil {
-					children = append(children, child)
-					if len(activated) > 0 && activated[0] == child.Value {
-						active = true
-					}
-				}
-			case *MenuGroupBuilder:
-				child, childActive := groupNode(it)
-				if child == nil {
-					continue
-				}
-				children = append(children, child)
-				if childActive {
-					active = true
-				}
-			}
-		}
+		children, active := itemNodes(v.items)
 		if len(children) == 0 {
 			return nil, false
 		}
 		if active {
-			// opened is keyed by the item value, which for a group is "group:<name>".
-			openedGroups = append(openedGroups, "group:"+v.name)
+			// opened is keyed by the item value, which for a group is its key.
+			openedGroups = append(openedGroups, menuKey(MenuItemGroup, v.name))
 		}
 		return &menuNode{
 			Title:    title,
-			Value:    "group:" + v.name,
+			Value:    menuKey(MenuItemGroup, v.name),
 			Props:    map[string]any{"prependIcon": groupIcon},
 			Children: children,
 		}, active
 	}
 
-	var nodes []*menuNode
-	for _, om := range b.menuOrder {
-		switch v := om.(type) {
-		case *MenuGroupBuilder:
-			if node, _ := groupNode(v); node != nil {
-				nodes = append(nodes, node)
+	// itemNodes renders a run of items in order. An item still waiting for its
+	// value renders nothing: it holds a place, and there is nothing to show
+	// until whoever owns it registers it.
+	itemNodes = func(items []*MenuItem) (nodes []*menuNode, active bool) {
+		for _, it := range items {
+			var (
+				node        *menuNode
+				childActive bool
+			)
+			switch value := it.Value.(type) {
+			case *ModelBuilder:
+				node = modelNode(value)
+			case *HttpPageBuilder:
+				node = pageNode(value)
+			case *MenuGroupBuilder:
+				node, childActive = groupNode(value)
 			}
-		case string:
-			var node *menuNode
-			if v[0] == '/' {
-				node = pageNode(pMap[v])
-			} else {
-				m, ok := mMap[v]
-				if !ok {
-					m = mMap[inflection.Plural(strcase.ToKebab(v))]
-				}
-				node = modelNode(m)
+			if node == nil {
+				continue
 			}
-			if node != nil {
-				nodes = append(nodes, node)
+			nodes = append(nodes, node)
+			if childActive || (len(activated) > 0 && activated[0] == node.Value) {
+				active = true
 			}
 		}
+		return
 	}
 
-	// Models and pages not placed by the order above, in their own order.
-	for _, m := range b.models {
-		if _, ok := inOrderMap[m.id]; ok {
-			continue
-		}
-		if node := modelNode(m); node != nil {
-			nodes = append(nodes, node)
-		}
-	}
-	for _, p := range b.pagesRegistrator.httpPages {
-		if _, ok := inOrderMap[p.path]; ok {
-			continue
-		}
-		if node := pageNode(p); node != nil {
-			nodes = append(nodes, node)
-		}
-	}
+	// The root's items, in order. Anything never moved sits here in the order it
+	// was registered, so a model or page nobody placed still shows up.
+	nodes, _ := itemNodes(b.MenuTree().items)
 
 	// The side menu is a VTreeview: it filters (search, bound to vars.menuFilter)
 	// and auto-expands matches natively, and a leaf's value is its path — so
