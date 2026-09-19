@@ -396,25 +396,37 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 	})
 
 	menus := map[string]*PermMenu{}
+	// The group a permission menu came from, so its title comes from the group
+	// itself rather than from a name looked up again.
+	menuGroups := map[string]*MenuGroupBuilder{}
 
 	v := b.verifier.Spawn()
 	for _, r := range roots {
-		if m := menus[r.Model.menuGroup]; m != nil {
+		// Keyed by the group's whole path, not by its innermost name: two groups
+		// may share a name under different parents, and the permission resource
+		// follows the same path the model's URI does.
+		group := r.Model.MenuGroup()
+		path := group.Path()
+
+		if m := menus[path]; m != nil {
 			m.Resources = append(m.Resources, r)
-		} else {
-			menus[r.Model.menuGroup] = &PermMenu{
-				Name:      v.Spawn().SnakeOn(r.Model.menuGroup).Resource(),
-				Resources: []*ModelPerm{r},
-			}
+			continue
 		}
+
+		res := v.Spawn()
+		for _, name := range group.PathNames() {
+			res.SnakeOn(name)
+		}
+		menus[path] = &PermMenu{
+			Name:      res.Resource(),
+			Resources: []*ModelPerm{r},
+		}
+		menuGroups[path] = group
 	}
 
-	// The group's own title, not its own back: this read g.Title, which left
-	// every group in the permission tree titleless. TTitle answers for a group
-	// that was never given one, humanizing its name.
-	for _, group := range b.menuGroups.menuGroups {
-		if g := menus[group.name]; g != nil {
-			g.Title = group.TTitle
+	for path, group := range menuGroups {
+		if m := menus[path]; m != nil && group != nil {
+			m.Title = group.TTitle
 		}
 	}
 

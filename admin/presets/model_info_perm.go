@@ -37,8 +37,8 @@ func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
 		} else {
 			mb := p.mb.GetVerifierModel()
 			v = mb.p.verifier.Spawn()
-			if mb.menuGroup != "" {
-				v.SnakeOn(mb.menuGroup)
+			for _, name := range mb.MenuGroup().PathNames() {
+				v.SnakeOn(name)
 			}
 		}
 	}
@@ -64,8 +64,8 @@ func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
 	} else {
 		mb := p.mb.GetVerifierModel()
 		v = mb.p.verifier.Spawn()
-		if mb.menuGroup != "" {
-			v.SnakeOn(mb.menuGroup)
+		for _, name := range mb.MenuGroup().PathNames() {
+			v.SnakeOn(name)
 		}
 	}
 

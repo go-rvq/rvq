@@ -12,23 +12,28 @@ import (
 )
 
 type HttpPageBuilder struct {
-	path         string
-	fullPath     string
-	methods      []string
-	handler      http.Handler
-	menuGroup    string
-	verififer    *perm.PermVerifierBuilder
-	baseVerifier RequestPermVerifier
-	titleFunc    func(ctx context.Context) string
-	subTitleFunc func(ctx context.Context) string
-	menuItemFunc func(ctx *web.EventContext, uri string) h.HTMLComponent
-	autoPerm     bool
-	notInMenu    bool
-	menuIcon     string
-	postBuild    []func(ph *PageHandler)
-	pageHandler  *PageHandler
-	preWraper    web.PageFuncWrapper
-	wraper       web.PageFuncWrapper
+	path     string
+	fullPath string
+	methods  []string
+	handler  http.Handler
+	// b is the builder the page was registered with, and the owner of the menu
+	// tree the page's entry lives in. It is nil until registration.
+	b *Builder
+	// menuGroupName is a group named before the page was registered, when there
+	// is no builder yet to resolve it against. Registration resolves it.
+	menuGroupName string
+	verififer     *perm.PermVerifierBuilder
+	baseVerifier  RequestPermVerifier
+	titleFunc     func(ctx context.Context) string
+	subTitleFunc  func(ctx context.Context) string
+	menuItemFunc  func(ctx *web.EventContext, uri string) h.HTMLComponent
+	autoPerm      bool
+	notInMenu     bool
+	menuIcon      string
+	postBuild     []func(ph *PageHandler)
+	pageHandler   *PageHandler
+	preWraper     web.PageFuncWrapper
+	wraper        web.PageFuncWrapper
 }
 
 func HttpPage(pth string) *HttpPageBuilder {
@@ -60,13 +65,57 @@ func (b *HttpPageBuilder) GetHandler() http.Handler {
 	return b.handler
 }
 
+// MenuGroup puts the page in the group of that name, creating the group when it
+// does not exist yet. A page built before it is registered has no builder to
+// resolve the name against, so the name waits until registration.
 func (b *HttpPageBuilder) MenuGroup(menuGroup string) *HttpPageBuilder {
-	b.menuGroup = menuGroup
+	if menuGroup == "" {
+		return b
+	}
+	b.menuGroupName = menuGroup
+	if b.b != nil {
+		return b.SetMenuGroup(b.b.MenuGroup(menuGroup))
+	}
 	return b
 }
 
+// registerMenu gives the page its entry in the menu tree, resolving a group
+// named before the page had a builder.
+func (b *HttpPageBuilder) registerMenu(bd *Builder) {
+	b.b = bd
+	if _, err := bd.RegisterMenuItem(MenuItemPage, b.path, b); err != nil {
+		panic(err)
+	}
+	if b.menuGroupName != "" {
+		b.SetMenuGroup(bd.MenuGroup(b.menuGroupName))
+	}
+}
+
+// SetMenuGroup puts the page in the group, moving its menu entry with it.
+func (b *HttpPageBuilder) SetMenuGroup(g *MenuGroupBuilder) *HttpPageBuilder {
+	if g == nil {
+		return b
+	}
+	if err := g.b.MoveMenuItem(PageItem(b.path), g); err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// GetMenuGroupBuilder is where the page's entry sits in the menu tree, or nil
+// at the root. Read from the tree, never copied onto the page: a copy would go
+// stale the moment something moved the entry.
+func (b *HttpPageBuilder) GetMenuGroupBuilder() *MenuGroupBuilder {
+	if b.b == nil {
+		return nil
+	}
+	return b.b.menuGroupOf(PageItem(b.path))
+}
+
+// GetMenuGroup returns the page's menu-group path — "a/b/c" for a page in a
+// group c nested in b nested in a. It is the page's URL prefix.
 func (b *HttpPageBuilder) GetMenuGroup() string {
-	return b.menuGroup
+	return b.GetMenuGroupBuilder().Path()
 }
 
 func (b *HttpPageBuilder) Perm(v *perm.PermVerifierBuilder) *HttpPageBuilder {
@@ -196,10 +245,9 @@ func (b *HttpPageBuilder) FullPath() string {
 
 func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 	if b.autoPerm {
-		var parts []string
-		if len(b.menuGroup) > 0 {
-			parts = append(parts, b.menuGroup)
-		}
+		// The whole chain of groups, not only the innermost: the permission
+		// follows the same path the URL does.
+		parts := b.GetMenuGroupBuilder().PathNames()
 		parts = append(parts, b.path)
 		b.verififer.Func(func(v *perm.Verifier) *perm.Verifier {
 			return v.On(parts...)
@@ -210,7 +258,7 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 		b.verififer.Title(b.titleFunc)
 	}
 
-	b.fullPath = path.Join("/", prefix, b.menuGroup, b.path)
+	b.fullPath = path.Join("/", prefix, b.GetMenuGroupBuilder().Path(), b.path)
 	ph := NewPageHandler(b.fullPath, b.handler, b.methods...)
 	for _, f := range b.postBuild {
 		f(ph)

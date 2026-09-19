@@ -48,7 +48,6 @@ type ModelBuilder struct {
 	detailFieldBuilders FieldBuilders
 
 	modelType           reflect.Type
-	menuGroup           string
 	notInMenu           bool
 	menuIcon            string
 	defaultURLQueryFunc func(*http.Request) url.Values
@@ -71,8 +70,6 @@ type ModelBuilder struct {
 	permissioner        *ModelPermissioner
 	plugins             []ModelPlugin
 	subRoutesSetup      func(mux *http.ServeMux, uri string)
-	listingMenu         Menu
-	detailingMenu       Menu
 	routePath           string
 	itemRoutePath       string
 
@@ -259,17 +256,39 @@ func (mb *ModelBuilder) SetUriName(uriName string) *ModelBuilder {
 	return mb
 }
 
-// MenuGroupName returns the model's menu-group path segment (also used as a URI
-// segment).
-func (mb *ModelBuilder) MenuGroupName() string { return mb.menuGroup }
+// MenuGroup is the group the model sits in, or nil at the root.
+//
+// It is read from the menu tree, not kept on the model: the tree is where the
+// item actually lives, and a copy here would go stale the moment something
+// moved it.
+func (mb *ModelBuilder) MenuGroup() *MenuGroupBuilder {
+	return mb.p.menuGroupOf(ModelItem(mb.id))
+}
+
+// SetMenuGroup puts the model in the group, moving its menu entry with it.
+func (mb *ModelBuilder) SetMenuGroup(g *MenuGroupBuilder) *ModelBuilder {
+	if g == nil {
+		return mb
+	}
+	if err := mb.p.MoveMenuItem(ModelItem(mb.id), g); err != nil {
+		panic(err)
+	}
+	return mb
+}
+
+// MenuGroupName returns the model's menu-group path — "a/b/c" for a model in a
+// group c nested in b nested in a. It is the model's URI prefix.
+func (mb *ModelBuilder) MenuGroupName() string { return mb.MenuGroup().Path() }
 
 // SetMenuGroupName sets the model's menu-group path segment. The menu-order
 // mechanism sets this for top-level models; nested models (added via AddChild)
 // are not reached by it, so a module mounting a resource under a parent can set
 // the segment explicitly to place it at parent/{id}/<group>/<uri>.
 func (mb *ModelBuilder) SetMenuGroupName(v string) *ModelBuilder {
-	mb.menuGroup = v
-	return mb
+	if v == "" {
+		return mb
+	}
+	return mb.SetMenuGroup(mb.p.MenuGroup(v))
 }
 
 func (mb *ModelBuilder) SetLabel(label string) *ModelBuilder {
@@ -707,10 +726,10 @@ func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, e
 	parentsID := ParentsModelID(ctx.R)
 
 	if len(parentsID) == 0 {
-		if root := mb.Root(); root.menuGroup != "" {
-			bc.Append(&Breadcrumb{
-				Label: mb.p.menuGroups.MenuGroup(root.menuGroup).TTitle(ctx.Context()),
-			})
+		if g := mb.Root().MenuGroup(); g != nil {
+			for _, g := range append(g.Ancestors(), g) {
+				bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
+			}
 		}
 	} else {
 		parents := mb.Parents()
@@ -737,8 +756,8 @@ func (mb *ModelBuilder) Children() []*ModelBuilder {
 
 func (mb *ModelBuilder) URI() string {
 	dotUri := mb.uriName
-	if mb.menuGroup != "" {
-		dotUri = mb.menuGroup + "/" + dotUri
+	if pth := mb.MenuGroup().Path(); pth != "" {
+		dotUri = pth + "/" + dotUri
 	}
 	if mb.parent != nil {
 		pth := []string{mb.parent.URI()}

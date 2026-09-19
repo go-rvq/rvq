@@ -97,10 +97,10 @@ func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*Mo
 	records = make([]any, len(parentsID))
 
 	if rooted {
-		if root := parents[0]; root.menuGroup != "" {
-			bc.Append(&Breadcrumb{
-				Label: root.p.menuGroups.MenuGroup(root.menuGroup).TTitle(ctx.Context()),
-			})
+		if g := parents[0].MenuGroup(); g != nil {
+			for _, g := range append(g.Ancestors(), g) {
+				bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
+			}
 		}
 	}
 

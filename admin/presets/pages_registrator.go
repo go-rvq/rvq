@@ -78,6 +78,7 @@ func (pr *PagesRegistrator) FetchFunc(f FetchFunc) *PagesRegistrator {
 
 func (pr *PagesRegistrator) New(page *HttpPageBuilder) *PageBuilder {
 	pr.httpPages = append(pr.httpPages, page)
+	page.registerMenu(pr.b)
 	pg := Page(pr, page)
 	pr.pages = append(pr.pages, pg)
 	return pg
@@ -94,6 +95,9 @@ func (pr *PagesRegistrator) Get(pth string) *PageBuilder {
 
 func (pr *PagesRegistrator) AddHttpPage(page ...*HttpPageBuilder) {
 	pr.httpPages = append(pr.httpPages, page...)
+	for _, p := range page {
+		p.registerMenu(pr.b)
+	}
 }
 
 func (pr *PagesRegistrator) GetHttpPage(pth string) *HttpPageBuilder {
