@@ -106,7 +106,9 @@ func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilde
 	}
 
 	jb.r = r
-	jb.rmb = jb.b.jpb.Model(r)
+	// jpb only renders the job form; its models are not menu entries, and two
+	// job resources may well share a type name.
+	jb.rmb = jb.b.jpb.Model(r, presets.ModelNotInMenu())
 
 	if _, ok := r.(Scheduler); ok {
 		jb.rmb.Editing().Field("ScheduleTime").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {

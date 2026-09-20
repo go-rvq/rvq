@@ -392,9 +392,9 @@ func favorPostSelector(db *gorm.DB, id uint) h.HTMLComponent {
 }
 
 func configureFavorPostSelectDialog(db *gorm.DB, pb *presets.Builder, publisher *publish.Builder) {
-	b := pb.Model(&models.Post{}).
+	b := pb.Model(&models.Post{}, presets.ModelNotInMenu()).
 		URIName("dialog-select-favor-posts").
-		InMenu(false).Use(publisher)
+		Use(publisher)
 	lb := b.Listing("ID", "Title", "TitleWithSlug", "Cover", "Body").
 		SearchColumns("title", "body").
 		PerPage(10).

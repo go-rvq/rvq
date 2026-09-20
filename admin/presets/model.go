@@ -28,6 +28,19 @@ func ModelWithID(id string) ModelBuilderOptionFunc {
 	}
 }
 
+// ModelNotInMenu keeps the model out of the side menu, from registration.
+//
+// It says the same as InMenu(false), but in time to matter: the menu holds one
+// entry per key, and a model's id is not unique by construction — a plugin may
+// register a second builder over the same type, told apart by URIName, as
+// publish does for its version-list dialog. A model that never wanted a menu
+// entry takes no key, and so cannot collide with the one that does.
+func ModelNotInMenu() ModelBuilderOptionFunc {
+	return func(mb *ModelBuilder) {
+		mb.notInMenu = true
+	}
+}
+
 func (f ModelBuilderOptionFunc) Apply(mb *ModelBuilder) {
 	f(mb)
 }

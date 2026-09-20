@@ -233,9 +233,10 @@ func DefaultVersionBar(db *gorm.DB) presets.ObjectComponentFunc {
 func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.ModelBuilder) {
 	// actually, VersionListDialog is a listing
 	// use this URL : URLName-version-list-dialog
-	mb := b.Model(pm.NewModel()).
-		URIName(pm.Info().URI() + "-version-list-dialog").
-		InMenu(false)
+	// A second builder over the same type, told apart by its URI: it is the
+	// dialog, never a menu entry, so it takes no key in the menu tree.
+	mb := b.Model(pm.NewModel(), presets.ModelNotInMenu()).
+		URIName(pm.Info().URI() + "-version-list-dialog")
 
 	registerEventFuncsForVersion(mb, pm, db)
 

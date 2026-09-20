@@ -56,6 +56,22 @@ A key is unique. Registering a value over a value is reported as an error
 of one silently replacing the other. Registering the *same* value again is the
 same registration, not a second one.
 
+Only what is IN the menu takes a key. A model's id is not unique by
+construction — a plugin may register a second builder over the same type, told
+apart by `URIName`, as publish does for its version-list dialog and pagebuilder
+for its editor. Such a model declares `presets.ModelNotInMenu()` at
+registration, takes no key, and so cannot collide with the model that does want
+the entry:
+
+```go
+b.Model(&Post{})                                   // model:posts
+b.Model(&Post{}, presets.ModelNotInMenu()).        // no key at all
+    URIName("dialog-select-favor-posts")
+```
+
+`InMenu(false)` says the same thing, but too late: the key is claimed when the
+model is registered.
+
 Filling a reservation keeps the position the reservation gave it, so this
 
 ```go

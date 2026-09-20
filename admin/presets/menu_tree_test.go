@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"fmt"
 	"maps"
 	"strings"
 	"testing"
@@ -231,4 +232,43 @@ func TestModelMenuNameIsTheRegistrationID(t *testing.T) {
 	if _, ok := b.MenuItems()[menuKey(MenuItemModel, "outros")]; !ok {
 		t.Error("ModelWithID não renomeou a chave do menu")
 	}
+}
+
+// A model kept out of the menu takes no key, so a second builder over the same
+// type — publish's version-list dialog, pagebuilder's editor — does not
+// collide with the model that does want the entry.
+func TestModelNotInMenuTakesNoKey(t *testing.T) {
+	b := menuBuilder()
+
+	first := b.Model(&menuAlpha{})
+	second := b.Model(&menuAlpha{}, ModelNotInMenu()).URIName("alpha-dialog")
+
+	it := b.MenuItems()[menuKey(MenuItemModel, "menu_alphas")]
+	if it == nil || it.Value != first {
+		t.Errorf("a chave do menu não ficou com o primeiro modelo: %v", it)
+	}
+	if got, want := len(b.MenuTree().items), 1; got != want {
+		t.Errorf("itens na raiz = %d, want %d", got, want)
+	}
+	if second.MenuGroup() != nil {
+		t.Error("o modelo fora do menu não devia ter grupo")
+	}
+}
+
+// Two models that BOTH want the menu and share an id cannot both be shown, and
+// that is reported rather than one silently winning.
+func TestTwoMenuModelsWithTheSameIDAreRejected(t *testing.T) {
+	b := menuBuilder()
+	b.Model(&menuAlpha{})
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("o segundo registro passou")
+		}
+		if !strings.Contains(fmt.Sprint(r), "already registered") {
+			t.Errorf("panic = %v, queria que dissesse que já estava registrado", r)
+		}
+	}()
+	b.Model(&menuAlpha{})
 }

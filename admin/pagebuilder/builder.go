@@ -260,8 +260,10 @@ func (b *Builder) ExpendContainers(v bool) (r *Builder) {
 
 func (b *Builder) Model(mb *presets.ModelBuilder) (r *ModelBuilder) {
 	r = &ModelBuilder{
-		mb:      mb,
-		editor:  b.ps.Model(mb.NewModel()).URIName(mb.Info().URI() + "/editors"),
+		mb: mb,
+		// The editor is a second builder over the model's type, told apart by
+		// its URI, and it is not a menu entry: it takes no key in the tree.
+		editor:  b.ps.Model(mb.NewModel(), presets.ModelNotInMenu()).URIName(mb.Info().URI() + "/editors"),
 		builder: b,
 		db:      b.db,
 	}
@@ -317,7 +319,11 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	b.configTemplateAndPage(pb, r)
 	b.configSharedContainer(pb, r)
 	b.configDemoContainer(pb)
-	categoryM := pb.Model(&Category{}).URIName("page_categories").Label("Categories")
+	// The id follows the URI: "categories" is a name any application may have
+	// taken for a model of its own, and the menu holds one entry per key.
+	categoryM := pb.Model(&Category{}, presets.ModelWithID("page_categories")).
+		URIName("page_categories").
+		Label("Categories")
 	err = b.categoryInstall(categoryM)
 
 	return

@@ -361,8 +361,11 @@ func (b *Builder) Model(v interface{}, opts ...ModelBuilderOption) (r *ModelBuil
 	r = NewModelBuilder(b, v, opts...)
 	b.ModelConfigurators.ConfigureModel(r)
 	b.models = append(b.models, r)
-	if _, err := b.RegisterMenuItem(MenuItemModel, r.id, r); err != nil {
-		panic(err)
+	// Only a model that is in the menu takes a key there — see ModelNotInMenu.
+	if !r.notInMenu {
+		if _, err := b.RegisterMenuItem(MenuItemModel, r.id, r); err != nil {
+			panic(err)
+		}
 	}
 	return r
 }
