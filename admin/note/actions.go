@@ -16,7 +16,7 @@ func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 		content := ctx.R.FormValue("Content")
 
 		userID, creator := GetUserData(ctx)
-		note := QorNote{
+		note := Note{
 			UserID:       userID,
 			Creator:      creator,
 			ResourceID:   ri,
@@ -34,7 +34,7 @@ func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 		db.Where(userNote).FirstOrCreate(&userNote)
 
 		var total int64
-		db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", rt, ri).Count(&total)
+		db.Model(&Note{}).Where("resource_type = ? AND resource_id = ?", rt, ri).Count(&total)
 		db.Model(&userNote).UpdateColumn("Number", total)
 
 		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nNoteKey, Messages_en_US).(*Messages)
@@ -70,7 +70,7 @@ func updateUserNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 		}
 
 		var total int64
-		db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", rt, ri).Count(&total)
+		db.Model(&Note{}).Where("resource_type = ? AND resource_id = ?", rt, ri).Count(&total)
 		userNote.Number = total
 
 		if err = db.Save(&userNote).Error; err != nil {

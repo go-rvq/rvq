@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type QorJob struct {
+type Job struct {
 	gorm.Model
 
 	Job    string
@@ -16,10 +16,10 @@ type QorJob struct {
 	Args   interface{} `sql:"-" gorm:"-"`
 }
 
-type QorJobInstance struct {
+type JobInstance struct {
 	gorm.Model
 
-	QorJobID uint `gorm:"index"`
+	JobID uint `gorm:"index"`
 
 	Operator string
 
@@ -39,12 +39,12 @@ type QorJobInstance struct {
 	Once bool `sql:"not null;default:false"`
 }
 
-type QorJobLog struct {
+type JobLog struct {
 	ID        uint      `gorm:"primarykey"`
 	CreatedAt time.Time `gorm:"index"`
 
-	QorJobInstanceID uint `gorm:"index"`
-	Log              string
+	JobInstanceID uint `gorm:"index"`
+	Log           string
 }
 
 type Scheduler interface {

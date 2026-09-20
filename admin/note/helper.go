@@ -57,7 +57,7 @@ func getNotesTab(ctx *web.EventContext, db *gorm.DB, resourceType string, resour
 		).Slot("{form}"),
 	)
 
-	var notes []QorNote
+	var notes []Note
 	db.Where("resource_type = ? and resource_id = ?", resourceType, resourceId).
 		Order("id DESC").Find(&notes)
 

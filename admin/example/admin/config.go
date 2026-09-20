@@ -456,7 +456,7 @@ func configMenuOrder(b *presets.Builder) {
 			presets.ModelItem("l_10_n_models"),
 			presets.ModelItem("l_10_n_model_with_versions"),
 		),
-		presets.ModelItem("qor_jobs"),
+		presets.ModelItem("jobs"),
 		presets.ModelItem("activity_logs"),
 	)
 }

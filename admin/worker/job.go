@@ -19,7 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
-//go:generate moq -pkg mock -out mock/qor_job.go . QorJobInterface
+//go:generate moq -pkg mock -out mock/job.go . JobInterface
 
 type JobCronConfig struct {
 	Arg  interface{} `json:"arg"`
@@ -91,7 +91,7 @@ func (jb *JobBuilder) GetCronConfig() JobCronConfig {
 	return jb.cronConfig
 }
 
-type JobHandler func(context.Context, QorJobInterface) error
+type JobHandler func(context.Context, JobInterface) error
 
 // r should be ptr to struct
 func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilder)) *JobBuilder {
@@ -187,9 +187,9 @@ func (jb *JobBuilder) parseArgs(in string) (args interface{}, err error) {
 	return args, nil
 }
 
-func getModelQorJobInstance(db *gorm.DB, qorJobID uint) (*QorJobInstance, error) {
-	var insts []*QorJobInstance
-	err := db.Where("qor_job_id = ?", qorJobID).
+func getModelJobInstance(db *gorm.DB, jobID uint) (*JobInstance, error) {
+	var insts []*JobInstance
+	err := db.Where("job_id = ?", jobID).
 		Order("created_at desc").
 		Limit(1).
 		Find(&insts).
@@ -204,8 +204,8 @@ func getModelQorJobInstance(db *gorm.DB, qorJobID uint) (*QorJobInstance, error)
 	return insts[0], nil
 }
 
-func (jb *JobBuilder) getJobInstance(qorJobID uint) (*QorJobInstance, error) {
-	inst, err := getModelQorJobInstance(jb.b.db, qorJobID)
+func (jb *JobBuilder) getJobInstance(jobID uint) (*JobInstance, error) {
+	inst, err := getModelJobInstance(jb.b.db, jobID)
 	if err != nil {
 		return nil, err
 	}
@@ -217,12 +217,12 @@ func (jb *JobBuilder) getJobInstance(qorJobID uint) (*QorJobInstance, error) {
 
 func (jb *JobBuilder) newJobInstance(
 	r *http.Request,
-	qorJobID uint,
-	qorJobName string,
+	jobID uint,
+	jobName string,
 	once bool,
 	args interface{},
 	context interface{},
-) (*QorJobInstance, error) {
+) (*JobInstance, error) {
 	var mArgs string
 	if v, ok := args.(string); ok {
 		mArgs = v
@@ -245,13 +245,13 @@ func (jb *JobBuilder) newJobInstance(
 		ctx = string(bArgs)
 	}
 
-	inst := QorJobInstance{
-		QorJobID: qorJobID,
-		Args:     mArgs,
-		Context:  ctx,
-		Job:      qorJobName,
-		Status:   JobStatusNew,
-		Once:     once,
+	inst := JobInstance{
+		JobID:   jobID,
+		Args:    mArgs,
+		Context: ctx,
+		Job:     jobName,
+		Status:  JobStatusNew,
+		Once:    once,
 	}
 	if jb.b.getCurrentUserIDFunc != nil {
 		inst.Operator = jb.b.getCurrentUserIDFunc(r)
@@ -261,11 +261,11 @@ func (jb *JobBuilder) newJobInstance(
 		return nil, err
 	}
 
-	return jb.getJobInstance(qorJobID)
+	return jb.getJobInstance(jobID)
 }
 
 type QueJobInterface interface {
-	QorJobInterface
+	JobInterface
 
 	GetStatus() string
 	FetchAndSetStatus() (string, error)
@@ -286,7 +286,7 @@ type JobInfo struct {
 }
 
 // for job handler
-type QorJobInterface interface {
+type JobInterface interface {
 	GetJobInfo() (*JobInfo, error)
 	SetProgress(uint) error
 	SetProgressText(string) error
@@ -294,9 +294,9 @@ type QorJobInterface interface {
 	AddLogf(format string, a ...interface{}) error
 }
 
-var _ QueJobInterface = (*QorJobInstance)(nil)
+var _ QueJobInterface = (*JobInstance)(nil)
 
-func (job *QorJobInstance) GetJobInfo() (ji *JobInfo, err error) {
+func (job *JobInstance) GetJobInfo() (ji *JobInfo, err error) {
 	arg, err := job.getArgument()
 	if err != nil {
 		return
@@ -308,7 +308,7 @@ func (job *QorJobInstance) GetJobInfo() (ji *JobInfo, err error) {
 	}
 
 	return &JobInfo{
-		JobID:    fmt.Sprint(job.QorJobID),
+		JobID:    fmt.Sprint(job.JobID),
 		JobName:  job.Job,
 		Operator: job.Operator,
 		Argument: arg,
@@ -316,11 +316,11 @@ func (job *QorJobInstance) GetJobInfo() (ji *JobInfo, err error) {
 	}, nil
 }
 
-func (job *QorJobInstance) GetStatus() string {
+func (job *JobInstance) GetStatus() string {
 	return job.Status
 }
 
-func (job *QorJobInstance) FetchAndSetStatus() (string, error) {
+func (job *JobInstance) FetchAndSetStatus() (string, error) {
 	var status string
 	{
 		db, err := job.jb.b.db.DB()
@@ -328,12 +328,12 @@ func (job *QorJobInstance) FetchAndSetStatus() (string, error) {
 			return job.Status, err
 		}
 
-		err = db.QueryRow("select status from qor_job_instances where id = $1", job.ID).Scan(&status)
+		err = db.QueryRow("select status from job_instances where id = $1", job.ID).Scan(&status)
 		if err != nil {
 			return job.Status, err
 		}
 		if status == "" {
-			return job.Status, errors.New("failed to fetch qor_job_instance status")
+			return job.Status, errors.New("failed to fetch job_instance status")
 		}
 	}
 
@@ -347,7 +347,7 @@ func (job *QorJobInstance) FetchAndSetStatus() (string, error) {
 	return job.Status, nil
 }
 
-func (job *QorJobInstance) SetStatus(status string) error {
+func (job *JobInstance) SetStatus(status string) error {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 
@@ -363,7 +363,7 @@ func (job *QorJobInstance) SetStatus(status string) error {
 	return nil
 }
 
-func (job *QorJobInstance) SetProgress(progress uint) error {
+func (job *JobInstance) SetProgress(progress uint) error {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 
@@ -379,7 +379,7 @@ func (job *QorJobInstance) SetProgress(progress uint) error {
 	return nil
 }
 
-func (job *QorJobInstance) SetProgressText(s string) error {
+func (job *JobInstance) SetProgressText(s string) error {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 
@@ -391,10 +391,10 @@ func (job *QorJobInstance) SetProgressText(s string) error {
 	return nil
 }
 
-func (job *QorJobInstance) AddLog(log string) error {
-	if err := job.jb.b.db.Create(&QorJobLog{
-		QorJobInstanceID: job.ID,
-		Log:              log,
+func (job *JobInstance) AddLog(log string) error {
+	if err := job.jb.b.db.Create(&JobLog{
+		JobInstanceID: job.ID,
+		Log:           log,
 	}).Error; err != nil {
 		return err
 	}
@@ -402,11 +402,11 @@ func (job *QorJobInstance) AddLog(log string) error {
 	return nil
 }
 
-func (job *QorJobInstance) AddLogf(format string, a ...interface{}) error {
+func (job *JobInstance) AddLogf(format string, a ...interface{}) error {
 	return job.AddLog(fmt.Sprintf(format, a...))
 }
 
-func (job *QorJobInstance) StartRefresh() {
+func (job *JobInstance) StartRefresh() {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 	if !job.inRefresh {
@@ -419,7 +419,7 @@ func (job *QorJobInstance) StartRefresh() {
 	}
 }
 
-func (job *QorJobInstance) StopRefresh() {
+func (job *JobInstance) StopRefresh() {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 
@@ -431,33 +431,33 @@ func (job *QorJobInstance) StopRefresh() {
 	job.stopRefresh = true
 }
 
-func (job *QorJobInstance) GetHandler() JobHandler {
+func (job *JobInstance) GetHandler() JobHandler {
 	return job.jb.h
 }
 
-func (job *QorJobInstance) getArgument() (interface{}, error) {
+func (job *JobInstance) getArgument() (interface{}, error) {
 	return job.jb.parseArgs(job.Args)
 }
 
-func (job *QorJobInstance) getContext() (map[string]interface{}, error) {
+func (job *JobInstance) getContext() (map[string]interface{}, error) {
 	context := make(map[string]interface{})
 	err := json.Unmarshal([]byte(job.Context), &context)
 	return context, err
 }
 
-func (job *QorJobInstance) shouldCallSave() bool {
+func (job *JobInstance) shouldCallSave() bool {
 	return !job.inRefresh || job.stopRefresh
 }
 
-func (job *QorJobInstance) callSave() error {
-	err := job.jb.b.setStatus(job.QorJobID, job.Status)
+func (job *JobInstance) callSave() error {
+	err := job.jb.b.setStatus(job.JobID, job.Status)
 	if err != nil {
 		return err
 	}
 	return job.jb.b.db.Save(job).Error
 }
 
-func (job *QorJobInstance) refresh() {
+func (job *JobInstance) refresh() {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 

@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-// Ensure, that QorJobInterfaceMock does implement worker.QorJobInterface.
+// Ensure, that JobInterfaceMock does implement worker.JobInterface.
 // If this is not the case, regenerate this file with moq.
-var _ worker.QorJobInterface = &QorJobInterfaceMock{}
+var _ worker.JobInterface = &JobInterfaceMock{}
 
-// QorJobInterfaceMock is a mock implementation of worker.QorJobInterface.
+// JobInterfaceMock is a mock implementation of worker.JobInterface.
 //
 //	func TestSomethingThatUsesQorJobInterface(t *testing.T) {
 //
-//		// make and configure a mocked worker.QorJobInterface
-//		mockedQorJobInterface := &QorJobInterfaceMock{
+//		// make and configure a mocked worker.JobInterface
+//		mockedQorJobInterface := &JobInterfaceMock{
 //			AddLogFunc: func(s string) error {
 //				panic("mock out the AddLog method")
 //			},
@@ -35,11 +35,11 @@ var _ worker.QorJobInterface = &QorJobInterfaceMock{}
 //			},
 //		}
 //
-//		// use mockedQorJobInterface in code that requires worker.QorJobInterface
+//		// use mockedQorJobInterface in code that requires worker.JobInterface
 //		// and then make assertions.
 //
 //	}
-type QorJobInterfaceMock struct {
+type JobInterfaceMock struct {
 	// AddLogFunc mocks the AddLog method.
 	AddLogFunc func(s string) error
 
@@ -91,9 +91,9 @@ type QorJobInterfaceMock struct {
 }
 
 // AddLog calls AddLogFunc.
-func (mock *QorJobInterfaceMock) AddLog(s string) error {
+func (mock *JobInterfaceMock) AddLog(s string) error {
 	if mock.AddLogFunc == nil {
-		panic("QorJobInterfaceMock.AddLogFunc: method is nil but QorJobInterface.AddLog was just called")
+		panic("JobInterfaceMock.AddLogFunc: method is nil but JobInterface.AddLog was just called")
 	}
 	callInfo := struct {
 		S string
@@ -110,7 +110,7 @@ func (mock *QorJobInterfaceMock) AddLog(s string) error {
 // Check the length with:
 //
 //	len(mockedQorJobInterface.AddLogCalls())
-func (mock *QorJobInterfaceMock) AddLogCalls() []struct {
+func (mock *JobInterfaceMock) AddLogCalls() []struct {
 	S string
 } {
 	var calls []struct {
@@ -123,9 +123,9 @@ func (mock *QorJobInterfaceMock) AddLogCalls() []struct {
 }
 
 // AddLogf calls AddLogfFunc.
-func (mock *QorJobInterfaceMock) AddLogf(format string, a ...interface{}) error {
+func (mock *JobInterfaceMock) AddLogf(format string, a ...interface{}) error {
 	if mock.AddLogfFunc == nil {
-		panic("QorJobInterfaceMock.AddLogfFunc: method is nil but QorJobInterface.AddLogf was just called")
+		panic("JobInterfaceMock.AddLogfFunc: method is nil but JobInterface.AddLogf was just called")
 	}
 	callInfo := struct {
 		Format string
@@ -144,7 +144,7 @@ func (mock *QorJobInterfaceMock) AddLogf(format string, a ...interface{}) error 
 // Check the length with:
 //
 //	len(mockedQorJobInterface.AddLogfCalls())
-func (mock *QorJobInterfaceMock) AddLogfCalls() []struct {
+func (mock *JobInterfaceMock) AddLogfCalls() []struct {
 	Format string
 	A      []interface{}
 } {
@@ -159,9 +159,9 @@ func (mock *QorJobInterfaceMock) AddLogfCalls() []struct {
 }
 
 // GetJobInfo calls GetJobInfoFunc.
-func (mock *QorJobInterfaceMock) GetJobInfo() (*worker.JobInfo, error) {
+func (mock *JobInterfaceMock) GetJobInfo() (*worker.JobInfo, error) {
 	if mock.GetJobInfoFunc == nil {
-		panic("QorJobInterfaceMock.GetJobInfoFunc: method is nil but QorJobInterface.GetJobInfo was just called")
+		panic("JobInterfaceMock.GetJobInfoFunc: method is nil but JobInterface.GetJobInfo was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -175,7 +175,7 @@ func (mock *QorJobInterfaceMock) GetJobInfo() (*worker.JobInfo, error) {
 // Check the length with:
 //
 //	len(mockedQorJobInterface.GetJobInfoCalls())
-func (mock *QorJobInterfaceMock) GetJobInfoCalls() []struct {
+func (mock *JobInterfaceMock) GetJobInfoCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -186,9 +186,9 @@ func (mock *QorJobInterfaceMock) GetJobInfoCalls() []struct {
 }
 
 // SetProgress calls SetProgressFunc.
-func (mock *QorJobInterfaceMock) SetProgress(v uint) error {
+func (mock *JobInterfaceMock) SetProgress(v uint) error {
 	if mock.SetProgressFunc == nil {
-		panic("QorJobInterfaceMock.SetProgressFunc: method is nil but QorJobInterface.SetProgress was just called")
+		panic("JobInterfaceMock.SetProgressFunc: method is nil but JobInterface.SetProgress was just called")
 	}
 	callInfo := struct {
 		V uint
@@ -205,7 +205,7 @@ func (mock *QorJobInterfaceMock) SetProgress(v uint) error {
 // Check the length with:
 //
 //	len(mockedQorJobInterface.SetProgressCalls())
-func (mock *QorJobInterfaceMock) SetProgressCalls() []struct {
+func (mock *JobInterfaceMock) SetProgressCalls() []struct {
 	V uint
 } {
 	var calls []struct {
@@ -218,9 +218,9 @@ func (mock *QorJobInterfaceMock) SetProgressCalls() []struct {
 }
 
 // SetProgressText calls SetProgressTextFunc.
-func (mock *QorJobInterfaceMock) SetProgressText(s string) error {
+func (mock *JobInterfaceMock) SetProgressText(s string) error {
 	if mock.SetProgressTextFunc == nil {
-		panic("QorJobInterfaceMock.SetProgressTextFunc: method is nil but QorJobInterface.SetProgressText was just called")
+		panic("JobInterfaceMock.SetProgressTextFunc: method is nil but JobInterface.SetProgressText was just called")
 	}
 	callInfo := struct {
 		S string
@@ -237,7 +237,7 @@ func (mock *QorJobInterfaceMock) SetProgressText(s string) error {
 // Check the length with:
 //
 //	len(mockedQorJobInterface.SetProgressTextCalls())
-func (mock *QorJobInterfaceMock) SetProgressTextCalls() []struct {
+func (mock *JobInterfaceMock) SetProgressTextCalls() []struct {
 	S string
 } {
 	var calls []struct {

@@ -45,8 +45,8 @@ type Messages struct {
 	DateTimePickerClearText  string
 	DateTimePickerOkText     string
 	PleaseSelectJob          string
-	QorJobs                  string
-	QorJob                   string
+	Jobs                     string
+	Job                      string
 	WorkersJob               string
 	ErrJobRunsOnce           i18n.ErrorString
 }
@@ -76,8 +76,8 @@ var Messages_en_US = &Messages{
 	DateTimePickerClearText:  "Clear",
 	DateTimePickerOkText:     "OK",
 	PleaseSelectJob:          "Please select job",
-	QorJobs:                  "Jobs",
-	QorJob:                   "Job",
+	Jobs:                     "Jobs",
+	Job:                      "Job",
 	WorkersJob:               "Job",
 	ErrJobRunsOnce:           "This job runs once",
 }
@@ -135,8 +135,8 @@ var Messages_pt_BR = &Messages{
 	DateTimePickerClearText:  "Limpar",
 	DateTimePickerOkText:     "OK",
 	PleaseSelectJob:          "Por favor selecione uma tarefa",
-	QorJobs:                  "Processos de Sistema",
-	QorJob:                   "Processo de Sistema",
+	Jobs:                     "Processos de Sistema",
+	Job:                      "Processo de Sistema",
 	WorkersJob:               "Tarefa",
 	ErrJobRunsOnce:           "Esta tarefa só pode ser executada uma única vez",
 }

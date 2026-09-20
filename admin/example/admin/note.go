@@ -15,7 +15,7 @@ WITH subquery AS (
     SELECT qn.resource_id
     FROM (
              SELECT resource_id, count(*) AS count
-             FROM qor_notes
+             FROM notes
              WHERE resource_type = '%v' AND deleted_at IS NULL
              GROUP BY resource_id
          ) AS qn LEFT JOIN (
@@ -70,7 +70,7 @@ WITH subquery AS (
     SELECT qn.resource_id, qn.resource_type
     FROM (
         SELECT resource_type, resource_id, count(*) AS count
-        FROM qor_notes
+        FROM notes
         WHERE deleted_at IS NULL
         GROUP BY resource_id, resource_type
     ) AS qn LEFT JOIN (
@@ -129,7 +129,7 @@ func markAllAsRead(db *gorm.DB) web.EventFunc {
 
 			if err = db.Raw(`
 SELECT resource_type, resource_id, count(*) AS count
-FROM qor_notes
+FROM notes
 WHERE deleted_at IS NULL
 GROUP BY resource_type, resource_id;
 `).Scan(&results).Error; err != nil {

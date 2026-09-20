@@ -252,7 +252,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Resource(&MessageForm{}, func(mb *presets.ModelBuilder) {
 			mb.SetModuleKey(MessagesKey)
 		}).
-		Handler(func(ctx context.Context, job worker.QorJobInterface) (err error) {
+		Handler(func(ctx context.Context, job worker.JobInterface) (err error) {
 			var info *worker.JobInfo
 			if info, err = job.GetJobInfo(); err != nil {
 				return
@@ -274,7 +274,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			}).
 			System(true).
 			CronConfig(worker.JobCronConfig{Spec: b.backupCronSpec, Once: true}).
-			Handler(func(ctx context.Context, job worker.QorJobInterface) (err error) {
+			Handler(func(ctx context.Context, job worker.JobInterface) (err error) {
 				job.AddLog("starting")
 				defer job.AddLog("done")
 				var bkp db_tools.Backuper

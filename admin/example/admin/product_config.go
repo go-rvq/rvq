@@ -30,7 +30,7 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 	noParametersJob := wb.ActionJob(
 		"No parameters",
 		p,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -49,7 +49,7 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 	parametersBoxJob := wb.ActionJob(
 		"Parameter input box",
 		p,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -69,7 +69,7 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 	displayLogJob := wb.ActionJob(
 		"Display log",
 		p,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -92,7 +92,7 @@ func configProduct(b *presets.Builder, _ *gorm.DB, wb *worker.Builder, publisher
 	getArgsJob := wb.ActionJob(
 		"Get Args",
 		p,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, err := job.GetJobInfo()
 			if err != nil {
 				return err

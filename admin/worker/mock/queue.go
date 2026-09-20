@@ -25,7 +25,7 @@ var _ worker.Queue = &QueueMock{}
 //			KillFunc: func(ctx context.Context, job worker.QueJobInterface) error {
 //				panic("mock out the Kill method")
 //			},
-//			ListenFunc: func(jobDefs []*worker.QorJobDefinition, getJob func(qorJobID uint) (worker.QueJobInterface, error)) error {
+//			ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
 //				panic("mock out the Listen method")
 //			},
 //			RemoveFunc: func(ctx context.Context, job worker.QueJobInterface) error {
@@ -48,7 +48,7 @@ type QueueMock struct {
 	KillFunc func(ctx context.Context, job worker.QueJobInterface) error
 
 	// ListenFunc mocks the Listen method.
-	ListenFunc func(jobDefs []*worker.QorJobDefinition, getJob func(qorJobID uint) (worker.QueJobInterface, error)) error
+	ListenFunc func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error
 
 	// RemoveFunc mocks the Remove method.
 	RemoveFunc func(ctx context.Context, job worker.QueJobInterface) error
@@ -75,9 +75,9 @@ type QueueMock struct {
 		// Listen holds details about calls to the Listen method.
 		Listen []struct {
 			// JobDefs is the jobDefs argument value.
-			JobDefs []*worker.QorJobDefinition
+			JobDefs []*worker.JobDefinition
 			// GetJob is the getJob argument value.
-			GetJob func(qorJobID uint) (worker.QueJobInterface, error)
+			GetJob func(jobID uint) (worker.QueJobInterface, error)
 		}
 		// Remove holds details about calls to the Remove method.
 		Remove []struct {
@@ -172,13 +172,13 @@ func (mock *QueueMock) KillCalls() []struct {
 }
 
 // Listen calls ListenFunc.
-func (mock *QueueMock) Listen(jobDefs []*worker.QorJobDefinition, getJob func(qorJobID uint) (worker.QueJobInterface, error)) error {
+func (mock *QueueMock) Listen(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
 	if mock.ListenFunc == nil {
 		panic("QueueMock.ListenFunc: method is nil but Queue.Listen was just called")
 	}
 	callInfo := struct {
-		JobDefs []*worker.QorJobDefinition
-		GetJob  func(qorJobID uint) (worker.QueJobInterface, error)
+		JobDefs []*worker.JobDefinition
+		GetJob  func(jobID uint) (worker.QueJobInterface, error)
 	}{
 		JobDefs: jobDefs,
 		GetJob:  getJob,
@@ -194,12 +194,12 @@ func (mock *QueueMock) Listen(jobDefs []*worker.QorJobDefinition, getJob func(qo
 //
 //	len(mockedQueue.ListenCalls())
 func (mock *QueueMock) ListenCalls() []struct {
-	JobDefs []*worker.QorJobDefinition
-	GetJob  func(qorJobID uint) (worker.QueJobInterface, error)
+	JobDefs []*worker.JobDefinition
+	GetJob  func(jobID uint) (worker.QueJobInterface, error)
 } {
 	var calls []struct {
-		JobDefs []*worker.QorJobDefinition
-		GetJob  func(qorJobID uint) (worker.QueJobInterface, error)
+		JobDefs []*worker.JobDefinition
+		GetJob  func(jobID uint) (worker.QueJobInterface, error)
 	}
 	mock.lockListen.RLock()
 	calls = mock.calls.Listen

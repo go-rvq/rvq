@@ -78,8 +78,8 @@ func noteFunc(db *gorm.DB, mb *presets.ModelBuilder) presets.FieldComponentFunc 
 			id = ps.PrimarySlug()
 		}
 
-		latestNote := QorNote{}
-		db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", tn, id).Order("created_at DESC").First(&latestNote)
+		latestNote := Note{}
+		db.Model(&Note{}).Where("resource_type = ? AND resource_id = ?", tn, id).Order("created_at DESC").First(&latestNote)
 
 		content := []rune(latestNote.Content)
 		result := string(content[:])

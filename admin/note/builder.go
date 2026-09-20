@@ -27,7 +27,10 @@ func (b *Builder) AfterCreate(f AfterCreateFunc) (r *Builder) {
 
 func (b *Builder) Install(pb *presets.Builder) error {
 	db := b.db
-	if err := db.AutoMigrate(QorNote{}, UserNote{}); err != nil {
+	if err := renameLegacy(db); err != nil {
+		return err
+	}
+	if err := db.AutoMigrate(Note{}, UserNote{}); err != nil {
 		return err
 	}
 
@@ -48,5 +51,17 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	m.RegisterEventHandler(createNoteEvent, createNoteAction(b, m))
 	m.RegisterEventHandler(updateUserNoteEvent, updateUserNoteAction(b, m))
 	m.Listing().Field("Notes").ComponentFunc(noteFunc(db, m))
+	return nil
+}
+
+// renameLegacy moves the table off the old "qor_" prefix, which the model
+// carried until it was renamed. It runs before AutoMigrate, which would
+// otherwise create the new table empty and leave the rows behind in the old
+// one.
+func renameLegacy(db *gorm.DB) error {
+	m := db.Migrator()
+	if m.HasTable("qor_notes") && !m.HasTable("notes") {
+		return m.RenameTable("qor_notes", "notes")
+	}
 	return nil
 }

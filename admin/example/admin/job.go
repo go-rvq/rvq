@@ -14,14 +14,14 @@ import (
 
 func addJobs(w *worker.Builder) {
 	w.NewJob("noArgJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("hoho1")
 			job.AddLog("hoho2")
 			job.AddLog("hoho3")
 			return nil
 		})
 	w.NewJob("progressTextJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("hoho1")
 			job.AddLog("hoho2")
 			job.AddLog("hoho3")
@@ -35,7 +35,7 @@ func addJobs(w *worker.Builder) {
 	}
 	ajb := w.NewJob("argJob").
 		Resource(&ArgJobResource{}).
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, _ := job.GetJobInfo()
 			job.AddLog(fmt.Sprintf("Argument %#+v", jobInfo.Argument))
 			job.AddLog(fmt.Sprintf("Context %#+v", jobInfo.Context))
@@ -63,20 +63,20 @@ func addJobs(w *worker.Builder) {
 	}
 	w.NewJob("scheduleJob").
 		Resource(&ScheduleJobResource{}).
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, _ := job.GetJobInfo()
 			job.AddLog(fmt.Sprintf("%#+v", jobInfo.Argument))
 			return nil
 		})
 
 	w.NewJob("errorJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("=====perform error job")
 			return errors.New("imError")
 		})
 
 	w.NewJob("panicJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("=====perform panic job")
 			panic("letsPanic")
 		})

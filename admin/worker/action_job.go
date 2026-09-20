@@ -117,14 +117,14 @@ func (b *Builder) eventActionJobCreate(ctx *web.EventContext) (r web.EventRespon
 	var (
 		jobName = ctx.R.FormValue("jobName")
 		config  = actionJobs[jobName]
-		qorJob  = &QorJob{Job: jobName}
+		newJob  = &Job{Job: jobName}
 	)
 
 	if config == nil {
 		return r, fmt.Errorf("job %s not found", jobName)
 	}
 
-	job, err := b.createJob(ctx, qorJob)
+	job, err := b.createJob(ctx, newJob)
 	if err != nil {
 		return
 	}
@@ -239,17 +239,17 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 
 func (b *Builder) eventActionJobClose(ctx *web.EventContext) (er web.EventResponse, err error) {
 	var (
-		qorJobID   = uint(ctx.ParamAsInt("jobID"))
-		qorJobName = ctx.R.FormValue("jobName")
+		jobID   = uint(ctx.ParamAsInt("jobID"))
+		jobName = ctx.R.FormValue("jobName")
 	)
 
 	er.RunScript = "vars.presetsDialog = false;vars.actionJobProgressingInterval = 0;"
-	if pErr := editIsAllowed(ctx.R, qorJobName); pErr != nil {
+	if pErr := editIsAllowed(ctx.R, jobName); pErr != nil {
 		return er, pErr
 	}
 
-	jb := b.mustGetJobBuilder(qorJobName)
-	inst, err := jb.getJobInstance(qorJobID)
+	jb := b.mustGetJobBuilder(jobName)
+	inst, err := jb.getJobInstance(jobID)
 	if err != nil {
 		return er, err
 	}
@@ -266,16 +266,16 @@ func (b *Builder) eventActionJobClose(ctx *web.EventContext) (er web.EventRespon
 
 func (b *Builder) eventActionJobProgressing(ctx *web.EventContext) (er web.EventResponse, err error) {
 	var (
-		qorJobID   = uint(ctx.ParamAsInt("jobID"))
-		qorJobName = ctx.R.FormValue("jobName")
-		config     = actionJobs[qorJobName]
+		jobID   = uint(ctx.ParamAsInt("jobID"))
+		jobName = ctx.R.FormValue("jobName")
+		config  = actionJobs[jobName]
 	)
 
 	if config == nil {
-		return er, fmt.Errorf("job %s not found", qorJobName)
+		return er, fmt.Errorf("job %s not found", jobName)
 	}
 
-	inst, err := getModelQorJobInstance(b.db, qorJobID)
+	inst, err := getModelJobInstance(b.db, jobID)
 	if err != nil {
 		return er, err
 	}
@@ -300,12 +300,12 @@ func (b *Builder) eventActionJobProgressing(ctx *web.EventContext) (er web.Event
 	return er, nil
 }
 
-func actionJobLog(b Builder, inst *QorJobInstance) h.HTMLComponent {
+func actionJobLog(b Builder, inst *JobInstance) h.HTMLComponent {
 	var logLines []h.HTMLComponent
 	logs := make([]string, 0, 100)
 
-	var mLogs []*QorJobLog
-	b.db.Where("qor_job_instance_id = ?", inst.ID).
+	var mLogs []*JobLog
+	b.db.Where("job_instance_id = ?", inst.ID).
 		Order("created_at desc").
 		Limit(100).
 		Find(&mLogs)

@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type QorNote struct {
+type Note struct {
 	gorm.Model
 
 	UserID       uuid.UUID `gorm:"type:uuid;index"`
@@ -18,7 +18,7 @@ type QorNote struct {
 	Content      string `sql:"size:5000"`
 }
 
-func (this *QorNote) BeforeCreate(tx *gorm.DB) (err error) {
+func (this *Note) BeforeCreate(tx *gorm.DB) (err error) {
 	if strings.TrimSpace(this.Content) == "" {
 		err = errors.New("Note cannot be empty")
 	}
@@ -37,7 +37,7 @@ type UserNote struct {
 
 func GetUnreadNotesCount(db *gorm.DB, userID uuid.UUID, resourceType, resourceID string) int64 {
 	var total int64
-	db.Model(&QorNote{}).Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).Count(&total)
+	db.Model(&Note{}).Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).Count(&total)
 
 	if total == 0 {
 		return 0

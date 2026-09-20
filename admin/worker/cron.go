@@ -135,13 +135,13 @@ func (c *cron) Add(ctx context.Context, job QueJobInterface) (err error) {
 }
 
 // Run a job from cron queue
-func (c *cron) run(ctx context.Context, qorJob QueJobInterface) (err error) {
-	jobInfo, err := qorJob.GetJobInfo()
+func (c *cron) run(ctx context.Context, job QueJobInterface) (err error) {
+	jobInfo, err := job.GetJobInfo()
 	if err != nil {
 		return err
 	}
 
-	h := qorJob.GetHandler()
+	h := job.GetHandler()
 	if h == nil {
 		panic(fmt.Sprintf("job %v no handler", jobInfo.JobName))
 	}
@@ -156,17 +156,17 @@ func (c *cron) run(ctx context.Context, qorJob QueJobInterface) (err error) {
 
 		i := <-sigint
 
-		qorJob.SetProgressText(fmt.Sprintf("Worker killed by signal %s", i.String()))
-		qorJob.SetStatus(JobStatusKilled)
+		job.SetProgressText(fmt.Sprintf("Worker killed by signal %s", i.String()))
+		job.SetStatus(JobStatusKilled)
 
-		qorJob.StopRefresh()
+		job.StopRefresh()
 		os.Exit(int(reflect.ValueOf(i).Int()))
 	}()
 
-	qorJob.StartRefresh()
-	defer qorJob.StopRefresh()
+	job.StartRefresh()
+	defer job.StopRefresh()
 
-	err = h(ctx, qorJob)
+	err = h(ctx, job)
 	if err == nil {
 		c.parseJobs()
 		defer c.writeCronJob()
@@ -225,13 +225,13 @@ func (c *cron) Remove(ctx context.Context, job QueJobInterface) error {
 	return errors.New("failed to find job")
 }
 
-func (c *cron) Listen(_ []*QorJobDefinition, getJob func(qorJobID uint) (QueJobInterface, error)) error {
+func (c *cron) Listen(_ []*JobDefinition, getJob func(jobID uint) (QueJobInterface, error)) error {
 	cmdLine := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	qorJobID := cmdLine.String("qor-job", "", "Qor Job ID")
+	jobID := cmdLine.String("qor-job", "", "Qor Job ID")
 	cmdLine.Parse(os.Args[1:])
 
-	if *qorJobID != "" {
-		id, err := strconv.ParseUint(*qorJobID, 10, 64)
+	if *jobID != "" {
+		id, err := strconv.ParseUint(*jobID, 10, 64)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

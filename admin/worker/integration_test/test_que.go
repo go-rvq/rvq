@@ -28,7 +28,7 @@ var Que = &mock.QueueMock{
 	KillFunc: func(ctx context.Context, job worker.QueJobInterface) error {
 		return job.SetStatus(worker.JobStatusKilled)
 	},
-	ListenFunc: func(jobDefs []*worker.QorJobDefinition, getJob func(qorJobID uint) (worker.QueJobInterface, error)) error {
+	ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
 		return nil
 	},
 	RemoveFunc: func(ctx context.Context, job worker.QueJobInterface) error {

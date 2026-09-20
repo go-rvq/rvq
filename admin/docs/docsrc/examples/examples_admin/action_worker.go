@@ -38,7 +38,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 	noParametersJob := wb.ActionJob(
 		"No parameters",
 		mb,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -57,7 +57,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 	parametersBoxJob := wb.ActionJob(
 		"Parameter input box",
 		mb,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -77,7 +77,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 	displayLogJob := wb.ActionJob(
 		"Display log",
 		mb,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 10; i++ {
 				select {
 				case <-ctx.Done():
@@ -100,7 +100,7 @@ func addActionJobs(mb *presets.ModelBuilder, wb *worker.Builder) {
 	getArgsJob := wb.ActionJob(
 		"Get Args",
 		mb,
-		func(ctx context.Context, job worker.QorJobInterface) error {
+		func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, err := job.GetJobInfo()
 			if err != nil {
 				return err

@@ -50,14 +50,14 @@ func TestMain(m *testing.M) {
 
 func addJobs(w *worker.Builder) {
 	w.NewJob("noArgJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("hoho1")
 			job.AddLog("hoho2")
 			job.AddLog("hoho3")
 			return nil
 		})
 	w.NewJob("progressTextJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("hoho1")
 			job.AddLog("hoho2")
 			job.AddLog("hoho3")
@@ -71,7 +71,7 @@ func addJobs(w *worker.Builder) {
 	}
 	ajb := w.NewJob("argJob").
 		Resource(&ArgJobResource{}).
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, _ := job.GetJobInfo()
 			job.AddLog(fmt.Sprintf("Argument %#+v", jobInfo.Argument))
 			return nil
@@ -93,7 +93,7 @@ func addJobs(w *worker.Builder) {
 	})
 
 	w.NewJob("longRunningJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			for i := 1; i <= 5; i++ {
 				select {
 				case <-ctx.Done():
@@ -114,20 +114,20 @@ func addJobs(w *worker.Builder) {
 	}
 	w.NewJob("scheduleJob").
 		Resource(&ScheduleJobResource{}).
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			jobInfo, _ := job.GetJobInfo()
 			job.AddLog(fmt.Sprintf("%#+v", jobInfo.Argument))
 			return nil
 		})
 
 	w.NewJob("errorJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("=====perform error job")
 			return errors.New("imError")
 		})
 
 	w.NewJob("panicJob").
-		Handler(func(ctx context.Context, job worker.QorJobInterface) error {
+		Handler(func(ctx context.Context, job worker.JobInterface) error {
 			job.AddLog("=====perform panic job")
 			panic("letsPanic")
 		})
@@ -135,9 +135,9 @@ func addJobs(w *worker.Builder) {
 
 func cleanData() {
 	err := db.Exec(`
-delete from qor_jobs;
-delete from qor_job_instances;
-delete from qor_job_logs;
+delete from jobs;
+delete from job_instances;
+delete from job_logs;
     `).Error
 	if err != nil {
 		panic(err)
@@ -169,8 +169,8 @@ func mustCreateJob(form map[string]string) {
 	}
 }
 
-func mustGetFirstJob() *worker.QorJob {
-	r := &worker.QorJob{}
+func mustGetFirstJob() *worker.Job {
+	r := &worker.Job{}
 	if err := db.First(r).Error; err != nil {
 		panic(err)
 	}
