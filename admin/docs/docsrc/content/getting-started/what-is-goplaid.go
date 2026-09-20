@@ -2,11 +2,11 @@ package getting_started
 
 import (
 	. "github.com/go-rvq/htmlgo"
+	. "github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_web"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
-	. "github.com/theplant/docgo"
-	"github.com/theplant/docgo/ch"
 )
 
 var WhatIsRVQ = Doc(

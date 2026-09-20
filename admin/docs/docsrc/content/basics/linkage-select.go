@@ -1,13 +1,13 @@
 package basics
 
 import (
+	. "github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_presets"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_vuetifyx"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
-	. "github.com/theplant/docgo"
-	"github.com/theplant/docgo/ch"
 )
 
 var LinkageSelect = Doc(

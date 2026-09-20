@@ -1,11 +1,11 @@
 package advanced_functions
 
 import (
+	. "github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_web"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
-	. "github.com/theplant/docgo"
-	"github.com/theplant/docgo/ch"
 )
 
 var ReloadPageWithAFlash = Doc(

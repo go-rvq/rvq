@@ -35,6 +35,7 @@ GO_TEST_PKGS := \
 # dos testes de integração.
 GO_BUILD_PKGS := \
 	./web/... \
+	./admin/docs/... \
 	./admin/l10n/... \
 	./admin/login/... \
 	./admin/microsite/... \

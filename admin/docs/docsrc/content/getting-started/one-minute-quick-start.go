@@ -1,7 +1,7 @@
 package getting_started
 
 import (
-	. "github.com/theplant/docgo"
+	. "github.com/go-rvq/rvq/admin/docs/docgo"
 )
 
 var OneMinuteQuickStart = Doc(

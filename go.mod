@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.4
 	github.com/disintegration/imaging v1.6.2
+	github.com/documize/html-diff v0.0.0-20160503140253-f61c192c7796
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
 	github.com/gad-lang/gad v0.1.0-rc.30
@@ -56,9 +57,7 @@ require (
 	github.com/sunfmin/reflectutils v1.0.4
 	github.com/sunfmin/snippetgo v0.0.2
 	github.com/theplant/bimg v1.1.1
-	github.com/theplant/docgo v0.0.16
 	github.com/theplant/gofixtures v1.1.2
-	github.com/theplant/htmlgo v1.0.3
 	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967
 	github.com/theplant/osenv v0.0.1
 	github.com/theplant/sliceutils v0.0.0-20200406042209-89153d988eb1
@@ -169,10 +168,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
+	github.com/sergi/go-diff v1.3.1
 	github.com/shirou/gopsutil/v3 v3.24.4 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629 // indirect
+	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629
 	github.com/shurcooL/highlight_diff v0.0.0-20230708024848-22f825814995 // indirect
 	github.com/shurcooL/highlight_go v0.0.0-20230708025100-33e05792540a // indirect
 	github.com/shurcooL/octicon v0.0.0-20230705024016-66bff059edb8 // indirect
@@ -208,14 +207,15 @@ require (
 	cloud.google.com/go/auth v0.16.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.4 // indirect
-	github.com/documize/html-diff v0.0.0-20160503140253-f61c192c7796 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/mb0/diff v0.0.0-20131118162322-d8d9a906c24d // indirect
-	github.com/qor5/web v1.2.3 // indirect
+	github.com/shurcooL/go v0.0.0-20200502201357-93f07166e636 // indirect
+	github.com/shurcooL/go-goon v0.0.0-20210110234559-7585751d9a17 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/

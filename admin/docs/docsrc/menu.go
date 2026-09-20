@@ -1,13 +1,13 @@
 package docsrc
 
 import (
+	"github.com/go-rvq/rvq/admin/docs/docgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/content"
 	advanced_functions "github.com/go-rvq/rvq/admin/docs/docsrc/content/advanced-functions"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/content/basics"
 	digging_deeper "github.com/go-rvq/rvq/admin/docs/docsrc/content/digging-deeper"
 	getting_started "github.com/go-rvq/rvq/admin/docs/docsrc/content/getting-started"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/utils"
-	"github.com/theplant/docgo"
 )
 
 var DocTree = []interface{}{

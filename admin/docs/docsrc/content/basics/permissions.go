@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	. "github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
-	. "github.com/theplant/docgo"
-	"github.com/theplant/docgo/ch"
 )
 
 var Permissions = Doc(
