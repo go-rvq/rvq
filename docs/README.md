@@ -7,6 +7,9 @@ top-level index of the in-tree documentation.
 
 ## Admin
 
+- [Developing a package](../developer.md) — the convention for anything that
+  installs models into a host: tables carry the package prefix, and so does the
+  registration id.
 - [Admin package reference](../admin/docs/reference.md) — index of the current
   per-package docs (presets, packages, features).
   - [presets](../admin/presets/README.md) · [presets/docs](../admin/presets/docs/README.md)

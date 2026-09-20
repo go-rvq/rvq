@@ -12,6 +12,9 @@ This unifies [rvq/web](https://github.com/go-rvq/web),
 - [Documentation index](docs/README.md) — overview and navigation.
 - [Admin package reference](admin/docs/reference.md) — presets, packages
   (perms, …) and features (activity, …).
+- [Developing a package](developer.md) — the naming a package must not take
+  from the application: table prefix, registration id, menu key and the
+  migration a rename owes the database.
 
 > The RVQ docs under `admin/docs` are from an old (upstream) version and will be
 > updated later; prefer the per-package docs linked above.
