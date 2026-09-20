@@ -1655,7 +1655,9 @@ func republishRelatedOnlinePages(pageURL func(ctx *web.EventContext) string) web
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, mb := range b.models {
-		if strings.Index(r.RequestURI, b.prefix+"/"+mb.name+"/preview") >= 0 {
+		// The same address previewHref builds: the model's URI, which carries
+		// its menu group, not the name derived from the type.
+		if strings.Index(r.RequestURI, b.prefix+"/"+mb.mb.Info().URI()+"/preview") >= 0 {
 			mb.preview.ServeHTTP(w, r)
 			return
 		}

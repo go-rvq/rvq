@@ -274,7 +274,15 @@ func (mb *ModelBuilder) SetUriName(uriName string) *ModelBuilder {
 // It is read from the menu tree, not kept on the model: the tree is where the
 // item actually lives, and a copy here would go stale the moment something
 // moved it.
+//
+// The group belongs to whoever OWNS the key. A second builder over the same
+// type shares the id but not the entry — it has no menu entry at all — so it
+// gets no group, and its URI does not repeat the prefix of the model that does
+// own it.
 func (mb *ModelBuilder) MenuGroup() *MenuGroupBuilder {
+	if it := mb.p.MenuItems()[menuKey(MenuItemModel, mb.id)]; it == nil || (it.Value != nil && it.Value != mb) {
+		return nil
+	}
 	return mb.p.menuGroupOf(ModelItem(mb.id))
 }
 

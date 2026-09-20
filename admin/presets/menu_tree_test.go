@@ -272,3 +272,25 @@ func TestTwoMenuModelsWithTheSameIDAreRejected(t *testing.T) {
 	}()
 	b.Model(&menuAlpha{})
 }
+
+// The group belongs to whoever owns the key. A twin over the same type shares
+// the id but has no entry, so it must not inherit the group — its URI would
+// repeat the prefix of the model that does own it.
+func TestTwinDoesNotInheritTheGroupOfTheKeyOwner(t *testing.T) {
+	b := menuBuilder()
+
+	owner := b.Model(&menuAlpha{}).URIName("alphas")
+	twin := b.Model(&menuAlpha{}, ModelNotInMenu()).URIName("alphas-dialog")
+
+	b.MenuGroup("g").Add(ModelItem("menu_alphas"))
+
+	if got, want := owner.URI(), "g/alphas"; got != want {
+		t.Errorf("URI do dono = %q, want %q", got, want)
+	}
+	if twin.MenuGroup() != nil {
+		t.Errorf("o gêmeo herdou o grupo %q", twin.MenuGroup().Path())
+	}
+	if got, want := twin.URI(), "alphas-dialog"; got != want {
+		t.Errorf("URI do gêmeo = %q, want %q", got, want)
+	}
+}
