@@ -416,43 +416,47 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 	return l
 }
 
+// configMenuOrder places the models in the side menu.
+//
+// A group name is also a URL segment — a model in the group is served under it
+// — so the names here are URL-safe and the human title is set apart.
 func configMenuOrder(b *presets.Builder) {
 	b.MenuOrder(
-		"profile",
-		b.MenuGroup("Page Builder").SubItems(
-			"Page",
-			"shared_containers",
-			"demo_containers",
-			"page_templates",
-			"page_categories",
-		).Icon("mdi-view-quilt"),
-		b.MenuGroup("EC Management").SubItems(
-			"ec-dashboard",
-			"Order",
-			"Product",
-			"Category",
-		).Icon("mdi-cart"),
-		// b.MenuGroup("Site Management").SubItems(
-		// 	"Setting",
-		// 	"RvqSEOSetting",
-		// ).Icon("settings"),
-		b.MenuGroup("User Management").SubItems(
-			"User",
-			"Role",
-		).Icon("mdi-account-multiple"),
-		b.MenuGroup("Featured Models Management").SubItems(
-			"InputDemo",
-			"Post",
-			"rvq-seosettings",
-			"List Editor Example",
-			"nested-field-demos",
-			"ListModels",
-			"MicrositeModels",
-			"L10nModel",
-			"L10nModelWithVersion",
-		).Icon("featured_play_list"),
-		"Worker",
-		"ActivityLogs",
+		presets.ModelItem("profile"),
+		b.MenuGroup("page-builder").Title("Page Builder").Icon("mdi-view-quilt").Add(
+			presets.ModelItem("Page"),
+			presets.ModelItem("shared_containers"),
+			presets.ModelItem("demo_containers"),
+			presets.ModelItem("page_templates"),
+			presets.ModelItem("page_categories"),
+		),
+		b.MenuGroup("ec-management").Title("EC Management").Icon("mdi-cart").Add(
+			presets.ModelItem("ec-dashboard"),
+			presets.ModelItem("Order"),
+			presets.ModelItem("Product"),
+			presets.ModelItem("Category"),
+		),
+		// b.MenuGroup("site-management").Title("Site Management").Icon("settings").Add(
+		// 	presets.ModelItem("Setting"),
+		// 	presets.ModelItem("RvqSEOSetting"),
+		// ),
+		b.MenuGroup("user-management").Title("User Management").Icon("mdi-account-multiple").Add(
+			presets.ModelItem("User"),
+			presets.ModelItem("Role"),
+		),
+		b.MenuGroup("featured-models").Title("Featured Models Management").Icon("featured_play_list").Add(
+			presets.ModelItem("InputDemo"),
+			presets.ModelItem("Post"),
+			presets.ModelItem("rvq-seosettings"),
+			presets.ModelItem("List Editor Example"),
+			presets.ModelItem("nested-field-demos"),
+			presets.ModelItem("ListModels"),
+			presets.ModelItem("MicrositeModels"),
+			presets.ModelItem("L10nModel"),
+			presets.ModelItem("L10nModelWithVersion"),
+		),
+		presets.ModelItem("Worker"),
+		presets.ModelItem("ActivityLogs"),
 	)
 }
 

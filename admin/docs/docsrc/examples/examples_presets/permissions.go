@@ -72,7 +72,13 @@ func PresetsPermissions(b *presets.Builder, db *gorm.DB) (
 		panic(err)
 	}
 
-	b.MenuGroup("User Management").SubItems("user", "group")
+	// The group is named before the models exist: the entries wait for them.
+	// A group name is also a URL segment and a permission segment — the policy
+	// above reads "*user_management*" — so it is URL-safe here.
+	b.MenuGroup("user-management").Title("User Management").Add(
+		presets.ModelItem("users"),
+		presets.ModelItem("groups"),
+	)
 	b.Model(&User{})
 	b.Model(&Group{})
 	return

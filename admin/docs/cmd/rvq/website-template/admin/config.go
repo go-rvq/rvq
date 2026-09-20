@@ -118,11 +118,16 @@ func newPB() Config {
 			return b.I18n().GetSupportLanguages()
 		})
 
+	// A group name is also a URL segment: the models in it are served under it.
 	b.MenuOrder(
-		b.MenuGroup("Page Builder").SubItems("pages", "page_templates", "page_categories").Icon("web"),
-		"shared_containers",
-		"demo_containers",
-		"media-library",
+		b.MenuGroup("page-builder").Title("Page Builder").Icon("web").Add(
+			presets.ModelItem("pages"),
+			presets.ModelItem("page_templates"),
+			presets.ModelItem("page_categories"),
+		),
+		presets.ModelItem("shared_containers"),
+		presets.ModelItem("demo_containers"),
+		presets.ModelItem("media-library"),
 	)
 
 	initMediaLibraryData(db)
