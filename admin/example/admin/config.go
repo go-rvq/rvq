@@ -418,45 +418,46 @@ func configListModel(b *presets.Builder, ab *activity.Builder) *presets.ModelBui
 
 // configMenuOrder places the models in the side menu.
 //
+// An entry names a model by its REGISTRATION ID — the snake_case of the plural
+// label, or what ModelWithID set — which is not the label and not the URI name.
+// A name that matches nothing is a place nobody ever fills: it holds a slot and
+// shows nothing.
+//
 // A group name is also a URL segment — a model in the group is served under it
 // — so the names here are URL-safe and the human title is set apart.
 func configMenuOrder(b *presets.Builder) {
 	b.MenuOrder(
-		presets.ModelItem("profile"),
+		presets.ModelItem("profiles"),
 		b.MenuGroup("page-builder").Title("Page Builder").Icon("mdi-view-quilt").Add(
-			presets.ModelItem("Page"),
-			presets.ModelItem("shared_containers"),
+			presets.ModelItem("pages"),
+			presets.ModelItem("containers"),
 			presets.ModelItem("demo_containers"),
-			presets.ModelItem("page_templates"),
+			presets.ModelItem("templates"),
 			presets.ModelItem("page_categories"),
 		),
 		b.MenuGroup("ec-management").Title("EC Management").Icon("mdi-cart").Add(
-			presets.ModelItem("ec-dashboard"),
-			presets.ModelItem("Order"),
-			presets.ModelItem("Product"),
-			presets.ModelItem("Category"),
+			presets.ModelItem("ecdashboards"),
+			presets.ModelItem("orders"),
+			presets.ModelItem("products"),
+			presets.ModelItem("categories"),
 		),
-		// b.MenuGroup("site-management").Title("Site Management").Icon("settings").Add(
-		// 	presets.ModelItem("Setting"),
-		// 	presets.ModelItem("RvqSEOSetting"),
-		// ),
 		b.MenuGroup("user-management").Title("User Management").Icon("mdi-account-multiple").Add(
-			presets.ModelItem("User"),
-			presets.ModelItem("Role"),
+			presets.ModelItem("users"),
+			presets.ModelItem("roles"),
 		),
 		b.MenuGroup("featured-models").Title("Featured Models Management").Icon("featured_play_list").Add(
-			presets.ModelItem("InputDemo"),
-			presets.ModelItem("Post"),
-			presets.ModelItem("rvq-seosettings"),
-			presets.ModelItem("List Editor Example"),
-			presets.ModelItem("nested-field-demos"),
-			presets.ModelItem("ListModels"),
-			presets.ModelItem("MicrositeModels"),
-			presets.ModelItem("L10nModel"),
-			presets.ModelItem("L10nModelWithVersion"),
+			presets.ModelItem("input_demos"),
+			presets.ModelItem("posts"),
+			// The SEO package brings its own group; here it nests.
+			presets.GroupItem("seo"),
+			presets.ModelItem("customers"),
+			presets.ModelItem("list_models"),
+			presets.ModelItem("micro_sites"),
+			presets.ModelItem("l_10_n_models"),
+			presets.ModelItem("l_10_n_model_with_versions"),
 		),
-		presets.ModelItem("Worker"),
-		presets.ModelItem("ActivityLogs"),
+		presets.ModelItem("qor_jobs"),
+		presets.ModelItem("activity_logs"),
 	)
 }
 

@@ -19,7 +19,7 @@ func TestOrders(t *testing.T) {
 			ReqFunc: func() *http.Request {
 				admin.OrdersExampleData.TruncatePut(dbr)
 				req := multipartestutils.NewMultipartBuilder().
-					PageURL("/orders?__execute_event__=presets_Detailing&overlay=RightDrawer&id=11").
+					PageURL("/ec-management/orders?__execute_event__=presets_Detailing&overlay=RightDrawer&id=11").
 					BuildEventFuncRequest()
 				return req
 			},

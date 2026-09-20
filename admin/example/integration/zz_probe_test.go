@@ -14,9 +14,9 @@ func TestZZProbe(t *testing.T) {
 	pageBuilderContainerTestData.TruncatePut(dbr)
 
 	for _, u := range []string{
-		"/page_builder/pages/editors/10_2024-05-21-v01_International",
-		"/page_builder/pages/editors/10_2024-05-21-v01_International?__execute_event__=page_builder_AddContainerEvent&modelName=BrandGrid",
-		"/page_builder/pages/editors",
+		"/page_builder/page-builder/pages/editors/10_2024-05-21-v01_International",
+		"/page_builder/page-builder/pages/editors/10_2024-05-21-v01_International?__execute_event__=page_builder_AddContainerEvent&modelName=BrandGrid",
+		"/page_builder/page-builder/pages/editors",
 	} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, NewMultipartBuilder().PageURL(u).BuildEventFuncRequest())
