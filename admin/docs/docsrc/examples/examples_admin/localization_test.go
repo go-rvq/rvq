@@ -83,10 +83,16 @@ func TestLocalization(t *testing.T) {
 			Debug: true,
 			ReqFunc: func() *http.Request {
 				l10nDataWithChina.TruncatePut(SqlDB)
+				// L10nModel has an UpdatedAt, so its edit form carries the stamp
+				// of the record it was rendered from — and the update requires
+				// it (see presets/record_stamp.go).
+				var stored L10nModel
+				TestDB.First(&stored, "id = ? AND locale_code = ?", 1, "China")
 				req := multipartestutils.NewMultipartBuilder().
 					PageURL("/l10n-models?__execute_event__=presets_Update&id=1_China").
 					AddField("Title", "Updated Title").
 					AddField("LocaleCode", "China").
+					AddField(presets.RecordStampFormKey, pb.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))).
 					BuildEventFuncRequest()
 				return req
 			},

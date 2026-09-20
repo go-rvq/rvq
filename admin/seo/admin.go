@@ -353,13 +353,7 @@ func (b *Builder) EditingComponentFunc(field *presets.FieldContext, ctx *web.Eve
 		return h.Div()
 	}
 
-	value := reflect.Indirect(reflect.ValueOf(obj))
-	for i := 0; i < value.NumField(); i++ {
-		if s, ok := value.Field(i).Interface().(Setting); ok {
-			setting = s
-			fieldPrefix = value.Type().Field(i).Name
-		}
-	}
+	setting, fieldPrefix = settingField(obj)
 	if !setting.EnabledCustomize && setting.IsEmpty() {
 		modelSetting := &RvqSEOSetting{}
 		db.Where("name = ? AND locale_code = ?", seo.name, locale).First(modelSetting)
@@ -546,13 +540,7 @@ func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.Even
 		return h.Div()
 	}
 
-	value := reflect.Indirect(reflect.ValueOf(obj))
-	for i := 0; i < value.NumField(); i++ {
-		if s, ok := value.Field(i).Interface().(Setting); ok {
-			setting = s
-			fieldPrefix = value.Type().Field(i).Name
-		}
-	}
+	setting, fieldPrefix = settingField(obj)
 	if !setting.EnabledCustomize && setting.IsEmpty() {
 		modelSetting := &RvqSEOSetting{}
 		db.Where("name = ? AND locale_code = ?", seo.name, locale).First(modelSetting)
@@ -565,14 +553,35 @@ func (b *Builder) detailShowComponent(field *presets.FieldContext, ctx *web.Even
 	).Class("pb-4")
 }
 
+// settingField is the model's seo.Setting field: its value and its NAME, which
+// is the prefix every input of the SEO form carries. A model is free to call it
+// SEO or Seo — the name is read from the struct, never assumed.
+func settingField(obj interface{}) (setting Setting, name string) {
+	value := reflect.Indirect(reflect.ValueOf(obj))
+	for i := 0; i < value.NumField(); i++ {
+		if s, ok := value.Field(i).Interface().(Setting); ok {
+			setting = s
+			name = value.Type().Field(i).Name
+		}
+	}
+	return
+}
+
 func (b *Builder) detailSaver(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
+	// The form posts under the struct field's name; reading it back under a
+	// fixed "SEO" saves nothing at all on a model that named the field Seo.
+	_, fieldPrefix := settingField(obj)
+	if fieldPrefix == "" {
+		fieldPrefix = SeoDetailFieldName
+	}
+
 	if err = EditSetterFunc(
 		obj,
 		&presets.FieldContext{
 			ToComponentOptions: &presets.ToComponentOptions{},
 			Mode:               presets.FieldModeStack{presets.DETAIL},
 			Obj:                obj,
-			Name:               SeoDetailFieldName,
+			Name:               fieldPrefix,
 		},
 		ctx); err != nil {
 		return

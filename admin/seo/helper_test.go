@@ -40,7 +40,10 @@ type Product struct {
 // @snippet_end
 
 func resetDB() {
-	dbForTest.Exec("truncate rvq_seo_settings;")
+	// The table is named by the model, not by the type: truncating the old
+	// "rvq_seo_settings" silently did nothing, and the rows leaked from one
+	// subtest into the next.
+	dbForTest.Exec("truncate " + RvqSEOSetting{}.TableName() + ";")
 }
 
 func metaEqual(got, want string) bool {

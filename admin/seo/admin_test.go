@@ -63,7 +63,10 @@ func TestUpdate(t *testing.T) {
 				Setting: Setting{
 					Title: "productB",
 				},
-				Variables: map[string]string{},
+				// The record was saved with no variables and the form posts
+				// none, so the map stays nil — update_variables below is what
+				// proves they round-trip.
+				Variables: nil,
 			},
 			locale: "en",
 		},
@@ -101,7 +104,7 @@ func TestUpdate(t *testing.T) {
 				Setting: Setting{
 					Title: "productB",
 				},
-				Variables: map[string]string{},
+				Variables: nil,
 			},
 			locale: "",
 		},
@@ -176,7 +179,9 @@ func TestUpdate(t *testing.T) {
 
 			form, mwriter := c.form(stamp)
 			req, err := http.DefaultClient.Post(
-				server.URL+"/admin/rvq-seosettings?__execute_event__=presets_Update&id="+c.id,
+				// The model's id is seo_global, and it sits in the "seo" menu
+				// group — which is also its URL prefix.
+				server.URL+"/admin/"+builder.GlobalModel.Info().URI()+"?__execute_event__=presets_Update&id="+c.id,
 				mwriter.FormDataContentType(),
 				form)
 			if err != nil {
