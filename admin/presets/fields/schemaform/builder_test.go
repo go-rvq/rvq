@@ -246,3 +246,69 @@ func TestEnumTypeCanBeOverridden(t *testing.T) {
 		t.Error("o componente registrado para o enum não foi usado")
 	}
 }
+
+// The words around a field come from the FieldInfoFunc, asked by PATH: the
+// names from the root down, with `*` where a slice is in the way.
+func TestFieldInfoByPath(t *testing.T) {
+	var asked []string
+
+	b := New().FieldInfo(func(ctx *web.EventContext, path string) FieldInfo {
+		asked = append(asked, path)
+		switch path {
+		case "title":
+			return FieldInfo{Label: "O título", Hint: "aparece no topo"}
+		case "links.*.href":
+			return FieldInfo{Label: "Endereço", Help: h.Div(h.Text("comece com https://"))}
+		}
+		return FieldInfo{}
+	})
+
+	got := render(t, b, "{title str; sub interface {note str}; links interface[] {href str}}")
+
+	// every field is asked for, by its own path
+	for _, want := range []string{"title", "sub", "sub.note", "links", "links.*.href"} {
+		var found bool
+		for _, p := range asked {
+			if p == want {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("o path %q não foi perguntado; perguntou: %v", want, asked)
+		}
+	}
+
+	// the label replaces the humanized name, and the hint shows
+	if !strings.Contains(got, `label='O título'`) {
+		t.Errorf("o label não veio do FieldInfo:\n%s", got)
+	}
+	if !strings.Contains(got, `hint='aparece no topo'`) {
+		t.Errorf("o hint não veio do FieldInfo:\n%s", got)
+	}
+
+	// a field with no answer keeps the humanized name
+	if !strings.Contains(got, `label='Note'`) {
+		t.Errorf("o fallback do label não é o nome humanizado:\n%s", got)
+	}
+
+	// the help hangs from a `?` beside the field
+	if !strings.Contains(got, "mdi-help-circle-outline") {
+		t.Errorf("o help não trouxe o ícone:\n%s", got)
+	}
+	if !strings.Contains(got, "comece com https://") {
+		t.Errorf("o help não foi desenhado:\n%s", got)
+	}
+}
+
+// Without the function nothing changes: the label is the name humanized, and
+// there is no `?`.
+func TestFieldInfoIsOptional(t *testing.T) {
+	got := render(t, New(), "{title str}")
+
+	if !strings.Contains(got, `label='Title'`) {
+		t.Errorf("label = ?:\n%s", got)
+	}
+	if strings.Contains(got, "mdi-help-circle-outline") {
+		t.Error("apareceu um ? sem help")
+	}
+}

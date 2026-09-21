@@ -18,6 +18,23 @@ const ItemVar = "item"
 // names a type, and the type is the component that edits a value of it.
 type ComponentFunc func(c *Context) h.HTMLComponent
 
+// FieldInfo is what the schema does not say: the words around a field.
+type FieldInfo struct {
+	// Label replaces the humanized field name.
+	Label string
+	// Hint is the line under the input.
+	Hint string
+	// Help is the long explanation, opened from a `?` beside the field.
+	Help h.HTMLComponent
+}
+
+// FieldInfoFunc answers for the field at PATH — the names from the root down,
+// with `*` standing for a slice level: `label`, `sub.title`, `links.*.href`.
+//
+// It is optional, and so is each answer: an empty Label leaves the humanized
+// name, an empty Hint leaves no hint, a nil Help leaves no `?`.
+type FieldInfoFunc func(ctx *web.EventContext, path string) FieldInfo
+
 // Context is what a type's component is given.
 type Context struct {
 	// Field is the schema's field: its name, its type, and — when the type is
@@ -31,15 +48,46 @@ type Context struct {
 	// the request being answered.
 	Form  *presets.FieldContext
 	Event *web.EventContext
+	// Path is where this field is in the schema, from the root down, with `*`
+	// for a slice level: `links.*.href`. It is what FieldInfoFunc answers for.
+	Path string
 	// Builder is the one drawing, so a type that contains other fields — a form
 	// inside the form — draws them the same way.
 	Builder *Builder
+
+	info     *FieldInfo
+	infoRead bool
 }
 
-// Label is what to put on the input: the field's name, humanized.
+// Info is what the builder's FieldInfoFunc says about this field, asked once.
+func (c *Context) Info() FieldInfo {
+	if !c.infoRead {
+		c.infoRead = true
+		if c.Builder != nil && c.Builder.info != nil {
+			i := c.Builder.info(c.Event, c.Path)
+			c.info = &i
+		}
+	}
+	if c.info == nil {
+		return FieldInfo{}
+	}
+	return *c.info
+}
+
+// Label is what to put on the input: what the FieldInfoFunc says, or the
+// field's name humanized.
 func (c *Context) Label() string {
+	if l := c.Info().Label; l != "" {
+		return l
+	}
 	return presets.HumanizeString(c.Field.Name)
 }
+
+// Hint is the line under the input, or "".
+func (c *Context) Hint() string { return c.Info().Hint }
+
+// Help is the long explanation, or nil.
+func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
 
 // Builder maps a TYPE to the component that edits it, and draws a schema with
 // them.
@@ -53,6 +101,15 @@ func (c *Context) Label() string {
 //	    Type("color", myColorPicker)
 type Builder struct {
 	types map[string]ComponentFunc
+	info  FieldInfoFunc
+}
+
+// FieldInfo sets the function that says the words around a field — its label,
+// its hint and its help — by PATH. It is optional; without it a field is
+// labelled by its name, humanized.
+func (b *Builder) FieldInfo(f FieldInfoFunc) *Builder {
+	b.info = f
+	return b
 }
 
 func New() *Builder {
@@ -125,6 +182,7 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 		return b.draw(schema, &Context{
 			Field:   &Field{Name: field.Name, Type: FormType, Schema: schema},
 			Value:   fmt.Sprintf("form[%q]", field.FormKey),
+			Path:    "",
 			Form:    field,
 			Event:   ctx,
 			Builder: b,
@@ -146,13 +204,14 @@ func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 // or the array sorter of a list whose item is that same record.
 func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	if !schema.Slice {
-		return b.record(schema, c, c.Value)
+		return b.record(schema, c, c.Value, c.Path)
 	}
 
 	// the list: the sorter iterates, and each item is that record again — the
-	// slot binds it to `item`, so a field of it is `item.<name>`
+	// slot binds it to `item`, so a field of it is `item.<name>`, and its path
+	// carries the `*` that says a slice is in the way
 	return vx.VXArraySorter(
-		web.Slot(b.record(schema, c, ItemVar)).
+		web.Slot(b.record(schema, c, ItemVar, join(c.Path, "*"))).
 			Name("item").
 			Scope("{ item, itemIndex }"),
 	).
@@ -162,8 +221,9 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 		Readonly(c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite()))
 }
 
-// record renders the fields of one record, each bound under value.
-func (b *Builder) record(schema *Schema, c *Context, value string) h.HTMLComponent {
+// record renders the fields of one record, each bound under value and each
+// reachable at its own path.
+func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLComponent {
 	var comps []h.HTMLComponent
 
 	for _, f := range schema.Fields {
@@ -175,16 +235,48 @@ func (b *Builder) record(schema *Schema, c *Context, value string) h.HTMLCompone
 			continue
 		}
 
-		comps = append(comps, draw(&Context{
+		fc := &Context{
 			Field:   f,
 			Value:   value + "." + f.Name,
+			Path:    join(path, f.Name),
 			Form:    c.Form,
 			Event:   c.Event,
 			Builder: b,
-		}))
+		}
+		comps = append(comps, withHelp(fc, draw(fc)))
 	}
 
 	return h.Div(comps...)
+}
+
+// join is the path of a field under prefix.
+func join(prefix, name string) string {
+	if prefix == "" {
+		return name
+	}
+	return prefix + "." + name
+}
+
+// withHelp puts the field's help behind a `?` at its right, when there is one.
+func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
+	help := c.Help()
+	if help == nil {
+		return comp
+	}
+
+	return h.Div(
+		h.Div(comp).Class("flex-grow-1"),
+		v.VMenu(
+			web.Slot(
+				v.VBtn("").
+					Icon("mdi-help-circle-outline").
+					Variant(v.VariantText).
+					Size(v.SizeSmall).
+					Attr("v-bind", "props"),
+			).Name("activator").Scope("{ props }"),
+			v.VCard(v.VCardText(help)).MaxWidth(420),
+		).CloseOnContentClick(false),
+	).Class("d-flex align-start ga-1")
 }
 
 // EnumComponentFunc draws a field whose type is an enum: a select over the
@@ -212,6 +304,8 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 	return v.VTextField().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
 		Attr("required", c.Field.Required()).
 		Attr("v-model", c.Value)
 }

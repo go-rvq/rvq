@@ -62,11 +62,6 @@ func TestParseNestedInterface(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			s, err := Parse(c.src)
 			if err != nil {
-				if strings.Contains(name, "short form") {
-					// the `name: {…}` spellings came after the gad release this
-					// module builds against; the long forms say the same thing
-					t.Skipf("o gad desta versão ainda não lê a forma curta: %v", err)
-				}
 				t.Fatal(err)
 			}
 			sub := s.Fields[1]
