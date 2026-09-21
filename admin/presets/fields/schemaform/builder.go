@@ -63,6 +63,10 @@ func New() *Builder {
 			"uint":      UintComponentFunc,
 			"bool":      BoolComponentFunc,
 			"color":     ColorComponentFunc,
+			"float":     DecimalComponentFunc,
+			"decimal":   DecimalComponentFunc,
+			"text":      LongTextComponentFunc,
+			"html":      HTMLComponentFunc,
 		},
 	}
 }
@@ -194,6 +198,38 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr("v-model.number", c.Value)
+}
+
+// DecimalComponentFunc is "float" and "decimal", which are the same thing here:
+// a gad.Decimal. It is a number field bound with a plain `v-model`, NOT
+// `v-model.number` — a decimal that goes through a JS number comes back a
+// float, and the precision it exists for is gone.
+func DecimalComponentFunc(c *Context) h.HTMLComponent {
+	return v.VTextField().
+		Type("number").
+		Attr("step", "any").
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Attr("v-model", c.Value)
+}
+
+// LongTextComponentFunc is "text": a textarea, for prose that is not markup.
+func LongTextComponentFunc(c *Context) h.HTMLComponent {
+	return v.VTextarea().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		AutoGrow(true).
+		Rows(3).
+		Attr("v-model", c.Value)
+}
+
+// HTMLComponentFunc is "html": the rich text editor, which is WYSIWYG and so is
+// its own preview.
+func HTMLComponentFunc(c *Context) h.HTMLComponent {
+	return vx.VXTipTapEditor().
+		Label(c.Label()).
+		Output("html").
+		Attr("v-model", c.Value)
 }
 
 // BoolComponentFunc is "bool": a switch.
