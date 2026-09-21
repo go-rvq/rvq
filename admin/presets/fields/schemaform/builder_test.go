@@ -1,0 +1,150 @@
+package schemaform
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
+)
+
+// render draws the schema for a presets field named Value and returns the HTML.
+func render(t *testing.T, b *Builder, src string) string {
+	t.Helper()
+
+	schema, err := Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comp := b.ComponentFunc(schema)(&presets.FieldContext{
+		ToComponentOptions: &presets.ToComponentOptions{},
+		Name:               "Value",
+		FormKey:            "Value",
+		Mode:               presets.FieldModeStack{presets.EDIT},
+	}, &web.EventContext{})
+
+	out, err := h.Marshal(comp, context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}
+
+// A record: each field binds under the form key of the presets field.
+func TestComponentFuncBindsEachFieldUnderTheFormKey(t *testing.T) {
+	got := render(t, New(), "{label str; href}")
+
+	for _, want := range []string{
+		`v-model='form["Value"].label'`,
+		`v-model='form["Value"].href'`, // untyped: a text field all the same
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("o form não liga %s:\n%s", want, got)
+		}
+	}
+}
+
+// A list: the sorter iterates over the value, and each item binds its own
+// fields under the slot's item.
+func TestComponentFuncDrawsAListWithTheSorter(t *testing.T) {
+	got := render(t, New(), "[]{label str; icon str; href}")
+
+	for _, want := range []string{
+		`vx-array-sorter`,
+		`v-model='form["Value"]'`,
+		`v-slot:item='{ item, itemIndex }'`,
+		`v-model='item.label'`,
+		`v-model='item.icon'`,
+		`v-model='item.href'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a lista não traz %s:\n%s", want, got)
+		}
+	}
+}
+
+// A field that is itself an interface draws the form again, one level down —
+// and a list of them draws a sorter inside the form.
+func TestComponentFuncRecursesIntoANestedForm(t *testing.T) {
+	got := render(t, New(), "{title str; sub interface {x str}}")
+	for _, want := range []string{
+		`v-model='form["Value"].title'`,
+		`v-model='form["Value"].sub.x'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("o form aninhado não traz %s:\n%s", want, got)
+		}
+	}
+
+	got = render(t, New(), "{title str; subs interface[] {x str}}")
+	for _, want := range []string{
+		`v-model='form["Value"].subs'`, // the nested sorter, over the field
+		`v-model='item.x'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a lista aninhada não traz %s:\n%s", want, got)
+		}
+	}
+}
+
+// The type is what picks the component, and an application registers its own.
+func TestTypeRegistry(t *testing.T) {
+	b := New().Type("color", func(c *Context) h.HTMLComponent {
+		return v.VTextField().Attr("data-color", "1").Attr("v-model", c.Value)
+	})
+
+	got := render(t, b, "{a str; b color}")
+	if !strings.Contains(got, `data-color='1'`) {
+		t.Errorf("o componente do type não foi usado:\n%s", got)
+	}
+	if !strings.Contains(got, `v-model='form["Value"].b'`) {
+		t.Errorf("o componente do type não recebeu o valor certo:\n%s", got)
+	}
+
+	// replacing the default is allowed: it is a type like any other
+	b2 := New().Type(DefaultType, func(c *Context) h.HTMLComponent {
+		return h.Div().Attr("data-mine", "1")
+	})
+	if !strings.Contains(render(t, b2, "{a str}"), `data-mine='1'`) {
+		t.Error("o type padrão não foi substituído")
+	}
+}
+
+// A type nobody registered is not silently drawn as text: the form says which
+// field asked for what, and what there is.
+func TestUnknownTypeIsReported(t *testing.T) {
+	got := render(t, New(), "{a str; b mistério}")
+
+	for _, want := range []string{"b", "mistério", "não tem componente registrado"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("o erro não diz %q:\n%s", want, got)
+		}
+	}
+	// the rest of the form is still drawn
+	if !strings.Contains(got, `v-model='form["Value"].a'`) {
+		t.Error("um type desconhecido derrubou o resto do form")
+	}
+}
+
+func TestTypesListsWhatIsRegistered(t *testing.T) {
+	names := New().Type("color", nil).Types()
+
+	var hasForm, hasStr, hasColor bool
+	for _, n := range names {
+		switch n {
+		case FormType:
+			hasForm = true
+		case DefaultType:
+			hasStr = true
+		case "color":
+			hasColor = true
+		}
+	}
+	if !hasForm || !hasStr || !hasColor {
+		t.Errorf("Types() = %v", names)
+	}
+}
