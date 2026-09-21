@@ -151,7 +151,7 @@ func TestParseEnum(t *testing.T) {
 	if !ok {
 		t.Fatalf("o enum não foi declarado: %v", s.Enums)
 	}
-	if got, want := strings.Join(e.Values, ","), "Read,Write"; got != want {
+	if got, want := strings.Join(e.Names, ","), "Read,Write"; got != want {
 		t.Errorf("valores = %q, want %q", got, want)
 	}
 

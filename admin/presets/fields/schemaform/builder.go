@@ -126,8 +126,8 @@ func (c *Context) EnumItems() []EnumItem {
 		}
 	}
 
-	items := make([]EnumItem, len(c.Field.Enum.Values))
-	for i, v := range c.Field.Enum.Values {
+	items := make([]EnumItem, len(c.Field.Enum.Names))
+	for i, v := range c.Field.Enum.Names {
 		items[i] = EnumItem{Value: v, Label: v}
 	}
 	return items

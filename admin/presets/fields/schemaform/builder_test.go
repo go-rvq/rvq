@@ -377,3 +377,24 @@ func TestEnumInfoIsOptional(t *testing.T) {
 		}
 	}
 }
+
+// What the form STORES is the enum member's NAME, never the number behind it —
+// the value is written out as YAML and read back by name, so an enum that
+// renumbers its members must not rewrite every record.
+func TestEnumStoresTheMemberName(t *testing.T) {
+	got := render(t, New(), "enum Perm { Read = 4, Write = 8 }\ninterface {perm Perm}")
+
+	for _, want := range []string{
+		`{"title":"Read","value":"Read"}`,
+		`{"title":"Write","value":"Write"}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("falta %s:\n%s", want, got)
+		}
+	}
+	for _, unwanted := range []string{`"value":"4"`, `"value":4`, `"value":"8"`, `"value":8`} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("o número do enum entrou no que se grava (%s):\n%s", unwanted, got)
+		}
+	}
+}

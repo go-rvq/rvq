@@ -49,8 +49,11 @@ type Schema struct {
 //	enum Perm { Read, Write }
 //	{ perm Perm }
 type Enum struct {
-	Name   string
-	Values []string
+	Name string
+	// Names are its members, in the order declared. The NAME is what the form
+	// stores — `Read`, not the 1 behind it — because the value is written out
+	// as YAML and read back by name.
+	Names []string
 }
 
 // Field is one entry of a form.
@@ -150,7 +153,7 @@ func enumOf(e *node.EnumExpr) *Enum {
 	out := &Enum{Name: name.Name}
 	for _, f := range e.Fields {
 		if f.Name != nil {
-			out.Values = append(out.Values, f.Name.Name)
+			out.Names = append(out.Names, f.Name.Name)
 		}
 	}
 	return out
