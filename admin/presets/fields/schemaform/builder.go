@@ -67,6 +67,9 @@ func New() *Builder {
 			"decimal":   DecimalComponentFunc,
 			"text":      LongTextComponentFunc,
 			"html":      HTMLComponentFunc,
+			"time":      TimeComponentFunc,
+			"date":      DateComponentFunc,
+			"duration":  DurationComponentFunc,
 		},
 	}
 }
@@ -229,6 +232,32 @@ func HTMLComponentFunc(c *Context) h.HTMLComponent {
 	return vx.VXTipTapEditor().
 		Label(c.Label()).
 		Output("html").
+		Attr("v-model", c.Value)
+}
+
+// TimeComponentFunc is "time", the gad time namespace's instant: a date AND a
+// time, so the picker is the datetime one.
+func TimeComponentFunc(c *Context) h.HTMLComponent {
+	return vx.VXDateTimePicker().
+		Label(c.Label()).
+		Attr("v-model", c.Value)
+}
+
+// DateComponentFunc is "date": an instant with no time of day.
+func DateComponentFunc(c *Context) h.HTMLComponent {
+	return vx.VXDatePicker().
+		Label(c.Label()).
+		Attr("v-model", c.Value)
+}
+
+// DurationComponentFunc is "duration", the gad time namespace's span. It is
+// written the way gad reads it back — "1h30m", "250ms" — so it is a text field:
+// a picker would have to choose a unit, and the value says its own.
+func DurationComponentFunc(c *Context) h.HTMLComponent {
+	return v.VTextField().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Placeholder("1h30m").
 		Attr("v-model", c.Value)
 }
 

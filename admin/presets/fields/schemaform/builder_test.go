@@ -153,7 +153,7 @@ func TestTypesListsWhatIsRegistered(t *testing.T) {
 // suits it — and a number bound as a NUMBER, since the value is written out
 // again and a quoted one would come back a string.
 func TestDefaultTypes(t *testing.T) {
-	got := render(t, New(), "{a str; n int; u uint; on bool; c color; f float; d decimal; t text; markup html}")
+	got := render(t, New(), "{a str; n int; u uint; on bool; c color; f float; d decimal; t text; markup html; at time; day date; span duration}")
 
 	for what, want := range map[string]string{
 		"str":   `<v-text-field`,
@@ -166,6 +166,10 @@ func TestDefaultTypes(t *testing.T) {
 		// a decimal keeps its text: through a JS number it would come back a float
 		"float":   `v-model='form["Value"].f'`,
 		"decimal": `v-model='form["Value"].d'`,
+		// the gad time namespace: an instant, a day, and a span written as text
+		"time":     `<vx-datetimepicker`,
+		"date":     `<vx-datepicker`,
+		"duration": `v-model='form["Value"].span'`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("%s: falta %s:\n%s", what, want, got)
