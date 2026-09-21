@@ -28,8 +28,9 @@ type FieldInfo struct {
 	Help h.HTMLComponent
 }
 
-// FieldInfoFunc answers for the field at PATH — the names from the root down,
-// with `*` standing for a slice level: `label`, `sub.title`, `links.*.href`.
+// FieldInfoFunc answers for the field at PATH — the names from the root down:
+// `label`, `sub.title`, `links.href`. A list adds no name, so a field of the
+// records in `links` is simply `links.href`.
 //
 // It is optional, and so is each answer: an empty Label leaves the humanized
 // name, an empty Hint leaves no hint, a nil Help leaves no `?`.
@@ -72,8 +73,9 @@ type Context struct {
 	// the request being answered.
 	Form  *presets.FieldContext
 	Event *web.EventContext
-	// Path is where this field is in the schema, from the root down, with `*`
-	// for a slice level: `links.*.href`. It is what FieldInfoFunc answers for.
+	// Path is where this field is in the schema, from the root down:
+	// `links.href` for a field of the records in the `links` list. A list adds
+	// no name of its own. It is what FieldInfoFunc answers for.
 	Path string
 	// Builder is the one drawing, so a type that contains other fields — a form
 	// inside the form — draws them the same way.
@@ -266,10 +268,11 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	}
 
 	// the list: the sorter iterates, and each item is that record again — the
-	// slot binds it to `item`, so a field of it is `item.<name>`, and its path
-	// carries the `*` that says a slice is in the way
+	// slot binds it to `item`, so a field of it is `item.<name>`. The PATH does
+	// not grow: a list adds no name, so a field of its item is `links.href`,
+	// not `links.*.href` — the same thing, with less to write.
 	return vx.VXArraySorter(
-		web.Slot(b.record(schema, c, ItemVar, join(c.Path, "*"))).
+		web.Slot(b.record(schema, c, ItemVar, c.Path)).
 			Name("item").
 			Scope("{ item, itemIndex }"),
 	).

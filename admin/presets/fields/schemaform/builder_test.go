@@ -248,7 +248,8 @@ func TestEnumTypeCanBeOverridden(t *testing.T) {
 }
 
 // The words around a field come from the FieldInfoFunc, asked by PATH: the
-// names from the root down, with `*` where a slice is in the way.
+// names from the root down. A list adds no name of its own, so a field of the
+// records in `links` is `links.href`.
 func TestFieldInfoByPath(t *testing.T) {
 	var asked []string
 
@@ -257,7 +258,7 @@ func TestFieldInfoByPath(t *testing.T) {
 		switch path {
 		case "title":
 			return FieldInfo{Label: "O título", Hint: "aparece no topo"}
-		case "links.*.href":
+		case "links.href":
 			return FieldInfo{Label: "Endereço", Help: h.Div(h.Text("comece com https://"))}
 		}
 		return FieldInfo{}
@@ -266,7 +267,7 @@ func TestFieldInfoByPath(t *testing.T) {
 	got := render(t, b, "{title str; sub interface {note str}; links interface[] {href str}}")
 
 	// every field is asked for, by its own path
-	for _, want := range []string{"title", "sub", "sub.note", "links", "links.*.href"} {
+	for _, want := range []string{"title", "sub", "sub.note", "links", "links.href"} {
 		var found bool
 		for _, p := range asked {
 			if p == want {
