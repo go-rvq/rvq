@@ -10,7 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	"context"
+	"net/http"
+
 	"github.com/go-rvq/rvq/cli"
+
+	"github.com/go-rvq/rvq/web"
 )
 
 func TestHttpApiHelp(t *testing.T) {
@@ -253,4 +258,61 @@ func containsAll(s string, subs ...string) bool {
 		}
 	}
 	return true
+}
+
+// The opt-out travels in the request record, so a spec file can carry it per
+// request — and it defaults to OFF, which is to say the stamp is required.
+func TestParseSpecsSkipFormSign(t *testing.T) {
+	specs, _, err := parseSpecsMode([]byte(`{"uri":"/a","skipFormSign":true}`))
+	if err != nil || len(specs) != 1 {
+		t.Fatalf("parse: specs=%d err=%v", len(specs), err)
+	}
+	if !specs[0].SkipFormSign {
+		t.Error("skipFormSign do JSON não chegou ao spec")
+	}
+
+	specs, _, err = parseSpecsMode([]byte(`[{"uri":"/a"},{"uri":"/b","skipFormSign":true}]`))
+	if err != nil || len(specs) != 2 {
+		t.Fatalf("parse: specs=%d err=%v", len(specs), err)
+	}
+	if specs[0].SkipFormSign {
+		t.Error("sem o campo, o padrão devia ser exigir o stamp")
+	}
+	if !specs[1].SkipFormSign {
+		t.Error("skipFormSign do segundo request não chegou")
+	}
+}
+
+// And what it does is put the flag in the request's CONTEXT, which is where the
+// admin reads it (web.SkipFormSign) — a network request can never set it.
+func TestServeCarriesSkipFormSignInTheContext(t *testing.T) {
+	for _, skip := range []bool{false, true} {
+		var got, served bool
+
+		cfg := Config{
+			Handler: func(mux *http.ServeMux) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					got, served = web.SkipFormSign(r), true
+					w.WriteHeader(http.StatusOK)
+				})
+			},
+		}
+
+		if _, err := Serve(context.Background(), cfg, Dispatch{
+			Method:       http.MethodPost,
+			URI:          "/admin/things",
+			ContentType:  "application/json",
+			RawBody:      []byte(`{}`),
+			SkipFormSign: skip,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if !served {
+			t.Fatal("o handler não foi chamado")
+		}
+		if got != skip {
+			t.Errorf("web.SkipFormSign = %v, want %v", got, skip)
+		}
+	}
 }

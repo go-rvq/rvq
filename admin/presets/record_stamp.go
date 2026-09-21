@@ -250,24 +250,39 @@ func RecordStampValue(t time.Time) string {
 //     the fetcher.
 func (b *EditingBuilder) RecordStateHash(obj any) string {
 	h := sha256.New()
-	writeFieldsState(h, &b.FieldsBuilder, reflect.Indirect(reflect.ValueOf(obj)), "", 0)
+	b.WalkRecordState(obj, func(key, value string) {
+		io.WriteString(h, "\x00"+key+"="+value)
+	})
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+}
+
+// WalkRecordState calls visit for every form key the stamp covers, with the
+// value it contributes. RecordStateHash is this walk, hashed.
+//
+// It is what an application checks its own components against: every key the
+// rendered form binds with `form["…"]` — bar the control fields — should come
+// out of here, or the guard is comparing something the form does not carry.
+func (b *EditingBuilder) WalkRecordState(obj any, visit func(key, value string)) {
+	walkFieldsState(visit, &b.FieldsBuilder, reflect.Indirect(reflect.ValueOf(obj)), "", 0)
+}
+
+// RecordStampKeys are the form keys the stamp covers, in order.
+func (b *EditingBuilder) RecordStampKeys(obj any) (keys []string) {
+	b.WalkRecordState(obj, func(key, _ string) {
+		keys = append(keys, key)
+	})
+	return
 }
 
 // maxRecordStateDepth stops the walk from following nested fields forever.
 const maxRecordStateDepth = 8
 
-func writeFieldsState(h io.Writer, fb *FieldsBuilder, v reflect.Value, prefix string, depth int) {
+func walkFieldsState(visit func(key, value string), fb *FieldsBuilder, v reflect.Value, prefix string, depth int) {
 	if !v.IsValid() || v.Kind() != reflect.Struct || depth > maxRecordStateDepth {
 		return
 	}
 
 	for _, f := range fb.fields {
-		if f.structField == nil {
-			// a field with no struct field behind it holds no record state
-			continue
-		}
-
 		// the value comes through the field's own context, the same object the
 		// components read — and through RawValue, which is what the form POSTS
 		// BACK. The display value is not it: FieldContext.ValueOverride masks a
@@ -287,26 +302,26 @@ func writeFieldsState(h io.Writer, fb *FieldsBuilder, v reflect.Value, prefix st
 			nv := reflect.Indirect(fv)
 			switch nv.Kind() {
 			case reflect.Slice, reflect.Array:
-				io.WriteString(h, "\x00"+key+"#"+strconv.Itoa(nv.Len()))
+				visit(key+"#", strconv.Itoa(nv.Len()))
 				for i := 0; i < nv.Len(); i++ {
-					writeFieldsState(h, nested, reflect.Indirect(nv.Index(i)),
+					walkFieldsState(visit, nested, reflect.Indirect(nv.Index(i)),
 						key+"["+strconv.Itoa(i)+"].", depth+1)
 				}
 			default:
-				writeFieldsState(h, nested, nv, key+".", depth+1)
+				walkFieldsState(visit, nested, nv, key+".", depth+1)
 			}
 			continue
 		}
 
 		if s, ok := columnValue(fv); ok {
-			io.WriteString(h, "\x00"+key+"="+s)
+			visit(key, s)
 			continue
 		}
 
 		// what is left is another record: the form carries the choice, so the
 		// identity is the whole of it
 		if s, ok := relatedID(fv); ok {
-			io.WriteString(h, "\x00"+key+"#"+s)
+			visit(key+"#", s)
 		}
 	}
 }

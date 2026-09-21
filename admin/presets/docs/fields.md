@@ -77,6 +77,12 @@ renders a value it read some other way, is outside that hash: the guard then
 compares something the form does not carry, and a change to what it DOES carry
 goes unnoticed. The hash is only as true as this convention.
 
+The convention is checked, not just written down:
+`tests/listeditor/conformance_test.go` renders an edit form, reads every literal
+`form["…"]` key out of the HTML and requires the record stamp to cover it.
+`EditingBuilder.RecordStampKeys` is exported so an application can do the same
+over its own forms.
+
 `ValueOverride` is for DISPLAY only — `PasswordFieldComponentFunc` sets it to
 `"***"`, a month selector sets it to the month's label. `Value()` returns it;
 `RawValue()` does not, and `RawValue()` is what the stamp hashes and what the

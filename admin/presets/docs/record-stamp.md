@@ -213,7 +213,14 @@ passed is left alone and stays readable.
 
 Trusted in-process code with no record to sign can skip the check altogether
 with `web.WithSkipFormSign(ctx)`. It lives in the request CONTEXT, so a network
-request can never ask for it.
+request can never ask for it. The `http_api` command exposes it as
+`--skip-form-sign`, and per request in a spec file:
+
+```json
+{"uri": "/admin/things", "method": "POST", "skipFormSign": true}
+```
+
+It defaults to off — the stamp is required.
 
 ## Tests
 
@@ -222,6 +229,13 @@ request can never ask for it.
   agree, two random ones do not, a short secret panics, an explicit key wins),
   field detection (`time.Time`, `*time.Time` nil, embedded), the stamp value and
   the message (when, by whom, and the fallback date layout).
+- [`tests/listeditor/conformance_test.go`](../tests/listeditor/conformance_test.go)
+  — the convention, checked against a real render: it takes the edit form of a
+  record with a nested list, reads every literal `form["…"]` key out of the
+  rendered HTML, and requires each one (bar the control fields) to be a key the
+  stamp covers. A component that binds something else fails it. `WalkRecordState`
+  and `RecordStampKeys` are exported for an application to do the same over its
+  own forms.
 - [`record_state_hash_test.go`](../record_state_hash_test.go) — the state hash:
   the same record hashes the same; a column, a valuer column, a time, the
   related CHOICE and a nested row added, removed, edited or reordered all move
