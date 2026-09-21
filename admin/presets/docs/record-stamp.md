@@ -140,6 +140,38 @@ has now seen what changed.
   `ErrInvalidFormSignature` — `errors.Is` works, while the message the user reads
   is the localized one.
 
+## Signing a request built by hand
+
+A browser posts the stamp because the form it came from carried it. A test — or
+in-process code submitting a form nobody rendered — has to put it there itself,
+and `Builder.SignForm` is what does it:
+
+```go
+req := multipartestutils.NewMultipartBuilder().
+	PageURL("/posts?__execute_event__=presets_Update&id=1").
+	AddField("Title", "Updated Title").
+	BuildEventFuncRequest()
+
+var stored Post
+db.First(&stored, 1) // the record AS STORED: its UpdatedAt is the stamp
+req, err := pb.SignForm(req, &stored)
+```
+
+It returns a COPY of the request whose form carries `__formSign`, signed by the
+builder's own signer — the one the update verifies against. The request you
+passed is left alone and stays readable.
+
+| | |
+| --- | --- |
+| the record | pass it as STORED, read right before signing: signing the object you are about to send says "nothing changed", which is the very thing the guard decides |
+| an unguarded model | no `UpdatedAt`, nothing to sign — the request comes back unchanged |
+| the body | `multipart/form-data` and `application/x-www-form-urlencoded`; anything else is an error, since there is no form to add a field to |
+| files | survive, with their filename and content type |
+
+Trusted in-process code with no record to sign can skip the check altogether
+with `web.WithSkipFormSign(ctx)`. It lives in the request CONTEXT, so a network
+request can never ask for it.
+
 ## Tests
 
 - [`record_stamp_test.go`](../record_stamp_test.go) — the signer (round trip,
@@ -147,6 +179,13 @@ has now seen what changed.
   agree, two random ones do not, a short secret panics, an explicit key wins),
   field detection (`time.Time`, `*time.Time` nil, embedded), the stamp value and
   the message (when, by whom, and the fallback date layout).
+- [`record_stamp_sign_test.go`](../record_stamp_sign_test.go) — `SignForm`: the
+  form it was given arrives whole (fields, a repeated one, the file), the stamp
+  it adds unsigns to the record's instant, the request it was given is not
+  touched, an unguarded model comes back unchanged, a body that is not a form is
+  refused — and, the point of it all, `VerifyRecordStamp` accepts what it signs,
+  reports `ErrRecordStampMissing` without it and `ErrRecordChanged` for a stale
+  record.
 - [`integration/record_stamp_test.go`](../integration/record_stamp_test.go) —
   end to end over a real database: the rendered form carries the record's stamp,
   saving it back works, saving it again after somebody else saved is refused, an
@@ -155,5 +194,4 @@ has now seen what changed.
   `UpdatedAt` saves normally.
 
 > A test that posts `presets_Update` by hand against a guarded model has to send
-> the stamp, the way a browser does:
-> `AddField(presets.RecordStampFormKey, b.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt)))`.
+> the stamp, the way a browser does — `pb.SignForm(req, &stored)`, above.

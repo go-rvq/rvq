@@ -1,12 +1,18 @@
 package presets
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -338,4 +344,115 @@ func (b *EditingBuilder) recordUser(stored any, ctx *web.EventContext) RecordUse
 		return nil
 	}
 	return user
+}
+
+// SignForm returns r carrying the record stamp of obj, signed exactly as the
+// rendered edit form carries it (under RecordStampFormKey).
+//
+// It is for a caller that builds an update request BY HAND — a unit test, or
+// in-process code submitting a form nobody rendered. A guarded model REQUIRES
+// the stamp and the stamp is signed, so such a request is refused without it
+// (ErrRecordStampMissing); this puts in the value the form would have had.
+//
+// obj is the record as STORED — the one the update is about — because its
+// UpdatedAt is the stamp. Read it back from the database right before signing:
+// signing the object the test is about to send says the record has not changed,
+// which is what the guard is there to decide. A model with no UpdatedAt is not
+// guarded, and r comes back unchanged.
+//
+// r is left alone; the copy carries the new body. multipart/form-data and
+// application/x-www-form-urlencoded bodies are supported — anything else is an
+// error, since there is no form to add a field to.
+//
+//	var stored Post
+//	db.First(&stored, id)
+//	req, err := pb.SignForm(req, &stored)
+func (b *Builder) SignForm(r *http.Request, obj any) (*http.Request, error) {
+	t, ok := RecordUpdatedAt(obj)
+	if !ok {
+		return r, nil
+	}
+	return addFormField(r, RecordStampFormKey, b.FormSigner().Sign(RecordStampValue(t)))
+}
+
+// addFormField returns a copy of r whose form carries one more field, re-encoding
+// the body it came with.
+func addFormField(r *http.Request, key, value string) (*http.Request, error) {
+	if r.Body == nil {
+		return nil, fmt.Errorf("presets: cannot add %s: the request has no body", key)
+	}
+
+	body, err := io.ReadAll(r.Body)
+	r.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("presets: reading the request body: %w", err)
+	}
+	// the caller's request stays readable
+	r.Body = io.NopCloser(bytes.NewReader(body))
+
+	mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, fmt.Errorf("presets: parsing the request content type: %w", err)
+	}
+
+	var (
+		out         bytes.Buffer
+		contentType string
+	)
+
+	switch {
+	case strings.HasPrefix(mediaType, "multipart/"):
+		w := multipart.NewWriter(&out)
+		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+		for {
+			// the RAW part: re-encoding must not decode what it copies.
+			p, err := mr.NextRawPart()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				return nil, fmt.Errorf("presets: reading a form part: %w", err)
+			}
+			// CreatePart keeps the part's own headers, so a file part keeps its
+			// filename and its content type.
+			pw, err := w.CreatePart(p.Header)
+			if err != nil {
+				return nil, err
+			}
+			if _, err = io.Copy(pw, p); err != nil {
+				return nil, fmt.Errorf("presets: copying a form part: %w", err)
+			}
+		}
+		if err = w.WriteField(key, value); err != nil {
+			return nil, err
+		}
+		if err = w.Close(); err != nil {
+			return nil, err
+		}
+		contentType = w.FormDataContentType()
+
+	case mediaType == "application/x-www-form-urlencoded":
+		values, err := url.ParseQuery(string(body))
+		if err != nil {
+			return nil, fmt.Errorf("presets: parsing the form body: %w", err)
+		}
+		values.Set(key, value)
+		out.WriteString(values.Encode())
+		contentType = mediaType
+
+	default:
+		return nil, fmt.Errorf("presets: cannot add %s to a %s body", key, mediaType)
+	}
+
+	signed := r.Clone(r.Context())
+	newBody := out.Bytes()
+	signed.Body = io.NopCloser(bytes.NewReader(newBody))
+	signed.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(newBody)), nil
+	}
+	signed.ContentLength = int64(len(newBody))
+	signed.Header.Set("Content-Type", contentType)
+	// a form parsed from the old body must not travel to the copy
+	signed.Form, signed.PostForm, signed.MultipartForm = nil, nil, nil
+	return signed, nil
 }

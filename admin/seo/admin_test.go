@@ -23,7 +23,7 @@ func TestUpdate(t *testing.T) {
 		name      string
 		prepareDB func()
 		builder   func() *Builder
-		form      func(stamp string) (*bytes.Buffer, *multipart.Writer)
+		form      func() (*bytes.Buffer, *multipart.Writer)
 		expected  *RvqSEOSetting
 		locale    string
 	}{
@@ -48,12 +48,11 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
+			form: func() (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Setting.Title", "productB"))
 				must(mwriter.WriteField("id", fmt.Sprintf("Product_%s", "en")))
-				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -90,12 +89,11 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
+			form: func() (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Setting.Title", "productB"))
 				must(mwriter.WriteField("id", "Product_"))
-				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -132,12 +130,11 @@ func TestUpdate(t *testing.T) {
 				builder.RegisterSEO("Product")
 				return builder
 			},
-			form: func(stamp string) (*bytes.Buffer, *multipart.Writer) {
+			form: func() (*bytes.Buffer, *multipart.Writer) {
 				form := &bytes.Buffer{}
 				mwriter := multipart.NewWriter(form)
 				must(mwriter.WriteField("Variables.varA", "B"))
 				must(mwriter.WriteField("id", fmt.Sprintf("Product_%s", "en")))
-				must(mwriter.WriteField(presets.RecordStampFormKey, stamp))
 				must(mwriter.Close())
 				return form, mwriter
 			},
@@ -170,25 +167,31 @@ func TestUpdate(t *testing.T) {
 			builder := c.builder()
 			builder.Install(admin)
 
-			// RvqSEOSetting has an UpdatedAt, so its edit form carries the stamp
-			// of the record it was rendered from — and the update requires it
-			// (see presets/record_stamp.go).
-			var stored RvqSEOSetting
-			dbForTest.First(&stored, "name = ? and locale_code = ?", "Product", c.locale)
-			stamp := admin.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))
-
-			form, mwriter := c.form(stamp)
-			req, err := http.DefaultClient.Post(
-				// The model's id is seo_global, and it sits in the "seo" menu
-				// group — which is also its URL prefix.
+			form, mwriter := c.form()
+			// The model's id is seo_global, and it sits in the "seo" menu
+			// group — which is also its URL prefix.
+			req, err := http.NewRequest("POST",
 				server.URL+"/admin/"+builder.GlobalModel.Info().URI()+"?__execute_event__=presets_Update&id="+c.id,
-				mwriter.FormDataContentType(),
 				form)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if req.StatusCode != 200 {
-				t.Errorf("Update should be processed successfully, status code is %v", req.StatusCode)
+			req.Header.Set("Content-Type", mwriter.FormDataContentType())
+
+			// RvqSEOSetting has an UpdatedAt, so the update requires the stamp
+			// the rendered form would have carried.
+			var stored RvqSEOSetting
+			dbForTest.First(&stored, "name = ? and locale_code = ?", "Product", c.locale)
+			if req, err = admin.SignForm(req, &stored); err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp.StatusCode != 200 {
+				t.Errorf("Update should be processed successfully, status code is %v", resp.StatusCode)
 			}
 
 			seoSetting := &RvqSEOSetting{}
