@@ -52,6 +52,36 @@ Passed to every component/setter. Important fields:
 | `MustInput` | render only the bare input (no label/hint/container) |
 | `Nested` | nested config (`NestedSlice` / `NestedStruct`) |
 
+## The convention a component follows
+
+A component binds **the field's own key** and renders **the field's own value**:
+
+```go
+ed.Field("Body").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	return richeditor.RichEditor(db, field.FormKey).   // not "Body"
+		Value(field.StringValue()).                    // not obj.(*Post).Body
+		Label(field.Label)
+})
+```
+
+Two things ride on it.
+
+**The form key.** `field.FormKey` is the whole key — `Items[2].Label` inside a
+nested form — while `field.Name` is only the field. A component that binds the
+name posts to the wrong key the moment it is used one level down.
+
+**The record stamp.** The optimistic lock hashes the fields the form edits,
+reading each through its `FieldContext` — see
+[record stamp](record-stamp.md). A component that binds another key, or that
+renders a value it read some other way, is outside that hash: the guard then
+compares something the form does not carry, and a change to what it DOES carry
+goes unnoticed. The hash is only as true as this convention.
+
+`ValueOverride` is for DISPLAY only — `PasswordFieldComponentFunc` sets it to
+`"***"`, a month selector sets it to the month's label. `Value()` returns it;
+`RawValue()` does not, and `RawValue()` is what the stamp hashes and what the
+form posts back.
+
 ## Default component funcs
 
 `field_component_funcs.go` provides the built-in components, wired by field type

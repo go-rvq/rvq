@@ -15,6 +15,14 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 )
 
+// stampedApp registers the guarded model SignForm signs for: the stamp is found
+// through the model's own editing builder.
+func stampedApp() *Builder {
+	b := New(i18n.New())
+	b.Model(&stampedModel{}).URIName("stamped")
+	return b
+}
+
 // multipartRequest is the kind of request a test builds by hand: a couple of
 // fields and a file.
 func multipartRequest(t *testing.T) *http.Request {
@@ -50,7 +58,7 @@ func multipartRequest(t *testing.T) *http.Request {
 // The signed request carries the stamp of the record, and the form it already
 // had arrives whole — every field, the repeated one, and the file.
 func TestSignFormKeepsTheFormAndAddsTheStamp(t *testing.T) {
-	b := New(i18n.New())
+	b := stampedApp()
 	at := time.Date(2026, 7, 27, 10, 30, 0, 0, time.UTC)
 
 	signed, err := b.SignForm(multipartRequest(t), &stampedModel{ID: 1, UpdatedAt: at})
@@ -140,30 +148,32 @@ func TestSignFormSatisfiesVerifyRecordStamp(t *testing.T) {
 	}
 }
 
-// A model with no UpdatedAt is not guarded: there is nothing to sign, and the
-// request comes back as it was.
-func TestSignFormLeavesAnUnguardedModelAlone(t *testing.T) {
-	b := New(i18n.New())
-	r := multipartRequest(t)
+// A model with no UpdatedAt is stamped all the same: the stamp is the hash of
+// the fields its form edits.
+func TestSignFormStampsAModelWithNoUpdatedAt(t *testing.T) {
+	b, mb := stateApp(t)
+	obj := baseStateModel()
 
-	signed, err := b.SignForm(r, &unstampedModel{ID: 1})
+	signed, err := b.SignForm(multipartRequest(t), obj)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if signed != r {
-		t.Error("o request devia voltar o mesmo")
 	}
 	if err = signed.ParseMultipartForm(1 << 20); err != nil {
 		t.Fatal(err)
 	}
-	if got := signed.FormValue(RecordStampFormKey); got != "" {
-		t.Errorf("stamp = %q, want vazio", got)
+
+	got, err := b.FormSigner().Unsign(signed.FormValue(RecordStampFormKey))
+	if err != nil {
+		t.Fatalf("o valor não veio assinado: %v", err)
+	}
+	if want := mb.Editing().RecordStateHash(obj); got != want {
+		t.Errorf("stamp = %q, want o hash do estado %q", got, want)
 	}
 }
 
 // The caller's request is not touched, and stays readable.
 func TestSignFormDoesNotTouchTheOriginal(t *testing.T) {
-	b := New(i18n.New())
+	b := stampedApp()
 	r := multipartRequest(t)
 
 	if _, err := b.SignForm(r, &stampedModel{ID: 1, UpdatedAt: time.Now()}); err != nil {
@@ -182,7 +192,7 @@ func TestSignFormDoesNotTouchTheOriginal(t *testing.T) {
 }
 
 func TestSignFormURLEncoded(t *testing.T) {
-	b := New(i18n.New())
+	b := stampedApp()
 	at := time.Date(2026, 7, 27, 10, 30, 0, 0, time.UTC)
 
 	r := httptest.NewRequest("POST", "/posts", strings.NewReader("Title=a+t%C3%ADtulo&Tags=one&Tags=two"))
@@ -213,7 +223,7 @@ func TestSignFormURLEncoded(t *testing.T) {
 // A body that is not a form has nowhere to put the field, and saying so beats
 // returning a request that would be refused later.
 func TestSignFormRefusesABodyThatIsNotAForm(t *testing.T) {
-	b := New(i18n.New())
+	b := stampedApp()
 
 	r := httptest.NewRequest("POST", "/posts", strings.NewReader(`{"Title":"x"}`))
 	r.Header.Set("Content-Type", "application/json")

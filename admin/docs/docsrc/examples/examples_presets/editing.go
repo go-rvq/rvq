@@ -38,8 +38,13 @@ func PresetsEditingCustomizationDescription(b *presets.Builder, db *gorm.DB) (
 	ce.Only("Name", "CompanyID", "Description")
 
 	ce.Field("Description").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		obj := field.Obj
-		return richeditor.RichEditor(db, "Body").Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).Value(obj.(*Customer).Description).Label(field.Label)
+		// the field's own key and the field's own value: what the form posts
+		// back has to be what the field holds, or the record stamp hashes one
+		// thing while the form carries another
+		return richeditor.RichEditor(db, field.FormKey).
+			Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).
+			Value(field.StringValue()).
+			Label(field.Label)
 	})
 	return
 }

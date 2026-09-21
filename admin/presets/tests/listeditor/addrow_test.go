@@ -28,7 +28,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "add row flags the appended item as __new",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.AddRowEvent).
 				Query(presets.ParamID, "1").
@@ -42,7 +42,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 				AddField("Items[1].Label", "B").
 				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "1").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 			bodyContainsAll(t, er.Body,
@@ -68,7 +68,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "save with appended __new row (zero ID) creates it",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app2, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -85,7 +85,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "1").
 				AddField("Items[1].__new", "true").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
@@ -122,7 +122,7 @@ func TestSaveOK_ZeroPKItemWithoutNewDoesNotCrash(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "zero-PK row without __new does not crash the save",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -138,7 +138,7 @@ func TestSaveOK_ZeroPKItemWithoutNewDoesNotCrash(t *testing.T) {
 				AddField("Items[1].Label", "NEW").
 				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "1").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 			if containsAny(er.Body, "WHERE conditions required") {

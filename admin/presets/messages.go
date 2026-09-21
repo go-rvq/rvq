@@ -150,9 +150,12 @@ type Messages struct {
 
 	// Optimistic locking of the edit form (see record_stamp.go).
 	// ErrRecordChangedBy takes the author's name and e-mail.
-	ErrRecordChanged      string
-	ErrRecordChangedBy    string
-	ErrRecordStampMissing i18n.ErrorString
+	// ErrRecordChangedUnknownWhen is for a model with no UpdatedAt: the state
+	// hash says the record moved, and nothing says when or by whom.
+	ErrRecordChanged            string
+	ErrRecordChangedBy          string
+	ErrRecordChangedUnknownWhen i18n.ErrorString
+	ErrRecordStampMissing       i18n.ErrorString
 
 	CopiedToClipboard string
 }
@@ -331,6 +334,8 @@ var Messages_en_US = &Messages{
 		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
 	ErrRecordChangedBy: "This record was changed by %s (%s) at %s, after you opened this form. " +
 		"Reload it and make your changes again, so that nothing that has been saved in the meantime is lost.",
+	ErrRecordChangedUnknownWhen: "This record was changed by someone else after you opened this form. " +
+		"Reload it and make your changes again, so that nothing saved in the meantime is lost.",
 	ErrRecordStampMissing: "This form is out of date and cannot be saved. Reload it and make your changes again.",
 	ErrFieldRequired:      i18n.ErrorString(ErrFieldRequired.Error()),
 	CopiedToClipboard:     "Copied to clipboard",
@@ -423,6 +428,8 @@ var Messages_pt_BR = &Messages{
 	ErrRecordChanged: "Este registro foi alterado por outra pessoa em %s, depois que você abriu este formulário. " +
 		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
 	ErrRecordChangedBy: "Este registro foi alterado por %s (%s) em %s, depois que você abriu este formulário. " +
+		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
+	ErrRecordChangedUnknownWhen: "Este registro foi alterado por outra pessoa depois que você abriu este formulário. " +
 		"Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.",
 	ErrRecordStampMissing: "Este formulário está desatualizado e não pode ser salvo. Recarregue-o e refaça suas alterações.",
 	ErrFieldRequired:      "Este campo não pode ser vazio",

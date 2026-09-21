@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	. "github.com/go-rvq/rvq/admin/presets/integration"
+	"github.com/go-rvq/rvq/web"
 	. "github.com/go-rvq/rvq/web/multipartestutils"
 )
 
@@ -112,7 +113,7 @@ func TestSaveFail_PersistedItemRemoved_KeepsDeletedInUI(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "save fails, removed persisted item stays deleted",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -125,7 +126,7 @@ func TestSaveFail_PersistedItemRemoved_KeepsDeletedInUI(t *testing.T) {
 				AddField("Items[1].Label", "B").
 				AddField("Items[1].__pos", "1").
 				AddField("Items[1].__deleted", "true"). // removed in the browser
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 			bodyContainsAll(t, er.Body,
@@ -165,7 +166,7 @@ func TestSaveFail_NewItemRemoved_VanishesFromUI(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "save fails, removed new item vanishes",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -185,7 +186,7 @@ func TestSaveFail_NewItemRemoved_VanishesFromUI(t *testing.T) {
 				AddField("Items[2].__pos", "2").
 				AddField("Items[2].__new", "true").
 				AddField("Items[2].__deleted", "true").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 			bodyContainsAll(t, er.Body,
@@ -227,7 +228,7 @@ func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "deleted item with empty required field does not fail validation",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -242,7 +243,7 @@ func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
 				AddField("Items[1].Label", ""). // empty required field
 				AddField("Items[1].__pos", "1").
 				AddField("Items[1].__deleted", "true").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		// save succeeds -> the dialog closes; no validation error rendered
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
@@ -280,7 +281,7 @@ func TestSaveOK_DeletedItemRemovedFromDB(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "successful save removes the deleted item",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -294,7 +295,7 @@ func TestSaveOK_DeletedItemRemovedFromDB(t *testing.T) {
 				AddField("Items[1].Label", "B").
 				AddField("Items[1].__pos", "1").
 				AddField("Items[1].__deleted", "true").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		// the overlay is closed on success (closer.show = false)
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
@@ -311,4 +312,34 @@ func TestSaveOK_DeletedItemRemovedFromDB(t *testing.T) {
 			}
 		},
 	}, app)
+}
+
+// signed is the request a browser would send: the form the test built, plus the
+// record stamp the rendered form carried. Product has no UpdatedAt, so the
+// stamp is the hash of the fields the form edits — and the record has to be
+// read the way the form read it, through the model's own fetcher, or the nested
+// items would hash differently (see presets.Builder.SignForm).
+func signed(t *testing.T, app *presets.Builder, r *http.Request) *http.Request {
+	t.Helper()
+
+	mb := app.GetModel(&Product{})
+	if mb == nil {
+		t.Fatal("o modelo Product não está registrado")
+	}
+
+	mid, err := mb.ParseRecordID(r.URL.Query().Get(presets.ParamID))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj := mb.NewModel()
+	if err = mb.Editing().Fetcher(obj, mid, &web.EventContext{R: r}); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := app.SignForm(r, obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }

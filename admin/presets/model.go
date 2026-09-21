@@ -60,8 +60,11 @@ type ModelBuilder struct {
 	listFieldBuilders,
 	detailFieldBuilders FieldBuilders
 
-	modelType           reflect.Type
-	notInMenu           bool
+	modelType reflect.Type
+	notInMenu bool
+	// noRecordStateStamp turns off the state-hash fallback of the optimistic
+	// lock for a model with no UpdatedAt (see SetRecordStateStamp).
+	noRecordStateStamp  bool
 	menuIcon            string
 	defaultURLQueryFunc func(*http.Request) url.Values
 	fieldLabels         map[string]func(ctx *web.EventContext) string
@@ -509,6 +512,24 @@ func (mb *ModelBuilder) URIName(v string) (r *ModelBuilder) {
 func (mb *ModelBuilder) DefaultURLQueryFunc(v func(*http.Request) url.Values) (r *ModelBuilder) {
 	mb.defaultURLQueryFunc = v
 	return mb
+}
+
+// SetRecordStateStamp turns the optimistic lock's fallback on or off for this
+// model. It is ON: a model with no UpdatedAt is guarded by a hash of the fields
+// its edit form carries (see EditingBuilder.RecordStateHash).
+//
+// Turn it off for a model whose form is not meant to be locked — or one whose
+// fields are expensive to read — and updates of it stop carrying, and stop
+// requiring, the stamp. A model WITH an UpdatedAt is guarded by it either way:
+// this switch does not reach that.
+func (mb *ModelBuilder) SetRecordStateStamp(v bool) (r *ModelBuilder) {
+	mb.noRecordStateStamp = !v
+	return mb
+}
+
+// RecordStateStamp reports whether the state-hash fallback is on for this model.
+func (mb *ModelBuilder) RecordStateStamp() bool {
+	return !mb.noRecordStateStamp
 }
 
 func (mb *ModelBuilder) InMenu(v bool) (r *ModelBuilder) {

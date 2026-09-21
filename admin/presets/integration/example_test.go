@@ -51,12 +51,11 @@ func TestExample(t *testing.T) {
 			Name: "Update",
 			ReqFunc: func() *http.Request {
 				customerData.TruncatePut(dbr)
-				// Customer has an UpdatedAt, so its edit form carries the stamp
-				// of the record it was rendered from — and the update requires
-				// it (see presets/record_stamp.go).
+				// Customer has an UpdatedAt, so the update requires the stamp
+				// the rendered form would have carried.
 				var stored examples.Customer
 				db.First(&stored, 11)
-				return NewMultipartBuilder().
+				req := NewMultipartBuilder().
 					PageURL("/admin/my_customers").
 					EventFunc(actions.Update).
 					Query(presets.ParamID, "11").
@@ -64,9 +63,12 @@ func TestExample(t *testing.T) {
 					AddField("ID", "11").
 					AddField("Int1", "42").
 					AddField("Name", "Felix11").
-					AddField(presets.RecordStampFormKey,
-						p.FormSigner().Sign(presets.RecordStampValue(stored.UpdatedAt))).
 					BuildEventFuncRequest()
+				req, err := p.SignForm(req, &stored)
+				if err != nil {
+					panic(err)
+				}
+				return req
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				u := &examples.Customer{}
@@ -176,12 +178,21 @@ func TestExample(t *testing.T) {
 			Name: "Without Editing Config/Create Product",
 			ReqFunc: func() *http.Request {
 				productData.TruncatePut(dbr)
-				return NewMultipartBuilder().
+				req := NewMultipartBuilder().
 					PageURL("/admin/products").
 					EventFunc(actions.Update).
 					Query(presets.ParamID, "12").
 					AddField("OwnerName", "owner1").
 					BuildEventFuncRequest()
+				// Product has no UpdatedAt: the stamp is the hash of the fields
+				// its form edits, and the update requires it all the same.
+				var stored examples.Product
+				db.First(&stored, 12)
+				req, err := p.SignForm(req, &stored)
+				if err != nil {
+					panic(err)
+				}
+				return req
 			},
 			EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 				u := &examples.Product{}

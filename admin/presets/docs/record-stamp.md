@@ -16,13 +16,48 @@ POST     presets_Update      →  10:00:00 ≠ 10:04:12 → refused, with a mess
 
 ## What is guarded
 
-Any model with an `UpdatedAt` field — `time.Time` or `*time.Time`, its own or
-promoted from an embedded struct (`gorm.Model`). Models without one are not
-guarded and their forms carry no stamp: there is nothing to compare against.
+Every model, by one of two stamps:
+
+| | the stamp is | noticed change |
+| --- | --- | --- |
+| model with an `UpdatedAt` | the instant the record held when the form was rendered | any save over the record, whatever it touched |
+| model without one | a hash of the fields THIS FORM edits | a change to something the form carries |
+
+`UpdatedAt` is a `time.Time` or `*time.Time`, the model's own or promoted from
+an embedded struct (`gorm.Model`). A model that has one is guarded by it, and
+the hash never comes into play.
 
 The check runs on the update, right after `FetchAndUnmarshal` and **before any
 validation** — what the form says is only worth validating if it was written
 over the record as it stands now.
+
+## The state hash, for a model with no UpdatedAt
+
+`EditingBuilder.RecordStateHash` hashes the record as **this form** sees it: the
+editing `FieldsBuilder`, in order, and nothing else. A field the form does not
+carry cannot be part of what the form is locking.
+
+| in the form | in the hash |
+| --- | --- |
+| a column — scalar, `[]byte`, `time.Time`, or a `driver.Valuer` (a JSON setting, `gorm.DeletedAt`) | its stored value |
+| a NESTED field | its own fields, element by element for a list, plus the list's length |
+| a RELATED record | its ID alone — the form carries the choice, not the other record's contents |
+| a column the form does not edit | nothing |
+
+Each value is read through the field's own `FieldContext`, by `RawValue()` —
+the same read the components do, and the same value the form posts back. That
+is what keeps the hash and the form from drifting apart, and it is why a
+component binds its own key and renders its own value (see
+[fields](fields.md#the-convention-a-component-follows)).
+
+The fallback is ON. A model turns it off — and stops carrying, and requiring,
+the stamp — with:
+
+```go
+mb.SetRecordStateStamp(false)
+```
+
+A model WITH an `UpdatedAt` is guarded either way: the switch does not reach it.
 
 ## The field, and why it is signed
 
@@ -113,11 +148,14 @@ message simply does not name anybody.
 | --- | --- |
 | changed, author unknown | *Este registro foi alterado por outra pessoa **em 27/07/2026 10:45:12 -03:00**, depois que você abriu este formulário. Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.* |
 | changed, author known | *Este registro foi alterado por **Ana Souza (ana@example.com)** em 27/07/2026 10:45:12 -03:00, depois que você abriu este formulário. …* |
+| changed, model with no `UpdatedAt` | *Este registro foi alterado por outra pessoa depois que você abriu este formulário. Recarregue-o e refaça suas alterações, para que nada do que foi salvo nesse meio tempo se perca.* |
 | stamp missing or forged | *Este formulário está desatualizado e não pode ser salvo. Recarregue-o e refaça suas alterações.* |
 
 They are `Messages.ErrRecordChanged` (one `%s`: when), `ErrRecordChangedBy`
-(three: name, e-mail, when) and `ErrRecordStampMissing`, English in
-`Messages_en_US`, so an application can replace them.
+(three: name, e-mail, when), `ErrRecordChangedUnknownWhen` — the state hash says
+the record moved, and nothing says when or by whom — and
+`ErrRecordStampMissing`, English in `Messages_en_US`, so an application can
+replace them.
 
 ## After a refusal
 
@@ -136,6 +174,9 @@ has now seen what changed.
   object says what the FORM sent. Deciding "is this model guarded" happens on the
   TYPE, so an unguarded model costs no extra read.
 - A creation carries no stamp (there is no record yet).
+- The stamp of a model with no `UpdatedAt` costs one read of the stored record
+  on save — the same read the time stamp already did. A model that turned the
+  fallback off costs none: that is decided on the TYPE, before any fetch.
 - Errors wrap `ErrRecordChanged`, `ErrRecordStampMissing` and
   `ErrInvalidFormSignature` — `errors.Is` works, while the message the user reads
   is the localized one.
@@ -153,7 +194,7 @@ req := multipartestutils.NewMultipartBuilder().
 	BuildEventFuncRequest()
 
 var stored Post
-db.First(&stored, 1) // the record AS STORED: its UpdatedAt is the stamp
+db.First(&stored, 1) // the record AS STORED, read the way the FORM read it
 req, err := pb.SignForm(req, &stored)
 ```
 
@@ -164,7 +205,9 @@ passed is left alone and stays readable.
 | | |
 | --- | --- |
 | the record | pass it as STORED, read right before signing: signing the object you are about to send says "nothing changed", which is the very thing the guard decides |
-| an unguarded model | no `UpdatedAt`, nothing to sign — the request comes back unchanged |
+| a record with nested fields | read it through the model's own fetcher — the hash covers them, and a record read without them hashes differently |
+| a model with the fallback off | nothing to sign; the request comes back unchanged |
+| the model | found by the object's type, so it must be registered on the builder |
 | the body | `multipart/form-data` and `application/x-www-form-urlencoded`; anything else is an error, since there is no form to add a field to |
 | files | survive, with their filename and content type |
 
@@ -179,6 +222,13 @@ request can never ask for it.
   agree, two random ones do not, a short secret panics, an explicit key wins),
   field detection (`time.Time`, `*time.Time` nil, embedded), the stamp value and
   the message (when, by whom, and the fallback date layout).
+- [`record_state_hash_test.go`](../record_state_hash_test.go) — the state hash:
+  the same record hashes the same; a column, a valuer column, a time, the
+  related CHOICE and a nested row added, removed, edited or reordered all move
+  it; a column outside the form and the related record's own fields do not; the
+  guard refuses a save over a record that moved and accepts one over a record
+  whose untouched columns changed; and a model with the fallback off carries no
+  stamp and requires none.
 - [`record_stamp_sign_test.go`](../record_stamp_sign_test.go) — `SignForm`: the
   form it was given arrives whole (fields, a repeated one, the file), the stamp
   it adds unsigns to the record's instant, the request it was given is not

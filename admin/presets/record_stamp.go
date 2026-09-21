@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql/driver"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -231,15 +232,252 @@ func RecordStampValue(t time.Time) string {
 	return strconv.FormatInt(t.UTC().UnixNano(), 10)
 }
 
-// recordStampField is the hidden field the edit form carries, or nil when the
-// model has no `UpdatedAt` to guard.
+// RecordStateHash is the stamp of a record that has no UpdatedAt to be stamped
+// by: a hash of the record as THIS FORM sees it, so a change made after the
+// form was rendered is still noticed. It is what gives the optimistic lock
+// something to compare on a model with no timestamps at all.
+//
+// What goes in are the fields the form edits — the editing FieldsBuilder, in
+// order — and nothing else. A field the form does not carry cannot be part of
+// what the form is locking:
+//
+//   - a column (a scalar, a []byte, a time.Time, or anything implementing
+//     driver.Valuer, such as a JSON setting) enters as its stored value;
+//   - a NESTED field enters through its own fields, element by element for a
+//     list — the same walk, one level down;
+//   - a RELATED record enters by its ID alone. The form carries the choice, not
+//     the other record's contents, and whether it was loaded at all depends on
+//     the fetcher.
+func (b *EditingBuilder) RecordStateHash(obj any) string {
+	h := sha256.New()
+	writeFieldsState(h, &b.FieldsBuilder, reflect.Indirect(reflect.ValueOf(obj)), "", 0)
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+}
+
+// maxRecordStateDepth stops the walk from following nested fields forever.
+const maxRecordStateDepth = 8
+
+func writeFieldsState(h io.Writer, fb *FieldsBuilder, v reflect.Value, prefix string, depth int) {
+	if !v.IsValid() || v.Kind() != reflect.Struct || depth > maxRecordStateDepth {
+		return
+	}
+
+	for _, f := range fb.fields {
+		if f.structField == nil {
+			// a field with no struct field behind it holds no record state
+			continue
+		}
+
+		// the value comes through the field's own context, the same object the
+		// components read — and through RawValue, which is what the form POSTS
+		// BACK. The display value is not it: FieldContext.ValueOverride masks a
+		// password as "***" and prints a month as its label, and hashing that
+		// would hide a change instead of catching one.
+		key := prefix + f.name
+		fv, ok := fieldStampValue(v, f, key)
+		if !ok {
+			continue
+		}
+
+		if f.nested != nil {
+			nested := f.nested.FieldsBuilder()
+			if nested == nil {
+				continue
+			}
+			nv := reflect.Indirect(fv)
+			switch nv.Kind() {
+			case reflect.Slice, reflect.Array:
+				io.WriteString(h, "\x00"+key+"#"+strconv.Itoa(nv.Len()))
+				for i := 0; i < nv.Len(); i++ {
+					writeFieldsState(h, nested, reflect.Indirect(nv.Index(i)),
+						key+"["+strconv.Itoa(i)+"].", depth+1)
+				}
+			default:
+				writeFieldsState(h, nested, nv, key+".", depth+1)
+			}
+			continue
+		}
+
+		if s, ok := columnValue(fv); ok {
+			io.WriteString(h, "\x00"+key+"="+s)
+			continue
+		}
+
+		// what is left is another record: the form carries the choice, so the
+		// identity is the whole of it
+		if s, ok := relatedID(fv); ok {
+			io.WriteString(h, "\x00"+key+"#"+s)
+		}
+	}
+}
+
+// fieldStampValue is what this field contributes to the stamp: its RawValue,
+// read through the field's own FieldContext — the same object every component
+// reads the record through, so the hash and the form cannot drift apart.
+//
+// A name the record does not answer to is a field the form builds itself; it
+// carries no record state and stays out.
+func fieldStampValue(v reflect.Value, f *FieldBuilder, formKey string) (fv reflect.Value, ok bool) {
+	if !v.IsValid() {
+		return reflect.Value{}, false
+	}
+	if !v.CanAddr() {
+		// RawValue needs something it can address
+		p := reflect.New(v.Type())
+		p.Elem().Set(v)
+		v = p.Elem()
+	}
+
+	defer func() {
+		if recover() != nil {
+			fv, ok = reflect.Value{}, false
+		}
+	}()
+
+	fc := &FieldContext{
+		ToComponentOptions: &ToComponentOptions{},
+		Obj:                v.Addr().Interface(),
+		Field:              f,
+		Name:               f.name,
+		FormKey:            formKey,
+		Path:               FieldPath{f.name},
+	}
+
+	value := fc.RawValue()
+	if value == nil {
+		return reflect.Value{}, false
+	}
+	return reflect.ValueOf(value), true
+}
+
+// relatedID is the identity of a related record (or of each one, in order),
+// which is all of it the form carries.
+func relatedID(v reflect.Value) (string, bool) {
+	v = reflect.Indirect(v)
+	if !v.IsValid() {
+		return "nil", true
+	}
+
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		var ids string
+		for i := 0; i < v.Len(); i++ {
+			s, _ := relatedID(v.Index(i))
+			ids += s + ","
+		}
+		return ids, true
+	case reflect.Struct:
+		id := v.FieldByName("ID")
+		if !id.IsValid() {
+			return "", false
+		}
+		s, ok := columnValue(id)
+		return s, ok
+	}
+
+	return "", false
+}
+
+// columnValue is the field as the database stores it, and whether it is stored
+// at all.
+func columnValue(v reflect.Value) (string, bool) {
+	if !v.IsValid() {
+		return "", false
+	}
+
+	// a Valuer says for itself what it is worth, on the value or on a pointer
+	// to it — which is how gorm reads it back out
+	if s, ok := valuerString(v); ok {
+		return s, true
+	}
+	if v.Kind() != reflect.Ptr && v.CanAddr() {
+		if s, ok := valuerString(v.Addr()); ok {
+			return s, true
+		}
+	}
+
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "nil", true
+		}
+		return columnValue(v.Elem())
+	}
+
+	if t, ok := v.Interface().(time.Time); ok {
+		return RecordStampValue(t), true
+	}
+
+	switch v.Kind() {
+	case reflect.Bool, reflect.String,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return fmt.Sprint(v.Interface()), true
+	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			if v.IsNil() {
+				return "nil", true
+			}
+			return string(v.Bytes()), true
+		}
+	}
+
+	return "", false
+}
+
+// valuerString asks a driver.Valuer for its stored value. A Valuer that errors
+// is left out: it has no value to compare, and the update is not the place to
+// report it.
+func valuerString(v reflect.Value) (string, bool) {
+	if !v.CanInterface() {
+		return "", false
+	}
+	valuer, ok := v.Interface().(driver.Valuer)
+	if !ok {
+		return "", false
+	}
+	if v.Kind() == reflect.Ptr && v.IsNil() {
+		return "nil", true
+	}
+
+	dv, err := valuer.Value()
+	if err != nil {
+		return "", false
+	}
+	if dv == nil {
+		return "nil", true
+	}
+	if b, ok := dv.([]byte); ok {
+		return string(b), true
+	}
+	if t, ok := dv.(time.Time); ok {
+		return RecordStampValue(t), true
+	}
+	return fmt.Sprint(dv), true
+}
+
+// recordStamp is the value the form carries for obj, and whether the record is
+// guarded at all: the instant its UpdatedAt holds, or — for a model that has
+// none — the hash of the fields this form edits, unless the model turned that
+// fallback off (see ModelBuilder.SetRecordStateStamp).
+func (b *EditingBuilder) recordStamp(obj any) (string, bool) {
+	if t, ok := RecordUpdatedAt(obj); ok {
+		return RecordStampValue(t), true
+	}
+	if b.mb.noRecordStateStamp {
+		return "", false
+	}
+	return b.RecordStateHash(obj), true
+}
+
+// recordStampField is the hidden field the edit form carries: the record as it
+// was when the form was rendered, signed.
 func (b *EditingBuilder) recordStampField(obj any) h.HTMLComponent {
-	t, ok := RecordUpdatedAt(obj)
+	value, ok := b.recordStamp(obj)
 	if !ok {
 		return nil
 	}
-
-	signed := b.mb.p.FormSigner().Sign(RecordStampValue(t))
+	signed := b.mb.p.FormSigner().Sign(value)
 	return h.Input("").Type("hidden").Attr(web.VField(RecordStampFormKey, signed)...)
 }
 
@@ -269,7 +507,9 @@ func (b *EditingBuilder) VerifyRecordStamp(mid ID, ctx *web.EventContext) error 
 	}
 
 	stored := b.mb.NewModel()
-	if _, ok := RecordUpdatedAt(stored); !ok {
+	// the TYPE answers whether the model is guarded, and by what — an
+	// unguarded model costs no read at all
+	if _, timed := RecordUpdatedAt(stored); !timed && b.mb.noRecordStateStamp {
 		return nil
 	}
 
@@ -277,7 +517,6 @@ func (b *EditingBuilder) VerifyRecordStamp(mid ID, ctx *web.EventContext) error 
 		return err
 	}
 
-	current, _ := RecordUpdatedAt(stored)
 	msgr := MustGetMessages(ctx.Context())
 
 	signed := ctx.R.FormValue(RecordStampFormKey)
@@ -294,11 +533,16 @@ func (b *EditingBuilder) VerifyRecordStamp(mid ID, ctx *web.EventContext) error 
 		return &recordStampError{cause: err, msg: string(msgr.ErrRecordStampMissing)}
 	}
 
-	if sent == RecordStampValue(current) {
+	if current, _ := b.recordStamp(stored); sent == current {
 		return nil
 	}
 
-	return &recordStampError{cause: ErrRecordChanged, msg: b.recordChangedMessage(stored, current, ctx)}
+	at, timed := RecordUpdatedAt(stored)
+	if !timed {
+		// the hash says the record moved, and nothing says when or by whom
+		return &recordStampError{cause: ErrRecordChanged, msg: string(msgr.ErrRecordChangedUnknownWhen)}
+	}
+	return &recordStampError{cause: ErrRecordChanged, msg: b.recordChangedMessage(stored, at, ctx)}
 }
 
 // recordStampError shows the reader a localized message while keeping the
@@ -368,11 +612,17 @@ func (b *EditingBuilder) recordUser(stored any, ctx *web.EventContext) RecordUse
 //	db.First(&stored, id)
 //	req, err := pb.SignForm(req, &stored)
 func (b *Builder) SignForm(r *http.Request, obj any) (*http.Request, error) {
-	t, ok := RecordUpdatedAt(obj)
+	mb := b.GetModel(obj)
+	if mb == nil {
+		return nil, fmt.Errorf("presets: no model registered for %T", obj)
+	}
+
+	value, ok := mb.Editing().recordStamp(obj)
 	if !ok {
+		// not guarded: there is no stamp to carry
 		return r, nil
 	}
-	return addFormField(r, RecordStampFormKey, b.FormSigner().Sign(RecordStampValue(t)))
+	return addFormField(r, RecordStampFormKey, b.FormSigner().Sign(value))
 }
 
 // addFormField returns a copy of r whose form carries one more field, re-encoding

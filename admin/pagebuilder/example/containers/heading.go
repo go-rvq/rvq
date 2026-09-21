@@ -44,8 +44,10 @@ func RegisterHeadingContainer(pb *pagebuilder.Builder, db *gorm.DB) {
 		})
 	ed := vb.Model(&Heading{}).Editing("AddTopSpace", "AddBottomSpace", "AnchorID", "Heading", "FontColor", "BackgroundColor", "Link", "LinkText", "LinkDisplayOption", "Text")
 	ed.Field("Text").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		obj := field.Obj
-		return richeditor.RichEditor(db, "Text").Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).Value(obj.(*Heading).Text).Label(field.Label)
+		return richeditor.RichEditor(db, field.FormKey).
+			Plugins([]string{"alignment", "video", "imageinsert", "fontcolor"}).
+			Value(field.StringValue()).
+			Label(field.Label)
 	})
 
 	ed.Field("FontColor").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {

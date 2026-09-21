@@ -118,7 +118,7 @@ func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilde
 			if t != nil {
 				v = t.Local().Format("2006-01-02 15:04")
 			}
-			return vx.VXDateTimePicker().Attr(web.VField(field.Name, v)...).Label(msgr.ScheduleTime).
+			return vx.VXDateTimePicker().Attr(web.VField(field.FormKey, v)...).Label(msgr.ScheduleTime).
 				TimePickerProps(vx.TimePickerProps{
 					Format:     "24hr",
 					Scrollable: true,

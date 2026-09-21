@@ -25,7 +25,7 @@ func TestIndexStable_FormKeysFollowIndexNotPosition(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "form keys follow __index, not slice position",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -41,7 +41,7 @@ func TestIndexStable_FormKeysFollowIndexNotPosition(t *testing.T) {
 				AddField("Items[1].Label", "B").
 				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "0").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
 			bodyContainsAll(t, er.Body,
@@ -77,7 +77,7 @@ func TestSaveOK_NewItemCreated(t *testing.T) {
 	RunCase(t, TestCase{
 		Name: "new item (flagged __new, no ID) is created",
 		ReqFunc: func() *http.Request {
-			return NewMultipartBuilder().
+			return signed(t, app, NewMultipartBuilder().
 				PageURL("/admin/products").
 				EventFunc(actions.Update).
 				Query(presets.ParamID, "1").
@@ -93,7 +93,7 @@ func TestSaveOK_NewItemCreated(t *testing.T) {
 				AddField("Items[1].__index", "1").
 				AddField("Items[1].__pos", "1").
 				AddField("Items[1].__new", "true").
-				BuildEventFuncRequest()
+				BuildEventFuncRequest())
 		},
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
