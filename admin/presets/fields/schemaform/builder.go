@@ -35,6 +35,25 @@ type FieldInfo struct {
 // name, an empty Hint leaves no hint, a nil Help leaves no `?`.
 type FieldInfoFunc func(ctx *web.EventContext, path string) FieldInfo
 
+// EnumItem is one value of an enum as the form offers it: the value that goes
+// into the record, and what the reader sees.
+type EnumItem struct {
+	Value string
+	Label string
+}
+
+// EnumInfoFunc answers for the enum of the field at PATH — the same path
+// FieldInfoFunc answers for — with ONE ENTRY PER ITEM, in the order they should
+// be offered.
+//
+// The path, and not the enum's name, because an enum need not have one: gad
+// takes it inline, as the type of a field, as well as declared beside the
+// interface. The name is there in Context.Field.Enum for whoever wants it.
+//
+// It is optional, and so is each entry: a nil answer leaves the values the enum
+// declared, and an entry with an empty Label shows its own value.
+type EnumInfoFunc func(ctx *web.EventContext, path string) []EnumItem
+
 // Context is what a type's component is given.
 type Context struct {
 	// Field is the schema's field: its name, its type, and — when the type is
@@ -89,6 +108,31 @@ func (c *Context) Hint() string { return c.Info().Hint }
 // Help is the long explanation, or nil.
 func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
 
+// EnumItems are the values this field offers: what the builder's EnumInfoFunc
+// says, or the ones the enum declared, each showing its own value.
+func (c *Context) EnumItems() []EnumItem {
+	if c.Field == nil || c.Field.Enum == nil {
+		return nil
+	}
+
+	if c.Builder != nil && c.Builder.enumInfo != nil {
+		if items := c.Builder.enumInfo(c.Event, c.Path); items != nil {
+			for i := range items {
+				if items[i].Label == "" {
+					items[i].Label = items[i].Value
+				}
+			}
+			return items
+		}
+	}
+
+	items := make([]EnumItem, len(c.Field.Enum.Values))
+	for i, v := range c.Field.Enum.Values {
+		items[i] = EnumItem{Value: v, Label: v}
+	}
+	return items
+}
+
 // Builder maps a TYPE to the component that edits it, and draws a schema with
 // them.
 //
@@ -100,8 +144,17 @@ func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
 //	    Type("int", myNumberField).
 //	    Type("color", myColorPicker)
 type Builder struct {
-	types map[string]ComponentFunc
-	info  FieldInfoFunc
+	types    map[string]ComponentFunc
+	info     FieldInfoFunc
+	enumInfo EnumInfoFunc
+}
+
+// EnumInfo sets the function that says which values an enum field offers, and
+// what each is called, BY THE FIELD'S PATH. It is optional; without it a field
+// offers the values its enum declared, each showing its own name.
+func (b *Builder) EnumInfo(f EnumInfoFunc) *Builder {
+	b.enumInfo = f
+	return b
 }
 
 // FieldInfo sets the function that says the words around a field — its label,
@@ -286,13 +339,20 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		return errorComponent(fmt.Sprintf("schemaform: o field %q não tem enum", c.Field.Name))
 	}
 
-	items := make([]string, len(c.Field.Enum.Values))
-	copy(items, c.Field.Enum.Values)
+	items := c.EnumItems()
+	options := make([]map[string]string, len(items))
+	for i, it := range items {
+		options[i] = map[string]string{"value": it.Value, "title": it.Label}
+	}
 
 	return v.VSelect().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
-		Items(items).
+		Items(options).
+		ItemTitle("title").
+		ItemValue("value").
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
 		Clearable(!c.Field.Required()).
 		Attr("required", c.Field.Required()).
 		Attr("v-model", c.Value)

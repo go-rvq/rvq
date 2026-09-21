@@ -198,7 +198,7 @@ func TestEnumFieldIsASelect(t *testing.T) {
 
 	for _, want := range []string{
 		`<v-select`,
-		`:items='["Read","Write"]'`,
+		`{"title":"Read","value":"Read"}`,
 		`v-model='form["Value"].perm'`,
 		`required`, // not optional: it may not be left empty
 	} {
@@ -310,5 +310,70 @@ func TestFieldInfoIsOptional(t *testing.T) {
 	}
 	if strings.Contains(got, "mdi-help-circle-outline") {
 		t.Error("apareceu um ? sem help")
+	}
+}
+
+// The values an enum field offers come from the EnumInfoFunc, asked by the
+// field's PATH — one entry per item, in the order they should be offered. The
+// path, and not the enum's name, because an enum need not have one.
+func TestEnumInfoByPath(t *testing.T) {
+	var asked []string
+
+	b := New().EnumInfo(func(ctx *web.EventContext, path string) []EnumItem {
+		asked = append(asked, path)
+		if path == "perm" {
+			return []EnumItem{
+				{Value: "Write", Label: "Escrita"},
+				{Value: "Read"}, // no label: shows its own value
+			}
+		}
+		return nil
+	})
+
+	got := render(t, b, "enum Perm { Read, Write }\nenum Cor { Azul }\ninterface {perm Perm; cor Cor}")
+
+	// asked for each enum field, by its path
+	for _, want := range []string{"perm", "cor"} {
+		var found bool
+		for _, p := range asked {
+			if p == want {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("o path %q não foi perguntado; perguntou: %v", want, asked)
+		}
+	}
+
+	// the answer decides the order and the words, and the value is what goes
+	// into the record
+	if !strings.Contains(got, `{"title":"Escrita","value":"Write"}`) {
+		t.Errorf("o item não veio do EnumInfo:\n%s", got)
+	}
+	if !strings.Contains(got, `{"title":"Read","value":"Read"}`) {
+		t.Errorf("um item sem label devia mostrar o próprio valor:\n%s", got)
+	}
+	if !strings.Contains(got, `:item-value='"value"'`) || !strings.Contains(got, `:item-title='"title"'`) {
+		t.Errorf("o select não separa valor de rótulo:\n%s", got)
+	}
+
+	// a field it did not answer for keeps what its enum declared
+	if !strings.Contains(got, `{"title":"Azul","value":"Azul"}`) {
+		t.Errorf("o enum declarado não foi usado onde o EnumInfo não respondeu:\n%s", got)
+	}
+}
+
+// Without the function the field offers what the enum declared, each showing
+// its own name.
+func TestEnumInfoIsOptional(t *testing.T) {
+	got := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+
+	for _, want := range []string{
+		`{"title":"Read","value":"Read"}`,
+		`{"title":"Write","value":"Write"}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("falta %s:\n%s", want, got)
+		}
 	}
 }
