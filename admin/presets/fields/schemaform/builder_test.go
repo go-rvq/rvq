@@ -323,8 +323,8 @@ func TestEnumInfoByPath(t *testing.T) {
 		asked = append(asked, path)
 		if path == "perm" {
 			return []EnumItem{
-				{Value: "Write", Label: "Escrita"},
-				{Value: "Read"}, // no label: shows its own value
+				{Name: "Write", Label: "Escrita", Hint: "pode alterar"},
+				{Name: "Read"}, // no label: shows its own name
 			}
 		}
 		return nil
@@ -347,7 +347,7 @@ func TestEnumInfoByPath(t *testing.T) {
 
 	// the answer decides the order and the words, and the value is what goes
 	// into the record
-	if !strings.Contains(got, `{"title":"Escrita","value":"Write"}`) {
+	if !strings.Contains(got, `"title":"Escrita","value":"Write"`) {
 		t.Errorf("o item não veio do EnumInfo:\n%s", got)
 	}
 	if !strings.Contains(got, `{"title":"Read","value":"Read"}`) {
@@ -355,6 +355,14 @@ func TestEnumInfoByPath(t *testing.T) {
 	}
 	if !strings.Contains(got, `:item-value='"value"'`) || !strings.Contains(got, `:item-title='"title"'`) {
 		t.Errorf("o select não separa valor de rótulo:\n%s", got)
+	}
+	// an item's hint rides as its subtitle, and only then does the select read
+	// each item's own props
+	if !strings.Contains(got, `"subtitle":"pode alterar"`) {
+		t.Errorf("o hint do item não virou subtítulo:\n%s", got)
+	}
+	if !strings.Contains(got, `:item-props`) {
+		t.Errorf("o select não leu os props do item:\n%s", got)
 	}
 
 	// a field it did not answer for keeps what its enum declared

@@ -38,8 +38,13 @@ type FieldInfoFunc func(ctx *web.EventContext, path string) FieldInfo
 // EnumItem is one value of an enum as the form offers it: the value that goes
 // into the record, and what the reader sees.
 type EnumItem struct {
-	Value string
+	// Name is what goes INTO the record — the enum member's name, never the
+	// number behind it.
+	Name string
+	// Label is what the reader sees; empty shows the Name.
 	Label string
+	// Hint is the line under the item in the list, when it needs one.
+	Hint string
 }
 
 // EnumInfoFunc answers for the enum of the field at PATH — the same path
@@ -119,7 +124,7 @@ func (c *Context) EnumItems() []EnumItem {
 		if items := c.Builder.enumInfo(c.Event, c.Path); items != nil {
 			for i := range items {
 				if items[i].Label == "" {
-					items[i].Label = items[i].Value
+					items[i].Label = items[i].Name
 				}
 			}
 			return items
@@ -127,8 +132,8 @@ func (c *Context) EnumItems() []EnumItem {
 	}
 
 	items := make([]EnumItem, len(c.Field.Enum.Names))
-	for i, v := range c.Field.Enum.Names {
-		items[i] = EnumItem{Value: v, Label: v}
+	for i, name := range c.Field.Enum.Names {
+		items[i] = EnumItem{Name: name, Label: name}
 	}
 	return items
 }
@@ -341,8 +346,13 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 
 	items := c.EnumItems()
 	options := make([]map[string]string, len(items))
+	var anyHint bool
 	for i, it := range items {
-		options[i] = map[string]string{"value": it.Value, "title": it.Label}
+		options[i] = map[string]string{"value": it.Name, "title": it.Label}
+		if it.Hint != "" {
+			options[i]["subtitle"] = it.Hint
+			anyHint = true
+		}
 	}
 
 	return v.VSelect().
@@ -351,6 +361,8 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		Items(options).
 		ItemTitle("title").
 		ItemValue("value").
+		// with a hint to show, each item carries its own props (the subtitle)
+		Attr(":item-props", anyHint).
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
 		Clearable(!c.Field.Required()).
