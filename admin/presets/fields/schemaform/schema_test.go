@@ -127,9 +127,15 @@ func TestParseRejectsWhatIsNotASchema(t *testing.T) {
 		"empty":      "",
 		"not a form": "42",
 		"broken":     "{a str",
-		// an interface before the form must have a name: nothing can refer to
+		// an interface beside the form must have a name: nothing can refer to
 		// an anonymous one, so it is a mistake written down
 		"two anonymous": "{a str} interface {b str}",
+		// written in parts, the form is the one named Form — and there is none
+		"no Form": "interface User { name }\ninterface Owner { user User }",
+		// a single named interface is not the form either, if it is not Form
+		"another name": "interface Schema { a str }",
+		// and an anonymous one beside Form cannot be referred to
+		"anonymous beside Form": "interface Form { a str }\ninterface { b str }",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := Parse(src); err == nil {
@@ -291,10 +297,10 @@ func TestFieldAt(t *testing.T) {
 	}
 }
 
-// A schema may be written in parts: every interface in the source is a
-// declaration a later one may use by NAME, and the last one is the form.
+// A schema may be written in parts: a named interface is a declaration another
+// may use by ITS NAME, and the one named Form is the form.
 func TestParseNamedInterfaces(t *testing.T) {
-	s, err := Parse("interface User { name, id }; interface Schema { owner User; creator User }")
+	s, err := Parse("interface User { name, id }; interface Form { owner User; creator User }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +330,7 @@ func TestParseNamedInterfaces(t *testing.T) {
 
 // A declared interface serves a list and a nested field the same way.
 func TestParseNamedInterfaceInAList(t *testing.T) {
-	s, err := Parse("interface Link { label str; href }\ninterface S { links []Link; main Link }")
+	s, err := Parse("interface Link { label str; href }\ninterface Form { links []Link; main Link }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +352,7 @@ func TestParseNamedInterfaceInAList(t *testing.T) {
 
 // Enums declared beside the schema reach the interfaces it names.
 func TestParseNamedInterfaceWithEnum(t *testing.T) {
-	s, err := Parse("enum Perm { Read, Write }\ninterface User { perm Perm }\ninterface S { owner User }")
+	s, err := Parse("enum Perm { Read, Write }\ninterface User { perm Perm }\ninterface Form { owner User }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -360,9 +366,9 @@ func TestParseNamedInterfaceWithEnum(t *testing.T) {
 // refused by name instead of being unfolded forever.
 func TestParseNamedInterfaceCycle(t *testing.T) {
 	for name, src := range map[string]string{
-		"direto":   "interface Node { child Node }\ninterface S { root Node }",
-		"indireto": "interface A { b B }\ninterface B { a A }\ninterface S { a A }",
-		"na raiz":  "interface S { self S }",
+		"direto":   "interface Node { child Node }\ninterface Form { root Node }",
+		"indireto": "interface A { b B }\ninterface B { a A }\ninterface Form { a A }",
+		"na raiz":  "interface Form { self Form }",
 	} {
 		_, err := Parse(src)
 		if err == nil {
@@ -384,5 +390,38 @@ func TestParseUnknownTypeNameIsKept(t *testing.T) {
 	}
 	if got := s.Fields[0].Type; got != "User" {
 		t.Errorf("type = %q, want %q", got, "User")
+	}
+}
+
+// The form is the interface NAMED Form, wherever it is written — before its
+// declarations as well as after them.
+func TestParseFormNameWinsOverOrder(t *testing.T) {
+	for name, src := range map[string]string{
+		"o form primeiro":   "interface Form { owner User }\ninterface User { name, id }",
+		"o form por último": "interface User { name, id }\ninterface Form { owner User }",
+		"entre outras":      "interface User { name, id }\ninterface Form { owner User }\ninterface Other { x str }",
+	} {
+		s, err := Parse(src)
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		if len(s.Fields) != 1 || s.Fields[0].Name != "owner" {
+			t.Errorf("%s: o form não é o interface Form: %+v", name, s.Fields)
+			continue
+		}
+		if s.Fields[0].Schema == nil || s.Fields[0].Schema.Fields[0].Name != "name" {
+			t.Errorf("%s: owner não virou o form de User: %+v", name, s.Fields[0])
+		}
+	}
+}
+
+// A schema written in ONE piece needs no name for anything, and goes on being
+// written without one.
+func TestParseAnonymousStillIsTheForm(t *testing.T) {
+	for _, src := range []string{"{a str}", "[]{a str}", "[]str", "interface { a str }"} {
+		if _, err := Parse(src); err != nil {
+			t.Errorf("%q: %v", src, err)
+		}
 	}
 }

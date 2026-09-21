@@ -1,38 +1,8 @@
-// Package schemaform builds an edit form out of a gad interface.
-//
-// A value edited as a form is described by a SCHEMA: the gad interface its
-// content satisfies, written without the keyword —
-//
-//	[]{label str; icon str; href}
-//
-// which is `interface []{label str; icon str; href}`, a list of records with
-// three fields. The form the schema describes is what the user edits; the value
-// itself is stored as it always was (YAML, for a LocaleMessage).
-//
-// The schema says, for each field, WHICH component renders it: the field's type
-// names a component registered on the Builder. An untyped field is `str` —
-// plain text — and a field that is itself an interface is a form again, drawn
-// by the same component one level down.
-//
-// A list needs no record: `[]str` is a list of plain values, each edited by the
-// component of its type, and `[][]str` a list of those. A field may be one too
-// (`tags []str`).
-//
-// A schema may be written in PARTS: every interface in the source is a
-// declaration a later one may use by name, and the last one is the form —
-//
-//	interface User { name, id }
-//	interface Schema { owner User; creator User }
-//
-// A field may also hold one of a list of values the schema does not know: see
-// Builder.EnumItems, which both fills the select and says what a posted value
-// is checked against (Builder.DecodeForm). And the value the form edits is
-// carried by the builder's codec (Builder.Codec) — YAML unless an application
-// says otherwise.
 package schemaform
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gad-lang/gad/parser"
@@ -120,28 +90,25 @@ func Parse(src string) (*Schema, error) {
 	}
 
 	var (
-		iface  *node.InterfaceExpr
+		// anon are the interfaces written without a name. A schema in one piece
+		// is exactly one of them and nothing else.
+		anon   []*node.InterfaceExpr
 		enums  = map[string]*Enum{}
 		ifaces = map[string]*node.InterfaceExpr{}
 	)
 
-	// Every interface in the source is a declaration a later one may use by
-	// name; the LAST is the form itself. So a schema may be written in parts:
+	// A named interface is a declaration another may use by ITS NAME, and the
+	// one named FormName is the form. So a schema may be written in parts, in
+	// any order:
 	//
 	//	interface User { name, id }
-	//	interface Schema { owner User; creator User }
-	//
-	// An interface that is not the form must have a name: without one, nothing
-	// can refer to it, so it would only be a mistake written down.
-	declare := func(found *node.InterfaceExpr) error {
-		if iface != nil && nameOf(iface) == "" {
-			return fmt.Errorf("schemaform: an interface before the form must have a name")
-		}
-		iface = found
+	//	interface Form { owner User; creator User }
+	declare := func(found *node.InterfaceExpr) {
 		if name := nameOf(found); name != "" {
 			ifaces[name] = found
+			return
 		}
-		return nil
+		anon = append(anon, found)
 	}
 
 	for _, stmt := range file.Stmts {
@@ -151,24 +118,21 @@ func Parse(src string) (*Schema, error) {
 				enums[e.Name] = e
 			}
 		case *node.InterfaceStmt:
-			if err := declare(&st.InterfaceExpr); err != nil {
-				return nil, err
-			}
+			declare(&st.InterfaceExpr)
 		case *node.ExprStmt:
 			found, ok := st.Expr.(*node.InterfaceExpr)
 			if !ok {
 				return nil, fmt.Errorf("schemaform: a schema is one interface and its enums, got %T", st.Expr)
 			}
-			if err := declare(found); err != nil {
-				return nil, err
-			}
+			declare(found)
 		default:
 			return nil, fmt.Errorf("schemaform: a schema is one interface and its enums, got %T", stmt)
 		}
 	}
 
-	if iface == nil {
-		return nil, fmt.Errorf("schemaform: a schema is one interface, and there is none")
+	iface, err := formOf(anon, ifaces)
+	if err != nil {
+		return nil, err
 	}
 
 	s := schemaOf(iface)
@@ -178,6 +142,49 @@ func Parse(src string) (*Schema, error) {
 	s.Enums = enums
 	bindEnums(s, enums)
 	return s, nil
+}
+
+// FormName is the name of the interface that is the FORM when a schema is
+// written in parts. The others, whatever they are called, are the declarations
+// it uses.
+const FormName = "Form"
+
+// formOf picks the interface the form is made of: the one named FormName, and
+// — for a schema written in one piece, which needs no name for anything — the
+// anonymous one.
+//
+// An anonymous interface beside the form is refused: nothing can refer to it,
+// so it would only be a mistake written down.
+func formOf(anon []*node.InterfaceExpr, named map[string]*node.InterfaceExpr) (*node.InterfaceExpr, error) {
+	form, ok := named[FormName]
+	if ok {
+		if len(anon) > 0 {
+			return nil, fmt.Errorf(
+				"schemaform: the form is the interface %q; an interface beside it must have a name too", FormName)
+		}
+		return form, nil
+	}
+
+	switch len(anon) {
+	case 1:
+		return anon[0], nil
+	case 0:
+		if len(named) > 0 {
+			names := make([]string, 0, len(named))
+			for name := range named {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			return nil, fmt.Errorf(
+				"schemaform: the form is the interface %q, and there is none (there is %s)",
+				FormName, strings.Join(names, ", "))
+		}
+		return nil, fmt.Errorf("schemaform: a schema is one interface, and there is none")
+	default:
+		return nil, fmt.Errorf(
+			"schemaform: a schema written in parts names its form %q; there are %d interfaces without a name",
+			FormName, len(anon))
+	}
 }
 
 // nameOf is the interface's own name, or "" when it is anonymous.

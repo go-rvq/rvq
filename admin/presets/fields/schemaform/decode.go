@@ -92,7 +92,7 @@ func (s *Schema) Decode(values url.Values, key string) any {
 func (b *Builder) DecodeForm(ctx *web.EventContext, schema *Schema, values url.Values, key string) (any, error) {
 	d := &decoder{
 		values: values,
-		items: func(path string, f *Field) []EnumItem {
+		items: func(path string, f *Field) ([]EnumItem, error) {
 			return b.itemsOf(ctx, path, f)
 		},
 	}
@@ -108,7 +108,7 @@ type decoder struct {
 	values url.Values
 	// items are the values a field may hold, when it holds one of a list. Nil
 	// when nobody is checking.
-	items func(path string, f *Field) []EnumItem
+	items func(path string, f *Field) ([]EnumItem, error)
 	errs  []error
 }
 
@@ -164,7 +164,15 @@ func (d *decoder) value(f *Field, key, path string) any {
 	}
 
 	if d.items != nil {
-		if items := d.items(path, f); len(items) > 0 {
+		items, err := d.items(path, f)
+		switch {
+		case err != nil:
+			// The list this value should have been checked against could not be
+			// fetched. A value that was never checked is not a value that
+			// passed, so the save fails here.
+			d.errs = append(d.errs, fmt.Errorf("%s: os valores possíveis não puderam ser obtidos: %w",
+				where(f, path), err))
+		case len(items) > 0:
 			d.check(f, path, s, items)
 		}
 	}
@@ -205,10 +213,7 @@ func (d *decoder) value(f *Field, key, path string) any {
 // own business: a field that accepts nil may be left empty, and a required one
 // that was is reported as empty, not as an impostor.
 func (d *decoder) check(f *Field, path, value string, items []EnumItem) {
-	where := path
-	if where == "" {
-		where = f.Name
-	}
+	where := where(f, path)
 
 	if value == "" {
 		if !f.Nullable {
@@ -226,6 +231,15 @@ func (d *decoder) check(f *Field, path, value string, items []EnumItem) {
 	}
 	d.errs = append(d.errs, fmt.Errorf("%s: %q não está entre os valores possíveis (%s)",
 		where, value, strings.Join(names, ", ")))
+}
+
+// where names a field in an error: its path, and — at the root, where there is
+// none — its own name.
+func where(f *Field, path string) string {
+	if path != "" {
+		return path
+	}
+	return f.Name
 }
 
 // hasKeyUnder reports whether the form carries anything at this path: the value

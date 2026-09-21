@@ -65,8 +65,11 @@ type EnumInfoFunc func(ctx *web.EventContext, path string) []EnumItem
 // schema. The field itself comes along, for whoever dispatches on its type.
 //
 // A nil answer means the field is not a closed list, and is drawn by its type
-// as usual.
-type EnumItemsFunc func(ctx *web.EventContext, path string, field *Field) []EnumItem
+// as usual. An ERROR is the answer when the list should have been there and
+// could not be fetched: the field is then drawn as the failure it is, and a
+// save that would have been checked against the list is refused — never
+// accepted unchecked.
+type EnumItemsFunc func(ctx *web.EventContext, path string, field *Field) ([]EnumItem, error)
 
 // Context is what a type's component is given.
 type Context struct {
@@ -97,6 +100,7 @@ type Context struct {
 	infoRead bool
 
 	items     []EnumItem
+	itemsErr  error
 	itemsRead bool
 }
 
@@ -135,15 +139,15 @@ func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
 
 // EnumItems are the values this field offers: what the builder's EnumInfoFunc
 // says, or the ones the enum declared, each showing its own value.
-func (c *Context) EnumItems() []EnumItem {
+func (c *Context) EnumItems() ([]EnumItem, error) {
 	if c.itemsRead {
-		return c.items
+		return c.items, c.itemsErr
 	}
 	c.itemsRead = true
 	if c.Builder != nil {
-		c.items = c.Builder.itemsOf(c.Event, c.Path, c.Field)
+		c.items, c.itemsErr = c.Builder.itemsOf(c.Event, c.Path, c.Field)
 	}
-	return c.items
+	return c.items, c.itemsErr
 }
 
 // Builder maps a TYPE to the component that edits it, and draws a schema with
@@ -193,22 +197,25 @@ func (b *Builder) EnumItems(f EnumItemsFunc) *Builder {
 //
 // It is the one place the two are resolved, so the select offers exactly what
 // a posted value is checked against.
-func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) []EnumItem {
+func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) ([]EnumItem, error) {
 	if f == nil {
-		return nil
+		return nil, nil
 	}
 
 	if f.Enum == nil {
 		if b.enumItems == nil {
-			return nil
+			return nil, nil
 		}
-		items := b.enumItems(ctx, path, f)
-		return withLabels(items)
+		items, err := b.enumItems(ctx, path, f)
+		if err != nil {
+			return nil, err
+		}
+		return withLabels(items), nil
 	}
 
 	if b.enumInfo != nil {
 		if items := b.enumInfo(ctx, path); items != nil {
-			return withLabels(items)
+			return withLabels(items), nil
 		}
 	}
 
@@ -216,7 +223,7 @@ func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) []EnumIt
 	for i, name := range f.Enum.Names {
 		items[i] = EnumItem{Name: name, Label: name}
 	}
-	return items
+	return items, nil
 }
 
 // withLabels shows an item's own name when nothing else was given for it.
@@ -285,7 +292,18 @@ func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
 	if registered && c.Field.Type != DefaultType {
 		return draw, true
 	}
-	if len(c.EnumItems()) > 0 {
+
+	items, err := c.EnumItems()
+	if err != nil {
+		// The values this field may hold should have been there and were not:
+		// say so where the field would be, instead of drawing a field that
+		// cannot offer them.
+		return func(c *Context) h.HTMLComponent {
+			return errorComponent(fmt.Sprintf(
+				"schemaform: os valores de %q não puderam ser obtidos: %v", c.Field.Name, err))
+		}, true
+	}
+	if len(items) > 0 {
 		return EnumComponentFunc, true
 	}
 	if registered {
@@ -451,7 +469,11 @@ func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
 // declared or the one EnumItemsFunc answered with — Context.EnumItems is the
 // same answer the posted value is checked against.
 func EnumComponentFunc(c *Context) h.HTMLComponent {
-	items := c.EnumItems()
+	items, err := c.EnumItems()
+	if err != nil {
+		return errorComponent(fmt.Sprintf(
+			"schemaform: os valores de %q não puderam ser obtidos: %v", c.Field.Name, err))
+	}
 	if len(items) == 0 {
 		return errorComponent(fmt.Sprintf(
 			"schemaform: o field %q não tem valores para escolher", c.Field.Name))

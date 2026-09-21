@@ -1,6 +1,7 @@
 package schemaform
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 	"testing"
@@ -10,11 +11,11 @@ import (
 
 // countries is a list that is not fixed — it comes from the request, not from
 // the schema — which is what EnumItemsFunc is for.
-func countries(_ *web.EventContext, path string, _ *Field) []EnumItem {
+func countries(_ *web.EventContext, path string, _ *Field) ([]EnumItem, error) {
 	if path != "country" && path != "addresses.country" {
-		return nil
+		return nil, nil
 	}
-	return []EnumItem{{Name: "BR", Label: "Brasil"}, {Name: "PT"}}
+	return []EnumItem{{Name: "BR", Label: "Brasil"}, {Name: "PT"}}, nil
 }
 
 // A field the schema left untyped becomes a select as soon as a list answers
@@ -52,8 +53,8 @@ func TestEnumItemsInsideAList(t *testing.T) {
 // A type an application registered keeps its component: registering a type is
 // how an application takes a field over.
 func TestEnumItemsDoNotStealARegisteredType(t *testing.T) {
-	b := New().EnumItems(func(_ *web.EventContext, _ string, _ *Field) []EnumItem {
-		return []EnumItem{{Name: "x"}}
+	b := New().EnumItems(func(_ *web.EventContext, _ string, _ *Field) ([]EnumItem, error) {
+		return []EnumItem{{Name: "x"}}, nil
 	})
 	if got := render(t, b, "{n int}"); !strings.Contains(got, "v-text-field") {
 		t.Errorf("o int deixou de ser int:\n%s", got)
@@ -131,5 +132,44 @@ func TestSchemaDecodeDoesNotCheck(t *testing.T) {
 	s, _ := Parse("enum Perm { Read }\ninterface { perm Perm }")
 	if rec, ok := s.Decode(url.Values{"V.perm": {"Delete"}}, "V").(Record); !ok || rec[0].Value != "Delete" {
 		t.Errorf("value = %#v", s.Decode(url.Values{"V.perm": {"Delete"}}, "V"))
+	}
+}
+
+// When the values a field may hold cannot be fetched, the field says so where
+// it would be — and a save is refused, because a value that was never checked
+// is not a value that passed.
+func TestEnumItemsError(t *testing.T) {
+	boom := errors.New("o banco não respondeu")
+	b := New().EnumItems(func(_ *web.EventContext, path string, _ *Field) ([]EnumItem, error) {
+		if path == "country" {
+			return nil, boom
+		}
+		return nil, nil
+	})
+
+	got := render(t, b, "{country; name str}")
+	if !strings.Contains(got, "o banco não respondeu") {
+		t.Errorf("o form não disse o que faltou:\n%s", got)
+	}
+	if !strings.Contains(got, `v-model='form["Value"].name'`) {
+		t.Errorf("o resto do form sumiu junto:\n%s", got)
+	}
+
+	s, err := Parse("{country; name str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.DecodeForm(&web.EventContext{}, s, url.Values{
+		"V.country": {"BR"},
+		"V.name":    {"Ada"},
+	}, "V")
+	if err == nil {
+		t.Fatal("um valor que ninguém conferiu passou")
+	}
+	if !errors.Is(err, boom) {
+		t.Errorf("o erro não veio junto: %v", err)
+	}
+	if !strings.Contains(err.Error(), "country") {
+		t.Errorf("o erro não diz de qual field: %v", err)
 	}
 }
