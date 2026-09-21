@@ -148,3 +148,37 @@ func TestTypesListsWhatIsRegistered(t *testing.T) {
 		t.Errorf("Types() = %v", names)
 	}
 }
+
+// The types a Builder knows out of the box, each drawn by the component that
+// suits it — and a number bound as a NUMBER, since the value is written out
+// again and a quoted one would come back a string.
+func TestDefaultTypes(t *testing.T) {
+	got := render(t, New(), "{a str; n int; u uint; on bool; c color}")
+
+	for what, want := range map[string]string{
+		"str":   `<v-text-field`,
+		"int":   `v-model.number='form["Value"].n'`,
+		"uint":  `v-model.number='form["Value"].u'`,
+		"bool":  `<v-switch`,
+		"color": `<v-color-picker`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("%s: falta %s:\n%s", what, want, got)
+		}
+	}
+
+	// uint does not go below zero
+	if !strings.Contains(got, `min='0'`) {
+		t.Error("uint sem piso em zero")
+	}
+	// each one binds its own field
+	for _, want := range []string{
+		`v-model='form["Value"].a'`,
+		`v-model='form["Value"].on'`,
+		`v-model='form["Value"].c'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("falta %s", want)
+		}
+	}
+}

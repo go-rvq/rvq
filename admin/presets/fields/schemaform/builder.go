@@ -59,6 +59,10 @@ func New() *Builder {
 	return &Builder{
 		types: map[string]ComponentFunc{
 			DefaultType: TextComponentFunc,
+			"int":       IntComponentFunc,
+			"uint":      UintComponentFunc,
+			"bool":      BoolComponentFunc,
+			"color":     ColorComponentFunc,
 		},
 	}
 }
@@ -170,6 +174,45 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr("v-model", c.Value)
+}
+
+// IntComponentFunc is "int": a number field. It binds with `v-model.number`, so
+// what goes back into the value is a NUMBER — the value is written out again
+// (as YAML, for a LocaleMessage), and a quoted number would come back a string.
+func IntComponentFunc(c *Context) h.HTMLComponent {
+	return numberField(c)
+}
+
+// UintComponentFunc is "uint": the same, floored at zero.
+func UintComponentFunc(c *Context) h.HTMLComponent {
+	return numberField(c).Attr("min", "0")
+}
+
+func numberField(c *Context) *v.VTextFieldBuilder {
+	return v.VTextField().
+		Type("number").
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Attr("v-model.number", c.Value)
+}
+
+// BoolComponentFunc is "bool": a switch.
+func BoolComponentFunc(c *Context) h.HTMLComponent {
+	return v.VSwitch().
+		Label(c.Label()).
+		Density(v.DensityCompact).
+		Attr("v-model", c.Value)
+}
+
+// ColorComponentFunc is "color": the color picker, showing the value it holds.
+func ColorComponentFunc(c *Context) h.HTMLComponent {
+	return h.Div(
+		h.Label(c.Label()).Class("v-label text-caption"),
+		v.VColorPicker().
+			Attr("v-model", c.Value).
+			Attr("mode", "hexa").
+			Attr("hide-inputs", "false"),
+	).Class("mb-4")
 }
 
 func errorComponent(msg string) h.HTMLComponent {
