@@ -90,6 +90,19 @@ func (b *Builder) TypeFunc(name string) (ComponentFunc, bool) {
 	return f, ok
 }
 
+// fieldFunc is the component that draws this field: the one registered for its
+// type, and — for a field typed with an enum the schema declared — the select,
+// unless the application registered something for that enum's name.
+func (b *Builder) fieldFunc(f *Field) (ComponentFunc, bool) {
+	if draw, ok := b.TypeFunc(f.Type); ok {
+		return draw, true
+	}
+	if f.Enum != nil {
+		return EnumComponentFunc, true
+	}
+	return nil, false
+}
+
 // Types are the registered type names, FormType included.
 func (b *Builder) Types() (names []string) {
 	names = append(names, FormType)
@@ -154,10 +167,10 @@ func (b *Builder) record(schema *Schema, c *Context, value string) h.HTMLCompone
 	var comps []h.HTMLComponent
 
 	for _, f := range schema.Fields {
-		draw, ok := b.TypeFunc(f.Type)
+		draw, ok := b.fieldFunc(f)
 		if !ok {
 			comps = append(comps, errorComponent(fmt.Sprintf(
-				"schemaform: o field %q pede o type %q, que não tem componente registrado (há: %v)",
+				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum declarado (há: %v)",
 				f.Name, f.Type, b.Types())))
 			continue
 		}
@@ -174,12 +187,32 @@ func (b *Builder) record(schema *Schema, c *Context, value string) h.HTMLCompone
 	return h.Div(comps...)
 }
 
+// EnumComponentFunc draws a field whose type is an enum: a select over the
+// values the enum declares, and nothing else.
+func EnumComponentFunc(c *Context) h.HTMLComponent {
+	if c.Field.Enum == nil {
+		return errorComponent(fmt.Sprintf("schemaform: o field %q não tem enum", c.Field.Name))
+	}
+
+	items := make([]string, len(c.Field.Enum.Values))
+	copy(items, c.Field.Enum.Values)
+
+	return v.VSelect().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Items(items).
+		Clearable(!c.Field.Required()).
+		Attr("required", c.Field.Required()).
+		Attr("v-model", c.Value)
+}
+
 // TextComponentFunc is DefaultType: a text field, which is what an untyped
 // field of the schema is.
 func TextComponentFunc(c *Context) h.HTMLComponent {
 	return v.VTextField().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr("required", c.Field.Required()).
 		Attr("v-model", c.Value)
 }
 

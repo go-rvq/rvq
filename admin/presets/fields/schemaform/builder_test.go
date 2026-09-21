@@ -191,3 +191,58 @@ func TestDefaultTypes(t *testing.T) {
 		}
 	}
 }
+
+// A field typed with an enum is a select over the enum's values.
+func TestEnumFieldIsASelect(t *testing.T) {
+	got := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+
+	for _, want := range []string{
+		`<v-select`,
+		`:items='["Read","Write"]'`,
+		`v-model='form["Value"].perm'`,
+		`required`, // not optional: it may not be left empty
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("o select não traz %s:\n%s", want, got)
+		}
+	}
+}
+
+// Empty is only allowed where the schema said it is: the `?` after the name.
+// A required input carries `required`; an optional one does not, and may be
+// cleared.
+func TestOnlyAnOptionalFieldMayBeEmpty(t *testing.T) {
+	optional := render(t, New(), "enum Perm { Read, Write }\ninterface {perm? Perm}")
+	if strings.Contains(optional, "required") {
+		t.Errorf("o field opcional foi marcado como obrigatório:\n%s", optional)
+	}
+	if !strings.Contains(optional, `:clearable='true'`) {
+		t.Errorf("o field opcional não pode ser limpo:\n%s", optional)
+	}
+
+	required := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+	if !strings.Contains(required, "required") {
+		t.Errorf("o field obrigatório não foi marcado:\n%s", required)
+	}
+	if strings.Contains(required, `:clearable='true'`) {
+		t.Errorf("o field obrigatório pode ser limpo:\n%s", required)
+	}
+
+	// and the same for a plain text field
+	if strings.Contains(render(t, New(), "{a? str}"), "required") {
+		t.Error("texto opcional marcado como obrigatório")
+	}
+	if !strings.Contains(render(t, New(), "{a str}"), "required") {
+		t.Error("texto obrigatório não marcado")
+	}
+}
+
+// An application may take over an enum by its name, like any other type.
+func TestEnumTypeCanBeOverridden(t *testing.T) {
+	b := New().Type("Perm", func(c *Context) h.HTMLComponent {
+		return h.Div().Attr("data-perm", "1")
+	})
+	if !strings.Contains(render(t, b, "enum Perm { Read }\ninterface {perm Perm}"), `data-perm='1'`) {
+		t.Error("o componente registrado para o enum não foi usado")
+	}
+}

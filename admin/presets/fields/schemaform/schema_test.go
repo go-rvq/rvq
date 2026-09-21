@@ -143,3 +143,52 @@ func TestParseRejectsWhatIsNotASchema(t *testing.T) {
 		})
 	}
 }
+
+// An enum declared beside the interface is a closed set of values, and a field
+// typed with it carries it.
+func TestParseEnum(t *testing.T) {
+	s, err := Parse("enum Perm { Read, Write }\ninterface {perm Perm; other str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e, ok := s.Enums["Perm"]
+	if !ok {
+		t.Fatalf("o enum não foi declarado: %v", s.Enums)
+	}
+	if got, want := strings.Join(e.Values, ","), "Read,Write"; got != want {
+		t.Errorf("valores = %q, want %q", got, want)
+	}
+
+	if s.Fields[0].Enum != e {
+		t.Error("o field não recebeu o enum do type dele")
+	}
+	if s.Fields[1].Enum != nil {
+		t.Error("um field de outro type não tem enum")
+	}
+}
+
+// An enum declared once serves the forms inside the form too.
+func TestParseEnumReachesNestedForms(t *testing.T) {
+	s, err := Parse("enum Perm { Read, Write }\ninterface {sub interface {perm Perm}}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Fields[0].Schema.Fields[0].Enum == nil {
+		t.Error("o form aninhado não enxergou o enum")
+	}
+}
+
+// Empty is only allowed where the schema said it is: the `?` after the name.
+func TestFieldRequired(t *testing.T) {
+	s, err := Parse("{btnColor? color; label str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Fields[0].Required() {
+		t.Error("btnColor? é opcional")
+	}
+	if !s.Fields[1].Required() {
+		t.Error("um field sem ? é obrigatório")
+	}
+}
