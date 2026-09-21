@@ -27,8 +27,9 @@ const (
 	// DefaultType is what an untyped field is: plain text.
 	DefaultType = "str"
 	// FormType is the type of a field that is itself an interface — a form
-	// inside the form, or a list of them.
-	FormType = "yaml_form"
+	// inside the form, or a list of them. It is also the type an application
+	// gives a value it wants edited this way.
+	FormType = "form"
 )
 
 // Schema is one form: the fields it edits, and whether the value it edits is a
