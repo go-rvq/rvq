@@ -124,10 +124,12 @@ func TestParseKeepsOnlyFields(t *testing.T) {
 
 func TestParseRejectsWhatIsNotASchema(t *testing.T) {
 	for name, src := range map[string]string{
-		"empty":       "",
-		"not a form":  "42",
-		"broken":      "{a str",
-		"two of them": "{a str} interface {b str}",
+		"empty":      "",
+		"not a form": "42",
+		"broken":     "{a str",
+		// an interface before the form must have a name: nothing can refer to
+		// an anonymous one, so it is a mistake written down
+		"two anonymous": "{a str} interface {b str}",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := Parse(src); err == nil {
@@ -286,5 +288,101 @@ func TestFieldAt(t *testing.T) {
 		if f := s.FieldAt(path); f != nil {
 			t.Errorf("%s = %+v, want nil", path, f)
 		}
+	}
+}
+
+// A schema may be written in parts: every interface in the source is a
+// declaration a later one may use by NAME, and the last one is the form.
+func TestParseNamedInterfaces(t *testing.T) {
+	s, err := Parse("interface User { name, id }; interface Schema { owner User; creator User }")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.Fields) != 2 {
+		t.Fatalf("o form é o último interface: %+v", s.Fields)
+	}
+	for _, f := range s.Fields {
+		if f.Type != FormType || f.Schema == nil {
+			t.Errorf("%s = %q, want um form", f.Name, f.Type)
+			continue
+		}
+		if got, want := len(f.Schema.Fields), 2; got != want {
+			t.Errorf("%s: %d fields, want %d", f.Name, got, want)
+		}
+		if f.Schema.Fields[0].Name != "name" || f.Schema.Fields[1].Name != "id" {
+			t.Errorf("%s: %+v", f.Name, f.Schema.Fields)
+		}
+	}
+
+	// each occurrence gets its own form: editing the words of one is not
+	// editing the other's
+	if s.Fields[0].Schema == s.Fields[1].Schema {
+		t.Error("os dois fields dividem o mesmo schema")
+	}
+}
+
+// A declared interface serves a list and a nested field the same way.
+func TestParseNamedInterfaceInAList(t *testing.T) {
+	s, err := Parse("interface Link { label str; href }\ninterface S { links []Link; main Link }")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	links := s.Fields[0]
+	if links.Schema == nil || !links.Schema.Slice || links.Schema.Item == nil {
+		t.Fatalf("links = %+v", links)
+	}
+	if links.Schema.Item.Type != FormType || links.Schema.Item.Schema == nil {
+		t.Fatalf("o item da lista não virou form: %+v", links.Schema.Item)
+	}
+	if got := links.Schema.Item.Schema.Fields[0].Name; got != "label" {
+		t.Errorf("item.fields[0] = %q", got)
+	}
+	if s.Fields[1].Type != FormType {
+		t.Errorf("main = %q, want um form", s.Fields[1].Type)
+	}
+}
+
+// Enums declared beside the schema reach the interfaces it names.
+func TestParseNamedInterfaceWithEnum(t *testing.T) {
+	s, err := Parse("enum Perm { Read, Write }\ninterface User { perm Perm }\ninterface S { owner User }")
+	if err != nil {
+		t.Fatal(err)
+	}
+	perm := s.Fields[0].Schema.Fields[0]
+	if perm.Enum == nil || len(perm.Enum.Names) != 2 {
+		t.Errorf("perm = %+v", perm)
+	}
+}
+
+// An interface that contains itself describes a form without end, and is
+// refused by name instead of being unfolded forever.
+func TestParseNamedInterfaceCycle(t *testing.T) {
+	for name, src := range map[string]string{
+		"direto":   "interface Node { child Node }\ninterface S { root Node }",
+		"indireto": "interface A { b B }\ninterface B { a A }\ninterface S { a A }",
+		"na raiz":  "interface S { self S }",
+	} {
+		_, err := Parse(src)
+		if err == nil {
+			t.Errorf("%s: um ciclo passou", name)
+			continue
+		}
+		if !strings.Contains(err.Error(), "contains itself") {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+}
+
+// A name nothing declared stays the type it was written as, and the builder
+// says it has no component (the schema does not invent one).
+func TestParseUnknownTypeNameIsKept(t *testing.T) {
+	s, err := Parse("{owner User}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Fields[0].Type; got != "User" {
+		t.Errorf("type = %q, want %q", got, "User")
 	}
 }

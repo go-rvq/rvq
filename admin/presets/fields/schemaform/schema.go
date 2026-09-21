@@ -17,6 +17,18 @@
 // A list needs no record: `[]str` is a list of plain values, each edited by the
 // component of its type, and `[][]str` a list of those. A field may be one too
 // (`tags []str`).
+//
+// A schema may be written in PARTS: every interface in the source is a
+// declaration a later one may use by name, and the last one is the form —
+//
+//	interface User { name, id }
+//	interface Schema { owner User; creator User }
+//
+// A field may also hold one of a list of values the schema does not know: see
+// Builder.EnumItems, which both fills the select and says what a posted value
+// is checked against (Builder.DecodeForm). And the value the form edits is
+// carried by the builder's codec (Builder.Codec) — YAML unless an application
+// says otherwise.
 package schemaform
 
 import (
@@ -108,9 +120,29 @@ func Parse(src string) (*Schema, error) {
 	}
 
 	var (
-		iface *node.InterfaceExpr
-		enums = map[string]*Enum{}
+		iface  *node.InterfaceExpr
+		enums  = map[string]*Enum{}
+		ifaces = map[string]*node.InterfaceExpr{}
 	)
+
+	// Every interface in the source is a declaration a later one may use by
+	// name; the LAST is the form itself. So a schema may be written in parts:
+	//
+	//	interface User { name, id }
+	//	interface Schema { owner User; creator User }
+	//
+	// An interface that is not the form must have a name: without one, nothing
+	// can refer to it, so it would only be a mistake written down.
+	declare := func(found *node.InterfaceExpr) error {
+		if iface != nil && nameOf(iface) == "" {
+			return fmt.Errorf("schemaform: an interface before the form must have a name")
+		}
+		iface = found
+		if name := nameOf(found); name != "" {
+			ifaces[name] = found
+		}
+		return nil
+	}
 
 	for _, stmt := range file.Stmts {
 		switch st := stmt.(type) {
@@ -118,15 +150,18 @@ func Parse(src string) (*Schema, error) {
 			if e := enumOf(&st.EnumExpr); e != nil {
 				enums[e.Name] = e
 			}
+		case *node.InterfaceStmt:
+			if err := declare(&st.InterfaceExpr); err != nil {
+				return nil, err
+			}
 		case *node.ExprStmt:
 			found, ok := st.Expr.(*node.InterfaceExpr)
 			if !ok {
 				return nil, fmt.Errorf("schemaform: a schema is one interface and its enums, got %T", st.Expr)
 			}
-			if iface != nil {
-				return nil, fmt.Errorf("schemaform: a schema is ONE interface, got another")
+			if err := declare(found); err != nil {
+				return nil, err
 			}
-			iface = found
 		default:
 			return nil, fmt.Errorf("schemaform: a schema is one interface and its enums, got %T", stmt)
 		}
@@ -137,9 +172,64 @@ func Parse(src string) (*Schema, error) {
 	}
 
 	s := schemaOf(iface)
+	if err := bindInterfaces(s, ifaces, map[string]bool{nameOf(iface): true}); err != nil {
+		return nil, err
+	}
 	s.Enums = enums
 	bindEnums(s, enums)
 	return s, nil
+}
+
+// nameOf is the interface's own name, or "" when it is anonymous.
+func nameOf(iface *node.InterfaceExpr) string {
+	if name, _ := iface.NameExpr.(*node.IdentExpr); name != nil {
+		return name.Name
+	}
+	return ""
+}
+
+// bindInterfaces expands a field whose type NAMES an interface declared beside
+// the schema into the form that interface describes — the same expansion a
+// field written inline gets, one level down.
+//
+// An interface that (directly or through another) contains itself describes a
+// form without end, so it is refused by name instead of being unfolded forever.
+func bindInterfaces(s *Schema, ifaces map[string]*node.InterfaceExpr, visiting map[string]bool) error {
+	expand := func(f *Field) error {
+		iface, ok := ifaces[f.Type]
+		if !ok {
+			return nil
+		}
+		if visiting[f.Type] {
+			return fmt.Errorf("schemaform: the interface %q contains itself", f.Type)
+		}
+
+		sub := schemaOf(iface)
+		visiting[f.Type] = true
+		defer delete(visiting, f.Type)
+		if err := bindInterfaces(sub, ifaces, visiting); err != nil {
+			return err
+		}
+
+		f.Type, f.Schema = FormType, sub
+		return nil
+	}
+
+	for _, f := range append(append([]*Field{}, s.Fields...), s.Item) {
+		if f == nil {
+			continue
+		}
+		if f.Schema != nil {
+			if err := bindInterfaces(f.Schema, ifaces, visiting); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := expand(f); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // withKeyword writes the `interface` a schema may leave out. A schema that is

@@ -60,6 +60,14 @@ type EnumItem struct {
 // declared, and an entry with an empty Label shows its own value.
 type EnumInfoFunc func(ctx *web.EventContext, path string) []EnumItem
 
+// EnumItemsFunc answers which values the field at PATH may hold when the schema
+// does not say — a list that is not fixed, so it cannot be an `enum` in the
+// schema. The field itself comes along, for whoever dispatches on its type.
+//
+// A nil answer means the field is not a closed list, and is drawn by its type
+// as usual.
+type EnumItemsFunc func(ctx *web.EventContext, path string, field *Field) []EnumItem
+
 // Context is what a type's component is given.
 type Context struct {
 	// Field is the schema's field: its name, its type, and — when the type is
@@ -87,6 +95,9 @@ type Context struct {
 
 	info     *FieldInfo
 	infoRead bool
+
+	items     []EnumItem
+	itemsRead bool
 }
 
 // Info is what the builder's FieldInfoFunc says about this field, asked once.
@@ -125,26 +136,14 @@ func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
 // EnumItems are the values this field offers: what the builder's EnumInfoFunc
 // says, or the ones the enum declared, each showing its own value.
 func (c *Context) EnumItems() []EnumItem {
-	if c.Field == nil || c.Field.Enum == nil {
-		return nil
+	if c.itemsRead {
+		return c.items
 	}
-
-	if c.Builder != nil && c.Builder.enumInfo != nil {
-		if items := c.Builder.enumInfo(c.Event, c.Path); items != nil {
-			for i := range items {
-				if items[i].Label == "" {
-					items[i].Label = items[i].Name
-				}
-			}
-			return items
-		}
+	c.itemsRead = true
+	if c.Builder != nil {
+		c.items = c.Builder.itemsOf(c.Event, c.Path, c.Field)
 	}
-
-	items := make([]EnumItem, len(c.Field.Enum.Names))
-	for i, name := range c.Field.Enum.Names {
-		items[i] = EnumItem{Name: name, Label: name}
-	}
-	return items
+	return c.items
 }
 
 // Builder maps a TYPE to the component that edits it, and draws a schema with
@@ -158,9 +157,12 @@ func (c *Context) EnumItems() []EnumItem {
 //	    Type("int", myNumberField).
 //	    Type("color", myColorPicker)
 type Builder struct {
-	types    map[string]ComponentFunc
-	info     FieldInfoFunc
-	enumInfo EnumInfoFunc
+	types     map[string]ComponentFunc
+	info      FieldInfoFunc
+	enumInfo  EnumInfoFunc
+	enumItems EnumItemsFunc
+	encode    EncodeFunc
+	decode    DecodeFunc
 }
 
 // EnumInfo sets the function that says which values an enum field offers, and
@@ -169,6 +171,62 @@ type Builder struct {
 func (b *Builder) EnumInfo(f EnumInfoFunc) *Builder {
 	b.enumInfo = f
 	return b
+}
+
+// EnumItems sets the function that gives a field its values when the SCHEMA
+// does not — a list that is not fixed, and so cannot be written as an `enum`:
+// the locales in the database, the categories of this account, whatever the
+// request has at hand.
+//
+// A field whose type names neither a registered component nor a declared enum
+// is a select as soon as this function answers for it, the answer is what the
+// select offers, and it is what a posted value is checked against
+// (Builder.DecodeForm). It is optional.
+func (b *Builder) EnumItems(f EnumItemsFunc) *Builder {
+	b.enumItems = f
+	return b
+}
+
+// itemsOf are the values the field at path may hold, or nil when it is not a
+// closed list: the enum the schema declared (which EnumInfoFunc may relabel and
+// reorder), or — when there is none — what EnumItemsFunc answers.
+//
+// It is the one place the two are resolved, so the select offers exactly what
+// a posted value is checked against.
+func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) []EnumItem {
+	if f == nil {
+		return nil
+	}
+
+	if f.Enum == nil {
+		if b.enumItems == nil {
+			return nil
+		}
+		items := b.enumItems(ctx, path, f)
+		return withLabels(items)
+	}
+
+	if b.enumInfo != nil {
+		if items := b.enumInfo(ctx, path); items != nil {
+			return withLabels(items)
+		}
+	}
+
+	items := make([]EnumItem, len(f.Enum.Names))
+	for i, name := range f.Enum.Names {
+		items[i] = EnumItem{Name: name, Label: name}
+	}
+	return items
+}
+
+// withLabels shows an item's own name when nothing else was given for it.
+func withLabels(items []EnumItem) []EnumItem {
+	for i := range items {
+		if items[i].Label == "" {
+			items[i].Label = items[i].Name
+		}
+	}
+	return items
 }
 
 // FieldInfo sets the function that says the words around a field — its label,
@@ -214,15 +272,27 @@ func (b *Builder) TypeFunc(name string) (ComponentFunc, bool) {
 	return f, ok
 }
 
-// fieldFunc is the component that draws this field: the one registered for its
-// type, and — for a field typed with an enum the schema declared — the select,
-// unless the application registered something for that enum's name.
-func (b *Builder) fieldFunc(f *Field) (ComponentFunc, bool) {
-	if draw, ok := b.TypeFunc(f.Type); ok {
+// fieldFunc is the component that draws this field.
+//
+// A component REGISTERED for the field's type wins — that is what registering a
+// type is for, an enum's own name included. What is left over goes to the
+// select when the field holds one of a closed list of values: an enum the
+// schema declared, or the list EnumItemsFunc answers with. A field the schema
+// left untyped is the one case where the list wins over the registration, since
+// `str` is what a field has when the schema said nothing about it.
+func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
+	draw, registered := b.TypeFunc(c.Field.Type)
+	if registered && c.Field.Type != DefaultType {
 		return draw, true
 	}
-	if f.Enum != nil {
+	if len(c.EnumItems()) > 0 {
 		return EnumComponentFunc, true
+	}
+	if registered {
+		return draw, true
+	}
+	if c.Field.Enum != nil {
+		return EnumComponentFunc, true // an enum that declared no value
 	}
 	return nil, false
 }
@@ -299,13 +369,6 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 // `form["x"][itemIndex]` — which a primitive needs to be written back. The path
 // does not grow either: a list adds no name of its own.
 func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
-	draw, ok := b.fieldFunc(item)
-	if !ok {
-		return errorComponent(fmt.Sprintf(
-			"schemaform: a lista pede o type %q, que não tem componente registrado nem é enum declarado (há: %v)",
-			item.Type, b.Types()))
-	}
-
 	ic := &Context{
 		Field:   item,
 		Value:   fmt.Sprintf("%s[itemIndex]", c.Value),
@@ -314,6 +377,13 @@ func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 		Event:   c.Event,
 		Builder: b,
 		noLabel: true,
+	}
+
+	draw, ok := b.fieldFunc(ic)
+	if !ok {
+		return errorComponent(fmt.Sprintf(
+			"schemaform: a lista pede o type %q, que não tem componente registrado nem é enum (há: %v)",
+			item.Type, b.Types()))
 	}
 	return withHelp(ic, draw(ic))
 }
@@ -324,14 +394,6 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 	var comps []h.HTMLComponent
 
 	for _, f := range schema.Fields {
-		draw, ok := b.fieldFunc(f)
-		if !ok {
-			comps = append(comps, errorComponent(fmt.Sprintf(
-				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum declarado (há: %v)",
-				f.Name, f.Type, b.Types())))
-			continue
-		}
-
 		fc := &Context{
 			Field:   f,
 			Value:   value + "." + f.Name,
@@ -339,6 +401,14 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 			Form:    c.Form,
 			Event:   c.Event,
 			Builder: b,
+		}
+
+		draw, ok := b.fieldFunc(fc)
+		if !ok {
+			comps = append(comps, errorComponent(fmt.Sprintf(
+				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum (há: %v)",
+				f.Name, f.Type, b.Types())))
+			continue
 		}
 		comps = append(comps, withHelp(fc, draw(fc)))
 	}
@@ -376,14 +446,16 @@ func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
 	).Class("d-flex align-start ga-1")
 }
 
-// EnumComponentFunc draws a field whose type is an enum: a select over the
-// values the enum declares, and nothing else.
+// EnumComponentFunc draws a field that holds one of a closed list of values: a
+// select over that list, and nothing else. The list is the enum the schema
+// declared or the one EnumItemsFunc answered with — Context.EnumItems is the
+// same answer the posted value is checked against.
 func EnumComponentFunc(c *Context) h.HTMLComponent {
-	if c.Field.Enum == nil {
-		return errorComponent(fmt.Sprintf("schemaform: o field %q não tem enum", c.Field.Name))
-	}
-
 	items := c.EnumItems()
+	if len(items) == 0 {
+		return errorComponent(fmt.Sprintf(
+			"schemaform: o field %q não tem valores para escolher", c.Field.Name))
+	}
 	options := make([]map[string]string, len(items))
 	var anyHint bool
 	for i, it := range items {
