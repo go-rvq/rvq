@@ -258,3 +258,33 @@ func TestParseSliceOfSeveralTypesRejected(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+// FieldAt walks the same path the form asks its words by.
+func TestFieldAt(t *testing.T) {
+	s, err := Parse("{title str; sub: {x int}; links: []{href str}; tags []str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for path, want := range map[string]string{
+		"title":      "str",
+		"sub.x":      "int",
+		"links.href": "str", // a list adds no level
+		"tags":       "str", // a list of values: the path of the list is its item
+	} {
+		f := s.FieldAt(path)
+		if f == nil {
+			t.Errorf("%s: nil", path)
+			continue
+		}
+		if f.Type != want {
+			t.Errorf("%s: type = %q, want %q", path, f.Type, want)
+		}
+	}
+
+	for _, path := range []string{"nope", "sub.nope", "title.x"} {
+		if f := s.FieldAt(path); f != nil {
+			t.Errorf("%s = %+v, want nil", path, f)
+		}
+	}
+}

@@ -295,3 +295,42 @@ func schemaOf(iface *node.InterfaceExpr) *Schema {
 
 	return s
 }
+
+// FieldAt is the field at PATH — the names from the root down, the same path
+// the form asks its words by. A list adds no name of its own, so the field of
+// the records in `links` is `links.href`, and the item of a list of plain
+// values is the list's own path.
+//
+// It is nil when the path names nothing.
+func (s *Schema) FieldAt(path string) *Field {
+	if path == "" {
+		return s.Item
+	}
+
+	cur := s
+	var found *Field
+
+	for _, name := range strings.Split(path, ".") {
+		if cur == nil {
+			return nil
+		}
+		found = nil
+		for _, f := range cur.Fields {
+			if f.Name == name {
+				found = f
+				break
+			}
+		}
+		if found == nil {
+			return nil
+		}
+		cur = found.Schema
+		// A list of plain values ends the path: its item has no name, so the
+		// path of the list is the path of what it holds.
+		if cur != nil && cur.Item != nil {
+			found = cur.Item
+			cur = cur.Item.Schema
+		}
+	}
+	return found
+}
