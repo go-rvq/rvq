@@ -187,3 +187,74 @@ func TestFieldRequired(t *testing.T) {
 		t.Error("um field sem ? é obrigatório")
 	}
 }
+
+// A list of PLAIN VALUES — `[]str`, the shape PAC's service_area uses — is a
+// list whose item is one value, not a record: no fields, one Item.
+func TestParseSliceOfValues(t *testing.T) {
+	s, err := Parse("[]str")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Slice {
+		t.Error("[]str descreve uma lista")
+	}
+	if len(s.Fields) != 0 {
+		t.Errorf("fields = %d, want 0: o item é o valor", len(s.Fields))
+	}
+	if s.Item == nil {
+		t.Fatal("Item = nil, want o valor da lista")
+	}
+	if got, want := s.Item.Type, "str"; got != want {
+		t.Errorf("item type = %q, want %q", got, want)
+	}
+
+	// any registered type, not only str
+	for _, typ := range []string{"int", "color", "date"} {
+		s, err := Parse("[]" + typ)
+		if err != nil {
+			t.Fatalf("[]%s: %v", typ, err)
+		}
+		if s.Item == nil || s.Item.Type != typ {
+			t.Errorf("[]%s: item = %+v", typ, s.Item)
+		}
+	}
+}
+
+// `[][]str` is a list of lists: one schema per `[]`, down to the value.
+func TestParseSliceOfSlices(t *testing.T) {
+	s, err := Parse("[][]str")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Item == nil || s.Item.Type != FormType || s.Item.Schema == nil {
+		t.Fatalf("item = %+v, want a lista de dentro", s.Item)
+	}
+	inner := s.Item.Schema
+	if !inner.Slice || inner.Item == nil || inner.Item.Type != "str" {
+		t.Errorf("lista de dentro = %+v", inner)
+	}
+}
+
+// A field of the form may be a list of values too.
+func TestParseFieldSliceOfValues(t *testing.T) {
+	s, err := Parse("{title str; tags []str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags := s.Fields[1]
+	if tags.Type != FormType || tags.Schema == nil {
+		t.Fatalf("tags = %+v, want um form de um nível abaixo", tags)
+	}
+	if !tags.Schema.Slice || tags.Schema.Item == nil || tags.Schema.Item.Type != "str" {
+		t.Errorf("tags.Schema = %+v", tags.Schema)
+	}
+}
+
+// A list holds ONE type: several enveloped types describe no single input.
+func TestParseSliceOfSeveralTypesRejected(t *testing.T) {
+	if _, err := Parse("[]<int|str>"); err == nil {
+		t.Fatal("uma lista de vários types não descreve um input")
+	} else if !strings.Contains(err.Error(), "UM type") {
+		t.Errorf("err = %v", err)
+	}
+}

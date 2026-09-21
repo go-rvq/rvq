@@ -81,6 +81,10 @@ type Context struct {
 	// inside the form — draws them the same way.
 	Builder *Builder
 
+	// noLabel marks the item of a list of PLAIN VALUES: the list already
+	// carries the words, so a label on every row would only repeat them.
+	noLabel bool
+
 	info     *FieldInfo
 	infoRead bool
 }
@@ -103,6 +107,9 @@ func (c *Context) Info() FieldInfo {
 // Label is what to put on the input: what the FieldInfoFunc says, or the
 // field's name humanized.
 func (c *Context) Label() string {
+	if c.noLabel {
+		return ""
+	}
 	if l := c.Info().Label; l != "" {
 		return l
 	}
@@ -271,8 +278,13 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	// slot binds it to `item`, so a field of it is `item.<name>`. The PATH does
 	// not grow: a list adds no name, so a field of its item is `links.href`,
 	// not `links.*.href` — the same thing, with less to write.
+	item := b.record(schema, c, ItemVar, c.Path)
+	if schema.Item != nil {
+		item = b.value(schema.Item, c)
+	}
+
 	return vx.VXArraySorter(
-		web.Slot(b.record(schema, c, ItemVar, c.Path)).
+		web.Slot(item).
 			Name("item").
 			Scope("{ item, itemIndex }"),
 	).
@@ -280,6 +292,30 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 		Density(v.DensityCompact).
 		Attr("v-model", c.Value).
 		Readonly(c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite()))
+}
+
+// value renders ONE item of a list of plain values (`[]str`): the item IS the
+// value, so it binds through the list's own expression at the item's index —
+// `form["x"][itemIndex]` — which a primitive needs to be written back. The path
+// does not grow either: a list adds no name of its own.
+func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
+	draw, ok := b.fieldFunc(item)
+	if !ok {
+		return errorComponent(fmt.Sprintf(
+			"schemaform: a lista pede o type %q, que não tem componente registrado nem é enum declarado (há: %v)",
+			item.Type, b.Types()))
+	}
+
+	ic := &Context{
+		Field:   item,
+		Value:   fmt.Sprintf("%s[itemIndex]", c.Value),
+		Path:    c.Path,
+		Form:    c.Form,
+		Event:   c.Event,
+		Builder: b,
+		noLabel: true,
+	}
+	return withHelp(ic, draw(ic))
 }
 
 // record renders the fields of one record, each bound under value and each

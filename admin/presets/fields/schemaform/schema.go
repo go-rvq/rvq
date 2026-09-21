@@ -13,6 +13,10 @@
 // names a component registered on the Builder. An untyped field is `str` —
 // plain text — and a field that is itself an interface is a form again, drawn
 // by the same component one level down.
+//
+// A list needs no record: `[]str` is a list of plain values, each edited by the
+// component of its type, and `[][]str` a list of those. A field may be one too
+// (`tags []str`).
 package schemaform
 
 import (
@@ -38,6 +42,10 @@ const (
 type Schema struct {
 	Slice  bool
 	Fields []*Field
+	// Item is what a list of PLAIN VALUES holds — `[]str`, a list of lines,
+	// against `[]{…}`, a list of records. It is set (and Slice with it) only
+	// for that shape, and then there are no Fields: the item IS the value.
+	Item *Field
 	// Enums are the enums the schema declared, by name. A field typed with one
 	// carries it in Field.Enum.
 	Enums map[string]*Enum
@@ -84,6 +92,13 @@ func (f *Field) Required() bool { return !f.Nullable }
 //	sub interface {x str}     sub: {x str}
 //	sub interface[] {x str}   sub: []{x str}
 func Parse(src string) (*Schema, error) {
+	// `[]str` — a list of plain values, not of records. It is a TYPE, not an
+	// interface, so it is read where a type is read: as the type of a field of
+	// a throw-away interface.
+	if isSliceOfType(src) {
+		return parseSliceOfType(src)
+	}
+
 	fs := source.NewFileSet()
 	f := fs.AddFileData("schema", -1, []byte(withKeyword(src)))
 
@@ -142,6 +157,66 @@ func withKeyword(src string) string {
 	return trimmed
 }
 
+// sliceItemSrc is what `[]…` holds, and how many `[]` are before it: `[]str`
+// holds `str` at depth 1, `[][]str` at depth 2. It is only a slice of a TYPE
+// when what it holds is not an interface body, so `[]{…}` — a list of records —
+// answers depth 0.
+func sliceItemSrc(src string) (item string, depth int) {
+	rest := strings.TrimSpace(src)
+	for strings.HasPrefix(rest, "[]") {
+		rest = strings.TrimSpace(rest[2:])
+		depth++
+	}
+	if depth == 0 || rest == "" || strings.HasPrefix(rest, "{") {
+		return "", 0
+	}
+	return rest, depth
+}
+
+// isSliceOfType reports whether the schema is a list of plain values.
+func isSliceOfType(src string) bool {
+	_, depth := sliceItemSrc(src)
+	return depth > 0
+}
+
+// parseSliceOfType reads `[]str` (and `[][]str`, a list of lists) into the form
+// it describes: a list whose item is one value of that type. The type is read
+// where a type is read — as the type of a field — so a list holds whatever a
+// field may hold.
+func parseSliceOfType(src string) (*Schema, error) {
+	trimmed := strings.TrimSpace(src)
+
+	s, err := Parse("interface { item " + trimmed + " }")
+	if err != nil {
+		return nil, err
+	}
+	if len(s.Fields) != 1 || s.Fields[0].Schema == nil {
+		return nil, fmt.Errorf("schemaform: %q não descreve uma lista de valores: uma lista guarda UM type", trimmed)
+	}
+	return s.Fields[0].Schema, nil
+}
+
+// sliceSchemaOf reads a slice type — `[]str`, `[][]int` — into a list whose item
+// is one value of that type, one schema per `[]` so a list of lists nests. A
+// slice of SEVERAL types (`[]<int|str>`) describes no single input, so it has no
+// form: it comes back nil and is reported as the type it is written as.
+func sliceSchemaOf(t *node.SliceTypeExpr) *Schema {
+	if len(t.Types) != 1 {
+		return nil
+	}
+
+	item := &Field{Type: t.Types[0].String()}
+	if nested, ok := t.Types[0].Expr.(*node.InterfaceExpr); ok {
+		item.Type, item.Schema = FormType, schemaOf(nested)
+	}
+
+	s := &Schema{Slice: true, Item: item}
+	for i := 1; i < t.Depth; i++ {
+		s = &Schema{Slice: true, Item: &Field{Type: FormType, Schema: s}}
+	}
+	return s
+}
+
 // enumOf reads `enum Name { A, B }`. An anonymous enum names nothing a field
 // could refer to, so it is left out.
 func enumOf(e *node.EnumExpr) *Enum {
@@ -162,6 +237,15 @@ func enumOf(e *node.EnumExpr) *Enum {
 // bindEnums hands each field the enum its type names, walking into the forms
 // inside the form — an enum declared once serves the whole schema.
 func bindEnums(s *Schema, enums map[string]*Enum) {
+	if s.Item != nil {
+		if e, ok := enums[s.Item.Type]; ok {
+			s.Item.Enum = e
+		}
+		if s.Item.Schema != nil {
+			s.Item.Schema.Enums = enums
+			bindEnums(s.Item.Schema, enums)
+		}
+	}
 	for _, f := range s.Fields {
 		if e, ok := enums[f.Type]; ok {
 			f.Enum = e
@@ -190,9 +274,18 @@ func schemaOf(iface *node.InterfaceExpr) *Schema {
 		}
 
 		if len(m.Name.Type) > 0 {
-			if nested, ok := m.Name.Type[0].Expr.(*node.InterfaceExpr); ok {
-				f.Type, f.Schema = FormType, schemaOf(nested)
-			} else {
+			switch t := m.Name.Type[0].Expr.(type) {
+			case *node.InterfaceExpr:
+				f.Type, f.Schema = FormType, schemaOf(t)
+			case *node.SliceTypeExpr:
+				// `tags []str` — a list of plain values is a form of its own,
+				// one level down, like any other nested schema.
+				if sub := sliceSchemaOf(t); sub != nil {
+					f.Type, f.Schema = FormType, sub
+				} else {
+					f.Type = m.Name.Type[0].String()
+				}
+			default:
 				f.Type = m.Name.Type[0].String()
 			}
 		}

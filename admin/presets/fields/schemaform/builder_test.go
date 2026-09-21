@@ -407,3 +407,40 @@ func TestEnumStoresTheMemberName(t *testing.T) {
 		}
 	}
 }
+
+// A list of PLAIN VALUES: the sorter iterates over the value and the ITEM is
+// the value, so it binds at the item's index — a primitive cannot be written
+// back through the slot's `item` variable.
+func TestComponentFuncDrawsAListOfValues(t *testing.T) {
+	got := render(t, New(), "[]str")
+
+	for _, want := range []string{
+		`vx-array-sorter`,
+		`v-model='form["Value"]'`,
+		`v-slot:item='{ item, itemIndex }'`,
+		`v-model='form["Value"][itemIndex]'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a lista de valores não liga %s:\n%s", want, got)
+		}
+	}
+	// the list carries the words; a label on every row would only repeat them
+	if strings.Count(got, `label='Value'`) > 1 {
+		t.Errorf("o item da lista repete o label da lista:\n%s", got)
+	}
+}
+
+// A field that is a list of values is that same list, one level down.
+func TestComponentFuncDrawsAFieldListOfValues(t *testing.T) {
+	got := render(t, New(), "{title str; tags []str}")
+
+	for _, want := range []string{
+		`v-model='form["Value"].title'`,
+		`v-model='form["Value"].tags'`,
+		`v-model='form["Value"].tags[itemIndex]'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("o field lista não liga %s:\n%s", want, got)
+		}
+	}
+}
