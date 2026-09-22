@@ -696,10 +696,13 @@ func DurationComponentFunc(c *Context) h.HTMLComponent {
 		Attr("v-model", c.Value)
 }
 
-// BoolComponentFunc is "bool": a switch.
+// BoolComponentFunc is "bool": a switch. Coloured when it is on — a switch
+// with no colour stays grey either way, which is exactly what a switch must not
+// be: whether it is on is the whole of what it says.
 func BoolComponentFunc(c *Context) h.HTMLComponent {
 	return v.VSwitch().
 		Label(c.Label()).
+		Color("primary").
 		Density(v.DensityCompact).
 		Attr("v-model", c.Value)
 }

@@ -538,3 +538,15 @@ func TestComponentFuncListSeparatesItems(t *testing.T) {
 		t.Errorf("o item não tem respiro nas laterais:\n%s", got)
 	}
 }
+
+// A switch says what it says by being on: it must be coloured when it is, or a
+// true reads exactly like a false.
+func TestBoolFieldSwitchIsColoured(t *testing.T) {
+	got := render(t, New(), "{on bool}")
+	if !strings.Contains(got, "v-switch") {
+		t.Fatalf("o bool não é um switch:\n%s", got)
+	}
+	if !strings.Contains(got, `color='primary'`) {
+		t.Errorf("o switch ligado não fica na cor primary:\n%s", got)
+	}
+}
