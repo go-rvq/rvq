@@ -392,7 +392,13 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 
 	sorter := vx.VXArraySorter(
 		web.Slot(
-			h.Div(row).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
+			h.Div(
+				// A line between one item and the next, so a record of several
+				// fields does not run into the one below it. Before each item
+				// but the first: the separator is BETWEEN them.
+				v.VDivider().Attr("v-if", "itemIndex > 0").Class("my-2"),
+				row,
+			).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
 			addItemButton(schema, c, readOnly),
 		).Name("default"),
 	).

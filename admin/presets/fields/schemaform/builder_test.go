@@ -521,3 +521,16 @@ func TestListItemTitleField(t *testing.T) {
 		}
 	}
 }
+
+// One item does not run into the next: there is a line between them — between,
+// so the first has none above it.
+func TestComponentFuncListSeparatesItems(t *testing.T) {
+	got := render(t, New(), "[]{label str; href str}")
+
+	if !strings.Contains(got, `<v-divider v-if='itemIndex > 0'`) {
+		t.Errorf("a lista não separa um item do outro:\n%s", got)
+	}
+	if strings.Count(got, "<v-divider") != 1 {
+		t.Errorf("a linha é uma só, dentro do v-for:\n%s", got)
+	}
+}
