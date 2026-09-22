@@ -37,6 +37,7 @@ type ModelHistory struct {
 	extraFields  []string
 	allFields    bool
 	wholeFields  map[string]bool
+	noRevert     map[string]bool
 	htmlFields   map[string]bool
 	refFields    map[string]bool
 	fieldDiffers map[string]FieldDiffFunc
@@ -63,6 +64,7 @@ func New(db *gorm.DB) *ModelHistory {
 	return &ModelHistory{
 		db:           db,
 		wholeFields:  map[string]bool{},
+		noRevert:     map[string]bool{},
 		htmlFields:   map[string]bool{},
 		refFields:    map[string]bool{},
 		fieldDiffers: map[string]FieldDiffFunc{},
@@ -113,6 +115,36 @@ func (h *ModelHistory) WholeFields(names ...string) *ModelHistory {
 	return h
 }
 
+// NoRevertFields marks fields a revert never restores. They are versioned and
+// compared like any other — what they said before is part of the record's
+// history, and often what explains the rest of it — but the value they have now
+// stays: a revert of the whole record touches every other field and leaves
+// these alone, and a revert of one of them is refused.
+//
+// It is for a field that is not the editor's to choose: one the application
+// keeps in step with something else (a configuration file, another record), so
+// restoring an old value would only put it out of step until the next sync.
+func (h *ModelHistory) NoRevertFields(names ...string) *ModelHistory {
+	for _, n := range names {
+		h.noRevert[n] = true
+	}
+	return h
+}
+
+// Revertible reports whether a revert may restore this field.
+func (h *ModelHistory) Revertible(field string) bool { return !h.noRevert[field] }
+
+// revertible is the fields of names a revert may restore, in order.
+func (h *ModelHistory) revertible(names []string) []string {
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		if h.Revertible(n) {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
 // HTMLFields marks fields whose value is HTML (e.g. Body), so the diff UI uses
 // an HTML diff for them instead of a plain-text one.
 func (h *ModelHistory) HTMLFields(names ...string) *ModelHistory {
@@ -158,6 +190,9 @@ func (h *ModelHistory) ResolvedFields() []string { return h.resolved }
 // e.g. a JSON map edited as YAML). Otherwise a reference/relation or whole-only
 // field never does: a hunk-level patch would corrupt it.
 func (h *ModelHistory) AcceptsPartial(field string) bool {
+	if !h.Revertible(field) {
+		return false
+	}
 	if _, ok := h.fieldCodecs[field]; ok {
 		return true
 	}

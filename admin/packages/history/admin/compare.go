@@ -192,6 +192,12 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 // In the panel title it needs @click.stop (so it doesn't toggle the panel) and
 // ms-auto; in a content top bar it uses a plain @click.
 func revertFieldButton(mh *ModelHistory, f, recordKey string, aHash histmodels.Hash, msgr *Messages, inTitle bool) h.HTMLComponent {
+	// A field the revert may not restore is still compared — it is part of the
+	// history — but there is nothing to offer here.
+	if !mh.Revertible(f) {
+		return nil
+	}
+
 	btn := v.VBtn("").Icon("mdi-history").
 		Variant(v.VariantText).Size(v.SizeSmall).Color("warning").
 		Attr("title", msgr.Revert)

@@ -18,8 +18,12 @@ import (
 //
 //   RevertRecord       — every versioned field, to `hash`.
 //   RevertFields       — only the named fields, to `hash`.
-//   RevertField        — one field's whole content, to `hash` (always allowed).
+//   RevertField        — one field's whole content, to `hash`.
 //   RevertFieldPartial — only selected hunks of one field (AcceptsPartial only).
+//
+// A field marked NoRevertFields is never restored by any of them: the ones that
+// take several fields leave it as it is and do the rest, and the ones that name
+// it alone refuse.
 
 // RevertRecord restores every versioned field of obj to revision `hash`.
 func (h *ModelHistory) RevertRecord(obj any, hash []byte, ctx *web.EventContext) error {
@@ -28,6 +32,12 @@ func (h *ModelHistory) RevertRecord(obj any, hash []byte, ctx *web.EventContext)
 
 // RevertFields restores only the named fields of obj to revision `hash`.
 func (h *ModelHistory) RevertFields(obj any, hash []byte, fields []string, ctx *web.EventContext) error {
+	// A field the revert may not restore keeps the value it has, and the rest
+	// of the record is reverted around it.
+	if fields = h.revertible(fields); len(fields) == 0 {
+		return nil
+	}
+
 	recordKey := h.mb.MustRecordID(obj).String()
 	rev, err := h.Revision(recordKey, hash)
 	if err != nil {
@@ -49,9 +59,12 @@ func (h *ModelHistory) RevertFields(obj any, hash []byte, fields []string, ctx *
 	return h.saveAndCapture(obj, ctx)
 }
 
-// RevertField restores one field's whole content to revision `hash`. Always
-// available, including for whole-only fields.
+// RevertField restores one field's whole content to revision `hash`. Available
+// for whole-only fields too, and refused for a field that is not revertible.
 func (h *ModelHistory) RevertField(obj any, hash []byte, field string, ctx *web.EventContext) error {
+	if !h.Revertible(field) {
+		return fmt.Errorf("history: field %q is not revertible", field)
+	}
 	return h.RevertFields(obj, hash, []string{field}, ctx)
 }
 
@@ -195,6 +208,9 @@ func (h *ModelHistory) currentText(obj any, field string) string {
 // applyFieldText sets a field from patched text and saves: through the codec's
 // Apply (e.g. parse YAML into the map) when registered, else as the string value.
 func (h *ModelHistory) applyFieldText(obj any, field, text string, ctx *web.EventContext) error {
+	if !h.Revertible(field) {
+		return fmt.Errorf("history: field %q is not revertible", field)
+	}
 	if c, ok := h.fieldCodecs[field]; ok {
 		if err := c.Apply(obj, text); err != nil {
 			return err

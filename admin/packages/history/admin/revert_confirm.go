@@ -175,6 +175,9 @@ func (mh *ModelHistory) revertChanges(ctx *web.EventContext) (recordKey string, 
 	default:
 		fields = mh.resolved
 	}
+	// What the preview promises is what the revert does: a field it may not
+	// restore is not part of either.
+	fields = mh.revertible(fields)
 
 	_ = ctx.R.ParseForm()
 	hunksSel := map[int]bool{}
