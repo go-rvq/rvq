@@ -379,13 +379,13 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	//
 	// The sorter sorts; adding and removing an item are ours too.
 	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
-	row := h.Div(item).Class("flex-grow-1")
+	row := h.Div(item).Class("flex-grow-1 px-2")
 	if !readOnly {
 		row = h.Div(
-			h.Div(item).Class("flex-grow-1"),
+			h.Div(item).Class("flex-grow-1 px-2"),
 			v.VBtn("").Icon("mdi-delete-outline").
 				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
-				Class("mt-2").
+				Class("mt-2 me-2").
 				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
 		).Class("d-flex align-start ga-2")
 	}

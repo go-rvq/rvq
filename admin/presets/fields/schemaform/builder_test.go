@@ -533,4 +533,8 @@ func TestComponentFuncListSeparatesItems(t *testing.T) {
 	if strings.Count(got, "<v-divider") != 1 {
 		t.Errorf("a linha é uma só, dentro do v-for:\n%s", got)
 	}
+	// and the item itself is not glued to the card's edge
+	if !strings.Contains(got, `class='flex-grow-1 px-2'`) {
+		t.Errorf("o item não tem respiro nas laterais:\n%s", got)
+	}
 }
