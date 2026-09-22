@@ -95,7 +95,9 @@
 //
 // Builder.ComponentFunc(schema) is a presets field component: it binds the
 // value under the field's own form key (`form["<FormKey>"]`), a record by name
-// and a list through the array sorter.
+// and a list through the array sorter — the list iterating in the sorter's
+// DEFAULT slot (the sorter draws rows of its own only while sorting), with a
+// button per row to remove it and one at the end to add another.
 //
 // What the browser posts is flat, by the two rules the binding follows: an
 // array indexes and a record names, so a list of records arrives as

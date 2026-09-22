@@ -56,7 +56,11 @@ func TestComponentFuncDrawsAListWithTheSorter(t *testing.T) {
 	for _, want := range []string{
 		`vx-array-sorter`,
 		`v-model='form["Value"]'`,
-		`v-slot:item='{ item, itemIndex }'`,
+		// the list as it is edited is the DEFAULT slot: the sorter draws its
+		// own rows only while sorting
+		`v-slot:default`,
+		`v-for='(item, itemIndex) in form["Value"]'`,
+		`item-title='label'`, // what a row shows while being sorted
 		`v-model='item.label'`,
 		`v-model='item.icon'`,
 		`v-model='item.href'`,
@@ -417,7 +421,8 @@ func TestComponentFuncDrawsAListOfValues(t *testing.T) {
 	for _, want := range []string{
 		`vx-array-sorter`,
 		`v-model='form["Value"]'`,
-		`v-slot:item='{ item, itemIndex }'`,
+		`v-slot:default`,
+		`v-for='(item, itemIndex) in form["Value"]'`,
 		`v-model='form["Value"][itemIndex]'`,
 	} {
 		if !strings.Contains(got, want) {
@@ -441,6 +446,78 @@ func TestComponentFuncDrawsAFieldListOfValues(t *testing.T) {
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("o field lista não liga %s:\n%s", want, got)
+		}
+	}
+}
+
+// The sorter sorts; adding and removing an item are the form's own, so a list
+// carries a button per row to remove it and one at the end to add another —
+// shaped like the ones already there.
+func TestComponentFuncListAddsAndRemoves(t *testing.T) {
+	got := render(t, New(), "[]{label str; count int; on bool}")
+
+	for _, want := range []string{
+		`@click='form["Value"].splice(itemIndex, 1)'`,
+		`@click='form["Value"].push({"label": "", "count": 0, "on": false})'`,
+		`Adicionar`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a lista não traz %s:\n%s", want, got)
+		}
+	}
+
+	// a list of plain values pushes the empty value of its type
+	if got := render(t, New(), "[]str"); !strings.Contains(got, `push("")`) {
+		t.Errorf("a lista de valores não acrescenta um item vazio:\n%s", got)
+	}
+	if got := render(t, New(), "[]int"); !strings.Contains(got, `push(0)`) {
+		t.Errorf("a lista de int não acrescenta um zero:\n%s", got)
+	}
+}
+
+// A list the user may not write shows neither button.
+func TestComponentFuncReadOnlyListHasNoButtons(t *testing.T) {
+	schema, err := Parse("[]{label str}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	comp := New().ComponentFunc(schema)(&presets.FieldContext{
+		ToComponentOptions: &presets.ToComponentOptions{},
+		Name:               "Value",
+		FormKey:            "Value",
+		Mode:               presets.FieldModeStack{presets.DETAIL},
+	}, &web.EventContext{})
+
+	out, err := h.Marshal(comp, context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, unwanted := range []string{"Adicionar", "splice("} {
+		if strings.Contains(string(out), unwanted) {
+			t.Errorf("uma lista só de leitura traz %q:\n%s", unwanted, out)
+		}
+	}
+}
+
+// While sorting, a row is the sorter's own and shows one field: the one a
+// reader would name the row by.
+func TestListItemTitleField(t *testing.T) {
+	for src, want := range map[string]string{
+		"[]{icon str; label str}": "label", // a name beats the first field
+		"[]{icon str; title str}": "title",
+		"[]{icon str; href str}":  "icon", // no name: the first text field
+		"[]{n int; label str}":    "label",
+		"[]{n int; u uint}":       "", // nothing to show
+	} {
+		got := render(t, New(), src)
+		if want == "" {
+			if strings.Contains(got, "item-title=") {
+				t.Errorf("%s: não há field de texto para o título:\n%s", src, got)
+			}
+			continue
+		}
+		if !strings.Contains(got, "item-title='"+want+"'") {
+			t.Errorf("%s: o título da linha devia ser %q:\n%s", src, want, got)
 		}
 	}
 }

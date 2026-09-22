@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"fmt"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -362,24 +363,53 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 		return b.record(schema, c, c.Value, c.Path)
 	}
 
-	// the list: the sorter iterates, and each item is that record again — the
-	// slot binds it to `item`, so a field of it is `item.<name>`. The PATH does
-	// not grow: a list adds no name, so a field of its item is `links.href`,
-	// not `links.*.href` — the same thing, with less to write.
+	// The list: each item is that record again, bound to `item`, so a field of
+	// it is `item.<name>`. The PATH does not grow: a list adds no name, so a
+	// field of its item is `links.href`, not `links.*.href` — the same thing,
+	// with less to write.
 	item := b.record(schema, c, ItemVar, c.Path)
 	if schema.Item != nil {
 		item = b.value(schema.Item, c)
 	}
 
-	return vx.VXArraySorter(
-		web.Slot(item).
-			Name("item").
-			Scope("{ item, itemIndex }"),
+	// The DEFAULT slot is the list as it is edited — the sorter draws its own
+	// rows (a drag handle and a title) only while sorting, through the `item`
+	// slot, which is why the iteration is ours: `item` and `itemIndex` are the
+	// names the fields above bind through.
+	//
+	// The sorter sorts; adding and removing an item are ours too.
+	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
+	row := h.Div(item).Class("flex-grow-1")
+	if !readOnly {
+		row = h.Div(
+			h.Div(item).Class("flex-grow-1"),
+			v.VBtn("").Icon("mdi-delete-outline").
+				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
+				Class("mt-2").
+				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
+		).Class("d-flex align-start ga-2")
+	}
+
+	sorter := vx.VXArraySorter(
+		web.Slot(
+			h.Div(row).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
+			addItemButton(schema, c, readOnly),
+		).Name("default"),
 	).
 		Label(c.Label()).
 		Density(v.DensityCompact).
 		Attr("v-model", c.Value).
-		Readonly(c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite()))
+		Readonly(readOnly)
+
+	// While sorting, the row is the sorter's own: a handle, the position and a
+	// title. A record has no `title`, so the title is the first field of the
+	// schema that holds plain text — enough to tell one row from another.
+	if title := firstTextField(schema); title != "" {
+		// A static prop: the name of the field, not an expression to evaluate
+		// in the form's scope.
+		sorter.Attr("item-title", title)
+	}
+	return sorter
 }
 
 // value renders ONE item of a list of plain values (`[]str`): the item IS the
@@ -432,6 +462,73 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 	}
 
 	return h.Div(comps...)
+}
+
+// addItemButton appends one empty item of the schema's own shape to the list.
+func addItemButton(schema *Schema, c *Context, readOnly bool) h.HTMLComponent {
+	if readOnly {
+		return nil
+	}
+	return v.VBtn("Adicionar").
+		PrependIcon("mdi-plus").
+		Variant(v.VariantTonal).
+		Size(v.SizeSmall).
+		Class("ma-2").
+		Attr("@click", fmt.Sprintf("%s.push(%s)", c.Value, emptyItemJS(schema)))
+}
+
+// emptyItemJS is a new item of the list, written as the JS the button pushes:
+// a record with each of its fields empty, or the empty value of the type a list
+// of plain values holds — so a new row opens with the shape the rest has.
+func emptyItemJS(schema *Schema) string {
+	if schema.Item != nil {
+		return emptyValueJS(schema.Item)
+	}
+
+	parts := make([]string, 0, len(schema.Fields))
+	for _, f := range schema.Fields {
+		value := emptyValueJS(f)
+		if f.Schema != nil {
+			value = emptyItemJS(f.Schema)
+			if f.Schema.Slice {
+				value = "[]"
+			}
+		}
+		parts = append(parts, fmt.Sprintf("%q: %s", f.Name, value))
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
+
+// emptyValueJS is the empty value of a field's type.
+func emptyValueJS(f *Field) string {
+	switch f.Type {
+	case "bool":
+		return "false"
+	case "int", "uint", "float", "decimal":
+		return "0"
+	default:
+		return `""`
+	}
+}
+
+// firstTextField is the name of the field a row of the sorter shows while the
+// list is being sorted: the one a reader would name it by — `label`, `title`,
+// `name` — and otherwise the first that holds plain text. Empty when there is
+// none (a list of plain values has no field at all).
+func firstTextField(schema *Schema) string {
+	for _, want := range []string{"label", "title", "name"} {
+		for _, f := range schema.Fields {
+			if f.Name == want && f.Type == DefaultType {
+				return f.Name
+			}
+		}
+	}
+	for _, f := range schema.Fields {
+		if f.Type == DefaultType {
+			return f.Name
+		}
+	}
+	return ""
 }
 
 // join is the path of a field under prefix.
