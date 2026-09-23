@@ -224,6 +224,14 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 					return db.Omit(b.Field)
 				default:
 					// Load the association for rendering (label/hints) and detail.
+					// A JOIN only works for a single related record (belongs-to /
+					// has-one); a many-to-many read that way is joined as if the
+					// key sat on the related table (`Pages.site_script_id`), so a
+					// list of records is PRELOADED — its own query, through the
+					// link table.
+					if b.many {
+						return db.Preload(b.Field)
+					}
 					return db.Joins(b.Field)
 				}
 			}
