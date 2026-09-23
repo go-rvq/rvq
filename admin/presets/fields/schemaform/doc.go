@@ -26,6 +26,28 @@
 // item IS the value, so it binds by index and carries no label of its own — the
 // list already has one.
 //
+// # The schema is a gad program
+//
+// A schema is not parsed into a form: it RUNS. It is compiled and run in a gad
+// VM of its own (Builder.Parse), and the interface named `Form` is what the run
+// returns; the form is then read off that interface through gad's own
+// reflection — its fields and their resolved types, its array depth
+// (`@depth`), the element of a list of values (`@elem`), the `[k=v, …]`
+// metadata of the interface and of each field (`@meta`). So a schema may use
+// whatever gad can declare, and is checked by gad the way any gad code is: a
+// type name nothing declared is an `unresolved reference`, reported where the
+// schema is read — not later, in the form.
+//
+// The types a field may use are the builder's: every type registered on it is
+// in scope while the schema runs, so `color` or `html` resolve although gad has
+// no such types — and `time`, which in gad is the time NAMESPACE, is the
+// builder's time type here. A name gad already has as a type (`str`, `int`,
+// `bool`) stays gad's.
+//
+// The run is bounded (RunTimeout), and what a schema read into is cached by the
+// source and the builder's types: a schema is read on every draw and every
+// save, and it is the same declaration each time.
+//
 // # What a field's type means
 //
 // The type NAMES THE COMPONENT that edits the field: `Builder.Type(name, comp)`
@@ -41,16 +63,40 @@
 // # A schema written in parts
 //
 // A named interface is a declaration another may use BY ITS NAME, and the one
-// named `Form` (FormName) is the form — wherever it is written, before its
-// declarations as well as after them:
+// named `Form` (FormName) is the form:
 //
 //	interface User { name, id }
 //	interface Form { owner User; creator User }
 //
-// Each occurrence is expanded on its own, so the words of `owner` are not the
-// words of `creator`. An interface that contains itself, directly or through
-// another, describes a form without end and is refused by name. Written in one
-// piece the schema needs no name for anything, and needs none.
+// As anywhere in gad, a name is in scope after its declaration, so what the
+// form uses is declared before it — which is also why an interface that
+// contains itself cannot be written at all. Each occurrence is read on its own,
+// so the words of `owner` are not the words of `creator`.
+//
+// Written in one piece the schema needs no name for anything, and needs none —
+// `{…}`, `[]{…}`, `[]str`, or `interface []{…}` after the enums it uses: that
+// one interface is the form. An interface without a name BESIDE the form is
+// refused: nothing could refer to it.
+//
+// # Metadata: how the form is drawn
+//
+// The `[k=v, …]` block before the interface says how the form is DRAWN, never
+// what the value is (Schema.Meta; a field's own block is Field.Meta):
+//
+//		[layout="table", columns=[#label, #icon, #color, #disabled]]
+//		interface Form []{label str; icon str; color str; link? str; disabled? bool}
+//
+//	  - `layout` — how a list of records is drawn: "form" (the default: each
+//	    record a form, one under the other) or "table" (one row per record, one
+//	    column per field). A table is only of a list of records.
+//	  - `columns` — the fields a table shows, in the order it shows them. Symbols
+//	    name them (`#label` is the string "label"). A field left out keeps its
+//	    value — it is in the record, only not drawn. Without it, every field, in
+//	    the schema's order.
+//
+// What cannot be drawn is refused where the schema is read: a layout that does
+// not exist, a table of something that is not a list of records, a column that
+// names no field.
 //
 // # Enums, and lists of values the schema cannot know
 //
@@ -98,6 +144,10 @@
 // and a list through the array sorter — the list iterating in the sorter's
 // DEFAULT slot (the sorter draws rows of its own only while sorting), with a
 // button per row to remove it and one at the end to add another.
+//
+// In a table each column's header carries the field's label, with its hint
+// behind it, and a cell carries only the input, on one line: the component is
+// given Context.Compact, and spreads Context.CompactAttrs on its input.
 //
 // What the browser posts is flat, by the two rules the binding follows: an
 // array indexes and a record names, so a list of records arrives as

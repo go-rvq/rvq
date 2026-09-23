@@ -93,6 +93,11 @@ type Context struct {
 	// inside the form — draws them the same way.
 	Builder *Builder
 
+	// Compact is a field drawn in a CELL of a table: the column header carries
+	// its label and hint, so the input shows neither, and keeps to one line.
+	// A component that draws something taller than a line may read it too.
+	Compact bool
+
 	// noLabel marks the item of a list of PLAIN VALUES: the list already
 	// carries the words, so a label on every row would only repeat them.
 	noLabel bool
@@ -123,7 +128,7 @@ func (c *Context) Info() FieldInfo {
 // Label is what to put on the input: what the FieldInfoFunc says, or the
 // field's name humanized.
 func (c *Context) Label() string {
-	if c.noLabel {
+	if c.noLabel || c.Compact {
 		return ""
 	}
 	if l := c.Info().Label; l != "" {
@@ -132,8 +137,26 @@ func (c *Context) Label() string {
 	return presets.HumanizeString(c.Field.Name)
 }
 
-// Hint is the line under the input, or "".
-func (c *Context) Hint() string { return c.Info().Hint }
+// Hint is the line under the input, or "" — also in a table cell, where the
+// column header carries it.
+func (c *Context) Hint() string {
+	if c.Compact {
+		return ""
+	}
+	return c.Info().Hint
+}
+
+// CompactAttrs are the attributes that keep an input to one line in a table
+// cell, and nothing outside one: `hide-details` (no hint, no message line) and a
+// compact density. A component spreads them on its input — `.Attr(c.CompactAttrs()...)`.
+func (c *Context) CompactAttrs() []any {
+	if !c.Compact {
+		return nil
+	}
+	// `:density`, bound, is the key the builders' own Density() writes — the
+	// same key replaces it instead of adding a second density beside it.
+	return []any{"hide-details", true, ":density", `"` + v.DensityCompact + `"`}
+}
 
 // Help is the long explanation, or nil.
 func (c *Context) Help() h.HTMLComponent { return c.Info().Help }
@@ -362,6 +385,9 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	if !schema.Slice {
 		return b.record(schema, c, c.Value, c.Path)
 	}
+	if schema.Layout == LayoutTable {
+		return b.table(schema, c)
+	}
 
 	// The list: each item is that record again, bound to `item`, so a field of
 	// it is `item.<name>`. The PATH does not grow: a list adds no name, so a
@@ -468,6 +494,81 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 	}
 
 	return h.Div(comps...)
+}
+
+// table draws a list of records as a TABLE — `[layout="table"]`: one row per
+// record, one column per field Columns names (every field, when it names none),
+// in that order. The header carries each column's label, with its hint behind
+// it; a cell carries only the input (Context.Compact). A field left out of the
+// columns keeps its value — it is in the record, only not drawn.
+//
+// It sits in the sorter like any list, so it sorts, adds and removes the same
+// way: the sorter draws rows of its own only while sorting.
+func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
+	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
+	cols := schema.TableColumns()
+
+	head := make([]h.HTMLComponent, 0, len(cols)+1)
+	cells := make([]h.HTMLComponent, 0, len(cols)+1)
+
+	for _, f := range cols {
+		path := join(c.Path, f.Name)
+
+		// The header is what a label and a hint are in a form.
+		hc := &Context{Field: f, Path: path, Form: c.Form, Event: c.Event, Builder: b}
+		th := h.Th(hc.Label()).Class("text-left text-no-wrap")
+		if hint := hc.Hint(); hint != "" {
+			th.Attr("title", hint)
+		}
+		head = append(head, th)
+
+		fc := &Context{
+			Field:   f,
+			Value:   ItemVar + "." + f.Name,
+			Path:    path,
+			Form:    c.Form,
+			Event:   c.Event,
+			Builder: b,
+			Compact: true,
+		}
+		var cell h.HTMLComponent
+		if draw, ok := b.fieldFunc(fc); ok {
+			cell = draw(fc)
+		} else {
+			cell = errorComponent(fmt.Sprintf(
+				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum (há: %v)",
+				f.Name, f.Type, b.Types()))
+		}
+		cells = append(cells, h.Td(cell).Class("py-1"))
+	}
+
+	if !readOnly {
+		head = append(head, h.Th("").Style("width: 1%"))
+		cells = append(cells, h.Td(
+			v.VBtn("").Icon("mdi-delete-outline").
+				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
+				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
+		))
+	}
+
+	table := v.VTable(
+		h.Thead(h.Tr(head...)),
+		h.Tbody(
+			h.Tr(cells...).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
+		),
+	).Density(v.DensityCompact)
+
+	sorter := vx.VXArraySorter(
+		web.Slot(table, addItemButton(schema, c, readOnly)).Name("default"),
+	).
+		Label(c.Label()).
+		Density(v.DensityCompact).
+		Attr("v-model", c.Value).
+		Readonly(readOnly)
+	if title := firstTextField(schema); title != "" {
+		sorter.Attr("item-title", title)
+	}
+	return sorter
 }
 
 // addItemButton appends one empty item of the schema's own shape to the list.
@@ -594,6 +695,7 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 	return v.VSelect().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
 		Items(options).
 		ItemTitle("title").
 		ItemValue("value").
@@ -612,6 +714,7 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 	return v.VTextField().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
 		Attr("required", c.Field.Required()).
@@ -635,6 +738,7 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 		Type("number").
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
 		Attr("v-model.number", c.Value)
 }
 
@@ -648,6 +752,7 @@ func DecimalComponentFunc(c *Context) h.HTMLComponent {
 		Attr("step", "any").
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
 		Attr("v-model", c.Value)
 }
 
@@ -692,6 +797,7 @@ func DurationComponentFunc(c *Context) h.HTMLComponent {
 	return v.VTextField().
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
 		Placeholder("1h30m").
 		Attr("v-model", c.Value)
 }
@@ -704,6 +810,7 @@ func BoolComponentFunc(c *Context) h.HTMLComponent {
 		Label(c.Label()).
 		Color("primary").
 		Density(v.DensityCompact).
+		Attr(c.CompactAttrs()...).
 		Attr("v-model", c.Value)
 }
 

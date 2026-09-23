@@ -362,8 +362,10 @@ func TestParseNamedInterfaceWithEnum(t *testing.T) {
 	}
 }
 
-// An interface that contains itself describes a form without end, and is
-// refused by name instead of being unfolded forever.
+// An interface that contains itself describes a form without end. In gad it
+// cannot even be written: a name is in scope only after its declaration, so the
+// reference to itself does not resolve, and the schema is refused where it is
+// read — by the gad compiler, naming the reference.
 func TestParseNamedInterfaceCycle(t *testing.T) {
 	for name, src := range map[string]string{
 		"direto":   "interface Node { child Node }\ninterface Form { root Node }",
@@ -375,31 +377,37 @@ func TestParseNamedInterfaceCycle(t *testing.T) {
 			t.Errorf("%s: um ciclo passou", name)
 			continue
 		}
-		if !strings.Contains(err.Error(), "contains itself") {
+		if !strings.Contains(err.Error(), "unresolved reference") {
 			t.Errorf("%s: err = %v", name, err)
 		}
 	}
 }
 
-// A name nothing declared stays the type it was written as, and the builder
-// says it has no component (the schema does not invent one).
-func TestParseUnknownTypeNameIsKept(t *testing.T) {
-	s, err := Parse("{owner User}")
-	if err != nil {
-		t.Fatal(err)
+// A type name nothing declared is not a type: the schema is a gad program, and
+// the gad compiler refuses it naming the reference — where the schema is read,
+// not later, in the form.
+func TestParseUnknownTypeNameIsRefused(t *testing.T) {
+	_, err := Parse("{owner User}")
+	if err == nil {
+		t.Fatal("um type que ninguém declarou passou")
 	}
-	if got := s.Fields[0].Type; got != "User" {
-		t.Errorf("type = %q, want %q", got, "User")
+	if !strings.Contains(err.Error(), `unresolved reference "User"`) {
+		t.Errorf("err = %v", err)
 	}
 }
 
-// The form is the interface NAMED Form, wherever it is written — before its
-// declarations as well as after them.
+// The form is the interface NAMED Form, wherever it is among the declarations —
+// which come before what uses them, as anywhere in gad.
 func TestParseFormNameWinsOverOrder(t *testing.T) {
+	// using a name before declaring it is refused by the compiler
+	if _, err := Parse("interface Form { owner User }\ninterface User { name, id }"); err == nil {
+		t.Error("uma referência antes da declaração passou")
+	}
+
 	for name, src := range map[string]string{
-		"o form primeiro":   "interface Form { owner User }\ninterface User { name, id }",
 		"o form por último": "interface User { name, id }\ninterface Form { owner User }",
 		"entre outras":      "interface User { name, id }\ninterface Form { owner User }\ninterface Other { x str }",
+		"na mesma linha":    "interface User { name, id }; interface Form { owner User }",
 	} {
 		s, err := Parse(src)
 		if err != nil {

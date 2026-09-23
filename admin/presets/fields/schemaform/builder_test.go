@@ -118,12 +118,12 @@ func TestTypeRegistry(t *testing.T) {
 	}
 }
 
-// A type nobody registered is not silently drawn as text: the form says which
-// field asked for what, and what there is.
+// A type gad knows but the builder has no component for is not silently drawn
+// as text: the form says which field asked for what, and what there is.
 func TestUnknownTypeIsReported(t *testing.T) {
-	got := render(t, New(), "{a str; b mistério}")
+	got := render(t, New(), "{a str; b bytes}")
 
-	for _, want := range []string{"b", "mistério", "não tem componente registrado"} {
+	for _, want := range []string{"b", "bytes", "não tem componente registrado"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("o erro não diz %q:\n%s", want, got)
 		}
