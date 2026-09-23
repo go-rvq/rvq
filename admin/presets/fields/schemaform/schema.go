@@ -297,7 +297,7 @@ func parseSliceOfType(src string) (*Schema, error) {
 // is one value of that type, one schema per `[]` so a list of lists nests. A
 // slice of SEVERAL types (`[]<int|str>`) describes no single input, so it has no
 // form: it comes back nil and is reported as the type it is written as.
-func sliceSchemaOf(t *node.SliceTypeExpr) *Schema {
+func sliceSchemaOf(t *node.ArrayTypeExpr) *Schema {
 	if len(t.Types) != 1 {
 		return nil
 	}
@@ -374,7 +374,7 @@ func schemaOf(iface *node.InterfaceExpr) *Schema {
 			switch t := m.Name.Type[0].Expr.(type) {
 			case *node.InterfaceExpr:
 				f.Type, f.Schema = FormType, schemaOf(t)
-			case *node.SliceTypeExpr:
+			case *node.ArrayTypeExpr:
 				// `tags []str` — a list of plain values is a form of its own,
 				// one level down, like any other nested schema.
 				if sub := sliceSchemaOf(t); sub != nil {
