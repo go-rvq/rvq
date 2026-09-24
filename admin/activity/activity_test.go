@@ -19,10 +19,18 @@ import (
 
 var (
 	db          *gorm.DB
-	pb          = presets.New(i18n.New())
-	pageModel   = pb.Model(&Page{})
-	widgetModel = pb.Model(&Widget{})
+	pb          *presets.Builder
+	pageModel   *presets.ModelBuilder
+	widgetModel *presets.ModelBuilder
 )
+
+// freshPresets gives each test its own admin: Install registers the activity
+// log model, and presets refuses the same model twice on one builder.
+func freshPresets() {
+	pb = presets.New(i18n.New())
+	pageModel = pb.Model(&Page{})
+	widgetModel = pb.Model(&Widget{})
+}
 
 type (
 	Page struct {
@@ -73,6 +81,7 @@ func resetDB() {
 }
 
 func TestModelKeys(t *testing.T) {
+	freshPresets()
 	resetDB()
 
 	builder := New(db, &TestActivityLog{})
@@ -100,6 +109,7 @@ func TestModelKeys(t *testing.T) {
 }
 
 func TestModelLink(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{})
 	builder.Install(pb)
 	builder.RegisterModel(pageModel).LinkFunc(func(v interface{}) string {
@@ -119,6 +129,7 @@ func TestModelLink(t *testing.T) {
 }
 
 func TestModelTypeHanders(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{})
 	builder.Install(pb)
 	builder.RegisterModel(pageModel).AddTypeHanders(Widgets{}, func(old, now interface{}, prefixField string) (diffs []Diff) {
@@ -200,6 +211,7 @@ func TestModelTypeHanders(t *testing.T) {
 }
 
 func TestCreator(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{})
 	builder.Install(pb)
 
@@ -228,6 +240,7 @@ func (u user) GetName() string {
 }
 
 func TestCreatorInferface(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{})
 	builder.Install(pb)
 
@@ -248,6 +261,7 @@ func TestCreatorInferface(t *testing.T) {
 }
 
 func TestGetActivityLogs(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{})
 	builder.Install(pb)
 
@@ -283,12 +297,13 @@ func TestGetActivityLogs(t *testing.T) {
 }
 
 func TestMutliModelBuilder(t *testing.T) {
+	freshPresets()
 	builder := New(db, &TestActivityLog{}).CreatorContextKey("creator")
 	builder.Install(pb)
 	pb.DataOperator(gorm2op.DataOperator(db))
 
-	pageModel2 := pb.Model(&TestActivityModel{}).URIName("page-02").Label("Page-02")
-	pageModel3 := pb.Model(&TestActivityModel{}).URIName("page-03").Label("Page-03")
+	pageModel2 := pb.Model(&TestActivityModel{}, presets.ModelWithID("page-02")).URIName("page-02").Label("Page-02")
+	pageModel3 := pb.Model(&TestActivityModel{}, presets.ModelWithID("page-03")).URIName("page-03").Label("Page-03")
 
 	builder.RegisterModel(&TestActivityModel{}).Keys("ID")
 	builder.RegisterModel(pageModel2).Keys("ID").SkipDelete().AddIgnoredFields("VersionName")

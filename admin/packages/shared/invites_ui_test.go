@@ -9,6 +9,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
@@ -29,6 +30,14 @@ func (f *fakeUser) SetRegistrationDate(time.Time) {}
 func (f *fakeUser) GetStatus() string             { return "active" }
 func (f *fakeUser) GetRoles() role.Roles          { return nil }
 func (f *fakeUser) SetRoles(role.Roles)           {}
+func (f *fakeUser) SetID(v uuid.UUID)             { f.id = v }
+func (f *fakeUser) Anonymous() bool               { return false }
+func (f *fakeUser) GetAccountName() string        { return "test" }
+
+// the code under test reads the user through user.GetCurrentUser, which asserts
+// user.User: a method the interface gains must break this build, not turn the
+// fake into "no user" at run time
+var _ user.User = (*fakeUser)(nil)
 
 func ctxWithUser(id uuid.UUID) *web.EventContext {
 	r := httptest.NewRequest("GET", "/admin", nil)
