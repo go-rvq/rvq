@@ -95,8 +95,13 @@ type Context struct {
 
 	// Compact is a field drawn in a CELL of a table: the column header carries
 	// its label and hint, so the input shows neither, and keeps to one line.
-	// A component that draws something taller than a line may read it too.
+	// A component that draws something taller than a line may read it too. In a
+	// read view (Display) it is also the listing cell.
 	Compact bool
+
+	// Data is the value itself, in a read view (Display): decoded, as
+	// DecodeValue reads it. An editing component binds Value instead.
+	Data any
 
 	// noLabel marks the item of a list of PLAIN VALUES: the list already
 	// carries the words, so a label on every row would only repeat them.
@@ -186,6 +191,7 @@ func (c *Context) EnumItems() ([]EnumItem, error) {
 //	    Type("color", myColorPicker)
 type Builder struct {
 	types     map[string]ComponentFunc
+	displays  map[string]ComponentFunc
 	info      FieldInfoFunc
 	enumInfo  EnumInfoFunc
 	enumItems EnumItemsFunc
@@ -284,6 +290,7 @@ func New() *Builder {
 			"date":      DateComponentFunc,
 			"duration":  DurationComponentFunc,
 		},
+		displays: defaultDisplays(),
 	}
 }
 

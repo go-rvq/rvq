@@ -160,6 +160,33 @@
 // EncodeValue/DecodeValue, YAML unless an application says otherwise
 // (JSONEncode/JSONDecode are here for a value stored as JSON).
 //
+// # Showing a value: the detail and the listing cell
+//
+// What is not edited is SHOWN, with the same schema and the same words:
+//
+//	value, _ := b.DecodeValue(stored)
+//	b.DetailComponent(ctx, schema, value) // the detail page
+//	b.ListComponent(ctx, schema, value)   // a listing cell
+//
+// Nothing is bound: the value itself is drawn. In a detail a record is its
+// fields under their labels (an empty one as a dash), a list of plain values a
+// bulleted list, a list of records each record with a line between them — and
+// `[layout="table"]` a table of the columns it names. A listing cell keeps to
+// what fits there: a record on one line, `Label: value · …`, without the empty
+// fields; a list of plain values separated by commas; a list of records one
+// line per record, showing the field a reader names it by (`label`, `title`,
+// `name`, else the first text field); a list shows ListMaxItems and says how
+// many more.
+//
+// Each type is shown by a component of its own, registered like the editing
+// one — Builder.Display(name, f), read with Builder.DisplayFunc — which is
+// given the value in Context.Data (not an expression in Context.Value) and
+// Context.Compact in a cell. The defaults: text for str and the numbers,
+// date, time and duration; `text` keeping its line breaks; `html` sanitized
+// (only its text in a cell); `bool` a check or a dash; `color` a swatch; an
+// enum, or a field EnumItemsFunc answers for, the LABEL of the value it holds.
+// A type with no display shows as text: a read view never refuses a value.
+//
 // # A whole use, end to end
 //
 //	schema, err := schemaform.Parse(`[]{label str; icon str; href}`)

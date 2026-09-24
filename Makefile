@@ -20,6 +20,7 @@ GO_TEST_PKGS := \
 	./x/packages/db-tools \
 	./admin/presets \
 	./admin/presets/integration \
+	./admin/presets/fields/schemaform \
 	./admin/presets/tests/... \
 	./admin/presets/gorm2op/... \
 	./admin/activity/... \
@@ -45,6 +46,7 @@ GO_BUILD_PKGS := \
 	./admin/presets \
 	./admin/presets/examples \
 	./admin/presets/integration \
+	./admin/presets/fields/schemaform \
 	./admin/packages/... \
 	./thirdpart/... \
 	./x/... \
