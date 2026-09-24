@@ -17,6 +17,13 @@ func Portal(children ...h.HTMLComponent) (r *PortalBuilder) {
 		tag: h.Tag("go-plaid-portal").Children(children...),
 		scope: js.Object{
 			"presetsListing": js.Raw("presetsListing"),
+			// The refresh hooks travel with the scope the way presetsListing
+			// does (see Plaid and presets.PostSaveScript): a portal that dropped
+			// them would hand what it renders the root's EMPTY list, and a save
+			// made in there — an EDIT opened from a detail, say — would refresh
+			// nothing its openers show. A form host replaces it with its own,
+			// longer list (presets.FormHostBuilder).
+			"onSaveCallbacks": js.Raw("onSaveCallbacks"),
 			//	"presetsDetailing": js.Raw("presetsDetailing"),
 			//	"presetsCreating":  js.Raw("presetsCreating"),
 			//	"presetsEditing":   js.Raw("presetsEditing"),

@@ -96,6 +96,17 @@ stateDiagram-v2
     Refreshing --> DetailOpen : closer.show = false<br/>(the edit form is destroyed)
 ```
 
+The row click must reach the item host even after the listing reloaded its
+table (a NEW, a search, a page change). The reloaded table is sent on its own to
+the table portal, and content a portal receives is compiled against the portal's
+scope alone. The hosts' slot variables do not reach it, and a `$`-named key of
+component state never reaches a template. So the table portal carries each
+slot host under a plain alias (`ItemFormHosts.PortalScope`), and the reloaded
+table declares them again under their real names (`ItemFormHosts.Rebind`, applied
+by `GetTableComponents` when no listing Build published the hosts). Without this
+the row falls back to the self-hosting event in the Temp portal. The detail still
+opens, but it lost the listing's hook, so saving refreshes only the detail.
+
 ## EDIT from a DETAIL page (no reload)
 
 ```mermaid

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
@@ -429,6 +430,51 @@ func (h *ItemFormHosts) OpenDetailExpr(id string) string {
 		return ""
 	}
 	return h.Detail.OpenExpr(map[string]string{"id": strconv.Quote(id)})
+}
+
+// slotHosts are the row hosts whose state is a slot variable of the listing
+// (a listing in a dialog); hosts kept in `vars` are reachable everywhere.
+func (hs *ItemFormHosts) slotHosts() (r []*FormHostBuilder) {
+	if hs == nil {
+		return
+	}
+	for _, hb := range []*FormHostBuilder{hs.Edit, hs.Detail} {
+		if hb != nil && !hb.inVars {
+			r = append(r, hb)
+		}
+	}
+	return
+}
+
+// portalAlias is the name a slot host travels under in a portal scope: a key
+// starting with `$` never reaches a template from a component's state (Vue
+// keeps those for itself), only from a slot.
+func portalAlias(hb *FormHostBuilder) string {
+	return "presetsHost_" + strings.TrimPrefix(hb.Ref(), "$")
+}
+
+// PortalScope hands the slot hosts to a portal whose content opens them: what a
+// portal receives later (a reloaded table) is compiled against the portal's
+// scope alone, out of reach of the hosts' slot variables. See Rebind.
+func (hs *ItemFormHosts) PortalScope(p *web.PortalBuilder) *web.PortalBuilder {
+	for _, hb := range hs.slotHosts() {
+		p.Scope(portalAlias(hb), js.Raw(hb.Ref()))
+	}
+	return p
+}
+
+// Rebind declares the slot hosts again around content sent on its own into a
+// portal set up by PortalScope, under the names its rows use.
+func (hs *ItemFormHosts) Rebind(comp h.HTMLComponent) h.HTMLComponent {
+	hosts := hs.slotHosts()
+	if len(hosts) == 0 {
+		return comp
+	}
+	uc := vue.UserComponent(comp)
+	for _, hb := range hosts {
+		uc.ScopeVar(hb.Ref(), portalAlias(hb))
+	}
+	return uc
 }
 
 // WithItemFormHosts publishes the listing's per-item hosts so the rows (data

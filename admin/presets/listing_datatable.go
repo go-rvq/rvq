@@ -34,6 +34,23 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 	datatableAdditions h.HTMLComponent,
 	err error,
 ) {
+	// A table re-rendered on its own (ReloadList, UpdateListingDialog) lands in
+	// the portal the listing Build rendered, inside the hosts it declared: its
+	// rows must open THOSE hosts again. Their names are fixed (see
+	// itemFormHosts), so publishing them anew yields the same expressions, and
+	// Rebind declares them again in the new content (the portal hands them over,
+	// see ItemFormHosts.PortalScope). Without this the rows fall back to the
+	// self-hosting event in the Temp portal, which carries none of the listing's
+	// refresh hooks — a save there no longer reloads the list.
+	if GetItemFormHosts(ctx) == nil {
+		hosts := lcb.itemFormHosts(ctx)
+		defer func() {
+			if err == nil {
+				dataTable = hosts.Rebind(dataTable)
+			}
+		}()
+	}
+
 	var sr SearchResult
 	if sr, err = lcb.b.search(ctx); err != nil {
 		return

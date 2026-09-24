@@ -134,6 +134,55 @@ describe("EDIT from a DETAIL opened by a listing", () => {
   }, 40000);
 });
 
+// A listing that reloaded its table (after a NEW, a search, a page change) gets
+// rows rendered on their own into the table portal, out of reach of the hosts'
+// slot variables. They must still open the listing's hosts — the fallback, the
+// self-hosting event in the Temp portal, loses the listing's refresh hook.
+describe("EDIT from a DETAIL opened by a listing that has RELOADED", () => {
+  it("still refreshes the listing", async () => {
+    const wrapper = await mountListing("/admin/articles");
+
+    await wrapper.find('[data-event="new"]').trigger("click");
+    await settle();
+    await fillAndSave(wrapper, "Reloaded first");
+    expect(tableText(wrapper)).toContain("Reloaded first");
+
+    // the rows now come from the reload
+    await wrapper.findAll("table")[0].findAll("td")[0].trigger("click");
+    await settle();
+    await wrapper.find('[data-event="edit"]').trigger("click");
+    await settle();
+    await fillAndSave(wrapper, "Edited after reload");
+
+    const detailNow = wrapper
+      .findAllComponents({ name: "vx-dialog" })
+      .find((d: any) => !String(d.props("title") ?? "").startsWith("Listing"));
+    expect(detailNow!.text()).toContain("Edited after reload");
+    expect(tableText(wrapper)).toContain("Edited after reload");
+    expect(reloads).toBe(0);
+
+    wrapper.unmount();
+  }, 60000);
+
+  it("a row's EDIT (no detailing) still refreshes the listing", async () => {
+    const wrapper = await mountListing("/admin/tags");
+
+    await wrapper.find('[data-event="new"]').trigger("click");
+    await settle();
+    await fillAndSave(wrapper, "Tag reloaded first");
+    expect(tableText(wrapper)).toContain("Tag reloaded first");
+
+    await wrapper.findAll("table")[0].findAll("td")[0].trigger("click");
+    await settle();
+    await fillAndSave(wrapper, "Tag edited after reload");
+
+    expect(tableText(wrapper)).toContain("Tag edited after reload");
+    expect(reloads).toBe(0);
+
+    wrapper.unmount();
+  }, 60000);
+});
+
 describe("a listing whose model has no detailing", () => {
   it("still refreshes when the row's EDIT is saved", async () => {
     const wrapper = await mountListing("/admin/tags");

@@ -337,7 +337,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 		cb.Body = h.HTMLComponents{
 			web.Portal().Name(lcb.portals.Temp()),
-			web.Portal(dataTable).Name(lcb.portals.DataTable()),
+			itemHosts.PortalScope(web.Portal(dataTable).Name(lcb.portals.DataTable())),
 		}
 
 		if lcb.configureComponent != nil {
@@ -387,7 +387,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 	cb.Body = h.HTMLComponents{
 		web.Portal().Name(lcb.portals.Temp()),
-		web.Portal(dataTable).Name(lcb.portals.DataTable()),
+		itemHosts.PortalScope(web.Portal(dataTable).Name(lcb.portals.DataTable())),
 		web.Portal(dataTableAdditions).Name(lcb.portals.DataTableAdditions()),
 	}
 

@@ -228,7 +228,7 @@ var eventCases = []struct {
 	</head>
 	<body class='front'>
 		<div id='app' v-cloak>
-			<go-plaid-portal :visible='true' raw :content='"\u003cdiv\u003ehello\u003c/div\u003e"' :form='form' :locals='locals' :scope='{"presetsListing": presetsListing}'></go-plaid-portal>
+			<go-plaid-portal :visible='true' raw :content='"\u003cdiv\u003ehello\u003c/div\u003e"' :form='form' :locals='locals' :scope='{"onSaveCallbacks": onSaveCallbacks,"presetsListing": presetsListing}'></go-plaid-portal>
 			<user-component :setup='[(({window}) => {window.VueI18n.useI18n().locale.value = ""})]'></user-component>
 		</div><script src='/assets/main.js'></script></body>
 </html>
