@@ -617,7 +617,9 @@ func TestFieldsBuilder(t *testing.T) {
 				PeopleCount: 420,
 				Departments: []*Department{
 					{
-						Name: "!!!",
+						// the form sent no Departments[0].Name: an update is a merge, so the
+						// fetched name stays (and its setter does not run)
+						Name: "Department A",
 						Employees: []*Employee{
 							{
 								Number: 0,
@@ -695,7 +697,9 @@ func TestFieldsBuilder(t *testing.T) {
 				PeopleCount: 420,
 				Departments: []*Department{
 					{
-						Name: "!!!",
+						// the form sent no Departments[0].Name: an update is a merge, so the
+						// fetched name stays (and its setter does not run)
+						Name: "Department A",
 						Employees: []*Employee{
 							{
 								Number: 0,
@@ -772,7 +776,9 @@ func TestFieldsBuilder(t *testing.T) {
 				PeopleCount: 420,
 				Departments: []*Department{
 					{
-						Name: "!!!",
+						// the form sent no Departments[0].Name: an update is a merge, so the
+						// fetched name stays (and its setter does not run)
+						Name: "Department A",
 						Employees: []*Employee{
 							{
 								Number: 0,
@@ -861,7 +867,9 @@ func TestFieldsBuilder(t *testing.T) {
 				PeopleCount: 420,
 				Departments: []*Department{
 					{
-						Name: "!!!",
+						// the form sent no Departments[0].Name: an update is a merge, so the
+						// fetched name stays (and its setter does not run)
+						Name: "Department A",
 						Employees: []*Employee{
 							{
 								Number: 0,

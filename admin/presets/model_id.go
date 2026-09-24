@@ -131,6 +131,16 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 			if value, ok := byField[pf.Name()]; ok {
 				fields = append(fields, pf)
 				parts = append(parts, value)
+				delete(byField, pf.Name())
+			}
+		}
+		// The decoder may name fields the schema does not mark as primary — for a
+		// model with no primary key, the slug IS the key. They follow, in the
+		// order the schema declares them, which is just as stable.
+		for _, f := range s.Fields() {
+			if value, ok := byField[f.Name()]; ok {
+				fields = append(fields, f)
+				parts = append(parts, value)
 			}
 		}
 	} else {

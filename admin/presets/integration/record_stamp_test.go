@@ -235,7 +235,9 @@ func TestRecordStampNamesTheAuthor(t *testing.T) {
 
 // A model with no UpdatedAt has nothing to compare: its form carries no stamp
 // and its updates are not required to send one.
-func TestRecordStampSkipsModelsWithoutUpdatedAt(t *testing.T) {
+// A model with no UpdatedAt is guarded all the same: its stamp is a hash of the
+// record's state as the form shows it (see presets.RecordStateHash).
+func TestRecordStampGuardsModelsWithoutUpdatedAtByHash(t *testing.T) {
 	if _, ok := presets.RecordUpdatedAt(&UnstampedArticle{}); ok {
 		t.Fatal("this test needs a model with no UpdatedAt")
 	}
@@ -246,8 +248,8 @@ func TestRecordStampSkipsModelsWithoutUpdatedAt(t *testing.T) {
 	}
 	db.Exec("DELETE FROM unstamped_articles")
 
-	product := &UnstampedArticle{Title: "Original"}
-	if err := db.Create(product).Error; err != nil {
+	article := &UnstampedArticle{Title: "Original"}
+	if err := db.Create(article).Error; err != nil {
 		t.Fatal(err)
 	}
 
@@ -255,34 +257,54 @@ func TestRecordStampSkipsModelsWithoutUpdatedAt(t *testing.T) {
 	b.DataOperator(gorm2op.DataOperator(db))
 	b.Model(&UnstampedArticle{}).URIName("unstamped-articles")
 
+	update := func(title, stamp string) string {
+		mb := multipartestutils.NewMultipartBuilder().
+			PageURL("/admin/unstamped-articles").
+			EventFunc(actions.Update).
+			Query(presets.ParamID, itoa(article.ID)).
+			AddField("Title", title)
+		if stamp != "" {
+			mb = mb.AddField(presets.RecordStampFormKey, stamp)
+		}
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, mb.BuildEventFuncRequest())
+		return w.Body.String()
+	}
+	title := func() string {
+		var got UnstampedArticle
+		if err := db.First(&got, article.ID).Error; err != nil {
+			t.Fatal(err)
+		}
+		return got.Title
+	}
+
 	w := httptest.NewRecorder()
-	r := multipartestutils.NewMultipartBuilder().
+	b.ServeHTTP(w, multipartestutils.NewMultipartBuilder().
 		PageURL("/admin/unstamped-articles").
 		EventFunc(actions.Edit).
-		Query(presets.ParamID, itoa(product.ID)).
-		BuildEventFuncRequest()
-	b.ServeHTTP(w, r)
+		Query(presets.ParamID, itoa(article.ID)).
+		BuildEventFuncRequest())
+	stamp := stampOf(t, w.Body.String())
 
-	if strings.Contains(w.Body.String(), presets.RecordStampFormKey) {
-		t.Error("a model with no UpdatedAt must not carry a stamp")
+	// no stamp: refused
+	update("No stamp", "")
+	if got := title(); got != "Original" {
+		t.Errorf("an update with no stamp went through: title = %q", got)
 	}
 
-	// and the update goes through with no stamp at all
-	w = httptest.NewRecorder()
-	r = multipartestutils.NewMultipartBuilder().
-		PageURL("/admin/unstamped-articles").
-		EventFunc(actions.Update).
-		Query(presets.ParamID, itoa(product.ID)).
-		AddField("Title", "Edited").
-		BuildEventFuncRequest()
-	b.ServeHTTP(w, r)
-
-	var got UnstampedArticle
-	if err := db.First(&got, product.ID).Error; err != nil {
-		t.Fatal(err)
+	// the form's stamp: saved
+	update("Edited", stamp)
+	if got := title(); got != "Edited" {
+		t.Errorf("title = %q, want %q", got, "Edited")
 	}
-	if got.Title != "Edited" {
-		t.Errorf("title = %q, want %q — an unguarded model must save normally", got.Title, "Edited")
+
+	// the same stamp again: the record changed since, so it is stale
+	body := update("Written over", stamp)
+	if got := title(); got != "Edited" {
+		t.Errorf("a stale form overwrote the record: title = %q, want %q", got, "Edited")
+	}
+	if !strings.Contains(body, "changed by someone else") {
+		t.Errorf("the answer does not explain what happened:\n%s", firstLines(body, 3))
 	}
 }
 

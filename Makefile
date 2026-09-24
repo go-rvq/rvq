@@ -72,6 +72,9 @@ check-go:
 
 check-ui:
 	@echo "== bun test (integração de UI) =="
+	@# o servidor Go dos testes é compilado antes: a suíte o compila de novo no
+	@# beforeAll (5s de limite), e ali ele só pode reaproveitar o cache.
+	$(GO) build -o .tmp/presets_testserver ./js/integration_tests/admin/presets/server
 	@for d in $(BUN_TEST_DIRS); do \
 		echo "-- $$d"; \
 		(cd $$d && $(BUN) test) || exit 1; \
