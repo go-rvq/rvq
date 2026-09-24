@@ -115,3 +115,81 @@ describe("NEW a partir de uma listagem em página", () => {
     wrapper.unmount();
   }, 40000);
 });
+
+// O REFRESH depois do save, numa listagem em página. Aqui os overlays vão para o
+// portal do LAYOUT e alcançam o estado do host por referência
+// (`vars.$presets…`). Os ganchos de refresh (`onSaveCallbacks`) têm de ir pelo
+// mesmo caminho: no portal do layout, o `onSaveCallbacks` do escopo é a lista
+// vazia da raiz, e um save ali não recarregaria nada.
+
+function tableText(wrapper: any) {
+  return wrapper.findAll("table").map((t: any) => t.text()).join(" | ");
+}
+
+// Digita no primeiro campo do formulário aberto e salva. O formulário é o do
+// botão de salvar mais recente — o drawer que o contém —, e um input oculto não
+// é campo (o primeiro é a assinatura do registro, `__formSign`).
+async function fillAndSave(wrapper: any, value: string) {
+  const save = [
+    ...wrapper.findAll('[data-event="presets_Update"]'),
+    ...wrapper.findAll('[data-event="presets_Create"]'),
+  ];
+  expect(save.length).toBeGreaterThan(0);
+  const btn = save[save.length - 1];
+
+  const drawer = (btn.element as HTMLElement).closest(".vx-drawer, .vx-dialog, .v-navigation-drawer, .v-dialog") as HTMLElement;
+  expect(drawer).toBeTruthy();
+  const input = drawer.querySelector('input:not([type="hidden"])') as HTMLInputElement;
+  expect(input).toBeTruthy();
+  input.value = value;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await settle(200);
+
+  requests.length = 0;
+  await btn.trigger("click");
+  await settle();
+}
+
+describe("refresh depois do save, numa listagem em página", () => {
+  it("NEW: a listagem mostra o registro criado", async () => {
+    const wrapper = await mountPage("/admin/articles");
+    await wrapper.find('[data-event="new"]').trigger("click");
+    await settle();
+
+    await fillAndSave(wrapper, "Page created");
+
+    expect(requests.some((r) => r.includes("presets_ReloadList"))).toBe(true);
+    expect(tableText(wrapper)).toContain("Page created");
+    wrapper.unmount();
+  }, 40000);
+
+  it("EDIT da linha (modelo sem detalhe): a listagem mostra o valor novo", async () => {
+    const wrapper = await mountPage("/admin/tags");
+    await wrapper.findAll("table")[0].findAll("td")[0].trigger("click");
+    await settle();
+
+    await fillAndSave(wrapper, "Page tag edited");
+
+    expect(requests.some((r) => r.includes("presets_ReloadList"))).toBe(true);
+    expect(tableText(wrapper)).toContain("Page tag edited");
+    wrapper.unmount();
+  }, 40000);
+
+  it("DETAIL → EDIT: o detalhe que abriu o form E a listagem recarregam", async () => {
+    const wrapper = await mountPage("/admin/articles");
+    await wrapper.findAll("table")[0].findAll("td")[0].trigger("click");
+    await settle();
+
+    await wrapper.find('[data-event="edit"]').trigger("click");
+    await settle();
+    await fillAndSave(wrapper, "Page detail edited");
+
+    // o detalhe se redesenha no portal que ocupa…
+    expect(requests.some((r) => r.includes("presets_ReloadDetail") || r.includes("presets_Detailing"))).toBe(true);
+    const detail = wrapper.findAll(".vx-drawer").find((d: any) => d.text().includes("Page detail edited") && !d.find("table").exists());
+    expect(detail).toBeDefined();
+    // …e a listagem embaixo também
+    expect(tableText(wrapper)).toContain("Page detail edited");
+    wrapper.unmount();
+  }, 40000);
+});

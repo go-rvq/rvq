@@ -6,6 +6,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/web/vue"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
@@ -41,7 +42,17 @@ func (p *Drawer) closerScope(comp h.HTMLComponent) h.HTMLComponent {
 		// by reference, so this works both inside the caller's portal (where the
 		// ambient `closer` IS the caller's) and in the layout's portal (where it
 		// is not, and the caller sent an address like `vars.$presetsCreating`)
-		return sb.Closer().Attr(":closer", p.closerRef())
+		ref := p.closerRef()
+		scoped := sb.Closer().Attr(":closer", ref)
+		if ref == "closer" {
+			return scoped
+		}
+		// In the layout's portal the ambient `onSaveCallbacks` is the root's
+		// empty list, not the one the host extended: a save there would refresh
+		// nothing. The host carries its list on its state, so it is taken from
+		// there, by the same reference as the closer.
+		return vue.UserComponent(scoped).
+			ScopeVar("onSaveCallbacks", ref+"?.onSaveCallbacks ?? onSaveCallbacks")
 	}
 	return web.CloserScope(comp, true)
 }

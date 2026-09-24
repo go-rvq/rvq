@@ -115,6 +115,22 @@ sequenceDiagram
     Note over P: the body shows the new data,<br/>document.title follows — no reload
 ```
 
+## A listing that is a PAGE
+
+A listing opened in a dialog keeps its overlays in its own portals, and the
+`onSaveCallbacks` a host extended reaches the form through the portal's scope.
+A listing that is a PAGE sends its overlays to the LAYOUT's portal instead (so a
+drawer sizes itself against the window): there the ambient `onSaveCallbacks` is
+the root's empty list, and the form reaches the host only by reference —
+`vars.$presetsEditing`, sent as `presets_closer_ref`.
+
+So the host's list travels WITH its state: `$closer({…, onSaveCallbacks: [...]})`
+carries the list the host extended, and a drawer bound to a closer by reference
+exposes `<ref>.onSaveCallbacks` to what it holds. Without it a save in a page
+listing refreshed nothing — neither the listing nor the detail that opened the
+form. `page_listing.dom.test.ts` pins NEW, the row's EDIT and DETAIL → EDIT on a
+page.
+
 ## SINGLETON
 
 ```mermaid

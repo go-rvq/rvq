@@ -251,6 +251,11 @@ func (b *FormHostBuilder) init() string {
 		s += ", closeCallbacks: [" + closerCallbackList(b.onClose) + "]"
 	}
 	s += ", reload: () => { " + b.loadScript() + " }"
+	// The refresh hooks travel WITH the state, not only down the portal's scope:
+	// an overlay drawn somewhere else (the layout's portal, for a listing that
+	// is a page) reaches this state by reference, and must reach the list this
+	// host extended with it — or its save refreshes nothing.
+	s += ", onSaveCallbacks: " + b.callbacks()
 	return s + "})"
 }
 
