@@ -5,14 +5,7 @@
 // inclusion and deletion at nested depth — always checking the submitted `form`.
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import {
-  eventFunc,
-  followEditForm,
-  formAssigns,
-  portalBody,
-  startServer,
-  type TestServer,
-} from "./helpers";
+import { eventFunc, followEditForm, formAssigns, portalBody, startServer, type TestServer, updateSigned } from "./helpers";
 
 const URL = "/admin/l0s";
 let server: TestServer;
@@ -39,7 +32,7 @@ describe("nested list editor (4 levels)", () => {
   });
 
   it("clearing a required Name at the deepest level fails validation", async () => {
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },
@@ -104,7 +97,7 @@ describe("nested list editor (4 levels)", () => {
     // remove the deepest item (L3[0]) AND clear the root Name so validation
     // fails: the re-render must keep the removed L3 flagged deleted (its removal
     // is not lost across the round-trip).
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },
@@ -135,7 +128,7 @@ describe("nested list editor (4 levels)", () => {
 
   it("removing a first-level item removes it from the DB on save", async () => {
     // the root reconciles its L1s has-many, so removing the only L1 persists.
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },

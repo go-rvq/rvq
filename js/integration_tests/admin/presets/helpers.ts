@@ -58,6 +58,43 @@ export async function eventFunc(
   return JSON.parse(text) as EventResponse;
 }
 
+// recordStamp is the signed record stamp an edit form seeds (`__formSign`), read
+// from the form the way the browser has it. An update without it is refused as
+// a stale form ("This form is out of date"): the stamp is what proves the form
+// was rendered over the record as it stands.
+export async function recordStamp(
+  server: TestServer,
+  opts: { url?: string; id?: string },
+): Promise<Record<string, string>> {
+  const r = await eventFunc(server, "presets_Edit", {
+    method: "POST",
+    url: opts.url,
+    query: { id: opts.id ?? "", overlay: "Dialog" },
+  });
+  const html = (r.updatePortals ?? []).map((p) => p.body).join("") + (r.body ?? "");
+  const sign = formAssigns(html)["__formSign"];
+  return sign ? { __formSign: String(sign) } : {};
+}
+
+// updateSigned posts a presets_Update as the browser does: with the record
+// stamp of a freshly opened form beside the fields.
+export async function updateSigned(
+  server: TestServer,
+  opts: {
+    method?: "GET" | "POST";
+    query?: Record<string, string>;
+    fields?: Record<string, string>;
+    url?: string;
+  },
+): Promise<EventResponse> {
+  const stamp = await recordStamp(server, { url: opts.url, id: opts.query?.id });
+  return eventFunc(server, "presets_Update", {
+    ...opts,
+    method: "POST",
+    fields: { ...stamp, ...(opts.fields ?? {}) },
+  });
+}
+
 // portalBody returns the body of the named updated portal (or the whole response
 // body when name is omitted / not found).
 export function portalBody(r: EventResponse, name?: string): string {

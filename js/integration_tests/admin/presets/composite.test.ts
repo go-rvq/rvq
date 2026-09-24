@@ -11,14 +11,7 @@
 // keying each row by its FULL composite primary key.
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import {
-  eventFunc,
-  followEditForm,
-  formAssigns,
-  portalBody,
-  startServer,
-  type TestServer,
-} from "./helpers";
+import { eventFunc, followEditForm, formAssigns, portalBody, startServer, type TestServer, updateSigned } from "./helpers";
 
 const URL = "/admin/carts";
 let server: TestServer;
@@ -73,7 +66,7 @@ describe("composite-key nested list editor", () => {
   it("clearing a required field at the deepest composite level fails validation", async () => {
     const fields = seededFields();
     fields["Items[0].Notes[0].Text"] = ""; // required Text at the deepest level
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },
@@ -107,7 +100,7 @@ describe("composite-key nested list editor", () => {
     const fields = seededFields();
     fields["Name"] = ""; // fail validation to force a re-render
     fields["Items[0].Notes[0].__deleted"] = "true"; // remove the deepest note
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },
@@ -123,7 +116,7 @@ describe("composite-key nested list editor", () => {
   it("removing a first-level composite-key item persists on a valid save", async () => {
     // the root reconciles its Items has-many (composite PK CartID,Sku), so
     // removing the only item persists.
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       url: URL,
       query: { id: "1", overlay: "Dialog", target_portal: "inner" },

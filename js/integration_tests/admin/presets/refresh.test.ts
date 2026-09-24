@@ -13,7 +13,7 @@
 //                         new page title, so nothing is reloaded
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { eventFunc, portalBody, startServer, type TestServer } from "./helpers";
+import { eventFunc, portalBody, startServer, updateSigned, type TestServer } from "./helpers";
 
 let server: TestServer;
 
@@ -33,12 +33,7 @@ async function page(path: string) {
 
 describe("saving hands over to the closer", () => {
   it("an update ends by calling onSave with the saved id, and needs no callback query", async () => {
-    const r = await eventFunc(server, "presets_Update", {
-      method: "POST",
-      url: "/admin/articles",
-      query: { id: "1", overlay: "Dialog" },
-      fields: { Title: "A1 edited", Body: "b1" },
-    });
+    const r = await updateSigned(server, { url: "/admin/articles", query: { id: "1", overlay: "Dialog" }, fields: { Title: "A1 edited", Body: "b1" } });
 
     expect(r.runScript ?? "").toContain('(onSaveCallbacks || []).forEach(f => f("1"))');
     // the request carried no presets_post_change_callback at all
@@ -106,12 +101,7 @@ describe("what each host refreshes", () => {
 
 describe("ReloadDetail", () => {
   it("re-renders the detail body with the new data and the new title", async () => {
-    await eventFunc(server, "presets_Update", {
-      method: "POST",
-      url: "/admin/articles",
-      query: { id: "2", overlay: "Dialog" },
-      fields: { Title: "A2 renamed", Body: "b2" },
-    });
+    await updateSigned(server, { url: "/admin/articles", query: { id: "2", overlay: "Dialog" }, fields: { Title: "A2 renamed", Body: "b2" } });
 
     const r = await eventFunc(server, "presets_ReloadDetail", {
       url: "/admin/articles",
@@ -128,12 +118,7 @@ describe("ReloadDetail", () => {
   });
 
   it("works for a SINGLETON detailing (no id)", async () => {
-    await eventFunc(server, "presets_Update", {
-      method: "POST",
-      url: "/admin/site",
-      query: { id: "1", overlay: "Dialog" },
-      fields: { Name: "Site renamed", Motto: "m" },
-    });
+    await updateSigned(server, { url: "/admin/site", query: { id: "1", overlay: "Dialog" }, fields: { Name: "Site renamed", Motto: "m" } });
 
     const r = await eventFunc(server, "presets_ReloadDetail", { url: "/admin/site" });
     expect(portalBody(r, "presets_detail_page")).toContain("Site renamed");

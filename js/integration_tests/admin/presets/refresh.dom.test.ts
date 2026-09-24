@@ -64,11 +64,13 @@ async function mountListing(url: string) {
 
 // Types a value into the form's FIRST field and saves it. Vuetify fields carry
 // no name attribute (they get generated ids), so the field is taken by position
-// inside the innermost dialog — the form that was just opened.
+// inside the innermost dialog — the form that was just opened. A hidden input is
+// not a field anyone types in: the form's first one is the signed record stamp
+// (`__formSign`), and typing over it makes the save a forgery the server refuses.
 async function fillAndSave(wrapper: any, value: string) {
   const dialogs = wrapper.findAllComponents({ name: "vx-dialog" });
   const form = dialogs[dialogs.length - 1];
-  const input = form.findAll("input")[0];
+  const input = form.findAll("input").filter((i: any) => i.attributes("type") !== "hidden")[0];
   expect(input).toBeTruthy();
   await input.setValue(value);
   await settle(200);

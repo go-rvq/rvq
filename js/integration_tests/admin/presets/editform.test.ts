@@ -8,14 +8,7 @@
 // recreate the scope.
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import {
-  eventFunc,
-  extractRunScript,
-  parseRunScriptEvent,
-  portalBody,
-  startServer,
-  type TestServer,
-} from "./helpers";
+import { eventFunc, extractRunScript, parseRunScriptEvent, portalBody, startServer, type TestServer, updateSigned } from "./helpers";
 
 let server: TestServer;
 
@@ -91,7 +84,7 @@ describe("inner form re-render", () => {
   it("re-renders with a validation error when required Name is empty", async () => {
     const q = await openInnerQueries();
 
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       query: q,
       fields: {
@@ -115,7 +108,7 @@ describe("inner form re-render", () => {
   it("saves successfully, removes the deleted item and closes via closer.show=false", async () => {
     const q = await openInnerQueries();
 
-    const r = await eventFunc(server, "presets_Update", {
+    const r = await updateSigned(server, {
       method: "POST",
       query: { ...q, overlay: "Dialog" },
       fields: {
