@@ -192,7 +192,7 @@ func (b *EditingBuilder) PostValidate(f func(ctx *web.EventContext, obj any) (er
 }
 
 func (b *EditingBuilder) WrapPostValidate(f func(old func(ctx *web.EventContext, obj any) (err error)) func(ctx *web.EventContext, obj any) error) *EditingBuilder {
-	return b.PostValidate(f(b.preValidate))
+	return b.PostValidate(f(b.postValidate))
 }
 
 func (b *EditingBuilder) PreSaveCallback(f SaveCallbackFunc) *EditingBuilder {

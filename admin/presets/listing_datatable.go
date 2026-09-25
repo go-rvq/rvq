@@ -177,41 +177,12 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		displayFields    []*FieldBuilder
 		selectColumnsBtn h.HTMLComponent
 		headers          []*vx.DataTableHeaderBuilder
-		mode             = FieldModeStack{LIST}
 	)
 
 	if b.selectableColumns {
 		selectColumnsBtn, displayFields = b.selectColumnsBtn(ctx.R.URL, ctx, inDialog)
 	} else {
-		nodes := b.fields.FieldTreeLayout(b.fields.FilterLayout(b.CurrentLayout(), FieldRenderable()))
-		var nodes2Headers func(node FieldBuilderTreeNodes) []*vx.DataTableHeaderBuilder
-		nodes2Headers = func(nodes FieldBuilderTreeNodes) (r []*vx.DataTableHeaderBuilder) {
-			for _, node := range nodes {
-				t := &vx.DataTableHeaderBuilder{}
-
-				if node.IsTree {
-					t.Name(node.Tree.Name)
-					if node.Tree.Title != nil {
-						t.Title(node.Tree.Title(ctx.Context()))
-					}
-					t.Children = nodes2Headers(node.Tree.Nodes)
-					if len(t.Children) > 0 {
-						r = append(r, t)
-					}
-				} else {
-					fcb := node.Field.NewContext(b.mb.Info(), ctx, nil, nil)
-					if !fcb.Disabled && node.Field.IsEnabled(fcb) {
-						displayFields = append(displayFields, node.Field)
-						t.Name(node.Field.name)
-						t.Title(fcb.Label)
-						r = append(r, t)
-					}
-				}
-			}
-			return
-		}
-
-		headers = nodes2Headers(nodes)
+		displayFields, headers = b.layoutFields(ctx)
 	}
 
 	var (
@@ -351,19 +322,99 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 	dataTable = sDataTable
 
-	for _, f := range displayFields {
-		fctx := f.NewContext(b.mb.Info(), ctx, nil, nil)
-		fctx.Mode = mode
+	for _, col := range b.columns(ctx, displayFields) {
+		dataTable.(*vx.DataTableBuilder).Column(col.Name).
+			Title(col.Label).
+			CellComponentFunc(col.cell)
+	}
+	return
+}
 
-		if f.IsEnabled(fctx) {
-			if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
-				continue
+// layoutFields are the fields the listing's current layout shows, in order, and
+// the table headers for them (a field tree becomes grouped headers).
+func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*FieldBuilder, headers []*vx.DataTableHeaderBuilder) {
+	nodes := b.fields.FieldTreeLayout(b.fields.FilterLayout(b.CurrentLayout(), FieldRenderable()))
+	var nodes2Headers func(node FieldBuilderTreeNodes) []*vx.DataTableHeaderBuilder
+	nodes2Headers = func(nodes FieldBuilderTreeNodes) (r []*vx.DataTableHeaderBuilder) {
+		for _, node := range nodes {
+			t := &vx.DataTableHeaderBuilder{}
+
+			if node.IsTree {
+				t.Name(node.Tree.Name)
+				if node.Tree.Title != nil {
+					t.Title(node.Tree.Title(ctx.Context()))
+				}
+				t.Children = nodes2Headers(node.Tree.Nodes)
+				if len(t.Children) > 0 {
+					r = append(r, t)
+				}
+			} else {
+				fcb := node.Field.NewContext(b.mb.Info(), ctx, nil, nil)
+				if !fcb.Disabled && node.Field.IsEnabled(fcb) {
+					displayFields = append(displayFields, node.Field)
+					t.Name(node.Field.name)
+					t.Title(fcb.Label)
+					r = append(r, t)
+				}
 			}
-			f = b.GetFieldOrDefault(f.name) // fill in empty compFunc and setter func with default
-			dataTable.(*vx.DataTableBuilder).Column(f.name).
-				Title(fctx.Label).
-				CellComponentFunc(b.cellComponentFunc(f))
 		}
+		return
+	}
+
+	headers = nodes2Headers(nodes)
+	return
+}
+
+// ListingColumn is one column of a listing as its table draws it: the field,
+// its label, and the cell it draws for a record.
+type ListingColumn struct {
+	Name  string
+	Label string
+	Field *FieldBuilder
+	cell  vx.CellComponentFunc
+	ctx   *web.EventContext
+}
+
+// Cell is what the listing's table draws for obj in this column — the field's
+// LIST component, a <td> as the table wants it.
+func (c *ListingColumn) Cell(obj any) h.HTMLComponent {
+	return c.cell(obj, c.Name, c.ctx)
+}
+
+// Columns are the columns the listing's table shows for this request: the same
+// fields, in the same order, with the same permission checks and the same
+// cells. A view that is not the table (a tree, a board) shows a listing's
+// columns through them.
+func (b *ListingBuilder) Columns(ctx *web.EventContext) []*ListingColumn {
+	var fields []*FieldBuilder
+	if b.selectableColumns {
+		_, fields = b.selectColumnsBtn(ctx.R.URL, ctx, IsInDialog(ctx))
+	} else {
+		fields, _ = b.layoutFields(ctx)
+	}
+	return b.columns(ctx, fields)
+}
+
+// columns are the enabled, permitted columns of fields.
+func (b *ListingBuilder) columns(ctx *web.EventContext, fields []*FieldBuilder) (cols []*ListingColumn) {
+	for _, f := range fields {
+		fctx := f.NewContext(b.mb.Info(), ctx, nil, nil)
+		fctx.Mode = FieldModeStack{LIST}
+
+		if !f.IsEnabled(fctx) {
+			continue
+		}
+		if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
+			continue
+		}
+		f = b.GetFieldOrDefault(f.name) // fill in empty compFunc and setter func with default
+		cols = append(cols, &ListingColumn{
+			Name:  f.name,
+			Label: fctx.Label,
+			Field: f,
+			cell:  b.cellComponentFunc(f),
+			ctx:   ctx,
+		})
 	}
 	return
 }
@@ -572,6 +623,13 @@ func (b *ListingBuilder) reloadURI(ctx *web.EventContext) string {
 		Query(ParamPortalID, portalID).
 		StringQuery(ctx.Queries().Encode()).
 		Go()
+}
+
+// ReloadScript is the JS that reloads this listing's records in place — what
+// its own form hosts run after a save. A view that replaces the table (see
+// ListingComponentBuilder.SetTableBuilder) hands it to the forms it opens.
+func (b *ListingBuilder) ReloadScript(ctx *web.EventContext) string {
+	return b.reloadURI(ctx)
 }
 
 func (b *ListingBuilder) reloadCallback(ctx *web.EventContext) (cb *web.Callback) {
