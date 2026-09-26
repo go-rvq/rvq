@@ -9,14 +9,23 @@ import (
 )
 
 type RelatedDeletionContext struct {
-	Builder             *ListingBuilder
-	Context             *web.EventContext
+	Builder *ListingBuilder
+	Context *web.EventContext
+	// FormKey is the JS expression the "delete related" switch binds:
+	// `cascade.value`. The confirmation's own state is the scope variable
+	// `cascade`, so a component the confirmation adds (WrapComponent) binds a
+	// field of it — `cascade.<name>` — and sends it with Queries.
 	FormKey             string
 	Obj                 any
 	Enabled             bool
 	Description         string
 	WrapComponent       func(comp h.HTMLComponent) h.HTMLComponent
 	ShowRelatedDisabled bool
+	// Queries are sent with the delete, beside `cascade`: query name → JS
+	// expression, evaluated when the delete button is clicked (e.g.
+	// `"move_to": "cascade.moveTo || ''"`). The delete func reads them from
+	// the request.
+	Queries map[string]string
 }
 
 type ShowRelatedItensForDeletionContext struct {

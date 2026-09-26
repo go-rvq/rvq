@@ -82,6 +82,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 		title         string
 		ido           ID
 		relatedComp   h.HTMLComponent
+		extraQueries  map[string]string
 	)
 
 	if ido, err = b.mb.ParseRecordID(id); err != nil {
@@ -144,6 +145,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 			if rdCtx.WrapComponent != nil {
 				relatedComp = rdCtx.WrapComponent(relatedComp)
 			}
+			extraQueries = rdCtx.Queries
 		} else if !b.DeletingRestriction.CanObj(obj, ctx) {
 			err = perm.PermissionDenied
 			return
@@ -155,6 +157,15 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 
 	if title, err = b.mb.RecordTitleFetch(obj, ctx); err != nil {
 		return
+	}
+
+	doDelete := web.Plaid().
+		EventFunc(actions.DoDelete).
+		Queries(ctx.Queries()).
+		Query("cascade", web.Var("cascade.value")).
+		URL(ctx.R.URL.Path)
+	for _, name := range sortedKeys(extraQueries) {
+		doDelete.Query(name, web.Var(extraQueries[name]))
 	}
 
 	b.mb.p.Dialog().
@@ -181,12 +192,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 						Color(ColorError).
 						Variant(VariantFlat).
 						Theme(ThemeDark).
-						Attr("@click", web.Plaid().
-							EventFunc(actions.DoDelete).
-							Queries(ctx.Queries()).
-							Query("cascade", web.Var("cascade.value")).
-							URL(ctx.R.URL.Path).
-							Go()),
+						Attr("@click", doDelete.Go()),
 				}).
 				Title(msgr.Delete),
 		).ScopeVar("cascade", "{value: false}"))
