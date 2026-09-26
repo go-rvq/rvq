@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"slices"
 	"strings"
-	"time"
 
 	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
@@ -162,21 +161,13 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 				}
 			}
 
-			if err = in(obj, id, cascade, ctx); err != nil {
-				return
-			}
-			locale := id.GetValue("LocaleCode").(string)
-			locale = fmt.Sprintf("%s(del:%d)", locale, time.Now().UnixMilli())
-
-			var withoutKeys []string
-			if ctx.R.URL.Query().Get("all_versions") == "true" {
-				withoutKeys = append(withoutKeys, "Version")
-			}
-
-			if err = db_utils.ModelIdWhere(db.Unscoped(), obj, id, withoutKeys...).Update("locale_code", locale).Error; err != nil {
-				return
-			}
-			return
+			// The record is deleted as its model deletes — softly, when it keeps
+			// deleted rows. Its key stays taken by the deleted row; the locale is
+			// NOT renamed to free it (a locale_code that is no locale breaks the
+			// foreign key to the locales, and every key that includes it): a later
+			// localization to this locale frees it instead (see
+			// purgeSoftDeletedLocale).
+			return in(obj, id, cascade, ctx)
 		}
 	})
 

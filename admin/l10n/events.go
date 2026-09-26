@@ -267,6 +267,12 @@ func DoLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *web.E
 			}
 		}
 
+		// A record deleted softly in this locale still holds the key the copy
+		// takes: it goes for good first.
+		if err = purgeSoftDeletedLocale(db, mb, mid, toLocale); err != nil {
+			return
+		}
+
 		if err = me.CreatingBuilder().Creator(toObj, ctx); err != nil {
 			return
 		}
@@ -308,4 +314,18 @@ func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder) web.EventF
 		r.Reload = true
 		return
 	}
+}
+
+// purgeSoftDeletedLocale deletes for good the row of record mid in locale that
+// was deleted softly — what keeps its key (id, locale) taken after a delete. A
+// model that keeps no deleted rows has nothing to purge.
+func purgeSoftDeletedLocale(db *gorm.DB, mb *presets.ModelBuilder, mid model.ID, locale string) error {
+	obj := mb.NewModel()
+	f, ok := reflect.Indirect(reflect.ValueOf(obj)).Type().FieldByName("DeletedAt")
+	if !ok || f.Type != reflect.TypeOf(gorm.DeletedAt{}) {
+		return nil
+	}
+	return db_utils.ModelIdWhere(db.Session(&gorm.Session{}).Unscoped(), obj, mid, "LocaleCode").
+		Where("locale_code = ? AND deleted_at IS NOT NULL", locale).
+		Delete(obj).Error
 }
