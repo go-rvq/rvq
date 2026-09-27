@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/admin/worker/mock"
+	"github.com/google/uuid"
 )
 
 var items []worker.QueJobInterface
