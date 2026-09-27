@@ -30,6 +30,11 @@ func init() {
 }
 
 func TestAll(t *testing.T) {
+	// a real bucket: without one configured there is nothing to talk to (the
+	// SDK would wait minutes for an EC2 role instead)
+	if config.Bucket == "" || config.AccessID == "" {
+		t.Skip("set QOR_AWS_BUCKET, QOR_AWS_ACCESS_KEY_ID and QOR_AWS_SECRET_ACCESS_KEY to test against S3")
+	}
 	fmt.Println("testing S3 with public ACL")
 	tests.TestAll(client, t)
 

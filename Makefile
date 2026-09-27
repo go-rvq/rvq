@@ -1,10 +1,11 @@
 # Verificação do que está saudável hoje. Rode `make check` ANTES DE COMMITAR.
 #
 # O repositório tem pacotes quebrados de longa data — o que sobrou das
-# estruturas antigas `github.com/go-rvq/{admin,web,x}`, forks do rvq
-# (docs/examples do admin, media, os que exigem libvips). Eles NÃO entram aqui:
+# estruturas antigas `github.com/go-rvq/{admin,web,x}`. Eles NÃO entram aqui:
 # `check` cobre o que passa, para que uma falha signifique de fato uma
-# regressão sua.
+# regressão sua. O admin/media/vips exige a libvips (libvips-dev) instalada; o
+# teste do storage S3 só fala com um bucket de verdade quando QOR_AWS_* estão
+# definidas (sem elas, pula).
 
 GO ?= go
 BUN ?= bun
@@ -31,9 +32,11 @@ GO_TEST_PKGS := \
 	./admin/example/integration \
 	./admin/docs/docsrc/examples/examples_presets \
 	./admin/docs/docsrc/examples/examples_admin \
+	./admin/docs/docsrc/examples/examples_admin/publish_test \
 	./admin/pagebuilder/example \
 	./admin/worker/integration_test \
 	./admin/media/integration \
+	./admin/media/storage/... \
 	./admin/media/media_library \
 	./admin/seo \
 	./admin/packages/... \
@@ -49,6 +52,7 @@ GO_BUILD_PKGS := \
 	./admin/microsite/... \
 	./admin/docs/docsrc/examples/examples_presets \
 	./admin/pagebuilder/... \
+	./admin/media/... \
 	./admin/seo/... \
 	./admin/presets \
 	./admin/presets/examples \

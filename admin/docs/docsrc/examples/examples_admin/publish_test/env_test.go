@@ -2,7 +2,6 @@ package publish_test
 
 import (
 	"database/sql"
-	"net/http"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
@@ -35,9 +34,4 @@ func TestMain(m *testing.M) {
 	examples_admin.PublishExample(PresetsBuilder, DB)
 
 	m.Run()
-}
-
-type Flow struct {
-	db *gorm.DB
-	h  http.Handler
 }
