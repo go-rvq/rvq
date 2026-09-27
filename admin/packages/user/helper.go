@@ -65,10 +65,11 @@ func (b *Builder) GenInitialUser(db *gorm.DB) (user User) {
 }
 
 func (b *Builder) GrantUserRole(db *gorm.DB, userID uuid.UUID, roleName string) error {
-	var roleID int
-	if err := db.Table("roles").Where("name = ?", roleName).Pluck("id", &roleID).Error; err != nil {
+	var r role.Role
+	if err := db.Where("name = ?", roleName).First(&r).Error; err != nil {
 		panic(err)
 	}
+	roleID := r.ID
 	return db.Table("user_role_join").Create(
 		&map[string]interface{}{
 			"user_id": userID,

@@ -113,10 +113,25 @@ func TestCreateFillsZeroKeys(t *testing.T) {
 func TestShortPath(t *testing.T) {
 	id := uuid.MustParse("019a8f3c-1111-7222-8333-444455556666")
 	p := ShortPath(id)
-	if p != "01/9a8f3c-1111-7222-8333-444455556666" {
+	if p != "66/019a8f3c-1111-7222-8333-4444555566" {
 		t.Errorf("ShortPath = %s", p)
 	}
-	if !strings.HasPrefix(p, id.String()[:2]+"/") {
-		t.Error("the first level is the first two characters")
+	first, rest, _ := strings.Cut(p, "/")
+	back, err := ParseShortPath(first, rest)
+	if err != nil || back != id {
+		t.Errorf("ParseShortPath(%q, %q) = %s, %v", first, rest, back, err)
+	}
+	if _, err := ParseShortPath("019", rest); err == nil {
+		t.Error("a first level is two characters")
+	}
+
+	// v7 keys made together spread: their first two characters do not
+	seen := map[string]bool{}
+	for i := 0; i < 64; i++ {
+		f, _, _ := strings.Cut(ShortPath(New()), "/")
+		seen[f] = true
+	}
+	if len(seen) < 16 {
+		t.Errorf("64 keys in %d first levels: they do not spread", len(seen))
 	}
 }

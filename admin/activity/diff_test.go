@@ -64,8 +64,8 @@ func TestDiff(t *testing.T) {
 		{
 			description:  "Default type handles",
 			modelBuilder: &ModelBuilder{},
-			old:          Post{Image: media_library.MediaBox{ID: json.Number("1"), Url: "https://s3.com/1.jpg", Description: "test"}},
-			now:          Post{Image: media_library.MediaBox{ID: json.Number("2"), Url: "https://s3.com/2.jpg", Description: "test2"}},
+			old:          Post{Image: media_library.MediaBox{ID: "1", Url: "https://s3.com/1.jpg", Description: "test"}},
+			now:          Post{Image: media_library.MediaBox{ID: "2", Url: "https://s3.com/2.jpg", Description: "test2"}},
 			want: []Diff{
 				{
 					Field: "Image.Url",
@@ -311,7 +311,7 @@ func BenchmarkComplexDiff(b *testing.B) {
 		ID:            1,
 		CreatedAt:     time.Now(),
 		PublishedDate: time.Now(),
-		Image:         media_library.MediaBox{ID: json.Number("1"), Url: "https://s3.com/1.jpg", Description: "test"},
+		Image:         media_library.MediaBox{ID: "1", Url: "https://s3.com/1.jpg", Description: "test"},
 		Title:         "title",
 		Content:       "content111",
 		Author:        Author{Name: "author1", Age: 10},
@@ -328,7 +328,7 @@ func BenchmarkComplexDiff(b *testing.B) {
 		ID:            1,
 		CreatedAt:     time.Now().Add(1 * time.Hour),
 		PublishedDate: time.Now().Add(3 * time.Hour),
-		Image:         media_library.MediaBox{ID: json.Number("2"), Url: "https://s3.com/2.jpg", Description: "test2"},
+		Image:         media_library.MediaBox{ID: "2", Url: "https://s3.com/2.jpg", Description: "test2"},
 		Title:         "title1",
 		Content:       "content111",
 		Author: Author{

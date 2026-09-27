@@ -233,7 +233,7 @@ func getFuncMap(db *gorm.DB, field *schema.Field, filename string) template.Func
 
 	return template.FuncMap{
 		"class": func() string { return inflection.Plural(strcase.ToSnake(field.Schema.ModelType.Name())) },
-		// A UUID key is two directory levels — its first two characters, then
+		// A UUID key is two directory levels — its last two characters, then
 		// the rest (uuidkey.ShortPath) — so no directory holds every record's
 		// files; any other key is written as it is.
 		"primary_key": func() string {

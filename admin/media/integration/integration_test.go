@@ -4,6 +4,7 @@ import (
 	"embed"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/profiles/latest/datalake/store/filesystem"
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/media/oss"

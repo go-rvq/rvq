@@ -413,7 +413,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 				Go(),
 			).Disabled(disabled),
 	)
-	if mediaBox != nil && mediaBox.ID.String() != "" && mediaBox.ID.String() != "0" {
+	if mediaBox != nil && !mediaBox.ID.IsZero() {
 		btnRow.AppendChild(
 			VBtn(msgr.Delete).
 				Variant(VariantTonal).Color(ColorError).Size(SizeXSmall).PrependIcon("mdi-delete-outline").
@@ -429,7 +429,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 	if !readonly {
 		c.AppendChild(btnRow.Class())
 	}
-	if mediaBox.ID.String() != "" && mediaBox.ID.String() != "0" {
+	if !mediaBox.ID.IsZero() {
 		row := VRow()
 		if len(cfg.Sizes) == 0 {
 			row.AppendChild(
@@ -492,7 +492,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 	}
 
 	mediaBoxValue := ""
-	if mediaBox.ID.String() != "" && mediaBox.ID.String() != "0" {
+	if !mediaBox.ID.IsZero() {
 		mediaBoxValue = h.JSONString(mediaBox)
 	}
 

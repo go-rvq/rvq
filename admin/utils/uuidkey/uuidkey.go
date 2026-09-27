@@ -12,6 +12,7 @@
 package uuidkey
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
@@ -80,12 +81,24 @@ func fill(db *gorm.DB) {
 	}
 }
 
-// ShortPath is the two-level path of a key for a file store: the first two
-// characters, then the rest — "01/9a8f…" — so no directory holds every
-// record's files.
+// ShortPath is the two-level path of a key for a file store: its last two
+// characters, then the key without them — "2d/01a08291-…-0f8245a36b" — so no
+// directory holds every record's files.
+//
+// The last two, not the first: a v7 key starts with its time, and the first
+// two characters are "01" from 2004 to 2039; the last two are random.
 func ShortPath(id uuid.UUID) string {
 	s := id.String()
-	return s[:2] + "/" + s[2:]
+	return s[len(s)-2:] + "/" + s[:len(s)-2]
+}
+
+// ParseShortPath is the key of the two levels ShortPath made: first ("2d")
+// and rest ("01a08291-…-0f8245a36b").
+func ParseShortPath(first, rest string) (uuid.UUID, error) {
+	if len(first) != 2 {
+		return uuid.Nil, fmt.Errorf("uuidkey: %q is not the first level of a key path", first)
+	}
+	return uuid.Parse(rest + first)
 }
 
 // Model is gorm.Model with a UUID key: the same fields, the same columns, for a

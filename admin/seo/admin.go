@@ -384,8 +384,8 @@ func (b *Builder) vseo(fieldPrefix string, seo *SEO, setting *Setting, ctx *web.
 	)
 
 	image := &setting.OpenGraphImageFromMediaLibrary
-	if image.ID.String() == "0" {
-		image.ID = json.Number("")
+	if image.ID.IsZero() {
+		image.ID = ""
 	}
 	refPrefix := strings.ReplaceAll(strings.ToLower(fieldPrefix), " ", "_")
 	return VSeo(
@@ -469,8 +469,8 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 	}
 
 	image := &setting.OpenGraphImageFromMediaLibrary
-	if image.ID.String() == "0" {
-		image.ID = json.Number("")
+	if image.ID.IsZero() {
+		image.ID = ""
 	}
 	// Two sections, each a VCard with a title (VCardTitle, so it never wraps like
 	// the old fixed-width chip did): "Basic" and "Open Graph information".

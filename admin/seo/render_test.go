@@ -2,10 +2,11 @@ package seo
 
 import (
 	"context"
-	h "github.com/go-rvq/htmlgo"
 	"net/http"
 	"net/url"
 	"testing"
+
+	h "github.com/go-rvq/htmlgo"
 
 	"github.com/go-rvq/rvq/admin/l10n"
 )

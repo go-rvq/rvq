@@ -54,15 +54,11 @@ func (b *Middlewares) WithRoles(next http.Handler) http.Handler {
 			return
 		}
 
-		var roleIDs []uint
-		if err := b.db.Table("user_role_join").Select("role_id").Where("user_id=?", u.GetID()).Scan(&roleIDs).Error; err != nil {
+		var roles []*role.Role
+		if err := b.db.Where("id IN (SELECT role_id FROM user_role_join WHERE user_id = ?)", u.GetID()).Find(&roles).Error; err != nil {
 			panic(err)
 		}
-		if len(roleIDs) > 0 {
-			var roles []*role.Role
-			if err := b.db.Where("id in (?)", roleIDs).Find(&roles).Error; err != nil {
-				panic(err)
-			}
+		if len(roles) > 0 {
 			u.SetRoles(roles)
 		}
 		next.ServeHTTP(w, r)

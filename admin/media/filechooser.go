@@ -1,7 +1,6 @@
 package media
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -582,7 +581,7 @@ func chooseFile(b *Builder) web.EventFunc {
 		}
 
 		mediaBox := media_library.MediaBox{
-			ID:          json.Number(fmt.Sprint(m.ID)),
+			ID:          media_library.MediaID(m.ID.String()),
 			Url:         m.File.Url,
 			VideoLink:   "",
 			FileName:    m.File.FileName,

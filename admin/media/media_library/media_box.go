@@ -17,7 +17,7 @@ const (
 )
 
 type MediaBox struct {
-	ID          json.Number
+	ID          MediaID
 	Url         string
 	VideoLink   string
 	FileName    string
@@ -52,7 +52,7 @@ func (mediaBox *MediaBox) Scan(data interface{}) (err error) {
 }
 
 func (mediaBox MediaBox) Value() (driver.Value, error) {
-	if mediaBox.ID.String() == "0" || mediaBox.ID.String() == "" {
+	if mediaBox.ID.IsZero() {
 		return nil, nil
 	}
 	results, err := json.Marshal(mediaBox)
