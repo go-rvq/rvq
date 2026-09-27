@@ -2,9 +2,8 @@ package seo
 
 import (
 	"context"
-	"testing"
-
 	h "github.com/go-rvq/htmlgo"
+	"testing"
 )
 
 func TestSettingHTMLComponent(t *testing.T) {
