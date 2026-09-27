@@ -16,6 +16,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -187,7 +188,7 @@ func (jb *JobBuilder) parseArgs(in string) (args interface{}, err error) {
 	return args, nil
 }
 
-func getModelJobInstance(db *gorm.DB, jobID uint) (*JobInstance, error) {
+func getModelJobInstance(db *gorm.DB, jobID uuid.UUID) (*JobInstance, error) {
 	var insts []*JobInstance
 	err := db.Where("job_id = ?", jobID).
 		Order("created_at desc").
@@ -204,7 +205,7 @@ func getModelJobInstance(db *gorm.DB, jobID uint) (*JobInstance, error) {
 	return insts[0], nil
 }
 
-func (jb *JobBuilder) getJobInstance(jobID uint) (*JobInstance, error) {
+func (jb *JobBuilder) getJobInstance(jobID uuid.UUID) (*JobInstance, error) {
 	inst, err := getModelJobInstance(jb.b.db, jobID)
 	if err != nil {
 		return nil, err
@@ -217,7 +218,7 @@ func (jb *JobBuilder) getJobInstance(jobID uint) (*JobInstance, error) {
 
 func (jb *JobBuilder) newJobInstance(
 	r *http.Request,
-	jobID uint,
+	jobID uuid.UUID,
 	jobName string,
 	once bool,
 	args interface{},

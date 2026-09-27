@@ -3,12 +3,12 @@ package login_session
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type LoginSession struct {
-	gorm.Model
+	uuidkey.Model
 
 	UserID    uuid.UUID `gorm:"type:uuid;index"`
 	Device    string

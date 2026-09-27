@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -236,12 +235,12 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			rids := ctx.FormSliceValues(field.FormKey)
 			var roles []*role.Role
 			for _, id := range rids {
-				uid, err1 := strconv.Atoi(id)
+				rid, err1 := uuid.Parse(id)
 				if err1 != nil {
 					continue
 				}
 				roles = append(roles, &role.Role{
-					ID: uint(uid),
+					ID: rid,
 				})
 			}
 

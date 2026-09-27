@@ -17,6 +17,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
+	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
@@ -231,10 +233,17 @@ func getFuncMap(db *gorm.DB, field *schema.Field, filename string) template.Func
 
 	return template.FuncMap{
 		"class": func() string { return inflection.Plural(strcase.ToSnake(field.Schema.ModelType.Name())) },
+		// A UUID key is two directory levels — its first two characters, then
+		// the rest (uuidkey.ShortPath) — so no directory holds every record's
+		// files; any other key is written as it is.
 		"primary_key": func() string {
 			ppf := db.Statement.Schema.PrioritizedPrimaryField
 			if ppf != nil {
-				return fmt.Sprintf("%v", ppf.ReflectValueOf(db.Statement.Context, db.Statement.ReflectValue))
+				v := ppf.ReflectValueOf(db.Statement.Context, db.Statement.ReflectValue).Interface()
+				if id, ok := v.(uuid.UUID); ok {
+					return uuidkey.ShortPath(id)
+				}
+				return fmt.Sprintf("%v", v)
 			}
 
 			return "0"

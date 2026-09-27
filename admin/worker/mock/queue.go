@@ -5,8 +5,10 @@ package mock
 
 import (
 	"context"
-	"github.com/go-rvq/rvq/admin/worker"
 	"sync"
+
+	"github.com/go-rvq/rvq/admin/worker"
+	"github.com/google/uuid"
 )
 
 // Ensure, that QueueMock does implement worker.Queue.
@@ -25,7 +27,7 @@ var _ worker.Queue = &QueueMock{}
 //			KillFunc: func(ctx context.Context, job worker.QueJobInterface) error {
 //				panic("mock out the Kill method")
 //			},
-//			ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
+//			ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uuid.UUID) (worker.QueJobInterface, error)) error {
 //				panic("mock out the Listen method")
 //			},
 //			RemoveFunc: func(ctx context.Context, job worker.QueJobInterface) error {
@@ -48,7 +50,7 @@ type QueueMock struct {
 	KillFunc func(ctx context.Context, job worker.QueJobInterface) error
 
 	// ListenFunc mocks the Listen method.
-	ListenFunc func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error
+	ListenFunc func(jobDefs []*worker.JobDefinition, getJob func(jobID uuid.UUID) (worker.QueJobInterface, error)) error
 
 	// RemoveFunc mocks the Remove method.
 	RemoveFunc func(ctx context.Context, job worker.QueJobInterface) error
@@ -77,7 +79,7 @@ type QueueMock struct {
 			// JobDefs is the jobDefs argument value.
 			JobDefs []*worker.JobDefinition
 			// GetJob is the getJob argument value.
-			GetJob func(jobID uint) (worker.QueJobInterface, error)
+			GetJob func(jobID uuid.UUID) (worker.QueJobInterface, error)
 		}
 		// Remove holds details about calls to the Remove method.
 		Remove []struct {
@@ -172,13 +174,13 @@ func (mock *QueueMock) KillCalls() []struct {
 }
 
 // Listen calls ListenFunc.
-func (mock *QueueMock) Listen(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
+func (mock *QueueMock) Listen(jobDefs []*worker.JobDefinition, getJob func(jobID uuid.UUID) (worker.QueJobInterface, error)) error {
 	if mock.ListenFunc == nil {
 		panic("QueueMock.ListenFunc: method is nil but Queue.Listen was just called")
 	}
 	callInfo := struct {
 		JobDefs []*worker.JobDefinition
-		GetJob  func(jobID uint) (worker.QueJobInterface, error)
+		GetJob  func(jobID uuid.UUID) (worker.QueJobInterface, error)
 	}{
 		JobDefs: jobDefs,
 		GetJob:  getJob,
@@ -195,11 +197,11 @@ func (mock *QueueMock) Listen(jobDefs []*worker.JobDefinition, getJob func(jobID
 //	len(mockedQueue.ListenCalls())
 func (mock *QueueMock) ListenCalls() []struct {
 	JobDefs []*worker.JobDefinition
-	GetJob  func(jobID uint) (worker.QueJobInterface, error)
+	GetJob  func(jobID uuid.UUID) (worker.QueJobInterface, error)
 } {
 	var calls []struct {
 		JobDefs []*worker.JobDefinition
-		GetJob  func(jobID uint) (worker.QueJobInterface, error)
+		GetJob  func(jobID uuid.UUID) (worker.QueJobInterface, error)
 	}
 	mock.lockListen.RLock()
 	calls = mock.calls.Listen

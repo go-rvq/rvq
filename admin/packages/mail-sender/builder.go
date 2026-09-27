@@ -14,6 +14,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/helper/nested"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
@@ -39,6 +40,7 @@ type Builder struct {
 }
 
 func New(db *gorm.DB, i18nB *i18n.Builder) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	ConfigureMessages(i18nB)
 	return &Builder{
 		db: db,

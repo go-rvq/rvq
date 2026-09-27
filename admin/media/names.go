@@ -1,6 +1,11 @@
 package media
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 func mainPortalName(field string) string {
 	return fmt.Sprintf("%s_portal", field)
@@ -30,6 +35,7 @@ func currentPageName(field string) string {
 	return fmt.Sprintf("%s_file_chooser_current_page", field)
 }
 
-func fileCroppingVarName(id uint) string {
-	return fmt.Sprintf("fileChooser%d_cropping", id)
+// fileCroppingVarName is a JS name: the file's key without its dashes.
+func fileCroppingVarName(id uuid.UUID) string {
+	return "fileChooser" + strings.ReplaceAll(id.String(), "-", "") + "_cropping"
 }

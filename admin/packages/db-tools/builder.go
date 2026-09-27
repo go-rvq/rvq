@@ -11,6 +11,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/js"
@@ -49,6 +50,7 @@ type MessageForm struct {
 }
 
 func New(db *gorm.DB, i18nB *i18n.Builder, wb *worker.Builder) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	if err := db.AutoMigrate(&DbBackupConfig{}); err != nil {
 		panic(err)
 	}

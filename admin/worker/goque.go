@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
-	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tnclong/go-que"
 	"github.com/tnclong/go-que/pg"
 	"go.uber.org/multierr"
@@ -83,7 +83,7 @@ func (q *goque) Remove(ctx context.Context, job QueJobInterface) error {
 	return job.SetStatus(JobStatusCancelled)
 }
 
-func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uint) (QueJobInterface, error)) error {
+func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uuid.UUID) (QueJobInterface, error)) error {
 	for i := range jobDefs {
 		jd := jobDefs[i]
 		if jd.Handler == nil {
@@ -104,11 +104,11 @@ func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uint) (QueJob
 					if err != nil {
 						return err
 					}
-					id, err := strconv.Atoi(sid)
+					id, err := uuid.Parse(sid)
 					if err != nil {
 						return err
 					}
-					job, err = getJob(uint(id))
+					job, err = getJob(id)
 					if err != nil {
 						return err
 					}

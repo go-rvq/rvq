@@ -7,6 +7,7 @@ package perms
 import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -46,6 +47,7 @@ func ListResource(mb *presets.ModelBuilder, parentID ...model.ID) string {
 // Grant creates or updates a DB policy granting subject the actions on
 // resource, keyed by referID (so it can be updated or revoked later).
 func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*perm.DefaultDBPolicy, error) {
+	uuidkey.MustRegister(db) // policies have UUID keys
 	p := &perm.DefaultDBPolicy{}
 	err := db.Where("refer_id = ?", referID).First(p).Error
 	switch err {

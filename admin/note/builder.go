@@ -2,6 +2,7 @@ package note
 
 import (
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,7 @@ type Builder struct {
 }
 
 func New(db *gorm.DB) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	b := &Builder{
 		db: db,
 	}

@@ -4,12 +4,13 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Note struct {
-	gorm.Model
+	uuidkey.Model
 
 	UserID       uuid.UUID `gorm:"type:uuid;index"`
 	Creator      string
@@ -27,7 +28,7 @@ func (this *Note) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type UserNote struct {
-	gorm.Model
+	uuidkey.Model
 
 	UserID       uuid.UUID `gorm:"type:uuid;index"`
 	ResourceType string    `gorm:"index"`

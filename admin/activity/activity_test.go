@@ -325,13 +325,13 @@ func TestMutliModelBuilder(t *testing.T) {
 	{
 		for _, id := range []string{"1", "2"} {
 			var log TestActivityLog
-			if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Create", "TestActivityModel", id).Find(&log); log.ID == 0 {
+			if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Create", "TestActivityModel", id).Find(&log); log.ID == uuid.Nil {
 				t.Errorf("want the log %v, but got %v", "TestActivityModel:"+id, log)
 			}
 		}
 
 		var log TestActivityLog
-		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Create", "TestActivityModel", 3).Find(&log); log.ID != 0 {
+		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Create", "TestActivityModel", 3).Find(&log); log.ID != uuid.Nil {
 			t.Errorf("want skip the create, but still got the record %v", log)
 		}
 	}
@@ -352,7 +352,7 @@ func TestMutliModelBuilder(t *testing.T) {
 
 	{
 		var log1 TestActivityLog
-		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "1").Find(&log1); log1.ID == 0 {
+		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "1").Find(&log1); log1.ID == uuid.Nil {
 			t.Errorf("want the log %v, but got %v", "TestActivityModel:1", log1)
 		}
 		if log1.GetModelDiffs() != `[{"Field":"Title","Old":"test1","Now":"test1-1"},{"Field":"Description","Old":"Description1","Now":"Description1-1"}]` {
@@ -360,7 +360,7 @@ func TestMutliModelBuilder(t *testing.T) {
 		}
 
 		var log2 TestActivityLog
-		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "2").Find(&log2); log2.ID == 0 {
+		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "2").Find(&log2); log2.ID == uuid.Nil {
 			t.Errorf("want the log %v, but got %v", "TestActivityModel:2", log2)
 		}
 		if log2.GetModelDiffs() != `[{"Field":"Title","Old":"test2","Now":"test2-1"},{"Field":"Description","Old":"Description3","Now":"Description2-1"}]` {
@@ -372,7 +372,7 @@ func TestMutliModelBuilder(t *testing.T) {
 		}
 
 		var log3 TestActivityLog
-		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "3").Find(&log3); log3.ID == 0 {
+		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Edit", "TestActivityModel", "3").Find(&log3); log3.ID == uuid.Nil {
 			t.Errorf("want the log %v, but got %v", "TestActivityModel:3", log3)
 		}
 		if log3.GetModelDiffs() != `[{"Field":"Title","Old":"test3","Now":"test3-1"}]` {
@@ -396,13 +396,13 @@ func TestMutliModelBuilder(t *testing.T) {
 	{
 		for _, id := range []string{"1", "3"} {
 			var log TestActivityLog
-			if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Delete", "TestActivityModel", id).Find(&log); log.ID == 0 {
+			if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Delete", "TestActivityModel", id).Find(&log); log.ID == uuid.Nil {
 				t.Errorf("want the log %v, but got %v", "TestActivityModel:"+id, log)
 			}
 		}
 
 		var log TestActivityLog
-		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Delete", "TestActivityModel", "2").Find(&log); log.ID != 0 {
+		if db.Where("action = ? AND model_name = ? AND model_keys = ?", "Delete", "TestActivityModel", "2").Find(&log); log.ID != uuid.Nil {
 			t.Errorf("want skip the create, but still got the record %v", log)
 		}
 	}

@@ -41,7 +41,7 @@ type ActivityLogInterface interface {
 }
 
 type ActivityLog struct {
-	ID         uint      `gorm:"primary_key"`
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID     uuid.UUID `gorm:"type:uuid;index"`
 	CreatedAt  time.Time
 	Creator    string

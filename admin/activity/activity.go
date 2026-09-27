@@ -8,6 +8,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/x/ui/vuetify"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -62,6 +63,7 @@ func (ab *Builder) PermPolicy(v *perm.PolicyBuilder) *Builder {
 }
 
 func New(db *gorm.DB, logModel ...ActivityLogInterface) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	ab := &Builder{
 		db:                db,
 		creatorContextKey: CreatorContextKey,

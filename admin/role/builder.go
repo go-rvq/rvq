@@ -8,11 +8,13 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/google/uuid"
 	"github.com/ory/ladon"
 	"gorm.io/gorm"
 )
@@ -29,6 +31,7 @@ type Builder struct {
 }
 
 func New(db *gorm.DB) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	return &Builder{
 		db: db,
 		actions: []*DefaultOptionItem{
@@ -147,7 +150,7 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 
 	ed.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		r := obj.(*Role)
-		if r.ID != 0 {
+		if r.ID != uuid.Nil {
 			if err = b.db.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", r.ID).Error; err != nil {
 				return
 			}

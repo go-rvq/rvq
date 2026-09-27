@@ -14,6 +14,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -53,6 +54,7 @@ func WithGlobalSEOName(name string) Option {
 }
 
 func New(db *gorm.DB, ops ...Option) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	globalSEO := &SEO{name: defaultGlobalSEOName}
 	globalSEO.RegisterSettingVariables("SiteName")
 	b := &Builder{

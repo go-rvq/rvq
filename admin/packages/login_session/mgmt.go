@@ -8,6 +8,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -30,6 +31,7 @@ func NewManager(lb *login.Builder) *Manager {
 }
 
 func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uuid.UUID) (err error) {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	token := login.GetSessionToken(m.lb, r)
 	client := uaparser.NewFromSaved().Parse(r.Header.Get("User-Agent"))
 

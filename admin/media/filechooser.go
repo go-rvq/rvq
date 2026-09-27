@@ -18,6 +18,7 @@ import (
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -213,7 +214,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		),
 	)
 
-	initCroppingVars := []string{fileCroppingVarName(0) + ": false"}
+	initCroppingVars := []string{fileCroppingVarName(uuid.Nil) + ": false"}
 
 	for i, f := range files {
 		_, needCrop := mergeNewSizes(f, cfg)

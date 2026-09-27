@@ -3,6 +3,7 @@ package media
 import (
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/gorm"
 )
@@ -16,6 +17,7 @@ type Builder struct {
 }
 
 func New(db *gorm.DB) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	b := &Builder{}
 	b.db = db
 	b.mediaLibraryPerPage = 39

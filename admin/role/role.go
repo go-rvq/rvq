@@ -4,15 +4,19 @@ import (
 	"time"
 
 	"github.com/go-rvq/rvq/x/perm"
+	"github.com/google/uuid"
 )
 
 type Role struct {
-	ID        uint `gorm:"primarykey"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	Name        string                  `admin:"required" gorm:"unique"`
-	Permissions []*perm.DefaultDBPolicy `gorm:"foreignKey:ReferID"`
+	Name string `admin:"required" gorm:"unique"`
+	// Permissions are the policies whose ReferID is this role's key. The column
+	// is text — it also holds free-form references — so the relation is read
+	// but creates no foreign key (-:migration).
+	Permissions []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
 }
 
 func (r *Role) String() string {

@@ -239,7 +239,7 @@ func (b *Builder) eventActionJobResponse(ctx *web.EventContext) (r web.EventResp
 
 func (b *Builder) eventActionJobClose(ctx *web.EventContext) (er web.EventResponse, err error) {
 	var (
-		jobID   = uint(ctx.ParamAsInt("jobID"))
+		jobID   = paramJobID(ctx)
 		jobName = ctx.R.FormValue("jobName")
 	)
 
@@ -266,7 +266,7 @@ func (b *Builder) eventActionJobClose(ctx *web.EventContext) (er web.EventRespon
 
 func (b *Builder) eventActionJobProgressing(ctx *web.EventContext) (er web.EventResponse, err error) {
 	var (
-		jobID   = uint(ctx.ParamAsInt("jobID"))
+		jobID   = paramJobID(ctx)
 		jobName = ctx.R.FormValue("jobName")
 		config  = actionJobs[jobName]
 	)

@@ -17,6 +17,7 @@ GO_TEST_PKGS := \
 	./x/perm \
 	./x/login \
 	./admin/login \
+	./admin/utils/uuidkey \
 	./admin/l10n \
 	./x/packages/db-tools \
 	./admin/presets \

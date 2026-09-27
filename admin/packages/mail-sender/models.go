@@ -1,9 +1,13 @@
 package mail_sender
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 type MailSender struct {
-	ID            uint `gorm:"primarykey" admin:"-"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey" admin:"-"`
 	SubjectPrefix string
 	Sender        string
 	Gmail         GmailSender `gorm:"embedded;embeddedPrefix:gmail__"`

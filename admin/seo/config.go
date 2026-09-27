@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -67,7 +69,7 @@ func (d *SEOConfigData) SetString(key, val string) {
 // (Data) with typed accessors for known values such as the Google Maps API key
 // (used by the built-in zipcodes variable's map picker). Table seo_config.
 type SEOConfig struct {
-	ID   uint          `gorm:"primarykey"`
+	ID   uuid.UUID     `gorm:"type:uuid;primaryKey"`
 	Data SEOConfigData `sql:"type:text"`
 }
 
@@ -80,14 +82,20 @@ func (c *SEOConfig) GoogleMapsAPIKey() string { return c.Data.GetString(SEOConfi
 // SetGoogleMapsAPIKey sets the Maps API key.
 func (c *SEOConfig) SetGoogleMapsAPIKey(key string) { c.Data.SetString(SEOConfigGoogleMapsKey, key) }
 
-// LoadSEOConfig returns the singleton SEO config (id 1), creating an empty row on
-// first use. Best-effort: a DB error yields a zero config so callers never fail
-// over configuration.
+// SEOConfigID is the key of the singleton SEO config: fixed, and derived from
+// its name (a UUID v5), so every database — and the migration from the integer
+// key 1 — agrees on it.
+var SEOConfigID = uuid.NewSHA1(uuid.NameSpaceURL, []byte("rvq:seo_config"))
+
+// LoadSEOConfig returns the singleton SEO config (SEOConfigID), creating an
+// empty row on first use. Best-effort: a DB error yields a zero config so
+// callers never fail over configuration.
 func LoadSEOConfig(db *gorm.DB) *SEOConfig {
-	c := &SEOConfig{ID: 1}
+	uuidkey.MustRegister(db) // its records have UUID keys
+	c := &SEOConfig{ID: SEOConfigID}
 	if db == nil {
 		return c
 	}
-	db.Session(&gorm.Session{}).FirstOrCreate(c, "id = ?", 1)
+	db.Session(&gorm.Session{}).FirstOrCreate(c, "id = ?", SEOConfigID)
 	return c
 }

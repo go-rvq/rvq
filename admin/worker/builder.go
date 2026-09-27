@@ -16,11 +16,13 @@ import (
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/google/uuid"
 	rcron "github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 )
@@ -60,6 +62,7 @@ type Builder struct {
 }
 
 func New(i18nB *i18n.Builder, db *gorm.DB, option ...NewOption) *Builder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	if db == nil {
 		panic("db can not be nil")
 	}
@@ -151,7 +154,7 @@ func (b *Builder) mustGetJobBuilder(name string) *JobBuilder {
 	return jb
 }
 
-func (b *Builder) getJobBuilderByJobID(id uint) (*JobBuilder, error) {
+func (b *Builder) getJobBuilderByJobID(id uuid.UUID) (*JobBuilder, error) {
 	j := Job{}
 	err := b.db.Where("id = ?", id).First(&j).Error
 	if err != nil {
@@ -161,7 +164,7 @@ func (b *Builder) getJobBuilderByJobID(id uint) (*JobBuilder, error) {
 	return b.getJobBuilder(j.Job), nil
 }
 
-func (b *Builder) setStatus(id uint, status string) error {
+func (b *Builder) setStatus(id uuid.UUID, status string) error {
 	return b.db.Model(&Job{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"status": status,
@@ -473,7 +476,7 @@ func (b *Builder) Listen() {
 		}
 	}
 
-	err := b.q.Listen(jds, func(jobID uint) (QueJobInterface, error) {
+	err := b.q.Listen(jds, func(jobID uuid.UUID) (QueJobInterface, error) {
 		jb, err := b.getJobBuilderByJobID(jobID)
 		if err != nil {
 			return nil, err
@@ -624,7 +627,7 @@ func (b *Builder) eventSelectJob(ctx *web.EventContext) (er web.EventResponse, e
 func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, err error) {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), MessagesKey, Messages_en_US).(*Messages)
 
-	jobID := uint(ctx.ParamAsInt("jobID"))
+	jobID := paramJobID(ctx)
 	jobName := ctx.R.FormValue("job")
 
 	if pErr := editIsAllowed(ctx.R, jobName); pErr != nil {
@@ -659,7 +662,7 @@ func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, er
 			action = "Cancel"
 		}
 		b.ab.AddCustomizedRecord(action, false, ctx.R.Context(), &Job{
-			Model: gorm.Model{
+			Model: uuidkey.Model{
 				ID: inst.JobID,
 			},
 		})
@@ -690,7 +693,7 @@ func (b *Builder) doAbortJob(ctx context.Context, inst *JobInstance) (err error)
 }
 
 func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, err error) {
-	jobID := uint(ctx.ParamAsInt("jobID"))
+	jobID := paramJobID(ctx)
 	jobName := ctx.R.FormValue("job")
 
 	if pErr := editIsAllowed(ctx.R, jobName); pErr != nil {
@@ -729,7 +732,7 @@ func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, er
 
 	if b.ab != nil {
 		b.ab.AddCustomizedRecord("Rerun", false, ctx.R.Context(), &Job{
-			Model: gorm.Model{
+			Model: uuidkey.Model{
 				ID: inst.JobID,
 			},
 		})
@@ -740,7 +743,7 @@ func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, er
 func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, err error) {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), MessagesKey, Messages_en_US).(*Messages)
 
-	jobID := uint(ctx.ParamAsInt("jobID"))
+	jobID := paramJobID(ctx)
 	jobName := ctx.R.FormValue("job")
 
 	if pErr := editIsAllowed(ctx.R, jobName); pErr != nil {
@@ -797,13 +800,13 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 		b.ab.AddEditRecordWithOldAndContext(
 			ctx.R.Context(),
 			&Job{
-				Model: gorm.Model{
+				Model: uuidkey.Model{
 					ID: newInst.JobID,
 				},
 				Args: oldArgs,
 			},
 			&Job{
-				Model: gorm.Model{
+				Model: uuidkey.Model{
 					ID: newInst.JobID,
 				},
 				Args: newArgs,
@@ -816,7 +819,7 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 func (b *Builder) eventUpdateJobProgressing(ctx *web.EventContext) (er web.EventResponse, err error) {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), MessagesKey, Messages_en_US).(*Messages)
 
-	jobID := uint(ctx.ParamAsInt("jobID"))
+	jobID := paramJobID(ctx)
 	jobName := ctx.R.FormValue("job")
 
 	inst, err := getModelJobInstance(b.db, jobID)
@@ -864,7 +867,7 @@ func (b *Builder) eventUpdateJobProgressing(ctx *web.EventContext) (er web.Event
 }
 
 func (b *Builder) eventLoadHiddenLogs(ctx *web.EventContext) (er web.EventResponse, err error) {
-	jobID := uint(ctx.ParamAsInt("jobID"))
+	jobID := paramJobID(ctx)
 	currentCount := ctx.ParamAsInt("currentCount")
 
 	inst, err := getModelJobInstance(b.db, jobID)
@@ -894,7 +897,7 @@ func (b *Builder) eventLoadHiddenLogs(ctx *web.EventContext) (er web.EventRespon
 func (b *Builder) jobProgressing(
 	canEdit bool,
 	msgr *Messages,
-	id uint,
+	id uuid.UUID,
 	job string,
 	status string,
 	progress uint,

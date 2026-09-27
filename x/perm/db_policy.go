@@ -1,10 +1,10 @@
 package perm
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -17,6 +17,7 @@ type DBPolicyBuilder struct {
 }
 
 func NewDBPolicy(db *gorm.DB) *DBPolicyBuilder {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	return &DBPolicyBuilder{
 		db:            db,
 		model:         DefaultDBPolicy{},
@@ -35,8 +36,10 @@ func (dpb *DBPolicyBuilder) LoadFrequency(d time.Duration) *DBPolicyBuilder {
 }
 
 type DefaultDBPolicy struct {
-	gorm.Model
+	uuidkey.Model
 
+	// ReferID names what the policy belongs to: a role's key, or a free-form
+	// reference ("share:<subject>", "adhoc"). Text, and no foreign key.
 	ReferID   string
 	Subject   string
 	Effect    string
@@ -70,5 +73,5 @@ func (p DefaultDBPolicy) LoadDBPolicies(db *gorm.DB, startFrom *time.Time) (toUp
 
 func (p DefaultDBPolicy) ToPolicy() *PolicyBuilder {
 	res := strings.Split(strings.Join(p.Resources, ","), ",")
-	return PolicyFor(p.Subject).WhoAre(p.Effect).ToDo(p.Actions...).On(res...).ID(strconv.Itoa(int(p.ID)))
+	return PolicyFor(p.Subject).WhoAre(p.Effect).ToDo(p.Actions...).On(res...).ID(p.ID.String())
 }

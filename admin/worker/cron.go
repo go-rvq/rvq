@@ -12,11 +12,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type cronJob struct {
@@ -225,19 +226,19 @@ func (c *cron) Remove(ctx context.Context, job QueJobInterface) error {
 	return errors.New("failed to find job")
 }
 
-func (c *cron) Listen(_ []*JobDefinition, getJob func(jobID uint) (QueJobInterface, error)) error {
+func (c *cron) Listen(_ []*JobDefinition, getJob func(jobID uuid.UUID) (QueJobInterface, error)) error {
 	cmdLine := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	jobID := cmdLine.String("qor-job", "", "Qor Job ID")
 	cmdLine.Parse(os.Args[1:])
 
 	if *jobID != "" {
-		id, err := strconv.ParseUint(*jobID, 10, 64)
+		id, err := uuid.Parse(*jobID)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		job, err := getJob(uint(id))
+		job, err := getJob(id)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

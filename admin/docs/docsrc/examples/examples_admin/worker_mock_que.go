@@ -13,6 +13,7 @@ import (
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/admin/worker/mock"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -48,7 +49,7 @@ var Que = &mock.QueueMock{
 	KillFunc: func(ctx context.Context, job worker.QueJobInterface) error {
 		return job.SetStatus(worker.JobStatusKilled)
 	},
-	ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uint) (worker.QueJobInterface, error)) error {
+	ListenFunc: func(jobDefs []*worker.JobDefinition, getJob func(jobID uuid.UUID) (worker.QueJobInterface, error)) error {
 		return nil
 	},
 	RemoveFunc: func(ctx context.Context, job worker.QueJobInterface) error {

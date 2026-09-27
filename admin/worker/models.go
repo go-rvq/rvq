@@ -4,11 +4,13 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
+	"github.com/go-rvq/rvq/web"
+	"github.com/google/uuid"
 )
 
 type Job struct {
-	gorm.Model
+	uuidkey.Model
 
 	Job    string
 	Status string      `sql:"default:'new'"`
@@ -17,9 +19,9 @@ type Job struct {
 }
 
 type JobInstance struct {
-	gorm.Model
+	uuidkey.Model
 
-	JobID uint `gorm:"index"`
+	JobID uuid.UUID `gorm:"type:uuid;index"`
 
 	Operator string
 
@@ -40,10 +42,10 @@ type JobInstance struct {
 }
 
 type JobLog struct {
-	ID        uint      `gorm:"primarykey"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time `gorm:"index"`
 
-	JobInstanceID uint `gorm:"index"`
+	JobInstanceID uuid.UUID `gorm:"type:uuid;index"`
 	Log           string
 }
 
@@ -72,7 +74,7 @@ func (schedule *Schedule) SetScheduleTime(t *time.Time) {
 }
 
 type GoQueError struct {
-	gorm.Model
+	uuidkey.Model
 	Error string
 }
 
@@ -91,4 +93,11 @@ func (s *CronSchedule) SetCronRule(v string) {
 
 func (s *CronSchedule) GetCronRule() string {
 	return s.CronRule
+}
+
+// paramJobID is the job id a request names ("jobID"); uuid.Nil when it names
+// none, or not a UUID.
+func paramJobID(ctx *web.EventContext) uuid.UUID {
+	id, _ := uuid.Parse(ctx.Param("jobID"))
+	return id
 }

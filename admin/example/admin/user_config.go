@@ -2,11 +2,12 @@ package admin
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/example/models"
@@ -241,12 +242,12 @@ func configUser(b *presets.Builder, nb *note.Builder, db *gorm.DB, publisher *pu
 			rids := ctx.R.Form[field.Name]
 			var roles []role.Role
 			for _, id := range rids {
-				uid, err1 := strconv.Atoi(id)
+				rid, err1 := uuid.Parse(id)
 				if err1 != nil {
 					continue
 				}
 				roles = append(roles, role.Role{
-					ID: uint(uid),
+					ID: rid,
 				})
 			}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/data"
 	"github.com/go-rvq/rvq/admin/utils/db_utils"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -86,6 +87,7 @@ var defaultPreparer Preparer = func(db *gorm.DB, mode Mode, obj interface{}, id 
 }
 
 func DataOperator(db *gorm.DB) (r *DataOperatorBuilder) {
+	uuidkey.MustRegister(db) // its records have UUID keys
 	db = db.Session(&gorm.Session{})
 	r = NewCallbacks(&DataOperatorBuilder{
 		db:       db,
