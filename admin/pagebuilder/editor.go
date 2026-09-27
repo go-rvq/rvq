@@ -135,7 +135,7 @@ func (b *Builder) Editor(m *ModelBuilder) web.PageFunc {
 				Width(350),
 			VMain(
 				vx.VXMessageListener().ListenFunc(b.generateEditorBarJsFunction(ctx)),
-				tabContent.Body.(h.HTMLComponent),
+				tabContent.Body,
 			),
 		)
 		return
@@ -214,40 +214,6 @@ func (b *Builder) renderNavigator(ctx *web.EventContext, m *ModelBuilder) (r h.H
 	return
 }
 
-func (b *Builder) renderEditContainer(ctx *web.EventContext) (r h.HTMLComponent, err error) {
-	var (
-		modelName     = ctx.R.FormValue(paramModelName)
-		containerName = ctx.R.FormValue(paramContainerName)
-		modelID       = ctx.R.FormValue(paramModelID)
-	)
-	builder := b.ContainerByName(modelName).GetModelBuilder()
-	element := builder.NewModel()
-	if err = b.db.First(element, modelID).Error; err != nil {
-		return
-	}
-	r = web.Scope(
-		VLayout(
-			VMain(
-				h.Div(
-					h.Span(containerName).Class("text-subtitle-1"),
-					h.Div(
-						VBtn("Save").Variant(VariantFlat).Color(ColorSecondary).Size(SizeSmall).Attr("@click", web.Plaid().
-							EventFunc(actions.Update).
-							URL(b.ContainerByName(modelName).mb.Info().UpdateHrefCtx(ctx)).
-							Query(presets.ParamID, modelID).
-							Go()),
-					),
-				).Class("d-flex  pa-6 align-center justify-space-between"),
-				VDivider(),
-				h.Div(
-					builder.Editing().ToComponent(nil, element, presets.FieldModeStack{presets.EDIT}, ctx),
-				).Class("pa-6"),
-			),
-		),
-	).Slot("{ form }")
-	return
-}
-
 func (b *Builder) copyContainersToNewPageVersion(db *gorm.DB, pageID int, locale, oldPageVersion, newPageVersion string) (err error) {
 	return b.copyContainersToAnotherPage(db, pageID, oldPageVersion, locale, pageID, newPageVersion, locale)
 }
@@ -301,7 +267,7 @@ func (b *Builder) localizeContainersToAnotherPage(db *gorm.DB, pageID int, pageV
 	}
 
 	for _, c := range cons {
-		newModelID := c.ModelID
+		var newModelID uint
 		newDisplayName := c.DisplayName
 		if !c.Shared {
 			model := b.ContainerByName(c.ModelName).NewModel()
@@ -442,7 +408,7 @@ func (b *Builder) pageEditorLayout(in web.PageFunc, config *presets.LayoutConfig
 			web.Portal().Name(presets.DeleteConfirmPortalName),
 			web.Portal().Name(presets.ListingDialogPortalName),
 			web.Portal().Name(dialogPortalName),
-			innerPr.Body.(h.HTMLComponent),
+			innerPr.Body,
 		).Attr("id", "vt-app").
 			Attr(web.VAssign("vars", `{presetsRightDrawer: false, presetsDialog: false, dialogPortalName: false}`)...)
 		return

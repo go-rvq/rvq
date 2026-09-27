@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,7 +23,7 @@ func Upload(Storage storage.Storage, path string, reader io.Reader) (err error) 
 	}()
 	_, err = Storage.Put(path, reader)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("upload error: %v, path: %v", err, path))
+		err = fmt.Errorf("upload error: %v, path: %v", err, path)
 		return
 	}
 	return
@@ -56,7 +55,7 @@ func DeleteObjects(Storage storage.Storage, paths []string) (err error) {
 			i = right
 			err = storage.DeleteObjects(paths[left:right])
 			if err != nil {
-				err = errors.New(fmt.Sprintf("delete error: %v, path: %v", err, paths[left:right]))
+				err = fmt.Errorf("delete error: %v, path: %v", err, paths[left:right])
 				return
 			}
 		}
@@ -66,7 +65,7 @@ func DeleteObjects(Storage storage.Storage, paths []string) (err error) {
 	for _, v := range paths {
 		err = Storage.Delete(v)
 		if err != nil {
-			err = errors.New(fmt.Sprintf("delete error: %v, path: %v", err, v))
+			err = fmt.Errorf("delete error: %v, path: %v", err, v)
 			return
 		}
 	}
@@ -92,7 +91,7 @@ func Copy(Storage storage.Storage, from, to string) (err error) {
 
 	err = Storage.(CopyInterface).Copy(from, to)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("copy error: %v, from: %v, to: %v", err, from, to))
+		err = fmt.Errorf("copy error: %v, from: %v, to: %v", err, from, to)
 	}
 	return
 }

@@ -2,7 +2,7 @@ package admin
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/go-rvq/rvq/admin/media"
 	"github.com/go-rvq/rvq/admin/media/base"
@@ -136,7 +136,7 @@ func configInputDemo(b *presets.Builder, _ *gorm.DB) {
 			if err != nil {
 				panic(err)
 			}
-			b, err := ioutil.ReadAll(f)
+			b, err := io.ReadAll(f)
 			if err != nil {
 				panic(err)
 			}

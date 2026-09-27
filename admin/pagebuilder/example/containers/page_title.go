@@ -30,16 +30,16 @@ type PageTitle struct {
 
 type Tags []*tag
 
-func (this Tags) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (t Tags) Value() (driver.Value, error) {
+	return json.Marshal(t)
 }
 
-func (this *Tags) Scan(value interface{}) error {
+func (t *Tags) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), t)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, t)
 	default:
 		return errors.New("not supported")
 	}

@@ -3,7 +3,6 @@ package oss
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/media/base"
@@ -80,8 +79,8 @@ var DefaultRetrieveHandler = func(oss OSS, path string) (base.FileInterface, err
 	}
 
 	if err == nil {
-		buf := []byte{}
-		if buf, err = ioutil.ReadAll(result); err == nil {
+		var buf []byte
+		if buf, err = io.ReadAll(result); err == nil {
 			result := ClosingReadSeeker{bytes.NewReader(buf)}
 			result.Seek(0, 0)
 			return result, err

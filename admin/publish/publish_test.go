@@ -2,15 +2,15 @@ package publish_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/go-rvq/rvq/admin/presets/gorm2op"
-	"github.com/go-rvq/rvq/x/i18n"
 	"io"
 	"os"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/x/i18n"
 
 	"github.com/go-rvq/rvq/admin/media/storage"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -71,7 +71,7 @@ func (p *Product) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx c
 		})
 	}
 
-	if val, ok := ctx.Value("skip_list").(bool); ok && val {
+	if val, ok := ctx.Value(skipListKey).(bool); ok && val {
 		return
 	}
 	objs = append(objs, &publish.PublishAction{
@@ -87,7 +87,7 @@ func (p *Product) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx
 		Url:      p.OnlineUrl,
 		IsDelete: true,
 	})
-	if val, ok := ctx.Value("skip_list").(bool); ok && val {
+	if val, ok := ctx.Value(skipListKey).(bool); ok && val {
 		return
 	}
 	objs = append(objs, &publish.PublishAction{
@@ -106,45 +106,45 @@ type ProductWithoutVersion struct {
 	publish.List
 }
 
-func (p *ProductWithoutVersion) getContent() string {
-	return p.Code + p.Name
+func (pwv *ProductWithoutVersion) getContent() string {
+	return pwv.Code + pwv.Name
 }
 
-func (p *ProductWithoutVersion) getUrl() string {
-	return fmt.Sprintf("test/product_no_version/%s/index.html", p.Code)
+func (pwv *ProductWithoutVersion) getUrl() string {
+	return fmt.Sprintf("test/product_no_version/%s/index.html", pwv.Code)
 }
 
-func (p *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
+func (pwv *ProductWithoutVersion) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
-		Url:      p.getUrl(),
-		Content:  p.getContent(),
+		Url:      pwv.getUrl(),
+		Content:  pwv.getContent(),
 		IsDelete: false,
 	})
 
-	if p.Status.Status == publish.StatusOnline && p.OnlineUrl != p.getUrl() {
+	if pwv.Status.Status == publish.StatusOnline && pwv.OnlineUrl != pwv.getUrl() {
 		objs = append(objs, &publish.PublishAction{
-			Url:      p.OnlineUrl,
+			Url:      pwv.OnlineUrl,
 			IsDelete: true,
 		})
 	}
 
-	p.OnlineUrl = p.getUrl()
+	pwv.OnlineUrl = pwv.getUrl()
 	return
 }
 
-func (p *ProductWithoutVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
+func (pwv *ProductWithoutVersion) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, _ storage.Storage) (objs []*publish.PublishAction, err error) {
 	objs = append(objs, &publish.PublishAction{
-		Url:      p.OnlineUrl,
+		Url:      pwv.OnlineUrl,
 		IsDelete: true,
 	})
 	return
 }
 
-func (this ProductWithoutVersion) GetListUrl(pageNumber string) string {
+func (pwv ProductWithoutVersion) GetListUrl(pageNumber string) string {
 	return fmt.Sprintf("/product_without_version/list/%v.html", pageNumber)
 }
 
-func (this ProductWithoutVersion) GetListContent(db *gorm.DB, onePageItems *publish.OnePageItems) string {
+func (pwv ProductWithoutVersion) GetListContent(db *gorm.DB, onePageItems *publish.OnePageItems) string {
 	pageNumber := onePageItems.PageNumber
 	var result string
 	for _, item := range onePageItems.Items {
@@ -155,14 +155,13 @@ func (this ProductWithoutVersion) GetListContent(db *gorm.DB, onePageItems *publ
 	return result
 }
 
-func (this ProductWithoutVersion) Sort(array []interface{}) {
+func (pwv ProductWithoutVersion) Sort(array []interface{}) {
 	var temp []*ProductWithoutVersion
 	sliceutils.Unwrap(array, &temp)
 	sort.Sort(SliceProductWithoutVersion(temp))
 	for k, v := range temp {
 		array[k] = v
 	}
-	return
 }
 
 type SliceProductWithoutVersion []*ProductWithoutVersion
@@ -255,8 +254,8 @@ func TestPublishVersionContentToS3(t *testing.T) {
 
 	p := publish.New(db, Storage)
 	// publish v1
-	skipListTrueContext := context.WithValue(context.Background(), "skip_list", true)
-	skipListFalseContext := context.WithValue(context.Background(), "skip_list", false)
+	skipListTrueContext := context.WithValue(context.Background(), skipListKey, true)
+	skipListFalseContext := context.WithValue(context.Background(), skipListKey, false)
 	if err := p.Publish(productMB, &productV1, skipListTrueContext); err != nil {
 		t.Error(err)
 	}
@@ -329,10 +328,10 @@ func TestPublishList(t *testing.T) {
 	var expected string
 	expected = "product:1 product:3 pageNumber:1"
 	if storage.Objects["/product_without_version/list/1.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 want: %v
 get: %v
-`, expected, storage.Objects["/product_without_version/list/1.html"])))
+`, expected, storage.Objects["/product_without_version/list/1.html"]))
 	}
 
 	publisher.Publish(productMB, &productV2, context.Background())
@@ -342,10 +341,10 @@ get: %v
 
 	expected = "product:1 product:2 product:3 pageNumber:1"
 	if storage.Objects["/product_without_version/list/1.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 want: %v
 get: %v
-`, expected, storage.Objects["/product_without_version/list/1.html"])))
+`, expected, storage.Objects["/product_without_version/list/1.html"]))
 	}
 
 	publisher.UnPublish(productMB, &productV2, context.Background())
@@ -355,10 +354,10 @@ get: %v
 
 	expected = "product:1 product:3 pageNumber:1"
 	if storage.Objects["/product_without_version/list/1.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 want: %v
 get: %v
-`, expected, storage.Objects["/product_without_version/list/1.html"])))
+`, expected, storage.Objects["/product_without_version/list/1.html"]))
 	}
 
 	publisher.UnPublish(productMB, &productV3, context.Background())
@@ -368,10 +367,10 @@ get: %v
 
 	expected = "product:1 pageNumber:1"
 	if storage.Objects["/product_without_version/list/1.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 want: %v
 get: %v
-`, expected, storage.Objects["/product_without_version/list/1.html"])))
+`, expected, storage.Objects["/product_without_version/list/1.html"]))
 	}
 }
 
@@ -400,10 +399,10 @@ func TestSchedulePublish(t *testing.T) {
 	var expected string
 	expected = "11"
 	if storage.Objects["test/product/1/index.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 	want: %v
 	get: %v
-	`, expected, storage.Objects["test/product/1/index.html"])))
+	`, expected, storage.Objects["test/product/1/index.html"]))
 	}
 
 	productV1.Name = "2"
@@ -419,10 +418,10 @@ func TestSchedulePublish(t *testing.T) {
 	}
 	expected = "12"
 	if storage.Objects["test/product/1/index.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 	want: %v
 	get: %v
-	`, expected, storage.Objects["test/product/1/index.html"])))
+	`, expected, storage.Objects["test/product/1/index.html"]))
 	}
 
 	endAt := startAt.Add(time.Second * 2)
@@ -436,10 +435,10 @@ func TestSchedulePublish(t *testing.T) {
 	}
 	expected = ""
 	if storage.Objects["test/product/1/index.html"] != expected {
-		t.Error(errors.New(fmt.Sprintf(`
+		t.Error(fmt.Errorf(`
 	want: %v
 	get: %v
-	`, expected, storage.Objects["test/product/1/index.html"])))
+	`, expected, storage.Objects["test/product/1/index.html"]))
 	}
 }
 
@@ -506,7 +505,6 @@ func assertUpdateStatus(t *testing.T, db *gorm.DB, p *Product, assertStatus stri
 	if diff != "" {
 		t.Error(diff)
 	}
-	return
 }
 
 func assertContentDeleted(t *testing.T, url string, Storage storage.Storage) {
@@ -517,7 +515,6 @@ func assertContentDeleted(t *testing.T, url string, Storage storage.Storage) {
 	if err == nil {
 		t.Errorf("content for %s should be deleted", url)
 	}
-	return
 }
 
 func assertNoVersionUpdateStatus(t *testing.T, db *gorm.DB, p *ProductWithoutVersion, assertStatus string, asserOnlineUrl string) {
@@ -533,7 +530,6 @@ func assertNoVersionUpdateStatus(t *testing.T, db *gorm.DB, p *ProductWithoutVer
 	if diff != "" {
 		t.Error(diff)
 	}
-	return
 }
 
 func assertUploadFile(t *testing.T, content string, url string, Storage storage.Storage) {
@@ -551,3 +547,7 @@ func assertUploadFile(t *testing.T, content string, url string, Storage storage.
 		t.Error(diff)
 	}
 }
+
+type testCtxKey string
+
+const skipListKey testCtxKey = "skip_list"

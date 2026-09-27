@@ -113,5 +113,4 @@ func (option Option) Get(key string) string {
 // set option
 func (option Option) Set(key string, val string) {
 	option[strings.ToUpper(key)] = val
-	return
 }

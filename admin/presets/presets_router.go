@@ -115,7 +115,6 @@ func (b *Builder) middleware(handler http.Handler) http.Handler {
 				notFoundHandler.ServeHTTP(&forcedStatusWriter{ResponseWriter: w, code: http.StatusNotFound}, r)
 			}
 		}
-		return
 	}))
 }
 

@@ -16,19 +16,15 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
-	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	"golang.org/x/text/language"
 )
 
-const (
-	I18nSeoKey         i18n.ModuleKey = "I18nSeoKey"
-	SeoDetailFieldName                = "SEO"
-)
+const I18nSeoKey i18n.ModuleKey = "I18nSeoKey"
 
-var permVerifier *perm.Verifier
+const SeoDetailFieldName = "SEO"
 
 type myTd struct {
 	td    *h.HTMLTagBuilder
@@ -89,8 +85,6 @@ func (b *Builder) configureGlobalModel(pb *presets.Builder) {
 		RegisterForModule(language.English, I18nSeoKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nSeoKey, Messages_zh_CN).
 		RegisterForModule(language.BrazilianPortuguese, I18nSeoKey, Messages_pt_BR)
-
-	permVerifier = perm.NewVerifier("seo", pb.GetPermission())
 }
 
 func (b *Builder) configureConfigModel(pb *presets.Builder) {
@@ -457,16 +451,6 @@ func (b *Builder) vseoReadonly(fieldPrefix string, seo *SEO, setting *Setting, r
 		msgr = i18n.MustGetModuleMessages(req.Context(), I18nSeoKey, Messages_en_US).(*Messages)
 		db   = b.db
 	)
-
-	var varComps []h.HTMLComponent
-	for varName := range seo.getAvailableVars() {
-		varComps = append(varComps,
-			VChip(
-				VIcon("mdi-plus-box").Class("mr-2"),
-				h.Text(i18n.PT(req.Context(), I18nSeoKey, "SettingVar", varName)),
-			).Variant(VariantText).Attr("@click", fmt.Sprintf("$refs.seo.addTags('%s')", varName)).Label(true).Variant(VariantOutlined),
-		)
-	}
 
 	image := &setting.OpenGraphImageFromMediaLibrary
 	if image.ID.IsZero() {

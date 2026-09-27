@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -462,7 +461,7 @@ func (b *SectionBuilder) editComponent(obj interface{}, field *FieldContext, ctx
 
 func (b *SectionBuilder) DefaultSaveFunc(obj interface{}, id ID, ctx *web.EventContext) (err error) {
 	if tf := reflect.TypeOf(obj).Kind(); tf != reflect.Ptr {
-		return errors.New(fmt.Sprintf("model %#+v must be pointer", obj))
+		return fmt.Errorf("model %#+v must be pointer", obj)
 	}
 	formObj := reflect.New(reflect.TypeOf(obj).Elem()).Interface()
 
@@ -710,7 +709,7 @@ func (b *SectionBuilder) editElement(obj any, index, _ int, ctx *web.EventContex
 func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, prefix string, ctx *web.EventContext) error {
 	return func(toObj, formObj any, prefix string, ctx *web.EventContext) (err error) {
 		if tf := reflect.TypeOf(toObj).Kind(); tf != reflect.Ptr {
-			return errors.New(fmt.Sprintf("model %#+v must be pointer", toObj))
+			return fmt.Errorf("model %#+v must be pointer", toObj)
 		}
 		oldForm := &multipart.Form{
 			Value: (map[string][]string)(http.Header(ctx.R.MultipartForm.Value).Clone()),

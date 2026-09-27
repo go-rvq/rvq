@@ -46,7 +46,7 @@ type Muxer interface {
 }
 
 func AddGA(ctx *web.EventContext) {
-	if strings.Index(ctx.R.Host, "localhost") >= 0 {
+	if strings.Contains(ctx.R.Host, "localhost") {
 		return
 	}
 	ctx.Injector.HeadHTML(`

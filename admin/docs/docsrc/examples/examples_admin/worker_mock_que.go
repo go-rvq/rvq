@@ -36,7 +36,7 @@ var Que = &mock.QueueMock{
 		if scheduler, ok := jobInfo.Argument.(worker.Scheduler); ok && scheduler.GetScheduleTime() != nil {
 			job.SetStatus(worker.JobStatusScheduled)
 			go func() {
-				time.Sleep(scheduler.GetScheduleTime().Sub(time.Now()))
+				time.Sleep(time.Until(*scheduler.GetScheduleTime()))
 				ConsumeQueItem(job)
 			}()
 		} else {

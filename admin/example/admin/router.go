@@ -3,9 +3,10 @@ package admin
 import (
 	_ "embed"
 	"fmt"
+	"net/http"
+
 	h "github.com/go-rvq/htmlgo"
 	"github.com/google/uuid"
-	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-rvq/rvq/admin/example/models"
@@ -67,7 +68,6 @@ func Router(db *gorm.DB) http.Handler {
 	mux.Handle("/", c.pb)
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		w.Write(favicon)
-		return
 	})
 
 	mux.Handle(exportOrdersURL, exportOrders(db))

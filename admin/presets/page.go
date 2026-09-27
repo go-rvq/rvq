@@ -16,7 +16,6 @@ type PageBuilder struct {
 	page    *HttpPageBuilder
 	events  web.EventsHub
 	actions []*ActionBuilder
-	layout  *LayoutConfig
 	pf      web.PageFunc
 	handler func(f web.PageFunc) http.Handler
 }

@@ -33,15 +33,15 @@ type MicroSite struct {
 	UnixKey     string
 }
 
-func (this *MicroSite) PermissionRN() []string {
-	return []string{"microsite_models", strconv.Itoa(int(this.ID)), this.Version.Version}
+func (ms *MicroSite) PermissionRN() []string {
+	return []string{"microsite_models", strconv.Itoa(int(ms.ID)), ms.Version.Version}
 }
 
-func (this *MicroSite) PrimarySlug() string {
-	return fmt.Sprintf("%v_%v", this.ID, this.Version.Version)
+func (ms *MicroSite) PrimarySlug() string {
+	return fmt.Sprintf("%v_%v", ms.ID, ms.Version.Version)
 }
 
-func (this *MicroSite) PrimaryColumnValuesBySlug(slug string) map[string]string {
+func (ms *MicroSite) PrimaryColumnValuesBySlug(slug string) map[string]string {
 	segs := strings.Split(slug, "_")
 	if len(segs) != 2 {
 		panic("wrong slug")
@@ -53,53 +53,50 @@ func (this *MicroSite) PrimaryColumnValuesBySlug(slug string) map[string]string 
 	}
 }
 
-func (this MicroSite) GetID() uint {
-	return this.ID
+func (ms MicroSite) GetID() uint {
+	return ms.ID
 }
 
-func (this MicroSite) GetUnixKey() string {
-	return this.UnixKey
+func (ms MicroSite) GetUnixKey() string {
+	return ms.UnixKey
 }
 
-func (this *MicroSite) SetUnixKey() {
-	this.UnixKey = strconv.FormatInt(time.Now().UnixMilli(), 10)
+func (ms *MicroSite) SetUnixKey() {
+	ms.UnixKey = strconv.FormatInt(time.Now().UnixMilli(), 10)
+}
+
+func (ms MicroSite) GetPublishedPath(fileName string) string {
+	return path.Join(strings.TrimPrefix(strings.TrimSuffix(ms.PrePath, "/"), "/"), fileName)
+}
+
+func (ms MicroSite) GetPublishedUrl(domain, fileName string) string {
+	return strings.TrimSuffix(domain, "/") + "/" + ms.GetPublishedPath(fileName)
+}
+
+func (ms MicroSite) GetPackageUrl(domain string) string {
+	return strings.TrimSuffix(domain, "/") + "/" + strings.TrimPrefix(ms.Package.Url, "/")
+}
+
+func (ms MicroSite) GetFileList() (arr []string) {
+	json.Unmarshal([]byte(ms.FilesList), &arr)
 	return
 }
 
-func (this MicroSite) GetPublishedPath(fileName string) string {
-	return path.Join(strings.TrimPrefix(strings.TrimSuffix(this.PrePath, "/"), "/"), fileName)
-}
-
-func (this MicroSite) GetPublishedUrl(domain, fileName string) string {
-	return strings.TrimSuffix(domain, "/") + "/" + this.GetPublishedPath(fileName)
-}
-
-func (this MicroSite) GetPackageUrl(domain string) string {
-	return strings.TrimSuffix(domain, "/") + "/" + strings.TrimPrefix(this.Package.Url, "/")
-}
-
-func (this MicroSite) GetFileList() (arr []string) {
-	json.Unmarshal([]byte(this.FilesList), &arr)
-	return
-}
-
-func (this *MicroSite) SetFilesList(filesList []string) {
+func (ms *MicroSite) SetFilesList(filesList []string) {
 	list, err := json.Marshal(filesList)
 	if err != nil {
 		return
 	}
-	this.FilesList = string(list)
-	return
+	ms.FilesList = string(list)
 }
 
-func (this *MicroSite) GetPackage() FileSystem {
-	return this.Package
+func (ms *MicroSite) GetPackage() FileSystem {
+	return ms.Package
 }
 
-func (this *MicroSite) SetPackage(fileName, url string) {
-	this.Package.FileName = fileName
-	this.Package.Url = url
-	return
+func (ms *MicroSite) SetPackage(fileName, url string) {
+	ms.Package.FileName = fileName
+	ms.Package.Url = url
 }
 
 type contextKeyType int
@@ -115,8 +112,8 @@ func builderFromContext(c context.Context) (b *Builder, ok bool) {
 	return
 }
 
-func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
-	if len(this.GetFileList()) == 0 {
+func (ms *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
+	if len(ms.GetFileList()) == 0 {
 		return
 	}
 	mib, ok := builderFromContext(ctx)
@@ -129,7 +126,7 @@ func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 	wg := sync.WaitGroup{}
 	var copyError error
 	var mutex sync.Mutex
-	for _, v := range this.GetFileList() {
+	for _, v := range ms.GetFileList() {
 		wg.Add(1)
 		copySemaphore <- struct{}{}
 		go func(v string) {
@@ -137,7 +134,7 @@ func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 				wg.Done()
 				<-copySemaphore
 			}()
-			err = utils.Copy(storage, getPreviewPath(this, v, mib), this.GetPublishedPath(v))
+			err = utils.Copy(storage, getPreviewPath(ms, v, mib), ms.GetPublishedPath(v))
 			if err != nil {
 				mutex.Lock()
 				copyError = multierror.Append(copyError, err).ErrorOrNil()
@@ -145,7 +142,7 @@ func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 				return
 			}
 			mutex.Lock()
-			previewPaths = append(previewPaths, getPreviewPath(this, v, mib))
+			previewPaths = append(previewPaths, getPreviewPath(ms, v, mib))
 			mutex.Unlock()
 		}(v)
 	}
@@ -160,10 +157,10 @@ func (this *MicroSite) GetPublishActions(mb *presets.ModelBuilder, db *gorm.DB, 
 	return
 }
 
-func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
+func (ms *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB, ctx context.Context, storage storage.Storage) (objs []*publish.PublishAction, err error) {
 	var paths []string
-	for _, v := range this.GetFileList() {
-		paths = append(paths, this.GetPublishedPath(v))
+	for _, v := range ms.GetFileList() {
+		paths = append(paths, ms.GetPublishedPath(v))
 	}
 	err = utils.DeleteObjects(storage, paths)
 	if err != nil {
@@ -172,7 +169,7 @@ func (this *MicroSite) GetUnPublishActions(mb *presets.ModelBuilder, db *gorm.DB
 	return
 }
 
-func (this *MicroSite) UnArchiveAndPublish(getPath func(string) string, fileName string, f io.Reader, storage storage.Storage) (filesList []string, err error) {
+func (ms *MicroSite) UnArchiveAndPublish(getPath func(string) string, fileName string, f io.Reader, storage storage.Storage) (filesList []string, err error) {
 	format, reader, err := archiver.Identify(fileName, f)
 	if err != nil {
 		if err == archiver.ErrNoMatch {

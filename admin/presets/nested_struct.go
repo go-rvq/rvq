@@ -32,10 +32,6 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 		modifiedIndexes := ContextModifiedIndexesBuilder(ctx)
 		fieldInfo := n.mb.Info().ChildOf(field.ModelInfo, field.Obj)
 		body := n.fb.toComponentWithFormValueKey(field.ToComponentOptions, fieldInfo, val, field.Mode, field, modifiedIndexes, ctx)
-		if body == nil {
-			return nil
-		}
-
 		switch t := body.(type) {
 		case h.HTMLComponents:
 			if len(t) == 0 {

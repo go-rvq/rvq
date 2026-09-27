@@ -205,5 +205,5 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 
 func (p *Builder) Drawer(drawerMode actions.OverlayMode) *Drawer {
 	return NewDrawer(p.rightDrawerWidth, drawerMode.PortalName()).
-		SetLocation(strings.ToLower(strings.TrimRight(drawerMode.String(), "Drawer")))
+		SetLocation(strings.ToLower(strings.TrimSuffix(drawerMode.String(), "Drawer")))
 }

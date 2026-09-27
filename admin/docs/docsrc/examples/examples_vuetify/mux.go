@@ -220,7 +220,6 @@ func Mux(mux *http.ServeMux, prefix string) http.Handler {
 
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		w.Write(assets.Favicon)
-		return
 	})
 
 	return mux
@@ -361,5 +360,4 @@ func SamplesHandler(mux examples.Muxer, prefix string) {
 		VuetifySnackBarsPB.Wrap(DemoVuetifyLayout),
 	)
 
-	return
 }

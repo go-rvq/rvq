@@ -2,7 +2,7 @@ package sitemap
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -97,7 +97,7 @@ func TestServeHTTP(t *testing.T) {
 		t.Error(err)
 	}
 
-	s, err := ioutil.ReadAll(resp.Body)
+	s, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Error(err)
 	}

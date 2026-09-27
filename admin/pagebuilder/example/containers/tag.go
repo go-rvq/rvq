@@ -16,10 +16,6 @@ type tag struct {
 	Link            string
 }
 
-type filterTag struct {
-	Text string
-}
-
 const (
 	ICON_NO    = "no"
 	ICON_SPEED = "speed"

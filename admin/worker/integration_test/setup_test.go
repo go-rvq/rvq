@@ -3,7 +3,6 @@ package integration_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -143,14 +142,6 @@ delete from job_logs;
 	if err != nil {
 		panic(err)
 	}
-}
-
-func mustParseEventResponse(b []byte) web.EventResponse {
-	r := web.EventResponse{}
-	if err := json.Unmarshal(b, &r); err != nil {
-		panic(err)
-	}
-	return r
 }
 
 func mustCreateJob(form map[string]string) {

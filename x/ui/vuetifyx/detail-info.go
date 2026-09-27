@@ -85,7 +85,6 @@ func (b *DetailFieldBuilder) Write(ctx *h.Context) (err error) {
 }
 
 type DetailColumnBuilder struct {
-	key      string
 	children []h.HTMLComponent
 	header   string
 }

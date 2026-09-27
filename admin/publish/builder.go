@@ -115,9 +115,11 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 	listing := m.Listing()
 
 	listing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
-		return func(obj interface{}, id presets.ID, cascade bool, ctx *web.EventContext) (err error) {
-			if obj, err = UnPublish.Execute(m, b, ActivityUnPublish, ctx, id); err != nil {
-				return
+		// the record is fetched again, unpublished, and that is what is deleted
+		return func(_ interface{}, id presets.ID, cascade bool, ctx *web.EventContext) error {
+			obj, err := UnPublish.Execute(m, b, ActivityUnPublish, ctx, id)
+			if err != nil {
+				return err
 			}
 			return in(obj, id, cascade, ctx)
 		}

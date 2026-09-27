@@ -859,7 +859,9 @@ func (b *Builder) findUserByID(id string) (user interface{}, err error) {
 		return nil, err
 	}
 	if b.postUserFindHook != nil {
-		err = b.postUserFindHook(m)
+		if err = b.postUserFindHook(m); err != nil {
+			return nil, err
+		}
 	}
 	return m, nil
 }
@@ -879,7 +881,6 @@ window.location.href="%s";
 </script>
 <a href="%s">complete</a>
     `, completeURL, completeURL)))
-	return
 }
 
 func (b *Builder) completeUserAuthCallbackComplete(w http.ResponseWriter, r *http.Request) {
@@ -982,7 +983,6 @@ func (b *Builder) completeUserAuthCallbackComplete(w http.ResponseWriter, r *htt
 	}
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
-	return
 }
 
 // return user if account exists even if there is an error returned
@@ -1137,7 +1137,6 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
-	return
 }
 
 func (b *Builder) genBaseSessionClaim(id string, initialUser bool) jwt.RegisteredClaims {
@@ -1286,7 +1285,7 @@ func (b *Builder) consumeTOTPCode(r *http.Request, up UserPasser, passcode strin
 		return ErrWrongTOTPCode
 	}
 	lastCode, usedAt := up.GetLastUsedTOTPCode()
-	if usedAt != nil && time.Now().Sub(*usedAt) > 90*time.Second {
+	if usedAt != nil && time.Since(*usedAt) > 90*time.Second {
 		lastCode = ""
 	}
 	if passcode == lastCode {
@@ -1379,7 +1378,7 @@ func (b *Builder) sendResetPasswordLink(w http.ResponseWriter, r *http.Request) 
 
 	_, createdAt, _ := u.(UserPasser).GetResetPasswordToken()
 	if createdAt != nil {
-		v := 60 - int(time.Now().Sub(*createdAt).Seconds())
+		v := 60 - int(time.Since(*createdAt).Seconds())
 		if v > 0 {
 			setSecondsToRedoFlash(w, v)
 			setWrongForgetPasswordInputFlash(w, WrongForgetPasswordInputFlash{
@@ -1438,7 +1437,6 @@ func (b *Builder) sendResetPasswordLink(w http.ResponseWriter, r *http.Request) 
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("%s?a=%s", b.resetPasswordLinkSentPageURL, account), http.StatusFound)
-	return
 }
 
 func (b *Builder) SendResetPasswordLink(r *http.Request, u UserPasser) (link string, err error) {
@@ -1619,7 +1617,6 @@ func (b *Builder) doResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	setInfoCodeFlash(w, InfoCodePasswordSuccessfullyReset)
 	http.Redirect(w, r, b.loginPageURL, http.StatusFound)
-	return
 }
 
 // NoticeError

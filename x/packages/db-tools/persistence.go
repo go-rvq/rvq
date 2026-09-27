@@ -1,7 +1,6 @@
 package db_tools
 
 import (
-	"errors"
 	"fmt"
 	"time"
 )
@@ -45,7 +44,7 @@ func (o *PersistenceOther) Parse(v string) (err error) {
 	case "years":
 		*o = PersistenceOtherYears
 	default:
-		err = errors.New(fmt.Sprintf("Unknown persistence option: %s", v))
+		err = fmt.Errorf("unknown persistence option: %s", v)
 	}
 	return
 }
@@ -106,7 +105,7 @@ func (p *Persistence) Group(items []time.Time) (g *IntervalGrouper, other []time
 	}
 
 	if p.Years > 0 {
-		g.Years, items, start = GroupByWithFilter(items, ToYear(start).AddDate(p.Years, 0, 0), ToYear)
+		g.Years, items, _ = GroupByWithFilter(items, ToYear(start).AddDate(p.Years, 0, 0), ToYear)
 	}
 
 	other = items

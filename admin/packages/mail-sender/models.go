@@ -35,6 +35,7 @@ func (c *MailSender) SendByMethod(senderName string, b *MessageBuilder) (err err
 	}
 
 	if sender == nil {
+		//lint:ignore ST1005 shown to the user as a sentence
 		return errors.New("Mail sender not configured")
 	}
 	return sender.Send(b)

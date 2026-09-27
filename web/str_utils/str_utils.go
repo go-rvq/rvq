@@ -1,13 +1,18 @@
 package str_utils
 
 import (
-	"strings"
 	"unicode"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 )
+
+// titleCaser upper-cases the first letter of each word and leaves the rest as
+// it is, as strings.Title did.
+var titleCaser = cases.Title(language.Und, cases.NoLower)
 
 // HumanizeString humanize separates string based on capitalizd letters
 // e.g. "OrderItem" -> "Order Item, CNNName to CNN Name"
@@ -22,7 +27,7 @@ func HumanizeString(str string) string {
 		}
 		human = append(human, l)
 	}
-	return strings.Title(string(human))
+	return titleCaser.String(string(human))
 }
 
 // NamifyString Joins string parts based on special separeted chars

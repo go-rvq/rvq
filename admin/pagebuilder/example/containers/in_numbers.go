@@ -34,16 +34,16 @@ func (*InNumbers) TableName() string {
 
 type InNumbersItems []*InNumbersItem
 
-func (this InNumbersItems) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (ini InNumbersItems) Value() (driver.Value, error) {
+	return json.Marshal(ini)
 }
 
-func (this *InNumbersItems) Scan(value interface{}) error {
+func (ini *InNumbersItems) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), ini)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, ini)
 	default:
 		return errors.New("not supported")
 	}

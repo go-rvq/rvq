@@ -134,7 +134,7 @@ func (mediaLibraryStorage *MediaLibraryStorage) Scan(data interface{}) (err erro
 			}
 		}
 	case string:
-		err = mediaLibraryStorage.Scan([]byte(values))
+		return mediaLibraryStorage.Scan([]byte(values))
 	case []string:
 		for _, str := range values {
 			if err = mediaLibraryStorage.Scan(str); err != nil {

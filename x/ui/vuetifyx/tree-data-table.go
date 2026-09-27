@@ -7,8 +7,6 @@ import (
 
 type VXTreeDataTableBuilder struct {
 	v.VTagBuilder[*VXTreeDataTableBuilder]
-	items interface{}
-	many  bool
 }
 
 func VXTreeDataTable(children ...h.HTMLComponent) *VXTreeDataTableBuilder {

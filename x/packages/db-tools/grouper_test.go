@@ -28,9 +28,9 @@ func TestInterval_Group(t *testing.T) {
 			}
 			fmt.Println("= " + name)
 			for i, v := range g {
-				fmt.Println(fmt.Sprintf("  => %03d. %v", i, v.Key.Format(layout)))
+				fmt.Printf("  => %03d. %v\n", i, v.Key.Format(layout))
 				for i, item := range v.Items {
-					fmt.Println(fmt.Sprintf("     %03d. %v", i, item))
+					fmt.Printf("     %03d. %v\n", i, item)
 				}
 			}
 		}
@@ -60,5 +60,4 @@ func TestInterval_Group(t *testing.T) {
 			Other: PersistenceOtherYears,
 		}, times)
 	}
-	return
 }

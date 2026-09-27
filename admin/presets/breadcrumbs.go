@@ -9,7 +9,10 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-const BreadcrumbsKey = "BreadcrumbsKey"
+type breadcrumbsKey string
+
+// BreadcrumbsKey is the context key of the request's breadcrumbs.
+const BreadcrumbsKey breadcrumbsKey = "BreadcrumbsKey"
 
 func GetOrInitBreadcrumbs(r *http.Request) (bc *BreadcrumbsBuilder) {
 	if bc = GetBreadcrumbs(r); bc == nil {

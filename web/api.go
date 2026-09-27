@@ -245,7 +245,10 @@ func (p *ContextValuePointer) Delete() context.Context {
 	return p.child
 }
 
-var valueCtxType = reflect.TypeOf(context.WithValue(context.Background(), "a", nil)).Elem()
+type probeKey struct{}
+
+// valueCtxType is the type context.WithValue makes, to recognise its values.
+var valueCtxType = reflect.TypeOf(context.WithValue(context.Background(), probeKey{}, nil)).Elem()
 
 func getContextValuer(child, ctx context.Context, key any) *ContextValuePointer {
 	contextValues := reflect.Indirect(reflect.ValueOf(ctx))
@@ -277,6 +280,7 @@ func getContextValuer(child, ctx context.Context, key any) *ContextValuePointer 
 }
 
 func GetContextValuer(ctx context.Context, key any) *ContextValuePointer {
+	//lint:ignore SA1012 the top of the chain has no child context: nil says so
 	return getContextValuer(nil, ctx, key)
 }
 
@@ -320,7 +324,6 @@ type EventContext struct {
 	Resp      *EventResponse
 	Injector  *PageInjector
 	Flash     interface{} // pass value from actions to index
-	i         int64
 	dataStack []any
 }
 
@@ -418,7 +421,7 @@ var FormTypeDecoders []CustoFormTypeDecoder
 func (ctx *EventContext) FormSliceValues(key string) (r []string) {
 	for _, key := range ctx.FormSliceKeys(key) {
 		for _, sufix := range []string{"", ".__value"} {
-			if v, _ := ctx.R.MultipartForm.Value[key.Key+sufix]; len(v) > 0 {
+			if v := ctx.R.MultipartForm.Value[key.Key+sufix]; len(v) > 0 {
 				if s := v[0]; s != "" {
 					r = append(r, s)
 				}

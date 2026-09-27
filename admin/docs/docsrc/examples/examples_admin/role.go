@@ -1,3 +1,5 @@
+//lint:file-ignore U1000 the code here is where the documentation's snippets (snippetgo) are read from
+
 package examples_admin
 
 import (

@@ -31,16 +31,16 @@ type ListItemLite struct {
 	Text    string
 }
 
-func (this ListItemLites) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (lil ListItemLites) Value() (driver.Value, error) {
+	return json.Marshal(lil)
 }
 
-func (this *ListItemLites) Scan(value interface{}) error {
+func (lil *ListItemLites) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), lil)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, lil)
 	default:
 		return errors.New("not supported")
 	}

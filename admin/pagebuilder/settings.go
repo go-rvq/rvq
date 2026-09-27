@@ -198,5 +198,4 @@ func detailPageEditor(dp *presets.DetailingBuilder, db *gorm.DB) {
 			),
 		)
 	})
-	return
 }

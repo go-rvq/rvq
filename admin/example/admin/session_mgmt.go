@@ -2,9 +2,10 @@ package admin
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/go-rvq/rvq/admin/example/models"
 	"github.com/go-rvq/rvq/x/login"
@@ -82,7 +83,7 @@ func expireOtherSessionLogs(db *gorm.DB, r *http.Request, userID uuid.UUID) (err
 }
 
 func isTokenValid(v models.LoginSession) bool {
-	return time.Now().Sub(v.ExpiredAt) > 0
+	return time.Since(v.ExpiredAt) > 0
 }
 
 func checkIsTokenValidFromRequest(db *gorm.DB, r *http.Request, userID uuid.UUID) (valid bool, err error) {

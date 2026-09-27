@@ -96,8 +96,6 @@ type ModelBuilder struct {
 	routeSetuper     func(mux *http.ServeMux, uri string)
 	itemRouteSetuper []func(mux *http.ServeMux, uri string)
 
-	pages PageHandlers
-
 	verifierModel *ModelBuilder
 	verifiers     perm.PermVerifiers
 
@@ -627,7 +625,7 @@ func (mb *ModelBuilder) Singleton(v bool) (r *ModelBuilder) {
 }
 
 func (mb *ModelBuilder) FieldLabel(field *FieldBuilder, ctx *web.EventContext) (r string) {
-	if f, _ := mb.fieldLabels[field.name]; f != nil {
+	if f := mb.fieldLabels[field.name]; f != nil {
 		return f(ctx)
 	}
 
@@ -635,7 +633,7 @@ func (mb *ModelBuilder) FieldLabel(field *FieldBuilder, ctx *web.EventContext) (
 }
 
 func (mb *ModelBuilder) FieldHint(field *FieldBuilder, ctx *web.EventContext) (r string) {
-	if f, _ := mb.fieldHints[field.name]; f != nil {
+	if f := mb.fieldHints[field.name]; f != nil {
 		return f(ctx)
 	}
 	return field.ContextHint(mb.Info(), ctx.Context())

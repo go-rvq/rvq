@@ -56,18 +56,6 @@ func parseClaims(claims jwt.Claims, val string, secret string) (rc jwt.Claims, e
 	return token.Claims, nil
 }
 
-func parseBaseClaims(val string, secret string) (rc *jwt.RegisteredClaims, err error) {
-	c, err := parseClaims(&jwt.RegisteredClaims{}, val, secret)
-	if err != nil {
-		return nil, err
-	}
-	rc, ok := c.(*jwt.RegisteredClaims)
-	if !ok {
-		return nil, errInvalidToken
-	}
-	return rc, nil
-}
-
 func parseClaimsFromCookie(r *http.Request, cookieName string, claims jwt.Claims, secret string) (rc jwt.Claims, err error) {
 	tc, err := r.Cookie(cookieName)
 	if err != nil || tc.Value == "" {

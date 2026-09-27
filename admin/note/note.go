@@ -19,8 +19,8 @@ type Note struct {
 	Content      string `sql:"size:5000"`
 }
 
-func (this *Note) BeforeCreate(tx *gorm.DB) (err error) {
-	if strings.TrimSpace(this.Content) == "" {
+func (n *Note) BeforeCreate(tx *gorm.DB) (err error) {
+	if strings.TrimSpace(n.Content) == "" {
 		err = errors.New("Note cannot be empty")
 	}
 

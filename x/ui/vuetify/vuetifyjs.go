@@ -67,14 +67,6 @@ func fontWoff() web.ComponentsPack {
 	return web.ComponentsPack(v)
 }
 
-func fontWoff2() web.ComponentsPack {
-	v, err := rvqjs.Vuetify.ReadFile("vuetify/dist/vuetify/assets/materialdesignicons-webfont.woff2")
-	if err != nil {
-		panic(err)
-	}
-	return web.ComponentsPack(v)
-}
-
 type muxer interface {
 	Handle(pattern string, handler http.Handler)
 }

@@ -2,7 +2,6 @@ package presets
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -269,7 +268,7 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 				}
 				break
 			}
-			err = errors.New(fmt.Sprintf("Unsupported type: %v of field %s", fieldType, fieldName))
+			err = fmt.Errorf("unsupported type: %v of field %s", fieldType, fieldName)
 			return
 		}
 		id.Values = append(id.Values, av)

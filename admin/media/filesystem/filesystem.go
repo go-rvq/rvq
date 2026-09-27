@@ -27,7 +27,7 @@ func (f *FileSystem) GetFullPath(url string, option *base.Option) (path string, 
 	}
 
 	dir := filepath.Dir(path)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	if _, serr := os.Stat(dir); os.IsNotExist(serr) {
 		err = os.MkdirAll(dir, os.ModePerm)
 	}
 
@@ -36,12 +36,19 @@ func (f *FileSystem) GetFullPath(url string, option *base.Option) (path string, 
 
 // Store save reader's context with name
 func (f *FileSystem) Store(name string, option *base.Option, reader io.Reader) (err error) {
-	if fullpath, err := f.GetFullPath(name, option); err == nil {
-		if dst, err := os.Create(fullpath); err == nil {
-			_, err = io.Copy(dst, reader)
-		}
+	fullpath, err := f.GetFullPath(name, option)
+	if err != nil {
+		return err
 	}
-	return err
+	dst, err := os.Create(fullpath)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(dst, reader); err != nil {
+		dst.Close()
+		return err
+	}
+	return dst.Close()
 }
 
 // Symlink create symbolic link

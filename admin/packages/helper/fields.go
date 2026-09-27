@@ -141,9 +141,7 @@ func (t *AdminTag) Parse(sf *reflect.StructField, s string) (valid bool) {
 				}
 			}
 
-			if handler != nil {
-				t.EditComponentHandlers = append(t.EditComponentHandlers, handler)
-			}
+			t.EditComponentHandlers = append(t.EditComponentHandlers, handler)
 		}
 	}
 	if v, ok := na.GetValueOrNil("hint").(gad.Str); ok {
@@ -218,7 +216,6 @@ func (t *AdminTag) Parse(sf *reflect.StructField, s string) (valid bool) {
 }
 
 type Hint struct {
-	value string
 	fixed bool
 }
 
@@ -327,5 +324,4 @@ func FieldReadyHandle(mb *presets.ModelBuilder, mode presets.FieldMode, field *p
 		})
 	}
 
-	return
 }

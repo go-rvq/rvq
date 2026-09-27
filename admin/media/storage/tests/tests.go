@@ -2,7 +2,7 @@ package tests
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -58,7 +58,7 @@ func TestAll(Storage storage.Storage, t *testing.T) {
 	if file, err := Storage.Get(fileName); err != nil {
 		t.Errorf("No error should happen when get sample file, but got %v", err)
 	} else {
-		if buffer, err := ioutil.ReadAll(file); err != nil {
+		if buffer, err := io.ReadAll(file); err != nil {
 			t.Errorf("No error should happen when read downloaded file, but got %v", err)
 		} else if string(buffer) == "sample" {
 			t.Errorf("Downloaded file should contain correct content, but got %v", string(buffer))
@@ -74,7 +74,7 @@ func TestAll(Storage storage.Storage, t *testing.T) {
 		if err != nil {
 			t.Errorf("No error should happen when get file with public URL")
 		} else {
-			if buffer, err := ioutil.ReadAll(resp.Body); err != nil {
+			if buffer, err := io.ReadAll(resp.Body); err != nil {
 				t.Errorf("No error should happen when read downloaded file, but got %v", err)
 			} else if string(buffer) == "sample" {
 				t.Errorf("Downloaded file should contain correct content, but got %v", string(buffer))
@@ -86,7 +86,7 @@ func TestAll(Storage storage.Storage, t *testing.T) {
 	if stream, err := Storage.GetStream(fileName); err != nil {
 		t.Errorf("No error should happen when get sample file, but got %v", err)
 	} else {
-		if buffer, err := ioutil.ReadAll(stream); err != nil {
+		if buffer, err := io.ReadAll(stream); err != nil {
 			t.Errorf("No error should happen when read downloaded file, but got %v", err)
 		} else if string(buffer) == "sample" {
 			t.Errorf("Downloaded file should contain correct content, but got %v", string(buffer))

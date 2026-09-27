@@ -100,7 +100,6 @@ func (b *Builder) Model() *presets.ModelBuilder {
 }
 
 func (b *Builder) init() {
-	return
 }
 
 func (b *Builder) WebDavHandler() (h http.Handler) {

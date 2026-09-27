@@ -7,8 +7,6 @@ import (
 
 type VXTreeRowsBuilder struct {
 	v.VTagBuilder[*VXTreeRowsBuilder]
-	items interface{}
-	many  bool
 }
 
 func VXTreeRows(children ...h.HTMLComponent) *VXTreeRowsBuilder {

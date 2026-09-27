@@ -29,6 +29,7 @@ func main() {
 		validate := func(input string) error {
 			s, err := os.Stat(input)
 			if err != nil || s.IsDir() {
+				//lint:ignore ST1005 shown to the user as a sentence
 				return errors.New("Please input correct csv file path")
 			}
 			return nil

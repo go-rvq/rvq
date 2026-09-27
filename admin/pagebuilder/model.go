@@ -653,7 +653,7 @@ func (b *ModelBuilder) addSharedContainerToPage(pageID int, containerID, pageVer
 	if err != nil {
 		return
 	}
-	containerID = container.PrimarySlug()
+	newContainerID = container.PrimarySlug()
 
 	return
 }

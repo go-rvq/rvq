@@ -168,7 +168,7 @@ func (e *GmailSender) Config() (config *oauth2.Config, err error) {
 	config, err = google.ConfigFromJSON(e.Credentials.Data.Raw, GmailScopes...)
 
 	if err != nil {
-		err = fmt.Errorf("Unable to parse client credentials to config: %v", err)
+		err = fmt.Errorf("unable to parse client credentials to config: %v", err)
 	}
 
 	if e.CallbackURI != "" {
@@ -193,7 +193,7 @@ func (e *GmailSender) Send(b *MessageBuilder) (err error) {
 	)
 
 	if svc, err = gmail.NewService(ctx, option.WithHTTPClient(client)); err != nil {
-		err = fmt.Errorf("Unable to retrieve Gmail client: %v", err)
+		err = fmt.Errorf("unable to retrieve Gmail client: %v", err)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (e *GmailSender) Send(b *MessageBuilder) (err error) {
 	}
 
 	if _, err = svc.Users.Messages.Send("me", gmsg).Do(); err != nil {
-		err = fmt.Errorf("Unable to send Gmail message: %v", err)
+		err = fmt.Errorf("unable to send Gmail message: %v", err)
 		return
 	}
 

@@ -87,7 +87,6 @@ func (b *PageInjector) setDefault() {
 
 func (b *PageInjector) Title(title string) {
 	b.addNode(h.Title(""), titleKey, true, title)
-	return
 }
 
 func (b *PageInjector) HasTitle() (r bool) {
@@ -96,22 +95,18 @@ func (b *PageInjector) HasTitle() (r bool) {
 
 func (b *PageInjector) MetaNameContent(name, content string, attrs ...string) {
 	b.Meta(MetaKey(name), append([]string{"name", name, "content", content}, attrs...)...)
-	return
 }
 
 func (b *PageInjector) Meta(key interface{}, attrs ...string) {
 	b.addNode(h.Meta(), key, true, "", attrs...)
-	return
 }
 
 func (b *PageInjector) TailHTML(v string) {
 	b.TailHTMLComponent(v, h.RawHTML(v), true)
-	return
 }
 
 func (b *PageInjector) TailHTMLComponent(key interface{}, comp h.HTMLComponent, replace bool) {
 	b.putComp(key, comp, tail, replace)
-	return
 }
 
 func (b *PageInjector) Clear() (r *PageInjector) {
@@ -121,12 +116,10 @@ func (b *PageInjector) Clear() (r *PageInjector) {
 
 func (b *PageInjector) HeadHTML(v string) {
 	b.HeadHTMLComponent(v, h.RawHTML(v), true)
-	return
 }
 
 func (b *PageInjector) HeadHTMLComponent(key interface{}, comp h.HTMLComponent, replace bool) {
 	b.putComp(key, comp, head, replace)
-	return
 }
 
 func toHTMLComponent(list []*keyComp) h.HTMLComponent {
@@ -152,7 +145,6 @@ func (b *PageInjector) GetExtraHTMLComponent() h.HTMLComponent {
 
 func (b *PageInjector) HTMLLang(lang string) {
 	b.lang = lang
-	return
 }
 
 func (b *PageInjector) GetHTMLLang() string {

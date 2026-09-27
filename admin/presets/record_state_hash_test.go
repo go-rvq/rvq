@@ -81,7 +81,8 @@ func TestRecordStateHashIsStable(t *testing.T) {
 	_, mb := stateApp(t)
 	ed := mb.Editing()
 
-	if ed.RecordStateHash(baseStateModel()) != ed.RecordStateHash(baseStateModel()) {
+	a, b := ed.RecordStateHash(baseStateModel()), ed.RecordStateHash(baseStateModel())
+	if a != b {
 		t.Error("dois registros iguais deram hashes diferentes")
 	}
 }

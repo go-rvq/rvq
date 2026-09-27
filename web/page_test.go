@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"html"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http/httptest"
 	"regexp"
@@ -104,7 +104,7 @@ func TestFileUpload(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			data, err = ioutil.ReadAll(mf)
+			data, err = io.ReadAll(mf)
 			if err != nil {
 				panic(err)
 			}
@@ -402,7 +402,7 @@ func PageFunc1(ctx *EventContext) (r PageResponse, err error) {
 	ctx.WithContextValue("afterTitle", h.H2("abc"))
 	ctx.WithContextValue("customizeHeader", h.Components())
 
-	ctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), "abc", h.H2("abc")))
+	ctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), testCtxKey("abc"), h.H2("abc")))
 	return
 }
 
@@ -420,7 +420,7 @@ func Layout1(pf PageFunc) (r PageFunc) {
 		r.Body = h.Div(
 			header,
 			ctx.ContextValue("afterTitle").(h.HTMLComponent),
-			ctx.ContextValue("abc").(h.HTMLComponent),
+			ctx.ContextValue(testCtxKey("abc")).(h.HTMLComponent),
 			pr.Body,
 		)
 		return
@@ -455,3 +455,5 @@ func appPortalContent(t *testing.T, page string) string {
 		`\t`, "\t",
 	).Replace(m[1]))
 }
+
+type testCtxKey string

@@ -118,10 +118,10 @@ to:
 			// overwrite new content to file
 			if isModifiedFile {
 				file, err := os.Create(fileName)
-				defer file.Close()
 				if err != nil {
 					return err
 				}
+				defer file.Close()
 
 				err = format.Node(file, fset, f)
 				if err != nil {

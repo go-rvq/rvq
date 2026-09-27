@@ -11,16 +11,22 @@ import (
 	"strings"
 )
 
-func ParseDir(fset *token.FileSet, path string, filter func(fs.FileInfo) bool, mode parser.Mode) (pkgs map[string]*ast.Package, first error) {
+// Package is a parsed package: its name and its files by file name.
+type Package struct {
+	Name  string
+	Files map[string]*ast.File
+}
+
+func ParseDir(fset *token.FileSet, path string, filter func(fs.FileInfo) bool, mode parser.Mode) (pkgs map[string]*Package, first error) {
 	list, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
-	pkgs = make(map[string]*ast.Package)
+	pkgs = make(map[string]*Package)
 	for _, d := range list {
 		if d.IsDir() {
-			insidePkgs := make(map[string]*ast.Package)
+			var insidePkgs map[string]*Package
 			insidePkgs, first = ParseDir(fset, go_path.Join(path, d.Name()), filter, mode)
 			if first != nil {
 				return
@@ -46,7 +52,7 @@ func ParseDir(fset *token.FileSet, path string, filter func(fs.FileInfo) bool, m
 			name := src.Name.Name
 			pkg, found := pkgs[path]
 			if !found {
-				pkg = &ast.Package{
+				pkg = &Package{
 					Name:  name,
 					Files: make(map[string]*ast.File),
 				}

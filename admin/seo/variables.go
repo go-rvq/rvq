@@ -36,18 +36,6 @@ func (b *Builder) RegisterVariableGroups(f func(ctx *web.EventContext) []Variabl
 	return b
 }
 
-// variablesMenu renders the "+ Variable" multi-level menu from the registered
-// groups. Each leaf inserts its expression through the send-variables component
-// (its Template wraps it into the `{expr}` form). Returns nil when no groups are
-// registered.
-func (b *Builder) variablesMenu(ctx *web.EventContext) h.HTMLComponent {
-	var groups []VariableGroup
-	if b.variableGroups != nil {
-		groups = b.variableGroups(ctx)
-	}
-	return b.renderVariablesMenu(ctx, groups)
-}
-
 // variablesMenuWithVars is variablesMenu plus a group for the setting's own
 // custom variables, so a field can insert `{Name}` for a declared variable (and
 // a descendant sees the inherited ones once merged — here it shows the setting's

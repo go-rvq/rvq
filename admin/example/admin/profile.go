@@ -120,7 +120,6 @@ func configProfile(b *presets.Builder, db *gorm.DB) {
 	eb.SetterFunc(func(obj interface{}, ctx *web.EventContext) {
 		u := obj.(*models.User)
 		u.Name = ctx.R.FormValue("name")
-		return
 	})
 
 	eb.Field("Info").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {

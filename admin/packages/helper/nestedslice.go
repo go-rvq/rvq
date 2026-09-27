@@ -413,7 +413,7 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 					}
 				} else {
 					for _, key := range ctx.FormSliceKeys(field.FormKey) {
-						if v, _ := ctx.R.MultipartForm.Value[key.Key]; len(v) > 0 {
+						if v := ctx.R.MultipartForm.Value[key.Key]; len(v) > 0 {
 							if s := v[0]; s != "" {
 								ids[v[0]] = nil
 							}

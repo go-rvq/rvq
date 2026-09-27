@@ -68,7 +68,6 @@ type Builder struct {
 	skipNotFoundHandler                   func(r *http.Request) bool
 	muxSetup                              []func(prefix string, r *http.ServeMux)
 	permissions                           *PermMenu
-	pageHandlers                          PageHandlers
 	verifiers                             perm.PermVerifiers
 	pagesRegistrator                      *PagesRegistrator
 	formSigner                            FormSigner
@@ -635,11 +634,6 @@ func defaultMenuIcon(mLabel string) string {
 	return "mdi-alert-octagon-outline"
 }
 
-const (
-	menuFontWeight    = "500"
-	subMenuFontWeight = "400"
-)
-
 type defaultMenuIconRE struct {
 	re   *regexp.Regexp
 	icon string
@@ -1040,7 +1034,7 @@ func (b *Builder) Overlay(ctx *web.EventContext, r *web.EventResponse, comp h.HT
 		b.dialog(ctx, r, comp, width)
 		return
 	} else if overlayType == actions.Content {
-		b.contentDrawer(ctx, r, comp, width)
+		b.contentDrawer(ctx, r, comp)
 		return
 	}
 	b.rightDrawer(r, comp, width)
@@ -1072,10 +1066,9 @@ func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width 
 	r.RunScript = "setTimeout(function(){ vars.presetsRightDrawer = true }, 100)"
 }
 
-func (b *Builder) contentDrawer(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent, width string) {
-	if width == "" {
-		width = b.rightDrawerWidth
-	}
+// contentDrawer puts comp in the target portal (the right drawer's by default),
+// which is already open: its width is the portal's.
+func (b *Builder) contentDrawer(ctx *web.EventContext, r *web.EventResponse, comp h.HTMLComponent) {
 	portalName := ctx.Param(ParamTargetPortal)
 	p := actions.RightDrawer.PortalName()
 	if portalName != "" {
@@ -1162,7 +1155,7 @@ func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 					ZIndex(1000000),
 			).Attr("v-if", "vars.presetsMessage"),
 			VMain(
-				innerPr.Body.(h.HTMLComponent),
+				innerPr.Body,
 			),
 		).
 			Attr("id", "vt-app").
@@ -1344,7 +1337,7 @@ func redirectSlashes(next http.Handler) http.Handler {
 				path = path[:len(path)-1]
 			}
 			redirectURL := fmt.Sprintf("//%s%s", r.Host, path)
-			http.Redirect(w, r, redirectURL, 301)
+			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
 			return
 		}
 		next.ServeHTTP(w, r)

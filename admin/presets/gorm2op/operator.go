@@ -43,16 +43,6 @@ const (
 	Write = Create | Update
 )
 
-type deleteAssocEntry struct {
-	db    *gorm.DB
-	query string
-	args  []interface{}
-}
-
-type deleteAssocStack struct {
-	entries []*deleteAssocEntry
-}
-
 func DBCascade(id model.ID, db *gorm.DB) *gorm.DB {
 
 	return nil
@@ -106,7 +96,6 @@ type DataOperatorBuilder struct {
 	finder   Finder
 
 	CallbacksRegistrator[*DataOperatorBuilder]
-	callbackMergers []CallbackMerger
 }
 
 func (b *DataOperatorBuilder) Updator() Updator {

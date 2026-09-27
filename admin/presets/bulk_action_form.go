@@ -30,7 +30,6 @@ func NewBulkActionFormContext[T any](context *web.EventContext, r *web.EventResp
 }
 
 type BulkActionFormBuilder[T any] struct {
-	model            T
 	action           *BulkActionBuilder
 	eb               *EditingBuilder
 	handlers         BulkActionFormBuilderHandlers[T]

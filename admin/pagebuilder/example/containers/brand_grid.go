@@ -33,16 +33,16 @@ func (*BrandGrid) TableName() string {
 
 type Brands []*Brand
 
-func (this Brands) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (b Brands) Value() (driver.Value, error) {
+	return json.Marshal(b)
 }
 
-func (this *Brands) Scan(value interface{}) error {
+func (b *Brands) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), b)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, b)
 	default:
 		return errors.New("not supported")
 	}

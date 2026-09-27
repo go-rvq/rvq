@@ -48,6 +48,12 @@ func NewFlashMessage(msg any, color ...string) (m *FlashMessage) {
 	}
 
 	switch t := msg.(type) {
+	// a *FlashMessage is an error too: it is taken as it is, before the error
+	// case would turn it into the text of an error
+	case *FlashMessage:
+		m = t
+	case FlashMessage:
+		*m = t
 	case *ValidationErrors:
 		gErr := t.GetGlobalError()
 		if len(gErr) > 0 {
@@ -66,10 +72,6 @@ func NewFlashMessage(msg any, color ...string) (m *FlashMessage) {
 	case h.HTMLComponent:
 		m.Text = "Bad flash message type. Contact your administrator."
 		m.Color = "error"
-	case *FlashMessage:
-		m = t
-	case FlashMessage:
-		*m = t
 	default:
 		m.Text = fmt.Sprintf("%v", t)
 	}

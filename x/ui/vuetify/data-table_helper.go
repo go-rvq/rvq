@@ -72,7 +72,7 @@ func (b *DataTableHeaderBasic) ToJsonMap() (m map[string]any) {
 
 func (b *DataTableHeaderBasic) FromJsonMap(m map[string]any) {
 	b.Title, _ = m["title"].(string)
-	b.Value, _ = m[":value"]
+	b.Value = m[":value"]
 	b.Key, _ = m["key"].(string)
 	b.Align, _ = m["align"].(string)
 	b.Width, _ = m["width"].(string)

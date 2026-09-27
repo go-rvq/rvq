@@ -17,7 +17,6 @@ type ModelInfo struct {
 
 	slice interface{}
 	index int
-	p     *ModelPermissioner
 }
 
 func (i *ModelInfo) Root() *ModelInfo {

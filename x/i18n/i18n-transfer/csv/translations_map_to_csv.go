@@ -25,10 +25,10 @@ func TranslationsMapToCsv(translationsMap map[string]map[string]string) (err err
 	sort.Strings(locales)
 
 	csvFile, err := os.Create(filename)
-	defer csvFile.Close()
 	if err != nil {
 		log.Fatalf("failed creating file: %s", err)
 	}
+	defer csvFile.Close()
 	writer := csv.NewWriter(csvFile)
 
 	// Append Headers

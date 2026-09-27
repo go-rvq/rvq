@@ -72,7 +72,7 @@ func migrateTables() {
 
 func dropTables() {
 	var err error
-	err = db.Exec(fmt.Sprintf("drop table phone_selling_shopping_site")).Error
+	err = db.Exec("drop table phone_selling_shopping_site").Error
 	if err != nil {
 		panic(err)
 	}

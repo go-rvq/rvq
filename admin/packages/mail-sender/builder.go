@@ -306,7 +306,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		tok, err := config.Exchange(context.TODO(), ctx.R.FormValue("code"))
 
 		if err != nil {
-			return fmt.Errorf("Unable to retrieve token from web: %v", err)
+			return fmt.Errorf("unable to retrieve token from web: %v", err)
 		}
 
 		token := &GmailToken{

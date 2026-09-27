@@ -96,15 +96,6 @@ func InitDB(db *gorm.DB, tables []string) {
 	}
 }
 
-// composeS3Path to generate file path as https://cdn.rvq.com/system/media_libraries/236/file.jpeg.
-func composeS3Path(filePath string) string {
-	endPoint := s3Endpoint
-	if endPoint == "" {
-		endPoint = "https://cdn.rvq.com"
-	}
-	return fmt.Sprintf("%s/system/media_libraries%s", endPoint, filePath)
-}
-
 // GetNonIgnoredTableNames returns all table names except the ignored ones.
 func GetNonIgnoredTableNames(db *gorm.DB) []string {
 	ignoredTableNames := map[string]struct{}{

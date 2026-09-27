@@ -182,23 +182,6 @@ func splitStringSliceSlice(s [][]string, size int) [][][]string {
 	return groups
 }
 
-func splitInterfaceSlice(s []interface{}, size int) [][]interface{} {
-	groupsLen := int(math.Ceil(float64(len(s)) / float64(size)))
-	groups := make([][]interface{}, groupsLen)
-
-	idx := 0
-	for i := 0; i < groupsLen; i++ {
-		idx = i * size
-		if i != groupsLen-1 {
-			groups[i] = s[idx : idx+size]
-		} else {
-			groups[i] = s[idx:]
-		}
-	}
-
-	return groups
-}
-
 func splitReflectSliceValue(s reflect.Value, size int) []reflect.Value {
 	groupsLen := int(math.Ceil(float64(s.Len()) / float64(size)))
 	groups := make([]reflect.Value, 0, groupsLen)

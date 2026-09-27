@@ -49,8 +49,6 @@ type VueEventTagBuilder struct {
 	Calls        []JsCall
 	afterScript  string
 	thenScript   string
-	eventID      string
-	pushState    bool
 }
 
 func Plaid() (r *VueEventTagBuilder) {

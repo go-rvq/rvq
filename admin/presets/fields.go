@@ -707,7 +707,6 @@ func (b *FieldsBuilder) setToObjNilOrDelete(toObj interface{}, formKey string, f
 		panic(err)
 	}
 
-	return
 }
 
 func (b *FieldsBuilder) setWithChildFromObjs(

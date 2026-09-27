@@ -277,65 +277,12 @@ func (mh *ModelHistory) fieldPanel(f string, oldObj, newObj any, am, bm map[stri
 	)
 }
 
-// splitFields separates the fields to compare into text/HTML (rendered through
-// the DetailingBuilder) and structured (rendered as a JSON summary). Empty means
-// every versioned field.
-func (mh *ModelHistory) splitFields(fields []string) (simple, structured []string) {
-	if len(fields) == 0 {
-		fields = mh.resolved
-	}
-	for _, f := range fields {
-		// Only top-level string fields render cleanly through the DetailingBuilder;
-		// nested/indexed paths and non-strings show as a JSON/text summary.
-		if mh.fieldIsSimple(f) && !strings.ContainsAny(f, ".[") {
-			simple = append(simple, f)
-		} else {
-			structured = append(structured, f)
-		}
-	}
-	return
-}
-
-// fieldIsSimple reports whether a field's value is a plain string (text or HTML)
-// — the kind the detail render handles cleanly. Everything else (struct, slice,
-// map, foreign key) is "structured".
-func (mh *ModelHistory) fieldIsSimple(field string) bool {
-	ft, ok := structFieldType(mh.mb.NewModel(), field)
-	if !ok {
-		return true
-	}
-	for ft.Kind() == reflect.Ptr {
-		ft = ft.Elem()
-	}
-	return ft.Kind() == reflect.String
-}
-
-// structuredRows renders each structured field's value as a readable JSON block.
-func structuredRows(m map[string]json.RawMessage, fields []string) h.HTMLComponent {
-	if len(fields) == 0 {
-		return h.Div()
-	}
-	var rows h.HTMLComponents
-	for _, f := range fields {
-		rows = append(rows, h.Div(
-			h.Div(h.Strong(f)).Class("text-caption text-medium-emphasis"),
-			jsonBlock(prettyJSONPath(m, f)),
-		).Class("mb-2"))
-	}
-	return h.Div(rows...).Class("mt-2")
-}
-
 // scaffoldRe matches the hidden form inputs the detail render emits around a
 // field's value (Vue directives, no content).
 var scaffoldRe = regexp.MustCompile(`(?s)<input\b[^>]*>`)
 
 // stripScaffold removes those hidden inputs, leaving the field's clean content.
 func stripScaffold(s string) string { return scaffoldRe.ReplaceAllString(s, "") }
-
-func jsonBlock(s string) h.HTMLComponent {
-	return h.Pre(s).Class("text-caption pa-1").
-		Style("white-space:pre-wrap;overflow-x:auto;background-color:rgba(0,0,0,.03);border-radius:4px")
-}
 
 // prettyJSONPath renders the value at a (possibly nested/indexed) path as
 // readable JSON.

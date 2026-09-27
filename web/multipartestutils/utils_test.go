@@ -1,7 +1,7 @@
 package multipartestutils_test
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/go-rvq/rvq/web/multipartestutils"
@@ -16,7 +16,7 @@ func TestCreateMultipartFileHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	content, err := ioutil.ReadAll(file)
+	content, err := io.ReadAll(file)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -183,7 +183,7 @@ func (p *ModelPermissioner) Lister(r *http.Request, parentID ...ID) *perm.Verifi
 
 func (p *ModelPermissioner) Default() *perm.Verifier {
 	var (
-		listing = !!p.mb.singleton
+		listing = p.mb.singleton
 		parents []ID
 		id      = ID{
 			Fields: []model.Field{model.SingleField("ID")},

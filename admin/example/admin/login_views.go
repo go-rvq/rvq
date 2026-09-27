@@ -117,8 +117,7 @@ func loginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 		}
 
 		r.PageTitle = loginMsgr.LoginPageTitle
-		var bodyForm HTMLComponent
-		bodyForm = Div(
+		var bodyForm HTMLComponent = Div(
 			logoSection,
 			userPassHTML,
 			oauthHTML,

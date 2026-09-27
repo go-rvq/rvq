@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -502,31 +501,6 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 	}
 
 	return
-}
-
-func unixToDate(u string) string {
-	return unixToDatetimeWithFormat(u, "2006-01-02")
-}
-
-func unixToDatetime(u string) string {
-	return unixToDatetimeWithFormat(u, time.RFC3339)
-}
-
-func unixToDatetimeWithFormat(u string, format string) string {
-	return unixToTime(u).Format(format)
-}
-
-// We always use local timezone(server timezone) to parse time.
-// e.g.
-// Server timezone: UTC+8
-// Client timezone: UTC+10
-// Client send 2022-4-15 12:00:00 UTC+10
-// Server would parse it as 2022-4-15 10:00:00 UTC+8
-func unixToTime(u string) time.Time {
-	unix, _ := strconv.ParseInt(u, 10, 64)
-	d := time.Unix(unix, 0)
-
-	return d
 }
 
 func sqlcToCond(sqlc string, mod string) string {

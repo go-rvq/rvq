@@ -209,7 +209,6 @@ type FieldBuilder struct {
 	ToComponentSetup FieldContextSetups
 	Validators       FieldValidators
 	ValueFormatters  FieldValueFormatters
-	defaultValuer    func()
 	audited          bool
 	hint             bool
 	required         bool

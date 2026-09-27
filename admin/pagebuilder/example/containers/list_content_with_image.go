@@ -37,16 +37,16 @@ func (*ListContentWithImage) TableName() string {
 	return "container_list_content_with_image"
 }
 
-func (this ImageListItems) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (ili ImageListItems) Value() (driver.Value, error) {
+	return json.Marshal(ili)
 }
 
-func (this *ImageListItems) Scan(value interface{}) error {
+func (ili *ImageListItems) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), ili)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, ili)
 	default:
 		return errors.New("not supported")
 	}

@@ -79,7 +79,7 @@ func (b *ActionFormBuilder[T]) DecodedForm(f func(fctx *ActionFormContext[T]) er
 }
 
 func (b *ActionFormBuilder[T]) FetchObject(fctx *ActionFormContext[T]) (err error) {
-	obj := b.action.db.mb.NewModel()
+	var obj any
 	if obj, err = b.action.db.Fetch(fctx.ID, fctx.Context); err != nil {
 		return
 	}

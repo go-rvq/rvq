@@ -82,7 +82,7 @@ func PresetsListingCustomizationFields(b *presets.Builder, db *gorm.DB) (
 		SupportLanguages(language.English, language.SimplifiedChinese).
 		RegisterForModule(language.SimplifiedChinese, presets.ModelsI18nModuleKey, Messages_zh_CN)
 
-	mb, cl, ce, dp = PresetsHelloWorld(b, db)
+	mb, _, _, dp = PresetsHelloWorld(b, db)
 
 	cl = mb.Listing("ID", "Name", "Company", "Email").
 		SearchColumns("name", "email").SelectableColumns(true)

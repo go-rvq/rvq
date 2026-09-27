@@ -187,7 +187,7 @@ func checkvalue(ctx *web.EventContext) (er web.EventResponse, err error) {
 }
 
 func (m *MyData) File1Bytes() string {
-	if m.File1 == nil || len(m.File1) == 0 {
+	if len(m.File1) == 0 {
 		return ""
 	}
 	f, err := m.File1[0].Open()

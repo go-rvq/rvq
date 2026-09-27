@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -363,7 +363,7 @@ func TestExample(t *testing.T) {
 200,DaMi11,2021-02-02,100,200,10,6.1,LCD,TRUE,FALSE,dddd,edddd,2000px,5000px,FALSE,TRUE
 `
 
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(csvContent)))
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(csvContent)))
 	assert.NoError(t, err)
 	err = importer.Exec(db, r)
 	assert.NoError(t, err)
@@ -384,7 +384,7 @@ func TestExample(t *testing.T) {
 300,Pear100,,,,,,,FALSE,FALSE,,,,,FALSE,FALSE
 `
 
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(csvContent)))
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(csvContent)))
 	assert.NoError(t, err)
 	err = importer.Exec(db, r)
 	assert.NoError(t, err)
@@ -414,7 +414,7 @@ func TestBatch(t *testing.T) {
 		// 100,Orange13,2021-01-01,80,180,8,6.5,IPS,FALSE,TRUE,yyds,eyyds,3000px,6000px,TRUE,FALSE
 		code := fmt.Sprintf("%d", i+100)
 		csvContentB.WriteString(code)
-		csvContentB.WriteString(fmt.Sprintf(",Orange"))
+		csvContentB.WriteString(",Orange")
 		csvContentB.WriteString(code)
 		csvContentB.WriteString(",2021-01-01,80,180,8,6.5,IPS,FALSE,TRUE,yyds,eyyds,3000px,6000px,TRUE,FALSE\n")
 	}
@@ -422,7 +422,7 @@ func TestBatch(t *testing.T) {
 
 	// batch create
 	maxParamsPerSQLOpt := exchange.MaxParamsPerSQL(100)
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(csvContent)))
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(csvContent)))
 	assert.NoError(t, err)
 	err = importer.Exec(db, r, maxParamsPerSQLOpt)
 	assert.NoError(t, err)
@@ -434,7 +434,7 @@ func TestBatch(t *testing.T) {
 	assert.Equal(t, csvContent, buf.String())
 
 	// batch find
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(csvContent)))
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(csvContent)))
 	assert.NoError(t, err)
 	err = importer.Exec(db, r, maxParamsPerSQLOpt)
 	assert.NoError(t, err)
@@ -452,7 +452,7 @@ func TestBatch(t *testing.T) {
 		// 100,Orange13,2021-01-01,80,180,8,6.5,IPS,FALSE,TRUE,yyds,eyyds,3000px,6000px,TRUE,FALSE
 		code := fmt.Sprintf("%d", i+100)
 		csvContentB.WriteString(code)
-		csvContentB.WriteString(fmt.Sprintf(",Orange"))
+		csvContentB.WriteString(",Orange")
 		csvContentB.WriteString(code)
 		csvContentB.WriteString(",2021-02-01,90,190,9,7.5,IPS+,FALSE,FALSE,,,,,FALSE,FALSE\n")
 	}
@@ -460,12 +460,12 @@ func TestBatch(t *testing.T) {
 		// 100,Orange13,2021-01-01,80,180,8,6.5,IPS,FALSE,TRUE,yyds,eyyds,3000px,6000px,TRUE,FALSE
 		code := fmt.Sprintf("%d", i+100)
 		csvContentB.WriteString(code)
-		csvContentB.WriteString(fmt.Sprintf(",Orangee"))
+		csvContentB.WriteString(",Orangee")
 		csvContentB.WriteString(code)
 		csvContentB.WriteString(",2021-02-01,90,190,9,7.5,IPS+,TRUE,FALSE,yyds2,eyyds2,4000px,7000px,FALSE,TRUE\n")
 	}
 	newCsvContent := csvContentB.String()
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(newCsvContent)))
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(newCsvContent)))
 	assert.NoError(t, err)
 	err = importer.Exec(db, r, maxParamsPerSQLOpt)
 	assert.NoError(t, err)

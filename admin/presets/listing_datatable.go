@@ -88,9 +88,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 	tempPortal := lcb.portals.Temp()
 
-	cellWrapperFunc := func(cell h.MutableAttrHTMLComponent, fieldName, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
-		return cell
-	}
+	var cellWrapperFunc vx.CellWrapperFunc
 
 	if b.cellWrapperFunc != nil {
 		cellWrapperFunc = b.cellWrapperFunc

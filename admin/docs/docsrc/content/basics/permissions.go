@@ -69,11 +69,11 @@ Let's say there is a button on User detailing page used to ban the user. And onl
 First, create a verifier
     `, "`super_admin`")),
 	ch.Code(generated.PermissionNewVerifier).Language("go"),
-	Markdown(fmt.Sprintf(`
+	Markdown(`
 Then inject this verifier to relevant logic, such as
 - whether to show the ban button.
 - validate permission before execute the ban action.
-    `)),
+    `),
 	ch.Code(generated.PermissionVerifierCheck).Language("go"),
 	Markdown(`
 Finally, add policy

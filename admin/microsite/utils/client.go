@@ -10,6 +10,6 @@ type S3Client struct {
 	*s3.Client
 }
 
-func (this S3Client) GetBucket() string {
-	return this.Config.Bucket
+func (sc S3Client) GetBucket() string {
+	return sc.Config.Bucket
 }

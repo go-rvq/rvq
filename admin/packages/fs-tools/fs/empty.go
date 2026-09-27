@@ -7,7 +7,7 @@ import (
 	"github.com/hack-pad/hackpadfs"
 )
 
-var ErrEmptyFS = errors.New("Empty FS")
+var ErrEmptyFS = errors.New("empty FS")
 
 type emptyFS struct {
 }

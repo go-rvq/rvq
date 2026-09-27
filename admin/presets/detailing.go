@@ -990,7 +990,7 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 	if list != nil {
 		listValue := reflect.ValueOf(list)
 		if listValue.Kind() != reflect.Slice {
-			err = errors.New(fmt.Sprintf("the kind of list field is %s, not slice", listValue.Kind()))
+			err = fmt.Errorf("the kind of list field is %s, not slice", listValue.Kind())
 			return
 		}
 		listLen = listValue.Len()

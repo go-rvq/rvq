@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"mime/multipart"
 	"net/http"
 
 	h "github.com/go-rvq/htmlgo"
@@ -83,7 +82,7 @@ func RespondFlashCookie(cookieName, defaultUrl string, oldMessageBytes []byte, c
 		url = defaultUrl
 	}
 	b, _ := json.Marshal(msg)
-	if len(b) > 0 && bytes.Compare(oldMessageBytes, b) != 0 {
+	if len(b) > 0 && !bytes.Equal(oldMessageBytes, b) {
 		b = append(b, []byte("\r"+url)...)
 		http.SetCookie(ctx.W, &http.Cookie{
 			Name:  cookieName,
@@ -218,20 +217,6 @@ func (p *PageBuilder) index(w ResponseWriter, r *http.Request) {
 	if _, err = fmt.Fprintln(w, body); err != nil {
 		panic(err)
 	}
-}
-
-func (p *PageBuilder) parseForm(r *http.Request) *multipart.Form {
-	maxSize := p.maxFormSize
-	if maxSize == 0 {
-		maxSize = DefaulMaxPostSize // 128MB
-	}
-
-	err := r.ParseMultipartForm(maxSize)
-	if err != nil {
-		panic(err)
-	}
-
-	return r.MultipartForm
 }
 
 const EventFuncIDName = "__execute_event__"

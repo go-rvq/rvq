@@ -292,7 +292,7 @@ func RequestToString(r *ladon.Request) string {
 	if r.Subject != "" {
 		s = append(s, fmt.Sprintf("subject=%q", r.Subject))
 	}
-	if r.Context != nil && len(r.Context) > 0 {
+	if len(r.Context) > 0 {
 		b, _ := json.Marshal(r.Context)
 		s = append(s, fmt.Sprintf("context=%v", string(b)))
 	}

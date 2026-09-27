@@ -11,16 +11,16 @@ type FileSystem struct {
 	Url      string
 }
 
-func (this FileSystem) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (fs FileSystem) Value() (driver.Value, error) {
+	return json.Marshal(fs)
 }
 
-func (this *FileSystem) Scan(value interface{}) error {
+func (fs *FileSystem) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), fs)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, fs)
 	default:
 		return errors.New("not supported")
 	}

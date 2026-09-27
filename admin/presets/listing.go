@@ -143,11 +143,7 @@ func (b *ListingBuilder) ModelBuilder() *ModelBuilder {
 
 func (b *ListingBuilder) Only(vs ...any) (r *ListingBuilder) {
 	r = b
-	ivs := make([]interface{}, 0, len(vs))
-	for _, v := range vs {
-		ivs = append(ivs, v)
-	}
-	r.FieldsBuilder = *r.FieldsBuilder.Only(ivs...)
+	r.FieldsBuilder = *r.FieldsBuilder.Only(vs...)
 	return
 }
 
@@ -324,9 +320,6 @@ func (b *ListingBuilder) SetConfigureComponent(configureComponent func(lcb *List
 const (
 	bulkPanelOpenParamName  = "bulkOpen"
 	DeleteConfirmPortalName = "deleteConfirm"
-
-	detailingContentPortalName = "detailingContentPortal"
-	formPortalName             = "formPortal"
 
 	SelectedEventParamName       = "selectedEvent"
 	SelectedEventConfigParamName = "selectedEventConfig"
@@ -756,63 +749,6 @@ func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventRespons
 	return
 }
 
-func (b *ListingBuilder) actionPanel(action *ActionBuilder, ctx *web.EventContext) (r h.HTMLComponent) {
-	msgr := MustGetMessages(ctx.Context())
-
-	var errComp h.HTMLComponent
-
-	if vErr, ok := ctx.Flash.(*web.ValidationErrors); ok {
-		if gErr := vErr.GetGlobalError(); gErr != "" {
-			errComp = VAlert(h.Text(gErr)).
-				Border("left").
-				Type("error").
-				Elevation(2)
-		}
-	}
-
-	onOK := web.Plaid().EventFunc(actions.DoListingAction).
-		Query(ParamAction, action.name).
-		MergeQuery(true)
-	if isInDialogFromQuery(ctx) {
-		onOK.URL(ctx.R.RequestURI)
-	}
-
-	var comp h.HTMLComponent
-	if action.compFunc != nil {
-		var err error
-		if comp, err = action.compFunc("", ctx); err != nil {
-			errComp = VAlert(h.Text(err.Error())).
-				Border("left").
-				Type("error").
-				Elevation(2)
-			return
-		}
-	}
-
-	return VCard(
-		VCardTitle(
-			h.Text(action.NameLabel.label),
-		),
-		VCardText(
-			errComp,
-			comp,
-		),
-		VCardActions(
-			VSpacer(),
-			VBtn(msgr.Cancel).
-				Variant(VariantFlat).
-				Class("ml-2").
-				Attr("@click", closeDialogVarScript),
-
-			VBtn(msgr.OK).
-				Color("primary").
-				Variant(VariantFlat).
-				Theme(ThemeDark).
-				Attr("@click", onOK.Go()),
-		),
-	)
-}
-
 func (b *ListingBuilder) openItemActionDialog(ctx *web.EventContext) (r web.EventResponse, err error) {
 	return b.openActionDialogInternal(b.itemActions, ctx)
 }
@@ -861,10 +797,7 @@ func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ct
 
 	ctx.Resp = &r
 
-	var success bool
-	if success, err = action.Do(b.mb, "", ctx); err != nil || !success {
-		return
-	}
+	_, err = action.Do(b.mb, "", ctx)
 	return
 }
 

@@ -67,7 +67,9 @@ func changeNameEventFunc(mb *presets.ModelBuilder) web.EventFunc {
 		obj := mb.NewModel()
 		id := ctx.Param(presets.ParamID)
 		mid := mb.MustParseRecordID(id)
-		err = eb.Fetcher(obj, mid, ctx)
+		if err = eb.Fetcher(obj, mid, ctx); err != nil {
+			return
+		}
 		obj.(*Customer).Name = "Darwin"
 		err = eb.Saver(obj, mid, ctx)
 		presets.ShowMessage(&r, "Nicely updated", "")

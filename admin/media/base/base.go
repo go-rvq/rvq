@@ -225,7 +225,7 @@ func (b Base) GetURLTemplate(option *Option) (path string) {
 	return
 }
 
-var urlReplacer = regexp.MustCompile("(\\s|\\+)+")
+var urlReplacer = regexp.MustCompile(`(\s|\+)+`)
 
 func getFuncMap(db *gorm.DB, field *schema.Field, filename string) template.FuncMap {
 	hash := func() string { return strings.Replace(time.Now().Format("20060102150405.000000"), ".", "", -1) }

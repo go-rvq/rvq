@@ -43,5 +43,5 @@ func GetProxy(r *http.Request) []string {
 }
 
 func IsTokenValid(v LoginSession) bool {
-	return time.Now().Sub(v.ExpiredAt) > 0
+	return time.Since(v.ExpiredAt) > 0
 }

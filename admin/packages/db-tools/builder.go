@@ -473,7 +473,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 									Color(ColorSuccess).
 									Variant(VariantText).
 									Density(DensityCompact).
-									Attr(":href", fmt.Sprintf(`"?download="+ item.ID`)).
+									Attr(":href", `"?download="+ item.ID`).
 									Class("me-2"),
 								VMenu(
 									web.Slot(

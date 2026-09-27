@@ -7,7 +7,7 @@ import (
 	"github.com/hack-pad/hackpadfs"
 )
 
-var ErrReadOnlyFS = errors.New("Read-only filesystem")
+var ErrReadOnlyFS = errors.New("read-only filesystem")
 
 type ROfs struct {
 	fs hackpadfs.FS

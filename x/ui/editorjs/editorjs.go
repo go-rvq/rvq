@@ -107,7 +107,7 @@ func Parse(bytes []byte) (blocks Blocks, err error) {
 	case '[':
 		err = json.Unmarshal(bytes, &blocks)
 	default:
-		err = errors.New("Unsupported JSON type")
+		err = errors.New("unsupported JSON type")
 	}
 	return
 }

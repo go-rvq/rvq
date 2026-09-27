@@ -15,14 +15,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-type dialogUser struct {
-	ID    uint
-	Name  string
-	Email string
-}
-
-func (u *dialogUser) GetAccountName() string { return u.Email }
-
 // Uma sessão que morre embaixo de uma página aberta não pode levar a página
 // embora: o request da própria página (plaid) volta com 401 e o endereço do
 // diálogo de login, e não com um redirecionamento.

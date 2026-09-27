@@ -129,7 +129,7 @@ func (ab Builder) NewLogModelData() interface{} {
 
 // NewLogModelSlice new a log model slice
 func (ab Builder) NewLogModelSlice() interface{} {
-	sliceType := reflect.SliceOf(reflect.PtrTo(reflect.Indirect(reflect.ValueOf(ab.logModel)).Type()))
+	sliceType := reflect.SliceOf(reflect.PointerTo(reflect.Indirect(reflect.ValueOf(ab.logModel)).Type()))
 	slice := reflect.New(sliceType)
 	slice.Elem().Set(reflect.MakeSlice(sliceType, 0, 0))
 	return slice.Interface()

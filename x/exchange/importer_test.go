@@ -3,7 +3,7 @@ package exchange_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -150,7 +150,7 @@ func TestImport(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			initTables()
-			r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(c.csvContent)))
+			r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(c.csvContent)))
 			assert.NoError(t, err, c.name)
 			err = exchange.NewImporter(&TestExchangeModel{}).
 				Metas(c.metas...).
@@ -190,7 +190,7 @@ func TestReImport(t *testing.T) {
 			}),
 		)
 	// 1st import
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name,Appender
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name,Appender
 1,Tom,aa
 2,Jerry,bb
 `)))
@@ -198,7 +198,7 @@ func TestReImport(t *testing.T) {
 	err = importer.Exec(db, r)
 	assert.NoError(t, err)
 	// 2nd import
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name,Appender
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name,Appender
 1,Tomey,AA
 2,,BB
 3,Spike,cc
@@ -207,7 +207,7 @@ func TestReImport(t *testing.T) {
 	err = importer.Exec(db, r)
 	assert.NoError(t, err)
 	// 3nd import
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name,Appender
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name,Appender
 1,Tomey2,aa
 `)))
 	assert.NoError(t, err)
@@ -245,7 +245,7 @@ func TestEmptyPrimaryKeyValue(t *testing.T) {
 			exchange.NewMeta("Name"),
 		)
 	// 1st import
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name
 ,Tom
 ,Jerry
 `)))
@@ -266,7 +266,7 @@ func TestEmptyPrimaryKeyValue(t *testing.T) {
 		},
 	}, records)
 	// 2nd import
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name
 1,Tomey
 ,Jerry
 ,Spike
@@ -305,7 +305,7 @@ func TestNoPrimaryKeyMeta(t *testing.T) {
 			exchange.NewMeta("Name"),
 		)
 	// 1st import
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`Name
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(`Name
 Tom
 Jerry
 `)))
@@ -326,7 +326,7 @@ Jerry
 		},
 	}, records)
 	// 2nd import
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`Name
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(`Name
 Tom
 Jerry
 `)))
@@ -370,7 +370,7 @@ func TestCompositePrimaryKey(t *testing.T) {
 			return nil
 		}),
 	)
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name,Age,Appender
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name,Age,Appender
 1,Tom,6,aa
 1,Tom2,16,bb
 2,Jerry,5,cc
@@ -404,7 +404,7 @@ func TestCompositePrimaryKey(t *testing.T) {
 		},
 	}, records)
 	// 2nd import
-	r, err = exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name,Age,Appender
+	r, err = exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name,Age,Appender
 1,Tom,7,AA
 1,Tom2,16,BB
 2,Jerry2,6,dd
@@ -460,7 +460,7 @@ func TestNoAffectOnOldData(t *testing.T) {
 			exchange.NewMeta("Name"),
 		)
 	// 1st import
-	r, err := exchange.NewCSVReader(ioutil.NopCloser(strings.NewReader(`ID,Name
+	r, err := exchange.NewCSVReader(io.NopCloser(strings.NewReader(`ID,Name
 1,Tom2
 `)))
 	assert.NoError(t, err)

@@ -29,7 +29,7 @@ func main() {
 		dir := filepath.Base(input)
 		_, err := os.Stat(dir)
 		if err == nil {
-			return fmt.Errorf("%s already exists, remove it first to generate.\n", err)
+			return fmt.Errorf("%s already exists, remove it first to generate", err)
 		}
 		return nil
 	}
@@ -94,7 +94,6 @@ func main() {
 		panic(fmt.Errorf("wrong option"))
 	}
 
-	return
 }
 
 func copyAndReplaceFiles(box embed.FS, dir string, template string, pkg string) {
@@ -138,7 +137,6 @@ func copyAndReplaceFiles(box embed.FS, dir string, template string, pkg string) 
 		runCmd(dir, "go", "mod", "init", pkg)
 		runCmd(dir, "go", "get", "./...")
 	}
-	return
 }
 
 func runCmd(dir string, name string, args ...string) {

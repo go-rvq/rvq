@@ -62,7 +62,7 @@ type Printer struct {
 func (p *Printer) ParseValues(values url.Values) (err error) {
 	if options := values.Get("options"); len(options) > 0 {
 		if err = json.NewDecoder(bytes.NewBufferString(options)).Decode(p); err != nil {
-			err = fmt.Errorf("Error parsing options: %v", err)
+			err = fmt.Errorf("error parsing options: %v", err)
 			return
 		}
 	}

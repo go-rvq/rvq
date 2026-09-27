@@ -132,7 +132,7 @@ func (vc *ViewCommon) PasswordInputWithStrengthMeter(in *VTextFieldBuilder, id s
 					// TODO reset color
 					Attr(":color", fmt.Sprintf(`["secondary", "error-darken-1", "error", "warning", "warning-lighten-1", "success"][(vars.meter_score?vars.meter_score(form.%s):0)]`, id)),
 			).Slot("{ locals }").
-				LocalsInit(fmt.Sprintf(`{ meter_score:  0 }`)),
+				LocalsInit(`{ meter_score:  0 }`),
 		).ID(fmt.Sprintf("password_%s", id)).
 			Attr("v-show", fmt.Sprintf("!!form.%s", id)),
 	)

@@ -385,5 +385,4 @@ func (b *FieldDefaults) builtInFieldTypes() {
 		ComponentFunc(RuneFieldComponentFunc)
 
 	b.Disable("ID")
-	return
 }

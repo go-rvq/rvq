@@ -36,9 +36,8 @@ type SEO struct {
 	// For example, if the variable field in the database contains a:"b", then {{a}} will be replaced with b.
 	settingVars map[string]struct{}
 
-	finalContextVarsCache   map[string]ContextVarFunc
-	finalMetaPropsCache     map[string]ContextVarFunc
-	finalAvailableVarsCache map[string]struct{}
+	finalContextVarsCache map[string]ContextVarFunc
+	finalMetaPropsCache   map[string]ContextVarFunc
 }
 
 func (seo *SEO) GetName() string {
@@ -229,27 +228,6 @@ func (seo *SEO) getFinalMetaProps() map[string]ContextVarFunc {
 			}
 		}
 		return seo.finalMetaPropsCache
-	}
-}
-
-func (seo *SEO) getAvailableVars() map[string]struct{} {
-	if seo == nil {
-		return nil
-	}
-	if seo.finalAvailableVarsCache != nil {
-		return seo.finalAvailableVarsCache
-	} else {
-		seo.finalAvailableVarsCache = make(map[string]struct{})
-		for varName := range seo.settingVars {
-			seo.finalAvailableVarsCache[varName] = struct{}{}
-		}
-		for varName := range seo.contextVars {
-			seo.finalAvailableVarsCache[varName] = struct{}{}
-		}
-		for varName := range seo.parent.getAvailableVars() {
-			seo.finalAvailableVarsCache[varName] = struct{}{}
-		}
-		return seo.finalAvailableVarsCache
 	}
 }
 

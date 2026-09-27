@@ -17,10 +17,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-const (
-	I18nActivityKey i18n.ModuleKey = "I18nActivityKey"
-	Timeline                       = "Timeline"
-)
+const I18nActivityKey i18n.ModuleKey = "I18nActivityKey"
+
+const Timeline = "Timeline"
 
 func (ab *Builder) Install(b *presets.Builder) error {
 	b.I18n().

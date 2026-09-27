@@ -21,13 +21,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// localizeKey is the type of the localization keys put in a context.
+type localizeKey string
+
 const (
 	Localize   = "l10n_LocalizeEvent"
 	DoLocalize = "l10n_DoLocalizeEvent"
 
-	FromID      = "l10n_DoLocalize_FromID"
-	FromVersion = "l10n_DoLocalize_FromVersion"
-	FromLocale  = "l10n_DoLocalize_FromLocale"
+	// the record a localization copies from, in the request's context
+	FromID      localizeKey = "l10n_DoLocalize_FromID"
+	FromVersion localizeKey = "l10n_DoLocalize_FromVersion"
+	FromLocale  localizeKey = "l10n_DoLocalize_FromLocale"
 
 	LocalizeFrom = "Localize From"
 	LocalizeTo   = "Localize To"

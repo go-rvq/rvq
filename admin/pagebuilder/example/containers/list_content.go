@@ -41,16 +41,16 @@ func (*ListContent) TableName() string {
 
 type ListItems []*ListItem
 
-func (this ListItems) Value() (driver.Value, error) {
-	return json.Marshal(this)
+func (li ListItems) Value() (driver.Value, error) {
+	return json.Marshal(li)
 }
 
-func (this *ListItems) Scan(value interface{}) error {
+func (li *ListItems) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case string:
-		return json.Unmarshal([]byte(v), this)
+		return json.Unmarshal([]byte(v), li)
 	case []byte:
-		return json.Unmarshal(v, this)
+		return json.Unmarshal(v, li)
 	default:
 		return errors.New("not supported")
 	}

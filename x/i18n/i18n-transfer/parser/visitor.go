@@ -108,7 +108,7 @@ func (v *Visitor) Visit(node ast.Node) ast.Visitor {
 
 // declare a Visitor
 // walk all files and fill the RigisterMap, LocalesMap and Variables
-func newVisitorAndWalk(fset *token.FileSet, pkgs map[string]*ast.Package, projectPath string) (v *Visitor, err error) {
+func newVisitorAndWalk(fset *token.FileSet, pkgs map[string]*Package, projectPath string) (v *Visitor, err error) {
 	v = &Visitor{
 		RigisterMap:      make(map[string][]MessageStruct),
 		LocalesMap:       make(map[string]string),

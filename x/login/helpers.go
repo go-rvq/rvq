@@ -1,8 +1,6 @@
 package login
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,12 +15,6 @@ func underlyingReflectType(t reflect.Type) reflect.Type {
 		return underlyingReflectType(t.Elem())
 	}
 	return t
-}
-
-func genHashSalt() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }
 
 func MustSetQuery(u string, keyVals ...string) string {

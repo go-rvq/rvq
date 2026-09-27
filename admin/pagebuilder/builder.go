@@ -707,7 +707,7 @@ func (b *Builder) configDetailLayoutFunc(
 					Height(2).
 					Color(pb.GetProgressBarColor()),
 			)
-			pageAppbarContent = h.Components(
+			pageAppbarContent = append(pageAppbarContent,
 				VAppBarNavIcon().
 					Density(DensityCompact).
 					Class("mr-2").
@@ -804,25 +804,19 @@ func (b *Builder) configDetailLayoutFunc(
 									h.H1("{{vars.pageTitle}}").Class("ml-4"),
 									versionBadge.Class("mt-2 ml-2"),
 								).Class("d-inline-flex align-center"),
-								tabContent.Body.(h.HTMLComponent),
+								tabContent.Body,
 							),
 						).Class("pa-6"),
 					),
 				).Attr("id", "vt-app").Attr(web.VAssign("vars", `{presetsRightDrawer: false, presetsDialog: false, dialogPortalName: false, presetsListingDialog: false, presetsMessage: {show: false, color: "success", message: ""}}`)...),
-			).Slot(" { locals } ").LocalsInit(fmt.Sprintf(`{action: "", commonConfirmDialog: false }`))
+			).Slot(" { locals } ").LocalsInit(`{action: "", commonConfirmDialog: false }`)
 			return
 		}
 	})
-	return
 }
 
 func versionCount(db *gorm.DB, obj interface{}, id string, localCode string) (count int64) {
 	db.Model(obj).Where("id = ? and locale_code = ?", id, localCode).Count(&count)
-	return
-}
-
-func scheduleCount(db *gorm.DB, p *Page) (count int64) {
-	db.Model(&Page{}).Where("id = ? and version != ? and status = ? and (scheduled_start_at is not null or scheduled_end_at is not null)", p.ID, p.Version.Version, publish.StatusDraft).Count(&count)
 	return
 }
 
@@ -1002,26 +996,6 @@ func getTplPortalComp(ctx *web.EventContext, db *gorm.DB, selectedID string) (h.
 	), nil
 }
 
-// Unused
-func clearTemplate(_ *gorm.DB) web.EventFunc {
-	return func(ctx *web.EventContext) (er web.EventResponse, err error) {
-		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nPageBuilderKey, Messages_en_US).(*Messages)
-		er.UpdatePortal(selectedTemplatePortal,
-			VRow(
-				VCol(
-					h.Input("").Type("hidden").Attr(web.VField(templateSelectedID, "")...),
-					VTextField().Readonly(true).Label(msgr.SelectedTemplateLabel).ModelValue(msgr.Blank).Density(DensityCompact).Variant(VariantOutlined),
-				).Cols(5),
-				VCol(
-					VBtn(msgr.ChangeTemplate).Color(ColorPrimary).
-						Attr("@click", web.Plaid().Query(templateSelectedID, "").EventFunc(openTemplateDialogEvent).Go()),
-				).Cols(5),
-			),
-		)
-		return
-	}
-}
-
 func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 	return func(ctx *web.EventContext) (er web.EventResponse, err error) {
 		gmsgr := presets.MustGetMessages(ctx.Context())
@@ -1077,7 +1051,7 @@ func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 						VSpacer(),
 						VBtn("").Icon("mdi-close").
 							Size(SizeLarge).
-							On("click", fmt.Sprintf("vars.showTemplateDialog=false")),
+							On("click", "vars.showTemplateDialog=false"),
 					),
 					VCardActions(
 						VRow(tplHTMLComponents...),
@@ -1093,7 +1067,7 @@ func openTemplateDialog(db *gorm.DB, prefix string) web.EventFunc {
 				).Tile(true),
 			).MaxWidth("80%").
 				Attr(web.VAssign("vars", `{showTemplateDialog: false}`)...).
-				Attr("v-model", fmt.Sprintf("vars.showTemplateDialog")),
+				Attr("v-model", "vars.showTemplateDialog"),
 		)
 		er.RunScript = `setTimeout(function(){ vars.showTemplateDialog = true }, 100)`
 		return
@@ -1196,7 +1170,6 @@ func (b *Builder) configSharedContainer(pb *presets.Builder, r *ModelBuilder) {
 	if b.l10n != nil {
 		pm.Use(b.l10n)
 	}
-	return
 }
 
 func (b *Builder) configDemoContainer(pb *presets.Builder) (pm *presets.ModelBuilder) {
@@ -1657,13 +1630,13 @@ func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, mb := range b.models {
 		// The same address previewHref builds: the model's URI, which carries
 		// its menu group, not the name derived from the type.
-		if strings.Index(r.RequestURI, b.prefix+"/"+mb.mb.Info().URI()+"/preview") >= 0 {
+		if strings.Contains(r.RequestURI, b.prefix+"/"+mb.mb.Info().URI()+"/preview") {
 			mb.preview.ServeHTTP(w, r)
 			return
 		}
 	}
 	if b.images != nil {
-		if strings.Index(r.RequestURI, path.Join(b.prefix, b.imagesPrefix)) >= 0 {
+		if strings.Contains(r.RequestURI, path.Join(b.prefix, b.imagesPrefix)) {
 			b.images.ServeHTTP(w, r)
 			return
 		}

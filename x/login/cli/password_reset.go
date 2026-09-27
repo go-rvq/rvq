@@ -75,6 +75,7 @@ func PasswordReset[T any](context func(ctx *cli.CommandContext) (*PasswordResetC
 			}
 
 			if pwd2 != pwd {
+				//lint:ignore ST1005 shown to the user as a sentence
 				err = fmt.Errorf("Passwords not equal")
 				return
 			}

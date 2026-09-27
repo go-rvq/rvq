@@ -1,7 +1,7 @@
 package sitemap
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,7 +51,7 @@ func TestRobotsServeHTTP(t *testing.T) {
 		t.Error(err)
 	}
 
-	s, err := ioutil.ReadAll(resp.Body)
+	s, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Error(err)
 	}

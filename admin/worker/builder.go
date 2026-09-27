@@ -297,11 +297,6 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		return err
 	})
 
-	type JobSelectItem struct {
-		Label string
-		Value string
-	}
-
 	eb.Field("Job").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		job := field.Obj.(*Job)
 		return web.Portal(b.jobSelectList(ctx, job.Job)).Name("worker_jobSelectList")

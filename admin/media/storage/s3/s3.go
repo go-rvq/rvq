@@ -178,6 +178,9 @@ func (client Client) Put(urlPath string, reader io.Reader) (*storage.Object, err
 
 	key := client.ToS3Key(urlPath)
 	buffer, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
 
 	fileType := mime.TypeByExtension(path.Ext(urlPath))
 	if fileType == "" {

@@ -105,8 +105,7 @@ func defaultLoginPage(vh *ViewHelper) web.PageFunc {
 		}
 
 		r.PageTitle = msgr.LoginPageTitle
-		var bodyForm HTMLComponent
-		bodyForm = Div(
+		var bodyForm HTMLComponent = Div(
 			userPassHTML,
 			oauthHTML,
 			If(len(languagesHTML) > 0,
@@ -404,6 +403,10 @@ func defaultTOTPSetupPage(vh *ViewHelper) web.PageFunc {
 				url.QueryEscape(totpSecret),
 			),
 		)
+		if err != nil {
+			r.Body = DefaultViewCommon.ErrorBody(err.Error())
+			return
+		}
 
 		img, err := key.Image(200, 200)
 		if err != nil {
