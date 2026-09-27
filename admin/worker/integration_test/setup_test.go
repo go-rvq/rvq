@@ -19,6 +19,7 @@ import (
 	"github.com/go-rvq/rvq/admin/worker"
 	integration "github.com/go-rvq/rvq/admin/worker/integration_test"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
@@ -37,10 +38,10 @@ func TestMain(m *testing.M) {
 	defer env.TearDown()
 	db = env.DB
 
-	pb = presets.New().
+	pb = presets.New(i18n.New()).
 		DataOperator(gorm2op.DataOperator(db))
 
-	wb := worker.NewWithQueue(db, integration.Que)
+	wb := worker.New(pb.I18n(), db, worker.WithQueue(integration.Que))
 	pb.Use(wb)
 	addJobs(wb)
 	wb.Listen()
@@ -76,12 +77,12 @@ func addJobs(w *worker.Builder) {
 			job.AddLog(fmt.Sprintf("Argument %#+v", jobInfo.Argument))
 			return nil
 		})
-	ajb.GetResourceBuilder().Editing().Field("F1").ComponentFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	ajb.GetResourceBuilder().Editing().Field("F1").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		var vErr web.ValidationErrors
 		if ve, ok := ctx.Flash.(*web.ValidationErrors); ok {
 			vErr = *ve
 		}
-		return VTextField().Attr(web.VField(field.Name, field.Value(obj))...).Label(field.Label).ErrorMessages(vErr.GetFieldErrors(field.Name)...)
+		return VTextField().Attr(web.VField(field.Name, field.Value())...).Label(field.Label).ErrorMessages(vErr.GetFieldErrors(field.Name)...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 		v := ctx.R.FormValue("F1")
 		obj.(*ArgJobResource).F1 = v
@@ -159,13 +160,13 @@ func mustCreateJob(form map[string]string) {
 		mw.WriteField(k, v)
 	}
 	mw.Close()
-	r := httptest.NewRequest(http.MethodPost, "/workers?__execute_event__=presets_Update", rBody)
+	r := httptest.NewRequest(http.MethodPost, "/workers?__execute_event__=presets_Create", rBody)
 	r.Header.Add("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", mw.Boundary()))
 	w := httptest.NewRecorder()
 	pb.ServeHTTP(w, r)
 	body := w.Body.String()
 	if !strings.Contains(body, "success") {
-		panic("create job failed")
+		panic("create job failed: " + body)
 	}
 }
 

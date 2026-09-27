@@ -30,6 +30,11 @@ GO_TEST_PKGS := \
 	./admin/publish \
 	./admin/example/integration \
 	./admin/docs/docsrc/examples/examples_presets \
+	./admin/docs/docsrc/examples/examples_admin \
+	./admin/pagebuilder/example \
+	./admin/worker/integration_test \
+	./admin/media/integration \
+	./admin/media/media_library \
 	./admin/seo \
 	./admin/packages/... \
 	./thirdpart/...

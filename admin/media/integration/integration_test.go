@@ -2,11 +2,16 @@ package integration_test
 
 import (
 	"embed"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/media/oss"
+	"github.com/go-rvq/rvq/admin/media/storage"
+	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
@@ -31,8 +36,8 @@ func setup() (db *gorm.DB) {
 	var err error
 	db = TestDB
 
-	db = db.Debug()
-	// db.Logger = db.Logger.LogMode(logger.Info)
+	// the records get UUID keys, as media.New arranges in an app
+	uuidkey.MustRegister(db)
 
 	if err = db.AutoMigrate(
 		&media_library.MediaLibrary{},
@@ -40,7 +45,7 @@ func setup() (db *gorm.DB) {
 		panic(err)
 	}
 
-	oss.Storage = filesystem.New("/tmp/media_test")
+	oss.Storage = storage.NewFileSystem("/tmp/media_test")
 
 	return
 }
@@ -60,8 +65,17 @@ func TestUpload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = base.SaveUploadAndCropImage(db, &m)
+	err = base.SaveUploadAndCropImage(&base.Config{}, db, &m)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// stored under the key's two levels (uuidkey.ShortPath)
+	dir := "/system/media_libraries/" + uuidkey.ShortPath(m.ID) + "/"
+	if !strings.HasPrefix(m.File.Url, dir) {
+		t.Fatalf("url %q is not under %q", m.File.Url, dir)
+	}
+	if _, err := os.Stat(filepath.Join("/tmp/media_test", m.File.Url)); err != nil {
+		t.Errorf("the file is not where its url says: %v", err)
 	}
 }

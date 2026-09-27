@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/go-rvq/rvq/admin/publish"
 	"github.com/go-rvq/rvq/admin/seo"
 	"github.com/go-rvq/rvq/web/multipartestutils"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/theplant/gofixtures"
 	"github.com/theplant/testenv"
@@ -48,9 +50,13 @@ display_order) VALUES (1, 1, 'pages', 'v1','International', 'Header', 1, 1),(2, 
 `, []string{"page_builder_pages", "page_builder_containers", "container_headers"}),
 )
 
+// formSignRe reads the signed record state from a rendered form (its quotes
+// come escaped in the event response's JSON).
+var formSignRe = regexp.MustCompile(`__formSign\\?":\s*\\?"([^"\\]+)`)
+
 func initPageBuilder() (*gorm.DB, *pagebuilder.Builder, *presets.Builder) {
 	db := TestDB
-	b := presets.New().DataOperator(gorm2op.DataOperator(db)).URIPrefix("/admin")
+	b := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db)).URIPrefix("/admin")
 	pb := example.ConfigPageBuilder(db, "/page_builder", "", b.I18n())
 	ab := activity.New(db).CreatorContextKey(login.UserKey).TabHeading(
 		func(log activity.ActivityLogInterface) string {
@@ -72,14 +78,36 @@ func TestPages(t *testing.T) {
 			Debug: true,
 			ReqFunc: func() *http.Request {
 				pageBuilderData.TruncatePut(dbr)
+				// the edit form signs the record's state; the update carries it
+				// back, as the browser does
+				w := httptest.NewRecorder()
+				p.ServeHTTP(w, multipartestutils.NewMultipartBuilder().
+					PageURL("/admin/pages").
+					EventFunc(actions.Edit).
+					Query(presets.ParamID, "1_v1_International").
+					BuildEventFuncRequest())
+				stamp := formSignRe.FindStringSubmatch(w.Body.String())
+				if stamp == nil {
+					t.Fatalf("the edit form carries no %s", presets.RecordStampFormKey)
+				}
 				return multipartestutils.NewMultipartBuilder().
 					PageURL("/admin/pages").
 					EventFunc(actions.Update).
 					Query(presets.ParamID, "1_v1_International").
 					AddField("Title", "Hello Page").
+					AddField("Slug", "123").
+					AddField(presets.RecordStampFormKey, stamp[1]).
 					BuildEventFuncRequest()
 			},
-			ExpectRunScriptContainsInOrder: []string{"success"},
+			// saved: the form's save callbacks run with the record's id
+			ExpectRunScriptContainsInOrder: []string{"onSaveCallbacks", "1_v1_International"},
+			EventResponseMatch: func(t *testing.T, er *multipartestutils.TestEventResponse) {
+				var title string
+				db.Raw(`SELECT title FROM page_builder_pages WHERE id = 1 AND version = 'v1' AND locale_code = 'International'`).Scan(&title)
+				if title != "Hello Page" {
+					t.Errorf("title = %q, want %q", title, "Hello Page")
+				}
+			},
 		},
 	}
 
@@ -117,7 +145,7 @@ func TestPageBuilder(t *testing.T) {
 					AddField("id", "1").
 					BuildEventFuncRequest()
 			},
-			ExpectRunScriptContainsInOrder: []string{"page_builder_ReloadRenderPageOrTemplateEvent", "pageBuilderRightContentPortal", "overlay", "content"},
+			ExpectRunScriptContainsInOrder: []string{"page_builder_ReloadRenderPageOrTemplateEvent", "pageBuilderRightContentPortal", "overlay", "Content"},
 		},
 		{
 			Name:  "Delete Container Confirmation Event",

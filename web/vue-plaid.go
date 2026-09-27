@@ -457,7 +457,7 @@ func (v VueEventTagBuilderSlice) Encode() string {
 func (v *VueEventTagBuilderSlice) Decode(s string) {
 	r := flate.NewReader(bytes.NewBufferString(s))
 	var elems = make([][]JsCall, 0)
-	json.NewDecoder(r).Decode(elems)
+	json.NewDecoder(r).Decode(&elems)
 	*v = make([]*VueEventTagBuilder, len(elems))
 	for i, elem := range elems {
 		(*v)[i] = &VueEventTagBuilder{Calls: elem}

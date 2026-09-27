@@ -466,7 +466,7 @@ loop:
 	}
 
 	if len(index) > 0 {
-		unique.Sort(unique.IntSlice{&index})
+		unique.Sort(unique.IntSlice{P: &index})
 	}
 
 	for _, i := range index {

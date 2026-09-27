@@ -63,10 +63,10 @@ func VField(name string, value interface{}) []interface{} {
 }
 
 func VModel(name string) []interface{} {
-	return append([]interface{}{
+	return []interface{}{
 		"v-model",
 		name,
-	})
+	}
 }
 
 func GlobalEvents() *h.HTMLTagBuilder {

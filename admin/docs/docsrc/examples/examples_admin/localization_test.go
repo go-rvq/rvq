@@ -3,7 +3,6 @@ package examples_admin
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -117,9 +116,11 @@ func TestLocalization(t *testing.T) {
 				return req
 			},
 			EventResponseMatch: func(t *testing.T, er *multipartestutils.TestEventResponse) {
+				// deleted softly, in its own locale: the locale is not renamed
+				// (a later translation to China frees the key, see l10n/events.go)
 				var m L10nModel
 				TestDB.Unscoped().Find(&m, "id = ? AND deleted_at IS NOT NULL", 1)
-				if !strings.Contains(m.LocaleCode, "del") {
+				if m.LocaleCode != "China" {
 					t.Errorf("delete is wrong %#+v", m)
 				}
 			},

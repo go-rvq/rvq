@@ -428,9 +428,14 @@ func (b *DataOperatorBuilder) NewCallbackState(db *gorm.DB, obj any, ctx *web.Ev
 	sharedDB.Statement = &gorm.Statement{
 		DB:       sharedDB,
 		ConnPool: db.Statement.ConnPool,
-		Settings: db.Statement.Settings,
 		Context:  db.Statement.Context,
 	}
+	// the settings are copied entry by entry: a sync.Map copied as a value
+	// shares its internals with the original
+	db.Statement.Settings.Range(func(k, v any) bool {
+		sharedDB.Statement.Settings.Store(k, v)
+		return true
+	})
 
 	return &CallbackState{
 		CommonDB: b.db.Session(&gorm.Session{}),

@@ -8,6 +8,7 @@ import (
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/theplant/testenv"
 	"gorm.io/gorm"
 )
@@ -30,7 +31,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	PresetsBuilder = presets.New().DataOperator(gorm2op.DataOperator(DB)).URIPrefix("/samples/publish-example")
+	PresetsBuilder = presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(DB)).URIPrefix("/samples/publish-example")
 	examples_admin.PublishExample(PresetsBuilder, DB)
 
 	m.Run()

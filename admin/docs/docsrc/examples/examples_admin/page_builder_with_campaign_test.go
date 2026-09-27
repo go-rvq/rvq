@@ -76,7 +76,9 @@ func TestPageBuilderCampaign(t *testing.T) {
 					t.Errorf("error portalName %v", er.UpdatePortals[0].Name)
 				}
 			},
-			ExpectPortalUpdate0ContainsInOrder: []string{"Editing MyContent 1", "my-contents"},
+			// the panel is the container's form (editor.go): its auto-save, then
+			// the record's value
+			ExpectPortalUpdate0ContainsInOrder: []string{`url("/page_builder/my-contents")`, "page_builder_AutoSaveContainerEvent", `"Text": "my-contents"`},
 		},
 		{
 			Name:  "CampaignContents edit",
@@ -90,7 +92,7 @@ func TestPageBuilderCampaign(t *testing.T) {
 					t.Errorf("error portalName %v", er.UpdatePortals[0].Name)
 				}
 			},
-			ExpectPortalUpdate0ContainsInOrder: []string{"Editing CampaignContent 1", "campaign-contents"},
+			ExpectPortalUpdate0ContainsInOrder: []string{`url("/page_builder/campaign-contents")`, "page_builder_AutoSaveContainerEvent"},
 		},
 		{
 			Name:  "Campaign add container MyContent",
