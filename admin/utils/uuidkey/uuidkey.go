@@ -108,3 +108,20 @@ func MustRegister(db *gorm.DB) {
 		panic(err)
 	}
 }
+
+// Ptr is id as a nullable key: a pointer to a copy, or nil for uuid.Nil — what
+// a nullable foreign-key field holds.
+func Ptr(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
+	}
+	return &id
+}
+
+// Val is the key a nullable field holds, or uuid.Nil when it holds none.
+func Val(p *uuid.UUID) uuid.UUID {
+	if p == nil {
+		return uuid.Nil
+	}
+	return *p
+}
