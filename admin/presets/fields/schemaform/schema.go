@@ -30,7 +30,7 @@ type Schema struct {
 	// schema says about how it is DRAWN, not about the value.
 	Meta Meta
 	// Layout is how the schema is drawn, one of the registered layouts (see
-	// Layout): LayoutForm (each record a form, one under the other),
+	// Layout): LayoutForm, the list (each record a card of its form, one under the other),
 	// LayoutTable (one row per record) or LayoutGrid (each record a card).
 	// Written `[layout="table"]`, or with its config
 	// `[layout={name: "grid", columns: 3}]`.

@@ -522,18 +522,30 @@ func TestListItemTitleField(t *testing.T) {
 	}
 }
 
-// One item does not run into the next: there is a line between them — between,
-// so the first has none above it.
+// One item does not run into the next: a record is a card, a value a row with
+// a line between it and the next — between, so the first has none above it.
 func TestComponentFuncListSeparatesItems(t *testing.T) {
 	got := render(t, New(), "[]{label str; href str}")
 
-	if !strings.Contains(got, `<v-divider v-if='itemIndex > 0'`) {
-		t.Errorf("a lista não separa um item do outro:\n%s", got)
+	// the default list of records: each record a card, with its remove button
+	if n := strings.Count(got, "<v-card "); n != 1 {
+		t.Errorf("cada registro é um card, um só dentro do v-for, got %d:\n%s", n, got)
 	}
-	if strings.Count(got, "<v-divider") != 1 {
-		t.Errorf("a linha é uma só, dentro do v-for:\n%s", got)
+	for _, want := range []string{`<v-card :variant='"outlined"'`, "<v-card-text", "<v-card-actions", "mdi-delete-outline",
+		`<div v-if='itemIndex > 0' class='mt-3'>`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("sem %s:\n%s", want, got)
+		}
 	}
-	// and the item itself is not glued to the card's edge
+	if strings.Contains(got, "<v-divider") {
+		t.Errorf("um card tem bordas: a linha sobra:\n%s", got)
+	}
+
+	// a list of plain values stays rows, a line between them
+	got = render(t, New(), "[]str")
+	if !strings.Contains(got, `<v-divider v-if='itemIndex > 0'`) || strings.Contains(got, "<v-card ") {
+		t.Errorf("valores: linhas, não cards:\n%s", got)
+	}
 	if !strings.Contains(got, `class='flex-grow-1 px-2'`) {
 		t.Errorf("o item não tem respiro nas laterais:\n%s", got)
 	}

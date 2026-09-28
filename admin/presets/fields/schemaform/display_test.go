@@ -87,12 +87,15 @@ func TestDisplayValues(t *testing.T) {
 	mustNotContain(t, got, "<li>")
 }
 
-// A list of records laid out as forms: every record, with a line between them.
+// The default list of records: every record a card, a space between them.
 func TestDisplayRecordsDetail(t *testing.T) {
 	got := show(t, New(), "[]{label str; href}", "- label: A\n  href: /a\n- label: B\n  href: /b\n", false)
 	mustContain(t, got, "A", "/a", "B", "/b", "Href")
-	if n := strings.Count(got, "<v-divider"); n != 1 {
-		t.Errorf("want 1 divider between 2 records, got %d:\n%s", n, got)
+	if n := strings.Count(got, "<v-card "); n != 2 {
+		t.Errorf("want a card per record, got %d:\n%s", n, got)
+	}
+	if strings.Count(got, "class='mt-3'") != 1 {
+		t.Errorf("a space between the cards, not before the first:\n%s", got)
 	}
 }
 

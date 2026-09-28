@@ -91,8 +91,8 @@
 // written as code, whose fields are what it may be told, typed, with their
 // defaults — and the ones there are by default:
 //
-//   - "form" (the default): each record a form, one under the other. It is
-//     told nothing.
+//   - "form" (the default, the list): each record a card of its form, one
+//     under the other. It is told nothing.
 //   - "table": one row per record, one column per field.
 //     `class Config { [fields=true, empty_as_all, sorted] columns []Field }`
 //     — the fields it shows, in order (symbols name them: `#label` is the

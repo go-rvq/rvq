@@ -192,15 +192,17 @@ func (b *Builder) showValues(schema *Schema, c *Context, items []any) h.HTMLComp
 	return h.Ul(lis...).Class("ps-4 mb-0")
 }
 
-// showRecords shows a list of records laid out as forms: each record as its
-// labelled fields, a line between one and the next — as the editor draws them.
+// showRecords shows a list of records laid out as the default list: each
+// record a card of its labelled fields, one under the other — as the editor
+// draws them.
 func (b *Builder) showRecords(schema *Schema, c *Context, items []any) h.HTMLComponent {
-	comps := make([]h.HTMLComponent, 0, len(items)*2)
+	comps := make([]h.HTMLComponent, len(items))
 	for i, it := range items {
+		card := v.VCard(v.VCardText(b.showRecord(schema, c, it))).Variant(v.VariantOutlined)
 		if i > 0 {
-			comps = append(comps, v.VDivider().Class("my-2"))
+			card.Class("mt-3")
 		}
-		comps = append(comps, h.Div(b.showRecord(schema, c, it)).Class("px-2"))
+		comps[i] = card
 	}
 	return h.Div(comps...)
 }

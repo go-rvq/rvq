@@ -425,26 +425,34 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	//
 	// The sorter sorts; adding and removing an item are ours too.
 	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
-	row := h.Div(item).Class("flex-grow-1 px-2")
-	if !readOnly {
-		row = h.Div(
-			h.Div(item).Class("flex-grow-1 px-2"),
-			v.VBtn("").Icon("mdi-delete-outline").
-				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
-				Class("mt-2 me-2").
-				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
-		).Class("d-flex align-start ga-2")
+	var row h.HTMLComponent
+	if schema.Item == nil {
+		// A record is a card: its form, and a button to remove it.
+		row = listCard(item, c, readOnly)
+	} else {
+		row = h.Div(item).Class("flex-grow-1 px-2")
+		if !readOnly {
+			row = h.Div(
+				h.Div(item).Class("flex-grow-1 px-2"),
+				v.VBtn("").Icon("mdi-delete-outline").
+					Variant(v.VariantText).Size(v.SizeSmall).Color("error").
+					Class("mt-2 me-2").
+					Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
+			).Class("d-flex align-start ga-2")
+		}
+	}
+
+	// Between one value and the next, a line; a record is a card, with edges
+	// of its own, and a space. Before each item but the first: the separator
+	// is BETWEEN them.
+	sep := h.HTMLComponent(v.VDivider().Attr("v-if", "itemIndex > 0").Class("my-2"))
+	if schema.Item == nil {
+		sep = h.Div().Attr("v-if", "itemIndex > 0").Class("mt-3")
 	}
 
 	sorter := vx.VXArraySorter(
 		web.Slot(
-			h.Div(
-				// A line between one item and the next, so a record of several
-				// fields does not run into the one below it. Before each item
-				// but the first: the separator is BETWEEN them.
-				v.VDivider().Attr("v-if", "itemIndex > 0").Class("my-2"),
-				row,
-			).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
+			h.Div(sep, row).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
 			addItemButton(schema, c, readOnly),
 		).Name("default"),
 	).
@@ -626,19 +634,9 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 func (b *Builder) grid(schema *Schema, c *Context) h.HTMLComponent {
 	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
 
-	body := []h.HTMLComponent{v.VCardText(b.record(schema, c, ItemVar, c.Path))}
-	if !readOnly {
-		body = append(body, v.VCardActions(
-			v.VSpacer(),
-			v.VBtn("").Icon("mdi-delete-outline").
-				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
-				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
-		))
-	}
-
 	grid := v.VRow(
 		gridCol(schema,
-			v.VCard(body...).Variant(v.VariantOutlined).Class("h-100"),
+			listCard(b.record(schema, c, ItemVar, c.Path), c, readOnly).Class("h-100"),
 		).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
 	).Dense(true)
 
@@ -653,6 +651,21 @@ func (b *Builder) grid(schema *Schema, c *Context) h.HTMLComponent {
 		sorter.Attr("item-title", title)
 	}
 	return sorter
+}
+
+// listCard is one record of a list as a card: its form and, unless the list is
+// read only, a button to remove it — the default list's and the grid's.
+func listCard(record h.HTMLComponent, c *Context, readOnly bool) *v.VCardBuilder {
+	body := []h.HTMLComponent{v.VCardText(record)}
+	if !readOnly {
+		body = append(body, v.VCardActions(
+			v.VSpacer(),
+			v.VBtn("").Icon("mdi-delete-outline").
+				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
+				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
+		))
+	}
+	return v.VCard(body...).Variant(v.VariantOutlined)
 }
 
 // gridCol is one cell of a grid: the whole width on a phone, two per row on a
