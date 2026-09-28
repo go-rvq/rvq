@@ -19,6 +19,12 @@ type MessageInit struct {
 	Help   string
 	Hint   string
 	Origin string
+	// Lang is the language Value is written in, when it is not the locale's
+	// own — a fallback ("en") the code gives a language it has no text for,
+	// or "auto" when it is not known: the value is then a source to
+	// translate into the locale, not the locale's text. Empty: Value is the
+	// locale's own.
+	Lang string
 }
 
 // MessageInitFunc produces the message definitions for one locale (BCP-47 code).
@@ -71,7 +77,8 @@ func (b *Builder) CollectMessages(locale string) ([]MessageInit, error) {
 				cur.Type = d.Type
 			}
 			if d.Value != "" {
-				cur.Value = d.Value
+				// a value and the language it is written in go together
+				cur.Value, cur.Lang = d.Value, d.Lang
 			}
 			if d.Help != "" {
 				cur.Help = d.Help
