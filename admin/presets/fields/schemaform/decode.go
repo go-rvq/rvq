@@ -113,6 +113,9 @@ type decoder struct {
 }
 
 func (d *decoder) schema(s *Schema, key, path string) any {
+	if s.Choice {
+		return d.choice(s, key, path)
+	}
 	if !s.Slice {
 		return d.record(s, key, path)
 	}
@@ -144,6 +147,22 @@ func (d *decoder) record(s *Schema, key, path string) Record {
 		rec = append(rec, RecordField{Name: f.Name, Value: d.field(f, name, join(path, f.Name))})
 	}
 	return rec
+}
+
+// choice reads a choice of classes (Schema.Choice): the class the form posted
+// something under, as an object of that one key — nil when it posted none.
+func (d *decoder) choice(s *Schema, key, path string) any {
+	for _, f := range s.Fields {
+		at := f.Name
+		if key != "" {
+			at = key + "." + f.Name
+		}
+		if !hasKeyUnder(d.values, at) {
+			continue
+		}
+		return Record{{Name: f.Name, Value: d.field(f, at, join(path, f.Name))}}
+	}
+	return nil
 }
 
 func (d *decoder) field(f *Field, key, path string) any {

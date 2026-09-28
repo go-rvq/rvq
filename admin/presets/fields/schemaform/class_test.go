@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"context"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -101,6 +102,14 @@ func TestChoiceFilled(t *testing.T) {
 	if len(empty) != 0 {
 		t.Errorf("nothing chosen, nothing held: %v", empty)
 	}
+
+	// a field the value lacks starts as its class's default
+	if grid := layout["gridLayout"].(map[string]any); grid["columns"] == nil {
+		t.Errorf("the default of columns: %v", grid)
+	}
+	if got := s.Filled(map[string]any{"title": "y"}).(map[string]any)["title"]; got != "y" {
+		t.Errorf("a value given is kept: %v", got)
+	}
 }
 
 // The form of a choice: a select of the classes, by their labels, and the
@@ -139,4 +148,28 @@ func TestChoiceDisplay(t *testing.T) {
 	}
 	mustContain(t, string(out), "Grade", "Colunas", "4")
 	mustNotContain(t, string(out), "Lista")
+}
+
+// What the form posts for a choice is the class chosen, alone: the one it
+// posted something under.
+func TestChoiceDecode(t *testing.T) {
+	b, s := classSchema(t)
+	values := url.Values{
+		"Value.posts.layout.gridLayout.columns": {"4"},
+		"Value.title":                           {"y"},
+	}
+	v, err := b.DecodeForm(&web.EventContext{}, s, values, "Value")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := b.EncodeValue(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustContain(t, out, "gridLayout:", "columns: 4", "title: \"y\"")
+	mustNotContain(t, out, "listLayout")
+
+	v, _ = b.DecodeForm(&web.EventContext{}, s, url.Values{"Value.title": {"y"}}, "Value")
+	out, _ = b.EncodeValue(v)
+	mustNotContain(t, out, "gridLayout", "listLayout")
 }

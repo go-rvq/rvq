@@ -292,15 +292,20 @@ func (s *Schema) chosen(v any) map[string]any {
 }
 
 // record is v as a record of the schema's fields, the records and lists inside
-// it filled in.
+// it filled in, and a field it lacks given the default its class declares.
 func (s *Schema) record(v any) map[string]any {
 	m, _ := v.(map[string]any)
 	if m == nil {
 		m = map[string]any{}
 	}
 	for _, f := range s.Fields {
-		if f.Schema != nil {
+		switch {
+		case f.Schema != nil:
 			m[f.Name] = f.Schema.Filled(m[f.Name])
+		case f.Default != nil:
+			if _, ok := m[f.Name]; !ok {
+				m[f.Name] = f.Default
+			}
 		}
 	}
 	return m
