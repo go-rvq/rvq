@@ -10,8 +10,16 @@ import (
 	"github.com/mpvl/unique"
 )
 
+// FieldPerm is the resource of a record's field: "#Title".
 func FieldPerm(name string) string {
 	return "#" + name
+}
+
+// SectionPerm is the resource of a section of a record's detail page:
+// "$Main". A section is seen (get) and edited in place (create/update) by its
+// own permission; the fields it writes are still asked theirs (FieldPerm).
+func SectionPerm(name string) string {
+	return "$" + name
 }
 
 type ResourcePermActions []*ResourcePermAction

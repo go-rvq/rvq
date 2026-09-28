@@ -41,6 +41,17 @@ func (d *SectionsBuilder) Section(name string) *SectionBuilder {
 	return d.appendNewSection(name)
 }
 
+// LookupSection is the section name, or nil: unlike Section, it never adds
+// one — what a request names is looked up, not built.
+func (d *SectionsBuilder) LookupSection(name string) *SectionBuilder {
+	for _, v := range d.sections {
+		if v.name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func (d *SectionsBuilder) GetSections() []*SectionBuilder {
 	return slices.Clone(d.sections)
 }
@@ -225,7 +236,7 @@ func (b *SectionBuilder) Editing(fields ...interface{}) (r *SectionBuilder) {
 			return b.editingFB.toComponentWithModifiedIndexes(field.ToComponentOptions, field.ModelInfo, field.Obj, field.Mode.Push(EDIT), &FieldContext{
 				ToComponentOptions: &ToComponentOptions{},
 				FormKey:            b.name,
-				Path:               FieldPath{b.name},
+				Path:               b.fieldPath(),
 				// the record and its model: a field's permission check reads them
 				// from the root context, and without them it asked for the id of a
 				// nil object and the whole section rendered as an error
@@ -246,7 +257,7 @@ func (b *SectionBuilder) Viewing(fields ...interface{}) (r *SectionBuilder) {
 			return b.viewingFB.toComponentWithModifiedIndexes(field.ToComponentOptions, field.ModelInfo, field.Obj, field.Mode.Push(DETAIL), &FieldContext{
 				ToComponentOptions: field.ToComponentOptions,
 				FormKey:            b.name,
-				Path:               FieldPath{b.name},
+				Path:               b.fieldPath(),
 				Obj:                field.Obj,
 				ModelInfo:          field.ModelInfo,
 			}, ctx)
@@ -361,10 +372,17 @@ func (b *SectionBuilder) ComponentFunc(v FieldComponentFunc) (r *FieldBuilder) {
 }
 
 func (b *SectionBuilder) ListFieldPrefix(index int) string {
-	return fmt.Sprintf("%s[%b]", b.name, index)
+	return fmt.Sprintf("%s[%d]", b.name, index)
 }
 
 func (b *SectionBuilder) viewComponent(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	// a section the request may not see is an empty portal: the page keeps
+	// its place, and shows nothing of it
+	if !b.canRead(field.Obj, ctx) {
+		return web.Portal().Name(b.FieldPortalName())
+	}
+	editable := b.canWrite(field.Obj, ctx)
+
 	id := ctx.Queries().Get(ParamID)
 	if id == "" {
 		if slugIf, ok := field.Obj.(SlugEncoder); ok {
@@ -375,7 +393,7 @@ func (b *SectionBuilder) viewComponent(field *FieldContext, ctx *web.EventContex
 	btn := VBtn("").Size(SizeXSmall).Variant("text").
 		Rounded("0").
 		Icon("mdi-square-edit-outline").
-		Attr("v-show", fmt.Sprintf("isHovering&&%t", b.componentEditBtnFunc(field.Obj, ctx))).
+		Attr("v-show", fmt.Sprintf("isHovering&&%t", editable && b.componentEditBtnFunc(field.Obj, ctx))).
 		Attr("@click", web.Plaid().EventFunc(actions.DoEditDetailingField).
 			Query(SectionFieldName, b.name).
 			Query(ParamID, id).
@@ -489,6 +507,7 @@ func (b *SectionBuilder) DefaultListElementSaveFunc(obj interface{}, id ID, ctx 
 	listObj := reflect.ValueOf(reflectutils.MustGet(obj, b.name))
 	elementObj := listObj.Index(int(index)).Interface()
 	formObj := reflect.New(reflect.TypeOf(b.editingFB.model).Elem()).Interface()
+	ctx.WithContextValue(sectionRecordKey{}, obj)
 	if err = b.elementUnmarshaler(elementObj, formObj, b.ListFieldPrefix(int(index)), ctx); err != nil {
 		return
 	}
@@ -500,6 +519,11 @@ func (b *SectionBuilder) DefaultListElementSaveFunc(obj interface{}, id ID, ctx 
 
 func (b *SectionBuilder) listComponent(field *FieldContext, ctx *web.EventContext, deletedID, editID, saveID int) h.HTMLComponent {
 	obj := field.Obj
+	if !b.canRead(obj, ctx) {
+		return web.Portal().Name(b.FieldPortalName())
+	}
+	editable := b.canWrite(obj, ctx)
+	ctx.WithContextValue(sectionWritableKey{}, editable)
 	if b.elementHoverFunc != nil {
 		b.elementHover = b.elementHoverFunc(obj, ctx)
 	}
@@ -518,6 +542,7 @@ func (b *SectionBuilder) listComponent(field *FieldContext, ctx *web.EventContex
 	if err != nil {
 		panic(err)
 	}
+	ctx.WithContextValue(sectionRecordKey{}, obj)
 
 	label := h.Div(h.Span(b.label).Style("fontSize:16px; font-weight:500;")).Class("mb-2")
 	rows := h.Div()
@@ -566,7 +591,7 @@ func (b *SectionBuilder) listComponent(field *FieldContext, ctx *web.EventContex
 		})
 	}
 
-	if !b.disableElementCreateBtn {
+	if !b.disableElementCreateBtn && editable {
 		addBtn := VBtn("Add Row").PrependIcon("mdi-plus-circle").Color("primary").Variant(VariantText).
 			Class("mb-2").
 			Attr("@click", web.Plaid().EventFunc(actions.DoCreateDetailingListField).
@@ -605,11 +630,11 @@ func (b *SectionBuilder) DeleteBtnKey() string {
 }
 
 func (b *SectionBuilder) ListElementIsEditing(index int) string {
-	return fmt.Sprintf("%s_%s[%b].%s", deletedHiddenNamePrefix, b.name, index, detailListFieldEditing)
+	return fmt.Sprintf("%s_%s[%d].%s", deletedHiddenNamePrefix, b.name, index, detailListFieldEditing)
 }
 
 func (b *SectionBuilder) ListElementPortalName(index int) string {
-	return fmt.Sprintf("DetailElementPortal_%s_%b", b.name, index)
+	return fmt.Sprintf("DetailElementPortal_%s_%d", b.name, index)
 }
 
 func (b *SectionBuilder) FieldPortalName() string {
@@ -620,7 +645,7 @@ func (b *SectionBuilder) showElement(obj any, index int, ctx *web.EventContext) 
 	editBtn := VBtn("").Size(SizeXSmall).Variant("text").
 		Rounded("0").
 		Icon("mdi-square-edit-outline").
-		Attr("v-show", fmt.Sprintf("isHovering&&%t", b.elementEditBtn)).
+		Attr("v-show", fmt.Sprintf("isHovering&&%t", b.elementEditBtn && ctx.ContextValue(sectionWritableKey{}) != false)).
 		Attr("@click", web.Plaid().EventFunc(actions.DoEditDetailingListField).
 			Query(SectionFieldName, b.name).
 			Query(ParamID, ctx.Queries().Get(ParamID)).
@@ -633,7 +658,7 @@ func (b *SectionBuilder) showElement(obj any, index int, ctx *web.EventContext) 
 		EventContext:       ctx,
 		Obj:                obj,
 		Name:               b.name,
-		FormKey:            fmt.Sprintf("%s[%b]", b.name, index),
+		FormKey:            fmt.Sprintf("%s[%d]", b.name, index),
 		Label:              b.label,
 		Path:               FieldPath{b.name, FieldPathIndex(index)},
 	}, ctx)
@@ -674,9 +699,9 @@ func (b *SectionBuilder) editElement(obj any, index, _ int, ctx *web.EventContex
 				EventContext:       ctx,
 				Obj:                obj,
 				Mode:               FieldModeStack{EDIT},
-				Name:               fmt.Sprintf("%s[%b]", b.name, index),
-				FormKey:            fmt.Sprintf("%s[%b]", b.name, index),
-				Label:              fmt.Sprintf("%s[%b]", b.label, index),
+				Name:               fmt.Sprintf("%s[%d]", b.name, index),
+				FormKey:            fmt.Sprintf("%s[%d]", b.name, index),
+				Label:              fmt.Sprintf("%s[%d]", b.label, index),
 				Path:               FieldPath{b.name, FieldPathIndex(index)},
 			}, ctx),
 		).Class("flex-grow-1"),
@@ -706,6 +731,43 @@ func (b *SectionBuilder) editElement(obj any, index, _ int, ctx *web.EventContex
 	).Name(b.ListElementPortalName(index))
 }
 
+// canRead reports whether the request may see the section of record ($NAME,
+// get), and canWrite whether it may edit it in place: the record must be
+// editable (the detail page's editing restriction: the update permission by
+// the model's route) and the section too ($NAME, create/update).
+func (b *SectionBuilder) canRead(record any, ctx *web.EventContext) bool {
+	return b.father.mb.Info().CanReadSection(ctx.R, record, b.name)
+}
+
+func (b *SectionBuilder) canWrite(record any, ctx *web.EventContext) bool {
+	mb := b.father.mb
+	return mb.detailing.CanEditObj(record, ctx) && mb.Info().CanWriteSection(ctx.R, record, b.name)
+}
+
+// sectionWritableKey is the context key of whether the list section being
+// rendered may be edited: its elements' edit buttons read it.
+type sectionWritableKey struct{}
+
+// sectionRecordKey is the context key of the record whose list section's
+// element is being unmarshaled.
+type sectionRecordKey struct{}
+
+// fieldPath is the path, from the record, of the fields the section shows:
+// none for a section of the record's own fields, the list's field for a list
+// section — so a field's permission is the same in a section and in the edit
+// form ("Title", "Tags.Name").
+func (b *SectionBuilder) fieldPath() FieldPath {
+	if b.isList {
+		return FieldPath{b.name}
+	}
+	return nil
+}
+
+// fieldFqn is the path from the record of the section's field name.
+func (b *SectionBuilder) fieldFqn(name string) string {
+	return append(b.fieldPath(), name).NoIndex().Fqn()
+}
+
 func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, prefix string, ctx *web.EventContext) error {
 	return func(toObj, formObj any, prefix string, ctx *web.EventContext) (err error) {
 		if tf := reflect.TypeOf(toObj).Kind(); tf != reflect.Ptr {
@@ -725,6 +787,14 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 		}
 		ctx2 := &web.EventContext{R: new(http.Request)}
 		ctx2.R.MultipartForm = newForm
+
+		// the record the section writes: toObj itself, or — for an element of a
+		// list section — the record holding the list, which its caller put in
+		// the context. A field's write permission is asked on it.
+		record := toObj
+		if b.isList {
+			record = ctx.ContextValue(sectionRecordKey{})
+		}
 
 		// a section saves the record it is mounted on, so only the keys its own
 		// form submitted may be applied — everything else on the record (other
@@ -748,7 +818,8 @@ func (b *SectionBuilder) DefaultElementUnmarshal() func(toObj, formObj any, pref
 				continue
 			}
 
-			if mb.permissioner.ReqCreator(ctx.R).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() && mb.permissioner.ReqObjectUpdater(ctx.R, formObj).SnakeOn(prefix).SnakeOn(FieldPerm(name)).Denied() {
+			// without the record (a caller that did not say it) nothing is written
+			if record == nil || !b.editingFB.CanWriteField(ctx.R, info, record, b.fieldFqn(name)) {
 				continue
 			}
 

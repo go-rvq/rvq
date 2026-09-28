@@ -81,6 +81,39 @@ func (p *ModelPermissioner) ReqObjectFielder(r *http.Request, obj any, field str
 	return p.ReqObjector(r, obj).On(FieldPerm(field))
 }
 
+// ReqObjectFieldReader verifies reading a field of obj, and
+// ReqObjectFieldWriter writing it: creating, when obj is a record not saved
+// yet, else updating. field is the field's path from the record: "Title",
+// "Tags.Name" (no indexes) — the same whether the field is written by the
+// edit form or by a section of the detail page.
+func (p *ModelPermissioner) ReqObjectFieldReader(r *http.Request, obj any, field string) *perm.Verifier {
+	return p.ReqObjectFielder(r, obj, field).Do(PermGet)
+}
+
+func (p *ModelPermissioner) ReqObjectFieldWriter(r *http.Request, obj any, field string) *perm.Verifier {
+	return p.ReqObjectFielder(r, obj, field).Do(p.writeAction(obj))
+}
+
+// ReqObjectSectionReader verifies seeing the section name of obj's detail
+// page, and ReqObjectSectionWriter editing it in place (creating or updating,
+// as for a field).
+func (p *ModelPermissioner) ReqObjectSectionReader(r *http.Request, obj any, name string) *perm.Verifier {
+	return p.ReqObjector(r, obj).On(SectionPerm(name)).Do(PermGet)
+}
+
+func (p *ModelPermissioner) ReqObjectSectionWriter(r *http.Request, obj any, name string) *perm.Verifier {
+	return p.ReqObjector(r, obj).On(SectionPerm(name)).Do(p.writeAction(obj))
+}
+
+// writeAction is what writing obj is: creating a record not saved yet (no
+// key), else updating it. A singleton is always updated.
+func (p *ModelPermissioner) writeAction(obj any) string {
+	if !p.mb.singleton && p.mb.MustRecordID(obj).IsZero() {
+		return PermCreate
+	}
+	return PermUpdate
+}
+
 func (p *ModelPermissioner) ReqObjectFieldConder(r *http.Request, obj any, ok bool, field string) *perm.Verifier {
 	v := p.ReqObjector(r, obj)
 	if ok {
@@ -202,4 +235,25 @@ func (p *ModelPermissioner) Default() *perm.Verifier {
 	}
 
 	return p.Verifier(id, parents...)
+}
+
+// CanReadField and CanWriteField say whether the request may read, or write,
+// the field of obj (a record of this model; field its path from it). See
+// ReqObjectFieldReader and ReqObjectFieldWriter.
+func (i *ModelInfo) CanReadField(r *http.Request, obj any, field string) bool {
+	return i.Permissioner().ReqObjectFieldReader(r, obj, field).Allowed()
+}
+
+func (i *ModelInfo) CanWriteField(r *http.Request, obj any, field string) bool {
+	return i.Permissioner().ReqObjectFieldWriter(r, obj, field).Allowed()
+}
+
+// CanReadSection and CanWriteSection say whether the request may see, or edit
+// in place, the section name of obj's detail page. See ReqObjectSectionReader.
+func (i *ModelInfo) CanReadSection(r *http.Request, obj any, name string) bool {
+	return i.Permissioner().ReqObjectSectionReader(r, obj, name).Allowed()
+}
+
+func (i *ModelInfo) CanWriteSection(r *http.Request, obj any, name string) bool {
+	return i.Permissioner().ReqObjectSectionWriter(r, obj, name).Allowed()
 }

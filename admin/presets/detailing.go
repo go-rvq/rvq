@@ -731,10 +731,33 @@ func (b *DetailingBuilder) parseRequestAction(ctx *web.EventContext) (id string,
 }
 
 // EditDetailField EventFunc: click detail field component edit button
+// ErrUnknownSection is a section event naming no section of the detail page.
+var ErrUnknownSection = errors.New("presets: unknown section")
+
+// fetchForSectionEdit fetches the record a section event edits, and refuses it
+// — perm.PermissionDenied — to whom may not edit it: editing a section in
+// place changes the record as the edit form does, so it asks what the form's
+// save asks (the editing restriction: the update permission by the model's
+// route, and any restriction the model adds).
+//
+// The section itself is asked too: editing it ($NAME) — see SectionPerm.
+func (b *DetailingBuilder) fetchForSectionEdit(obj any, mid ID, section *SectionBuilder, ctx *web.EventContext) error {
+	if err := b.GetFetchFunc()(obj, mid, ctx); err != nil {
+		return err
+	}
+	if !section.canWrite(obj, ctx) {
+		return perm.PermissionDenied
+	}
+	return nil
+}
+
 func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventResponse, err error) {
 	key := ctx.Queries().Get(SectionFieldName)
 
-	f := b.Section(key)
+	f := b.LookupSection(key)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	obj := b.mb.NewModel()
 	var mid ID
@@ -742,8 +765,7 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 		return
 	}
 
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {
@@ -766,7 +788,10 @@ func (b *DetailingBuilder) EditDetailField(ctx *web.EventContext) (r web.EventRe
 func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventResponse, err error) {
 	key := ctx.Queries().Get(SectionFieldName)
 
-	f := b.Section(key)
+	f := b.LookupSection(key)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	obj := b.mb.NewModel()
 
@@ -775,8 +800,7 @@ func (b *DetailingBuilder) SaveDetailField(ctx *web.EventContext) (r web.EventRe
 		return
 	}
 
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {
@@ -811,7 +835,10 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 	)
 
 	fieldName = ctx.Queries().Get(SectionFieldName)
-	f := b.Section(fieldName)
+	f := b.LookupSection(fieldName)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	index, err = strconv.ParseInt(ctx.Queries().Get(f.EditBtnKey()), 10, 64)
 	if err != nil {
@@ -830,8 +857,7 @@ func (b *DetailingBuilder) EditDetailListField(ctx *web.EventContext) (r web.Eve
 		return
 	}
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {
@@ -858,7 +884,10 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 	)
 
 	fieldName = ctx.Queries().Get(SectionFieldName)
-	f := b.Section(fieldName)
+	f := b.LookupSection(fieldName)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	index, err = strconv.ParseInt(ctx.Queries().Get(f.SaveBtnKey()), 10, 64)
 	if err != nil {
@@ -870,8 +899,7 @@ func (b *DetailingBuilder) SaveDetailListField(ctx *web.EventContext) (r web.Eve
 		return
 	}
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {
@@ -904,7 +932,10 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 	)
 
 	fieldName = ctx.Queries().Get(SectionFieldName)
-	f := b.Section(fieldName)
+	f := b.LookupSection(fieldName)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	index, err = strconv.ParseInt(ctx.Queries().Get(f.DeleteBtnKey()), 10, 64)
 	if err != nil {
@@ -917,8 +948,7 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 	}
 
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {
@@ -965,7 +995,10 @@ func (b *DetailingBuilder) DeleteDetailListField(ctx *web.EventContext) (r web.E
 // CreateDetailListField Event: click detail list field element Add row button
 func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.EventResponse, err error) {
 	fieldName := ctx.Queries().Get(SectionFieldName)
-	f := b.Section(fieldName)
+	f := b.LookupSection(fieldName)
+	if f == nil {
+		return r, ErrUnknownSection
+	}
 
 	var mid ID
 	if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
@@ -973,8 +1006,7 @@ func (b *DetailingBuilder) CreateDetailListField(ctx *web.EventContext) (r web.E
 	}
 
 	obj := b.mb.NewModel()
-	err = b.GetFetchFunc()(obj, mid, ctx)
-	if err != nil {
+	if err = b.fetchForSectionEdit(obj, mid, f, ctx); err != nil {
 		return
 	}
 	if f.setter != nil {

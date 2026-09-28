@@ -459,6 +459,11 @@ func (b *FieldsBuilder) Unmarshal(opts *FieldsSetterOptions, toObj interface{}, 
 	if opts == nil {
 		opts = &FieldsSetterOptions{}
 	}
+	if opts.Record == nil {
+		o := *opts
+		o.Record = toObj
+		opts = &o
+	}
 
 	fromObj := reflect.New(t.Elem()).Interface()
 	// don't panic for fields that set in SetterFunc
@@ -499,6 +504,40 @@ func (b *FieldsBuilder) DoSkipFieldVerifier(field string) bool {
 	return false
 }
 
+// CanReadField and CanWriteField say whether the request may read, or write,
+// the field of obj (a record of info's model; field its path from the record),
+// unless the builder skips verifying the field. See ModelInfo.CanReadField.
+func (b *FieldsBuilder) CanReadField(r *http.Request, info *ModelInfo, obj any, field string) bool {
+	return b.DoSkipFieldVerifier(field) || info.CanReadField(r, obj, field)
+}
+
+func (b *FieldsBuilder) CanWriteField(r *http.Request, info *ModelInfo, obj any, field string) bool {
+	return b.DoSkipFieldVerifier(field) || info.CanWriteField(r, obj, field)
+}
+
+// fieldFqn is the path of the field name under parent, from the record,
+// without indexes: "Title", "Tags.Name".
+func fieldFqn(parent *FieldContext, name string) string {
+	var p FieldPath
+	if parent != nil {
+		p = append(p, parent.Path...)
+	}
+	return append(p, name).NoIndex().Fqn()
+}
+
+// mayWrite is the write permission of the field f of the record being
+// unmarshaled.
+func (b *FieldsBuilder) mayWrite(opts *FieldsSetterOptions, info *ModelInfo, parent *FieldContext, toObj any, f *FieldBuilder, ctx *web.EventContext) bool {
+	if opts.SkipsPermVerify() || info == nil {
+		return true
+	}
+	record := opts.Record
+	if record == nil {
+		record = toObj
+	}
+	return b.CanWriteField(ctx.R, info.Root(), record, fieldFqn(parent, f.name))
+}
+
 func (b *FieldsBuilder) IsAllowed(r *http.Request, info *ModelInfo, obj interface{}, field string, perm ...string) bool {
 	if !b.DoSkipFieldVerifier(field) {
 		v := info.Permissioner().ReqObjectFielder(r, obj, field)
@@ -518,6 +557,9 @@ func (o *FieldsSetterOptions) SkipsPermVerify() bool {
 
 type FieldsSetterOptions struct {
 	SkipPermVerify bool
+	// Record is the record the form writes (Unmarshal sets it): a field's write
+	// permission is asked on it, as creating when it is not saved yet.
+	Record any
 }
 
 // formCarriesField reports whether the submitted form carried the given field
@@ -568,10 +610,8 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 		}
 
 		info := parent.ModelInfo
-		if !opts.SkipsPermVerify() && info != nil {
-			if !b.IsAllowed(ctx.R, info, toObj, f.name, PermCreate, PermUpdate) {
-				continue
-			}
+		if !b.mayWrite(opts, info, parent, toObj, f, ctx) {
+			continue
 		}
 
 		if f.nested != nil {
@@ -605,10 +645,6 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 				if err := reflectutils.Set(toObj, f.name, childToObj); err != nil {
 					panic(err)
 				}
-				continue
-			}
-		} else if !opts.SkipsPermVerify() && info != nil {
-			if !b.IsAllowed(ctx.R, info, toObj, f.name, PermCreate, PermUpdate) {
 				continue
 			}
 		}
@@ -1288,19 +1324,21 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 
 	if !opts.SkipsPermVerify() && info != nil {
 		var (
-			fqn  = fctx.Path.NoIndex().Fqn()
-			perm = PermGet
-			mode = mode.Dot()
+			root, record = info.Root(), fctx.Root().Obj
+			fqn          = fctx.Path.NoIndex().Fqn()
+			mode         = mode.Dot()
+			allowed      bool
 		)
 		switch mode {
-		case EDIT:
-			perm = PermUpdate
-		case NEW:
-			perm = PermCreate
+		case EDIT, NEW:
+			allowed = b.CanWriteField(ctx.R, root, record, fqn)
+		default:
+			allowed = b.CanReadField(ctx.R, root, record, fqn)
 		}
 
-		if !b.IsAllowed(ctx.R, info.Root(), fctx.Root().Obj, fqn, perm) {
-			if mode == EDIT && b.IsAllowed(ctx.R, info.Root(), fctx.Root().Obj, fqn, PermGet) {
+		if !allowed {
+			// a field that may be read but not written is shown, read only
+			if mode == EDIT && b.CanReadField(ctx.R, root, record, fqn) {
 				fctx.ReadOnly = true
 			} else {
 				return nil
