@@ -29,20 +29,31 @@ type Schema struct {
 	// Meta is the `[k=v, …]` block written before the interface — what the
 	// schema says about how it is DRAWN, not about the value.
 	Meta Meta
-	// Layout is how a list of records is drawn: LayoutForm (each record a form,
-	// one under the other) or LayoutTable (one row per record). Written as
-	// `[layout="table"]`.
+	// Layout is how the schema is drawn, one of the registered layouts (see
+	// Layout): LayoutForm (each record a form, one under the other),
+	// LayoutTable (one row per record) or LayoutGrid (each record a card).
+	// Written `[layout="table"]`, or with its config
+	// `[layout={name: "grid", columns: 3}]`.
 	Layout string
-	// Columns are the fields a table shows, in the order it shows them —
-	// `[columns=[#label, #href]]`. Empty: every field, in the schema's order. A
-	// field left out keeps its value; it is only not drawn.
-	Columns []string
+	// LayoutConfig is what the layout was told, typed by its Config and with
+	// its defaults: a table's `columns` (the fields it shows), a grid's
+	// `columns` (the cards side by side).
+	LayoutConfig Meta
 }
 
 // The layouts a list of records may be drawn in.
 const (
 	LayoutForm  = "form"
 	LayoutTable = "table"
+	LayoutGrid  = "grid"
+)
+
+// DefaultGridColumns is how many cards a grid puts side by side when the schema
+// does not say (its Config's default), and MaxGridColumns the most it may (the
+// width of the grid it is drawn in).
+const (
+	DefaultGridColumns = 4
+	MaxGridColumns     = 12
 )
 
 // Meta is a `[k=v, …]` block read into Go values: a string, an int64, a
@@ -53,6 +64,22 @@ type Meta map[string]any
 func (m Meta) String(key string) string {
 	s, _ := m[key].(string)
 	return s
+}
+
+// Int is the value of key when it is a whole number; ok is false when the key is
+// absent, and err says a value of another kind.
+func (m Meta) Int(key string) (n int, ok bool, err error) {
+	raw, ok := m[key]
+	if !ok {
+		return 0, false, nil
+	}
+	switch v := raw.(type) {
+	case int64:
+		return int(v), true, nil
+	case int:
+		return v, true, nil
+	}
+	return 0, true, fmt.Errorf("%s: want a whole number, got %T", key, raw)
 }
 
 // Strings is the value of key when it is a list of strings — symbols included,
@@ -106,6 +133,41 @@ type Field struct {
 	Enum *Enum
 	// Meta is the `[k=v, …]` block written before the field.
 	Meta Meta
+	// Default is the value a class field declares (`columns int = 4`), read
+	// into Go as metadata is; nil when it has none.
+	Default any
+}
+
+// Clone is a copy of the schema that may be changed — a schema Parse returns
+// is shared (cached), and never to be changed. The fields, and the schemas
+// inside them, are copied; the enums and the metadata, which nothing changes,
+// are shared.
+func (s *Schema) Clone() *Schema {
+	if s == nil {
+		return nil
+	}
+	c := *s
+	if s.LayoutConfig != nil {
+		c.LayoutConfig = make(Meta, len(s.LayoutConfig))
+		for k, v := range s.LayoutConfig {
+			c.LayoutConfig[k] = v
+		}
+	}
+	c.Item = s.Item.clone()
+	c.Fields = make([]*Field, len(s.Fields))
+	for i, f := range s.Fields {
+		c.Fields[i] = f.clone()
+	}
+	return &c
+}
+
+func (f *Field) clone() *Field {
+	if f == nil {
+		return nil
+	}
+	c := *f
+	c.Schema = f.Schema.Clone()
+	return &c
 }
 
 // Required reports whether the field may be left empty: only an optional one
@@ -151,20 +213,30 @@ func (s *Schema) FieldAt(path string) *Field {
 	return found
 }
 
-// TableColumns are the fields a table layout draws, in order: the ones Columns
-// names, or every field when it names none.
+// TableColumns are the fields a table layout draws, in order: the ones its
+// `columns` name, or every field when they name none.
 func (s *Schema) TableColumns() []*Field {
-	if len(s.Columns) == 0 {
-		return s.Fields
+	if cols := s.LayoutFields("columns"); len(cols) > 0 {
+		return cols
 	}
-	out := make([]*Field, 0, len(s.Columns))
-	for _, name := range s.Columns {
-		for _, f := range s.Fields {
-			if f.Name == name {
-				out = append(out, f)
-				break
-			}
-		}
+	return s.Fields
+}
+
+// GridColumns is how many cards a grid layout puts side by side.
+func (s *Schema) GridColumns() int {
+	if n := s.LayoutInt("columns"); n > 0 {
+		return n
 	}
-	return out
+	return DefaultGridColumns
+}
+
+// WithLayout is a copy of the schema drawn in the layout name, told cfg —
+// checked as the metadata would be. The schema itself is not changed (Parse
+// shares it).
+func (s *Schema) WithLayout(name string, cfg Meta) (*Schema, error) {
+	c := s.Clone()
+	if err := c.setLayout(name, cfg); err != nil {
+		return nil, err
+	}
+	return c, nil
 }

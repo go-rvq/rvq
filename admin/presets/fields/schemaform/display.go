@@ -104,6 +104,8 @@ func (b *Builder) formDisplayFunc(c *Context) h.HTMLComponent {
 		return b.showTitles(schema, c, items)
 	case schema.Layout == LayoutTable:
 		return b.showTable(schema, c, items)
+	case schema.Layout == LayoutGrid:
+		return b.showGrid(schema, c, items)
 	default:
 		return b.showRecords(schema, c, items)
 	}
@@ -195,6 +197,18 @@ func (b *Builder) showRecords(schema *Schema, c *Context, items []any) h.HTMLCom
 		comps = append(comps, h.Div(b.showRecord(schema, c, it)).Class("px-2"))
 	}
 	return h.Div(comps...)
+}
+
+// showGrid shows a list of records in the grid layout: each record a card of
+// its labelled fields, schema.GridColumns() side by side.
+func (b *Builder) showGrid(schema *Schema, c *Context, items []any) h.HTMLComponent {
+	cols := make([]h.HTMLComponent, len(items))
+	for i, it := range items {
+		cols[i] = gridCol(schema,
+			v.VCard(v.VCardText(b.showRecord(schema, c, it))).Variant(v.VariantOutlined).Class("h-100"),
+		)
+	}
+	return v.VRow(cols...).Dense(true)
 }
 
 // showTable shows a list of records in the table layout: the columns the

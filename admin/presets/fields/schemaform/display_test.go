@@ -98,7 +98,7 @@ func TestDisplayRecordsDetail(t *testing.T) {
 
 // The table layout: the columns it names, in its order, a row per record.
 func TestDisplayTableDetail(t *testing.T) {
-	src := `[layout="table", columns=[#href, #label]]
+	src := `[layout={name: "table", columns: [#href, #label]}]
 interface Form []{label str; href; hidden? str}`
 	got := show(t, New(), src, "- label: A\n  href: /a\n  hidden: secret\n", false)
 	mustContain(t, got, "<v-table", "<th", "Href", "Label", "<td", "/a")
@@ -232,4 +232,17 @@ func TestDisplayRecordValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	mustContain(t, string(out), "From the form")
+}
+
+// A grid shows each record as a card of its labelled fields, columns per
+// row; a cell keeps to the titles.
+func TestDisplayGrid(t *testing.T) {
+	src := `[layout={name: "grid", columns: 2}] interface Form []{label str; href}`
+	stored := "- label: A\n  href: /a\n- label: B\n  href: /b\n"
+	got := show(t, New(), src, stored, false)
+	mustContain(t, got, "<v-row", `:md='6'`, "<v-card", "Label", "/a", "/b")
+	if strings.Count(got, "<v-card ") != 2 {
+		t.Errorf("one card per record:\n%s", got)
+	}
+	mustNotContain(t, show(t, New(), src, stored, true), "<v-card", "<v-row")
 }

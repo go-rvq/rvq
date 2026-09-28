@@ -83,20 +83,36 @@
 // The `[k=v, …]` block before the interface says how the form is DRAWN, never
 // what the value is (Schema.Meta; a field's own block is Field.Meta):
 //
-//		[layout="table", columns=[#label, #icon, #color, #disabled]]
-//		interface Form []{label str; icon str; color str; link? str; disabled? bool}
+//	[layout={name: "table", columns: [#label, #icon, #color, #disabled]}]
+//	interface Form []{label str; icon str; color str; link? str; disabled? bool}
 //
-//	  - `layout` — how a list of records is drawn: "form" (the default: each
-//	    record a form, one under the other) or "table" (one row per record, one
-//	    column per field). A table is only of a list of records.
-//	  - `columns` — the fields a table shows, in the order it shows them. Symbols
-//	    name them (`#label` is the string "label"). A field left out keeps its
-//	    value — it is in the record, only not drawn. Without it, every field, in
-//	    the schema's order.
+// `layout` is a layout's name, or `{name: …}` with what the layout is told.
+// A layout is registered (RegisterLayout) with its Config — a gad class,
+// written as code, whose fields are what it may be told, typed, with their
+// defaults — and the ones there are by default:
+//
+//   - "form" (the default): each record a form, one under the other. It is
+//     told nothing.
+//   - "table": one row per record, one column per field.
+//     `class Config { [fields=true, empty_as_all, sorted] columns []Field }`
+//     — the fields it shows, in order (symbols name them: `#label` is the
+//     string "label"); none, every field. A field left out keeps its value —
+//     it is in the record, only not drawn.
+//   - "grid": each record a card, `columns` of them side by side (on a narrow
+//     screen they stack). `class Config { columns int = 4 }`, 1 to 12.
+//
+// A table and a grid are only of a list of records. The metadata a Config's
+// field may carry: `fields=true` (it names fields of the list — a `Field`, or
+// a list of them), `empty_as_all` (an empty list of fields is all of them),
+// `sorted` (the order it names them in is the order drawn).
 //
 // What cannot be drawn is refused where the schema is read: a layout that does
-// not exist, a table of something that is not a list of records, a column that
-// names no field.
+// not exist, a table or a grid of something that is not a list of records, a
+// config the layout's Config does not declare or of another type, a column
+// that names no field, a grid out of range.
+//
+// A field's own `when` draws it only while the record holds what it says —
+// `[when={name: "grid"}] columns? int` is there only while `name` is "grid".
 //
 // # Enums, and lists of values the schema cannot know
 //

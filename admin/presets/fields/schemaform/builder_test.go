@@ -550,3 +550,49 @@ func TestBoolFieldSwitchIsColoured(t *testing.T) {
 		t.Errorf("o switch ligado não fica na cor primary:\n%s", got)
 	}
 }
+
+// A grid: each record a card with its fields and a button to remove it, the
+// cards columns per row from a medium screen on (12/4 = 3 of the 12).
+func TestComponentFuncGrid(t *testing.T) {
+	got := render(t, New(), `[layout={name: "grid", columns: 4}] interface Form []{label str; href}`)
+	for _, want := range []string{
+		"<v-row", "<v-col", `:md='3'`, `v-for='(item, itemIndex) in form["Value"]'`,
+		"<v-card", `v-model='item.label'`, `v-model='item.href'`,
+		`splice(itemIndex, 1)`, "Adicionar",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "<v-table") {
+		t.Error("a grid is not a table")
+	}
+}
+
+// `when` draws a field only while the record holds what it says.
+func TestComponentFuncWhen(t *testing.T) {
+	got := render(t, New(), `interface Form {
+	name str
+	[when={name: "grid"}]
+	columns? int
+}`)
+	want := `v-if='(form["Value"] || {})["name"] === "grid"'`
+	if !strings.Contains(got, want) {
+		t.Errorf("missing %q in\n%s", want, got)
+	}
+	if strings.Count(got, "v-if=") != 1 {
+		t.Errorf("only the field with when is conditional:\n%s", got)
+	}
+}
+
+// A record inside the record is drawn as a group, under its label.
+func TestComponentFuncNestedRecordIsAGroup(t *testing.T) {
+	b := New().FieldInfo(func(_ *web.EventContext, path string) FieldInfo {
+		return FieldInfo{Label: map[string]string{"address": "Endereço"}[path]}
+	})
+	got := render(t, b, "interface Address { street str }\ninterface Form { name str; address Address }")
+	i, j := strings.Index(got, "Endereço"), strings.Index(got, `form["Value"].address.street`)
+	if i < 0 || j < 0 || i > j {
+		t.Errorf("the group's label comes before its fields:\n%s", got)
+	}
+}

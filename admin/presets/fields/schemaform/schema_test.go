@@ -433,3 +433,21 @@ func TestParseAnonymousStillIsTheForm(t *testing.T) {
 		}
 	}
 }
+
+// A clone may be changed without touching the schema Parse cached.
+func TestSchemaClone(t *testing.T) {
+	src := `[layout={name: "table", columns: [#a, #b]}] interface Form []{ a str; b str }`
+	s, err := Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := s.Clone()
+	c.Layout = LayoutGrid
+	c.LayoutConfig["columns"] = 2
+	c.Fields[0].Name = "changed"
+
+	again, _ := Parse(src)
+	if again.Fields[0].Name != "a" || again.Layout != LayoutTable || len(again.TableColumns()) != 2 {
+		t.Errorf("changing the clone changed the cached schema: %s %v", again.Layout, again.LayoutConfig)
+	}
+}

@@ -133,6 +133,20 @@ func formProgram(src string) (string, error) {
 // run compiles and runs the program, with the builder's types in scope, and
 // returns the VM — the field types are symbols only it resolves — and the form.
 func (b *Builder) run(program string) (*gad.VM, *gad.Interface, error) {
+	vm, ret, err := b.runProgram(program)
+	if err != nil {
+		return nil, nil, err
+	}
+	form, ok := ret.(*gad.Interface)
+	if !ok {
+		return nil, nil, fmt.Errorf("schemaform: %q is not an interface, it is %s", FormName, ret.Type().Name())
+	}
+	return vm, form, nil
+}
+
+// runProgram compiles and runs the program, with the builder's types in scope,
+// and returns the VM and what the program returned.
+func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 	builtins := gad.NewBuiltins()
 	for name := range b.types {
 		// A name gad already has as a TYPE stays gad's — `str`, `int`, `bool`
@@ -160,12 +174,28 @@ func (b *Builder) run(program string) (*gad.VM, *gad.Interface, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("schemaform: %w", err)
 	}
+	return vm, ret, nil
+}
 
-	form, ok := ret.(*gad.Interface)
-	if !ok {
-		return nil, nil, fmt.Errorf("schemaform: %q is not an interface, it is %s", FormName, ret.Type().Name())
+// class reads the fields of a gad class — what a layout's Config declares —
+// the way an interface's are read, with the default each one has.
+func (r *reader) class(c *gad.Class) (*Schema, error) {
+	s := &Schema{}
+	for _, cf := range c.RawFields() {
+		types := make(gad.Array, len(cf.Types))
+		for i, t := range cf.Types {
+			types[i] = t
+		}
+		f := &Field{Name: cf.Name, Meta: metaOf(cf.Meta), Nullable: cf.Nullable}
+		if err := r.typeInto(f, types); err != nil {
+			return nil, fmt.Errorf("%s: %w", f.Name, err)
+		}
+		if cf.Value != nil && cf.Value != gad.Nil {
+			f.Default = metaValue(cf.Value)
+		}
+		s.Fields = append(s.Fields, f)
 	}
-	return vm, form, nil
+	return s, nil
 }
 
 // typeMarker is a type the builder knows and gad does not — `color`, `html` —
@@ -484,40 +514,61 @@ func metaValue(o gad.Object) any {
 	return o.ToString()
 }
 
-// readLayout reads how the schema is drawn from its metadata, and refuses what
-// cannot be drawn: an unknown layout, a table of something that is not a list of
-// records, a column that names no field.
+// readLayout reads how the schema is drawn from its metadata — `layout`, a
+// layout's name or `{name: …, <its config>}` — and refuses what cannot be
+// drawn: an unknown layout, a list layout of something that is not a list of
+// records, a config the layout's Config does not declare or its checks refuse.
 func (s *Schema) readLayout() error {
-	s.Layout = s.Meta.String("layout")
-	switch s.Layout {
-	case "":
-		s.Layout = LayoutForm
-	case LayoutForm:
-	case LayoutTable:
-		if !s.Slice || s.Item != nil {
-			return fmt.Errorf("schemaform: layout %q draws a list of records, and this is not one", LayoutTable)
+	name, cfg, err := layoutMeta(s.Meta)
+	if err != nil {
+		return err
+	}
+	return s.setLayout(name, cfg)
+}
+
+// layoutMeta is the layout the metadata names, and the config it gives it.
+func layoutMeta(meta Meta) (name string, cfg Meta, err error) {
+	for _, k := range []string{"columns", "num_columns"} {
+		if _, ok := meta[k]; ok {
+			return "", nil, fmt.Errorf(`schemaform: %q is the config of a layout: write it in layout={name: "…", %s: …}`, k, k)
+		}
+	}
+	switch v := meta["layout"].(type) {
+	case nil:
+	case string:
+		name = v
+	case Meta:
+		cfg = make(Meta, len(v))
+		for k, x := range v {
+			if k == "name" {
+				name, _ = x.(string)
+				continue
+			}
+			cfg[k] = x
 		}
 	default:
-		return fmt.Errorf("schemaform: layout %q does not exist (there is %q and %q)", s.Layout, LayoutForm, LayoutTable)
+		return "", nil, fmt.Errorf("schemaform: layout is a name or {name: …, …}, not %T", v)
 	}
+	return name, cfg, nil
+}
 
-	cols, err := s.Meta.Strings("columns")
+// setLayout gives the schema the layout name, told cfg.
+func (s *Schema) setLayout(name string, cfg Meta) error {
+	if name == "" {
+		name = LayoutForm
+	}
+	l := LookupLayout(name)
+	if l == nil {
+		return fmt.Errorf("schemaform: layout %q does not exist (there is %q)", name, strings.Join(LayoutNames(), `", "`))
+	}
+	if l.Records && (!s.Slice || s.Item != nil) {
+		return fmt.Errorf("schemaform: layout %q draws a list of records, and this is not one", name)
+	}
+	config, err := l.read(s, cfg)
 	if err != nil {
-		return fmt.Errorf("schemaform: %w", err)
+		return fmt.Errorf("schemaform: layout %q: %w", name, err)
 	}
-	for _, name := range cols {
-		found := false
-		for _, f := range s.Fields {
-			if f.Name == name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("schemaform: the column %q names no field", name)
-		}
-	}
-	s.Columns = cols
+	s.Layout, s.LayoutConfig = name, config
 	return nil
 }
 

@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -383,7 +384,16 @@ func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 	if c.Field.Schema == nil {
 		return errorComponent(fmt.Sprintf("schemaform: o field %q é um form sem schema", c.Field.Name))
 	}
-	return b.draw(c.Field.Schema, c)
+	body := b.draw(c.Field.Schema, c)
+	// A record inside the record is a group: its label over its fields, set in
+	// — a list carries its label in the sorter already.
+	if label := c.Label(); !c.Field.Schema.Slice && label != "" {
+		return h.Div(
+			h.Div(h.Text(label)).Class("text-subtitle-2 mb-2"),
+			h.Div(body).Class("ps-3 border-s"),
+		).Class("mb-3")
+	}
+	return body
 }
 
 // draw renders a schema over the value c.Value holds: the fields of a record,
@@ -392,8 +402,11 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	if !schema.Slice {
 		return b.record(schema, c, c.Value, c.Path)
 	}
-	if schema.Layout == LayoutTable {
+	switch schema.Layout {
+	case LayoutTable:
 		return b.table(schema, c)
+	case LayoutGrid:
+		return b.grid(schema, c)
 	}
 
 	// The list: each item is that record again, bound to `item`, so a field of
@@ -497,10 +510,35 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 				f.Name, f.Type, b.Types())))
 			continue
 		}
-		comps = append(comps, withHelp(fc, draw(fc)))
+		comp := withHelp(fc, draw(fc))
+		if cond := whenCondition(f, value); cond != "" {
+			comp = h.Div(comp).Attr("v-if", cond)
+		}
+		comps = append(comps, comp)
 	}
 
 	return h.Div(comps...)
+}
+
+// MetaWhen is the field metadata that draws a field only while the record it
+// is in holds some values — `[when={name: "grid"}] grid? GridConfig`: the
+// field is there only while the record's name is "grid".
+const MetaWhen = "when"
+
+// whenCondition is the JS condition MetaWhen says, over the record at value;
+// "" when the field is always drawn.
+func whenCondition(f *Field, value string) string {
+	when, ok := f.Meta[MetaWhen].(Meta)
+	if !ok || len(when) == 0 {
+		return ""
+	}
+	keys := keysOf(when)
+	sort.Strings(keys)
+	conds := make([]string, len(keys))
+	for i, k := range keys {
+		conds[i] = fmt.Sprintf("(%s || {})[%s] === %s", value, h.JSONString(k), h.JSONString(when[k]))
+	}
+	return strings.Join(conds, " && ")
 }
 
 // table draws a list of records as a TABLE — `[layout="table"]`: one row per
@@ -576,6 +614,52 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 		sorter.Attr("item-title", title)
 	}
 	return sorter
+}
+
+// grid draws a list of records as cards, schema.GridColumns() side by side (one
+// under the other on a narrow screen): each card is the record's form, with a
+// button to remove it; the list is sorted by the same sorter as the others.
+func (b *Builder) grid(schema *Schema, c *Context) h.HTMLComponent {
+	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
+
+	body := []h.HTMLComponent{v.VCardText(b.record(schema, c, ItemVar, c.Path))}
+	if !readOnly {
+		body = append(body, v.VCardActions(
+			v.VSpacer(),
+			v.VBtn("").Icon("mdi-delete-outline").
+				Variant(v.VariantText).Size(v.SizeSmall).Color("error").
+				Attr("@click", fmt.Sprintf("%s.splice(itemIndex, 1)", c.Value)),
+		))
+	}
+
+	grid := v.VRow(
+		gridCol(schema,
+			v.VCard(body...).Variant(v.VariantOutlined).Class("h-100"),
+		).Attr("v-for", fmt.Sprintf("(%s, itemIndex) in %s", ItemVar, c.Value)),
+	).Dense(true)
+
+	sorter := vx.VXArraySorter(
+		web.Slot(grid, addItemButton(schema, c, readOnly)).Name("default"),
+	).
+		Label(c.Label()).
+		Density(v.DensityCompact).
+		Attr("v-model", c.Value).
+		Readonly(readOnly)
+	if title := firstTextField(schema); title != "" {
+		sorter.Attr("item-title", title)
+	}
+	return sorter
+}
+
+// gridCol is one cell of a grid: the whole width on a phone, two per row on a
+// small screen, and schema.GridColumns() per row from a medium one on.
+func gridCol(schema *Schema, comp h.HTMLComponent) *v.VColBuilder {
+	n := schema.GridColumns()
+	sm := 6
+	if n == 1 {
+		sm = 12
+	}
+	return v.VCol(comp).Cols(12).Sm(sm).Md(MaxGridColumns / n)
 }
 
 // addItemButton appends one empty item of the schema's own shape to the list.
