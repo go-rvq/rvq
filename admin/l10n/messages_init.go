@@ -6,17 +6,19 @@ import "fmt"
 // shaped like an entry of the site's messages config file. The application layer
 // (e.g. hermon-cms) maps it onto its LocaleMessage model and upserts it.
 //
-// System marks a message whose value is provided/translated in Go code (a label
-// the code owns): it is seeded automatically for every locale and is read-only in
-// the admin. A non-System message (from the template scan or the config file) is
-// a normal, editable text.
+// Origin says where a message comes from, when it is not an ordinary text of
+// the site (from the template scan or the config file, editable): the
+// application names its origins — hermon-cms, for instance, has "system" for a
+// label the Go code owns and translates (read-only in the admin) and
+// "locale_config" for the words of a form a config key declares. "" is an
+// ordinary text.
 type MessageInit struct {
 	Key    string
 	Type   string // text | html | yaml ("" means text)
 	Value  string // the value for the locale being initialized
 	Help   string
 	Hint   string
-	System bool
+	Origin string
 }
 
 // MessageInitFunc produces the message definitions for one locale (BCP-47 code).
@@ -44,8 +46,8 @@ func (b *Builder) HasMessageInitializers() bool {
 
 // CollectMessages runs every registered initializer for a locale and returns the
 // merged definitions in first-seen key order, with later initializers overriding
-// earlier ones field by field (a later empty field does not erase an earlier
-// value; System, once set, stays set).
+// earlier ones field by field (a later empty field — Origin included — does not
+// erase an earlier value).
 func (b *Builder) CollectMessages(locale string) ([]MessageInit, error) {
 	byKey := map[string]*MessageInit{}
 	var order []string
@@ -77,8 +79,8 @@ func (b *Builder) CollectMessages(locale string) ([]MessageInit, error) {
 			if d.Hint != "" {
 				cur.Hint = d.Hint
 			}
-			if d.System {
-				cur.System = true
+			if d.Origin != "" {
+				cur.Origin = d.Origin
 			}
 		}
 	}

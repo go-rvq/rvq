@@ -494,7 +494,7 @@ func (b *ListingBuilder) NewSearchParams(ctx *web.EventContext, qs url.Values, p
 
 	if b.filterDataFunc != nil {
 		fd := b.filterDataFunc(ctx)
-		cond, args := fd.SetByQueryString(ctx.R.URL.RawQuery)
+		cond, args := fd.SetByQueryString(b.filterQuery(ctx))
 
 		params.SQLConditions = append(params.SQLConditions, &SQLCondition{
 			Query: cond,
@@ -803,6 +803,46 @@ func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ct
 
 const ActiveFilterTabQueryKey = "active_filter_tab"
 
+// defaultFilterTab is the tab a request that picks none is in: the Default
+// one, when the query carries neither a tab (active_filter_tab) nor a filter
+// of any tab. nil otherwise.
+func defaultFilterTab(ctx *web.EventContext, tabs []*FilterTab) *FilterTab {
+	qs := ctx.R.URL.Query()
+	if qs.Has(ActiveFilterTabQueryKey) {
+		return nil
+	}
+	var def *FilterTab
+	for _, tab := range tabs {
+		for k := range tab.Query {
+			if qs.Has(k) {
+				return nil
+			}
+		}
+		if tab.Default {
+			def = tab
+		}
+	}
+	return def
+}
+
+// filterQuery is the query the listing's filters read: the request's, plus —
+// when it picked no tab — the default tab's filters, so the listing opens as
+// that tab shows it.
+func (b *ListingBuilder) filterQuery(ctx *web.EventContext) string {
+	if b.filterTabsFunc == nil {
+		return ctx.R.URL.RawQuery
+	}
+	tab := defaultFilterTab(ctx, b.filterTabsFunc(ctx))
+	if tab == nil {
+		return ctx.R.URL.RawQuery
+	}
+	q := ctx.R.URL.Query()
+	for k, v := range tab.Query {
+		q[k] = v
+	}
+	return q.Encode()
+}
+
 func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	ctx *web.EventContext,
 	inDialog bool,
@@ -823,21 +863,23 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		ShowArrows(true).
 		Color("primary").
 		Density(DensityCompact)
-	var defaultTab *FilterTab
+	defaults := 0
 	for _, tab := range tabsData {
 		if tab.Default {
-			if defaultTab != nil {
-				return VAlert(h.RawHTML("Many filter tabs with <b>Default</b> flag.")).Color("error")
-			}
-			defaultTab = tab
+			defaults++
 		}
 	}
+	if defaults > 1 {
+		return VAlert(h.RawHTML("Many filter tabs with <b>Default</b> flag.")).Color("error")
+	}
+	defaultTab := defaultFilterTab(ctx, tabsData)
 	value := -1
 	activeTabValue := qs.Get(ActiveFilterTabQueryKey)
 
 	for i, td := range tabsData {
-		// Find selected tab by active_filter_tab=xx in the url query
-		if activeTabValue != "" && activeTabValue == td.ID {
+		// Find selected tab by active_filter_tab=xx in the url query, or the
+		// default one when the query picked none
+		if (activeTabValue != "" && activeTabValue == td.ID) || td == defaultTab {
 			value = i
 		}
 

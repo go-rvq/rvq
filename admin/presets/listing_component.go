@@ -164,7 +164,7 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	var filterBar h.HTMLComponent
 	if !lcb.FilterDisabled && b.filterDataFunc != nil {
 		fd := b.filterDataFunc(ctx)
-		fd.SetByQueryString(ctx.R.URL.RawQuery)
+		fd.SetByQueryString(b.filterQuery(ctx))
 		filterBar = b.filterBar(ctx, msgr, fd, inDialog)
 	}
 
