@@ -90,7 +90,13 @@ func (b *Builder) formDisplayFunc(c *Context) h.HTMLComponent {
 		return errorComponent(fmt.Sprintf("schemaform: o field %q é um form sem schema", c.Field.Name))
 	}
 	if !schema.Slice {
-		return b.showRecord(schema, c, c.Data)
+		rec := b.showRecord(schema, c, c.Data)
+		// a record inside the record: set in, behind a line, as in the form (its
+		// label is above it already); the root, and a cell, as they are
+		if c.Field.Name != "" && !c.Compact {
+			return h.Div(rec).Class(nestedRecordClass)
+		}
+		return rec
 	}
 
 	items, _ := c.Data.([]any)

@@ -1,6 +1,7 @@
 package schemaform
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -449,5 +450,31 @@ func TestSchemaClone(t *testing.T) {
 	again, _ := Parse(src)
 	if again.Fields[0].Name != "a" || again.Layout != LayoutTable || len(again.TableColumns()) != 2 {
 		t.Errorf("changing the clone changed the cached schema: %s %v", again.Layout, again.LayoutConfig)
+	}
+}
+
+// The value a form starts from has every record and list the schema has, so
+// what the form binds through is there.
+func TestFilled(t *testing.T) {
+	s, err := Parse(`interface Words { label? str }
+interface Fields { icon? Words; link? Words }
+interface Layout { name? str; tags? []str }
+interface Form { layout? Layout; fields? Fields }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := s.Filled(map[string]any{"fields": map[string]any{"icon": map[string]any{"label": "Ícone"}}})
+	want := map[string]any{
+		"layout": map[string]any{"tags": []any{}},
+		"fields": map[string]any{
+			"icon": map[string]any{"label": "Ícone"},
+			"link": map[string]any{},
+		},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("filled:\n %v\nwant\n %v", got, want)
+	}
+	if list := (&Schema{Slice: true}).Filled(nil); list == nil {
+		t.Error("a list is filled in as an empty list")
 	}
 }

@@ -240,3 +240,45 @@ func (s *Schema) WithLayout(name string, cfg Meta) (*Schema, error) {
 	}
 	return c, nil
 }
+
+// Filled is v with the shape the schema describes filled in where it is
+// missing: a record inside the record an empty record, a list an empty list —
+// all the way down. A form binds its inputs through those (`value.layout.name`),
+// and a record that is not there breaks the whole form in the browser; what v
+// holds is kept as it is.
+func (s *Schema) Filled(v any) any {
+	if s == nil {
+		return v
+	}
+	if s.Slice {
+		list, _ := v.([]any)
+		if list == nil {
+			list = []any{}
+		}
+		for i, item := range list {
+			switch {
+			case s.Item == nil:
+				list[i] = s.record(item)
+			case s.Item.Schema != nil:
+				list[i] = s.Item.Schema.Filled(item)
+			}
+		}
+		return list
+	}
+	return s.record(v)
+}
+
+// record is v as a record of the schema's fields, the records and lists inside
+// it filled in.
+func (s *Schema) record(v any) map[string]any {
+	m, _ := v.(map[string]any)
+	if m == nil {
+		m = map[string]any{}
+	}
+	for _, f := range s.Fields {
+		if f.Schema != nil {
+			m[f.Name] = f.Schema.Filled(m[f.Name])
+		}
+	}
+	return m
+}

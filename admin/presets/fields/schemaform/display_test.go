@@ -246,3 +246,15 @@ func TestDisplayGrid(t *testing.T) {
 	}
 	mustNotContain(t, show(t, New(), src, stored, true), "<v-card", "<v-row")
 }
+
+// A record inside the record is set in, behind a line, in the detail as in the
+// form; a cell keeps to one line.
+func TestDisplayNestedRecordIsSetIn(t *testing.T) {
+	src := "interface Address { street str }\ninterface Form { name str; address Address }"
+	got := show(t, New(), src, "name: A\naddress:\n  street: Rua 1\n", false)
+	mustContain(t, got, `class='`+nestedRecordClass+`'`, "Rua 1")
+	if strings.Count(got, nestedRecordClass) != 1 {
+		t.Errorf("only the inner record is set in:\n%s", got)
+	}
+	mustNotContain(t, show(t, New(), src, "name: A\naddress:\n  street: Rua 1\n", true), nestedRecordClass)
+}

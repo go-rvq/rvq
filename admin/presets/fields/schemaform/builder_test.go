@@ -595,4 +595,7 @@ func TestComponentFuncNestedRecordIsAGroup(t *testing.T) {
 	if i < 0 || j < 0 || i > j {
 		t.Errorf("the group's label comes before its fields:\n%s", got)
 	}
+	if !strings.Contains(got, `class='`+nestedRecordClass+`'`) {
+		t.Errorf("the group's fields are set in:\n%s", got)
+	}
 }

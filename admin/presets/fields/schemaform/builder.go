@@ -390,7 +390,7 @@ func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 	if label := c.Label(); !c.Field.Schema.Slice && label != "" {
 		return h.Div(
 			h.Div(h.Text(label)).Class("text-subtitle-2 mb-2"),
-			h.Div(body).Class("ps-3 border-s"),
+			h.Div(body).Class(nestedRecordClass),
 		).Class("mb-3")
 	}
 	return body
@@ -519,6 +519,10 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 
 	return h.Div(comps...)
 }
+
+// nestedRecordClass sets a record inside the record in, behind a line — the
+// same in the form and in the detail.
+const nestedRecordClass = "ps-5 border-s"
 
 // MetaWhen is the field metadata that draws a field only while the record it
 // is in holds some values — `[when={name: "grid"}] grid? GridConfig`: the
