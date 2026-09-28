@@ -29,6 +29,12 @@ type Schema struct {
 	// Meta is the `[k=v, …]` block written before the interface — what the
 	// schema says about how it is DRAWN, not about the value.
 	Meta Meta
+	// Choice says the record holds ONE of its fields, not all: a field typed by
+	// a union of classes (`layout listLayout|gridLayout`), each class a field —
+	// its name the class's, its schema the class's record. The value is an
+	// object of one key, the class chosen, holding what that class holds:
+	// `{gridLayout: {columns: 3}}`.
+	Choice bool
 	// Layout is how the schema is drawn, one of the registered layouts (see
 	// Layout): LayoutForm, the list (each record a card of its form, one under the other),
 	// LayoutTable (one row per record) or LayoutGrid (each record a card).
@@ -265,7 +271,24 @@ func (s *Schema) Filled(v any) any {
 		}
 		return list
 	}
+	if s.Choice {
+		return s.chosen(v)
+	}
 	return s.record(v)
+}
+
+// chosen is v as a choice: the class it holds filled in, and no other.
+func (s *Schema) chosen(v any) map[string]any {
+	m, _ := v.(map[string]any)
+	if m == nil {
+		m = map[string]any{}
+	}
+	for _, f := range s.Fields {
+		if val, ok := m[f.Name]; ok && f.Schema != nil {
+			m[f.Name] = f.Schema.Filled(val)
+		}
+	}
+	return m
 }
 
 // record is v as a record of the schema's fields, the records and lists inside

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onMounted, onUpdated, PropType, Ref, ref} from 'vue'
+import {computed, onMounted, PropType, Ref, ref, watch} from 'vue'
 import draggable from 'vuedraggable'
 
 enum Variant {
@@ -48,7 +48,9 @@ const props = defineProps({
   }
 })
 const listItems: Ref<Array<any>> = ref([...props.items])
-const value = ref()
+// The value starts as the one given — a value already saved shows at once, not
+// only after something else makes the component update — and follows it.
+const value = ref<any>(props.modelValue)
 const cachedSelectedItems: Ref<Array<any>> = ref([...(props.cacheItems ?? [])])
 const isLoading = ref(false)
 const disabled = ref(false)
@@ -128,9 +130,12 @@ const removeItem = (v: any) => {
 onMounted(() => {
   loadRemoteItems()
 })
-onUpdated(() => {
-  value.value = props.modelValue
-})
+watch(
+  () => props.modelValue,
+  (v) => {
+    value.value = v
+  }
+)
 
 const reloadSearch = (val: any) => {
   if (!props.loadData) {

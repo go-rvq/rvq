@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gad-lang/gad"
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -116,20 +117,39 @@ type Context struct {
 	itemsRead bool
 }
 
-// Info is what the builder's FieldInfoFunc says about this field, asked once.
+// Info is what the builder's FieldInfoFunc says about this field, asked once;
+// what it leaves unsaid, the field's own metadata says — `[label="…",
+// hint="…", help="…"]`, as a class field is written.
 func (c *Context) Info() FieldInfo {
 	if !c.infoRead {
 		c.infoRead = true
+		var i FieldInfo
 		if c.Builder != nil && c.Builder.info != nil {
-			i := c.Builder.info(c.Event, c.Path)
-			c.info = &i
+			i = c.Builder.info(c.Event, c.Path)
 		}
-	}
-	if c.info == nil {
-		return FieldInfo{}
+		if c.Field != nil {
+			if l, ok := c.Field.Meta[MetaLabel].(string); ok && i.Label == "" {
+				i.Label = l
+			}
+			if hint, ok := c.Field.Meta[MetaHint].(string); ok && i.Hint == "" {
+				i.Hint = hint
+			}
+			if help, ok := c.Field.Meta[MetaHelp].(string); ok && i.Help == nil && help != "" {
+				i.Help = h.Div(h.Text(help)).Style("white-space:pre-wrap")
+			}
+		}
+		c.info = &i
 	}
 	return *c.info
 }
+
+// The field metadata that names a field where the application gives it no
+// words (FieldInfoFunc): `[label="Título", hint="…", help="…"]`.
+const (
+	MetaLabel = "label"
+	MetaHint  = "hint"
+	MetaHelp  = "help"
+)
 
 // Label is what to put on the input: what the FieldInfoFunc says, or the
 // field's name humanized.
@@ -198,6 +218,20 @@ type Builder struct {
 	enumItems EnumItemsFunc
 	encode    EncodeFunc
 	decode    DecodeFunc
+	typeOf    TypeOfFunc
+}
+
+// TypeOfFunc says what a field's type is, for a type the schema cannot name by
+// itself: an application's own — a model, say — given as the gad object the
+// field is typed with. It answers the name of the component the field is
+// drawn with, or "" to leave the type to the schema.
+type TypeOfFunc func(t gad.Object) string
+
+// TypeOf sets the function that names the types only the application knows
+// (TypeOfFunc). It is asked first, for every field of a single type.
+func (b *Builder) TypeOf(f TypeOfFunc) *Builder {
+	b.typeOf = f
+	return b
 }
 
 // EnumInfo sets the function that says which values an enum field offers, and
@@ -386,8 +420,8 @@ func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 	}
 	body := b.draw(c.Field.Schema, c)
 	// A record inside the record is a group: its label over its fields, set in
-	// — a list carries its label in the sorter already.
-	if label := c.Label(); !c.Field.Schema.Slice && label != "" {
+	// — a list carries its label in the sorter already, a choice in its select.
+	if label := c.Label(); !c.Field.Schema.Slice && !c.Field.Schema.Choice && label != "" {
 		return h.Div(
 			h.Div(h.Text(label)).Class("text-subtitle-2 mb-2"),
 			h.Div(body).Class(nestedRecordClass),
@@ -399,6 +433,9 @@ func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 // draw renders a schema over the value c.Value holds: the fields of a record,
 // or the array sorter of a list whose item is that same record.
 func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
+	if schema.Choice {
+		return b.choice(schema, c)
+	}
 	if !schema.Slice {
 		return b.record(schema, c, c.Value, c.Path)
 	}
@@ -526,6 +563,50 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 	}
 
 	return h.Div(comps...)
+}
+
+// choice draws a choice of one class (Schema.Choice): a select of the classes,
+// and under it the form of the one chosen. The value is an object of one key,
+// the class: choosing another starts it empty — as its form is —, choosing the
+// one there keeps what it holds, and clearing it (an optional field) leaves
+// nothing.
+func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
+	chosen := fmt.Sprintf("Object.keys(%s || {})[0]", c.Value)
+
+	options := make([]map[string]string, len(schema.Fields))
+	empties := make([]string, len(schema.Fields))
+	forms := make([]h.HTMLComponent, 0, len(schema.Fields))
+	for i, f := range schema.Fields {
+		fc := &Context{
+			Field:   f,
+			Value:   fmt.Sprintf("%s[%q]", c.Value, f.Name),
+			Path:    join(c.Path, f.Name),
+			Form:    c.Form,
+			Event:   c.Event,
+			Builder: b,
+		}
+		options[i] = map[string]string{"value": f.Name, "title": fc.Label()}
+		empties[i] = fmt.Sprintf("%q: %s", f.Name, emptyItemJS(f.Schema))
+		forms = append(forms, h.Div(b.record(f.Schema, fc, fc.Value, fc.Path)).
+			Class(nestedRecordClass).
+			Attr("v-if", fmt.Sprintf("%s === %q", chosen, f.Name)))
+	}
+
+	sel := v.VSelect().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Items(options).
+		ItemTitle("title").
+		ItemValue("value").
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
+		Clearable(!c.Field.Required()).
+		Attr(":model-value", chosen).
+		Attr("@update:model-value", fmt.Sprintf(
+			"(v) => { %[1]s = v ? {[v]: (%[1]s || {})[v] || ({%[2]s})[v]} : null }",
+			c.Value, strings.Join(empties, ", ")))
+
+	return h.Div(append([]h.HTMLComponent{sel}, forms...)...).Class("mb-3")
 }
 
 // nestedRecordClass sets a record inside the record in, behind a line — the
@@ -847,6 +928,8 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
 		Attr("v-model.number", c.Value)
 }
 

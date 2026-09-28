@@ -89,6 +89,9 @@ func (b *Builder) formDisplayFunc(c *Context) h.HTMLComponent {
 	if schema == nil {
 		return errorComponent(fmt.Sprintf("schemaform: o field %q é um form sem schema", c.Field.Name))
 	}
+	if schema.Choice {
+		return b.showChoice(schema, c)
+	}
 	if !schema.Slice {
 		rec := b.showRecord(schema, c, c.Data)
 		// a record inside the record: set in, behind a line, as in the form (its
@@ -115,6 +118,27 @@ func (b *Builder) formDisplayFunc(c *Context) h.HTMLComponent {
 	default:
 		return b.showRecords(schema, c, items)
 	}
+}
+
+// showChoice shows a choice (Schema.Choice): the class chosen, by its label,
+// and what it holds — set in, as a record inside the record is.
+func (b *Builder) showChoice(schema *Schema, c *Context) h.HTMLComponent {
+	m, _ := c.Data.(map[string]any)
+	for _, f := range schema.Fields {
+		data, ok := m[f.Name]
+		if !ok {
+			continue
+		}
+		fc := b.fieldContext(c, f, data)
+		if c.Compact {
+			return h.Tag("span").Children(h.Text(displayLabel(fc)))
+		}
+		return h.Div(
+			h.Div(h.Text(displayLabel(fc))).Class("text-body-2 mb-2"),
+			h.Div(b.showRecord(f.Schema, fc, data)).Class(nestedRecordClass),
+		)
+	}
+	return emptyDisplay(c)
 }
 
 // fieldContext is the context a field of a record is shown with.

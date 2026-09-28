@@ -177,9 +177,33 @@ func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 	return vm, ret, nil
 }
 
+// Class reads a gad class as a form: a record of its fields, the way an
+// interface's are read, with the default each one has. A field typed by a
+// class — `a class { … }`, or one by name — is a record of its own, a group
+// of the form; a type only the application knows is named by TypeOf. vm is
+// the VM that ran the code the class comes from.
+func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
+	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf}
+	s, err := r.class(c)
+	if err != nil {
+		return nil, err
+	}
+	s.shareEnums(r.enums)
+	return s, nil
+}
+
 // class reads the fields of a gad class — what a layout's Config declares —
 // the way an interface's are read, with the default each one has.
 func (r *reader) class(c *gad.Class) (*Schema, error) {
+	if r.visitingClass[c] {
+		return nil, fmt.Errorf("schemaform: the class %q contains itself", c.Name())
+	}
+	if r.visitingClass == nil {
+		r.visitingClass = map[*gad.Class]bool{}
+	}
+	r.visitingClass[c] = true
+	defer delete(r.visitingClass, c)
+
 	s := &Schema{}
 	for _, cf := range c.RawFields() {
 		types := make(gad.Array, len(cf.Types))
@@ -194,6 +218,28 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 			f.Default = metaValue(cf.Value)
 		}
 		s.Fields = append(s.Fields, f)
+	}
+	return s, nil
+}
+
+// choice reads a union of classes (`listLayout|gridLayout`) into a choice of
+// one of them (Schema.Choice): a field per class, named as the class is, its
+// schema the class's record, its metadata the class's. nil when a type of the
+// union is not a class.
+func (r *reader) choice(types gad.Array) (*Schema, error) {
+	s := &Schema{Choice: true}
+	for _, t := range types {
+		c, ok := t.(*gad.Class)
+		if !ok {
+			return nil, nil
+		}
+		sub, err := r.class(c)
+		if err != nil {
+			return nil, err
+		}
+		s.Fields = append(s.Fields, &Field{
+			Name: c.Name(), Type: FormType, Schema: sub, Nullable: true, Meta: metaOf(c.Meta),
+		})
 	}
 	return s, nil
 }
@@ -220,8 +266,11 @@ type reader struct {
 	// enums are the enums the fields hold, by name.
 	enums map[string]*Enum
 	// visiting are the interfaces being read, down from the form: one met again
-	// on the way down contains itself.
-	visiting map[*gad.Interface]bool
+	// on the way down contains itself. visitingClass, the classes.
+	visiting      map[*gad.Interface]bool
+	visitingClass map[*gad.Class]bool
+	// typeOf names the application's own types (Builder.TypeOf).
+	typeOf TypeOfFunc
 }
 
 // index is obj[key] through the object's own reflection.
@@ -366,6 +415,14 @@ func (r *reader) typeInto(f *Field, types gad.Array) error {
 		return nil
 	case 1:
 	default:
+		// a union of classes is a choice of one of them
+		if choice, err := r.choice(types); err != nil || choice != nil {
+			if err != nil {
+				return err
+			}
+			f.Type, f.Schema = FormType, choice
+			return nil
+		}
 		// Several types describe no single input: the field is reported as the
 		// union it is written as, which no component is registered for.
 		names := make([]string, len(types))
@@ -376,7 +433,21 @@ func (r *reader) typeInto(f *Field, types gad.Array) error {
 		return nil
 	}
 
+	if r.typeOf != nil {
+		if name := r.typeOf(types[0]); name != "" {
+			f.Type = name
+			return nil
+		}
+	}
+
 	switch t := types[0].(type) {
+	case *gad.Class:
+		// a record of its own: `a class { … }`, or a class by name
+		sub, err := r.class(t)
+		if err != nil {
+			return err
+		}
+		f.Type, f.Schema = FormType, sub
 	case *gad.Interface:
 		sub, err := r.schema(t)
 		if err != nil {

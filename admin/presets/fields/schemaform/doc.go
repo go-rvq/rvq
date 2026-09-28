@@ -203,6 +203,36 @@
 // enum, or a field EnumItemsFunc answers for, the LABEL of the value it holds.
 // A type with no display shows as text: a read view never refuses a value.
 //
+// # A class as the form
+//
+// Builder.Class reads a gad class — options an application declares in code,
+// as a layout does — as a form: a record of its fields, their defaults and
+// metadata kept.
+//
+//		[label="Grade"]
+//		class gridLayout { [label="Colunas", hint="de 1 a 6"] columns int = 3 }
+//		class listLayout { comp? enum { index_list, compact } }
+//		class PageOptions {
+//		    postType? models.PostType          // a type only the application knows
+//		    posts class {                      // a record of its own: a group
+//		        layout? listLayout|gridLayout  // a choice of one class
+//		    }
+//		}
+//
+//	  - A field typed by a class — `a class { … }`, or a class by name — is a
+//	    record of its own, drawn as a group.
+//	  - A field typed by a union of classes is a CHOICE (Schema.Choice): a
+//	    select of the classes — by the `label` of each class's metadata, or its
+//	    name — and the form of the one chosen. Its value is an object of one
+//	    key, the class chosen: `{gridLayout: {columns: 3}}`. In the schema it is
+//	    a record with a field per class, so a path goes through the class:
+//	    `posts.layout.gridLayout.columns`.
+//	  - A type only the application knows is named by Builder.TypeOf, asked
+//	    first for every field of a single type: it answers the component the
+//	    field is drawn with (registered with Builder.Type).
+//	  - `[label="…", hint="…", help="…"]` on a field names it where the
+//	    FieldInfoFunc gives it no words.
+//
 // # A whole use, end to end
 //
 //	schema, err := schemaform.Parse(`[]{label str; icon str; href}`)
