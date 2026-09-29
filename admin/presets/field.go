@@ -3,7 +3,9 @@ package presets
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -196,9 +198,13 @@ func (f FieldContextSetups) Setup(ctx *FieldContext) {
 
 type FieldBuilder struct {
 	NameLabel
-	mode             FieldMode
-	structField      *reflect_utils.IndexableStructField
-	compFunc         FieldComponentFunc
+	mode        FieldMode
+	structField *reflect_utils.IndexableStructField
+	compFunc    FieldComponentFunc
+	// compWraps are the wraps given while the field had no component
+	// (WrapComponentFunc): applied, in order, to the one it gets. Until then the
+	// field has none, and is skipped.
+	compWraps        []func(old FieldComponentFunc) FieldComponentFunc
 	setterFunc       FieldSetterFunc
 	context          context.Context
 	rt               reflect.Type
@@ -337,6 +343,7 @@ func (b FieldBuilder) Clone() *FieldBuilder {
 	b.Setup = append(FieldContextSetups{}, b.Setup...)
 	b.ToComponentSetup = append(FieldContextSetups{}, b.ToComponentSetup...)
 	b.ValueFormatters = append(FieldValueFormatters{}, b.ValueFormatters...)
+	b.compWraps = append([]func(old FieldComponentFunc) FieldComponentFunc(nil), b.compWraps...)
 	b.Validators = append(FieldValidators{}, b.Validators...)
 	b.DataField = b.DataField.Clone()
 	return &b
@@ -347,12 +354,23 @@ func (b *FieldBuilder) ComponentFunc(v FieldComponentFunc) (r *FieldBuilder) {
 		panic("value required")
 	}
 	b.compFunc = v
+	for _, wrap := range b.compWraps {
+		b.compFunc = wrap(b.compFunc)
+	}
+	b.compWraps = nil
 	return b
 }
 
+// WrapComponentFunc wraps the field's component. A field without one is not
+// given one by the wrap — it stays skipped (not drawn, no permission asked) —:
+// the wrap waits for the component the field gets, so old is never nil.
 func (b *FieldBuilder) WrapComponentFunc(v func(old FieldComponentFunc) FieldComponentFunc) (r *FieldBuilder) {
 	if v == nil {
 		panic("value required")
+	}
+	if b.compFunc == nil {
+		b.compWraps = append(b.compWraps, v)
+		return b
 	}
 	b.compFunc = v(b.compFunc)
 	return b
@@ -473,6 +491,9 @@ func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {
 	defer func() {
 		if panics {
 			if r := recover(); r != nil {
+				// the page shows the error where the field would be; the log
+				// says where it happened
+				log.Printf("presets: field %q: %v\n%s", b.name, r, debug.Stack())
 				comp = FieldComponentWrapper(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 					return v.VAlert().
 						Type(v.TypeError).
