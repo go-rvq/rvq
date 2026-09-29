@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -214,6 +215,7 @@ func (c *Context) EnumItems() ([]EnumItem, error) {
 type Builder struct {
 	types     map[string]ComponentFunc
 	displays  map[string]ComponentFunc
+	decoders  map[string]TypeDecoderFunc
 	info      FieldInfoFunc
 	enumInfo  EnumInfoFunc
 	enumItems EnumItemsFunc
@@ -331,6 +333,21 @@ func New() *Builder {
 }
 
 // Type registers (or replaces) the component that draws a field of this type.
+// TypeDecoderFunc reads the value of a type the application registers from the
+// form it posted under key — a value the form flattens, as a list
+// (`key[0].field`), which the reader of a plain input would not read.
+type TypeDecoderFunc func(values url.Values, key string) any
+
+// TypeDecoder registers how the value of the type name is read back from the
+// posted form (see TypeDecoderFunc); a type without one is read as one input.
+func (b *Builder) TypeDecoder(name string, f TypeDecoderFunc) *Builder {
+	if b.decoders == nil {
+		b.decoders = map[string]TypeDecoderFunc{}
+	}
+	b.decoders[name] = f
+	return b
+}
+
 func (b *Builder) Type(name string, f ComponentFunc) *Builder {
 	b.types[name] = f
 	return b

@@ -95,6 +95,7 @@ func (b *Builder) DecodeForm(ctx *web.EventContext, schema *Schema, values url.V
 		items: func(path string, f *Field) ([]EnumItem, error) {
 			return b.itemsOf(ctx, path, f)
 		},
+		decoders: b.decoders,
 	}
 	value := d.schema(schema, key, "")
 	return value, errors.Join(d.errs...)
@@ -109,7 +110,10 @@ type decoder struct {
 	// items are the values a field may hold, when it holds one of a list. Nil
 	// when nobody is checking.
 	items func(path string, f *Field) ([]EnumItem, error)
-	errs  []error
+	// decoders read the types the application registers a reader for
+	// (Builder.TypeDecoder).
+	decoders map[string]TypeDecoderFunc
+	errs     []error
 }
 
 func (d *decoder) schema(s *Schema, key, path string) any {
@@ -176,6 +180,9 @@ func (d *decoder) field(f *Field, key, path string) any {
 // the empty value of its type otherwise — a required field that was left empty
 // is written as empty, not dropped, so the value keeps its shape.
 func (d *decoder) value(f *Field, key, path string) any {
+	if dec := d.decoders[f.Type]; dec != nil {
+		return dec(d.values, key)
+	}
 	raw, present := d.values[key]
 	var s string
 	if len(raw) > 0 {
