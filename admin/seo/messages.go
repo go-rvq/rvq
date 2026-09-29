@@ -82,7 +82,7 @@ var Messages_en_US = &Messages{
 	CustomVars:      "Custom variables",
 	CustomVarsGroup: "Variables",
 
-	SEOConfig:          "SEO configuration",
+	SEOConfig:          "Settings",
 	MapsKey:            "Google Maps API Key",
 	MapsKeyHint:        "A browser API key (Maps JavaScript + Places) used by the ZIP-codes variable.",
 	MapsKeyHelpTooltip: "How to get the API key",
@@ -182,7 +182,7 @@ var Messages_pt_BR = &Messages{
 	CustomVars:      "Variáveis personalizadas",
 	CustomVarsGroup: "Variáveis",
 
-	SEOConfig:          "Configuração de SEO",
+	SEOConfig:          "Configurações",
 	MapsKey:            "Google Maps API Key",
 	MapsKeyHint:        "Chave de navegador (Maps JavaScript + Places), usada pela variável de CEPs.",
 	MapsKeyHelpTooltip: "Como gerar a API Key",
