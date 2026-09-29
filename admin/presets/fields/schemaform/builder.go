@@ -237,6 +237,9 @@ type Builder struct {
 	encode    EncodeFunc
 	decode    DecodeFunc
 	typeOf    TypeOfFunc
+	// choiceAsName reads a union of classes as the choice of a class's NAME
+	// (ChoiceAsName).
+	choiceAsName bool
 }
 
 // TypeOfFunc says what a field's type is, for a type the schema cannot name by
@@ -249,6 +252,17 @@ type TypeOfFunc func(t gad.Object) string
 // (TypeOfFunc). It is asked first, for every field of a single type.
 func (b *Builder) TypeOf(f TypeOfFunc) *Builder {
 	b.typeOf = f
+	return b
+}
+
+// ChoiceAsName reads a union of classes (`layout? ServiceOptions |
+// PortfolioOptions`) as the choice of one class BY ITS NAME — a select of the
+// classes, each by its label and hint (the class's metadata; its name
+// humanized when it has no label), the value saved its name: "ServiceOptions".
+// Without it, the union is a choice of one class WITH ITS FIELDS, saved as
+// `{"ServiceOptions": {…}}` (Schema.Choice).
+func (b *Builder) ChoiceAsName(v bool) *Builder {
+	b.choiceAsName = v
 	return b
 }
 
@@ -302,6 +316,9 @@ func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) ([]EnumI
 		}
 	}
 
+	if f.Enum.Items != nil {
+		return withLabels(append([]EnumItem(nil), f.Enum.Items...)), nil
+	}
 	items := make([]EnumItem, len(f.Enum.Names))
 	for i, name := range f.Enum.Names {
 		items[i] = EnumItem{Name: name, Label: name}

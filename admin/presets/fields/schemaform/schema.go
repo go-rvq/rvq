@@ -121,6 +121,10 @@ type Enum struct {
 	// stores — `Read`, not the 1 behind it — because the value is written out
 	// as YAML and read back by name.
 	Names []string
+	// Items are the members' labels and hints when the schema itself gives
+	// them — a choice of classes read as their names (Builder.ChoiceAsName)
+	// takes each class's metadata; nil otherwise.
+	Items []EnumItem
 }
 
 // Field is one entry of a form.

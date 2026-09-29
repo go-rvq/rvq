@@ -3,6 +3,7 @@ package schemaform
 import (
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/admin/presets"
 	"regexp"
 	"sort"
 	"strings"
@@ -183,7 +184,7 @@ func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 // of the form; a type only the application knows is named by TypeOf. vm is
 // the VM that ran the code the class comes from.
 func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
-	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf}
+	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf, choiceAsName: b.choiceAsName}
 	s, err := r.class(c)
 	if err != nil {
 		return nil, err
@@ -244,6 +245,31 @@ func (r *reader) choice(types gad.Array) (*Schema, error) {
 	return s, nil
 }
 
+// classNames reads a union of classes as an enum of their names, each labelled
+// by its class's metadata — its label, else its name humanized — and hinted
+// by its hint. nil when a type of the union is not a class.
+func classNames(types gad.Array) *Enum {
+	e := &Enum{}
+	for _, t := range types {
+		c, ok := t.(*gad.Class)
+		if !ok {
+			return nil
+		}
+		it := EnumItem{Name: c.Name(), Label: presets.HumanizeString(c.Name())}
+		meta := metaOf(c.Meta)
+		if l, _ := meta["label"].(string); l != "" {
+			it.Label = l
+		}
+		if hint, _ := meta["hint"].(string); hint != "" {
+			it.Hint = hint
+		}
+		e.Names = append(e.Names, c.Name())
+		e.Items = append(e.Items, it)
+	}
+	e.Name = strings.Join(e.Names, "|")
+	return e
+}
+
 // typeMarker is a type the builder knows and gad does not — `color`, `html` —
 // declared while the schema runs so a field may be typed with it. It is only
 // ever reflected upon: its name is the component the field is drawn with.
@@ -271,6 +297,9 @@ type reader struct {
 	visitingClass map[*gad.Class]bool
 	// typeOf names the application's own types (Builder.TypeOf).
 	typeOf TypeOfFunc
+	// choiceAsName reads a union of classes as the choice of a class's name
+	// (Builder.ChoiceAsName).
+	choiceAsName bool
 }
 
 // index is obj[key] through the object's own reflection.
@@ -415,7 +444,14 @@ func (r *reader) typeInto(f *Field, types gad.Array) error {
 		return nil
 	case 1:
 	default:
-		// a union of classes is a choice of one of them
+		// a union of classes is a choice of one of them: by its name, or with
+		// its fields
+		if r.choiceAsName {
+			if e := classNames(types); e != nil {
+				f.Type, f.Enum = e.Name, e
+				return nil
+			}
+		}
 		if choice, err := r.choice(types); err != nil || choice != nil {
 			if err != nil {
 				return err
