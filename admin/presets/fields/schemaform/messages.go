@@ -98,7 +98,8 @@ func GetMessages(ctx context.Context) *Messages {
 // messagesOf are the messages in the language of the request being answered.
 func messagesOf(ev *web.EventContext) *Messages {
 	if ev == nil || ev.R == nil {
-		return GetMessages(nil)
+		// no request: the default language's
+		return GetMessages(context.Background())
 	}
 	return GetMessages(ev.R.Context())
 }

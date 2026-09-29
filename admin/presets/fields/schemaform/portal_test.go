@@ -55,7 +55,7 @@ func TestPortal(t *testing.T) {
 	}
 	mustContain(t, cell, "show:<")
 
-	if NewPortalName() == NewPortalName() {
+	if a, b := NewPortalName(), NewPortalName(); a == b {
 		t.Error("two portals share a name")
 	}
 }
