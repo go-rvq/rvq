@@ -115,13 +115,8 @@ func OrderDisplayFunc(options OrderOptionsFunc) ComponentFunc {
 		if text == "" {
 			return emptyDisplay(c)
 		}
-		if c.Compact {
-			return h.Span(text)
-		}
-		return h.Div(
-			h.Div(h.Text(displayLabel(c))).Class("text-caption text-medium-emphasis"),
-			h.Div(h.Text(text)),
-		).Class("mb-2")
+		// the value alone: the record labels its fields (showRecord)
+		return h.Span(text)
 	}
 }
 

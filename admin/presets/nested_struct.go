@@ -7,12 +7,33 @@ import (
 )
 
 type NestedStructBuilder struct {
-	mb *ModelBuilder
-	fb *FieldsBuilder
+	mb    *ModelBuilder
+	fb    *FieldsBuilder
+	frame NestedStructFrame
+}
+
+// NestedStructFrame draws the fields of a nested struct — body, with the
+// field's hint (nil when it has none) — as the field: by default its label over
+// an outlined card holding them (DefaultNestedStructFrame).
+type NestedStructFrame func(field *FieldContext, hint, body h.HTMLComponent) h.HTMLComponent
+
+// DefaultNestedStructFrame is the field's label over an outlined card holding
+// the hint and the fields.
+func DefaultNestedStructFrame(field *FieldContext, hint, body h.HTMLComponent) h.HTMLComponent {
+	return h.Div(
+		h.Label(field.Label).Class("v-label theme--light text-caption"),
+		v.VCard(hint, body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
+	)
 }
 
 func NestedStruct(mb *ModelBuilder, fb *FieldsBuilder) *NestedStructBuilder {
 	return &NestedStructBuilder{mb: mb, fb: fb}
+}
+
+// Frame sets what the fields are drawn in (NestedStructFrame).
+func (n *NestedStructBuilder) Frame(f NestedStructFrame) *NestedStructBuilder {
+	n.frame = f
+	return n
 }
 
 func (n *NestedStructBuilder) Model() *ModelBuilder {
@@ -44,10 +65,11 @@ func (n *NestedStructBuilder) Build(b *FieldBuilder) {
 			hintComp = h.Div(h.RawHTML(hint)).Class("input-fields-group_hint text-caption opacity-60 mb-3")
 		}
 
-		return h.Div(
-			h.Label(field.Label).Class("v-label theme--light text-caption"),
-			v.VCard(hintComp, body).Variant("outlined").Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
-		)
+		frame := n.frame
+		if frame == nil {
+			frame = DefaultNestedStructFrame
+		}
+		return frame(field, hintComp, body)
 	})
 }
 
