@@ -218,7 +218,12 @@ func publishAction(mb *presets.ModelBuilder, publisher *Builder, actionName stri
 		}
 
 		if status, ok := obj.(StatusInterface); ok {
-			web.AppendRunScripts(&r, fmt.Sprintf("locals.%s = %q", FieldOnlineUrl, status.EmbedStatus().OnlineUrl))
+			// the address as the record links it, as the publish bar draws it
+			onlineUrl := status.EmbedStatus().OnlineUrl
+			if pu, _ := obj.(PublicUrlInterface); pu != nil {
+				onlineUrl = pu.GetPublicUrl(mb, ctx)
+			}
+			web.AppendRunScripts(&r, fmt.Sprintf("locals.%s = %q", FieldOnlineUrl, onlineUrl))
 		}
 
 		if script := ctx.R.FormValue(ParamScriptAfterPublish); script != "" {

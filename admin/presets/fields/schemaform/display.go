@@ -55,12 +55,37 @@ func (b *Builder) showRoot(ctx *web.EventContext, schema *Schema, value any, com
 	if schema == nil {
 		return errorComponent("schemaform: o field não tem schema")
 	}
-	return b.formDisplayFunc(&Context{
+	c := &Context{
 		Field:   &Field{Type: FormType, Schema: schema},
 		Data:    value,
 		Event:   ctx,
 		Builder: b,
 		Compact: compact,
+	}
+	if compact {
+		// a listing cell embeds no portal: one per cell would weigh on the
+		// listing, and a field opens nothing there (Context.Portal is "")
+		return compactCell(b.formDisplayFunc(c))
+	}
+	c.Portal = NewPortalName()
+	return h.Components(b.formDisplayFunc(c), web.Portal().Name(c.Portal))
+}
+
+// compactCell keeps a listing cell to one line, cut with "…"; a click on it
+// shows it whole, and another cuts it again — without opening the record the
+// row is. An empty cell stays empty.
+func compactCell(comp h.HTMLComponent) h.HTMLComponent {
+	return h.ComponentFunc(func(ctx *h.Context) error {
+		body, err := h.Marshal(comp, ctx.Context)
+		if err != nil || strings.TrimSpace(string(body)) == "" {
+			return err
+		}
+		return h.Tag("span").Children(h.RawHTML(body)).
+			Class("schemaform-cell text-truncate d-inline-block").
+			Style("max-width: 24em; vertical-align: bottom; cursor: pointer").
+			Attr("title", "clique para ver inteiro").
+			Attr("@click.stop", `$event.currentTarget.classList.toggle("text-truncate")`).
+			Write(ctx)
 	})
 }
 
@@ -144,10 +169,10 @@ func (b *Builder) showChoice(schema *Schema, c *Context) h.HTMLComponent {
 // fieldContext is the context a field of a record is shown with.
 func (b *Builder) fieldContext(c *Context, f *Field, data any) *Context {
 	return &Context{
-		Field:   f,
-		Data:    data,
-		Path:    join(c.Path, f.Name),
-		Event:   c.Event,
+		Field: f,
+		Data:  data,
+		Path:  join(c.Path, f.Name),
+		Event: c.Event, Portal: c.Portal,
 		Builder: b,
 		Compact: c.Compact,
 	}
@@ -193,7 +218,7 @@ func (b *Builder) showValues(schema *Schema, c *Context, items []any) h.HTMLComp
 	show := func(data any) h.HTMLComponent {
 		return b.showField(&Context{
 			Field: schema.Item, Data: data, Path: c.Path,
-			Event: c.Event, Builder: b, Compact: c.Compact, noLabel: true,
+			Event: c.Event, Portal: c.Portal, Builder: b, Compact: c.Compact, noLabel: true,
 		})
 	}
 	if c.Compact {

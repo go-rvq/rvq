@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gad-lang/gad"
 	h "github.com/go-rvq/htmlgo"
@@ -106,6 +107,12 @@ type Context struct {
 	// DecodeValue reads it. An editing component binds Value instead.
 	Data any
 
+	// Portal is the name of a portal embedded at the root of the component —
+	// the form, the detail —, shared by all its fields: where one opens what it
+	// opens (a dialog, say) without depending on the page around it. "" in a
+	// listing cell (Compact), which embeds none.
+	Portal string
+
 	// noLabel marks the item of a list of PLAIN VALUES: the list already
 	// carries the words, so a label on every row would only repeat them.
 	noLabel bool
@@ -116,6 +123,14 @@ type Context struct {
 	items     []EnumItem
 	itemsErr  error
 	itemsRead bool
+}
+
+// PortalName is the portal embedded at the root of the component this field
+// is drawn in (Context.Portal): where a component — the builder's or one of
+// the application's, registered with Type or Display — opens what it opens,
+// a dialog, say. "" in a listing cell, which embeds none.
+func (c *Context) PortalName() string {
+	return c.Portal
 }
 
 // Info is what the builder's FieldInfoFunc says about this field, asked once;
@@ -418,15 +433,31 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 		if schema == nil {
 			return errorComponent("schemaform: o field não tem schema")
 		}
-		return b.draw(schema, &Context{
-			Field:   &Field{Name: field.Name, Type: FormType, Schema: schema},
-			Value:   fmt.Sprintf("form[%q]", field.FormKey),
-			Path:    "",
-			Form:    field,
-			Event:   ctx,
-			Builder: b,
-		})
+		portal := NewPortalName()
+		return h.Components(
+			b.draw(schema, &Context{
+				Field:   &Field{Name: field.Name, Type: FormType, Schema: schema},
+				Value:   fmt.Sprintf("form[%q]", field.FormKey),
+				Path:    "",
+				Form:    field,
+				Event:   ctx,
+				Builder: b,
+				Portal:  portal,
+			}),
+			web.Portal().Name(portal),
+		)
 	}
+}
+
+var portalSeq atomic.Uint64
+
+// NewPortalName is a new name for the portal a component's root embeds
+// (Context.Portal): one of its own, so two schema forms on a page never share
+// it. A root drawn out of the builder's own — a component of the application
+// that draws fields itself — makes one, embeds `web.Portal().Name(name)`, and
+// gives it to the contexts it draws with.
+func NewPortalName() string {
+	return fmt.Sprintf("schemaform_portal_%d", portalSeq.Add(1))
 }
 
 // formComponentFunc is FormType: a field that is itself a form, or a list of
@@ -533,11 +564,11 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 // does not grow either: a list adds no name of its own.
 func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 	ic := &Context{
-		Field:   item,
-		Value:   fmt.Sprintf("%s[itemIndex]", c.Value),
-		Path:    c.Path,
-		Form:    c.Form,
-		Event:   c.Event,
+		Field: item,
+		Value: fmt.Sprintf("%s[itemIndex]", c.Value),
+		Path:  c.Path,
+		Form:  c.Form,
+		Event: c.Event, Portal: c.Portal,
 		Builder: b,
 		noLabel: true,
 	}
@@ -558,11 +589,11 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 
 	for _, f := range schema.Fields {
 		fc := &Context{
-			Field:   f,
-			Value:   value + "." + f.Name,
-			Path:    join(path, f.Name),
-			Form:    c.Form,
-			Event:   c.Event,
+			Field: f,
+			Value: value + "." + f.Name,
+			Path:  join(path, f.Name),
+			Form:  c.Form,
+			Event: c.Event, Portal: c.Portal,
 			Builder: b,
 		}
 
@@ -598,11 +629,11 @@ func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
 	forms := make([]h.HTMLComponent, 0, len(schema.Fields))
 	for i, f := range schema.Fields {
 		fc := &Context{
-			Field:   f,
-			Value:   fmt.Sprintf("%s[%q]", c.Value, f.Name),
-			Path:    join(c.Path, f.Name),
-			Form:    c.Form,
-			Event:   c.Event,
+			Field: f,
+			Value: fmt.Sprintf("%s[%q]", c.Value, f.Name),
+			Path:  join(c.Path, f.Name),
+			Form:  c.Form,
+			Event: c.Event, Portal: c.Portal,
 			Builder: b,
 		}
 		options[i] = map[string]string{"value": f.Name, "title": fc.Label()}
@@ -679,7 +710,7 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 		path := join(c.Path, f.Name)
 
 		// The header is what a label and a hint are in a form.
-		hc := &Context{Field: f, Path: path, Form: c.Form, Event: c.Event, Builder: b}
+		hc := &Context{Field: f, Path: path, Form: c.Form, Event: c.Event, Portal: c.Portal, Builder: b}
 		th := h.Th(hc.Label()).Class("text-left text-no-wrap")
 		if hint := hc.Hint(); hint != "" {
 			th.Attr("title", hint)
@@ -687,11 +718,11 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 		head = append(head, th)
 
 		fc := &Context{
-			Field:   f,
-			Value:   ItemVar + "." + f.Name,
-			Path:    path,
-			Form:    c.Form,
-			Event:   c.Event,
+			Field: f,
+			Value: ItemVar + "." + f.Name,
+			Path:  path,
+			Form:  c.Form,
+			Event: c.Event, Portal: c.Portal,
 			Builder: b,
 			Compact: true,
 		}
