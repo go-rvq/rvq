@@ -12,12 +12,19 @@ enum Variant {
   SoloFilled = 'solo-filled'
 }
 
+// What the component does not declare — label, hint, persistent-hint,
+// multiple… — goes to the v-autocomplete, not to the div around it.
+defineOptions({ inheritAttrs: false })
+
 const emit = defineEmits(['update:modelValue'])
 const props = defineProps({
   modelValue: { type: String },
   variant: { type: String as PropType<Variant>, default: 'underlined' },
   density: { type: String as PropType<null | 'default' | 'comfortable' | 'compact'> },
   items: { type: Array<any>, default: [] },
+  // the items already chosen, when the list (loaded later, remote) may not
+  // hold them yet: they are in it from the start
+  selectedItems: { type: Array<any>, default: () => [] },
   cacheItems: { type: Array<any>, default: [] },
   isPaging: Boolean,
   hasIcon: Boolean,
@@ -47,7 +54,12 @@ const props = defineProps({
     }
   }
 })
-const listItems: Ref<Array<any>> = ref([...props.items])
+const listItems: Ref<Array<any>> = ref([
+  ...props.items,
+  ...(props.selectedItems ?? []).filter(
+    (s: any) => !props.items.some((i: any) => i?.[props.itemValue] == s?.[props.itemValue])
+  )
+])
 // The value starts as the one given — a value already saved shows at once, not
 // only after something else makes the component update — and follows it.
 const value = ref<any>(props.modelValue)
@@ -190,6 +202,7 @@ const chipsVisible = computed(() => {
       </v-list>
     </v-card>
     <v-autocomplete
+      v-bind="$attrs"
       v-model="value"
       :items="listItems"
       :loading="isLoading"

@@ -73,7 +73,10 @@ func (b *VXAutocompleteBuilder) Write(ctx *h.Context) (err error) {
 		b.items = b.selectedItems
 	}
 	b.Attr(":items", b.items)
-	b.Attr(":selected-items", b.selectedItems)
+	// none given: the component fills it with the item chosen
+	if b.selectedItems != nil {
+		b.Attr(":selected-items", b.selectedItems)
+	}
 	return b.GetHTMLTagBuilder().Write(ctx)
 }
 

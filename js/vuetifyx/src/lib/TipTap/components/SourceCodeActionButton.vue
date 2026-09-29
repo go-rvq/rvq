@@ -22,7 +22,7 @@ function action() {
 
 // Apply replaces the editor content with the edited HTML source.
 function apply() {
-  props.editor.commands.setContent(html.value, true)
+  props.editor.commands.setContent(html.value, {emitUpdate: true})
   open.value = false
 }
 

@@ -1,4 +1,4 @@
-import {computed, defineComponent, ExtractPublicPropTypes} from 'vue'
+import {defineComponent, ExtractPublicPropTypes, h, shallowRef} from 'vue'
 import {Codemirror} from 'vue-codemirror'
 import {EditorView} from '@codemirror/view'
 import {EditorState, Extension} from '@codemirror/state'
@@ -105,10 +105,12 @@ export default defineComponent({
     'update:help': (_value: boolean) => true,
   },
 
-  setup(props: Props, {emit}) {
+  setup(props) {
     // Loaded language extensions, resolved asynchronously so a missing grammar
-    // never breaks the build or the editor (it just stays plain text).
-    const langExts = computed<Extension[]>(() => [])
+    // never breaks the build or the editor (it just stays plain text). A
+    // shallow ref: Extension is a recursive type, and a deep one would make
+    // Vue unwrap it without end.
+    const resolvedLang = shallowRef<Extension[]>([])
     const loadLang = async (): Promise<Extension[]> => {
       const factory = LANGUAGES[props.language]
       if (!factory) return []
@@ -119,13 +121,7 @@ export default defineComponent({
       }
     }
 
-    return {langExts, loadLang}
-  },
-
-  data() {
-    return {
-      resolvedLang: [] as Extension[],
-    }
+    return {resolvedLang, loadLang}
   },
 
   async mounted() {
@@ -247,9 +243,16 @@ export default defineComponent({
       <div style={{position: 'relative'}}>
         {helpButton}
         {editor}
-        <Dialog v-model={this.helpOpen} title={this.helpTitle} width="40%">
-          {this.$slots.help?.()}
-        </Dialog>
+        {h(
+          Dialog,
+          {
+            modelValue: this.helpOpen,
+            'onUpdate:modelValue': (v: boolean) => (this.helpOpen = v),
+            title: this.helpTitle,
+            width: '40%',
+          },
+          {default: () => this.$slots.help?.()},
+        )}
       </div>
     )
   },

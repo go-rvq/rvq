@@ -140,8 +140,8 @@ export default defineComponent({
               :data="v.data"
               :maps-key="mapsKey"
               :action="v.action"
-              @update:value="(nv) => { v.value = nv; emit() }"
-              @update:data="(nd) => { v.data = nd; emit() }"
+              @update:value="(nv: any) => { v.value = nv; emit() }"
+              @update:data="(nd: any) => { v.data = nd; emit() }"
             />
             <!-- Plain text: toggle single-/multi-line. -->
             <div v-else class="d-flex align-start ga-1">
