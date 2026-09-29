@@ -118,7 +118,7 @@ func TestDecodeFormChecksADeclaredEnum(t *testing.T) {
 
 	// required and empty is reported as empty; optional and empty is fine
 	_, err = b.DecodeForm(&web.EventContext{}, s, url.Values{"V.perm": {""}}, "V")
-	if err == nil || !strings.Contains(err.Error(), "escolha um valor") {
+	if err == nil || !strings.Contains(err.Error(), "choose a value") {
 		t.Fatalf("err = %v", err)
 	}
 	if strings.Contains(err.Error(), "opt") {

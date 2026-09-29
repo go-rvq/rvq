@@ -415,8 +415,7 @@ func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
 		// say so where the field would be, instead of drawing a field that
 		// cannot offer them.
 		return func(c *Context) h.HTMLComponent {
-			return errorComponent(fmt.Sprintf(
-				"schemaform: os valores de %q não puderam ser obtidos: %v", c.Field.Name, err))
+			return errorComponent(fmt.Sprintf(c.Messages().ItemsUnavailable, c.Field.Name, err))
 		}, true
 	}
 	if len(items) > 0 {
@@ -448,7 +447,7 @@ func (b *Builder) Types() (names []string) {
 func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		if schema == nil {
-			return errorComponent("schemaform: o field não tem schema")
+			return errorComponent(messagesOf(ctx).NoSchema)
 		}
 		portal := NewPortalName()
 		return h.Components(
@@ -482,7 +481,7 @@ func NewPortalName() string {
 // recursive.
 func (b *Builder) formComponentFunc(c *Context) h.HTMLComponent {
 	if c.Field.Schema == nil {
-		return errorComponent(fmt.Sprintf("schemaform: o field %q é um form sem schema", c.Field.Name))
+		return errorComponent(fmt.Sprintf(c.Messages().FormWithoutSchema, c.Field.Name))
 	}
 	body := b.draw(c.Field.Schema, c)
 	// A record inside the record is a group: its label over its fields, set in
@@ -592,9 +591,7 @@ func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 
 	draw, ok := b.fieldFunc(ic)
 	if !ok {
-		return errorComponent(fmt.Sprintf(
-			"schemaform: a lista pede o type %q, que não tem componente registrado nem é enum (há: %v)",
-			item.Type, b.Types()))
+		return errorComponent(fmt.Sprintf(c.Messages().ListTypeUnknown, item.Type, b.Types()))
 	}
 	return withHelp(ic, draw(ic))
 }
@@ -616,9 +613,7 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 
 		draw, ok := b.fieldFunc(fc)
 		if !ok {
-			comps = append(comps, errorComponent(fmt.Sprintf(
-				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum (há: %v)",
-				f.Name, f.Type, b.Types())))
+			comps = append(comps, errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types())))
 			continue
 		}
 		comp := withHelp(fc, draw(fc))
@@ -747,9 +742,7 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 		if draw, ok := b.fieldFunc(fc); ok {
 			cell = draw(fc)
 		} else {
-			cell = errorComponent(fmt.Sprintf(
-				"schemaform: o field %q pede o type %q, que não tem componente registrado nem é enum (há: %v)",
-				f.Name, f.Type, b.Types()))
+			cell = errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types()))
 		}
 		cells = append(cells, h.Td(cell).Class("py-1"))
 	}
@@ -839,7 +832,7 @@ func addItemButton(schema *Schema, c *Context, readOnly bool) h.HTMLComponent {
 	if readOnly {
 		return nil
 	}
-	return v.VBtn("Adicionar").
+	return v.VBtn(c.Messages().Add).
 		PrependIcon("mdi-plus").
 		Variant(v.VariantTonal).
 		Size(v.SizeSmall).
@@ -938,12 +931,10 @@ func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
 func EnumComponentFunc(c *Context) h.HTMLComponent {
 	items, err := c.EnumItems()
 	if err != nil {
-		return errorComponent(fmt.Sprintf(
-			"schemaform: os valores de %q não puderam ser obtidos: %v", c.Field.Name, err))
+		return errorComponent(fmt.Sprintf(c.Messages().ItemsUnavailable, c.Field.Name, err))
 	}
 	if len(items) == 0 {
-		return errorComponent(fmt.Sprintf(
-			"schemaform: o field %q não tem valores para escolher", c.Field.Name))
+		return errorComponent(fmt.Sprintf(c.Messages().NoItems, c.Field.Name))
 	}
 	options := make([]map[string]string, len(items))
 	var anyHint bool

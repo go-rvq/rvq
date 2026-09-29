@@ -96,6 +96,7 @@ func (b *Builder) DecodeForm(ctx *web.EventContext, schema *Schema, values url.V
 			return b.itemsOf(ctx, path, f)
 		},
 		decoders: b.decoders,
+		msgs:     messagesOf(ctx),
 	}
 	value := d.schema(schema, key, "")
 	return value, errors.Join(d.errs...)
@@ -114,6 +115,8 @@ type decoder struct {
 	// (Builder.TypeDecoder).
 	decoders map[string]TypeDecoderFunc
 	errs     []error
+	// msgs say what is wrong with a value, in the request's language.
+	msgs *Messages
 }
 
 func (d *decoder) schema(s *Schema, key, path string) any {
@@ -196,8 +199,8 @@ func (d *decoder) value(f *Field, key, path string) any {
 			// The list this value should have been checked against could not be
 			// fetched. A value that was never checked is not a value that
 			// passed, so the save fails here.
-			d.errs = append(d.errs, fmt.Errorf("%s: os valores possíveis não puderam ser obtidos: %w",
-				where(f, path), err))
+			d.errs = append(d.errs, fmt.Errorf("%s: %s: %w",
+				where(f, path), d.messages().ItemsUnavailableOnSave, err))
 		case len(items) > 0:
 			d.check(f, path, s, items)
 		}
@@ -235,6 +238,13 @@ func (d *decoder) value(f *Field, key, path string) any {
 	return s
 }
 
+func (d *decoder) messages() *Messages {
+	if d.msgs == nil {
+		return Messages_en_US
+	}
+	return d.msgs
+}
+
 // check refuses a value the list did not offer. An empty value is the field's
 // own business: a field that accepts nil may be left empty, and a required one
 // that was is reported as empty, not as an impostor.
@@ -243,7 +253,7 @@ func (d *decoder) check(f *Field, path, value string, items []EnumItem) {
 
 	if value == "" {
 		if !f.Nullable {
-			d.errs = append(d.errs, fmt.Errorf("%s: escolha um valor", where))
+			d.errs = append(d.errs, fmt.Errorf("%s: %s", where, d.messages().ChooseValue))
 		}
 		return
 	}
@@ -255,7 +265,7 @@ func (d *decoder) check(f *Field, path, value string, items []EnumItem) {
 		}
 		names[i] = it.Name
 	}
-	d.errs = append(d.errs, fmt.Errorf("%s: %q não está entre os valores possíveis (%s)",
+	d.errs = append(d.errs, fmt.Errorf("%s: "+d.messages().NotAmongItems,
 		where, value, strings.Join(names, ", ")))
 }
 

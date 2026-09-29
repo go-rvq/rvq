@@ -374,7 +374,7 @@ func (r *reader) schema(iface *gad.Interface) (*Schema, error) {
 
 	var s *Schema
 	if len(elem) > 1 {
-		return nil, fmt.Errorf("schemaform: uma lista de valores guarda UM type, e %q declara %d", iface.IName, len(elem))
+		return nil, fmt.Errorf("schemaform: a list of values holds ONE type, and %q declares %d", iface.IName, len(elem))
 	}
 	if len(elem) == 1 {
 		// `interface Form []str` — the element is a type, and the item IS the

@@ -263,7 +263,7 @@ func TestParseFieldSliceOfValues(t *testing.T) {
 func TestParseSliceOfSeveralTypesRejected(t *testing.T) {
 	if _, err := Parse("[]<int|str>"); err == nil {
 		t.Fatal("uma lista de vários types não descreve um input")
-	} else if !strings.Contains(err.Error(), "UM type") {
+	} else if !strings.Contains(err.Error(), "ONE type") {
 		t.Errorf("err = %v", err)
 	}
 }

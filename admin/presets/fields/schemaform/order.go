@@ -71,9 +71,9 @@ func OrderComponentFunc(options OrderOptionsFunc) ComponentFunc {
 				Class("text-caption text-medium-emphasis mx-2").Style("min-width: 1.2em"),
 			h.Span("").Attr("v-text", label).Class("flex-grow-1").Attr(":class", `{"text-disabled": !r.dir}`),
 			v.VBtnToggle(
-				v.VBtn("ASC").Value("ASC").Attr("prepend-icon", "mdi-arrow-up-thin"),
-				v.VBtn("DESC").Value("DESC").Attr("prepend-icon", "mdi-arrow-down-thin"),
-				v.VBtn("—").Value(""),
+				v.VBtn(c.Messages().OrderAsc).Value("ASC").Attr("prepend-icon", "mdi-arrow-up-thin"),
+				v.VBtn(c.Messages().OrderDesc).Value("DESC").Attr("prepend-icon", "mdi-arrow-down-thin"),
+				v.VBtn(c.Messages().OrderNone).Value(""),
 			).Density("compact").Variant("outlined").Divided(true).
 				Attr(":model-value", "r.dir").Attr("@update:model-value", setDir),
 		).Class("d-flex align-center py-1").

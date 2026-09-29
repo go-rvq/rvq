@@ -3,6 +3,7 @@ package schemaform
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -53,7 +54,7 @@ func (b *Builder) ListComponent(ctx *web.EventContext, schema *Schema, value any
 
 func (b *Builder) showRoot(ctx *web.EventContext, schema *Schema, value any, compact bool) h.HTMLComponent {
 	if schema == nil {
-		return errorComponent("schemaform: o field não tem schema")
+		return errorComponent(messagesOf(ctx).NoSchema)
 	}
 	c := &Context{
 		Field:   &Field{Type: FormType, Schema: schema},
@@ -65,7 +66,7 @@ func (b *Builder) showRoot(ctx *web.EventContext, schema *Schema, value any, com
 	if compact {
 		// a listing cell embeds no portal: one per cell would weigh on the
 		// listing, and a field opens nothing there (Context.Portal is "")
-		return compactCell(b.formDisplayFunc(c))
+		return compactCell(b.formDisplayFunc(c), c.Messages().ShowWhole)
 	}
 	c.Portal = NewPortalName()
 	return h.Components(b.formDisplayFunc(c), web.Portal().Name(c.Portal))
@@ -74,7 +75,7 @@ func (b *Builder) showRoot(ctx *web.EventContext, schema *Schema, value any, com
 // compactCell keeps a listing cell to one line, cut with "…"; a click on it
 // shows it whole, and another cuts it again — without opening the record the
 // row is. An empty cell stays empty.
-func compactCell(comp h.HTMLComponent) h.HTMLComponent {
+func compactCell(comp h.HTMLComponent, title string) h.HTMLComponent {
 	return h.ComponentFunc(func(ctx *h.Context) error {
 		body, err := h.Marshal(comp, ctx.Context)
 		if err != nil || strings.TrimSpace(string(body)) == "" {
@@ -83,7 +84,7 @@ func compactCell(comp h.HTMLComponent) h.HTMLComponent {
 		return h.Tag("span").Children(h.RawHTML(body)).
 			Class("schemaform-cell text-truncate d-inline-block").
 			Style("max-width: 24em; vertical-align: bottom; cursor: pointer").
-			Attr("title", "clique para ver inteiro").
+			Attr("title", title).
 			Attr("@click.stop", `$event.currentTarget.classList.toggle("text-truncate")`).
 			Write(ctx)
 	})
@@ -112,7 +113,7 @@ func (b *Builder) displayFieldFunc(c *Context) ComponentFunc {
 func (b *Builder) formDisplayFunc(c *Context) h.HTMLComponent {
 	schema := c.Field.Schema
 	if schema == nil {
-		return errorComponent(fmt.Sprintf("schemaform: o field %q é um form sem schema", c.Field.Name))
+		return errorComponent(fmt.Sprintf(c.Messages().FormWithoutSchema, c.Field.Name))
 	}
 	if schema.Choice {
 		return b.showChoice(schema, c)
@@ -182,34 +183,50 @@ func (b *Builder) showField(fc *Context) h.HTMLComponent {
 	return b.displayFieldFunc(fc)(fc)
 }
 
-// showRecord shows a record's fields with their labels: one under the other in
-// a detail, one after the other on a single line in a cell — where an empty
-// field is left out, since there is no room to say it is empty.
+// showRecord shows a record's fields with their labels, one under the other —
+// in a cell, on a single line (showRecordCompact).
 func (b *Builder) showRecord(schema *Schema, c *Context, data any) h.HTMLComponent {
+	if c.Compact {
+		return b.showRecordCompact(schema, c, data)
+	}
 	var comps []h.HTMLComponent
 	for _, f := range schema.Fields {
 		fc := b.fieldContext(c, f, recordValue(data, f.Name))
-		if c.Compact {
-			if isEmpty(fc.Data) {
-				continue
-			}
-			if len(comps) > 0 {
-				comps = append(comps, h.Span(" · ").Class("text-medium-emphasis"))
-			}
-			comps = append(comps,
-				h.Span(displayLabel(fc)+": ").Class("text-medium-emphasis"),
-				b.showField(fc))
-			continue
-		}
 		comps = append(comps, h.Div(
 			h.Div(h.Text(displayLabel(fc))).Class("text-caption text-medium-emphasis"),
 			h.Div(b.showField(fc)).Class("pt-1"),
 		).Class("mb-3"))
 	}
-	if c.Compact {
-		return h.Tag("span").Children(comps...)
-	}
 	return h.Div(comps...)
+}
+
+// showRecordCompact is a record in a listing cell: "label: value" of each
+// field it has, by the labels, apart by ", " — "Layout das postagens:
+// Serviços". An empty field is left out: there is no room to say it is empty.
+func (b *Builder) showRecordCompact(schema *Schema, c *Context, data any) h.HTMLComponent {
+	type pair struct {
+		label string
+		fc    *Context
+	}
+	var pairs []pair
+	for _, f := range schema.Fields {
+		fc := b.fieldContext(c, f, recordValue(data, f.Name))
+		if isEmpty(fc.Data) {
+			continue
+		}
+		pairs = append(pairs, pair{displayLabel(fc), fc})
+	}
+	sort.SliceStable(pairs, func(i, j int) bool { return pairs[i].label < pairs[j].label })
+	var comps []h.HTMLComponent
+	for i, p := range pairs {
+		if i > 0 {
+			comps = append(comps, h.Span(", ").Class("text-medium-emphasis"))
+		}
+		comps = append(comps,
+			h.Span(p.label+": ").Class("text-medium-emphasis"),
+			b.showField(p.fc))
+	}
+	return h.Tag("span").Children(comps...)
 }
 
 // showValues shows a list of plain values: a bulleted list in a detail, the

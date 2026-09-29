@@ -123,7 +123,7 @@ func TestTypeRegistry(t *testing.T) {
 func TestUnknownTypeIsReported(t *testing.T) {
 	got := render(t, New(), "{a str; b bytes}")
 
-	for _, want := range []string{"b", "bytes", "não tem componente registrado"} {
+	for _, want := range []string{"b", "bytes", "has no component"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("o erro não diz %q:\n%s", want, got)
 		}
@@ -459,7 +459,7 @@ func TestComponentFuncListAddsAndRemoves(t *testing.T) {
 	for _, want := range []string{
 		`@click='form["Value"].splice(itemIndex, 1)'`,
 		`@click='form["Value"].push({"label": "", "count": 0, "on": false})'`,
-		`Adicionar`,
+		`Add`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("a lista não traz %s:\n%s", want, got)
@@ -492,7 +492,7 @@ func TestComponentFuncReadOnlyListHasNoButtons(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, unwanted := range []string{"Adicionar", "splice("} {
+	for _, unwanted := range []string{"mdi-plus", "splice("} {
 		if strings.Contains(string(out), unwanted) {
 			t.Errorf("uma lista só de leitura traz %q:\n%s", unwanted, out)
 		}
@@ -570,7 +570,7 @@ func TestComponentFuncGrid(t *testing.T) {
 	for _, want := range []string{
 		"<v-row", "<v-col", `:md='3'`, `v-for='(item, itemIndex) in form["Value"]'`,
 		"<v-card", `v-model='item.label'`, `v-model='item.href'`,
-		`splice(itemIndex, 1)`, "Adicionar",
+		`splice(itemIndex, 1)`, "Add",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)

@@ -155,7 +155,7 @@ interface Form []{label str; icon str; hidden str}`)
 		`v-model='item.label'`,
 		`hide-details`,
 		`@click='form["Value"].splice(itemIndex, 1)'`,
-		`Adicionar`,
+		`Add`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("a tabela não traz %s:\n%s", want, got)
