@@ -9,7 +9,7 @@ import (
 	"github.com/go-rvq/rvq/admin/docs/docsrc"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

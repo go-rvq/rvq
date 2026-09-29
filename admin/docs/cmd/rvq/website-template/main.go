@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/go-rvq/rvq/admin/docs/cmd/rvq/website-template/admin"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 var (

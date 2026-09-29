@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 var routesDebug = osenv.GetBool("RVQ_ADMIN_ROUTES_DEBUG", "Debug mounted routes", false)

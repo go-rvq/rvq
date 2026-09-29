@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-rvq/rvq/admin/docs/cmd/rvq/admin-template/admin"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 func main() {

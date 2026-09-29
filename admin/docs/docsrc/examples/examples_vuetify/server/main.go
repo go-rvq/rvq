@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_vuetify"
 	"github.com/go-rvq/rvq/web"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 var port = osenv.Get("RVQ_PORT", "The port to serve on", "7800")

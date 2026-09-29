@@ -5,7 +5,7 @@ import (
 	"io/fs"
 
 	rvqjs "github.com/go-rvq/rvq/js"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 func JSComponentsPack() ComponentsPack {

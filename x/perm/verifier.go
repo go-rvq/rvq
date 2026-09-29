@@ -12,7 +12,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/ory/ladon"
 	"github.com/sunfmin/reflectutils"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 var ErrIsDanied = errors.New("verifier is denied")

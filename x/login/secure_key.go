@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	rcron "github.com/robfig/cron/v3"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 // The secure key: a way in for whoever operates the server, past the form

@@ -11,7 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/pagebuilder/example/containers"
 	"github.com/go-rvq/rvq/admin/richeditor"
 	"github.com/go-rvq/rvq/x/i18n"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

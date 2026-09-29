@@ -7,7 +7,7 @@ import (
 
 	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 const doAction1 = "doAction1"

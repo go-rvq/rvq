@@ -2,7 +2,7 @@ package admin
 
 import (
 	"github.com/go-rvq/rvq/admin/docs/cmd/rvq/admin-template/models"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

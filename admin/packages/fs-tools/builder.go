@@ -14,7 +14,7 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/hack-pad/hackpadfs"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"golang.org/x/net/webdav"
 )
 

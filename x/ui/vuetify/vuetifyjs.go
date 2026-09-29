@@ -7,7 +7,7 @@ import (
 
 	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 )
 
 var customizeVuetifyCSS = osenv.GetBool("RVQ_CUSTOMIZE_VUETIFY_CSS", "Use customized styles for vuetify", true)

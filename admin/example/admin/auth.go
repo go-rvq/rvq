@@ -19,7 +19,7 @@ import (
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/microsoftonline"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/gorm"
 )
 

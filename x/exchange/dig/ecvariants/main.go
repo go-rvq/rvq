@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-rvq/rvq/x/exchange"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

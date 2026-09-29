@@ -14,7 +14,7 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"github.com/theplant/testingutils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

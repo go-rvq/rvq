@@ -15,7 +15,7 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
-	"github.com/theplant/osenv"
+	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/gorm"
 )
 

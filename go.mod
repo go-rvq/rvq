@@ -59,7 +59,6 @@ require (
 	github.com/theplant/bimg v1.1.1
 	github.com/theplant/gofixtures v1.1.2
 	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967
-	github.com/theplant/osenv v0.0.1
 	github.com/theplant/sliceutils v0.0.0-20200406042209-89153d988eb1
 	github.com/theplant/testenv v0.0.0-20240513012518-1c94c8c84239
 	github.com/theplant/testingutils v0.0.2
