@@ -137,7 +137,8 @@ func (b *EditingBuilder) doUpdate(
 }
 
 func (b *EditingBuilder) defaultUpdate(ctx *web.EventContext) (r web.EventResponse, err error) {
-	if err = b.doUpdate(ctx, &r, false); err == nil {
+	// a save that has something to say — ctx.Flash — keeps it
+	if err = b.doUpdate(ctx, &r, false); err == nil && ctx.Flash == nil {
 		ctx.Flash = MustGetMessages(ctx.Context()).SuccessfullyUpdated
 	}
 	return
