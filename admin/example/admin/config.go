@@ -37,10 +37,10 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
+	"github.com/go-rvq/rvq/x/osenv"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	"github.com/go-rvq/rvq/x/osenv"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )

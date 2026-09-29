@@ -6,9 +6,9 @@ import (
 
 	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/osenv"
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/sunfmin/snippetgo/parse"
-	"github.com/go-rvq/rvq/x/osenv"
 )
 
 func Anchor(h *HTMLTagBuilder, text string) HTMLComponent {

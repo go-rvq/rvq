@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
-	"github.com/joho/godotenv"
 	"github.com/go-rvq/rvq/x/osenv"
+	"github.com/joho/godotenv"
 )
 
 var PKG_DIR = func() string {

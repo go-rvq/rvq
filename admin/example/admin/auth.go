@@ -15,11 +15,11 @@ import (
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/login"
+	"github.com/go-rvq/rvq/x/osenv"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/microsoftonline"
-	"github.com/go-rvq/rvq/x/osenv"
 	"gorm.io/gorm"
 )
 

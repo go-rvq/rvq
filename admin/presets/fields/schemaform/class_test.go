@@ -19,7 +19,7 @@ const optionsSrc = `
 class Ref { id str }
 [label="Lista"]
 class listLayout { comp? enum { index_list, compact } }
-[label="Grade"]
+[label="Grade", hint="cartões numa grade"]
 class gridLayout { [label="Colunas", hint="de 1 a 6"] columns int = 3 }
 class Options {
     [label="Tipo de post"] postType? Ref
@@ -112,9 +112,11 @@ func TestChoiceFilled(t *testing.T) {
 	}
 }
 
-// The form of a choice: a select of the classes, by their labels, and the
-// form of the one chosen only while it is; choosing another starts it empty.
-// Labels and hints the application does not give come from the metadata.
+// The form of a choice: a select of the classes, by their labels with their
+// hints under them, the hint of the select the chosen class's (else the
+// field's), and the form of the one chosen only while it is; choosing another
+// starts it empty. Labels and hints the application does not give come from
+// the metadata.
 func TestChoiceComponent(t *testing.T) {
 	b, s := classSchema(t)
 	comp := b.ComponentFunc(s)(&presets.FieldContext{
@@ -130,7 +132,9 @@ func TestChoiceComponent(t *testing.T) {
 	got := string(out)
 	mustContain(t, got,
 		`:model-value='Object.keys(form["Value"].posts.layout || {})[0]'`,
-		`"title":"Lista","value":"listLayout"`, `"title":"Grade","value":"gridLayout"`,
+		`"title":"Lista","value":"listLayout"`, `"subtitle":"cartões numa grade","title":"Grade","value":"gridLayout"`,
+		`:item-props='true'`,
+		`:hint='({"gridLayout":"cartões numa grade"})[Object.keys(form["Value"].posts.layout || {})[0]] || ""'`,
 		`v-if='Object.keys(form["Value"].posts.layout || {})[0] === "gridLayout"'`,
 		`form["Value"].posts.layout["gridLayout"].columns`,
 		`"gridLayout": {"columns": 0}`,

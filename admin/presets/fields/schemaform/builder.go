@@ -151,8 +151,9 @@ const (
 	MetaHelp  = "help"
 )
 
-// Label is what to put on the input: what the FieldInfoFunc says, or the
-// field's name humanized.
+// Label is what to put on the input: what the FieldInfoFunc says, else the
+// label of its metadata, else the field's name humanized — for the option of a
+// choice, the class's name.
 func (c *Context) Label() string {
 	if c.noLabel || c.Compact {
 		return ""
@@ -566,13 +567,15 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 }
 
 // choice draws a choice of one class (Schema.Choice): a select of the classes,
-// and under it the form of the one chosen. The value is an object of one key,
-// the class: choosing another starts it empty — as its form is —, choosing the
-// one there keeps what it holds, and clearing it (an optional field) leaves
-// nothing.
+// each by its label with its hint under it, and under the select the form of
+// the one chosen — its hint the chosen class's, else the field's. The value is
+// an object of one key, the class: choosing another starts it empty — as its
+// form is —, choosing the one there keeps what it holds, and clearing it (an
+// optional field) leaves nothing.
 func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
 	chosen := fmt.Sprintf("Object.keys(%s || {})[0]", c.Value)
 
+	hints := map[string]string{}
 	options := make([]map[string]string, len(schema.Fields))
 	empties := make([]string, len(schema.Fields))
 	forms := make([]h.HTMLComponent, 0, len(schema.Fields))
@@ -586,6 +589,10 @@ func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
 			Builder: b,
 		}
 		options[i] = map[string]string{"value": f.Name, "title": fc.Label()}
+		if hint := fc.Hint(); hint != "" {
+			options[i]["subtitle"] = hint
+			hints[f.Name] = hint
+		}
 		empties[i] = fmt.Sprintf("%q: %s", f.Name, emptyItemJS(f.Schema))
 		forms = append(forms, h.Div(b.record(f.Schema, fc, fc.Value, fc.Path)).
 			Class(nestedRecordClass).
@@ -598,8 +605,10 @@ func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
 		Items(options).
 		ItemTitle("title").
 		ItemValue("value").
-		Hint(c.Hint()).
-		PersistentHint(c.Hint() != "").
+		// title, value and subtitle go to each item of the list
+		Attr(":item-props", "true").
+		Attr(":hint", fmt.Sprintf("(%s)[%s] || %s", h.JSONString(hints), chosen, h.JSONString(c.Hint()))).
+		PersistentHint(true).
 		Clearable(!c.Field.Required()).
 		Attr(":model-value", chosen).
 		Attr("@update:model-value", fmt.Sprintf(
