@@ -363,23 +363,23 @@ func TestParseNamedInterfaceWithEnum(t *testing.T) {
 	}
 }
 
-// An interface that contains itself describes a form without end. In gad it
-// cannot even be written: a name is in scope only after its declaration, so the
-// reference to itself does not resolve, and the schema is refused where it is
-// read — by the gad compiler, naming the reference.
+// An interface that contains itself describes a form without end: it is
+// refused where the schema is read — one that names itself, by the schema
+// ("contains itself"); two that name each other, by the gad compiler (an
+// initialization cycle).
 func TestParseNamedInterfaceCycle(t *testing.T) {
-	for name, src := range map[string]string{
-		"direto":   "interface Node { child Node }\ninterface Form { root Node }",
-		"indireto": "interface A { b B }\ninterface B { a A }\ninterface Form { a A }",
-		"na raiz":  "interface Form { self Form }",
+	for name, c := range map[string]struct{ src, want string }{
+		"direto":   {"interface Node { child Node }\ninterface Form { root Node }", `the interface "Node" contains itself`},
+		"indireto": {"interface A { b B }\ninterface B { a A }\ninterface Form { a A }", "initialization cycle"},
+		"na raiz":  {"interface Form { self Form }", `the interface "Form" contains itself`},
 	} {
-		_, err := Parse(src)
+		_, err := Parse(c.src)
 		if err == nil {
 			t.Errorf("%s: um ciclo passou", name)
 			continue
 		}
-		if !strings.Contains(err.Error(), "unresolved reference") {
-			t.Errorf("%s: err = %v", name, err)
+		if !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: err = %v, want %q", name, err, c.want)
 		}
 	}
 }
@@ -398,14 +398,10 @@ func TestParseUnknownTypeNameIsRefused(t *testing.T) {
 }
 
 // The form is the interface NAMED Form, wherever it is among the declarations —
-// which come before what uses them, as anywhere in gad.
+// which may come in any order, as anywhere in gad.
 func TestParseFormNameWinsOverOrder(t *testing.T) {
-	// using a name before declaring it is refused by the compiler
-	if _, err := Parse("interface Form { owner User }\ninterface User { name, id }"); err == nil {
-		t.Error("uma referência antes da declaração passou")
-	}
-
 	for name, src := range map[string]string{
+		"o form primeiro":   "interface Form { owner User }\ninterface User { name, id }",
 		"o form por último": "interface User { name, id }\ninterface Form { owner User }",
 		"entre outras":      "interface User { name, id }\ninterface Form { owner User }\ninterface Other { x str }",
 		"na mesma linha":    "interface User { name, id }; interface Form { owner User }",

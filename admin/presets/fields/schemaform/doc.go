@@ -68,10 +68,11 @@
 //	interface User { name, id }
 //	interface Form { owner User; creator User }
 //
-// As anywhere in gad, a name is in scope after its declaration, so what the
-// form uses is declared before it — which is also why an interface that
-// contains itself cannot be written at all. Each occurrence is read on its own,
-// so the words of `owner` are not the words of `creator`.
+// As anywhere in gad, the declarations may come in any order: the form may use
+// an interface declared after it. An interface that contains itself — itself,
+// or through others — describes a form without end, and is refused where the
+// schema is read. Each occurrence is read on its own, so the words of `owner`
+// are not the words of `creator`.
 //
 // Written in one piece the schema needs no name for anything, and needs none —
 // `{…}`, `[]{…}`, `[]str`, or `interface []{…}` after the enums it uses: that
