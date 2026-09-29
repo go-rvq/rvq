@@ -509,7 +509,15 @@ func (b *Builder) Listen() {
 	}
 }
 
+// Shutdown stops the cron — no job is created any more — and the queue's
+// workers, which hold connections of their own while they run.
 func (b *Builder) Shutdown(ctx context.Context) error {
+	if b.cron != nil {
+		select {
+		case <-b.cron.Stop().Done():
+		case <-ctx.Done():
+		}
+	}
 	return b.q.Shutdown(ctx)
 }
 

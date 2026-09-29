@@ -84,6 +84,10 @@ func (q *goque) Remove(ctx context.Context, job QueJobInterface) error {
 }
 
 func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uuid.UUID) (QueJobInterface, error)) error {
+	// One mutex for all the workers: a mutex holds a connection of its own
+	// (its advisory locks live on it) for as long as it is busy, so one per
+	// job would take as many connections as there are jobs.
+	mutex := q.q.Mutex()
 	for i := range jobDefs {
 		jd := jobDefs[i]
 		if jd.Handler == nil {
@@ -91,7 +95,7 @@ func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uuid.UUID) (Q
 		}
 		worker, err := que.NewWorker(que.WorkerOptions{
 			Queue:                     "worker_" + jd.Name,
-			Mutex:                     q.q.Mutex(),
+			Mutex:                     mutex,
 			MaxLockPerSecond:          10,
 			MaxBufferJobsCount:        0,
 			MaxPerformPerSecond:       2,
