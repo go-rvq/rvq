@@ -2,10 +2,13 @@ package perms
 
 import (
 	"context"
+	"net/http"
+	"reflect"
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/softdelete"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/gorm"
@@ -25,31 +28,62 @@ type TrashOptions struct {
 }
 
 // SetupTrash turns a soft-delete listing into a trash-enabled one, gated by the
-// PermTrash ('trash') listing permission: an "All"/"Trash" filter tab pair, the
+// PermTrash ('trash') listing permission: a "Trash" filter tab after the
+// model's own tabs — after an "All" one, the default, when it has none —, the
 // unscoped trash query and a restore bulk action are all only available to
 // subjects allowed the trash verb (backend enforced). Deleted records use
-// gorm's soft delete, so they are hidden from the default listing.
+// gorm's soft delete, so they are hidden from the default listing. The tab is
+// added when the listing renders (presets.FilterTabsWrapper): the model's
+// FilterTabsFunc, set before or after, keeps it.
 func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 	registerMessages(mb.Builder())
 	lb := mb.Listing()
 
-	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
-		m := msgs(ctx.Context())
-		tabs := []*presets.FilterTab{{Label: m.TabAll, Default: true}}
-		if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed() {
-			tabs = append(tabs, &presets.FilterTab{ID: FilterTabTrash, Label: m.TabTrash})
+	lb.AppendFilterTabsWrapper(func(ctx *web.EventContext, tabs []*presets.FilterTab) []*presets.FilterTab {
+		if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Denied() {
+			return tabs
 		}
-		return tabs
+		m := msgs(ctx.Context())
+		if len(tabs) == 0 {
+			tabs = append(tabs, &presets.FilterTab{Label: m.TabAll, Default: true})
+		}
+		return append(tabs, &presets.FilterTab{ID: FilterTabTrash, Label: m.TabTrash})
 	})
 
+	// who deletes a record, and from where (softdelete.Deletion)
+	deletion := hasDeletion(mb.NewModel())
+	if err := MigrateDeleted(db, opts.TableName, mb.NewModel()); err != nil {
+		panic(err)
+	}
+	installDeletedColumns(mb, db, opts.TableName)
+
 	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
-		return do.(*gorm2op.DataOperatorBuilder).WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
+		return do.(*gorm2op.DataOperatorBuilder).WithDeleteCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
+			cb.Post(func(state *gorm2op.CallbackState) error {
+				if !deletion {
+					return nil
+				}
+				var r *http.Request
+				if state.Ctx != nil {
+					r = state.Ctx.R
+				}
+				return state.DB.Session(&gorm.Session{NewDB: true}).Unscoped().
+					Model(state.Obj).UpdateColumns(DeletedBy(r)).Error
+			})
+		}).WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
 			return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 				db = old(db, mode, obj, id, params, ctx)
 				if mode == gorm2op.Search && params != nil &&
 					params.Query.Get(presets.ActiveFilterTabQueryKey) == FilterTabTrash &&
 					mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed() {
 					db = db.Unscoped().Where(opts.TableName + ".deleted_at IS NOT NULL")
+				}
+				// a record of the trash opens — its detail, its history, as
+				// the parent of its children —: fetched deleted or not, by who
+				// may see the trash
+				if (mode.Has(gorm2op.Fetch) || mode.Has(gorm2op.FetchTitle)) && ctx != nil && ctx.R != nil &&
+					mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed() {
+					db = db.Unscoped()
 				}
 				return db
 			}
@@ -66,7 +100,7 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 			if err := db.Session(&gorm.Session{}).Unscoped().
 				Table(opts.TableName).
 				Where("id IN ?", selectedIds).
-				Update("deleted_at", nil).Error; err != nil {
+				UpdateColumns(restored(deletion)).Error; err != nil {
 				return err
 			}
 			if opts.OnRestore != nil {
@@ -74,4 +108,46 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 			}
 			return nil
 		})
+}
+
+// AutoTrash sets up the trash (SetupTrash) of every model of b made from now
+// on whose records are soft-deleted — a gorm.DeletedAt field —, listed by
+// the gorm data operator, not a singleton: the default of a soft-delete
+// listing. Before the models.
+func AutoTrash(b *presets.Builder, db *gorm.DB) {
+	b.ModelConfigurators.Append(presets.ModelConfiguratorFunc(func(mb *presets.ModelBuilder) {
+		if mb.GetSingleton() {
+			return
+		}
+		if _, ok := mb.CurrentDataOperator().(*gorm2op.DataOperatorBuilder); !ok {
+			return
+		}
+		if table, ok := softDeleteTable(db, mb.NewModel()); ok {
+			SetupTrash(mb, db, TrashOptions{TableName: table})
+		}
+	}))
+}
+
+// softDeleteTable is the table of obj's model when its records are
+// soft-deleted: a gorm.DeletedAt field.
+func softDeleteTable(db *gorm.DB, obj any) (string, bool) {
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(obj); err != nil || stmt.Schema == nil {
+		return "", false
+	}
+	for _, f := range stmt.Schema.Fields {
+		if f.FieldType == reflect.TypeOf(gorm.DeletedAt{}) && f.DBName != "" {
+			return stmt.Schema.Table, true
+		}
+	}
+	return "", false
+}
+
+// restored are the columns of records restored: not deleted — by nobody, from
+// nowhere, when the model keeps who deleted them.
+func restored(deletion bool) map[string]any {
+	if deletion {
+		return softdelete.Restored()
+	}
+	return map[string]any{"deleted_at": nil}
 }

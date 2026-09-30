@@ -179,6 +179,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 	if b.selectableColumns {
 		selectColumnsBtn, displayFields = b.selectColumnsBtn(ctx.R.URL, ctx, inDialog)
+		displayFields = append(displayFields, b.enabledTrailingFields(ctx, displayFields)...)
 	} else {
 		displayFields, headers = b.layoutFields(ctx)
 	}
@@ -360,6 +361,40 @@ func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*F
 	}
 
 	headers = nodes2Headers(nodes)
+	for _, f := range b.enabledTrailingFields(ctx, displayFields) {
+		displayFields = append(displayFields, f)
+		headers = append(headers, (&vx.DataTableHeaderBuilder{}).Name(f.name).Title(f.NewContext(b.mb.Info(), ctx, nil, nil).Label))
+	}
+	return
+}
+
+// AppendTrailingFields shows the fields of names after the listing's, whatever
+// its layout — set before or after —, when they are enabled (FieldBuilder
+// SetEnabled): the columns of every listing of a kind, as the trash's who and
+// from where of a deletion, in its tab only.
+func (b *ListingBuilder) AppendTrailingFields(names ...string) *ListingBuilder {
+	b.trailingFields = append(b.trailingFields, names...)
+	return b
+}
+
+// enabledTrailingFields are the trailing fields enabled for the request, not
+// shown already.
+func (b *ListingBuilder) enabledTrailingFields(ctx *web.EventContext, shown []*FieldBuilder) (r []*FieldBuilder) {
+names:
+	for _, name := range b.trailingFields {
+		for _, f := range shown {
+			if f.name == name {
+				continue names
+			}
+		}
+		f := b.fields.Get(name)
+		if f == nil {
+			continue
+		}
+		if fcb := f.NewContext(b.mb.Info(), ctx, nil, nil); !fcb.Disabled && f.IsEnabled(fcb) {
+			r = append(r, f)
+		}
+	}
 	return
 }
 
@@ -387,6 +422,7 @@ func (b *ListingBuilder) Columns(ctx *web.EventContext) []*ListingColumn {
 	var fields []*FieldBuilder
 	if b.selectableColumns {
 		_, fields = b.selectColumnsBtn(ctx.R.URL, ctx, IsInDialog(ctx))
+		fields = append(fields, b.enabledTrailingFields(ctx, fields)...)
 	} else {
 		fields, _ = b.layoutFields(ctx)
 	}

@@ -30,9 +30,13 @@ type Messages struct {
 	Old             string
 	New             string
 
-	Revision          string
-	Author            string
-	Origin            string
+	Revision string
+	// RevisionSnapshot is the detail's field of the record as of the revision.
+	RevisionSnapshot string
+	Author           string
+	Origin           string
+	// EventDeleted marks the revision of a record's deletion.
+	EventDeleted      string
 	OriginIP          string
 	OriginBrowser     string
 	OriginPlace       string
@@ -74,8 +78,10 @@ var (
 		Old:               "Before",
 		New:               "After",
 		Revision:          "Revision",
+		RevisionSnapshot:  "Snapshot",
 		Author:            "Author",
 		Origin:            "Origin",
+		EventDeleted:      "Deleted",
 		OriginIP:          "IP address",
 		OriginBrowser:     "Browser",
 		OriginPlace:       "Place",
@@ -116,8 +122,10 @@ var (
 		Old:               "Antes",
 		New:               "Depois",
 		Revision:          "Revisão",
+		RevisionSnapshot:  "Registro nesta revisão",
 		Author:            "Autor",
 		Origin:            "Origem",
+		EventDeleted:      "Exclusão",
 		OriginIP:          "Endereço IP",
 		OriginBrowser:     "Navegador",
 		OriginPlace:       "Local",

@@ -6,6 +6,8 @@ package models
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/softdelete"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -23,7 +25,7 @@ type Base struct {
 	OrganizacaoID uuid.UUID `gorm:"type:uuid;index"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
-	DeletedAt     gorm.DeletedAt `gorm:"index"`
+	softdelete.Deletion
 }
 
 // BeforeCreate assigns a random UUID when none was provided, so it works on any

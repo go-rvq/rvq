@@ -32,56 +32,82 @@ type Messages struct {
 	TabTrash       string
 	Restore        string
 	TrashEmptyHint string
-	Shared         string
-	SharedNote     string
+	// The trash's columns — when, by whom and from where a record was
+	// deleted —, the action that shows where from, and its words.
+	DeletedAt         string
+	DeletedBy         string
+	DeletedOrigin     string
+	OriginIP          string
+	OriginBrowser     string
+	OriginPlace       string
+	OriginCoordinates string
+	OriginNoMap       string
+	Shared            string
+	SharedNote        string
 }
 
 var Messages_en_US = &Messages{
-	ManageTitle:    "Manage Permissions",
-	Subject:        "Roles or users",
-	SubjectHint:    "One per line (or comma-separated). Applies to all of them.",
-	Permissions:    "Permissions",
-	Actions:        "Actions",
-	Pages:          "Pages",
-	NoGrants:       "No permissions granted for this record.",
-	Help:           "Grant a role/user permission over this record. Clear everything and save to revoke.",
-	View:           "View",
-	Edit:           "Edit",
-	Delete:         "Delete",
-	FieldsView:     "Fields — view",
-	FieldsEdit:     "Fields — edit",
-	FieldsHelp:     "Optional: restrict the grant to specific fields (nested included).",
-	RevokeHint:     "Saving with no option checked revokes the given roles/users' permissions.",
-	TabAll:         "All",
-	TabTrash:       "Trash",
-	Restore:        "Restore",
-	TrashEmptyHint: "No deleted records.",
-	Shared:         "Share",
-	SharedNote:     "Managed in Sharing — cannot be removed here.",
+	ManageTitle:       "Manage Permissions",
+	Subject:           "Roles or users",
+	SubjectHint:       "One per line (or comma-separated). Applies to all of them.",
+	Permissions:       "Permissions",
+	Actions:           "Actions",
+	Pages:             "Pages",
+	NoGrants:          "No permissions granted for this record.",
+	Help:              "Grant a role/user permission over this record. Clear everything and save to revoke.",
+	View:              "View",
+	Edit:              "Edit",
+	Delete:            "Delete",
+	FieldsView:        "Fields — view",
+	FieldsEdit:        "Fields — edit",
+	FieldsHelp:        "Optional: restrict the grant to specific fields (nested included).",
+	RevokeHint:        "Saving with no option checked revokes the given roles/users' permissions.",
+	TabAll:            "All",
+	TabTrash:          "Trash",
+	Restore:           "Restore",
+	TrashEmptyHint:    "No deleted records.",
+	DeletedAt:         "Deleted on",
+	DeletedBy:         "Deleted by",
+	DeletedOrigin:     "Deleted from",
+	OriginIP:          "Address",
+	OriginBrowser:     "Browser",
+	OriginPlace:       "Place",
+	OriginCoordinates: "Coordinates",
+	OriginNoMap:       "Where the address is is not known: no map.",
+	Shared:            "Share",
+	SharedNote:        "Managed in Sharing — cannot be removed here.",
 }
 
 var Messages_pt_BR = &Messages{
-	ManageTitle:    "Gerenciar Permissões",
-	Subject:        "Papéis ou usuários",
-	SubjectHint:    "Um por linha (ou separados por vírgula). Aplica a todos os informados.",
-	Permissions:    "Permissões",
-	Actions:        "Ações",
-	Pages:          "Páginas",
-	NoGrants:       "Nenhuma permissão concedida para este registro.",
-	Help:           "Conceda a um papel/usuário permissão sobre este registro. Desmarque tudo e salve para revogar.",
-	View:           "Visualizar",
-	Edit:           "Editar",
-	Delete:         "Excluir",
-	FieldsView:     "Campos — visualizar",
-	FieldsEdit:     "Campos — editar",
-	FieldsHelp:     "Opcional: restringe a concessão a campos específicos (nested incluídos).",
-	RevokeHint:     "Salvar sem nenhuma opção marcada revoga as permissões dos papéis/usuários informados.",
-	TabAll:         "Tudo",
-	TabTrash:       "Lixeira",
-	Restore:        "Restaurar",
-	TrashEmptyHint: "Nenhum registro excluído.",
-	Shared:         "Compartilhamento",
-	SharedNote:     "Gerenciado em Compartilhamento — não pode ser removido aqui.",
+	ManageTitle:       "Gerenciar Permissões",
+	Subject:           "Papéis ou usuários",
+	SubjectHint:       "Um por linha (ou separados por vírgula). Aplica a todos os informados.",
+	Permissions:       "Permissões",
+	Actions:           "Ações",
+	Pages:             "Páginas",
+	NoGrants:          "Nenhuma permissão concedida para este registro.",
+	Help:              "Conceda a um papel/usuário permissão sobre este registro. Desmarque tudo e salve para revogar.",
+	View:              "Visualizar",
+	Edit:              "Editar",
+	Delete:            "Excluir",
+	FieldsView:        "Campos — visualizar",
+	FieldsEdit:        "Campos — editar",
+	FieldsHelp:        "Opcional: restringe a concessão a campos específicos (nested incluídos).",
+	RevokeHint:        "Salvar sem nenhuma opção marcada revoga as permissões dos papéis/usuários informados.",
+	TabAll:            "Tudo",
+	TabTrash:          "Lixeira",
+	Restore:           "Restaurar",
+	TrashEmptyHint:    "Nenhum registro excluído.",
+	DeletedAt:         "Excluído em",
+	DeletedBy:         "Excluído por",
+	DeletedOrigin:     "Excluído de",
+	OriginIP:          "Endereço",
+	OriginBrowser:     "Navegador",
+	OriginPlace:       "Lugar",
+	OriginCoordinates: "Coordenadas",
+	OriginNoMap:       "Não se sabe onde fica o endereço: sem mapa.",
+	Shared:            "Compartilhamento",
+	SharedNote:        "Gerenciado em Compartilhamento — não pode ser removido aqui.",
 }
 
 func msgs(ctx context.Context) *Messages {

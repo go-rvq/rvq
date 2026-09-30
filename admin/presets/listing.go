@@ -29,6 +29,8 @@ type ListingBuilder struct {
 	actionsAsMenu                         bool
 	filterDataFunc                        FilterDataFunc
 	filterTabsFunc                        FilterTabsFunc
+	filterTabsWrappers                    []FilterTabsWrapper
+	trailingFields                        []string
 	relatedDeletionConfig                 RelatedDeletionFunc
 	newBtnFunc                            ComponentFunc
 	pageFunc                              web.PageFunc
@@ -829,10 +831,7 @@ func defaultFilterTab(ctx *web.EventContext, tabs []*FilterTab) *FilterTab {
 // when it picked no tab — the default tab's filters, so the listing opens as
 // that tab shows it.
 func (b *ListingBuilder) filterQuery(ctx *web.EventContext) string {
-	if b.filterTabsFunc == nil {
-		return ctx.R.URL.RawQuery
-	}
-	tab := defaultFilterTab(ctx, b.filterTabsFunc(ctx))
+	tab := defaultFilterTab(ctx, b.allFilterTabs(ctx))
 	if tab == nil {
 		return ctx.R.URL.RawQuery
 	}
@@ -847,11 +846,7 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	ctx *web.EventContext,
 	inDialog bool,
 ) (r h.HTMLComponent) {
-	if b.filterTabsFunc == nil {
-		return
-	}
-
-	tabsData := b.filterTabsFunc(ctx)
+	tabsData := b.allFilterTabs(ctx)
 	if len(tabsData) == 0 {
 		return
 	}

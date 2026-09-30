@@ -29,6 +29,7 @@ mapeada para cada tabela por `db.Table(name)`.
 | `CreatedAt` | time | quando. |
 | `CreatorID` / `Creator` | uuid / string | autor (nunca nil: usuário logado ou AnonymousID). |
 | `Origin` | `models.Origin` (colunas `origin_*`) | de onde o autor fez a revisão: IP, navegador e — quando a aplicação localiza endereços (`SetOriginFunc`) — país, região, cidade e coordenadas aproximadas. Vazio no seed. |
+| `Event` | string | o que a revisão registra além de uma edição: `deleted` (`EventDeleted`), a exclusão do registro — o registro como estava, quem excluiu e de onde —; vazio numa edição. |
 | `Tag` / `Published` | string / bool | a revisão publicada (o "git tag"). |
 | `AccessCount` / `LastAccess` | int64 / time | contador de acessos por revisão (público). |
 
@@ -140,6 +141,18 @@ history.SetOriginFunc(func(r *http.Request) histmodels.Origin {
 
 A listagem das revisões mostra a origem ("Viçosa, Minas Gerais, Brazil
 (200.1.2.3)", o navegador ao passar o mouse).
+
+A origem é do pacote `admin/origin` (`origin.Origin`, `origin.SetFunc`,
+`origin.Of`): `SetOriginFunc` troca a função de todos que a usam — o history e
+a lixeira (`perms`), que guarda de onde um registro foi excluído.
+
+### Exclusões
+
+A exclusão de um registro pelo admin (o `Delete` do data operator gorm2op) é
+uma revisão própria — `Event` `deleted`, nunca deduplicada —: o registro como
+estava antes, quem excluiu e de onde. A listagem das revisões a marca
+("Exclusão"). Fora do admin — um site, um job —, `RecordDeletion(obj,
+creatorID, creator, r)` grava a mesma revisão, com `obj` carregado inteiro.
 
 ---
 

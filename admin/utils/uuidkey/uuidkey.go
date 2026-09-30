@@ -16,6 +16,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/softdelete"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -107,7 +109,8 @@ type Model struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	// the deletion: when, by whom, from where (softdelete)
+	softdelete.Deletion
 }
 
 // MustRegister is Register, for a constructor: it panics if gorm refuses the

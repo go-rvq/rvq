@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/activity"
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 	"github.com/go-rvq/rvq/admin/packages/user"
+	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -243,6 +245,7 @@ func (h *ModelHistory) Build() *ModelHistory {
 			return h.capture(obj, ctx)
 		}
 	})
+	h.installDeletion()
 	h.installPublishTag()
 	h.installChild()
 	return h
@@ -509,29 +512,98 @@ func (h *ModelHistory) Record(obj any, creatorID uuid.UUID, creator string, r *h
 	return h.createRevision(obj, creatorID, creator, originOf(r))
 }
 
+// RecordDeletion records the deletion of obj — deleted outside the admin's
+// forms: by a site, a job, a command —: a revision of its own (EventDeleted),
+// its snapshot obj as it was — loaded whole, as for Record —, with who deleted
+// it (creatorID, creator) and from where (the request r; nil: nowhere known).
+func (h *ModelHistory) RecordDeletion(obj any, creatorID uuid.UUID, creator string, r *http.Request) (histmodels.Hash, error) {
+	hash, _, err := h.createEventRevision(obj, histmodels.EventDeleted, creatorID, creator, originOf(r))
+	return hash, err
+}
+
+// installDeletion records, in a revision of its own, the deletion of a record
+// by the admin — the model's data operator (gorm2op) —: the record as it was
+// before, who deleted it and from where.
+func (h *ModelHistory) installDeletion() {
+	if _, ok := h.mb.CurrentDataOperator().(*gorm2op.DataOperatorBuilder); !ok {
+		return
+	}
+	type deletingKey struct{}
+	h.mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
+		return do.(*gorm2op.DataOperatorBuilder).WithDeleteCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
+			cb.Pre(func(state *gorm2op.CallbackState) error {
+				// the record as it is, before it is deleted
+				obj := state.Obj
+				if id := h.mb.MustRecordID(obj); !id.IsZero() && state.Ctx != nil {
+					fresh := h.mb.NewModel()
+					if h.mb.Editing().Fetcher(fresh, id, state.Ctx) == nil {
+						obj = fresh
+					}
+				}
+				state.Set(deletingKey{}, obj)
+				return nil
+			})
+			cb.Post(func(state *gorm2op.CallbackState) error {
+				obj := state.Get(deletingKey{})
+				if obj == nil {
+					return nil
+				}
+				var (
+					creatorID uuid.UUID
+					creator   string
+					origin    histmodels.Origin
+				)
+				if state.Ctx != nil && state.Ctx.R != nil {
+					if u := user.GetCurrentUser(state.Ctx.R); u != nil {
+						creatorID, creator = u.GetID(), u.GetName()
+					}
+					origin = originOf(state.Ctx.R)
+				}
+				_, _, err := h.createEventRevision(obj, histmodels.EventDeleted, creatorID, creator, origin)
+				return err
+			})
+		})
+	})
+}
+
 // createRevision snapshots obj (already loaded, with its associations) and
 // creates its revision unless an identical one already exists (dedup). It needs
 // no request context, so it also serves the boot-time seed. Returns the hash and
 // whether a new revision was created.
 func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, creator string, origin histmodels.Origin) (histmodels.Hash, bool, error) {
+	return h.createEventRevision(obj, "", creatorID, creator, origin)
+}
+
+// createEventRevision is createRevision of an event (Revision.Event): ""
+// for an edit — deduplicated by its snapshot —, or what else happened to the
+// record, as its deletion — always a revision of its own, its snapshot the
+// record as it was, nothing changed in it.
+func (h *ModelHistory) createEventRevision(obj interface{}, event string, creatorID uuid.UUID, creator string, origin histmodels.Origin) (histmodels.Hash, bool, error) {
 	snap, data, err := h.snapshot(obj)
 	if err != nil {
 		return nil, false, err
 	}
 	recordKey := h.mb.MustRecordID(obj).String()
 	// Fold the record key into the hash so it is unique per record (sole PK,
-	// clean nested route) yet still collapses an unchanged save.
-	sum := sha256.Sum256(append([]byte(recordKey+"\x00"), data...))
+	// clean nested route) yet still collapses an unchanged save. An event's
+	// folds the event and when it happened too: its own revision.
+	prefix := recordKey + "\x00"
+	if event != "" {
+		prefix += event + "\x00" + strconv.FormatInt(time.Now().UnixNano(), 10) + "\x00"
+	}
+	sum := sha256.Sum256(append([]byte(prefix), data...))
 	hash := histmodels.Hash(sum[:])
 
-	var exists int64
-	if err = h.db.Table(h.table).
-		Where("hash = ? AND record_key = ?", hash, recordKey).
-		Count(&exists).Error; err != nil {
-		return nil, false, err
-	}
-	if exists > 0 {
-		return hash, false, nil
+	if event == "" {
+		var exists int64
+		if err = h.db.Table(h.table).
+			Where("hash = ? AND record_key = ?", hash, recordKey).
+			Count(&exists).Error; err != nil {
+			return nil, false, err
+		}
+		if exists > 0 {
+			return hash, false, nil
+		}
 	}
 
 	parent, err := h.latestHash(recordKey)
@@ -542,9 +614,11 @@ func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, crea
 	// The fields whose value changed from the parent (all of them on the first
 	// revision). Kept alongside the full snapshot so the history is queryable by
 	// field without walking the chain or re-diffing.
-	changed, err := h.changedFields(recordKey, parent, snap)
-	if err != nil {
-		return nil, false, err
+	var changed []string
+	if event == "" {
+		if changed, err = h.changedFields(recordKey, parent, snap); err != nil {
+			return nil, false, err
+		}
 	}
 
 	rev := histmodels.Revision{
@@ -557,6 +631,7 @@ func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, crea
 		CreatorID:     creatorID,
 		Creator:       creator,
 		Origin:        origin,
+		Event:         event,
 	}
 	if err = h.db.Table(h.table).Create(&rev).Error; err != nil {
 		return nil, false, err

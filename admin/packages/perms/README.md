@@ -50,9 +50,13 @@ public so you can build a custom UI:
 `SetupTrash(mb, db, opts)` turns a soft-delete listing into a trash-enabled one,
 gated by the `trash` listing permission:
 
-- an **All / Trash** filter-tab pair (the Trash tab only shows for subjects
-  allowed the trash verb);
+- a **Trash** filter tab after the model's own tabs — after an **All** one, the
+  default, when it has none. It is added when the listing renders
+  (`presets.FilterTabsWrapper`), so a `FilterTabsFunc` set before or after keeps
+  it; the tab only shows for subjects allowed the trash verb;
 - the unscoped trash query and a **restore** bulk action, both backend-gated;
+- a record of the trash opens — its detail, its history, as the parent of its
+  children —: fetched deleted or not, by who may see the trash;
 - an optional `OnRestore` hook to audit restores.
 
 ```go
@@ -61,6 +65,27 @@ perms.SetupTrash(mb, db, perms.TrashOptions{
     OnRestore: auditRestores, // optional
 })
 ```
+
+`AutoTrash(b, db)`, before the models, sets up the trash of **every**
+soft-deleted model (a `gorm.DeletedAt` field, listed by gorm2op, not a
+singleton) — the default of a soft-delete listing.
+
+### Who deleted a record, and from where
+
+A model that embeds `softdelete.Deletion` in place of its `DeletedAt` keeps its
+deletion: `DeletedAt`, `DeletedByID` (a foreign key to the users —
+`UsersTable`, set up by `MigrateDeleted` —, nil when the user is deleted) and
+`DeletedOrigin` (`origin.Origin`, the columns `deleted_origin_*`: the address,
+the browser and, when the application locates addresses — `origin.SetFunc` —,
+the place). The trash fills them in when the admin deletes a record, and
+clears them on restore; outside the admin, set them with
+`softdelete.Columns(by, origin.Of(r))` (or `perms.DeletedBy(r)`).
+
+In the Trash tab the listing shows, after its own columns
+(`ListingBuilder.AppendTrailingFields`), **Deleted on**, **Deleted by** and
+**Deleted from**; the last opens the `deleted_origin` action (of the record's
+detail, in the admin's dialog): what is known of where from, and the place on
+a map (`origin/originui`).
 
 ## i18n
 

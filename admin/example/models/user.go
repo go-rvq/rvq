@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/softdelete"
+
 	"github.com/google/uuid"
 
 	"github.com/go-rvq/rvq/admin/role"
@@ -38,8 +40,8 @@ type User struct {
 	// Users use a UUID primary key (not the shared uint gorm.Model), so user
 	// references across the system (activity, notes, sessions) are UUIDs,
 	// matching the rvq user identity.
-	ID        uuid.UUID      `admin:"-" gorm:"type:uuid;primaryKey"`
-	DeletedAt gorm.DeletedAt `sql:"index"`
+	ID uuid.UUID `admin:"-" gorm:"type:uuid;primaryKey"`
+	softdelete.Deletion
 
 	Name             string
 	Company          string

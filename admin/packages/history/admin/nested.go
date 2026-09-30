@@ -30,6 +30,8 @@ func (mh *ModelHistory) installChild() {
 	// conflicting. AddChild registers it under the parent only.
 	child := presets.NewModelBuilder(b, &histmodels.Revision{}, presets.ModelWithID(mh.table))
 	child.URIName("revisions")
+	// its labels — Revision, Revisions, its fields' — are this package's
+	child.SetModuleKey(MessagesKey)
 	child.MenuIcon("mdi-history")
 	// Revisions are recorded automatically on save; they are never created or
 	// edited by hand. Read-only also makes a row click open the detail (the
@@ -190,6 +192,11 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 		SetI18nLabel(func(c context.Context) string { return getMessages(c).Changes }).
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			rev := field.Obj.(*histmodels.Revision)
+			if rev.Event == histmodels.EventDeleted {
+				return h.Td(v.VChip(h.Text(getMessages(ctx.Context()).EventDeleted)).
+					Size(v.SizeSmall).Color("error").Variant(v.VariantTonal).PrependIcon("mdi-delete-outline").
+					Attr("data-revision-event", rev.Event))
+			}
 			label := mh.ChangedFieldsLabel(rev, ctx)
 			// A truncating inline-block (not td width:100%, which would collapse the
 			// other columns and let Hash overlap the selection checkbox): wide cap,

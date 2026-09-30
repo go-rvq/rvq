@@ -57,6 +57,10 @@ type Revision struct {
 	// (admin SetOriginFunc). Columns origin_ip, origin_city, …
 	Origin Origin `gorm:"embedded;embeddedPrefix:origin_"`
 
+	// Event is what the revision records besides an edit: EventDeleted, the
+	// record deleted — its snapshot the record as it was —; "" for an edit.
+	Event string `gorm:"type:varchar(16);index"`
+
 	// Tag names the published version this revision became — the git "tag" set
 	// on publication; empty on an ordinary (unpublished) revision.
 	Tag string
@@ -70,6 +74,9 @@ type Revision struct {
 	AccessCount int64
 	LastAccess  time.Time
 }
+
+// EventDeleted is the Event of the revision of a record's deletion.
+const EventDeleted = "deleted"
 
 // PrimarySlug is the revision's id in a URL and in the listing's row selection:
 // the hash as hex. The primary key is Hash (there is no "ID" field), so without
