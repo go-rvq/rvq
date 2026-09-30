@@ -32,6 +32,12 @@ type Messages struct {
 
 	Revision          string
 	Author            string
+	Origin            string
+	OriginIP          string
+	OriginBrowser     string
+	OriginPlace       string
+	OriginCoordinates string
+	OriginNoMap       string
 	When              string
 	Status            string
 	Compare           string
@@ -69,6 +75,12 @@ var (
 		New:               "After",
 		Revision:          "Revision",
 		Author:            "Author",
+		Origin:            "Origin",
+		OriginIP:          "IP address",
+		OriginBrowser:     "Browser",
+		OriginPlace:       "Place",
+		OriginCoordinates: "Coordinates",
+		OriginNoMap:       "Where the address is is not known: no map.",
 		When:              "When",
 		Status:            "Status",
 		Compare:           "Compare selected",
@@ -105,6 +117,12 @@ var (
 		New:               "Depois",
 		Revision:          "Revisão",
 		Author:            "Autor",
+		Origin:            "Origem",
+		OriginIP:          "Endereço IP",
+		OriginBrowser:     "Navegador",
+		OriginPlace:       "Local",
+		OriginCoordinates: "Coordenadas",
+		OriginNoMap:       "Não se sabe onde fica o endereço: sem mapa.",
 		When:              "Quando",
 		Status:            "Situação",
 		Compare:           "Comparar selecionadas",

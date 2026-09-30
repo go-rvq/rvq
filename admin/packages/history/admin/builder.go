@@ -5,6 +5,7 @@ package admin
 import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
+	"github.com/go-rvq/rvq/admin/geomap"
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -36,6 +37,8 @@ func NewBuilder(db *gorm.DB) *Builder {
 // returns it. Activate per model with New(db).Model(mb).Build().
 func Configure(b *presets.Builder, db *gorm.DB) *Builder {
 	ConfigureMessages(b.I18n())
+	// the map of a revision's origin (ActionOrigin)
+	geomap.Install(b)
 	// Let the activity log render a change from its revision instead of a
 	// duplicated diff (no-op when activity is not mounted).
 	activity.RevisionDiffFunc = revisionDiff

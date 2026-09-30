@@ -28,6 +28,7 @@ mapeada para cada tabela por `db.Table(name)`.
 | `ChangedFields` | JSONB `[]string` | fields que mudaram vs o pai (todos na 1ª). Torna o histórico consultável por campo. |
 | `CreatedAt` | time | quando. |
 | `CreatorID` / `Creator` | uuid / string | autor (nunca nil: usuário logado ou AnonymousID). |
+| `Origin` | `models.Origin` (colunas `origin_*`) | de onde o autor fez a revisão: IP, navegador e — quando a aplicação localiza endereços (`SetOriginFunc`) — país, região, cidade e coordenadas aproximadas. Vazio no seed. |
 | `Tag` / `Published` | string / bool | a revisão publicada (o "git tag"). |
 | `AccessCount` / `LastAccess` | int64 / time | contador de acessos por revisão (público). |
 
@@ -83,6 +84,7 @@ o boot), então rodam a cada boot sem efeito depois de aplicados.
 | `FieldContentHandler(field, lang, codec)` | codec de texto para um campo estruturado (ver Revert parcial de campo estruturado): faz um map JSON participar do revert parcial, editado como texto (ex. YAML). Registrar um codec habilita `AcceptsPartial` no campo. |
 | `Fetcher(fn)` | como recarregar o registro antes do snapshot (default: o fetcher de Editing do model, que aplica os preloads). |
 | `Build()` | aplica tudo. |
+| `Record(obj, creatorID, creator, r)` | grava a revisão de um registro alterado **fora** dos forms do admin (um site, um job, um comando), com o autor e a origem (a requisição `r`; nil: nenhuma); `obj` carregado inteiro. Nada quando não mudou (dedup). |
 
 `Build()` devolve o `*ModelHistory` — encadeie `FieldDiffHandler`/`FieldContentHandler` **depois** de `Build()`.
 
@@ -100,6 +102,44 @@ A cada save (create ou update), `capture`:
 A criação e a atualização são capturadas (o admin usa `Saver` e `Creator`
 separados; ambos são embrulhados), então criar um registro já grava sua 1ª
 revisão.
+
+### Fora do admin: `Record`
+
+Um registro que muda por outro caminho que não os forms do admin — o site que
+deixa o autor editar o próprio comentário, um job — grava a sua revisão com
+`Record`, depois de salvar, com o registro recarregado e o autor:
+
+```go
+mh := history.New(db).Model(commentM).Fields("Body").Build()
+
+// no handler do site, depois de salvar
+var c PostComment
+db.First(&c, "id = ?", id)
+mh.Record(&c, user.ID, user.Name, r) // r: a requisição, a origem da revisão
+```
+
+A revisão é a mesma de um save do admin: entra na cadeia, é deduplicada e
+aparece no histórico do registro (`/<model>/{id}/revisions`).
+
+### A origem de uma revisão
+
+Cada revisão guarda de onde o autor a fez (`Revision.Origin`): o endereço — atrás
+de um proxy reverso, o primeiro do `X-Forwarded-For` (ou `X-Real-Ip`) — e o
+navegador, tirados da requisição do save (ou da passada a `Record`). Onde fica o
+endereço, o history não sabe: a aplicação que localiza endereços (uma base GeoIP)
+diz, trocando a função que faz a origem:
+
+```go
+history.SetOriginFunc(func(r *http.Request) histmodels.Origin {
+    o := history.DefaultOrigin(r) // o endereço e o navegador
+    loc := geo.Lookup(o.IP)       // da aplicação
+    o.Country, o.CountryName, o.Region, o.City = loc.Country, loc.CountryName, loc.Region, loc.City
+    return o
+})
+```
+
+A listagem das revisões mostra a origem ("Viçosa, Minas Gerais, Brazil
+(200.1.2.3)", o navegador ao passar o mouse).
 
 ---
 

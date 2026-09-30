@@ -78,6 +78,7 @@ func (mh *ModelHistory) installChild() {
 	mh.mb.AddChild(child)
 	mh.configChildListing(child)
 	mh.configChildDetailing(child)
+	mh.installOriginAction(child)
 	mh.installRevertConfirm(child)
 }
 
@@ -164,7 +165,7 @@ func scanLatestHash(db *gorm.DB, table, recordKey string) (histmodels.Hash, erro
 }
 
 func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
-	l := child.Listing("Hash", "ChangedFields", "Creator", "CreatedAt", "Published", "Tag", "AccessCount").
+	l := child.Listing("Hash", "ChangedFields", "Creator", "Origin", "CreatedAt", "Published", "Tag", "AccessCount").
 		OrderBy("created_at DESC")
 
 	// Highlight the CURRENT record's row (its newest revision) with the success
@@ -213,6 +214,13 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 			return h.Td(h.Code(shortHash(rev.Hash)))
 		})
 	l.Field("Creator").SetI18nLabel(func(c context.Context) string { return getMessages(c).Author })
+	// where the author made it from: the place and the address, the browser on
+	// hover
+	l.Field("Origin").
+		SetI18nLabel(func(c context.Context) string { return getMessages(c).Origin }).
+		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			return h.Td(originLink(child, field.Obj.(*histmodels.Revision), ctx)).Style("white-space:nowrap")
+		})
 	l.Field("CreatedAt").SetI18nLabel(func(c context.Context) string { return getMessages(c).When })
 	l.Field("Published").SetI18nLabel(func(c context.Context) string { return getMessages(c).Published })
 	l.Field("Tag").SetI18nLabel(func(c context.Context) string { return getMessages(c).Tag })
@@ -276,7 +284,7 @@ func (mh *ModelHistory) configChildListing(child *presets.ModelBuilder) {
 // Revision, with whole-record and per-field/partial revert), not a static
 // snapshot; the separate compare action is therefore not needed.
 func (mh *ModelHistory) configChildDetailing(child *presets.ModelBuilder) {
-	child.Detailing("Snapshot")
+	child.Detailing("Origin", "Snapshot")
 
 	// Fetch the revision through our own table-qualified query. gorm2op's default
 	// Fetch does state.DB.First(&Revision{}), and First appends ORDER BY on the

@@ -378,7 +378,7 @@ func (h *ModelHistory) SeedInitialRevisions() error {
 				obj = fresh
 			}
 		}
-		if _, _, err := h.createRevision(obj, uuid.Nil, ""); err != nil && firstErr == nil {
+		if _, _, err := h.createRevision(obj, uuid.Nil, "", histmodels.Origin{}); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -477,14 +477,16 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 
 	var creatorID uuid.UUID
 	var creator string
+	var origin histmodels.Origin
 	if ctx != nil && ctx.R != nil {
 		if u := user.GetCurrentUser(ctx.R); u != nil {
 			creatorID = u.GetID()
 			creator = u.GetName()
 		}
+		origin = originOf(ctx.R)
 	}
 
-	hash, created, err := h.createRevision(obj, creatorID, creator)
+	hash, created, err := h.createRevision(obj, creatorID, creator, origin)
 	if err != nil || !created {
 		return err
 	}
@@ -496,11 +498,22 @@ func (h *ModelHistory) capture(obj interface{}, ctx *web.EventContext) error {
 	return nil
 }
 
+// Record records the revision of obj — a record of the model changed outside
+// the admin's forms: by a site, a job, a command — with its author (creatorID
+// and creator; uuid.Nil and "" for none) and where they were: the request r
+// they made it by (SetOriginFunc; nil: nowhere known). obj must be loaded
+// whole (the associations of the versioned fields too): its snapshot is what
+// the revision keeps. Nothing when it did not change since its last revision
+// (the same snapshot); the hash is the revision's, and whether it was created.
+func (h *ModelHistory) Record(obj any, creatorID uuid.UUID, creator string, r *http.Request) (histmodels.Hash, bool, error) {
+	return h.createRevision(obj, creatorID, creator, originOf(r))
+}
+
 // createRevision snapshots obj (already loaded, with its associations) and
 // creates its revision unless an identical one already exists (dedup). It needs
 // no request context, so it also serves the boot-time seed. Returns the hash and
 // whether a new revision was created.
-func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, creator string) (histmodels.Hash, bool, error) {
+func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, creator string, origin histmodels.Origin) (histmodels.Hash, bool, error) {
 	snap, data, err := h.snapshot(obj)
 	if err != nil {
 		return nil, false, err
@@ -543,6 +556,7 @@ func (h *ModelHistory) createRevision(obj interface{}, creatorID uuid.UUID, crea
 		CreatedAt:     time.Now(),
 		CreatorID:     creatorID,
 		Creator:       creator,
+		Origin:        origin,
 	}
 	if err = h.db.Table(h.table).Create(&rev).Error; err != nil {
 		return nil, false, err

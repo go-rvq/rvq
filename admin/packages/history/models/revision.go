@@ -52,6 +52,11 @@ type Revision struct {
 	CreatorID uuid.UUID `gorm:"type:uuid;index"`
 	Creator   string
 
+	// Origin is where the author made the revision from: the address, the
+	// browser, and where the address is when the application locates it
+	// (admin SetOriginFunc). Columns origin_ip, origin_city, …
+	Origin Origin `gorm:"embedded;embeddedPrefix:origin_"`
+
 	// Tag names the published version this revision became — the git "tag" set
 	// on publication; empty on an ordinary (unpublished) revision.
 	Tag string
