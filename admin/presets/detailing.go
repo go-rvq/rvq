@@ -23,6 +23,7 @@ type DetailingBuilder struct {
 	fetcher            FetchFunc
 	tabPanels          []TabComponentFunc
 	afterTitleCompFunc ObjectComponentFunc
+	noticeFuncs        []ObjectComponentFunc
 	pageHandlers       PageHandlers
 	pagesRegistrator   *PagesRegistrator
 	verifiers          perm.PermVerifiers
@@ -173,6 +174,14 @@ func (b *DetailingBuilder) AfterTitleCompFunc(v ObjectComponentFunc) (r *Detaili
 		panic("value required")
 	}
 	b.afterTitleCompFunc = v
+	return b
+}
+
+// AppendNoticeFunc adds a notice at the top of the detail's body — what the
+// record is in, as deleted —: f's component for the record, nothing when nil.
+// Every notice added is shown, in the order they were added.
+func (b *DetailingBuilder) AppendNoticeFunc(f ObjectComponentFunc) *DetailingBuilder {
+	b.noticeFuncs = append(b.noticeFuncs, f)
 	return b
 }
 
@@ -607,6 +616,16 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 	if len(actionsErrors) > 0 {
 		f.Body = append(actionsErrors, f.Body)
+	}
+
+	var notices h.HTMLComponents
+	for _, nf := range b.noticeFuncs {
+		if c := nf(obj, ctx); c != nil {
+			notices = append(notices, c)
+		}
+	}
+	if len(notices) > 0 {
+		f.Body = append(notices, f.Body)
 	}
 
 	if len(actionsMenus) > 0 {

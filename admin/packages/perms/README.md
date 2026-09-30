@@ -87,6 +87,10 @@ In the Trash tab the listing shows, after its own columns
 detail, in the admin's dialog): what is known of where from, and the place on
 a map (`origin/originui`).
 
+The detail of a deleted record opens with a warning (`DetailingBuilder.
+AppendNoticeFunc`): it was deleted, when and — as the model keeps them — by
+whom and from where.
+
 ## i18n
 
 Messages ship in en-US and pt-BR and are registered automatically on the

@@ -34,6 +34,8 @@ type Messages struct {
 	TrashEmptyHint string
 	// The trash's columns — when, by whom and from where a record was
 	// deleted —, the action that shows where from, and its words.
+	// DeletedNotice is the warning of the detail of a deleted record.
+	DeletedNotice     string
 	DeletedAt         string
 	DeletedBy         string
 	DeletedOrigin     string
@@ -66,6 +68,7 @@ var Messages_en_US = &Messages{
 	TabTrash:          "Trash",
 	Restore:           "Restore",
 	TrashEmptyHint:    "No deleted records.",
+	DeletedNotice:     "This record was deleted.",
 	DeletedAt:         "Deleted on",
 	DeletedBy:         "Deleted by",
 	DeletedOrigin:     "Deleted from",
@@ -98,6 +101,7 @@ var Messages_pt_BR = &Messages{
 	TabTrash:          "Lixeira",
 	Restore:           "Restaurar",
 	TrashEmptyHint:    "Nenhum registro excluído.",
+	DeletedNotice:     "Este registro foi excluído.",
 	DeletedAt:         "Excluído em",
 	DeletedBy:         "Excluído por",
 	DeletedOrigin:     "Excluído de",

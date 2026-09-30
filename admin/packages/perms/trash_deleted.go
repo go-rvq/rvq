@@ -15,6 +15,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/softdelete"
 	"github.com/go-rvq/rvq/web"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -89,6 +90,28 @@ func deletionOf(obj any) *softdelete.Deletion {
 	return nil
 }
 
+// deletedAtOf is when obj was deleted; zero while it is not (or its model has
+// no gorm.DeletedAt).
+func deletedAtOf(obj any) time.Time {
+	f := reflect.Indirect(reflect.ValueOf(obj)).FieldByName("DeletedAt")
+	if !f.IsValid() {
+		return time.Time{}
+	}
+	if d, ok := f.Interface().(gorm.DeletedAt); ok && d.Valid {
+		return d.Time
+	}
+	return time.Time{}
+}
+
+// userName is the name of the user id; "" when not found.
+func userName(db *gorm.DB, id *uuid.UUID) (name string) {
+	if id != nil {
+		db.Session(&gorm.Session{NewDB: true}).Table(UsersTable).
+			Select(UserNameColumn).Where("id = ?", *id).Limit(1).Scan(&name)
+	}
+	return
+}
+
 // installDeletedColumns adds to the trash of mb — in its tab only — the
 // columns of when, by whom and from where each record was deleted, and the
 // action that shows where from with a map.
@@ -110,6 +133,7 @@ func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) 
 			}
 			return h.Td(h.Text(s)).Style("white-space:nowrap")
 		})
+	installDeletedNotice(mb, db)
 	if !hasDeletion(mb.NewModel()) {
 		lb.AppendTrailingFields("DeletedAt")
 		return
@@ -119,9 +143,8 @@ func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) 
 		SetEnabled(inTrash).
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			var name string
-			if d := deletionOf(field.Obj); d != nil && d.DeletedByID != nil {
-				db.Session(&gorm.Session{NewDB: true}).Table(UsersTable).
-					Select(UserNameColumn).Where("id = ?", *d.DeletedByID).Limit(1).Scan(&name)
+			if d := deletionOf(field.Obj); d != nil {
+				name = userName(db, d.DeletedByID)
 			}
 			return h.Td(h.Text(name))
 		})
@@ -133,15 +156,7 @@ func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) 
 			if d == nil {
 				return h.Td()
 			}
-			id := mb.MustRecordID(field.Obj).String()
-			open := web.Plaid().
-				EventFunc(actions.Action).
-				Query(presets.ParamID, id).
-				Query(presets.ParamAction, ActionDeletedOrigin).
-				Query(presets.ParamOverlay, actions.Dialog).
-				URL(mb.Info().ListingHrefCtx(ctx)).
-				Go()
-			return h.Td(originui.Link(d.DeletedOrigin, open, "data-deleted-origin", id))
+			return h.Td(deletedOriginLink(mb, field.Obj, d, ctx))
 		})
 	lb.AppendTrailingFields("DeletedAt", "DeletedByID", "DeletedOrigin")
 
@@ -173,4 +188,51 @@ func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) 
 				Coordinates: m.OriginCoordinates, NoMap: m.OriginNoMap,
 			}, deletionOf(obj).DeletedOrigin), nil
 		})
+}
+
+// deletedOriginLink is where obj — d its deletion — was deleted from, on one
+// line, opening the deleted_origin action (of its detail, in the admin's
+// dialog).
+func deletedOriginLink(mb *presets.ModelBuilder, obj any, d *softdelete.Deletion, ctx *web.EventContext) h.HTMLComponent {
+	id := mb.MustRecordID(obj).String()
+	open := web.Plaid().
+		EventFunc(actions.Action).
+		Query(presets.ParamID, id).
+		Query(presets.ParamAction, ActionDeletedOrigin).
+		Query(presets.ParamOverlay, actions.Dialog).
+		URL(mb.Info().ListingHrefCtx(ctx)).
+		Go()
+	return originui.Link(d.DeletedOrigin, open, "data-deleted-origin", id)
+}
+
+// installDeletedNotice warns, at the top of the detail of a deleted record,
+// that it is deleted — and when, by whom and from where, when its model keeps
+// them (softdelete.Deletion).
+func installDeletedNotice(mb *presets.ModelBuilder, db *gorm.DB) {
+	mb.Detailing().AppendNoticeFunc(func(obj any, ctx *web.EventContext) h.HTMLComponent {
+		at := deletedAtOf(obj)
+		if at.IsZero() {
+			return nil
+		}
+		m := msgs(ctx.Context())
+		row := func(label string, value h.HTMLComponent) h.HTMLComponent {
+			return h.Div(h.Strong(label+": "), value)
+		}
+		body := h.HTMLComponents{row(m.DeletedAt, h.Text(at.Local().Format(time.DateTime)))}
+		if d := deletionOf(obj); d != nil {
+			if name := userName(db, d.DeletedByID); name != "" {
+				body = append(body, row(m.DeletedBy, h.Text(name)))
+			}
+			if d.DeletedOrigin.String() != "" {
+				body = append(body, row(m.DeletedOrigin, deletedOriginLink(mb, obj, d, ctx)))
+			}
+		}
+		return v.VAlert(body...).
+			Type("warning").
+			Variant(v.VariantTonal).
+			Title(m.DeletedNotice).
+			Icon("mdi-delete-alert-outline").
+			Class("mb-4").
+			Attr("data-deleted-notice", "true")
+	})
 }
