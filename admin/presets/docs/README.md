@@ -32,6 +32,10 @@ Reference notes for the `presets` admin package. See the package
   successful save (`onSaveCallbacks`): the listing behind a NEW, the detail and
   the listing that opened it after an EDIT, the detail PAGE and its `<title>`
   without a reload, and the singleton cases.
+- [Embedding the admin](embedding.md) — the admin in another page's iframe
+  (`name="rvq-embedded"`, `EmbeddedWindowName`): it starts with the side menu
+  closed, the toolbar's button opens it; loading it on the first opening; the
+  same origin and the framing headers.
 - [Record IDs](record-id.md) — how a model's primary key is encoded into a
   record id, parsed back (`ParseRecordID` / `ParseRecordIDTo`), the supported
   key types (basic kinds, `uuid.UUID`, a `Parse` method, `sql.Scanner`) and the

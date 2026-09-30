@@ -19,6 +19,13 @@ import (
 //go:embed assets/fix-layout.css
 var fixLayoutCSS []byte
 
+// EmbeddedWindowName is the name of a window — an iframe's, name="…" — the
+// admin runs in embedded in another page (a site's dialog): there it starts
+// with the side menu closed, the room is the page's; the button of the
+// toolbar opens it. The name stays the window's while the admin navigates in
+// it.
+const EmbeddedWindowName = "rvq-embedded"
+
 func BuildBreadcrumbsComponent(b *Builder, bc *BreadcrumbsBuilder, ctx *web.EventContext, pageTitle string) (breadcrumb h.HTMLComponent) {
 	home := &Breadcrumb{
 		Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
@@ -326,7 +333,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 	presetsEndDrawer: false,  
 	presetsDialog: false, 
 	presetsListingDialog: false,
-	navDrawer: true,
+	navDrawer: window.name !== "`+EmbeddedWindowName+`",
 	contentPageMenu: false,
 	menuFilter: "",
 	printer: {show:false},
