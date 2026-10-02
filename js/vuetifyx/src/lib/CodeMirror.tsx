@@ -27,13 +27,27 @@ const yamlLanguage = StreamLanguage.define<{}>({
   },
 })
 
+// LanguageOptions are the props a language's extensions may depend on: the
+// delimiters of a Gad template's code (gadt).
+interface LanguageOptions {
+  templateStart: string
+  templateEnd: string
+}
+
+// gadTemplate is the Gad template (gadt) grammar — literal text with Gad code
+// between the delimiters, `{%` / `%}` unless told otherwise (the SEO fields and
+// the admin's messages use `{` / `}`) — from @gad-lang/codemirror-gad.
+const gadTemplate = async (o: LanguageOptions) => {
+  const {gad} = await import('@gad-lang/codemirror-gad')
+  return [gad({sourceType: 'template', delimiters: {start: o.templateStart, end: o.templateEnd}})]
+}
+
 // Language registry — a name → CodeMirror language extensions map. Adding another
 // language is one import plus one entry here (and its `@codemirror/lang-*`
-// dependency in package.json). A name with no entry (e.g. "yaml", which has no
-// dedicated grammar installed) edits as plain text with line numbers, still fully
-// usable. The registry is intentionally the single extension point the component
-// exposes for new languages.
-const LANGUAGES: Record<string, () => Promise<Extension[]>> = {
+// dependency in package.json). A name with no entry edits as plain text with line
+// numbers, still fully usable. The registry is intentionally the single extension
+// point the component exposes for new languages.
+const LANGUAGES: Record<string, (o: LanguageOptions) => Promise<Extension[]>> = {
   json: async () => [(await import('@codemirror/lang-json')).json()],
   javascript: async () => [(await import('@codemirror/lang-javascript')).javascript()],
   js: async () => [(await import('@codemirror/lang-javascript')).javascript()],
@@ -44,9 +58,11 @@ const LANGUAGES: Record<string, () => Promise<Extension[]>> = {
   html: async () => [(await import('@codemirror/lang-html')).html()],
   css: async () => [(await import('@codemirror/lang-css')).css()],
   go: async () => [(await import('@codemirror/lang-go')).go()],
-  // Gad is Go-like; until a dedicated CodeMirror grammar exists it reuses the Go
-  // grammar for highlighting.
-  gad: async () => [(await import('@codemirror/lang-go')).go()],
+  // Gad, its templates (gadt) and Gadx: @gad-lang/codemirror-gad (highlighting,
+  // completion and hover of the builtins).
+  gad: async () => [(await import('@gad-lang/codemirror-gad')).gad()],
+  gadt: gadTemplate,
+  gadx: async () => [(await import('@gad-lang/codemirror-gad')).gadx()],
   yaml: async () => [yamlLanguage],
   yml: async () => [yamlLanguage],
 }
@@ -58,6 +74,16 @@ const propsOptions = {
   },
   // Language name looked up in LANGUAGES; unknown → plain text.
   language: {
+    type: String,
+    default: '',
+  },
+  // The delimiters of the code of a Gad template (language "gadt"): `{%` / `%}`
+  // when empty.
+  templateStart: {
+    type: String,
+    default: '',
+  },
+  templateEnd: {
     type: String,
     default: '',
   },
@@ -115,7 +141,7 @@ export default defineComponent({
       const factory = LANGUAGES[props.language]
       if (!factory) return []
       try {
-        return await factory()
+        return await factory({templateStart: props.templateStart, templateEnd: props.templateEnd})
       } catch {
         return []
       }
@@ -130,6 +156,12 @@ export default defineComponent({
 
   watch: {
     language() {
+      this.loadLang().then((e) => (this.resolvedLang = e))
+    },
+    templateStart() {
+      this.loadLang().then((e) => (this.resolvedLang = e))
+    },
+    templateEnd() {
       this.loadLang().then((e) => (this.resolvedLang = e))
     },
   },

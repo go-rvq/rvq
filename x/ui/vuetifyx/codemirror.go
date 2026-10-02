@@ -23,6 +23,13 @@ func (b *VXCodeMirrorBuilder) Language(v string) *VXCodeMirrorBuilder {
 	return b.Attr("language", v)
 }
 
+// TemplateDelimiters sets the delimiters of the code of a Gad template
+// (language "gadt"): `{%` / `%}` unless set; the SEO fields and the admin's
+// messages use `{` / `}`.
+func (b *VXCodeMirrorBuilder) TemplateDelimiters(start, end string) *VXCodeMirrorBuilder {
+	return b.Attr("template-start", start).Attr("template-end", end)
+}
+
 // Readonly renders a non-editable viewer (used for the live preview).
 func (b *VXCodeMirrorBuilder) Readonly(v bool) *VXCodeMirrorBuilder {
 	return b.Attr(":readonly", v)
