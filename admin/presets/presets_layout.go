@@ -266,7 +266,10 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Width("320").
 				Attr("v-model", "vars.navDrawer").
 				VariantMenu().
-				ContainerProps(`{permanent:true, floating:true, elevation:0, class:"border-e"}`),
+				// on a narrow screen (vars.navMobile) the menu goes over the page —
+				// closed by a click out of it —, not beside it, which would leave
+				// the page no room
+				ContainerProps(`{permanent: !vars.navMobile, temporary: vars.navMobile, floating:true, elevation:0, class:"border-e"}`),
 			VMain(
 				scoped(
 					h.If(hasHeader,
@@ -333,7 +336,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 	presetsEndDrawer: false,  
 	presetsDialog: false, 
 	presetsListingDialog: false,
-	navDrawer: window.name !== "`+EmbeddedWindowName+`",
+	// a narrow screen (Vuetify's md breakpoint): the menu starts hidden
+	navMobile: window.innerWidth < 960,
+	navDrawer: window.name !== "`+EmbeddedWindowName+`" && window.innerWidth >= 960,
 	contentPageMenu: false,
 	menuFilter: "",
 	printer: {show:false},
