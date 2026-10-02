@@ -281,12 +281,13 @@ func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.H
 			parts = append(parts, h.Li(h.A(h.Text(c.Title)).Href(b.DocHref(ctx, c.ID))))
 		}
 	}
+	// in the frame of a document: its look (docStyle) the same
 	out := h.Div(
-		h.H1(title).Class("text-h5 mb-2"),
+		h.H1(title),
 		h.P(h.Text(msgs.NothingWritten)).Class("text-medium-emphasis"),
-	)
+	).Class("user-doc")
 	if len(parts) > 0 {
-		out.AppendChildren(h.H2(msgs.SeeAlso).Class("text-subtitle-1 mt-4"), h.Ul(parts...))
+		out.AppendChildren(h.H2(msgs.SeeAlso), h.Ul(parts...))
 	}
 	return out
 }
