@@ -12,9 +12,11 @@ import (
 // model and the models nested in it, an action, a page. Its ID is its
 // document's path without the file (DocFile).
 type Node struct {
-	ID       string  `json:"value"`
-	Title    string  `json:"title"`
-	Icon     string  `json:"prependIcon,omitempty"`
+	ID    string `json:"value"`
+	Title string `json:"title"`
+	Icon  string `json:"prependIcon,omitempty"`
+	// Href is the URL of its document: the item is a link to it.
+	Href     string  `json:"href,omitempty"`
 	Children []*Node `json:"children,omitempty"`
 }
 

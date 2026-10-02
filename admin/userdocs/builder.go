@@ -183,10 +183,24 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 	if node == "" && len(tree) > 0 {
 		node = tree[0].ID
 	}
+	// the nodes above the one shown, and it — its parts in sight
 	opened := ancestors(tree, node)
 	if opened == nil {
 		opened = []string{}
 	}
+	if n := findNode(tree, node); n != nil && len(n.Children) > 0 {
+		opened = append(opened, node)
+	}
+	// each node a link to its document — before Items, which writes the
+	// tree out
+	var link func(nodes []*Node)
+	link = func(nodes []*Node) {
+		for _, n := range nodes {
+			n.Href = b.DocHref(ctx, n.ID)
+			link(n.Children)
+		}
+	}
+	link(tree)
 	nav := v.VTreeview().
 		Items(tree).
 		ItemValue("value").
@@ -197,15 +211,19 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 		Density(v.DensityCompact).
 		Opened(opened).
 		Activated([]string{node}).
-		Attr("@update:activated", `(ids) => { if (!ids || !ids.length) return; `+
-			`const u = new URL(window.location.href); u.searchParams.set("doc", ids[0]); `+
-			`window.location.href = u.toString(); }`)
+		// the title a link to the node's document
+		Children(web.Slot(
+			h.A(h.Text("{{ (item.raw || item).title }}")).
+				Attr(":href", "(item.raw || item).href").
+				Class("user-docs-link text-decoration-none").
+				Style("color: inherit; display: block"),
+		).Name("title").Scope("{ item }"))
 
-	// a style in a component is dropped by Vue: in the head of the page
-	if ctx.Injector != nil {
-		ctx.Injector.HeadHTML("<style>" + docStyle + "</style>")
-	}
 	return h.Div(
+		// with the component — a page reached without a reload has no head
+		// of its own —; a <style> Vue would drop, a <component is="style">
+		// it keeps
+		h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML(docStyle)),
 		v.VRow(
 			v.VCol(
 				h.Div(h.Text(msgs.Contents)).Class("text-overline text-medium-emphasis"),
