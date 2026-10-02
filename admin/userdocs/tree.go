@@ -41,7 +41,7 @@ func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext)
 				Icon: "mdi-folder-outline", Children: children})
 		case presets.MenuItemModel:
 			mb, _ := it.Value.(*presets.ModelBuilder)
-			if mb == nil || mb == b.mb || !b.canList(mb, ctx) {
+			if mb == nil || mb == b.mb || !mb.IsInMenu() || !b.canList(mb, ctx) {
 				continue
 			}
 			nodes = append(nodes, b.modelTree(mb, mb.MenuID(), ctx))
@@ -66,7 +66,7 @@ func (b *Builder) canList(mb *presets.ModelBuilder, ctx *web.EventContext) bool 
 // models nested in it under it.
 func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventContext) *Node {
 	n := &Node{ID: id, Title: mb.TTitlePlural(ctx.Context()), Icon: mb.GetMenuIcon()}
-	for _, a := range mb.Detailing().GetActions() {
+	for _, a := range detailingActions(mb) {
 		n.Children = append(n.Children, &Node{ID: id + "/actions/" + a.Name(),
 			Title: a.RequestTitle(mb, ctx.Context()), Icon: "mdi-gesture-tap"})
 	}
@@ -80,11 +80,21 @@ func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventC
 	return n
 }
 
+// detailingActions are the actions of the detail of mb — none when it has no
+// detail: asking for it would make one.
+func detailingActions(mb *presets.ModelBuilder) []*presets.ActionBuilder {
+	if !mb.HasDetailing() {
+		return nil
+	}
+	return mb.Detailing().GetActions()
+}
+
 // childKey is the name of a model nested in another, in the path of its
-// documents: its id, else its URI's name, in snake case (modules).
+// documents: its id (the field it is, Modules), else its URI's name, in
+// snake case (modules).
 func childKey(mb *presets.ModelBuilder) string {
 	if id := mb.MenuID(); id != "" && !strings.Contains(id, ".") {
-		return id
+		return strcase.ToSnake(id)
 	}
 	return strcase.ToSnake(mb.UriName())
 }

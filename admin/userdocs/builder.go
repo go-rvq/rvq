@@ -214,16 +214,12 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.HTMLComponent {
 	msgs := GetMessages(ctx.Context())
 	locale := b.locale(ctx)
-	file := DocFile(node)
 	r := &renderer{b: b, ctx: ctx}
-	for _, src := range b.sources {
-		content, ok, err := b.content(locale, src, file)
-		if err != nil {
-			return v.VAlert(h.Text(fmt.Sprintf(msgs.RenderError, err))).Type("error")
-		}
-		if !ok {
-			continue
-		}
+	file, src, content, err := b.find(locale, node)
+	if err != nil {
+		return v.VAlert(h.Text(fmt.Sprintf(msgs.RenderError, err))).Type("error")
+	}
+	if src != nil {
 		out, err := r.Render(src, file, content)
 		if err != nil {
 			return v.VAlert(h.Text(fmt.Sprintf(msgs.RenderError, err))).Type("error")
@@ -256,6 +252,30 @@ func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.H
 		out.AppendChildren(h.H2(msgs.SeeAlso).Class("text-subtitle-1 mt-4"), h.Ul(parts...))
 	}
 	return out
+}
+
+// find is the document of node in locale: its file, the source that has it,
+// and its content as kept in locale — nil when none has it. An action that
+// its model's documents do not explain is the one of whatever package
+// explains it in general: actions/NAME.md (restore, the trash's, is the
+// trash's).
+func (b *Builder) find(locale, node string) (file string, src *Source, content string, err error) {
+	files := []string{DocFile(node)}
+	if _, name, ok := strings.Cut(node, "/actions/"); ok && !strings.Contains(name, "/") {
+		files = append(files, "actions/"+name+".md")
+	}
+	for _, f := range files {
+		for _, s := range b.sources {
+			c, ok, err := b.content(locale, s, f)
+			if err != nil {
+				return "", nil, "", err
+			}
+			if ok {
+				return f, s, c, nil
+			}
+		}
+	}
+	return "", nil, "", nil
 }
 
 // content is the file of src as kept in locale, and whether there is one.

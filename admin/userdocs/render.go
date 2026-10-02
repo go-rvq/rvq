@@ -195,7 +195,7 @@ func (r *renderer) globals() gad.Dict {
 // actionTitle is the title of the action name of mb: of its detail, or of its
 // listing (in bulk).
 func actionTitle(mb *presets.ModelBuilder, name string, ctx *web.EventContext) (string, bool) {
-	for _, a := range mb.Detailing().GetActions() {
+	for _, a := range detailingActions(mb) {
 		if a.Name() == name {
 			return a.RequestTitle(mb, ctx.Context()), true
 		}
