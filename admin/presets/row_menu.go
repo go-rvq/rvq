@@ -106,8 +106,11 @@ func (b *RowMenuItemBuilder) TTitle(ctx context.Context) string {
 	if b.title != nil {
 		return b.title(ctx)
 	}
-	return strcase.ToDelimited(b.name, ' ')
+	return HumanizeString(b.name)
 }
+
+// deleteTitle is the title of the item that deletes a record.
+func deleteTitle(ctx context.Context) string { return MustGetMessages(ctx).Delete }
 
 // Child is the nested model the item opens, nil when it is not one.
 func (b *RowMenuItemBuilder) Child() *ModelBuilder { return b.child }

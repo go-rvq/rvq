@@ -62,11 +62,14 @@ func (b *Builder) canList(mb *presets.ModelBuilder, ctx *web.EventContext) bool 
 	return !mb.Permissioner().ReqLister(ctx.R).Denied()
 }
 
-// modelTree is the node of mb, its document at id: its actions, under
-// Actions; its pages, under Pages; the models nested in it.
+// modelTree is the node of mb, its document at id: its forms (formNodes);
+// its actions, under Actions; its pages, under Pages; the models nested in it.
 func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventContext) *Node {
 	msgs := GetMessages(ctx.Context())
 	n := &Node{ID: id, Title: mb.TTitleAuto(ctx.Context()), Icon: mb.GetMenuIcon()}
+
+	// its forms: of a new record, of an edit, the detail
+	n.Children = append(n.Children, formNodes(mb, id, msgs)...)
 
 	actions := &Node{ID: id + "/actions", Title: msgs.Actions, Icon: "mdi-gesture-tap"}
 	for _, a := range detailingActions(mb) {

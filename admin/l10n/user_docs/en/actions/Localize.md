@@ -15,3 +15,7 @@ cannot be chosen.
 
 See also: {%= admin.doc("actions/Localizations").link %},
 {%= admin.doc("actions/L10nChangeLocaleCode").link %}.
+
+## When it is available
+
+To whoever may edit the record. The languages offered are those it has no version in yet.

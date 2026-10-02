@@ -14,3 +14,7 @@ O registro volta para as outras abas da listagem, e a exclusão fica guardada
 no histórico de revisões dele.
 
 Veja também: {%= admin.doc("actions/deleted_origin").link %}.
+
+## Quando está disponível
+
+Só na aba Lixeira de uma listagem, para quem pode ver a lixeira.

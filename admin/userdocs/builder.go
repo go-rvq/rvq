@@ -69,6 +69,8 @@ func New(p *presets.Builder, db *gorm.DB) *Builder {
 		}
 		return "en"
 	}
+	// its own documents: the forms of every model
+	b.Register(coreSource())
 	return b
 }
 
@@ -257,7 +259,7 @@ const docStyle = `
 func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.HTMLComponent {
 	msgs := GetMessages(ctx.Context())
 	locale := b.locale(ctx)
-	r := &renderer{b: b, ctx: ctx, tree: tree}
+	r := &renderer{b: b, ctx: ctx, tree: tree, node: node}
 	file, src, content, err := b.find(locale, node)
 	if err != nil {
 		return v.VAlert(h.Text(fmt.Sprintf(msgs.RenderError, err))).Type("error")
@@ -322,13 +324,16 @@ func (b *Builder) find(locale, node string) (file string, src *Source, content s
 
 // DocFiles are the files the document of node is looked for in, in order:
 // its own (DocFile); for an action, actions/NAME.md — the one of whatever
-// package explains it in general —; for a nested model,
+// package explains it in general —; for a form, forms/NAME.md (the
+// documentation's own, userdocs/user_docs); for a nested model,
 // children/WORD/README.md, WORD the last word of its key (posts_revisions is
 // children/revisions).
 func DocFiles(node string) []string {
 	files := []string{DocFile(node)}
 	if i := strings.LastIndex(node, "/actions/"); i >= 0 && !strings.Contains(node[i+len("/actions/"):], "/") {
 		files = append(files, "actions/"+node[i+len("/actions/"):]+".md")
+	} else if i := strings.LastIndex(node, "/forms/"); i >= 0 && !strings.Contains(node[i+len("/forms/"):], "/") {
+		files = append(files, "forms/"+node[i+len("/forms/"):]+".md")
 	} else if i := strings.LastIndex(node, "/children/"); i >= 0 {
 		key := node[i+len("/children/"):]
 		if j := strings.LastIndex(key, "_"); j >= 0 {

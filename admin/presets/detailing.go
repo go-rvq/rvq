@@ -84,7 +84,7 @@ func (mb *ModelBuilder) Detailing(vs ...interface{}) (r *DetailingBuilder) {
 
 		rmb := r.RowMenu()
 
-		rmb.SetRowMenuItem("Delete").ComponentFunc(
+		rmb.SetRowMenuItem("Delete").Title(deleteTitle).ComponentFunc(
 			NewDeletingMenuItemBuilder(mb.Info()).
 				SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
 					cb := web.DecodeCallback(rctx.Ctx.R.FormValue(ParamPostChangeCallback))

@@ -14,3 +14,7 @@ exclusão é definitiva.
 
 Um registro do qual outros dependem não pode ser excluído enquanto eles
 dependerem.
+
+## Quando está disponível
+
+Para quem pode excluir o registro, numa listagem que exclui registros.

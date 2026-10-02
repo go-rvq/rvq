@@ -109,6 +109,9 @@ func (b *FieldsBuilder) BeginComponent(f func(info *ModelInfo, obj interface{}, 
 	return b
 }
 
+// HiddenFields are the fields kept in the form but not shown (HiddenField).
+func (b *FieldsBuilder) HiddenFields() []string { return b.hiddenFields }
+
 func (b *FieldsBuilder) HiddenField(f ...string) *FieldsBuilder {
 	b.hiddenFields = append(b.hiddenFields, f...)
 	unique.Sort(unique.StringSlice{P: &b.hiddenFields})
@@ -1591,4 +1594,40 @@ func (b *ModifiedIndexesBuilder) ToFormHidden() h.HTMLComponent {
 			Attr(web.VField(sortedHiddenSliceFormKey(sliceFormKey), strings.Join(b.sortedValues[sliceFormKey], ","))...))
 	}
 	return h.Components(hidden...)
+}
+
+// ShownFields are the names of the fields the form shows for obj in mode to
+// the request of ctx, in the order of its layout: those it would make a
+// component of (fieldToComponentWithFormValueKey). A field shown depending
+// on the record (SetEnabled) is among them whatever obj is; one whose
+// component cannot be made of obj (it panics) too.
+func (b *FieldsBuilder) ShownFields(info *ModelInfo, obj any, mode FieldModeStack, ctx *web.EventContext) (names []string) {
+	seen := map[string]bool{}
+	for _, name := range b.hiddenFields {
+		seen[name] = true
+	}
+	for _, name := range b.CurrentLayout().Names() {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		f := b.GetFieldOrDefault(name)
+		if f.disabled || (f.compFunc == nil && f.nested == nil) {
+			continue
+		}
+		if f.enabled != nil || b.shows(info, obj, mode, ctx, name) {
+			names = append(names, name)
+		}
+	}
+	return
+}
+
+// shows says the field name has a component for obj in mode.
+func (b *FieldsBuilder) shows(info *ModelInfo, obj any, mode FieldModeStack, ctx *web.EventContext, name string) (ok bool) {
+	defer func() {
+		if recover() != nil {
+			ok = true
+		}
+	}()
+	return b.fieldToComponentWithFormValueKey(&ToComponentOptions{}, info, obj, mode, nil, ctx, name, &web.ValidationErrors{}) != nil
 }

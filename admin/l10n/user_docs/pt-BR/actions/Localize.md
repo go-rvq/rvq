@@ -15,3 +15,7 @@ versão.
 
 Veja também: {%= admin.doc("actions/Localizations").link %},
 {%= admin.doc("actions/L10nChangeLocaleCode").link %}.
+
+## Quando está disponível
+
+Para quem pode editar o registro. Os idiomas oferecidos são aqueles em que ele ainda não tem versão.

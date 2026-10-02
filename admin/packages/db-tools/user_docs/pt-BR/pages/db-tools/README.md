@@ -10,3 +10,7 @@ As cópias de segurança do banco de dados do site.
 - A **persistência** diz por quanto tempo as cópias são mantidas: tantos
   dias, semanas, meses, anos — as mais antigas são removidas.
 - Uma cópia pode ser baixada ou removida.
+
+## Quando está disponível
+
+**Criar Nova Cópia de Segurança** e as configurações da **persistência** só aparecem quando o servidor pode fazer cópias (a ferramenta de cópias dele está configurada).

@@ -117,6 +117,8 @@ func TestDocFile(t *testing.T) {
 		"posts/pages/report":    "posts/pages/report.md",
 		"pages/pages/report":    "pages/pages/report.md",
 		"posts/actions":         "posts/actions/README.md",
+		"posts/forms/new":       "posts/forms/new.md",
+		"things/forms/detail":   "things/forms/detail.md",
 	} {
 		if got := DocFile(node); got != file {
 			t.Errorf("DocFile(%s) = %s, want %s", node, got, file)
@@ -274,5 +276,37 @@ func TestSyncFromPortuguese(t *testing.T) {
 	en, _ := value(t, db, "en")
 	if !strings.HasPrefix(en["things/README.md"], "# [pt-br>en]Coisas") {
 		t.Errorf("en %q", en["things/README.md"])
+	}
+}
+
+// A form of a model without its own document: the documentation's.
+func TestDocFilesForm(t *testing.T) {
+	if got := DocFiles("posts/children/seo/forms/edit"); strings.Join(got, ",") != "posts/children/seo/forms/edit.md,forms/edit.md" {
+		t.Errorf("DocFiles %q", got)
+	}
+	if _, err := coreSource().FilesOf("pt-BR"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The rule of an action: the text under its heading, in one paragraph.
+func TestRule(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(db); err != nil {
+		t.Fatal(err)
+	}
+	src := &Source{Package: "example.com/pkg", FS: fstest.MapFS{
+		"en/things/actions/do.md":   {Data: []byte("# Do\n\nIt does.\n\n## When it is available\n\nOnly while the thing\nis open.\n\n## Else\n\nNo.\n")},
+		"en/things/actions/none.md": {Data: []byte("# None\n\nIt does.\n")},
+	}}
+	b := &Builder{db: db, sources: []*Source{src}}
+	if got, ok := b.rule("en", "things/actions/do", Messages_en_US); !ok || got != "Only while the thing is open." {
+		t.Errorf("rule %q, %v", got, ok)
+	}
+	if _, ok := b.rule("en", "things/actions/none", Messages_en_US); ok {
+		t.Error("a rule where none is written")
 	}
 }

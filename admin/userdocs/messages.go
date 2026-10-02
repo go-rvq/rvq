@@ -25,6 +25,17 @@ type Messages struct {
 	ResetDocuments    string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
 	Actions           string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
 	Pages             string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
+	FormNew           string `i18n:"hint='Node of the tree with the form of a new record of a model.'"`
+	FormEdit          string `i18n:"hint='Node of the tree with the form of an edit of a record of a model.'"`
+	FormDetail        string `i18n:"hint='Node of the tree with the detail of a record of a model.'"`
+	Field             string `i18n:"hint='Column of the table of the fields of a form: the field.'"`
+	Description       string `i18n:"hint='Column of the table of the fields of a form: what the field is.'"`
+	Conditional       string `i18n:"hint='Said of a field shown depending on the record.'"`
+	NoFields          string `i18n:"hint='Shown for a form with no field.'"`
+	Children          string `i18n:"hint='Title of the models nested in a record, in the menu of its detail.'"`
+	NothingInMenu     string `i18n:"hint='Shown for a detail whose menu has nothing.'"`
+	RuleHeading       string `i18n:"hint='Heading of the section of the document of an action that says when it is available: the text under it is shown in the menu of the detail. The documents use the same.'"`
+	RuleUndocumented  string `i18n:"hint='Shown for an action available by a rule its document does not say.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -36,6 +47,17 @@ var Messages_en_US = &Messages{
 	ResetDocuments:    "Reset to the initial documents",
 	Actions:           "Actions",
 	Pages:             "Pages",
+	FormNew:           "New record",
+	FormEdit:          "Edit",
+	FormDetail:        "Detail",
+	Field:             "Field",
+	Description:       "Description",
+	Conditional:       "Shown depending on the record.",
+	NoFields:          "No fields.",
+	Children:          "Nested records",
+	NothingInMenu:     "The menu has nothing.",
+	RuleHeading:       "When it is available",
+	RuleUndocumented:  "Available depending on the record (the rule is not documented).",
 }
 
 var Messages_pt_BR = &Messages{
@@ -47,6 +69,17 @@ var Messages_pt_BR = &Messages{
 	ResetDocuments:    "Restaurar os documentos iniciais",
 	Actions:           "Ações",
 	Pages:             "Páginas",
+	FormNew:           "Cadastro",
+	FormEdit:          "Edição",
+	FormDetail:        "Detalhe",
+	Field:             "Campo",
+	Description:       "Descrição",
+	Conditional:       "Aparece conforme o registro.",
+	NoFields:          "Nenhum campo.",
+	Children:          "Registros filhos",
+	NothingInMenu:     "O menu não tem nada.",
+	RuleHeading:       "Quando está disponível",
+	RuleUndocumented:  "Disponível conforme o registro (a regra não está documentada).",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

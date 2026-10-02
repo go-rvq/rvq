@@ -121,7 +121,7 @@ func (mb *ModelBuilder) newListing() (lb *ListingBuilder) {
 
 	rmb := mb.listing.RowMenu()
 	// rmb.RowMenuItem("Edit").ComponentFunc(editRowMenuItemFunc(mb.Info(), "", url.Values{}))
-	rmb.SetRowMenuItem("Delete").ComponentFunc(NewDeletingMenuItemBuilder(mb.Info()).
+	rmb.SetRowMenuItem("Delete").Title(deleteTitle).ComponentFunc(NewDeletingMenuItemBuilder(mb.Info()).
 		SetWrapEvent(func(rctx *RecordMenuItemContext, e *web.VueEventTagBuilder) {
 			e.Query(ParamPostChangeCallback, web.CallbackScript(mb.listing.reloadURI(rctx.Ctx)).Encode())
 		}).

@@ -9,3 +9,7 @@ The backups of the database of the site.
 - **Persistence** says how long the backups are kept: so many days, weeks,
   months, years — the older ones are removed.
 - A backup may be downloaded, or removed.
+
+## When it is available
+
+**Create backup** and the settings of the **persistence** are there only when the server can make backups (its backup tool is set up).

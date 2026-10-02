@@ -13,3 +13,7 @@ see {%= admin.doc("actions/restore").link %} and
 for good.
 
 A record others depend on may not be deleted while they do.
+
+## When it is available
+
+To whoever may delete the record, in a listing that deletes records.

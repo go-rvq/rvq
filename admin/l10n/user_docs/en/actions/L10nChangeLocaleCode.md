@@ -8,3 +8,7 @@ it was written in the wrong one, say.
 3. Choose the language it belongs to, and confirm.
 
 A language the record already has a version in cannot be chosen.
+
+## When it is available
+
+Only when there is a language of the site the record has no version in yet: there is somewhere to move it to.

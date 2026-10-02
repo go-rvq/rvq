@@ -13,3 +13,7 @@ The record goes back to the other tabs of the listing, and the deletion is
 kept in its history of revisions.
 
 See also: {%= admin.doc("actions/deleted_origin").link %}.
+
+## When it is available
+
+Only in the Trash tab of a listing, to whoever may see the trash.

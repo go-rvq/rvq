@@ -58,7 +58,7 @@ type compiledTemplate struct {
 var templates sync.Map
 
 // templateGlobals are the names a document's template sees.
-var templateGlobals = []string{"admin"}
+var templateGlobals = []string{"admin", "doc"}
 
 // RenderTemplate runs a document's template — {% … %} code, {%= expr %} a
 // value — with globals in scope (templateGlobals): the markdown it writes.
@@ -93,14 +93,15 @@ func RenderTemplate(src string, globals gad.Dict) (string, error) {
 }
 
 // DocFile is the file of a node of the tree: README.md of a model, a group, a
-// page of the admin; NAME.md of an action (MODEL/actions/NAME) and of a page
-// of a model (MODEL/pages/NAME — not pages/NAME, a page of the admin).
+// page of the admin; NAME.md of an action (MODEL/actions/NAME), of a form
+// (MODEL/forms/NAME) and of a page of a model (MODEL/pages/NAME — not
+// pages/NAME, a page of the admin).
 func DocFile(node string) string {
 	rest := node
 	if i := strings.Index(node, "/"); i >= 0 {
 		rest = node[i:]
 	}
-	if strings.Contains("/"+node, "/actions/") || strings.Contains(rest, "/pages/") {
+	if strings.Contains("/"+node, "/actions/") || strings.Contains("/"+node, "/forms/") || strings.Contains(rest, "/pages/") {
 		return node + ".md"
 	}
 	return node + "/README.md"
@@ -118,12 +119,17 @@ func docNode(file string) string {
 type renderer struct {
 	b   *Builder
 	ctx *web.EventContext
+	// node is the node of the document rendered
+	node string
 	// tree is the request's tree, made once
 	tree []*Node
 }
 
 // globals are the template's: admin.model, admin.action, admin.page and
-// admin.doc — each a record of its label, its href and a markdown link.
+// admin.doc — each a record of its label, its href and a markdown link —;
+// of the model of the document (the one of its node): admin.fields(form) —
+// the table of the fields of a form (FormNew, FormEdit, FormDetail) —,
+// admin.menu() — the menu of its detail —, and doc.model, its title.
 func (r *renderer) globals() gad.Dict {
 	link := func(label, href string) gad.Dict {
 		return gad.Dict{
@@ -139,7 +145,28 @@ func (r *renderer) globals() gad.Dict {
 		return c.Args.Get(i).ToString(), nil
 	}
 	ctx := r.ctx.Context()
-	return gad.Dict{"admin": gad.Dict{
+	mb := r.b.modelOf(r.node)
+	var model gad.Object = gad.Str("")
+	if mb != nil {
+		model = gad.Str(mb.TTitleAuto(ctx))
+	}
+	return gad.Dict{"doc": gad.Dict{"model": model}, "admin": gad.Dict{
+		"fields": gad.NewFunction("fields", func(c gad.Call) (gad.Object, error) {
+			form, err := arg(c, 0, "admin.fields")
+			if err != nil {
+				return nil, err
+			}
+			if mb == nil {
+				return nil, fmt.Errorf("admin.fields: %s is of no model", r.node)
+			}
+			return gad.Str(fieldsTable(mb, form, r.ctx)), nil
+		}),
+		"menu": gad.NewFunction("menu", func(c gad.Call) (gad.Object, error) {
+			if mb == nil {
+				return nil, fmt.Errorf("admin.menu: %s is of no model", r.node)
+			}
+			return gad.Str(r.detailMenu(mb)), nil
+		}),
 		"model": gad.NewFunction("model", func(c gad.Call) (gad.Object, error) {
 			id, err := arg(c, 0, "admin.model")
 			if err != nil {

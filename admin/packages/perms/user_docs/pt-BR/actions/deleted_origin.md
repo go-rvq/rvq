@@ -8,3 +8,7 @@ Abra-o no menu da linha (**⋯**) de um registro na aba **Lixeira** de uma
 listagem.
 
 Para trazer o registro de volta, veja {%= admin.doc("actions/restore").link %}.
+
+## Quando está disponível
+
+Só para um registro excluído: na aba Lixeira da listagem dele, ou no detalhe aberto por ali.

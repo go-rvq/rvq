@@ -8,3 +8,7 @@ Open it from the menu of the row (**⋯**) of a record in the **Trash** tab of a
 listing.
 
 To bring the record back, see {%= admin.doc("actions/restore").link %}.
+
+## When it is available
+
+Only for a deleted record: in the Trash tab of its listing, or in its detail opened from there.
