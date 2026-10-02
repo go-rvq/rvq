@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Database",
 		"The backups of the database: making, keeping and restoring them."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Banco de dados",
+		"As cópias de segurança do banco de dados: fazê-las, mantê-las e restaurá-las."),
+}

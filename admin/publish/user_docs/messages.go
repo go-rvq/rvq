@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Publishing",
 		"Putting records on the site: drafts, publishing, scheduling and versions."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Publicação",
+		"Pôr registros no site: rascunhos, publicação, agendamento e versões."),
+}

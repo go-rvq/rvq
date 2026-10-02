@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Media library",
 		"The images and files of the site: uploading, choosing, cropping."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Biblioteca de mídia",
+		"As imagens e os arquivos do site: enviar, escolher, cortar."),
+}

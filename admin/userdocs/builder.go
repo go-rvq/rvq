@@ -41,8 +41,8 @@ type Builder struct {
 	assetsPath string
 	// mb is the UserDoc's, pkg the UserDocPackage's.
 	mb, pkg *presets.ModelBuilder
-	// locale is the language a request's documentation is in; locales the
-	// languages there are.
+	// locale is the language a request's documentation is in — the
+	// request's, chosen in the menu —; locales the languages there are.
 	locale  func(ctx *web.EventContext) string
 	locales func() []string
 }
@@ -61,9 +61,6 @@ func New(p *presets.Builder, db *gorm.DB) *Builder {
 	}
 	b.locale = func(ctx *web.EventContext) string {
 		langs := b.locales()
-		if l := ctx.R.FormValue("locale"); slices.Contains(langs, l) {
-			return l
-		}
 		if d := i18n.DynaFromContext(ctx.Context()); d != nil && slices.Contains(langs, d.GetLanguage()) {
 			return d.GetLanguage()
 		}
@@ -126,7 +123,10 @@ func (b *Builder) AssetsHandler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		lang, err := src.Lang()
+		rest, _ = url.PathUnescape(rest)
+		rest = path.Clean(rest)
+		// the picture of the language asked for, else the source's
+		lang, err := src.Asset(r.URL.Query().Get("locale"), rest)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -136,18 +136,24 @@ func (b *Builder) AssetsHandler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		rest, _ = url.PathUnescape(rest)
-		http.ServeFileFS(w, r, sub, path.Clean(rest))
+		http.ServeFileFS(w, r, sub, rest)
 	}))
 }
 
-// DocHref is the URL of the document of a node, in the language of ctx.
-func (b *Builder) DocHref(ctx *web.EventContext, node string) string {
-	q := url.Values{"doc": {node}}
-	if l := ctx.R.FormValue("locale"); l != "" {
-		q.Set("locale", l)
+// DocHref is the URL of the document of a node: in the language of the
+// request that opens it (the one chosen in the menu).
+func (b *Builder) DocHref(_ *web.EventContext, node string) string {
+	return b.mb.Info().ListingHref() + "?" + url.Values{"doc": {node}}.Encode()
+}
+
+// packagesLocale is the language of the documents of the packages listed:
+// the one asked for (?locale=, the link of a document to its package's), else
+// the request's.
+func (b *Builder) packagesLocale(ctx *web.EventContext) string {
+	if l := ctx.R.FormValue("locale"); slices.Contains(b.locales(), l) {
+		return l
 	}
-	return b.mb.Info().ListingHref() + "?" + q.Encode()
+	return b.locale(ctx)
 }
 
 // Configure makes mb — of UserDoc, a singleton — the documentation page: the
@@ -339,7 +345,16 @@ func (b *Builder) content(locale string, src *Source, file string) (string, bool
 	err := b.db.Session(&gorm.Session{}).Select("value").
 		Take(&row, "locale_code = ? AND id = ?", locale, src.Package).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		// not synced yet: the source's own
+		// not synced yet: the source's own — the language's, where written
+		if l := src.LangOf(locale); l != "" {
+			written, err := src.FilesOf(l)
+			if err != nil {
+				return "", false, err
+			}
+			if c, ok := filesByPath(written)[file]; ok {
+				return c, true, nil
+			}
+		}
 		files, err := src.Files()
 		if err != nil {
 			return "", false, err
@@ -368,7 +383,7 @@ func (b *Builder) configurePackages(pkg *presets.ModelBuilder) {
 			WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
 				return func(db *gorm.DB, mode gorm2op.Mode, obj interface{}, id model.ID, params *presets.SearchParams, ctx *web.EventContext) *gorm.DB {
 					if mode.Is(gorm2op.Search) {
-						params.Where("locale_code = ?", b.locale(ctx))
+						params.Where("locale_code = ?", b.packagesLocale(ctx))
 					}
 					return old(db, mode, obj, id, params, ctx)
 				}

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Activity log",
 		"What was done in the admin: by whom, when, from where."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Registro de atividades",
+		"O que foi feito no admin: por quem, quando, de onde."),
+}

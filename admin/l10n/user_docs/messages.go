@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Localization",
 		"The records kept in several languages: their versions, and moving them between languages."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Localização",
+		"Os registros mantidos em vários idiomas: as versões deles, e movê-los entre idiomas."),
+}

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Users",
 		"The people who use the admin: their accounts, passwords and two-factor authentication."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Usuários",
+		"As pessoas que usam o admin: as contas, as senhas e a autenticação de dois fatores delas."),
+}

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Roles",
 		"The roles of the users: what each one may do."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Papéis",
+		"Os papéis dos usuários: o que cada um pode fazer."),
+}

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("File system",
 		"The files of the server: browsing them, and reaching them through WebDAV."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Sistema de arquivos",
+		"Os arquivos do servidor: navegar por eles, e acessá-los por WebDAV."),
+}

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Jobs",
 		"The work done in the background: imports, backups, translations and their progress."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Tarefas",
+		"O trabalho feito em segundo plano: importações, cópias de segurança, traduções e o progresso delas."),
+}

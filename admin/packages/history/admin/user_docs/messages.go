@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("History of revisions",
 		"The revisions of a record: what changed, by whom, comparing and going back."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Histórico de revisões",
+		"As revisões de um registro: o que mudou, por quem, comparar e voltar atrás."),
+}

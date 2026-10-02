@@ -38,8 +38,9 @@ func Migrate(db *gorm.DB) error {
 
 // Sync writes the documents of every source in every language of locales:
 //
-//   - the initial value is the source's documents — the files of its
-//     language, translated into another (a Job: the source's, till done);
+//   - the initial value is the documents of the language, where the source
+//     has them; else the source language's, translated (a Job: the source
+//     language's, till done);
 //   - the value is the initial one for a new package, and for a document the
 //     user has not changed; a document changed keeps the change;
 //   - a file whose source did not change is not translated again;
@@ -94,6 +95,20 @@ func syncPackage(db *gorm.DB, src *Source, locale string, row *UserDocPackage) (
 		return nil, err
 	}
 	same := sameLanguage(lang, locale)
+	// the documents written in locale: as they are, not translated
+	own := map[string]string{}
+	if l := src.LangOf(locale); l != "" && !same {
+		written, err := src.FilesOf(l)
+		if err != nil {
+			return nil, err
+		}
+		own = filesByPath(written)
+		for _, f := range written {
+			if !slices.ContainsFunc(files, func(s File) bool { return s.Path == f.Path }) {
+				files = append(files, File{Path: f.Path, Content: f.Content})
+			}
+		}
+	}
 
 	var oldInitial, oldValue map[string]string
 	hashes := Hashes{}
@@ -118,7 +133,9 @@ func syncPackage(db *gorm.DB, src *Source, locale string, row *UserDocPackage) (
 	for i, f := range files {
 		h := hash(f.Content)
 		content, translated := f.Content, true
-		if !same {
+		if c, ok := own[f.Path]; ok {
+			content = c
+		} else if !same {
 			if prev, ok := oldInitial[f.Path]; ok && hashes[f.Path] == h {
 				content = prev
 			} else {

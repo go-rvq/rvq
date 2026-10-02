@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Permissions and trash",
 		"Who may do what in the admin, and the trash of the records deleted."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Permissões e lixeira",
+		"Quem pode fazer o quê no admin, e a lixeira dos registros excluídos."),
+}

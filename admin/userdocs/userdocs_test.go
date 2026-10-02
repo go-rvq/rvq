@@ -42,8 +42,68 @@ func TestSourceFiles(t *testing.T) {
 		t.Errorf("files %q", paths)
 	}
 	two := &Source{FS: fstest.MapFS{"en/a.md": {}, "pt-BR/a.md": {}}}
-	if _, err := two.Lang(); err == nil {
-		t.Error("two languages were accepted")
+	if lang, err := two.Lang(); err != nil || lang != "en" {
+		t.Errorf("the source of en and pt-BR: %q, %v", lang, err)
+	}
+	if two.LangOf("pt-BR") != "pt-BR" || two.LangOf("pt") != "pt-BR" || two.LangOf("es") != "" {
+		t.Error("LangOf")
+	}
+	noEn := &Source{FS: fstest.MapFS{"es/a.md": {}, "pt-BR/a.md": {}}}
+	if _, err := noEn.Lang(); err == nil {
+		t.Error("two languages and no en were accepted")
+	}
+}
+
+// The pictures of a language: its own, else the source's.
+func TestSourceAsset(t *testing.T) {
+	src := &Source{FS: fstest.MapFS{
+		"en/a/images/x.png": {}, "en/a/images/y.png": {},
+		"pt-BR/a/images/x.png": {},
+	}}
+	for _, c := range []struct{ locale, file, want string }{
+		{"pt-BR", "a/images/x.png", "pt-BR"},
+		{"pt-BR", "a/images/y.png", "en"},
+		{"en", "a/images/x.png", "en"},
+		{"", "a/images/x.png", "en"},
+	} {
+		if got, err := src.Asset(c.locale, c.file); err != nil || got != c.want {
+			t.Errorf("Asset(%s, %s) = %s, %v; want %s", c.locale, c.file, got, err, c.want)
+		}
+	}
+}
+
+// A package written in en and in pt-BR: pt-BR's documents as they are; one
+// pt-BR lacks, translated from en's.
+func TestSyncWritten(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := testSource("# Things\n")
+	src.FS.(fstest.MapFS)["pt-BR/things/README.md"] = &fstest.MapFile{Data: []byte("# Coisas\n")}
+	src.FS.(fstest.MapFS)["pt-BR/things/only.md"] = &fstest.MapFile{Data: []byte("# Só aqui\n")}
+	jobs, err := Sync(db, []*Source{src}, []string{"en", "pt-BR"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 1 || jobs[0].Locale != "pt-BR" || len(jobs[0].Files) != 2 {
+		t.Fatalf("jobs %+v", jobs)
+	}
+	Translate(db, &fakeTranslator{}, jobs[0])
+	pt, _ := value(t, db, "pt-BR")
+	if pt["things/README.md"] != "# Coisas\n" || pt["things/only.md"] != "# Só aqui\n" {
+		t.Errorf("pt-BR's own %q", pt)
+	}
+	if !strings.Contains(pt["things/actions/do.md"], "[en>pt-br]") {
+		t.Errorf("not translated %q", pt["things/actions/do.md"])
+	}
+	en, _ := value(t, db, "en")
+	if _, ok := en["things/only.md"]; ok || en["things/README.md"] != "# Things\n" {
+		t.Errorf("en %q", en)
+	}
+	// nothing changed: nothing to translate
+	if jobs, _ = Sync(db, []*Source{src}, []string{"en", "pt-BR"}); len(jobs) != 0 {
+		t.Errorf("a sync with nothing new left %+v", jobs)
 	}
 }
 

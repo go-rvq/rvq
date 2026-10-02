@@ -247,7 +247,7 @@ func (r *renderer) Render(src *Source, file, content string) (string, error) {
 			}
 			return href
 		}
-		return r.b.AssetHref(src, rel)
+		return r.b.AssetHref(src, rel, r.b.locale(r.ctx))
 	}
 	var out bytes.Buffer
 	if err := newMarkdown(rewrite).Convert([]byte(md), &out); err != nil {
@@ -257,7 +257,7 @@ func (r *renderer) Render(src *Source, file, content string) (string, error) {
 }
 
 // AssetHref is the URL of a file of a source (a picture), by its path under
-// the language's directory.
-func (b *Builder) AssetHref(src *Source, file string) string {
-	return b.assetsPath + "/" + url.PathEscape(src.Package) + "/" + file
+// the language's directory: locale's, where it has it (AssetsHandler).
+func (b *Builder) AssetHref(src *Source, file, locale string) string {
+	return b.assetsPath + "/" + url.PathEscape(src.Package) + "/" + file + "?" + url.Values{"locale": {locale}}.Encode()
 }

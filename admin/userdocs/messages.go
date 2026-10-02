@@ -78,6 +78,19 @@ func PackageMessagesEn(title, description string) PackageMessages {
 	}
 }
 
+// PackageMessagesPtBR are the words of a package's documentation in
+// Portuguese, its title and description given.
+func PackageMessagesPtBR(title, description string) PackageMessages {
+	return PackageMessages{
+		ModuleDescription: description,
+		Title:             title,
+		Path:              "Documento",
+		PathHint:          "Onde o documento fica, na documentação do pacote.",
+		Content:           "Conteúdo",
+		ContentHint:       "Markdown; {%= admin.model(\"id\").link %} cria um link para uma parte do admin.",
+	}
+}
+
 // packageMessages are the words of src's documentation in ctx's language.
 func packageMessages(ctx context.Context, src *Source) PackageMessages {
 	var def i18n.Messages

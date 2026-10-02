@@ -1,5 +1,5 @@
 // Package user_docs is the documentation of github.com/go-rvq/rvq/admin/packages/perms for whoever uses the
-// admin (userdocs), in en/.
+// admin (userdocs), in en/ and pt-BR/.
 package user_docs
 
 import (
@@ -12,7 +12,7 @@ import (
 
 // FS is the documents, in the directory of their language.
 //
-//go:embed en
+//go:embed en pt-BR
 var FS embed.FS
 
 // Package is the package documented.
@@ -24,6 +24,9 @@ func Source() *userdocs.Source {
 		Package:     Package,
 		FS:          FS,
 		MessagesKey: MessagesKey,
-		Messages:    map[language.Tag]i18n.Messages{language.English: Messages_en_US},
+		Messages: map[language.Tag]i18n.Messages{
+			language.English:             Messages_en_US,
+			language.BrazilianPortuguese: Messages_pt_BR,
+		},
 	}
 }

@@ -17,3 +17,8 @@ var Messages_en_US = &Messages{
 	PackageMessages: userdocs.PackageMessagesEn("Mail senders",
 		"The accounts the e-mails of the site are sent through."),
 }
+
+var Messages_pt_BR = &Messages{
+	PackageMessages: userdocs.PackageMessagesPtBR("Remetentes de e-mail",
+		"As contas pelas quais os e-mails do site são enviados."),
+}
