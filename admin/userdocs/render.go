@@ -93,9 +93,14 @@ func RenderTemplate(src string, globals gad.Dict) (string, error) {
 }
 
 // DocFile is the file of a node of the tree: README.md of a model, a group, a
-// page; NAME.md of an action.
+// page of the admin; NAME.md of an action (MODEL/actions/NAME) and of a page
+// of a model (MODEL/pages/NAME — not pages/NAME, a page of the admin).
 func DocFile(node string) string {
-	if strings.Contains("/"+node, "/actions/") {
+	rest := node
+	if i := strings.Index(node, "/"); i >= 0 {
+		rest = node[i:]
+	}
+	if strings.Contains("/"+node, "/actions/") || strings.Contains(rest, "/pages/") {
 		return node + ".md"
 	}
 	return node + "/README.md"
@@ -148,7 +153,7 @@ func (r *renderer) globals() gad.Dict {
 			if mb.Parent() == nil {
 				href = mb.Info().ListingHref()
 			}
-			return link(mb.TTitlePlural(ctx), href), nil
+			return link(mb.TTitleAuto(ctx), href), nil
 		}),
 		"action": gad.NewFunction("action", func(c gad.Call) (gad.Object, error) {
 			id, err := arg(c, 0, "admin.action")
@@ -208,6 +213,11 @@ func actionTitle(mb *presets.ModelBuilder, name string, ctx *web.EventContext) (
 	for _, a := range mb.Listing().GetBulkActions() {
 		if a.Name() == name {
 			return a.RequestTitle(ctx.Context()), true
+		}
+	}
+	for _, it := range rowMenuItems(mb) {
+		if it.Name() == name {
+			return it.TTitle(ctx.Context()), true
 		}
 	}
 	return "", false

@@ -45,7 +45,13 @@ type Builder struct {
 	// languages there are.
 	locale  func(ctx *web.EventContext) string
 	locales func() []string
+	// openEvent is the event that shows a document in the portal of the page
+	// (docPortal), without a reload.
+	openEvent string
 }
+
+// docPortal is the portal of the document shown.
+const docPortal = "userdocs_doc"
 
 // New is the documentation of p, kept in db. The words of its page are
 // registered on p's i18n.
@@ -170,6 +176,11 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	mb.Detailing().Field("Documentation").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return b.page(ctx)
 	})
+	// a node chosen: its document in the portal, the page kept
+	b.openEvent = mb.RegisterEventFunc("userdocs_open", func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		r.UpdatePortal(docPortal, b.document(ctx, b.Tree(ctx), ctx.R.FormValue("doc")))
+		return
+	})
 
 	b.configurePackages(pkg)
 }
@@ -210,11 +221,16 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 		Activatable(true).
 		Density(v.DensityCompact).
 		Opened(opened).
-		Activated([]string{node}).
+		// the node shown, active: in locals, so a document opened in the
+		// portal moves it
+		Attr("v-model:activated", "locals.userDocsActive").
 		// the title a link to the node's document
 		Children(web.Slot(
 			h.A(h.Text("{{ (item.raw || item).title }}")).
-				Attr(":href", "(item.raw || item).href").
+				Attr(":href", "(item.raw || item).docHref").
+				// the link opens the document and activates its node
+				Attr("@click", "(e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; "+
+					b.openLinkScript("e.currentTarget")+" }").
 				Class("user-docs-link text-decoration-none").
 				Style("color: inherit; display: block"),
 		).Name("title").Scope("{ item }"))
@@ -229,9 +245,42 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 				h.Div(h.Text(msgs.Contents)).Class("text-overline text-medium-emphasis"),
 				nav,
 			).Cols(12).Md(4).Lg(3).Class("border-e"),
-			v.VCol(b.document(ctx, tree, node)).Cols(12).Md(8).Lg(9),
-		).Class("user-docs"),
+			v.VCol(web.Portal(b.document(ctx, tree, node)).Name(docPortal)).Cols(12).Md(8).Lg(9).
+				Attr("@click", b.openScript()),
+		).Class("user-docs").
+			Attr(web.VAssign("locals", "{userDocsActive: "+string(h.JSONString([]string{node}))+"}")...),
 	)
+}
+
+// openScript is the click of the document shown: a link to a document shows
+// it in the portal, the address following, without a reload; another link
+// goes as links go. A link keeps its href, so it still opens in a new tab.
+func (b *Builder) openScript() string {
+	return `(e) => {
+	const a = e.target && e.target.closest && e.target.closest("a[href]");
+	if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+	` + b.openLinkScript("a") + `
+}`
+}
+
+// openLinkScript is what the click of a link — a, an element <a> — does: a
+// link to a document shows it in the portal (openEvent) and pushes its
+// address; another, nothing (the link goes as links go).
+func (b *Builder) openLinkScript(a string) string {
+	base := strconv.Quote(b.mb.Info().ListingHref())
+	// a template of Vue sees none of the globals but a few (no window, URL,
+	// history): the window is the element's
+	return `const w = ` + a + `.ownerDocument.defaultView;
+	const u = new w.URL(` + a + `.getAttribute("href"), w.location.href);
+	const doc = u.searchParams.get("doc");
+	if (u.pathname !== ` + base + ` || !doc) return;
+	e.preventDefault();
+	// the node active here: the item's click would toggle it off again
+	e.stopPropagation();
+	locals.userDocsActive = [doc];
+	plaid().vars(vars).locals(locals).form(form).eventFunc(` + strconv.Quote(b.openEvent) + `)` +
+		`.query("doc", doc).query("locale", u.searchParams.get("locale") || "").url(` + base + `).go();
+	w.history.pushState(null, "", u.pathname + u.search);`
 }
 
 // docStyle is the look of a document: its pictures within the column,

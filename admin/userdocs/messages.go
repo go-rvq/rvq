@@ -24,6 +24,8 @@ type Messages struct {
 	EditDocuments     string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
 	RenderError       string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
 	ResetDocuments    string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
+	Actions           string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
+	Pages             string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -34,6 +36,8 @@ var Messages_en_US = &Messages{
 	EditDocuments:     "Edit the documents",
 	RenderError:       "This document could not be shown: %s",
 	ResetDocuments:    "Reset to the initial documents",
+	Actions:           "Actions",
+	Pages:             "Pages",
 }
 
 var Messages_pt_BR = &Messages{
@@ -44,6 +48,8 @@ var Messages_pt_BR = &Messages{
 	EditDocuments:     "Editar os documentos",
 	RenderError:       "Este documento não pôde ser mostrado: %s",
 	ResetDocuments:    "Restaurar os documentos iniciais",
+	Actions:           "Ações",
+	Pages:             "Páginas",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

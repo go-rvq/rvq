@@ -54,6 +54,9 @@ func TestDocFile(t *testing.T) {
 		"things/children/parts": "things/children/parts/README.md",
 		"groups/admin":          "groups/admin/README.md",
 		"pages/db-tools":        "pages/db-tools/README.md",
+		"posts/pages/report":    "posts/pages/report.md",
+		"pages/pages/report":    "pages/pages/report.md",
+		"posts/actions":         "posts/actions/README.md",
 	} {
 		if got := DocFile(node); got != file {
 			t.Errorf("DocFile(%s) = %s, want %s", node, got, file)

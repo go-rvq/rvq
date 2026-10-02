@@ -885,6 +885,8 @@ func (mb *ModelBuilder) AddChildH(child *ModelBuilder, h ...func(mb *ModelBuilde
 			label = child.pluralLabel
 		}
 		mb.AddRowMenuItem(label, childRowMenuItemFunc(child))
+		mb.listing.RowMenu().RowMenuItem(label).child = child
+		mb.detailing.RowMenu().RowMenuItem(label).child = child
 	}
 
 	mb.p.ModelConfigurators.ConfigureModel(child)

@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -72,7 +73,44 @@ type RowMenuItemBuilder struct {
 	compF      RecordMenuItemFunc
 	permAction string
 	eventID    string
+	title      func(ctx context.Context) string
+	child      *ModelBuilder
 }
+
+// Items are the items of the menu, in the order of the menu.
+func (b *RowMenuBuilder) Items() (items []*RowMenuItemBuilder) {
+	listings := b.defaultListings
+	if len(b.listings) > 0 {
+		listings = b.listings
+	}
+	for _, li := range listings {
+		if ib, ok := b.items[strcase.ToSnake(li)]; ok {
+			items = append(items, ib)
+		}
+	}
+	return
+}
+
+// Name is the name of the item.
+func (b *RowMenuItemBuilder) Name() string { return b.name }
+
+// Title sets the title of the item, for whoever names it out of the menu (the
+// documentation): its component shows its own.
+func (b *RowMenuItemBuilder) Title(f func(ctx context.Context) string) *RowMenuItemBuilder {
+	b.title = f
+	return b
+}
+
+// TTitle is the title of the item: Title's, else its name.
+func (b *RowMenuItemBuilder) TTitle(ctx context.Context) string {
+	if b.title != nil {
+		return b.title(ctx)
+	}
+	return strcase.ToDelimited(b.name, ' ')
+}
+
+// Child is the nested model the item opens, nil when it is not one.
+func (b *RowMenuItemBuilder) Child() *ModelBuilder { return b.child }
 
 func (b *RowMenuBuilder) SetRowMenuItem(name string) *RowMenuItemBuilder {
 	return b.rowMenuItem(true, name)

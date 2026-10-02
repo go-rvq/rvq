@@ -172,7 +172,8 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	})
 
 	rmb := m.Listing().RowMenu()
-	rmb.RowMenuItem("Localize").ComponentFunc(localizeRowMenuItemFunc(m.Info(), "", url.Values{}))
+	rmb.RowMenuItem("Localize").ComponentFunc(localizeRowMenuItemFunc(m.Info(), "", url.Values{})).
+		Title(func(ctx context.Context) string { return MustGetTranslation(ctx, "Localize") })
 
 	locationLabelComp := func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 		loc := b.GetLocale(field.Obj.(LocaleInterface).EmbedLocale().LocaleCode)

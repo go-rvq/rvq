@@ -15,8 +15,10 @@ type Node struct {
 	ID    string `json:"value"`
 	Title string `json:"title"`
 	Icon  string `json:"prependIcon,omitempty"`
-	// Href is the URL of its document: the item is a link to it.
-	Href     string  `json:"href,omitempty"`
+	// Href is the URL of its document: the title of the item is a link to
+	// it. Not "href": the tree gives an item's keys to its list item as
+	// props, and an href would make the whole item a link.
+	Href     string  `json:"docHref,omitempty"`
 	Children []*Node `json:"children,omitempty"`
 }
 
@@ -64,22 +66,75 @@ func (b *Builder) canList(mb *presets.ModelBuilder, ctx *web.EventContext) bool 
 	return !mb.Permissioner().ReqLister(ctx.R).Denied()
 }
 
-// modelTree is the node of mb, its document at id: its actions, and the
-// models nested in it under it.
+// modelTree is the node of mb, its document at id: its actions, under
+// Actions; its pages, under Pages; the models nested in it.
 func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventContext) *Node {
-	n := &Node{ID: id, Title: mb.TTitlePlural(ctx.Context()), Icon: mb.GetMenuIcon()}
+	msgs := GetMessages(ctx.Context())
+	n := &Node{ID: id, Title: mb.TTitleAuto(ctx.Context()), Icon: mb.GetMenuIcon()}
+
+	actions := &Node{ID: id + "/actions", Title: msgs.Actions, Icon: "mdi-gesture-tap"}
 	for _, a := range detailingActions(mb) {
-		n.Children = append(n.Children, &Node{ID: id + "/actions/" + a.Name(),
-			Title: a.RequestTitle(mb, ctx.Context()), Icon: "mdi-gesture-tap"})
+		actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
+			Title: a.RequestTitle(mb, ctx.Context())})
 	}
 	for _, a := range mb.Listing().GetBulkActions() {
-		n.Children = append(n.Children, &Node{ID: id + "/actions/" + a.Name(),
-			Title: a.RequestTitle(ctx.Context()), Icon: "mdi-checkbox-multiple-marked-outline"})
+		actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
+			Title: a.RequestTitle(ctx.Context())})
 	}
+	for _, a := range rowMenuItems(mb) {
+		if findNode(actions.Children, id+"/actions/"+a.Name()) == nil {
+			actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
+				Title: a.TTitle(ctx.Context())})
+		}
+	}
+	if len(actions.Children) > 0 {
+		n.Children = append(n.Children, actions)
+	}
+
+	pages := &Node{ID: id + "/pages", Title: msgs.Pages, Icon: "mdi-file-document-multiple-outline"}
+	for _, p := range modelPages(mb) {
+		pages.Children = append(pages.Children, &Node{ID: id + "/pages/" + pageKey(p.Path()),
+			Title: p.TTitle(ctx.Context())})
+	}
+	if len(pages.Children) > 0 {
+		n.Children = append(n.Children, pages)
+	}
+
 	for _, c := range mb.Children() {
 		n.Children = append(n.Children, b.modelTree(c, id+"/children/"+childKey(c), ctx))
 	}
 	return n
+}
+
+// modelPages are the pages of mb: of its listing, and of its detail — none
+// when it has no detail: asking for it would make one.
+func modelPages(mb *presets.ModelBuilder) (pages []*presets.HttpPageBuilder) {
+	pages = append(pages, mb.Listing().PagesRegistrator().HttpPages()...)
+	if mb.HasDetailing() {
+		pages = append(pages, mb.Detailing().PagesRegistrator().HttpPages()...)
+	}
+	return
+}
+
+// pageKey is the name of a page in the path of its document: its path, its
+// "/" as "_" (report, counters_detail).
+func pageKey(path string) string {
+	return strings.ReplaceAll(strings.Trim(path, "/{}"), "/", "_")
+}
+
+// rowMenuItems are the items of the menu of a record of mb's listing — the
+// nested models it opens left out: they are nodes of their own; the deletion
+// left out where there is none. A singleton has no listing: no items.
+func rowMenuItems(mb *presets.ModelBuilder) (items []*presets.RowMenuItemBuilder) {
+	if mb.GetSingleton() {
+		return
+	}
+	for _, it := range mb.Listing().RowMenu().Items() {
+		if it.Child() == nil && (it.Name() != "Delete" || !mb.DeletingDisabled()) {
+			items = append(items, it)
+		}
+	}
+	return
 }
 
 // detailingActions are the actions of the detail of mb — none when it has no
