@@ -15,7 +15,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-const MessagesKey i18n.ModuleKey = "rqv-admin/db-tools"
+const MessagesKey i18n.ModuleKey = "rvq-admin/db-tools"
 
 func GetMessages(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, MessagesKey, Messages_en_US).(*Messages)

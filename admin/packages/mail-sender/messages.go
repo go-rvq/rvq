@@ -7,7 +7,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-const MessagesKey i18n.ModuleKey = "rqv-admin/mail-sender"
+const MessagesKey i18n.ModuleKey = "rvq-admin/mail-sender"
 
 type Messages struct {
 	ModuleDescription                 string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`

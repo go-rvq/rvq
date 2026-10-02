@@ -10,7 +10,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-const MessagesKey i18n.ModuleKey = "rqv-admin/tiptap"
+const MessagesKey i18n.ModuleKey = "rvq-admin/tiptap"
 
 func GetMessages(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, MessagesKey, Messages_en_US).(*Messages)
