@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -103,6 +104,11 @@ func ParseRecordID(s Schema, v string) (id ID, err error) {
 		return
 	}
 	id.Schema = s
+	// ID.String path-escapes the slug: unescaped before it is decoded (a path
+	// value comes unescaped already, a query value does not)
+	if u, uerr := url.PathUnescape(v); uerr == nil {
+		v = u
+	}
 
 	var (
 		fields model.Fields

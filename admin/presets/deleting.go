@@ -136,7 +136,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 							EventFunc(actions.ShowRelatedItensForDeletion).
 							Query(ParamTargetPortal, portalID).
 							Query(ParamID, id).
-							URL(ctx.R.URL.Path).
+							URL(ctx.R.URL.EscapedPath()).
 							Go()))
 			}
 
@@ -163,7 +163,7 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 		EventFunc(actions.DoDelete).
 		Queries(ctx.Queries()).
 		Query("cascade", web.Var("cascade.value")).
-		URL(ctx.R.URL.Path)
+		URL(ctx.R.URL.EscapedPath())
 	for _, name := range sortedKeys(extraQueries) {
 		doDelete.Query(name, web.Var(extraQueries[name]))
 	}

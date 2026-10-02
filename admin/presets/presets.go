@@ -1329,7 +1329,8 @@ func (b *Builder) BindVerifiedPageFunc(vf *perm.PermVerifierBuilder, f web.PageF
 
 func redirectSlashes(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
+		// escaped: a record ID with a "/" (%2F) stays one segment
+		path := r.URL.EscapedPath()
 		if len(path) > 1 && path[len(path)-1] == '/' {
 			if r.URL.RawQuery != "" {
 				path = fmt.Sprintf("%s?%s", path[:len(path)-1], r.URL.RawQuery)

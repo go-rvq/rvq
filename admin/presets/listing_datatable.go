@@ -563,7 +563,7 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		)
 
 		if inDialog {
-			onclick.URL(ctx.R.URL.Path).
+			onclick.URL(ctx.R.URL.EscapedPath()).
 				Query(ParamOverlay, actions.Dialog)
 		}
 

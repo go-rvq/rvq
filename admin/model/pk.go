@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"net/url"
 	"reflect"
 	"slices"
 	"strings"
@@ -48,11 +49,54 @@ func (s ID) StringValue() string {
 	return s.Value().(string)
 }
 
+// slugEncoder is a model that says the slug of its primary key
+// (presets.SlugEncoder): the inverse of its presets.SlugDecoder.
+type slugEncoder interface {
+	PrimarySlug() string
+}
+
+// String is the ID as it goes in a URL: its Slug, path-escaped — after the
+// encoding, so a slug with a "/" (a module key, admin/packages/user) stays one
+// segment of the path. presets.ParseRecordID unescapes it before decoding.
 func (id ID) String() string {
 	if id.IsZero() {
 		return ""
 	}
+	return url.PathEscape(id.Slug())
+}
+
+// Slug is the ID unescaped: the PrimarySlug of the model, when it says one, of
+// a record holding the ID's values; else the values joined by "_".
+func (id ID) Slug() string {
+	if s, ok := id.modelSlug(); ok {
+		return s
+	}
 	return strings.Join(id.StringValues(), "_")
+}
+
+// modelSlug is the PrimarySlug of a record of the schema's model holding the
+// ID's values, when the model is a slugEncoder.
+func (id ID) modelSlug() (slug string, ok bool) {
+	if id.Schema == nil || len(id.Fields) == 0 {
+		return
+	}
+	t := reflect.TypeOf(id.Schema.Model())
+	if t == nil || t.Kind() != reflect.Pointer || t.Elem().Kind() != reflect.Struct {
+		return
+	}
+	obj := reflect.New(t.Elem()).Interface()
+	enc, isEnc := obj.(slugEncoder)
+	if !isEnc {
+		return
+	}
+	defer func() {
+		// a value that does not fit the field: the values joined
+		if recover() != nil {
+			slug, ok = "", false
+		}
+	}()
+	id.SetTo(obj)
+	return enc.PrimarySlug(), true
 }
 
 func (id ID) StringValues() (s []string) {

@@ -1351,7 +1351,7 @@ func (b *ListingBuilder) wrapComp(ctx *web.EventContext, comp h.HTMLComponent) h
 		onLoad string
 	)
 	if IsInDialog(ctx) {
-		plaid.ParseURL(ctx.R.URL.Path + "?" + ctx.R.Form.Encode()).
+		plaid.ParseURL(ctx.R.URL.EscapedPath() + "?" + ctx.R.Form.Encode()).
 			EventFunc(actions.UpdateListingDialog)
 	} else {
 		plaid.EventFunc("__reload__")
@@ -1368,7 +1368,7 @@ func (b *ListingBuilder) wrapComp(ctx *web.EventContext, comp h.HTMLComponent) h
 	scope.presetsListing.loader = %s
 	%s
 }`,
-			ctx.R.URL.Path,
+			ctx.R.URL.EscapedPath(),
 			plaid.String(),
 			onLoad,
 		))

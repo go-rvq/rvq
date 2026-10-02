@@ -780,7 +780,7 @@ func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, e
 
 	if !mb.singleton {
 		uri := mb.Info().ListingHref(parentsID...)
-		if ctx.R.URL.Path != uri {
+		if ctx.R.URL.EscapedPath() != uri {
 			bc.Append(&Breadcrumb{
 				URI:   mb.Info().ListingHref(parentsID...),
 				Label: mb.TTitlePlural(ctx.Context()),
