@@ -111,15 +111,16 @@ func TestParseKeepsOnlyFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(s.Fields), 1; got != want {
-		var names []string
-		for _, f := range s.Fields {
-			names = append(names, f.Name)
-		}
-		t.Fatalf("fields = %d (%v), want %d", got, names, want)
+	// a getter alone is a field shown, not edited — before the fields: gad
+	// keeps the properties apart from them —; a setter and a prop are
+	// behaviour
+	var names []string
+	for _, f := range s.Fields {
+		names = append(names, f.Name)
 	}
-	if s.Fields[0].Name != "a" {
-		t.Errorf("field = %q, want a", s.Fields[0].Name)
+	if len(s.Fields) != 2 || s.Fields[0].Name != "b" || !s.Fields[0].ReadOnly ||
+		s.Fields[1].Name != "a" || s.Fields[1].ReadOnly {
+		t.Fatalf("fields %v", names)
 	}
 }
 

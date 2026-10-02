@@ -119,6 +119,95 @@ type decoder struct {
 	msgs *Messages
 }
 
+// KeepReadOnly is value — what a form posted, decoded — with the fields
+// declared `get name Type` (Field.ReadOnly) set back to what stored — the
+// value as it was — holds: a post does not change what is only shown. The
+// records of a list are matched by their index. stored may be what the
+// decoder gave, or what YAML or JSON read (maps and slices).
+func (s *Schema) KeepReadOnly(value, stored any) any {
+	if s == nil || stored == nil {
+		return value
+	}
+	if s.Slice {
+		items, ok := value.([]any)
+		old, ok2 := asSlice(stored)
+		if !ok || !ok2 {
+			return value
+		}
+		for i := range items {
+			if i >= len(old) {
+				break
+			}
+			if s.Item != nil {
+				if s.Item.Schema != nil {
+					items[i] = s.Item.Schema.KeepReadOnly(items[i], old[i])
+				}
+				continue
+			}
+			items[i] = s.keepRecord(items[i], old[i])
+		}
+		return items
+	}
+	return s.keepRecord(value, stored)
+}
+
+func (s *Schema) keepRecord(value, stored any) any {
+	rec, ok := value.(Record)
+	if !ok {
+		return value
+	}
+	for i, rf := range rec {
+		f := s.field(rf.Name)
+		if f == nil {
+			continue
+		}
+		old, has := fieldOf(stored, rf.Name)
+		switch {
+		case f.ReadOnly:
+			if has {
+				rec[i].Value = old
+			}
+		case f.Schema != nil && has:
+			rec[i].Value = f.Schema.KeepReadOnly(rf.Value, old)
+		}
+	}
+	return rec
+}
+
+// fieldOf is the field name of a record as stored: a Record, or a map YAML or
+// JSON read.
+func fieldOf(stored any, name string) (any, bool) {
+	switch r := stored.(type) {
+	case Record:
+		for _, f := range r {
+			if f.Name == name {
+				return f.Value, true
+			}
+		}
+	case map[string]any:
+		v, ok := r[name]
+		return v, ok
+	case map[any]any:
+		v, ok := r[name]
+		return v, ok
+	}
+	return nil, false
+}
+
+func asSlice(v any) ([]any, bool) {
+	switch s := v.(type) {
+	case []any:
+		return s, true
+	case []map[string]any:
+		out := make([]any, len(s))
+		for i := range s {
+			out[i] = s[i]
+		}
+		return out, true
+	}
+	return nil, false
+}
+
 func (d *decoder) schema(s *Schema, key, path string) any {
 	if s.Choice {
 		return d.choice(s, key, path)

@@ -386,6 +386,20 @@ func (r *reader) schema(iface *gad.Interface) (*Schema, error) {
 		s = &Schema{Slice: true, Item: item}
 	} else {
 		s = &Schema{Slice: depth > 0}
+		// the getters (`get path str`) first: fields shown, never edited
+		props, err := r.array(iface, "props")
+		if err != nil {
+			return nil, err
+		}
+		for _, o := range props {
+			f, err := r.getter(o)
+			if err != nil {
+				return nil, err
+			}
+			if f != nil {
+				s.Fields = append(s.Fields, f)
+			}
+		}
 		fields, err := r.array(iface, "fields")
 		if err != nil {
 			return nil, err
@@ -427,6 +441,32 @@ func (r *reader) field(o gad.Object) (*Field, error) {
 	// `?` after the name has no reflection key of its own; it is the field's.
 	if gf, ok := o.(*gad.InterfaceField); ok {
 		f.Nullable = gf.Nullable
+	}
+	if err := r.typeInto(f, types); err != nil {
+		return nil, fmt.Errorf("%s: %w", f.Name, err)
+	}
+	return f, nil
+}
+
+// getter reads a property of an interface that is a getter alone — `get name
+// Type` — as a read-only field of the type it returns; nil for a property with
+// a setter, which describes behaviour.
+func (r *reader) getter(o gad.Object) (*Field, error) {
+	p, ok := o.(*gad.InterfaceProp)
+	if !ok || p.Getter == nil || len(p.Setters) > 0 {
+		return nil, nil
+	}
+	meta, err := r.meta(o)
+	if err != nil {
+		return nil, err
+	}
+	f := &Field{Name: p.Name, Meta: meta, ReadOnly: true}
+	// the getter returns one value, a typedIdent: its types, resolved
+	var types gad.Array
+	if len(p.Getter.Return) > 0 {
+		if types, err = r.array(p.Getter.Return[0], "types"); err != nil {
+			return nil, fmt.Errorf("%s: %w", f.Name, err)
+		}
 	}
 	if err := r.typeInto(f, types); err != nil {
 		return nil, fmt.Errorf("%s: %w", f.Name, err)

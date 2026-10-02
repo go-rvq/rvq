@@ -21,6 +21,17 @@
 //	{tags []str}                     a field that is a list of plain values
 //	{name?: {x str}}                 the nested field may be nil or absent
 //
+// A field declared `get name Type` — a getter — is SHOWN, never edited:
+//
+//	[]{get path str; content text}
+//
+// is a list of records whose path is read-only and whose content is a
+// textarea. The getters come before the other fields (gad keeps an
+// interface's properties apart from its fields). The form draws a getter
+// read-only, and Schema.KeepReadOnly puts back the stored value over whatever
+// a post said of it. A property with a setter, a `prop`, describes behaviour,
+// and is not in the form.
+//
 // `[]str` is the short form of `[]<str>`; `sub: {…}` the short form of
 // `sub interface {…}`. A list of plain values has no Fields and one Item: the
 // item IS the value, so it binds by index and carries no label of its own — the

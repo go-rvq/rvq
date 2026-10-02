@@ -404,6 +404,9 @@ func (b *Builder) TypeFunc(name string) (ComponentFunc, bool) {
 // left untyped is the one case where the list wins over the registration, since
 // `str` is what a field has when the schema said nothing about it.
 func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
+	if c.Field.ReadOnly {
+		return ReadOnlyComponentFunc, true
+	}
 	draw, registered := b.TypeFunc(c.Field.Type)
 	if registered && c.Field.Type != DefaultType {
 		return draw, true
@@ -959,6 +962,19 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		PersistentHint(c.Hint() != "").
 		Clearable(!c.Field.Required()).
 		Attr("required", c.Field.Required()).
+		Attr("v-model", c.Value)
+}
+
+// ReadOnlyComponentFunc draws a field declared `get name Type`: its value,
+// read-only — whatever its type, it is shown, not edited.
+func ReadOnlyComponentFunc(c *Context) h.HTMLComponent {
+	return v.VTextField().
+		Label(c.Label()).
+		Variant(v.FieldVariantPlain).
+		Attr(c.CompactAttrs()...).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
+		Readonly(true).
 		Attr("v-model", c.Value)
 }
 
