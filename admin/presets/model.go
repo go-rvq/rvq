@@ -822,6 +822,12 @@ func (mb *ModelBuilder) SplitedURI() (r []any) {
 	return
 }
 
+// MenuID is the model's id: the name of its menu entry, and what
+// Builder.GetModelByID finds it by (admin_locales); ID is its URI's.
+func (mb *ModelBuilder) MenuID() string {
+	return mb.id
+}
+
 func (mb *ModelBuilder) ID() string {
 	if mb.parent != nil {
 		return mb.parent.ID() + "." + mb.uriName

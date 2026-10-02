@@ -66,6 +66,7 @@ require (
 	github.com/ua-parser/uap-go v0.0.0-20240113215029-33f8e6d47f38
 	github.com/wcharczuk/go-chart/v2 v2.1.1
 	github.com/wneessen/go-mail v0.6.2
+	github.com/yuin/goldmark v1.8.5
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	goji.io/v3 v3.0.0
@@ -213,7 +214,6 @@ require (
 	github.com/shurcooL/go v0.0.0-20200502201357-93f07166e636 // indirect
 	github.com/shurcooL/go-goon v0.0.0-20210110234559-7585751d9a17 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	github.com/yuin/goldmark v1.8.5 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
