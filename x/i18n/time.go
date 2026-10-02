@@ -6,9 +6,9 @@ import (
 )
 
 type TimeLayoutSpec struct {
-	Default TimeLayout
-	Short   TimeLayout
-	Full    TimeLayout
+	Default TimeLayout `i18n:"hint='The usual form, as a Go layout.'"`
+	Short   TimeLayout `i18n:"hint='The short form, as a Go layout.'"`
+	Full    TimeLayout `i18n:"hint='The full form, as a Go layout.'"`
 }
 
 func (s *TimeLayoutSpec) FromLevel(level TimeFormatLevel) TimeLayout {

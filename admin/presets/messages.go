@@ -14,9 +14,9 @@ func MustGetMessages(ctx context.Context) *Messages {
 }
 
 type TimeFormatMessages struct {
-	Date     string
-	Time     string
-	DateTime string
+	Date     string `i18n:"hint='How a date is written, as a Go layout: the reference date 2006-01-02 written the way wanted.'"`
+	Time     string `i18n:"hint='How a time is written, as a Go layout: the reference time 15:04:05 Z07:00 written the way wanted.'"`
+	DateTime string `i18n:"label='Date and time', hint='How a date with its time is written, as a Go layout (reference 2006-01-02 15:04:05 Z07:00).'"`
 }
 
 type StrMap map[string]string
@@ -51,113 +51,113 @@ func (m StrMap) Merge(other StrMap) {
 }
 
 type PrinterOptionsMessages struct {
-	Title          string
-	Print          string
-	WithHeaders    string
-	WithoutHeaders string
-	Preview        string
+	Title          string `i18n:"hint='Title of the print options.'"`
+	Print          string `i18n:"hint='Button that prints.'"`
+	WithHeaders    string `i18n:"hint='Option that prints the headers.'"`
+	WithoutHeaders string `i18n:"hint='Option that prints without the headers.'"`
+	Preview        string `i18n:"hint='Title of the preview of a print.'"`
 }
 
 type Messages struct {
-	SuccessfullyUpdated        string
-	SuccessfullyCreated        string
-	SuccessfullyDeleted        string
-	SuccessfullyExecutedAction string
-	Search                     string
-	TheFemaleTitle             string
-	TheMaleTitle               string
+	SuccessfullyUpdated        string `i18n:"hint='Shown once a record was saved.'"`
+	SuccessfullyCreated        string `i18n:"hint='Shown once a record was created.'"`
+	SuccessfullyDeleted        string `i18n:"hint='Shown once a record was deleted.'"`
+	SuccessfullyExecutedAction string `i18n:"hint='Shown once an action ran.'"`
+	Search                     string `i18n:"hint='Placeholder of the search of a listing.'"`
+	TheFemaleTitle             string `i18n:"label='The (feminine)', hint='A title with its article, for a feminine noun. %s is the title.'"`
+	TheMaleTitle               string `i18n:"label='The (masculine)', hint='A title with its article, for a masculine noun. %s is the title.'"`
 
-	YouAreHere                                 string
-	New                                        string
-	Update                                     string
-	Execute                                    string
-	Delete                                     string
-	DeleteRelated                              string
-	DeleteRelatedHint                          string
-	ShowRelatedItemsTitle                      string
-	RelatedItemsForDeletionActionTitle         string
-	Edit                                       string
-	FormTitle                                  string
-	OK                                         string
-	Cancel                                     string
-	Clear                                      string
-	Create                                     string
-	DeleteConfirmationTextTemplate             string
-	CreatingFemaleObjectTitleTemplate          string
-	EditingTitleTemplate                       string
-	CreatingObjectTitleTemplate                string
-	EditingObjectTitleTemplate                 string
-	ListingObjectTitleTemplate                 string
-	DetailingObjectTitleTemplate               string
-	FiltersClear                               string
-	FiltersAdd                                 string
-	FilterApply                                string
-	FilterByTemplate                           string
-	FiltersDateInTheLast                       string
-	FiltersDateEquals                          string
-	FiltersDateBetween                         string
-	FiltersDateIsAfter                         string
-	FiltersDateIsAfterOrOn                     string
-	FiltersDateIsBefore                        string
-	FiltersDateIsBeforeOrOn                    string
-	FiltersDateDays                            string
-	FiltersDateMonths                          string
-	FiltersDateAnd                             string
-	FiltersTo                                  string
-	FiltersNumberEquals                        string
-	FiltersNumberBetween                       string
-	FiltersNumberGreaterThan                   string
-	FiltersNumberLessThan                      string
-	FiltersNumberAnd                           string
-	FiltersStringEquals                        string
-	FiltersStringContains                      string
-	FiltersMultipleSelectIn                    string
-	FiltersMultipleSelectNotIn                 string
-	Month                                      string
-	MonthNames                                 [13]string
-	Year                                       string
-	PaginationRowsPerPage                      string
-	PaginationPageInfo                         string
-	PaginationPage                             string
-	PaginationOfPage                           string
-	ListingNoRecordToShow                      string
-	ListingSelectedCountNotice                 string
-	ListingClearSelection                      string
-	BulkActionNoAvailableRecords               string
-	BulkActionSelectedIdsProcessNoticeTemplate string
-	ConfirmDialogPromptTitle                   string
-	ConfirmDialogPromptText                    string
-	Language                                   string
-	Colon                                      string
-	NotFoundPageNotice                         string
-	AddRow                                     string
-	ListEditorDeletedItem                      string
-	ListEditorRevertDeletion                   string
-	ListEditorRemoveItem                       string
-	ListEditorActions                          string
-	PleaseSelectRecord                         string
-	PrinterOptions                             PrinterOptionsMessages
-	BulkActionConfirmationTextTemplate         string
+	YouAreHere                                 string                 `i18n:"hint='Label of the breadcrumb (where the user is).'"`
+	New                                        string                 `i18n:"hint='Button that creates a record.'"`
+	Update                                     string                 `i18n:"hint='Button that saves a record.'"`
+	Execute                                    string                 `i18n:"hint='Button that runs an action.'"`
+	Delete                                     string                 `i18n:"hint='Button that deletes a record.'"`
+	DeleteRelated                              string                 `i18n:"hint='Option that deletes the related records too.'"`
+	DeleteRelatedHint                          string                 `i18n:"label='Delete related: hint', hint='Hint of the option that deletes the related records too.'"`
+	ShowRelatedItemsTitle                      string                 `i18n:"hint='Button that shows the records related to the one being deleted.'"`
+	RelatedItemsForDeletionActionTitle         string                 `i18n:"label='Related items for deletion', hint='Title of the records deleted along with a record.'"`
+	Edit                                       string                 `i18n:"hint='Button that opens the form of a record.'"`
+	FormTitle                                  string                 `i18n:"hint='Title of a form with no other.'"`
+	OK                                         string                 `i18n:"hint='Button that confirms.'"`
+	Cancel                                     string                 `i18n:"hint='Button that closes without doing anything.'"`
+	Clear                                      string                 `i18n:"hint='Button that empties a field.'"`
+	Create                                     string                 `i18n:"hint='Button that saves a new record.'"`
+	DeleteConfirmationTextTemplate             string                 `i18n:"label='Delete confirmation', hint='Asks to confirm a deletion. {the_model} is replaced by the model with its article, {title} by the record\\'s title.'"`
+	CreatingFemaleObjectTitleTemplate          string                 `i18n:"label='New record title (feminine)', hint='Title of the creation of a record of a feminine model. {modelName} is the model.'"`
+	EditingTitleTemplate                       string                 `i18n:"label='Editing title', hint='Title of the form of a record. {modelName} is the model.'"`
+	CreatingObjectTitleTemplate                string                 `i18n:"label='New record title', hint='Title of the creation of a record. {modelName} is the model.'"`
+	EditingObjectTitleTemplate                 string                 `i18n:"label='Editing record title', hint='Title of the form of a record. {modelName} is the model, {id} the record.'"`
+	ListingObjectTitleTemplate                 string                 `i18n:"label='Listing title', hint='Title of a listing. {modelName} is the model.'"`
+	DetailingObjectTitleTemplate               string                 `i18n:"label='Detail title', hint='Title of the detail of a record. {modelName} is the model, {id} the record.'"`
+	FiltersClear                               string                 `i18n:"hint='Button that removes every filter.'"`
+	FiltersAdd                                 string                 `i18n:"hint='Button that opens the filters.'"`
+	FilterApply                                string                 `i18n:"hint='Button that applies a filter.'"`
+	FilterByTemplate                           string                 `i18n:"label='Filter by', hint='Title of a filter. {filter} is its name.'"`
+	FiltersDateInTheLast                       string                 `i18n:"label='Date: in the last', hint='Date filter operator: within the last days or months.'"`
+	FiltersDateEquals                          string                 `i18n:"label='Date: equals', hint='Date filter operator: on the day.'"`
+	FiltersDateBetween                         string                 `i18n:"label='Date: between', hint='Date filter operator: between two days.'"`
+	FiltersDateIsAfter                         string                 `i18n:"label='Date: after', hint='Date filter operator: after the day.'"`
+	FiltersDateIsAfterOrOn                     string                 `i18n:"label='Date: on or after', hint='Date filter operator: on or after the day.'"`
+	FiltersDateIsBefore                        string                 `i18n:"label='Date: before', hint='Date filter operator: before the day.'"`
+	FiltersDateIsBeforeOrOn                    string                 `i18n:"label='Date: on or before', hint='Date filter operator: on or before the day.'"`
+	FiltersDateDays                            string                 `i18n:"label='Date: days', hint='Unit of the date filter: days.'"`
+	FiltersDateMonths                          string                 `i18n:"label='Date: months', hint='Unit of the date filter: months.'"`
+	FiltersDateAnd                             string                 `i18n:"label='Date: and', hint='Word between the two days of a range.'"`
+	FiltersTo                                  string                 `i18n:"label='To', hint='Word between the two ends of a range.'"`
+	FiltersNumberEquals                        string                 `i18n:"label='Number: equals', hint='Number filter operator: equal to.'"`
+	FiltersNumberBetween                       string                 `i18n:"label='Number: between', hint='Number filter operator: between two numbers.'"`
+	FiltersNumberGreaterThan                   string                 `i18n:"label='Number: greater than', hint='Number filter operator: greater than.'"`
+	FiltersNumberLessThan                      string                 `i18n:"label='Number: less than', hint='Number filter operator: less than.'"`
+	FiltersNumberAnd                           string                 `i18n:"label='Number: and', hint='Word between the two numbers of a range.'"`
+	FiltersStringEquals                        string                 `i18n:"label='Text: equals', hint='Text filter operator: equal to.'"`
+	FiltersStringContains                      string                 `i18n:"label='Text: contains', hint='Text filter operator: contains.'"`
+	FiltersMultipleSelectIn                    string                 `i18n:"label='Choice: in', hint='Choice filter operator: one of those selected.'"`
+	FiltersMultipleSelectNotIn                 string                 `i18n:"label='Choice: not in', hint='Choice filter operator: none of those selected.'"`
+	Month                                      string                 `i18n:"hint='Label of a month.'"`
+	MonthNames                                 [13]string             `i18n:"hint='The names of the months, January first (the item 0 is unused).'"`
+	Year                                       string                 `i18n:"hint='Label of a year.'"`
+	PaginationRowsPerPage                      string                 `i18n:"label='Rows per page', hint='Label of how many records a page of a listing shows.'"`
+	PaginationPageInfo                         string                 `i18n:"label='Page info', hint='Which records the page shows. {currPageStart} and {currPageEnd} are the first and last, {total} how many there are.'"`
+	PaginationPage                             string                 `i18n:"label='Page', hint='Label before the page number.'"`
+	PaginationOfPage                           string                 `i18n:"label='Of pages', hint='After the page number. {total} is how many pages there are.'"`
+	ListingNoRecordToShow                      string                 `i18n:"label='No records', hint='Shown when a listing is empty.'"`
+	ListingSelectedCountNotice                 string                 `i18n:"label='Selected count', hint='How many records are selected. {count} is the number.'"`
+	ListingClearSelection                      string                 `i18n:"label='Clear selection', hint='Link that unselects every record.'"`
+	BulkActionNoAvailableRecords               string                 `i18n:"label='Bulk action: none possible', hint='Shown when no selected record can take the action.'"`
+	BulkActionSelectedIdsProcessNoticeTemplate string                 `i18n:"label='Bulk action: some impossible', hint='Shown when some selected records cannot take the action. {ids} are those records.'"`
+	ConfirmDialogPromptTitle                   string                 `i18n:"label='Confirmation title', hint='Title of a confirmation dialog.'"`
+	ConfirmDialogPromptText                    string                 `i18n:"label='Confirmation text', hint='Question of a confirmation dialog.'"`
+	Language                                   string                 `i18n:"hint='Label of a language.'"`
+	Colon                                      string                 `i18n:"hint='The colon put after a label, as the language writes it.'"`
+	NotFoundPageNotice                         string                 `i18n:"label='Page not found', hint='Shown when the page asked for does not exist.'"`
+	AddRow                                     string                 `i18n:"hint='Button that adds a row to a list.'"`
+	ListEditorDeletedItem                      string                 `i18n:"label='List: removed item', hint='Mark of an item removed from a list, before saving.'"`
+	ListEditorRevertDeletion                   string                 `i18n:"label='List: undo', hint='Button that brings back an item removed from a list.'"`
+	ListEditorRemoveItem                       string                 `i18n:"label='List: remove', hint='Button that removes an item from a list.'"`
+	ListEditorActions                          string                 `i18n:"label='List: actions', hint='Title of the actions column of a list.'"`
+	PleaseSelectRecord                         string                 `i18n:"hint='Shown when an action needs a record and none was selected.'"`
+	PrinterOptions                             PrinterOptionsMessages `i18n:"hint='The words of the print options.'"`
+	BulkActionConfirmationTextTemplate         string                 `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the selected records (HTML). {Action} is the action, {count} how many records.'"`
 
-	TimeFormats TimeFormatMessages
+	TimeFormats TimeFormatMessages `i18n:"hint='How times and dates are written.'"`
 
-	Common StrMap
+	Common StrMap `i18n:"hint='Labels of the fields every model may have, by the field\\'s name (CreatedAt, Title…): what a field is called when its model says nothing.'"`
 
-	Error               string
-	ErrEmptyParamID     i18n.ErrorString
-	ErrPermissionDenied i18n.ErrorString
-	ErrFieldRequired    i18n.ErrorString
+	Error               string           `i18n:"hint='Title of an error.'"`
+	ErrEmptyParamID     i18n.ErrorString `i18n:"label='Empty ID', hint='Error when a record was asked for without its id.'"`
+	ErrPermissionDenied i18n.ErrorString `i18n:"hint='Error when the user may not do what was asked.'"`
+	ErrFieldRequired    i18n.ErrorString `i18n:"hint='Error of a required field left empty.'"`
 
 	// Optimistic locking of the edit form (see record_stamp.go).
 	// ErrRecordChangedBy takes the author's name and e-mail.
 	// ErrRecordChangedUnknownWhen is for a model with no UpdatedAt: the state
 	// hash says the record moved, and nothing says when or by whom.
-	ErrRecordChanged            string
-	ErrRecordChangedBy          string
-	ErrRecordChangedUnknownWhen i18n.ErrorString
-	ErrRecordStampMissing       i18n.ErrorString
+	ErrRecordChanged            string           `i18n:"hint='Error when someone else saved the record after the form was opened. %s is when.'"`
+	ErrRecordChangedBy          string           `i18n:"hint='Error when someone else saved the record after the form was opened. The %s are who, their account, and when.'"`
+	ErrRecordChangedUnknownWhen i18n.ErrorString `i18n:"hint='Error when someone else saved the record after the form was opened, when not known.'"`
+	ErrRecordStampMissing       i18n.ErrorString `i18n:"hint='Error of a form too old to be saved.'"`
 
-	CopiedToClipboard string
+	CopiedToClipboard string `i18n:"hint='Shown once something was copied.'"`
 }
 
 // FormatDateTime writes an instant the way this language does. Falls back to a
