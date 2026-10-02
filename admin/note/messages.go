@@ -1,10 +1,10 @@
 package note
 
 type Messages struct {
-	SuccessfullyCreated string
-	Item                string
-	Notes               string
-	NewNote             string
+	SuccessfullyCreated string `i18n:"hint='Shown once a note was added to a record.'"`
+	Item                string `i18n:"hint='Label of the note\\'s text field.'"`
+	Notes               string `i18n:"hint='Title of a record\\'s notes tab and column.'"`
+	NewNote             string `i18n:"hint='Button that adds a note to a record.'"`
 }
 
 var Messages_en_US = &Messages{

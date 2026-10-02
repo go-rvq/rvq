@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/gad-lang/gad/parser/source"
-	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/i18n/gadxtpl"
 	"golang.org/x/text/language"
 )
 
@@ -17,11 +17,12 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	ErrScriptFailure     i18n.ErrorString
-	ParseErrorTemplate   string
-	CompileErrorTemplate string
-	RunErrorTemplate     string
-	EditorUsage          h.HTMLComponent
+	ErrScriptFailure     i18n.ErrorString `i18n:"hint='Error shown when a script of the rich text editor fails.'"`
+	ParseErrorTemplate   string           `i18n:"label='Parse error', hint='Error of a script that could not be read. %d and %d are its line and column; %s is what went wrong.'"`
+	CompileErrorTemplate string           `i18n:"label='Compile error', hint='Error of a script that could not be compiled. %d and %d are its line and column; %s is what went wrong.'"`
+	RunErrorTemplate     string           `i18n:"label='Run error', hint='Error of a script that failed while running. %d and %d are its line and column; %s is what went wrong.'"`
+	// EditorUsage is the help of the script editor, written in Gadx.
+	EditorUsage gadxtpl.Template `i18n:"type=gadx, hint='Help of the script editor, shown beside it: Gadx (HTML with logic).'"`
 }
 
 func (m *Messages) FormateTypeError(errType ScriptErrorType, pos source.FilePos, message string) string {

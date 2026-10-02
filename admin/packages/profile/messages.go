@@ -14,7 +14,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	ChangePassword string
+	ChangePassword string `i18n:"hint='Button of the user\\'s profile that opens the change of their password.'"`
 }
 
 var (

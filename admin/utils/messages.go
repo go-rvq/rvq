@@ -1,8 +1,8 @@
 package utils
 
 type Messages struct {
-	OK     string
-	Cancel string
+	OK     string `i18n:"hint='Button that confirms a confirmation dialog.'"`
+	Cancel string `i18n:"hint='Button that closes a confirmation dialog without doing anything.'"`
 }
 
 var Messages_en_US = &Messages{

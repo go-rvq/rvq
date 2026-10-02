@@ -16,10 +16,10 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	FileSystem                    string
-	WebDavAccessTemplate          h.RawHTML
-	WebDavProtocolTitle           string
-	WebDavProtocolSoftwareExample h.RawHTML
+	FileSystem                    string    `i18n:"hint='Title of the file system tools page.'"`
+	WebDavAccessTemplate          h.RawHTML `i18n:"type=html, label='WebDAV access', hint='How to reach the files through WebDAV (HTML). %s is the WebDAV URL.'"`
+	WebDavProtocolTitle           string    `i18n:"label='WebDAV protocol title', hint='Title of the section about the WebDAV protocol.'"`
+	WebDavProtocolSoftwareExample h.RawHTML `i18n:"type=html, label='WebDAV programs', hint='Programs that access files through WebDAV, with their links (HTML).'"`
 }
 
 func (m *Messages) WebDavAccess(url string) h.RawHTML {

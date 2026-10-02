@@ -21,34 +21,34 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	StatusNew                string
-	StatusScheduled          string
-	StatusRunning            string
-	StatusCancelled          string
-	StatusDone               string
-	StatusException          string
-	StatusKilled             string
-	FilterTabAll             string
-	FilterTabRunning         string
-	FilterTabScheduled       string
-	FilterTabDone            string
-	FilterTabErrors          string
-	ActionCancelJob          string
-	ActionAbortJob           string
-	ActionUpdateJob          string
-	ActionRerunJob           string
-	DetailTitleStatus        string
-	DetailTitleLog           string
-	NoticeJobCannotBeAborted string
-	NoticeJobWontBeExecuted  string
-	ScheduleTime             string
-	DateTimePickerClearText  string
-	DateTimePickerOkText     string
-	PleaseSelectJob          string
-	Jobs                     string
-	Job                      string
-	WorkersJob               string
-	ErrJobRunsOnce           i18n.ErrorString
+	StatusNew                string           `i18n:"hint='Status of a job created and not yet scheduled or started.'"`
+	StatusScheduled          string           `i18n:"hint='Status of a job waiting for its scheduled time.'"`
+	StatusRunning            string           `i18n:"hint='Status of a job being executed.'"`
+	StatusCancelled          string           `i18n:"hint='Status of a job cancelled before it ran.'"`
+	StatusDone               string           `i18n:"hint='Status of a job that finished successfully.'"`
+	StatusException          string           `i18n:"hint='Status of a job that stopped with an error.'"`
+	StatusKilled             string           `i18n:"hint='Status of a job aborted while running.'"`
+	FilterTabAll             string           `i18n:"label='Tab: all jobs', hint='Tab of the jobs listing that shows every job.'"`
+	FilterTabRunning         string           `i18n:"label='Tab: running', hint='Tab of the jobs listing that shows the running jobs.'"`
+	FilterTabScheduled       string           `i18n:"label='Tab: scheduled', hint='Tab of the jobs listing that shows the scheduled jobs.'"`
+	FilterTabDone            string           `i18n:"label='Tab: done', hint='Tab of the jobs listing that shows the finished jobs.'"`
+	FilterTabErrors          string           `i18n:"label='Tab: errors', hint='Tab of the jobs listing that shows the jobs that failed.'"`
+	ActionCancelJob          string           `i18n:"hint='Button that cancels a job not started yet.'"`
+	ActionAbortJob           string           `i18n:"hint='Button that aborts a running job.'"`
+	ActionUpdateJob          string           `i18n:"hint='Button that saves the changes to a scheduled job.'"`
+	ActionRerunJob           string           `i18n:"hint='Button that runs a finished job again.'"`
+	DetailTitleStatus        string           `i18n:"label='Detail: status title', hint='Title of the status section of a job\\'s detail.'"`
+	DetailTitleLog           string           `i18n:"label='Detail: log title', hint='Title of the log section of a job\\'s detail.'"`
+	NoticeJobCannotBeAborted string           `i18n:"hint='Shown when a job changed status and can no longer be aborted, cancelled or updated.'"`
+	NoticeJobWontBeExecuted  string           `i18n:"hint='Shown when the code of a job was removed or changed, so the job will not run.'"`
+	ScheduleTime             string           `i18n:"hint='Label of the field with the date and time a job is scheduled to run.'"`
+	DateTimePickerClearText  string           `i18n:"label='Date picker: clear', hint='Button of the date and time picker that clears the value.'"`
+	DateTimePickerOkText     string           `i18n:"label='Date picker: OK', hint='Button of the date and time picker that confirms the value.'"`
+	PleaseSelectJob          string           `i18n:"hint='Shown when an action needs a job and none was selected.'"`
+	Jobs                     string           `i18n:"hint='Name of the jobs model in the plural (menu, listing title).'"`
+	Job                      string           `i18n:"hint='Name of the jobs model in the singular (detail and form titles).'"`
+	WorkersJob               string           `i18n:"label='Job (field)', hint='Label of the field that says which job a worker record runs.'"`
+	ErrJobRunsOnce           i18n.ErrorString `i18n:"hint='Error shown when a job that runs only once is started again.'"`
 }
 
 var Messages_en_US = &Messages{
