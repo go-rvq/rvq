@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"maps"
 	"net/http"
 	"slices"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/text/language"
@@ -20,26 +23,79 @@ func (e ErrorString) Error() string {
 }
 
 type Builder struct {
-	supportLanguages                   []language.Tag
 	getSupportLanguagesFromRequestFunc func(R *http.Request) []language.Tag
-	moduleMessages                     map[language.Tag]context.Context
-	matcher                            language.Matcher
 	cookieName                         string
 	queryName                          string
+
+	// mu orders the writers; the readers load state, which is never changed
+	// once stored — a writer stores a copy (copy-on-write), so an update at
+	// run time (SetLanguage, SetSupportLanguages) races no request.
+	mu    sync.Mutex
+	state atomic.Pointer[builderState]
+}
+
+// builderState is what the Builder serves: the languages, and per language the
+// messages registered by the code and those that replace some of them.
+type builderState struct {
+	supportLanguages []language.Tag
+	matcher          language.Matcher
+	// code is the context of the messages the code registered, per language.
+	code map[language.Tag]context.Context
+	// codeModules is code's messages of a ModuleKey, per language.
+	codeModules map[language.Tag]map[ModuleKey]Messages
+	// overrides is what SetLanguage gave, per language.
+	overrides map[language.Tag]map[ModuleKey]Messages
+	// effective is code with overrides on it: what a request gets.
+	effective map[language.Tag]context.Context
+}
+
+func (s *builderState) clone() *builderState {
+	c := *s
+	c.supportLanguages = slices.Clone(s.supportLanguages)
+	c.code = maps.Clone(s.code)
+	c.codeModules = maps.Clone(s.codeModules)
+	c.overrides = maps.Clone(s.overrides)
+	c.effective = maps.Clone(s.effective)
+	return &c
+}
+
+// build makes the effective messages of lang.
+func (s *builderState) build(lang language.Tag) {
+	c := s.code[lang]
+	if c == nil {
+		c = context.TODO()
+	}
+	for module, msg := range s.overrides[lang] {
+		c = context.WithValue(c, module, msg)
+	}
+	s.effective[lang] = c
+}
+
+func (s *builderState) setSupportLanguages(vs []language.Tag) {
+	s.supportLanguages = vs
+	for _, l := range vs {
+		if s.effective[l] == nil {
+			s.build(l)
+		}
+	}
+	s.matcher = language.NewMatcher(vs)
 }
 
 type Messages interface{}
 
 func New() *Builder {
 	b := &Builder{
-		supportLanguages: []language.Tag{
-			language.English,
-		},
-		moduleMessages: map[language.Tag]context.Context{language.English: context.TODO()},
-		cookieName:     "lang",
-		queryName:      "lang",
+		cookieName: "lang",
+		queryName:  "lang",
 	}
-	b.matcher = language.NewMatcher(b.supportLanguages)
+	st := &builderState{
+		code:        map[language.Tag]context.Context{},
+		codeModules: map[language.Tag]map[ModuleKey]Messages{},
+		overrides:   map[language.Tag]map[ModuleKey]Messages{},
+		effective:   map[language.Tag]context.Context{},
+	}
+	st.setSupportLanguages([]language.Tag{language.English})
+	b.state.Store(st)
 
 	b.RegisterForModules(language.English, DefaultKey, Default_en).
 		RegisterForModules(language.BrazilianPortuguese, DefaultKey, Default_pt_BR)
@@ -47,8 +103,14 @@ func New() *Builder {
 	return b
 }
 
-func (b *Builder) defaultLanguage() language.Tag {
-	return b.supportLanguages[0]
+// update stores a copy of the state changed by do.
+func (b *Builder) update(do func(s *builderState)) *Builder {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	s := b.state.Load().clone()
+	do(s)
+	b.state.Store(s)
+	return b
 }
 
 func (b *Builder) GetCookieName() string {
@@ -59,44 +121,36 @@ func (b *Builder) GetQueryName() string {
 	return b.queryName
 }
 
+// SupportLanguages sets the languages, the default first. It may be called at
+// run time (SetSupportLanguages is it).
 func (b *Builder) SupportLanguages(vs ...language.Tag) (r *Builder) {
 	if len(vs) == 0 {
 		panic("have to support at least one language")
 	}
-	b.supportLanguages = vs
-	for _, l := range b.supportLanguages {
-		if b.moduleMessages[l] == nil {
-			b.moduleMessages[l] = context.TODO()
-		}
-	}
-	b.matcher = language.NewMatcher(b.supportLanguages)
-	return b
+	vs = slices.Clone(vs)
+	return b.update(func(s *builderState) { s.setSupportLanguages(vs) })
+}
+
+// SetSupportLanguages sets the languages at run time, the default first: the
+// languages enabled in a database, say.
+func (b *Builder) SetSupportLanguages(vs ...language.Tag) (r *Builder) {
+	return b.SupportLanguages(vs...)
 }
 
 func (b *Builder) SupportLanguage(vs ...language.Tag) (r *Builder) {
-	var news []language.Tag
-
-	for _, v := range vs {
-		if slices.Contains(b.supportLanguages, v) {
-			continue
+	return b.update(func(s *builderState) {
+		langs := s.supportLanguages
+		for _, v := range vs {
+			if !slices.Contains(langs, v) {
+				langs = append(langs, v)
+			}
 		}
-		news = append(news, v)
-	}
-
-	b.supportLanguages = append(b.supportLanguages, news...)
-
-	for _, l := range news {
-		if b.moduleMessages[l] == nil {
-			b.moduleMessages[l] = context.TODO()
-		}
-	}
-
-	b.matcher = language.NewMatcher(b.supportLanguages)
-	return b
+		s.setSupportLanguages(langs)
+	})
 }
 
 func (b *Builder) GetSupportLanguages() []language.Tag {
-	return b.supportLanguages
+	return b.state.Load().supportLanguages
 }
 
 func (b *Builder) GetSupportLanguagesFromRequest(R *http.Request) []language.Tag {
@@ -112,37 +166,71 @@ func (b *Builder) GetSupportLanguagesFromRequestFunc(v func(R *http.Request) []l
 }
 
 func (b *Builder) RegisterForModule(lang language.Tag, module ModuleKey, msg Messages) (r *Builder) {
-	c := b.moduleMessages[lang]
-	if c == nil {
-		c = context.TODO()
-	}
-
-	c = context.WithValue(c, module, msg)
-	b.moduleMessages[lang] = c
-	return b
+	return b.RegisterForModules(lang, module, msg)
 }
 
+// RegisterForModules registers the code's messages of lang: pairs of a key —
+// a ModuleKey, usually — and its messages.
 func (b *Builder) RegisterForModules(lang language.Tag, args ...any) (r *Builder) {
-	c := b.moduleMessages[lang]
-	if c == nil {
-		c = context.TODO()
-	}
-
 	if len(args)%2 != 0 {
 		panic("invalid number of arguments")
 	}
-
-	for len(args) > 0 {
-		c = context.WithValue(c, args[0], args[1])
-		args = args[2:]
-	}
-
-	b.moduleMessages[lang] = c
-	return b
+	return b.update(func(s *builderState) {
+		c := s.code[lang]
+		if c == nil {
+			c = context.TODO()
+		}
+		modules := maps.Clone(s.codeModules[lang])
+		if modules == nil {
+			modules = map[ModuleKey]Messages{}
+		}
+		for ; len(args) > 0; args = args[2:] {
+			c = context.WithValue(c, args[0], args[1])
+			if module, ok := args[0].(ModuleKey); ok {
+				modules[module] = args[1]
+			}
+		}
+		s.code[lang] = c
+		s.codeModules[lang] = modules
+		s.build(lang)
+	})
 }
 
+// SetLanguage sets the messages of lang that replace the code's — those of a
+// database, say —, at run time: every module of lang not in modules is the
+// code's again. Nil modules leaves lang with the code's alone.
+func (b *Builder) SetLanguage(lang language.Tag, modules map[ModuleKey]Messages) (r *Builder) {
+	modules = maps.Clone(modules)
+	return b.update(func(s *builderState) {
+		if len(modules) == 0 {
+			delete(s.overrides, lang)
+		} else {
+			s.overrides[lang] = modules
+		}
+		s.build(lang)
+	})
+}
+
+// CodeModules is the messages the code registered, of each ModuleKey, per
+// language. The maps are the Builder's: they must not be changed.
+func (b *Builder) CodeModules() map[language.Tag]map[ModuleKey]Messages {
+	return b.state.Load().codeModules
+}
+
+// GetCodeModuleMessages is the messages of module the code registered for
+// lang: those of GetModuleMessages without the ones SetLanguage gave.
+func (b *Builder) GetCodeModuleMessages(lang language.Tag, module ModuleKey) any {
+	c := b.state.Load().code[lang]
+	if c == nil {
+		return nil
+	}
+	return c.Value(module)
+}
+
+// GetModuleMessages is the messages of module that lang has: the code's, or
+// those SetLanguage gave in their place.
 func (b *Builder) GetModuleMessages(lang language.Tag, module ModuleKey) any {
-	c := b.moduleMessages[lang]
+	c := b.state.Load().effective[lang]
 	if c == nil {
 		return nil
 	}
@@ -188,11 +276,12 @@ func (b *Builder) EnsureLanguage(in http.Handler) (out http.Handler) {
 
 		accept := r.Header.Get("Accept-Language")
 
+		st := b.state.Load()
 		var availableLanguages []language.Tag
 		var matcher language.Matcher
 		if len(lang) > 0 {
-			availableLanguages = b.GetSupportLanguages()
-			matcher = b.matcher
+			availableLanguages = st.supportLanguages
+			matcher = st.matcher
 		} else {
 			availableLanguages = b.GetSupportLanguagesFromRequest(r)
 			matcher = language.NewMatcher(availableLanguages)
@@ -200,9 +289,9 @@ func (b *Builder) EnsureLanguage(in http.Handler) (out http.Handler) {
 		_, i := language.MatchStrings(matcher, lang, accept)
 		tag := availableLanguages[i]
 
-		moduleMsgs := b.moduleMessages[tag]
+		moduleMsgs := st.effective[tag]
 		if moduleMsgs == nil {
-			moduleMsgs = b.moduleMessages[b.defaultLanguage()]
+			moduleMsgs = st.effective[st.supportLanguages[0]]
 		}
 		if moduleMsgs == nil {
 			panic(fmt.Sprintf("language %s not supported", tag.String()))
