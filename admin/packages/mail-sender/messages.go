@@ -10,43 +10,43 @@ import (
 const MessagesKey i18n.ModuleKey = "rqv-admin/mail-sender"
 
 type Messages struct {
-	MailSender                        string
-	TestMessageSubject                string
-	TestMessageBody                   string
-	MailSenderSender                  string
-	MailSenderSubjectPrefix           string
-	MailSenderGmail                   string
-	MailSenderSMTP                    string
-	MailSender_Action_TestSendMail    string
-	GmailSenderConfiguredSuccessfully string
-	GmailSenderLogOutSuccessfully     string
-	GmailSenderCallbackURI            string
-	GmailSenderCredentials            string
-	GmailSenderCredentialsFile        string
-	GmailSenderCredentialsFile_Hint   string
-	GmailSenderSetup                  string
-	GmailSenderSetupTitle             string
-	GmailSenderSetupSteps             []string
-	GmailSenderSetupScopes            string
-	GmailSenderSetupScopesHint        string
-	GmailSenderSetupScopesSteps       []string
-	GmailSenderSetupBlocked           string
-	GmailSenderSetupCallback          string
-	GmailSenderSetupCallbackHint      string
-	GmailSenderSetupConsoleBtn        string
-	SmtpSenderTLS                     string
-	SmtpSenderServer                  string
-	SmtpSenderPort                    string
-	SmtpSenderFromMail                string
-	SmtpSenderUser                    string
-	SmtpSenderPassword                string
-	SendMailTestFormTo                string
-	SendMailTestFormSubject           string
-	SendMailTestFormMessage           string
-	SendMailTestFormSender            string
-	ErrGmailSenderCredentialsInvalid  i18n.ErrorString
-	ErrGmailSenderScopeNotGranted     string
-	SendMailSuccessfully              string
+	MailSender                        string           `i18n:"hint='Name of the mail sender settings (menu, title).'"`
+	TestMessageSubject                string           `i18n:"label='Test message: subject', hint='Subject of the test email.'"`
+	TestMessageBody                   string           `i18n:"label='Test message: body', hint='Body of the test email.'"`
+	MailSenderSender                  string           `i18n:"label='Sender', hint='Label of the kind of sender (Gmail, SMTP).'"`
+	MailSenderSubjectPrefix           string           `i18n:"label='Subject prefix', hint='Label of the text put before the subject of every email.'"`
+	MailSenderGmail                   string           `i18n:"label='Gmail', hint='Name of the Gmail sender.'"`
+	MailSenderSMTP                    string           `i18n:"label='SMTP', hint='Name of the SMTP sender.'"`
+	MailSender_Action_TestSendMail    string           `i18n:"label='Send test mail', hint='Action that sends a test email.'"`
+	GmailSenderConfiguredSuccessfully string           `i18n:"label='Gmail configured', hint='Shown once the Gmail sender was authorized.'"`
+	GmailSenderLogOutSuccessfully     string           `i18n:"label='Gmail logged out', hint='Shown once the Gmail sender was signed out.'"`
+	GmailSenderCallbackURI            string           `i18n:"label='Gmail: callback URI', hint='Label of the address Google returns to after the authorization.'"`
+	GmailSenderCredentials            string           `i18n:"label='Gmail: app credentials', hint='Label of the OAuth credentials of the Gmail sender.'"`
+	GmailSenderCredentialsFile        string           `i18n:"label='Gmail: app credentials file', hint='Label of the field that uploads the credentials file.'"`
+	GmailSenderCredentialsFile_Hint   string           `i18n:"label='Gmail: app credentials file hint', hint='Hint of the credentials file: the .json of a Desktop application from the Google Cloud Console.'"`
+	GmailSenderSetup                  string           `i18n:"label='Gmail: setup', hint='Button that opens how to create the Gmail credentials.'"`
+	GmailSenderSetupTitle             string           `i18n:"label='Gmail: setup title', hint='First paragraph of the Gmail setup: why the OAuth client is created by hand.'"`
+	GmailSenderSetupSteps             []string         `i18n:"label='Gmail: setup steps', hint='The steps to create the Gmail credentials, one per item.'"`
+	GmailSenderSetupScopes            string           `i18n:"label='Gmail: scopes', hint='Title of the scopes to declare on the consent screen.'"`
+	GmailSenderSetupScopesHint        string           `i18n:"label='Gmail: scopes hint', hint='Why the scopes listed are the ones needed.'"`
+	GmailSenderSetupScopesSteps       []string         `i18n:"label='Gmail: scopes steps', hint='The steps to declare the scopes, one per item.'"`
+	GmailSenderSetupBlocked           string           `i18n:"label='Gmail: access blocked', hint='What to do when Google blocks the access because the app is not verified.'"`
+	GmailSenderSetupCallback          string           `i18n:"label='Gmail: setup callback', hint='Title of the callback address of this installation.'"`
+	GmailSenderSetupCallbackHint      string           `i18n:"label='Gmail: setup callback hint', hint='Why the callback address need not be registered.'"`
+	GmailSenderSetupConsoleBtn        string           `i18n:"label='Gmail: open console', hint='Button that opens the Google Cloud Console.'"`
+	SmtpSenderTLS                     string           `i18n:"label='SMTP: TLS', hint='Label of whether the SMTP connection uses TLS.'"`
+	SmtpSenderServer                  string           `i18n:"label='SMTP: server', hint='Label of the SMTP server.'"`
+	SmtpSenderPort                    string           `i18n:"label='SMTP: port', hint='Label of the SMTP port.'"`
+	SmtpSenderFromMail                string           `i18n:"label='SMTP: from', hint='Label of the address the emails are sent from.'"`
+	SmtpSenderUser                    string           `i18n:"label='SMTP: user', hint='Label of the SMTP user.'"`
+	SmtpSenderPassword                string           `i18n:"label='SMTP: password', hint='Label of the SMTP password.'"`
+	SendMailTestFormTo                string           `i18n:"label='Test: to', hint='Label of who the test email goes to.'"`
+	SendMailTestFormSubject           string           `i18n:"label='Test: subject', hint='Label of the subject of the test email.'"`
+	SendMailTestFormMessage           string           `i18n:"label='Test: message', hint='Label of the body of the test email.'"`
+	SendMailTestFormSender            string           `i18n:"label='Test: sender', hint='Label of the sender the test email goes through.'"`
+	ErrGmailSenderCredentialsInvalid  i18n.ErrorString `i18n:"hint='Error when the credentials file is not of a Desktop application.'"`
+	ErrGmailSenderScopeNotGranted     string           `i18n:"hint='Error when Google gave a token without the scope needed. %s is the scope.'"`
+	SendMailSuccessfully              string           `i18n:"label='Mail sent', hint='Shown once an email was sent.'"`
 }
 
 var (

@@ -21,19 +21,19 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type MessagesPersistence struct {
-	Enabled     string
-	Disabled    string
-	Title       string
-	Days        string
-	Weeks       string
-	Months      string
-	Years       string
-	NoOther     string
-	OtherDays   string
-	OtherWeeks  string
-	OtherMonths string
-	OtherYears  string
-	Template    string
+	Enabled     string `i18n:"type=html, hint='Shown when removing old backups is on (HTML).'"`
+	Disabled    string `i18n:"type=html, hint='Shown when removing old backups is off (HTML).'"`
+	Title       string `i18n:"hint='Title of the backup persistence.'"`
+	Days        string `i18n:"hint='How many days are kept. %d is the number.'"`
+	Weeks       string `i18n:"hint='How many weeks are kept. %d is the number.'"`
+	Months      string `i18n:"hint='How many months are kept. %d is the number.'"`
+	Years       string `i18n:"hint='How many years are kept. %d is the number.'"`
+	NoOther     string `i18n:"hint='Shown when no time is set for the other backups.'"`
+	OtherDays   string `i18n:"hint='The other backups kept by days.'"`
+	OtherWeeks  string `i18n:"hint='The other backups kept by weeks.'"`
+	OtherMonths string `i18n:"hint='The other backups kept by months.'"`
+	OtherYears  string `i18n:"hint='The other backups kept by years.'"`
+	Template    string `i18n:"type=html, hint='Summary of the persistence, a Go template (HTML): .valid says it is set, .enabled is the Enabled or Disabled text, and .days, .weeks, .months, .years, .other the parts; join_and joins them.'"`
 }
 
 func (p *MessagesPersistence) Format(per *db_tools.Persistence) (s h.RawHTML, err error) {
@@ -119,32 +119,32 @@ func (p *MessagesPersistence) Format(per *db_tools.Persistence) (s h.RawHTML, er
 }
 
 type Messages struct {
-	AutoBackup                           string
-	DatabaseAutoBackup                   string
-	Database                             string
-	CreateBackup                         string
-	ConfigureBackupPersistence           string
-	CreateDatabaseBackup                 string
-	DatabaseOlderBackupsRemover          string
-	BackupStartedInBackgroundJobTemplate string
-	MessageFormMessage                   string
-	Backups                              string
-	CreatedAt                            string
-	DbName                               string
-	Size                                 string
-	Message                              string
-	Actions                              string
-	BackupDetailTemplate                 string
-	BackupRemovedTemplate                h.RawHTML
-	BackupRemoveConfirmTemplate          h.RawHTML
-	Auto                                 string
-	Persistence                          MessagesPersistence
-	PersistenceEnabled                   string
-	PersistenceYears                     string
-	PersistenceMonths                    string
-	PersistenceWeeks                     string
-	PersistenceDays                      string
-	PersistenceOther                     string
+	AutoBackup                           string              `i18n:"hint='Name of the automatic backup settings.'"`
+	DatabaseAutoBackup                   string              `i18n:"hint='Title of the automatic database backup job.'"`
+	Database                             string              `i18n:"hint='Title of the database tools.'"`
+	CreateBackup                         string              `i18n:"hint='Button that makes a database backup now.'"`
+	ConfigureBackupPersistence           string              `i18n:"hint='Action that sets how long backups are kept.'"`
+	CreateDatabaseBackup                 string              `i18n:"hint='Title of the job that makes a database backup.'"`
+	DatabaseOlderBackupsRemover          string              `i18n:"label='Older backups remover', hint='Title of the job that removes the backups no longer kept.'"`
+	BackupStartedInBackgroundJobTemplate string              `i18n:"label='Backup started', hint='Shown once a backup job was started.'"`
+	MessageFormMessage                   string              `i18n:"label='Backup message', hint='Label of the note given to a backup.'"`
+	Backups                              string              `i18n:"hint='Title of the list of backups.'"`
+	CreatedAt                            string              `i18n:"hint='Column with when a backup was made.'"`
+	DbName                               string              `i18n:"label='Database name', hint='Column with the database a backup is of.'"`
+	Size                                 string              `i18n:"hint='Column with the size of a backup.'"`
+	Message                              string              `i18n:"hint='Column with the note given to a backup.'"`
+	Actions                              string              `i18n:"hint='Column with the actions of a backup.'"`
+	BackupDetailTemplate                 string              `i18n:"label='Backup detail', hint='Line of the job log about a backup. %s is its detail.'"`
+	BackupRemovedTemplate                h.RawHTML           `i18n:"type=html, label='Backup removed', hint='Shown once a backup was removed (HTML). %s is the backup.'"`
+	BackupRemoveConfirmTemplate          h.RawHTML           `i18n:"type=html, label='Backup remove confirmation', hint='Asks to confirm the removal of a backup (HTML). %s is the backup.'"`
+	Auto                                 string              `i18n:"hint='Mark of a backup made automatically.'"`
+	Persistence                          MessagesPersistence `i18n:"hint='The words of how long backups are kept.'"`
+	PersistenceEnabled                   string              `i18n:"label='Persistence: enabled', hint='Label of whether old backups are removed.'"`
+	PersistenceYears                     string              `i18n:"label='Persistence: years', hint='Label of for how many years a yearly backup is kept.'"`
+	PersistenceMonths                    string              `i18n:"label='Persistence: months', hint='Label of for how many months a monthly backup is kept.'"`
+	PersistenceWeeks                     string              `i18n:"label='Persistence: weeks', hint='Label of for how many weeks a weekly backup is kept.'"`
+	PersistenceDays                      string              `i18n:"label='Persistence: days', hint='Label of for how many days a daily backup is kept.'"`
+	PersistenceOther                     string              `i18n:"label='Persistence: other', hint='Label of how long the other backups are kept.'"`
 }
 
 var (
