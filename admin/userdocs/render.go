@@ -5,26 +5,49 @@ import (
 	"fmt"
 	"net/url"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/gad-lang/gad"
+	"github.com/gad-lang/gad/gadx"
 	"github.com/gad-lang/gad/parser"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/ast"
+	gparser "github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
-// markdown is the renderer of the documents: GitHub's markdown (tables, task
-// lists, strikethrough, autolinks); HTML in a document is kept — the
-// documents are the code's and the administrators'.
-var markdown = goldmark.New(
-	goldmark.WithExtensions(extension.GFM),
-	goldmark.WithRendererOptions(html.WithUnsafe()),
-)
+// newMarkdown is the renderer of a document, its links and images resolved by
+// rewrite: Gad's markdown (gadx.NewMarkdown — every bundled extension: GFM,
+// typographer, definition lists, footnotes; auto heading ids; HTML kept, the
+// documents being the code's and the administrators').
+func newMarkdown(rewrite func(dest string) string) goldmark.Markdown {
+	md := gadx.NewMarkdown()
+	md.Parser().AddOptions(gparser.WithASTTransformers(util.Prioritized(linkRewriter(rewrite), 100)))
+	return md
+}
+
+// linkRewriter rewrites the destination of every link and image of a
+// document.
+type linkRewriter func(dest string) string
+
+func (f linkRewriter) Transform(doc *ast.Document, _ text.Reader, _ gparser.Context) {
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch t := n.(type) {
+		case *ast.Link:
+			t.Destination = []byte(f(string(t.Destination)))
+		case *ast.Image:
+			t.Destination = []byte(f(string(t.Destination)))
+		}
+		return ast.WalkContinue, nil
+	})
+}
 
 type compiledTemplate struct {
 	bc       *gad.Bytecode
@@ -185,35 +208,37 @@ func actionTitle(mb *presets.ModelBuilder, name string, ctx *web.EventContext) (
 	return "", false
 }
 
-// attrRe is a src or href attribute of the HTML of a document.
-var attrRe = regexp.MustCompile(`(src|href)="([^"]*)"`)
-
 // Render is a document — the file of a node, its content as kept for the
 // language — as HTML: its template run, its markdown rendered, its relative
-// links pointing at the documentation (a .md) or at its package's pictures.
+// links pointing at the documentation (a .md) or at its package's files (an
+// image).
 func (r *renderer) Render(src *Source, file, content string) (string, error) {
 	md, err := RenderTemplate(content, r.globals())
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", file, err)
 	}
-	var out bytes.Buffer
-	if err := markdown.Convert([]byte(md), &out); err != nil {
-		return "", fmt.Errorf("%s: %w", file, err)
-	}
 	dir := path.Dir(file)
-	return attrRe.ReplaceAllStringFunc(out.String(), func(m string) string {
-		sm := attrRe.FindStringSubmatch(m)
-		attr, target := sm[1], sm[2]
+	rewrite := func(target string) string {
 		if target == "" || strings.HasPrefix(target, "/") || strings.HasPrefix(target, "#") ||
 			strings.Contains(target, "://") || strings.HasPrefix(target, "mailto:") {
-			return m
+			return target
 		}
-		rel := path.Join(dir, target)
+		rel, frag, _ := strings.Cut(target, "#")
+		rel = path.Join(dir, rel)
 		if strings.HasSuffix(rel, ".md") {
-			return attr + `="` + r.b.DocHref(r.ctx, docNode(rel)) + `"`
+			href := r.b.DocHref(r.ctx, docNode(rel))
+			if frag != "" {
+				href += "#" + frag
+			}
+			return href
 		}
-		return attr + `="` + r.b.AssetHref(src, rel) + `"`
-	}), nil
+		return r.b.AssetHref(src, rel)
+	}
+	var out bytes.Buffer
+	if err := newMarkdown(rewrite).Convert([]byte(md), &out); err != nil {
+		return "", fmt.Errorf("%s: %w", file, err)
+	}
+	return out.String(), nil
 }
 
 // AssetHref is the URL of a file of a source (a picture), by its path under
