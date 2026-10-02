@@ -1,7 +1,7 @@
 package microsite
 
 type Messages struct {
-	CurrentPackage string
+	CurrentPackage string `i18n:"hint='Label of the package a microsite currently serves.'"`
 }
 
 var Messages_en_US = &Messages{

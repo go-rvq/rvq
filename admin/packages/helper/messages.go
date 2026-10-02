@@ -14,7 +14,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	ErrFieldRequired i18n.ErrorString
+	ErrFieldRequired i18n.ErrorString `i18n:"hint='Error of a required field left empty.'"`
 }
 
 func (m *Messages) FromError(err error) error {
