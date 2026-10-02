@@ -12,57 +12,57 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	StatusDraft                             string
-	StatusOnline                            string
-	StatusOffline                           string
-	Publication                             string
-	Publish                                 string
-	PublishHelp                             string
-	PublishOrRepublish                      string
-	PublishOrRepublishHelp                  string
-	Unpublish                               string
-	UnpublishHelp                           string
-	Republish                               string
-	RepublishHelp                           string
-	Areyousure                              string
-	ScheduledStartAt                        string
-	ScheduledEndAt                          string
-	ScheduledStartAtShouldLaterThanNow      string
-	ScheduledEndAtShouldLaterThanNowOrEmpty string
-	ScheduledEndAtShouldLaterThanStartAt    string
-	ScheduledStartAtShouldNotEmpty          string
-	PublishedAt                             string
-	UnPublishedAt                           string
-	ActualPublishTime                       string
-	SchedulePublishTime                     string
-	NotSet                                  string
-	WhenDoYouWantToPublish                  string
-	PublishScheduleTip                      string
-	DateTimePickerClearText                 string
-	DateTimePickerOkText                    string
-	SaveAsNewVersion                        string
-	SwitchedToNewVersion                    string
-	SuccessfullyCreated                     string
-	SuccessfullyRename                      string
-	SuccessfullyPublished                   string
-	SuccessfullyPublishedOrRepublished      string
-	SuccessfullyUnpublished                 string
-	SuccessfullyRepublished                 string
-	OnlineVersion                           string
-	VersionsList                            string
-	AllVersions                             string
-	NamedVersions                           string
-	RenameVersion                           string
-	DeleteVersionConfirmationTextTemplate   string
-	BulkActionConfirmationTextTemplate      string
-	BulkActionNoRecordsTextTemplate         string
+	StatusDraft                             string `i18n:"label='Status: draft', hint='Status of a record not published yet.'"`
+	StatusOnline                            string `i18n:"label='Status: online', hint='Status of a published record.'"`
+	StatusOffline                           string `i18n:"label='Status: offline', hint='Status of a record taken off the site.'"`
+	Publication                             string `i18n:"hint='Title of the publication section of a record.'"`
+	Publish                                 string `i18n:"hint='Action that publishes a record.'"`
+	PublishHelp                             string `i18n:"label='Publish: hint', hint='When Publish applies: to a draft or offline record.'"`
+	PublishOrRepublish                      string `i18n:"label='Publish or republish', hint='Action that publishes a draft or offline record, or republishes an online one.'"`
+	PublishOrRepublishHelp                  string `i18n:"label='Publish or republish: hint', hint='What Publish or republish does depending on the status.'"`
+	Unpublish                               string `i18n:"hint='Action that takes a record off the site.'"`
+	UnpublishHelp                           string `i18n:"label='Unpublish: hint', hint='When Unpublish applies: to an online record.'"`
+	Republish                               string `i18n:"hint='Action that publishes again an online record.'"`
+	RepublishHelp                           string `i18n:"label='Republish: hint', hint='When Republish applies: to an online record.'"`
+	Areyousure                              string `i18n:"label='Are you sure', hint='Asks to confirm an action.'"`
+	ScheduledStartAt                        string `i18n:"label='Scheduled start', hint='Label of when a scheduled publication starts.'"`
+	ScheduledEndAt                          string `i18n:"label='Scheduled end', hint='Label of when a scheduled publication ends.'"`
+	ScheduledStartAtShouldLaterThanNow      string `i18n:"label='Start in the past', hint='Error when the scheduled start is not in the future.'"`
+	ScheduledEndAtShouldLaterThanNowOrEmpty string `i18n:"label='End in the past', hint='Error when the scheduled end is set and not in the future.'"`
+	ScheduledEndAtShouldLaterThanStartAt    string `i18n:"label='End before start', hint='Error when the scheduled end is not after the start.'"`
+	ScheduledStartAtShouldNotEmpty          string `i18n:"label='Start missing', hint='Error when the scheduled start is empty.'"`
+	PublishedAt                             string `i18n:"label='Published at', hint='Label of when a record was published.'"`
+	UnPublishedAt                           string `i18n:"label='Unpublished at', hint='Label of when a record was taken off the site.'"`
+	ActualPublishTime                       string `i18n:"hint='Title of when a record actually was published.'"`
+	SchedulePublishTime                     string `i18n:"hint='Title of when a record is scheduled to be published.'"`
+	NotSet                                  string `i18n:"hint='Shown for a time not set.'"`
+	WhenDoYouWantToPublish                  string `i18n:"label='When to publish', hint='Title of the dialog that schedules a publication.'"`
+	PublishScheduleTip                      string `i18n:"label='Schedule: hint', hint='How scheduling works. {SchedulePublishTime} is replaced by the title of the scheduled time.'"`
+	DateTimePickerClearText                 string `i18n:"label='Date picker: clear', hint='Button of the date and time picker that clears the value.'"`
+	DateTimePickerOkText                    string `i18n:"label='Date picker: OK', hint='Button of the date and time picker that confirms the value.'"`
+	SaveAsNewVersion                        string `i18n:"hint='Action that saves the changes as a new version.'"`
+	SwitchedToNewVersion                    string `i18n:"hint='Shown once the record switched to the new version.'"`
+	SuccessfullyCreated                     string `i18n:"hint='Shown once a version was created.'"`
+	SuccessfullyRename                      string `i18n:"label='Successfully renamed', hint='Shown once a version was renamed.'"`
+	SuccessfullyPublished                   string `i18n:"hint='Shown once a record was published.'"`
+	SuccessfullyPublishedOrRepublished      string `i18n:"hint='Shown once records were published or republished.'"`
+	SuccessfullyUnpublished                 string `i18n:"hint='Shown once a record was taken off the site.'"`
+	SuccessfullyRepublished                 string `i18n:"hint='Shown once a record was republished.'"`
+	OnlineVersion                           string `i18n:"hint='Mark of the version that is published.'"`
+	VersionsList                            string `i18n:"hint='Title of the list of a record\\'s versions.'"`
+	AllVersions                             string `i18n:"hint='Filter of the versions list: every version.'"`
+	NamedVersions                           string `i18n:"hint='Filter of the versions list: the versions given a name.'"`
+	RenameVersion                           string `i18n:"hint='Action that renames a version.'"`
+	DeleteVersionConfirmationTextTemplate   string `i18n:"label='Delete version: confirmation', hint='Asks to confirm the deletion of a version. {VersionName} is replaced by its name.'"`
+	BulkActionConfirmationTextTemplate      string `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the records listed (HTML). {Action} is replaced by the action.'"`
+	BulkActionNoRecordsTextTemplate         string `i18n:"type=html, label='Bulk action: no records', hint='Shown when there is no record to act on (HTML). {Action} is replaced by the action.'"`
 
-	FilterTabAllVersions   string
-	FilterTabOnlineVersion string
-	FilterTabNamedVersions string
-	Rename                 string
-	PageOverView           string
-	Duplicate              string
+	FilterTabAllVersions   string `i18n:"label='Tab: all versions', hint='Tab that shows every version.'"`
+	FilterTabOnlineVersion string `i18n:"label='Tab: online versions', hint='Tab that shows the published versions.'"`
+	FilterTabNamedVersions string `i18n:"label='Tab: named versions', hint='Tab that shows the versions given a name.'"`
+	Rename                 string `i18n:"hint='Action that renames.'"`
+	PageOverView           string `i18n:"label='Page overview', hint='Title of the summary of a page.'"`
+	Duplicate              string `i18n:"hint='Action that copies a record into a new one.'"`
 }
 
 func (msgr *Messages) Status(status string) string {

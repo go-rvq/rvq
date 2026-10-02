@@ -68,86 +68,86 @@ func ErrorToMessageError(msgr *Messages, err error) (r error) {
 
 type Messages struct {
 	// common
-	Confirm string
-	Verify  string
+	Confirm string `i18n:"hint='Button that confirms.'"`
+	Verify  string `i18n:"hint='Button that checks a passcode.'"`
 	// login page
-	LoginPageTitle      string
-	AccountLabel        string
-	AccountPlaceholder  string
-	PasswordLabel       string
-	PasswordPlaceholder string
-	SignInBtn           string
-	SignOutBtn          string
-	ForgetPasswordLink  string
+	LoginPageTitle      string `i18n:"label='Login page title', hint='Title of the sign-in page.'"`
+	AccountLabel        string `i18n:"label='Account label', hint='Label of the account (email) field of the sign-in.'"`
+	AccountPlaceholder  string `i18n:"label='Account placeholder', hint='Placeholder of the account (email) field of the sign-in.'"`
+	PasswordLabel       string `i18n:"hint='Label of the password field of the sign-in.'"`
+	PasswordPlaceholder string `i18n:"hint='Placeholder of the password field of the sign-in.'"`
+	SignInBtn           string `i18n:"label='Sign in button', hint='Button that signs in.'"`
+	SignOutBtn          string `i18n:"label='Sign out button', hint='Button that signs out.'"`
+	ForgetPasswordLink  string `i18n:"label='Forgot password link', hint='Link to the recovery of a forgotten password.'"`
 	// login dialog: the session ended under a page the user was working on, so
 	// the login opens over it (see docs/session-lost.md)
-	LoginAgainTitle string
+	LoginAgainTitle string `i18n:"hint='Title shown when the session ended and the user must sign in again.'"`
 	// forget password page
-	ForgetPasswordPageTitle        string
-	ForgotMyPasswordTitle          string
-	ForgetPasswordEmailLabel       string
-	ForgetPasswordEmailPlaceholder string
-	SendResetPasswordEmailBtn      string
-	ResendResetPasswordEmailBtn    string
-	SendEmailTooFrequentlyNotice   string
+	ForgetPasswordPageTitle        string `i18n:"label='Forgot password page title', hint='Title of the page of the recovery of a password.'"`
+	ForgotMyPasswordTitle          string `i18n:"hint='Heading of the recovery of a password.'"`
+	ForgetPasswordEmailLabel       string `i18n:"label='Forgot password: email label', hint='Label of the email field of the recovery.'"`
+	ForgetPasswordEmailPlaceholder string `i18n:"label='Forgot password: email placeholder', hint='Placeholder of the email field of the recovery.'"`
+	SendResetPasswordEmailBtn      string `i18n:"label='Send reset email button', hint='Button that sends the email to reset the password.'"`
+	ResendResetPasswordEmailBtn    string `i18n:"label='Resend reset email button', hint='Button that sends the reset email again.'"`
+	SendEmailTooFrequentlyNotice   string `i18n:"label='Email too frequent', hint='Shown when emails were asked for too often.'"`
 	// reset password link sent page
-	ResetPasswordLinkSentPageTitle string
-	ResetPasswordLinkWasSentTo     string
-	ResetPasswordLinkSentPrompt    string
+	ResetPasswordLinkSentPageTitle string `i18n:"label='Reset link sent: page title', hint='Title of the page shown once the reset link was sent.'"`
+	ResetPasswordLinkWasSentTo     string `i18n:"label='Reset link sent to', hint='Text before the address the reset link was sent to.'"`
+	ResetPasswordLinkSentPrompt    string `i18n:"label='Reset link sent: prompt', hint='What to do once the reset link was sent.'"`
 	// reset password page
-	ResetPasswordPageTitle          string
-	ResetYourPasswordTitle          string
-	ResetPasswordLabel              string
-	ResetPasswordPlaceholder        string
-	ResetPasswordConfirmLabel       string
-	ResetPasswordConfirmPlaceholder string
+	ResetPasswordPageTitle          string `i18n:"hint='Title of the page that resets the password.'"`
+	ResetYourPasswordTitle          string `i18n:"hint='Heading of the reset of the password.'"`
+	ResetPasswordLabel              string `i18n:"label='Reset: new password label', hint='Label of the new password field of the reset.'"`
+	ResetPasswordPlaceholder        string `i18n:"label='Reset: new password placeholder', hint='Placeholder of the new password field of the reset.'"`
+	ResetPasswordConfirmLabel       string `i18n:"label='Reset: confirm label', hint='Label of the field that repeats the new password.'"`
+	ResetPasswordConfirmPlaceholder string `i18n:"label='Reset: confirm placeholder', hint='Placeholder of the field that repeats the new password.'"`
 	// change password page
-	ChangePasswordPageTitle             string
-	ChangePasswordTitle                 string
-	ChangePasswordOldLabel              string
-	ChangePasswordOldPlaceholder        string
-	ChangePasswordNewLabel              string
-	ChangePasswordNewPlaceholder        string
-	ChangePasswordNewConfirmLabel       string
-	ChangePasswordNewConfirmPlaceholder string
+	ChangePasswordPageTitle             string `i18n:"hint='Title of the page that changes the password.'"`
+	ChangePasswordTitle                 string `i18n:"hint='Heading of the change of the password.'"`
+	ChangePasswordOldLabel              string `i18n:"label='Change: old password label', hint='Label of the current password field.'"`
+	ChangePasswordOldPlaceholder        string `i18n:"label='Change: old password placeholder', hint='Placeholder of the current password field.'"`
+	ChangePasswordNewLabel              string `i18n:"label='Change: new password label', hint='Label of the new password field.'"`
+	ChangePasswordNewPlaceholder        string `i18n:"label='Change: new password placeholder', hint='Placeholder of the new password field.'"`
+	ChangePasswordNewConfirmLabel       string `i18n:"label='Change: confirm label', hint='Label of the field that repeats the new password.'"`
+	ChangePasswordNewConfirmPlaceholder string `i18n:"label='Change: confirm placeholder', hint='Placeholder of the field that repeats the new password.'"`
 	// TOTP setup page
-	TOTPSetupPageTitle       string
-	TOTPSetupTitle           string
-	TOTPSetupScanPrompt      string
-	TOTPSetupSecretPrompt    string
-	TOTPSetupEnterCodePrompt string
-	TOTPSetupCodePlaceholder string
+	TOTPSetupPageTitle       string `i18n:"label='TOTP setup page title', hint='Title of the page that sets up two-factor authentication.'"`
+	TOTPSetupTitle           string `i18n:"label='TOTP setup title', hint='Heading of the setup of two-factor authentication.'"`
+	TOTPSetupScanPrompt      string `i18n:"label='TOTP setup: scan', hint='Asks to scan the QR code with an authenticator app.'"`
+	TOTPSetupSecretPrompt    string `i18n:"label='TOTP setup: secret', hint='Offers the code to type into the app instead of the QR code.'"`
+	TOTPSetupEnterCodePrompt string `i18n:"label='TOTP setup: enter code', hint='Asks for the one-time code the app shows.'"`
+	TOTPSetupCodePlaceholder string `i18n:"label='TOTP setup: code placeholder', hint='Placeholder of the one-time code field.'"`
 	// TOTP validate page
-	TOTPValidatePageTitle       string
-	TOTPValidateTitle           string
-	TOTPValidateEnterCodePrompt string
-	TOTPValidateCodeLabel       string
-	TOTPValidateCodePlaceholder string
+	TOTPValidatePageTitle       string `i18n:"label='TOTP validate page title', hint='Title of the page that asks for the one-time code at sign-in.'"`
+	TOTPValidateTitle           string `i18n:"label='TOTP validate title', hint='Heading of the check of the one-time code.'"`
+	TOTPValidateEnterCodePrompt string `i18n:"label='TOTP validate: enter code', hint='Asks for the one-time code.'"`
+	TOTPValidateCodeLabel       string `i18n:"label='TOTP validate: code label', hint='Label of the one-time code field.'"`
+	TOTPValidateCodePlaceholder string `i18n:"label='TOTP validate: code placeholder', hint='Placeholder of the one-time code field.'"`
 	// Error Messages
-	ErrorSystemError                    string
-	ErrorCompleteUserAuthFailed         string
-	ErrorUserNotFound                   string
-	ErrorIncorrectAccountNameOrPassword string
-	ErrorUserLocked                     string
-	ErrorAccountIsRequired              string
-	ErrorPasswordCannotBeEmpty          string
-	ErrorPasswordNotMatch               string
-	ErrorIncorrectPassword              string
-	ErrorInvalidToken                   string
-	ErrorTokenExpired                   string
-	ErrorIncorrectTOTPCode              string
-	ErrorTOTPCodeReused                 string
-	ErrorIncorrectRecaptchaToken        string
-	ErrorIncorrectChallenge             string
-	ErrorChallengeExpired               string
-	ErrorPasswordVeryEasy               string
-	ErrorPasswordChanged                string
-	ErrorUserGetLocked                  string
+	ErrorSystemError                    string `i18n:"hint='Error of an unexpected failure.'"`
+	ErrorCompleteUserAuthFailed         string `i18n:"hint='Error when the sign-in through an external provider failed.'"`
+	ErrorUserNotFound                   string `i18n:"hint='Error when no user has the account given.'"`
+	ErrorIncorrectAccountNameOrPassword string `i18n:"label='Incorrect account or password', hint='Error of a wrong account or password.'"`
+	ErrorUserLocked                     string `i18n:"hint='Error when the user is locked out after failed sign-ins.'"`
+	ErrorAccountIsRequired              string `i18n:"label='Account is required', hint='Error when the account (email) is empty.'"`
+	ErrorPasswordCannotBeEmpty          string `i18n:"hint='Error when the password is empty.'"`
+	ErrorPasswordNotMatch               string `i18n:"label='Passwords do not match', hint='Error when the two passwords typed differ.'"`
+	ErrorIncorrectPassword              string `i18n:"hint='Error when the current password is wrong.'"`
+	ErrorInvalidToken                   string `i18n:"hint='Error of a reset link that is not valid.'"`
+	ErrorTokenExpired                   string `i18n:"hint='Error of a reset link that expired.'"`
+	ErrorIncorrectTOTPCode              string `i18n:"label='Incorrect TOTP code', hint='Error of a wrong one-time code.'"`
+	ErrorTOTPCodeReused                 string `i18n:"label='TOTP code reused', hint='Error of a one-time code already used.'"`
+	ErrorIncorrectRecaptchaToken        string `i18n:"label='Incorrect reCAPTCHA', hint='Error when the reCAPTCHA check failed.'"`
+	ErrorIncorrectChallenge             string `i18n:"hint='Error when the form check could not tell a person filled it in.'"`
+	ErrorChallengeExpired               string `i18n:"hint='Error when the form was open too long.'"`
+	ErrorPasswordVeryEasy               string `i18n:"label='Password too easy', hint='Error of a password too easy to guess.'"`
+	ErrorPasswordChanged                string `i18n:"hint='Shown when the password was changed elsewhere.'"`
+	ErrorUserGetLocked                  string `i18n:"label='User got locked', hint='Error when the user was just locked out.'"`
 	// Warn Messages
-	WarnPasswordHasBeenChanged string
+	WarnPasswordHasBeenChanged string `i18n:"label='Password changed: sign in again', hint='Shown when the password changed and the user must sign in again.'"`
 	// Info Messages
-	InfoPasswordSuccessfullyReset   string
-	InfoPasswordSuccessfullyChanged string
+	InfoPasswordSuccessfullyReset   string `i18n:"label='Password reset', hint='Shown once the password was reset.'"`
+	InfoPasswordSuccessfullyChanged string `i18n:"label='Password changed', hint='Shown once the password was changed.'"`
 }
 
 var Messages_en_US = &Messages{
