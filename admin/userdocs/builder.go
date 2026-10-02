@@ -161,6 +161,8 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 		d.LocaleCode = b.locale(ctx)
 		return nil
 	}
+	// the page shows; the documents are edited in the packages (pkg)
+	mb.SetReadonly(true).SetDeletingDisabled(true)
 	mb.Detailing().FetchFunc(fetch)
 	mb.Editing().FetchFunc(fetch)
 	mb.Detailing("Documentation").Field("Documentation").
@@ -199,14 +201,33 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 			`const u = new URL(window.location.href); u.searchParams.set("doc", ids[0]); `+
 			`window.location.href = u.toString(); }`)
 
-	return v.VRow(
-		v.VCol(
-			h.Div(h.Text(msgs.Contents)).Class("text-overline text-medium-emphasis"),
-			nav,
-		).Cols(12).Md(4).Lg(3).Class("border-e"),
-		v.VCol(b.document(ctx, tree, node)).Cols(12).Md(8).Lg(9),
-	).Class("user-docs")
+	// a style in a component is dropped by Vue: in the head of the page
+	if ctx.Injector != nil {
+		ctx.Injector.HeadHTML("<style>" + docStyle + "</style>")
+	}
+	return h.Div(
+		v.VRow(
+			v.VCol(
+				h.Div(h.Text(msgs.Contents)).Class("text-overline text-medium-emphasis"),
+				nav,
+			).Cols(12).Md(4).Lg(3).Class("border-e"),
+			v.VCol(b.document(ctx, tree, node)).Cols(12).Md(8).Lg(9),
+		).Class("user-docs"),
+	)
 }
+
+// docStyle is the look of a document: its pictures within the column,
+// framed; its tables, code and headings spaced.
+const docStyle = `
+.user-doc img { max-width: 100%; height: auto; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; margin: 8px 0; }
+.user-doc h1 { font-size: 1.6rem; margin: 0 0 8px; }
+.user-doc h2 { font-size: 1.25rem; margin: 20px 0 8px; }
+.user-doc p, .user-doc ul, .user-doc ol { margin-bottom: 10px; }
+.user-doc ul, .user-doc ol { padding-left: 24px; }
+.user-doc code { background: rgba(var(--v-theme-on-surface), 0.06); padding: 1px 4px; border-radius: 4px; }
+.user-doc table { border-collapse: collapse; margin: 10px 0; }
+.user-doc th, .user-doc td { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); padding: 4px 8px; }
+`
 
 // document is the document of node in the request's language: its file, as
 // the package keeps it in that language; a page made of the node's parts
@@ -214,7 +235,7 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.HTMLComponent {
 	msgs := GetMessages(ctx.Context())
 	locale := b.locale(ctx)
-	r := &renderer{b: b, ctx: ctx}
+	r := &renderer{b: b, ctx: ctx, tree: tree}
 	file, src, content, err := b.find(locale, node)
 	if err != nil {
 		return v.VAlert(h.Text(fmt.Sprintf(msgs.RenderError, err))).Type("error")
@@ -258,12 +279,10 @@ func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.H
 // and its content as kept in locale — nil when none has it. An action that
 // its model's documents do not explain is the one of whatever package
 // explains it in general: actions/NAME.md (restore, the trash's, is the
-// trash's).
+// trash's); a nested model, children/WORD/README.md, WORD the last word of
+// its key (revisions).
 func (b *Builder) find(locale, node string) (file string, src *Source, content string, err error) {
-	files := []string{DocFile(node)}
-	if _, name, ok := strings.Cut(node, "/actions/"); ok && !strings.Contains(name, "/") {
-		files = append(files, "actions/"+name+".md")
-	}
+	files := DocFiles(node)
 	for _, f := range files {
 		for _, s := range b.sources {
 			c, ok, err := b.content(locale, s, f)
@@ -276,6 +295,25 @@ func (b *Builder) find(locale, node string) (file string, src *Source, content s
 		}
 	}
 	return "", nil, "", nil
+}
+
+// DocFiles are the files the document of node is looked for in, in order:
+// its own (DocFile); for an action, actions/NAME.md — the one of whatever
+// package explains it in general —; for a nested model,
+// children/WORD/README.md, WORD the last word of its key (posts_revisions is
+// children/revisions).
+func DocFiles(node string) []string {
+	files := []string{DocFile(node)}
+	if i := strings.LastIndex(node, "/actions/"); i >= 0 && !strings.Contains(node[i+len("/actions/"):], "/") {
+		files = append(files, "actions/"+node[i+len("/actions/"):]+".md")
+	} else if i := strings.LastIndex(node, "/children/"); i >= 0 {
+		key := node[i+len("/children/"):]
+		if j := strings.LastIndex(key, "_"); j >= 0 {
+			key = key[j+1:]
+		}
+		files = append(files, "children/"+key+"/README.md")
+	}
+	return files
 }
 
 // content is the file of src as kept in locale, and whether there is one.

@@ -1,0 +1,5 @@
+# The pictures of the documentation of the package (hermon-cms
+# tools/userdocs-shots).
+- file: roles/images/listing.png
+  url: /admin/admin/roles
+  wait: table

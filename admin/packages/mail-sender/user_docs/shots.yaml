@@ -1,0 +1,5 @@
+# The pictures of the documentation of the package (hermon-cms
+# tools/userdocs-shots).
+- file: mail_sender/images/listing.png
+  url: /admin/admin/mail-sender
+  wait: .v-main

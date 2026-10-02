@@ -17,6 +17,11 @@
 //	    MODEL_ID/children/CHILD/…   a model nested in it, the same way,
 //	                                recursively
 //	    MODEL_ID/images/*.png       its pictures, referred to by the documents
+//	    actions/ACTION.md           an action, of whatever model has it
+//	                                (restore), when the model's documents do
+//	                                not explain it
+//	    children/WORD/README.md     a nested model, of whatever model has it,
+//	                                by the last word of its key (revisions)
 //	    pages/PAGE/README.md        a page of the admin (db-tools)
 //	    groups/GROUP/README.md      a group of the menu
 //

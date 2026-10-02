@@ -1,0 +1,5 @@
+# The pictures of the documentation of the package (hermon-cms
+# tools/userdocs-shots).
+- file: activity_logs/images/listing.png
+  url: /admin/system/activity-logs
+  wait: table

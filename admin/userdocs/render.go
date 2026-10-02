@@ -113,6 +113,8 @@ func docNode(file string) string {
 type renderer struct {
 	b   *Builder
 	ctx *web.EventContext
+	// tree is the request's tree, made once
+	tree []*Node
 }
 
 // globals are the template's: admin.model, admin.action, admin.page and
@@ -184,7 +186,10 @@ func (r *renderer) globals() gad.Dict {
 				return nil, err
 			}
 			title := node
-			if n := findNode(r.b.Tree(r.ctx), node); n != nil {
+			if r.tree == nil {
+				r.tree = r.b.Tree(r.ctx)
+			}
+			if n := findNode(r.tree, node); n != nil {
 				title = n.Title
 			}
 			return link(title, r.b.DocHref(r.ctx, node)), nil

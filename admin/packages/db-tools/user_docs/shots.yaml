@@ -1,0 +1,5 @@
+# The pictures of the documentation of the package (hermon-cms
+# tools/userdocs-shots).
+- file: pages/db-tools/images/page.png
+  url: /admin/admin/db-tools
+  wait: .v-main
