@@ -12,13 +12,9 @@ import (
 // model and the models nested in it, an action, a page. Its ID is its
 // document's path without the file (DocFile).
 type Node struct {
-	ID    string `json:"value"`
-	Title string `json:"title"`
-	Icon  string `json:"prependIcon,omitempty"`
-	// Href is the URL of its document: the title of the item is a link to
-	// it. Not "href": the tree gives an item's keys to its list item as
-	// props, and an href would make the whole item a link.
-	Href     string  `json:"docHref,omitempty"`
+	ID       string  `json:"value"`
+	Title    string  `json:"title"`
+	Icon     string  `json:"prependIcon,omitempty"`
 	Children []*Node `json:"children,omitempty"`
 }
 
@@ -172,20 +168,6 @@ func findNode(nodes []*Node, id string) *Node {
 		}
 		if f := findNode(n.Children, id); f != nil {
 			return f
-		}
-	}
-	return nil
-}
-
-// ancestors are the ids of the nodes above id, from the root: the nodes the
-// tree opens to show it.
-func ancestors(nodes []*Node, id string) []string {
-	for _, n := range nodes {
-		if n.ID == id {
-			return []string{}
-		}
-		if a := ancestors(n.Children, id); a != nil {
-			return append([]string{n.ID}, a...)
 		}
 	}
 	return nil

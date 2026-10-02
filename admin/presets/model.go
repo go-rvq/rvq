@@ -66,6 +66,7 @@ type ModelBuilder struct {
 	// lock for a model with no UpdatedAt (see SetRecordStateStamp).
 	noRecordStateStamp  bool
 	menuIcon            string
+	menuChildren        MenuChildrenFunc
 	defaultURLQueryFunc func(*http.Request) url.Values
 	fieldLabels         map[string]func(ctx *web.EventContext) string
 	fieldHints          map[string]func(ctx *web.EventContext) string

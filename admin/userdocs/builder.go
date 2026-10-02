@@ -45,13 +45,7 @@ type Builder struct {
 	// languages there are.
 	locale  func(ctx *web.EventContext) string
 	locales func() []string
-	// openEvent is the event that shows a document in the portal of the page
-	// (docPortal), without a reload.
-	openEvent string
 }
-
-// docPortal is the portal of the document shown.
-const docPortal = "userdocs_doc"
 
 // New is the documentation of p, kept in db. The words of its page are
 // registered on p's i18n.
@@ -157,8 +151,9 @@ func (b *Builder) DocHref(ctx *web.EventContext, node string) string {
 }
 
 // Configure makes mb — of UserDoc, a singleton — the documentation page: the
-// tree of the menu on the left, the document of the node chosen on the right;
-// and pkg — of UserDocPackage — the documents of each package, edited.
+// document of the node chosen, the tree of the nodes under its item of the
+// menu (presets' MenuChildren); and pkg — of UserDocPackage — the documents of
+// each package, edited.
 func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	b.mb, b.pkg = mb, pkg
 
@@ -176,111 +171,65 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	mb.Detailing().Field("Documentation").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return b.page(ctx)
 	})
-	// a node chosen: its document in the portal, the page kept
-	b.openEvent = mb.RegisterEventFunc("userdocs_open", func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		r.UpdatePortal(docPortal, b.document(ctx, b.Tree(ctx), ctx.R.FormValue("doc")))
-		return
-	})
+	mb.MenuChildren(b.menuChildren)
 
 	b.configurePackages(pkg)
 }
 
-// page is the documentation: the tree on the left, the document on the
-// right.
+// page is the document of the node chosen — the first when none is.
 func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
-	msgs := GetMessages(ctx.Context())
 	tree := b.Tree(ctx)
-	node := ctx.R.FormValue("doc")
-	if node == "" && len(tree) > 0 {
-		node = tree[0].ID
-	}
-	// the nodes above the one shown, and it — its parts in sight
-	opened := ancestors(tree, node)
-	if opened == nil {
-		opened = []string{}
-	}
-	if n := findNode(tree, node); n != nil && len(n.Children) > 0 {
-		opened = append(opened, node)
-	}
-	// each node a link to its document — before Items, which writes the
-	// tree out
-	var link func(nodes []*Node)
-	link = func(nodes []*Node) {
-		for _, n := range nodes {
-			n.Href = b.DocHref(ctx, n.ID)
-			link(n.Children)
-		}
-	}
-	link(tree)
-	nav := v.VTreeview().
-		Items(tree).
-		ItemValue("value").
-		ItemTitle("title").
-		ItemChildren("children").
-		ItemProps(true).
-		Activatable(true).
-		Density(v.DensityCompact).
-		Opened(opened).
-		// the node shown, active: in locals, so a document opened in the
-		// portal moves it
-		Attr("v-model:activated", "locals.userDocsActive").
-		// the title a link to the node's document
-		Children(web.Slot(
-			h.A(h.Text("{{ (item.raw || item).title }}")).
-				Attr(":href", "(item.raw || item).docHref").
-				// the link opens the document and activates its node
-				Attr("@click", "(e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; "+
-					b.openLinkScript("e.currentTarget")+" }").
-				Class("user-docs-link text-decoration-none").
-				Style("color: inherit; display: block"),
-		).Name("title").Scope("{ item }"))
-
 	return h.Div(
 		// with the component — a page reached without a reload has no head
 		// of its own —; a <style> Vue would drop, a <component is="style">
 		// it keeps
 		h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML(docStyle)),
-		v.VRow(
-			v.VCol(
-				h.Div(h.Text(msgs.Contents)).Class("text-overline text-medium-emphasis"),
-				nav,
-			).Cols(12).Md(4).Lg(3).Class("border-e"),
-			v.VCol(web.Portal(b.document(ctx, tree, node)).Name(docPortal)).Cols(12).Md(8).Lg(9).
-				Attr("@click", b.openScript()),
-		).Class("user-docs").
-			Attr(web.VAssign("locals", "{userDocsActive: "+string(h.JSONString([]string{node}))+"}")...),
-	)
+		b.document(ctx, tree, b.shown(ctx, tree)),
+	).Class("user-docs").Attr("@click", b.openScript())
 }
 
-// openScript is the click of the document shown: a link to a document shows
-// it in the portal, the address following, without a reload; another link
-// goes as links go. A link keeps its href, so it still opens in a new tab.
+// shown is the node the request shows: its doc, else the first.
+func (b *Builder) shown(ctx *web.EventContext, tree []*Node) string {
+	node := ctx.R.FormValue("doc")
+	if node == "" && len(tree) > 0 {
+		node = tree[0].ID
+	}
+	return node
+}
+
+// menuChildren are the nodes of the tree as the children of the item of the
+// documentation in the menu, each its document's page; the one shown active.
+func (b *Builder) menuChildren(ctx *web.EventContext) ([]*presets.MenuNode, string) {
+	tree := b.Tree(ctx)
+	var nodes func(tree []*Node) []*presets.MenuNode
+	nodes = func(tree []*Node) (r []*presets.MenuNode) {
+		for _, n := range tree {
+			href := b.DocHref(ctx, n.ID)
+			r = append(r, &presets.MenuNode{Title: n.Title, Value: href,
+				Props: map[string]any{"href": href, "prependIcon": n.Icon}, Children: nodes(n.Children)})
+		}
+		return
+	}
+	return nodes(tree), b.DocHref(ctx, b.shown(ctx, tree))
+}
+
+// openScript is the click of the document: a link to another document opens
+// it as the menu opens its items — its page without a reload, the menu
+// following —; another link goes as links go. A link keeps its href, so it
+// still opens in a new tab.
 func (b *Builder) openScript() string {
+	base := strconv.Quote(b.mb.Info().ListingHref())
+	// a template of Vue sees none of the globals but a few (no window, URL):
+	// the window is the element's
 	return `(e) => {
 	const a = e.target && e.target.closest && e.target.closest("a[href]");
 	if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
-	` + b.openLinkScript("a") + `
-}`
-}
-
-// openLinkScript is what the click of a link — a, an element <a> — does: a
-// link to a document shows it in the portal (openEvent) and pushes its
-// address; another, nothing (the link goes as links go).
-func (b *Builder) openLinkScript(a string) string {
-	base := strconv.Quote(b.mb.Info().ListingHref())
-	// a template of Vue sees none of the globals but a few (no window, URL,
-	// history): the window is the element's
-	return `const w = ` + a + `.ownerDocument.defaultView;
-	const u = new w.URL(` + a + `.getAttribute("href"), w.location.href);
-	const doc = u.searchParams.get("doc");
-	if (u.pathname !== ` + base + ` || !doc) return;
+	const w = a.ownerDocument.defaultView;
+	const u = new w.URL(a.getAttribute("href"), w.location.href);
+	if (u.pathname !== ` + base + ` || !u.searchParams.get("doc")) return;
 	e.preventDefault();
-	// the node active here: the item's click would toggle it off again
-	e.stopPropagation();
-	locals.userDocsActive = [doc];
-	plaid().vars(vars).locals(locals).form(form).eventFunc(` + strconv.Quote(b.openEvent) + `)` +
-		`.query("doc", doc).query("locale", u.searchParams.get("locale") || "").url(` + base + `).go();
-	w.history.pushState(null, "", u.pathname + u.search);`
+	plaid().vars(vars).pushStateURL(u.pathname + u.search).go();
+}`
 }
 
 // docStyle is the look of a document: its pictures within the column,

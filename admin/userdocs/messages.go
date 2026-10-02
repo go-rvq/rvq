@@ -18,7 +18,6 @@ func GetMessages(ctx context.Context) *Messages {
 // Messages are the words of the documentation page.
 type Messages struct {
 	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	Contents          string `i18n:"hint='Title of the tree of the documentation.'"`
 	NothingWritten    string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
 	SeeAlso           string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
 	EditDocuments     string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
@@ -30,7 +29,6 @@ type Messages struct {
 
 var Messages_en_US = &Messages{
 	ModuleDescription: "The documentation of the admin: the page that explains each part of it.",
-	Contents:          "Contents",
 	NothingWritten:    "Nothing was written about this yet.",
 	SeeAlso:           "In this part",
 	EditDocuments:     "Edit the documents",
@@ -42,7 +40,6 @@ var Messages_en_US = &Messages{
 
 var Messages_pt_BR = &Messages{
 	ModuleDescription: "A documentação do admin: a página que explica cada parte dele.",
-	Contents:          "Conteúdo",
 	NothingWritten:    "Ainda não há nada escrito sobre isto.",
 	SeeAlso:           "Nesta parte",
 	EditDocuments:     "Editar os documentos",

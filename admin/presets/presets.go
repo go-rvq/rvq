@@ -664,16 +664,6 @@ var defaultMenuIconREs = []defaultMenuIconRE{
 	{re: regexp.MustCompile(`\bsettings?\b`), icon: "mdi-cog"},
 }
 
-// menuNode is one node of the data-driven side menu (a VTreeview item): a group
-// (has Children) or a leaf (Value is the target path). Props carries the item's
-// component props (the prepend icon, and href on leaves).
-type menuNode struct {
-	Title    string         `json:"title"`
-	Value    string         `json:"value"`
-	Props    map[string]any `json:"props,omitempty"`
-	Children []*menuNode    `json:"children,omitempty"`
-}
-
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	var (
 		mMap = make(map[string]*ModelBuilder)
@@ -700,7 +690,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 
 	// pageNode / modelNode build a leaf node (or nil when hidden/denied), record
 	// it as placed, and flag the active one.
-	pageNode := func(p *HttpPageBuilder) *menuNode {
+	pageNode := func(p *HttpPageBuilder) *MenuNode {
 		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
 			return nil
 		}
@@ -712,9 +702,9 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		if p.menuIcon != "" {
 			props["prependIcon"] = p.menuIcon
 		}
-		return &menuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
+		return &MenuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
 	}
-	modelNode := func(m *ModelBuilder) *menuNode {
+	modelNode := func(m *ModelBuilder) *MenuNode {
 		if m == nil || m.notInMenu || m.permissioner.ReqLister(ctx.R).Denied() {
 			return nil
 		}
@@ -733,11 +723,33 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		if icon == "" {
 			icon = defaultMenuIcon(m.label)
 		}
-		return &menuNode{
+		node := &MenuNode{
 			Title: m.TPageLabel(ctx.Context()),
 			Value: href,
 			Props: map[string]any{"href": href, "prependIcon": icon},
 		}
+		if m.menuChildren != nil {
+			if m.isMenuItemActive(ctx) {
+				// its page shown: its children with it, the one shown active
+				// and the way to it open
+				var active string
+				node.Children, active = m.menuChildren(ctx)
+				openedGroups = append(openedGroups, node.Value)
+				if path := menuPath(node.Children, active); path != nil {
+					activated = []string{active}
+					openedGroups = append(openedGroups, path...)
+				}
+			}
+			if len(node.Children) == 0 {
+				// else when it is opened (MenuChildrenEvent)
+				node.lazy = true
+				node.Props["loadChildren"] = map[string]string{
+					"url":   m.Info().ListingHref(ParentsModelID(ctx.R)...),
+					"event": MenuChildrenEvent,
+				}
+			}
+		}
+		return node
 	}
 
 	// groupNode builds a group node (and its nested sub-groups) recursively. It
@@ -745,10 +757,10 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	// group (or a descendant) holds the active item, so each ancestor adds itself
 	// to openedGroups and the whole chain auto-expands.
 	var (
-		groupNode func(v *MenuGroupBuilder) (node *menuNode, active bool)
-		itemNodes func(items []*MenuItem) (nodes []*menuNode, active bool)
+		groupNode func(v *MenuGroupBuilder) (node *MenuNode, active bool)
+		itemNodes func(items []*MenuItem) (nodes []*MenuNode, active bool)
 	)
-	groupNode = func(v *MenuGroupBuilder) (node *menuNode, active bool) {
+	groupNode = func(v *MenuGroupBuilder) (node *MenuNode, active bool) {
 		groupIcon := v.icon
 		if groupIcon == "" {
 			groupIcon = defaultMenuIcon(v.name)
@@ -763,7 +775,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 			// opened is keyed by the item value, which for a group is its key.
 			openedGroups = append(openedGroups, menuKey(MenuItemGroup, v.name))
 		}
-		return &menuNode{
+		return &MenuNode{
 			Title:    title,
 			Value:    menuKey(MenuItemGroup, v.name),
 			Props:    map[string]any{"prependIcon": groupIcon},
@@ -774,10 +786,10 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	// itemNodes renders a run of items in order. An item still waiting for its
 	// value renders nothing: it holds a place, and there is nothing to show
 	// until whoever owns it registers it.
-	itemNodes = func(items []*MenuItem) (nodes []*menuNode, active bool) {
+	itemNodes = func(items []*MenuItem) (nodes []*MenuNode, active bool) {
 		for _, it := range items {
 			var (
-				node        *menuNode
+				node        *MenuNode
 				childActive bool
 			)
 			switch value := it.Value.(type) {
@@ -792,7 +804,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				continue
 			}
 			nodes = append(nodes, node)
-			if childActive || (len(activated) > 0 && activated[0] == node.Value) {
+			if childActive || (len(activated) > 0 && node.has(activated[0])) {
 				active = true
 			}
 		}
@@ -815,7 +827,8 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				Size(SizeSmall),
 		).Attr("v-slot:prepend", "{ item }"),
 	).
-		Items(nodes).
+		// in locals: the children loaded on opening a node stay with it
+		Attr(":items", "locals.items").
 		ItemTitle("title").
 		ItemValue("value").
 		ItemChildren("children").
@@ -829,11 +842,15 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		Attr("v-model:opened", "locals.opened").
 		Attr("v-model:activated", "locals.activated").
 		Attr(":search", "vars.menuFilter").
+		// a node of children not loaded yet (MenuNode.lazy) loads them when
+		// opened
+		Attr(":load-children", menuLoadChildrenScript).
 		// Navigate when a leaf (value is a path) is activated; group values are
 		// "group:<name>" and are ignored.
 		Attr("@update:activated", `(v) => { const p = Array.isArray(v) ? v[v.length-1] : v; if (p && String(p).charAt(0) === '/') { plaid().vars(vars).pushStateURL(String(p)).go(); } }`)
 
 	r = web.Scope(tree).Slot("{ locals }").LocalsInit(
+		fmt.Sprintf(`{ items: %s}`, h.JSONString(nodes)),
 		fmt.Sprintf(`{ opened: %s}`, h.JSONString(openedGroups)),
 		fmt.Sprintf(`{ activated: %s}`, h.JSONString(activated)),
 	)
