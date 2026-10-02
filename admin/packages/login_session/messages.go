@@ -18,19 +18,19 @@ func ConfigureMessages(b *i18n.Builder) {
 }
 
 type Messages struct {
-	SignOutAllOtherSessions    string
-	SignOutAllSuccessfullyTips string
-	ChangePassword             string
-	LoginSessions              string
-	LoginSessionsTips          string
-	Expired                    string
-	Active                     string
-	CurrentSession             string
-	Time                       string
-	Device                     string
-	IPAddress                  string
-	HideIPTips                 string
-	Status                     string
+	SignOutAllOtherSessions    string `i18n:"label='Sign out all other sessions', hint='Button that ends every session of the user but the current one.'"`
+	SignOutAllSuccessfullyTips string `i18n:"label='Signed out of the others', hint='Shown once the user\\'s other sessions were ended.'"`
+	ChangePassword             string `i18n:"hint='Button that opens the change of the user\\'s password.'"`
+	LoginSessions              string `i18n:"hint='Title of the list of places where the user is logged in.'"`
+	LoginSessionsTips          string `i18n:"label='Login sessions: hint', hint='Text under the title of the login sessions list.'"`
+	Expired                    string `i18n:"hint='Status of a session that has ended.'"`
+	Active                     string `i18n:"hint='Status of a session still open.'"`
+	CurrentSession             string `i18n:"hint='Mark of the session the user is using now.'"`
+	Time                       string `i18n:"hint='Column with when a session started.'"`
+	Device                     string `i18n:"hint='Column with the browser and system of a session.'"`
+	IPAddress                  string `i18n:"label='IP address', hint='Column with the address a session came from.'"`
+	HideIPTips                 string `i18n:"label='Hidden IP: hint', hint='Shown in place of the address of a session when it is hidden.'"`
+	Status                     string `i18n:"hint='Column with whether a session is active or expired.'"`
 }
 
 var (

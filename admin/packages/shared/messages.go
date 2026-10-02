@@ -15,22 +15,22 @@ const I18nSharedKey i18n.ModuleKey = "SharedManager"
 
 // Messages are the sharing UI labels.
 type Messages struct {
-	ShareTitle    string
-	ShareWith     string
-	ShareWithHint string
-	Permissions   string
-	CanView       string
-	CanEdit       string
-	CanDelete     string
-	SharedWith    string
-	NoShares      string
-	Add           string
-	Remove        string
-	MyInvites     string
-	NoInvites     string
-	AcceptInvite  string
-	RejectInvite  string
-	InviteFrom    string
+	ShareTitle    string `i18n:"label='Share: title', hint='Title of the dialog that shares a record.'"`
+	ShareWith     string `i18n:"hint='Label of the users a record is shared with.'"`
+	ShareWithHint string `i18n:"label='Share with: hint', hint='Hint of the users field: one per line, or separated by commas or semicolons.'"`
+	Permissions   string `i18n:"hint='Label of what the users a record is shared with may do.'"`
+	CanView       string `i18n:"hint='Permission to see a shared record.'"`
+	CanEdit       string `i18n:"hint='Permission to change a shared record.'"`
+	CanDelete     string `i18n:"hint='Permission to delete a shared record.'"`
+	SharedWith    string `i18n:"hint='Title of the users a record is shared with.'"`
+	NoShares      string `i18n:"hint='Shown when a record is shared with no one.'"`
+	Add           string `i18n:"label='Share', hint='Button that shares the record with the users chosen.'"`
+	Remove        string `i18n:"hint='Button that stops sharing the record with a user.'"`
+	MyInvites     string `i18n:"label='My invites', hint='Title of the shares the user was invited to.'"`
+	NoInvites     string `i18n:"hint='Shown when the user has no invite waiting.'"`
+	AcceptInvite  string `i18n:"label='Accept invite', hint='Button that accepts an invite to a shared record.'"`
+	RejectInvite  string `i18n:"label='Decline invite', hint='Button that declines an invite to a shared record.'"`
+	InviteFrom    string `i18n:"label='Invited by', hint='Label of who invited the user to a shared record.'"`
 }
 
 var Messages_en_US = &Messages{

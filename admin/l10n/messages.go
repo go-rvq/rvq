@@ -9,23 +9,23 @@ import (
 const I18nLocalizeKey i18n.ModuleKey = "I18nLocalizeKey"
 
 type Messages struct {
-	Localize                         string
-	LocalizeFrom                     string
-	LocalizeTo                       string
-	CurrentLocalizations             string
-	Actions                          string
-	Localizations                    string
-	SuccessfullyLocalized            string
-	Location                         string
-	Colon                            string
-	International                    string
-	China                            string
-	Japan                            string
-	ErrDeleteInternationalizedRecord string
-	ChangeLocale                     string
-	SuccessfullyChangedLocale        string
-	ErrChangeLocaleEmpty             string
-	ErrChangeLocaleUnavailable       string
+	Localize                         string `i18n:"hint='Action that copies a record to other languages.'"`
+	LocalizeFrom                     string `i18n:"label='Localize: from', hint='Label of the language a record is localized from.'"`
+	LocalizeTo                       string `i18n:"label='Localize: to', hint='Label of the languages a record is localized to.'"`
+	CurrentLocalizations             string `i18n:"hint='Title of the languages a record already exists in.'"`
+	Actions                          string `i18n:"hint='Title of the actions column of the localizations.'"`
+	Localizations                    string `i18n:"hint='Title of a record\\'s versions in other languages.'"`
+	SuccessfullyLocalized            string `i18n:"hint='Shown once a record was localized.'"`
+	Location                         string `i18n:"label='Language', hint='Label of the language (location) of a record.'"`
+	Colon                            string `i18n:"hint='The colon put after a label, as the language writes it.'"`
+	International                    string `i18n:"hint='Name of the international (default) language option.'"`
+	China                            string `i18n:"hint='Name of the China location option.'"`
+	Japan                            string `i18n:"hint='Name of the Japan location option.'"`
+	ErrDeleteInternationalizedRecord string `i18n:"label='Delete: localized record', hint='Error when deleting the default-language record of a record that has localizations.'"`
+	ChangeLocale                     string `i18n:"label='Change language', hint='Action that moves a record to another language.'"`
+	SuccessfullyChangedLocale        string `i18n:"label='Language changed', hint='Shown once a record was moved to another language.'"`
+	ErrChangeLocaleEmpty             string `i18n:"label='Change language: none chosen', hint='Error when no language was chosen to move a record to.'"`
+	ErrChangeLocaleUnavailable       string `i18n:"label='Change language: taken', hint='Error when the record already exists in the chosen language.'"`
 }
 
 var Messages_en_US = &Messages{
