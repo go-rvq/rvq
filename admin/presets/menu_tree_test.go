@@ -294,3 +294,41 @@ func TestTwinDoesNotInheritTheGroupOfTheKeyOwner(t *testing.T) {
 		t.Errorf("URI do gêmeo = %q, want %q", got, want)
 	}
 }
+
+// A group's URI segment is its name unless it says otherwise (URIName): an
+// empty one adds none. Only the URIs follow it — the permissions keep the
+// groups' names.
+func TestMenuGroupURIName(t *testing.T) {
+	b := menuBuilder()
+	mb := b.Model(&menuAlpha{}, ModelWithID("locales")).URIName("locales")
+	other := b.Model(&menuBeta{}, ModelWithID("users")).URIName("users")
+	panel := b.MenuGroup("panel").Add(ModelItem("locales"))
+	b.MenuGroup("admin").Add(ModelItem("users"), GroupItem("panel"))
+
+	if got, want := mb.URI(), "admin/panel/locales"; got != want {
+		t.Errorf("default URI() = %q, want %q", got, want)
+	}
+
+	panel.URIName("painel")
+	if got, want := mb.URI(), "admin/painel/locales"; got != want {
+		t.Errorf("URI() with a URIName = %q, want %q", got, want)
+	}
+	b.MenuGroup("admin").URIName("")
+	if got, want := mb.URI(), "painel/locales"; got != want {
+		t.Errorf("URI() under a group with no segment = %q, want %q", got, want)
+	}
+	if got, want := other.URI(), "users"; got != want {
+		t.Errorf("URI() of a model of that group = %q, want %q", got, want)
+	}
+	if got, want := mb.MenuGroupName(), "admin/panel"; got != want {
+		t.Errorf("MenuGroupName() — what the permissions are named after — = %q, want %q", got, want)
+	}
+
+	page := HttpPage("/report")
+	b.PagesRegistrator().AddHttpPage(page)
+	panel.Add(PageItem("/report"))
+	page.Build("admin")
+	if got, want := page.FullPath(), "/admin/painel/report"; got != want {
+		t.Errorf("a page's FullPath() = %q, want %q", got, want)
+	}
+}

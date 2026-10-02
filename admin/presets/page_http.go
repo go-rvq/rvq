@@ -142,6 +142,16 @@ func (b *HttpPageBuilder) menuGroupPathNames() []string {
 	return strings.Split(strings.Trim(b.menuGroupName, "/"), "/")
 }
 
+// menuGroupURIPathNames are the URI segments of the groups the page sits in
+// (MenuGroupBuilder.URIName): what its URL is made of, while its permission
+// keeps the groups' names (menuGroupPathNames).
+func (b *HttpPageBuilder) menuGroupURIPathNames() []string {
+	if b.b != nil {
+		return b.GetMenuGroupBuilder().URIPathNames()
+	}
+	return b.menuGroupPathNames()
+}
+
 func (b *HttpPageBuilder) Perm(v *perm.PermVerifierBuilder) *HttpPageBuilder {
 	b.verififer = v
 	return b
@@ -283,7 +293,7 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 		b.verififer.Title(b.titleFunc)
 	}
 
-	b.fullPath = path.Join("/", prefix, path.Join(groups...), b.path)
+	b.fullPath = path.Join("/", prefix, path.Join(b.menuGroupURIPathNames()...), b.path)
 	ph := NewPageHandler(b.fullPath, b.handler, b.methods...)
 	for _, f := range b.postBuild {
 		f(ph)

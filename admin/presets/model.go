@@ -796,7 +796,7 @@ func (mb *ModelBuilder) Children() []*ModelBuilder {
 
 func (mb *ModelBuilder) URI() string {
 	dotUri := mb.uriName
-	if pth := mb.MenuGroup().Path(); pth != "" {
+	if pth := mb.MenuGroup().URIPath(); pth != "" {
 		dotUri = pth + "/" + dotUri
 	}
 	if mb.parent != nil {

@@ -130,6 +130,25 @@ permission all read from the tree, so moving an entry moves its URL with it.
 Nothing is cached on the model or on the page: a copy would go stale at the
 first move.
 
+### A group's URI segment: `URIName`
+
+A group's segment in the URLs is its name unless it says otherwise:
+
+```go
+b.MenuGroup("admin").Add(presets.GroupItem("panel"))
+b.MenuGroup("panel").URIName("painel").Add(presets.ModelItem("locales"))
+// URL:        /admin/admin/painel/locales
+// permission: …:admin:panel:locales        (the names, as before)
+
+b.MenuGroup("admin").URIName("")             // no segment of its own
+// URL:        /admin/painel/locales
+```
+
+Only the URLs follow it — `group.URIPath()` / `URIPathNames()`, read by the
+model's `URI()` and the page's `FullPath()`. The group's name, its key in the
+menu and the permissions' resources stay its name (`Path()`), so a policy
+already saved keeps matching.
+
 ## Title and icon
 
 A group's title defaults to a humanized version of its name; `Title` /

@@ -75,6 +75,8 @@ type MenuGroupBuilder struct {
 	name  string
 	icon  string
 	items []*MenuItem
+	// uriName is the group's segment in its models' URIs; nil is its name.
+	uriName *string
 
 	// b is the builder the group belongs to; it owns the key registry, so the
 	// group needs it to resolve the names its sub-items refer to.
@@ -146,9 +148,47 @@ func (b *MenuGroupBuilder) PathNames() (r []string) {
 	return append(r, b.name)
 }
 
-// Path is the group's place in the tree as a URI segment — "a/b/c" for a group
-// c nested in b nested in a. It is what a model under the group prefixes its
-// own URI with, so a model keeps the whole chain, not only its innermost group.
+// URIName sets the group's segment in the URIs of the models under it — its
+// name by default. Empty, the group adds no segment: its models' URIs are
+// those of its parent's. Only the URIs change: the group's name, its key in
+// the menu and the permissions' resources stay its name.
+func (b *MenuGroupBuilder) URIName(v string) *MenuGroupBuilder {
+	b.uriName = &v
+	return b
+}
+
+// GetURIName is the group's segment in its models' URIs (URIName).
+func (b *MenuGroupBuilder) GetURIName() string {
+	if b.uriName != nil {
+		return *b.uriName
+	}
+	return b.name
+}
+
+// URIPathNames are the URI segments from the outermost ancestor down to this
+// group, the empty ones left out.
+func (b *MenuGroupBuilder) URIPathNames() (r []string) {
+	if b == nil || b.item == nil {
+		return nil
+	}
+	for _, g := range append(b.Ancestors(), b) {
+		if n := g.GetURIName(); n != "" {
+			r = append(r, n)
+		}
+	}
+	return
+}
+
+// URIPath is what a model under the group prefixes its URI with: the
+// URIName of every group of the chain — "a/b/c" for c in b in a.
+func (b *MenuGroupBuilder) URIPath() string {
+	return strings.Join(b.URIPathNames(), "/")
+}
+
+// Path is the group's place in the tree — "a/b/c" for a group c nested in b
+// nested in a —, by the groups' names: what the permissions' resources are
+// named after. The models' URIs take URIPath, which is the same unless a group
+// says otherwise (URIName).
 func (b *MenuGroupBuilder) Path() string {
 	return strings.Join(b.PathNames(), "/")
 }
