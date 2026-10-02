@@ -256,7 +256,7 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 					Attr(":icon", fmt.Sprintf(`%s?"mdi-chevron-up-circle":"mdi-chevron-down"`, localsExpandVarName)).
 					Attr(":class", fmt.Sprintf(`{"v-data-table__expand-icon--active": locals.%s_%d, "v-data-table__expand-icon": true}`, expandVarName, i)).
 					On("click", fmt.Sprintf("locals.%s_%d = !locals.%s_%d", expandVarName, i, expandVarName, i)),
-			).Class("pr-0").Style("width: 40px;"))
+			).Class("pr-0").Style("width: 40px; min-width: 40px;"))
 		}
 
 		if b.selectable {
@@ -282,7 +282,7 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 						Attr("v-model", "itemLocals.inputValue").
 						Attr("@update:model-value", onChange+";locals.selected_count+=($event?1:-1);"),
 				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ inputValue :"%v"} `, inputValue)),
-			).Class("pr-0 item-selector"))
+			).Class("pr-0 item-selector").Style("width: 48px; min-width: 48px;"))
 		}
 
 		for _, f := range b.columns {
@@ -332,9 +332,9 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 						).Density("compact").
 							Attr("slim", true),
 					).ZIndex("50000"),
-				).Style("width: 64px;").Class("pl-0 noprint")
+				).Style("width: 64px; min-width: 64px;").Class("pl-0 noprint")
 			} else {
-				td = h.Td().Style("width: 64px;").Class("pl-0 noprint")
+				td = h.Td().Style("width: 64px; min-width: 64px;").Class("pl-0 noprint")
 			}
 			bindTds = append(bindTds, td)
 		}
@@ -415,7 +415,7 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 						Attr("style", "min-height: auto").
 						Attr("@update:model-value", onChange),
 				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue)),
-			).Style("width: 48px;").Class("pr-0"))
+			).Style("width: 48px; min-width: 48px;").Class("pr-0"))
 		}
 
 		{
@@ -492,7 +492,7 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 			if hasRowMenuCol {
 				trows[0] = append(trows[0], h.Th("").
 					Children(b.selectableColumnsBtn).
-					Style("width: 64px;").
+					Style("width: 64px; min-width: 64px;").
 					Class("pl-0 noprint").
 					AttrIf("rowspan", len(trows), len(trows) > 1)) // Edit, Delete menu
 			}
