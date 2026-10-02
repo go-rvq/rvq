@@ -18,9 +18,9 @@ func GetMessages(ctx context.Context) *Messages {
 
 type Messages struct {
 	ErrScriptFailure     i18n.ErrorString `i18n:"hint='Error shown when a script of the rich text editor fails.'"`
-	ParseErrorTemplate   string           `i18n:"label='Parse error', hint='Error of a script that could not be read. %d and %d are its line and column; %s is what went wrong.'"`
-	CompileErrorTemplate string           `i18n:"label='Compile error', hint='Error of a script that could not be compiled. %d and %d are its line and column; %s is what went wrong.'"`
-	RunErrorTemplate     string           `i18n:"label='Run error', hint='Error of a script that failed while running. %d and %d are its line and column; %s is what went wrong.'"`
+	ParseErrorTemplate   string           `i18n:"label='Parse error', hint='Error of a script that could not be read.', fields=(;'%[1]d'='the line', '%[2]d'='the column', '%[3]s'='what went wrong')"`
+	CompileErrorTemplate string           `i18n:"label='Compile error', hint='Error of a script that could not be compiled.', fields=(;'%[1]d'='the line', '%[2]d'='the column', '%[3]s'='what went wrong')"`
+	RunErrorTemplate     string           `i18n:"label='Run error', hint='Error of a script that failed while running.', fields=(;'%[1]d'='the line', '%[2]d'='the column', '%[3]s'='what went wrong')"`
 	// EditorUsage is the help of the script editor, written in Gadx.
 	EditorUsage gadxtpl.Template `i18n:"type=gadx, hint='Help of the script editor, shown beside it: Gadx (HTML with logic).'"`
 }

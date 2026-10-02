@@ -19,25 +19,25 @@ type Messages struct {
 	// NoSchema: a field drawn without a schema.
 	NoSchema string `i18n:"hint='Error when a schema form field has no schema.'"`
 	// FormWithoutSchema: a form field with no schema; %q is the field.
-	FormWithoutSchema string `i18n:"label='Form without schema', hint='Error when a field is a form and has no schema. %q is the field\\'s name.'"`
+	FormWithoutSchema string `i18n:"label='Form without schema', hint='Error when a field is a form and has no schema.', fields=(;'%q'='the field\\'s name')"`
 	// ItemsUnavailable: the values a field may hold could not be fetched; %q
 	// the field, %v why.
-	ItemsUnavailable string `i18n:"hint='Error when the values a field may hold could not be fetched. %q is the field, %v the error.'"`
+	ItemsUnavailable string `i18n:"hint='Error when the values a field may hold could not be fetched.', fields=(;'%q'='the field', '%v'='the error')"`
 	// NoItems: a field that is a closed list has nothing to choose; %q the
 	// field.
-	NoItems string `i18n:"hint='Error when a field has no values to choose from. %q is the field.'"`
+	NoItems string `i18n:"hint='Error when a field has no values to choose from.', fields=(;'%q'='the field')"`
 	// ListTypeUnknown: a list's items are of a type with no component; %q the
 	// type, %v the ones there are.
-	ListTypeUnknown string `i18n:"label='List type unknown', hint='Error when a list asks for a type with no component and no enum. %q is the type, %v the types there are.'"`
+	ListTypeUnknown string `i18n:"label='List type unknown', hint='Error when a list asks for a type with no component and no enum.', fields=(;'%q'='the type', '%v'='the types there are')"`
 	// FieldTypeUnknown: a field of a type with no component; %q the field,
 	// %q the type, %v the ones there are.
-	FieldTypeUnknown string `i18n:"hint='Error when a field asks for a type with no component and no enum. %q is the field, the second %q the type, %v the types there are.'"`
+	FieldTypeUnknown string `i18n:"hint='Error when a field asks for a type with no component and no enum.', fields=(;'%[1]q'='the field', '%[2]q'='the type', '%[3]v'='the types there are')"`
 
 	// ChooseValue: a required choice was left empty.
 	ChooseValue string `i18n:"hint='Placeholder of a field whose value is chosen from a list.'"`
 	// NotAmongItems: a value the list does not offer; %q the value, %s the
 	// ones it does.
-	NotAmongItems string `i18n:"hint='Error when a value is not one of those a field may hold. %q is the value, %s the values it may hold.'"`
+	NotAmongItems string `i18n:"hint='Error when a value is not one of those a field may hold.', fields=(;'%q'='the value', '%s'='the values it may hold')"`
 	// ItemsUnavailableOnSave: the values could not be fetched to check the one
 	// posted (why follows it).
 	ItemsUnavailableOnSave string `i18n:"label='Items unavailable on save', hint='Error on save when the values a field may hold could not be fetched.'"`

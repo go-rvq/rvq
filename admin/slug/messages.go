@@ -1,7 +1,7 @@
 package slug
 
 type Messages struct {
-	Sync string `i18n:"label='Auto sync', hint='Label of the switch that keeps a slug in step with another field. %s is that field\\'s label, in lower case.'"`
+	Sync string `i18n:"label='Auto sync', hint='Label of the switch that keeps a slug in step with another field.', fields=(;'%s'='that field\\'s label, in lower case')"`
 }
 
 var Messages_en_US = &Messages{

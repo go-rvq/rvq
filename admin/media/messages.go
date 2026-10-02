@@ -20,7 +20,7 @@ type Messages struct {
 	Download                    string `i18n:"hint='Button that downloads a file.'"`
 	ChooseAFile                 string `i18n:"label='Choose a file', hint='Title of the dialog that chooses a file of the media library.'"`
 	ChosenFileIsGone            string `i18n:"hint='Shown when the chosen file was removed from the media library meanwhile.'"`
-	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image. %d and %d are its width and height in pixels, %s its proportion (16:9).'"`
+	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image.', fields=(;'%[1]d'='its width, in pixels', '%[2]d'='its height, in pixels', '%[3]s'='its proportion (16:9)')"`
 	Search                      string `i18n:"hint='Placeholder of the search of the media library.'"`
 	UploadFiles                 string `i18n:"hint='Button that uploads files to the media library.'"`
 	Cropping                    string `i18n:"hint='Shown while an image is being cropped.'"`

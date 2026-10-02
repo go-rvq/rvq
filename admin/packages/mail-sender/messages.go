@@ -45,7 +45,7 @@ type Messages struct {
 	SendMailTestFormMessage           string           `i18n:"label='Test: message', hint='Label of the body of the test email.'"`
 	SendMailTestFormSender            string           `i18n:"label='Test: sender', hint='Label of the sender the test email goes through.'"`
 	ErrGmailSenderCredentialsInvalid  i18n.ErrorString `i18n:"hint='Error when the credentials file is not of a Desktop application.'"`
-	ErrGmailSenderScopeNotGranted     string           `i18n:"hint='Error when Google gave a token without the scope needed. %s is the scope.'"`
+	ErrGmailSenderScopeNotGranted     string           `i18n:"hint='Error when Google gave a token without the scope needed.', fields=(;'%s'='the scope')"`
 	SendMailSuccessfully              string           `i18n:"label='Mail sent', hint='Shown once an email was sent.'"`
 }
 

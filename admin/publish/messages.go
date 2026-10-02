@@ -37,7 +37,7 @@ type Messages struct {
 	SchedulePublishTime                     string `i18n:"hint='Title of when a record is scheduled to be published.'"`
 	NotSet                                  string `i18n:"hint='Shown for a time not set.'"`
 	WhenDoYouWantToPublish                  string `i18n:"label='When to publish', hint='Title of the dialog that schedules a publication.'"`
-	PublishScheduleTip                      string `i18n:"label='Schedule: hint', hint='How scheduling works. {SchedulePublishTime} is replaced by the title of the scheduled time.'"`
+	PublishScheduleTip                      string `i18n:"label='Schedule: hint', hint='How scheduling works.', fields=(;'{SchedulePublishTime}'='the title of the scheduled time')"`
 	DateTimePickerClearText                 string `i18n:"label='Date picker: clear', hint='Button of the date and time picker that clears the value.'"`
 	DateTimePickerOkText                    string `i18n:"label='Date picker: OK', hint='Button of the date and time picker that confirms the value.'"`
 	SaveAsNewVersion                        string `i18n:"hint='Action that saves the changes as a new version.'"`
@@ -53,9 +53,9 @@ type Messages struct {
 	AllVersions                             string `i18n:"hint='Filter of the versions list: every version.'"`
 	NamedVersions                           string `i18n:"hint='Filter of the versions list: the versions given a name.'"`
 	RenameVersion                           string `i18n:"hint='Action that renames a version.'"`
-	DeleteVersionConfirmationTextTemplate   string `i18n:"label='Delete version: confirmation', hint='Asks to confirm the deletion of a version. {VersionName} is replaced by its name.'"`
-	BulkActionConfirmationTextTemplate      string `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the records listed (HTML). {Action} is replaced by the action.'"`
-	BulkActionNoRecordsTextTemplate         string `i18n:"type=html, label='Bulk action: no records', hint='Shown when there is no record to act on (HTML). {Action} is replaced by the action.'"`
+	DeleteVersionConfirmationTextTemplate   string `i18n:"label='Delete version: confirmation', hint='Asks to confirm the deletion of a version.', fields=(;'{VersionName}'='its name')"`
+	BulkActionConfirmationTextTemplate      string `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the records listed (HTML).', fields=(;'{Action}'='the action')"`
+	BulkActionNoRecordsTextTemplate         string `i18n:"type=html, label='Bulk action: no records', hint='Shown when there is no record to act on (HTML).', fields=(;'{Action}'='the action')"`
 
 	FilterTabAllVersions   string `i18n:"label='Tab: all versions', hint='Tab that shows every version.'"`
 	FilterTabOnlineVersion string `i18n:"label='Tab: online versions', hint='Tab that shows the published versions.'"`

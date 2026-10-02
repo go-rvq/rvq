@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"text/template"
 
+	"github.com/gad-lang/gad"
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/worker"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/i18n/gadttpl"
 	db_tools "github.com/go-rvq/rvq/x/packages/db-tools"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"golang.org/x/text/language"
@@ -21,85 +22,53 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type MessagesPersistence struct {
-	Enabled     string `i18n:"type=html, hint='Shown when removing old backups is on (HTML).'"`
-	Disabled    string `i18n:"type=html, hint='Shown when removing old backups is off (HTML).'"`
-	Title       string `i18n:"hint='Title of the backup persistence.'"`
-	Days        string `i18n:"hint='How many days are kept. %d is the number.'"`
-	Weeks       string `i18n:"hint='How many weeks are kept. %d is the number.'"`
-	Months      string `i18n:"hint='How many months are kept. %d is the number.'"`
-	Years       string `i18n:"hint='How many years are kept. %d is the number.'"`
-	NoOther     string `i18n:"hint='Shown when no time is set for the other backups.'"`
-	OtherDays   string `i18n:"hint='The other backups kept by days.'"`
-	OtherWeeks  string `i18n:"hint='The other backups kept by weeks.'"`
-	OtherMonths string `i18n:"hint='The other backups kept by months.'"`
-	OtherYears  string `i18n:"hint='The other backups kept by years.'"`
-	Template    string `i18n:"type=html, hint='Summary of the persistence, a Go template (HTML): .valid says it is set, .enabled is the Enabled or Disabled text, and .days, .weeks, .months, .years, .other the parts; join_and joins them.'"`
+	Enabled     string           `i18n:"type=html, hint='Shown when removing old backups is on (HTML).'"`
+	Disabled    string           `i18n:"type=html, hint='Shown when removing old backups is off (HTML).'"`
+	Title       string           `i18n:"hint='Title of the backup persistence.'"`
+	Days        string           `i18n:"hint='How many days are kept.', fields=(;'%d'='the number')"`
+	Weeks       string           `i18n:"hint='How many weeks are kept.', fields=(;'%d'='the number')"`
+	Months      string           `i18n:"hint='How many months are kept.', fields=(;'%d'='the number')"`
+	Years       string           `i18n:"hint='How many years are kept.', fields=(;'%d'='the number')"`
+	NoOther     string           `i18n:"hint='Shown when no time is set for the other backups.'"`
+	OtherDays   string           `i18n:"hint='The other backups kept by days.'"`
+	OtherWeeks  string           `i18n:"hint='The other backups kept by weeks.'"`
+	OtherMonths string           `i18n:"hint='The other backups kept by months.'"`
+	OtherYears  string           `i18n:"hint='The other backups kept by years.'"`
+	Template    gadttpl.Template `i18n:"type=gadt, hint='Summary of the persistence (HTML).', fields=(;valid='whether it is set', enabled='the Enabled or Disabled text', days='the days part', weeks='the weeks part', months='the months part', years='the years part', other='the other part', join_and='join_and(sep, lastSep, parts…): the parts not empty, sep between them and lastSep before the last')"`
 }
 
 func (p *MessagesPersistence) Format(per *db_tools.Persistence) (s h.RawHTML, err error) {
-	var t *template.Template
-	if t, err = template.New("messages_persistence").
-		Funcs(map[string]any{
-			"join_and": func(sep, lastSep string, elem ...string) string {
-				var valid []string
-				for _, s := range elem {
-					if len(s) > 0 {
-						valid = append(valid, s)
-					}
-				}
-
-				elem = valid
-				switch len(elem) {
-				case 0:
-					return ""
-				case 1:
-					return elem[0]
-				}
-
-				s := strings.Join(elem[:len(elem)-1], sep)
-				if len(elem) > 1 {
-					return s + lastSep + elem[len(elem)-1]
-				}
-				return s
-			},
-		}).
-		Parse(p.Template); err != nil {
-		return
+	data := gad.Dict{
+		"enabled":  gad.Str(p.Enabled),
+		"valid":    gad.Bool(!per.IsZero()),
+		"days":     gad.Str(""),
+		"weeks":    gad.Str(""),
+		"months":   gad.Str(""),
+		"years":    gad.Str(""),
+		"join_and": gadttpl.JoinAnd,
 	}
 
-	var (
-		data = map[string]any{
-			"enabled": p.Enabled,
-			"valid":   !per.IsZero(),
-			"days":    "",
-			"weeks":   "",
-			"months":  "",
-			"years":   "",
-		}
-		other string
-		w     strings.Builder
-	)
-
 	if !per.Enabled {
-		data["enabled"] = p.Disabled
+		data["enabled"] = gad.Str(p.Disabled)
 	}
 
 	if per.Days > 0 {
-		data["days"] = fmt.Sprintf(p.Days, per.Days)
+		data["days"] = gad.Str(fmt.Sprintf(p.Days, per.Days))
 	}
 
 	if per.Weeks > 0 {
-		data["weeks"] = fmt.Sprintf(p.Weeks, per.Weeks)
+		data["weeks"] = gad.Str(fmt.Sprintf(p.Weeks, per.Weeks))
 	}
 
 	if per.Months > 0 {
-		data["months"] = fmt.Sprintf(p.Months, per.Months)
+		data["months"] = gad.Str(fmt.Sprintf(p.Months, per.Months))
 	}
 
 	if per.Years > 0 {
-		data["years"] = fmt.Sprintf(p.Years, per.Years)
+		data["years"] = gad.Str(fmt.Sprintf(p.Years, per.Years))
 	}
 
+	var other string
 	switch per.Other {
 	case db_tools.PersistenceOtherYears:
 		other = p.OtherYears
@@ -111,10 +80,13 @@ func (p *MessagesPersistence) Format(per *db_tools.Persistence) (s h.RawHTML, er
 		other = p.OtherDays
 	}
 
-	data["other"] = other
+	data["other"] = gad.Str(other)
 
-	err = t.Execute(&w, data)
-	s = h.RawHTML(w.String())
+	var out string
+	if out, err = p.Template.Render(data); err != nil {
+		return
+	}
+	s = h.RawHTML(out)
 	return
 }
 
@@ -134,9 +106,9 @@ type Messages struct {
 	Size                                 string              `i18n:"hint='Column with the size of a backup.'"`
 	Message                              string              `i18n:"hint='Column with the note given to a backup.'"`
 	Actions                              string              `i18n:"hint='Column with the actions of a backup.'"`
-	BackupDetailTemplate                 string              `i18n:"label='Backup detail', hint='Line of the job log about a backup. %s is its detail.'"`
-	BackupRemovedTemplate                h.RawHTML           `i18n:"type=html, label='Backup removed', hint='Shown once a backup was removed (HTML). %s is the backup.'"`
-	BackupRemoveConfirmTemplate          h.RawHTML           `i18n:"type=html, label='Backup remove confirmation', hint='Asks to confirm the removal of a backup (HTML). %s is the backup.'"`
+	BackupDetailTemplate                 string              `i18n:"label='Backup detail', hint='Line of the job log about a backup.', fields=(;'%s'='its detail')"`
+	BackupRemovedTemplate                h.RawHTML           `i18n:"type=html, label='Backup removed', hint='Shown once a backup was removed (HTML).', fields=(;'%s'='the backup')"`
+	BackupRemoveConfirmTemplate          h.RawHTML           `i18n:"type=html, label='Backup remove confirmation', hint='Asks to confirm the removal of a backup (HTML).', fields=(;'%s'='the backup')"`
 	Auto                                 string              `i18n:"hint='Mark of a backup made automatically.'"`
 	Persistence                          MessagesPersistence `i18n:"hint='The words of how long backups are kept.'"`
 	PersistenceEnabled                   string              `i18n:"label='Persistence: enabled', hint='Label of whether old backups are removed.'"`
@@ -187,7 +159,7 @@ var (
 			OtherWeeks:  "other weeks",
 			OtherMonths: "other months",
 			OtherYears:  "other years",
-			Template:    `{{if .valid}}{{.enabled}}, keep for {{join_and ", " " and " .days .weeks .months .years .other}}{{else}}<span class='text-warning'>Do not keep</span>{{end}}.`,
+			Template:    `{ if valid begin }{= enabled }, keep for {= join_and(", ", " and ", days, weeks, months, years, other) }{ else }<span class='text-warning'>Do not keep</span>{ end }.`,
 		},
 	}
 
@@ -223,7 +195,7 @@ var (
 			OtherWeeks:  "demais semanas",
 			OtherMonths: "demais meses",
 			OtherYears:  "demais anos",
-			Template:    `{{if .valid}}{{.enabled}}, manter por {{join_and ", " " e " .days .weeks .months .years .other}}{{else}}<span class='text-warning'>Não manter</span>{{end}}.`,
+			Template:    `{ if valid begin }{= enabled }, manter por {= join_and(", ", " e ", days, weeks, months, years, other) }{ else }<span class='text-warning'>Não manter</span>{ end }.`,
 		},
 		PersistenceEnabled: "Ativado",
 		PersistenceYears:   "Anos",

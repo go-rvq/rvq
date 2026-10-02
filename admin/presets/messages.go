@@ -64,8 +64,8 @@ type Messages struct {
 	SuccessfullyDeleted        string `i18n:"hint='Shown once a record was deleted.'"`
 	SuccessfullyExecutedAction string `i18n:"hint='Shown once an action ran.'"`
 	Search                     string `i18n:"hint='Placeholder of the search of a listing.'"`
-	TheFemaleTitle             string `i18n:"label='The (feminine)', hint='A title with its article, for a feminine noun. %s is the title.'"`
-	TheMaleTitle               string `i18n:"label='The (masculine)', hint='A title with its article, for a masculine noun. %s is the title.'"`
+	TheFemaleTitle             string `i18n:"label='The (feminine)', hint='A title with its article, for a feminine noun.', fields=(;'%s'='the title')"`
+	TheMaleTitle               string `i18n:"label='The (masculine)', hint='A title with its article, for a masculine noun.', fields=(;'%s'='the title')"`
 
 	YouAreHere                                 string                 `i18n:"hint='Label of the breadcrumb (where the user is).'"`
 	New                                        string                 `i18n:"hint='Button that creates a record.'"`
@@ -82,17 +82,17 @@ type Messages struct {
 	Cancel                                     string                 `i18n:"hint='Button that closes without doing anything.'"`
 	Clear                                      string                 `i18n:"hint='Button that empties a field.'"`
 	Create                                     string                 `i18n:"hint='Button that saves a new record.'"`
-	DeleteConfirmationTextTemplate             string                 `i18n:"label='Delete confirmation', hint='Asks to confirm a deletion. {the_model} is replaced by the model with its article, {title} by the record\\'s title.'"`
-	CreatingFemaleObjectTitleTemplate          string                 `i18n:"label='New record title (feminine)', hint='Title of the creation of a record of a feminine model. {modelName} is the model.'"`
-	EditingTitleTemplate                       string                 `i18n:"label='Editing title', hint='Title of the form of a record. {modelName} is the model.'"`
-	CreatingObjectTitleTemplate                string                 `i18n:"label='New record title', hint='Title of the creation of a record. {modelName} is the model.'"`
-	EditingObjectTitleTemplate                 string                 `i18n:"label='Editing record title', hint='Title of the form of a record. {modelName} is the model, {id} the record.'"`
-	ListingObjectTitleTemplate                 string                 `i18n:"label='Listing title', hint='Title of a listing. {modelName} is the model.'"`
-	DetailingObjectTitleTemplate               string                 `i18n:"label='Detail title', hint='Title of the detail of a record. {modelName} is the model, {id} the record.'"`
+	DeleteConfirmationTextTemplate             string                 `i18n:"label='Delete confirmation', hint='Asks to confirm a deletion.', fields=(;'{the_model}'='the model, with its article', '{title}'='the record\\'s title')"`
+	CreatingFemaleObjectTitleTemplate          string                 `i18n:"label='New record title (feminine)', hint='Title of the creation of a record of a feminine model.', fields=(;'{modelName}'='the model')"`
+	EditingTitleTemplate                       string                 `i18n:"label='Editing title', hint='Title of the form of a record.', fields=(;'{modelName}'='the model')"`
+	CreatingObjectTitleTemplate                string                 `i18n:"label='New record title', hint='Title of the creation of a record.', fields=(;'{modelName}'='the model')"`
+	EditingObjectTitleTemplate                 string                 `i18n:"label='Editing record title', hint='Title of the form of a record.', fields=(;'{modelName}'='the model', '{id}'='the record')"`
+	ListingObjectTitleTemplate                 string                 `i18n:"label='Listing title', hint='Title of a listing.', fields=(;'{modelName}'='the model')"`
+	DetailingObjectTitleTemplate               string                 `i18n:"label='Detail title', hint='Title of the detail of a record.', fields=(;'{modelName}'='the model', '{id}'='the record')"`
 	FiltersClear                               string                 `i18n:"hint='Button that removes every filter.'"`
 	FiltersAdd                                 string                 `i18n:"hint='Button that opens the filters.'"`
 	FilterApply                                string                 `i18n:"hint='Button that applies a filter.'"`
-	FilterByTemplate                           string                 `i18n:"label='Filter by', hint='Title of a filter. {filter} is its name.'"`
+	FilterByTemplate                           string                 `i18n:"label='Filter by', hint='Title of a filter.', fields=(;'{filter}'='its name')"`
 	FiltersDateInTheLast                       string                 `i18n:"label='Date: in the last', hint='Date filter operator: within the last days or months.'"`
 	FiltersDateEquals                          string                 `i18n:"label='Date: equals', hint='Date filter operator: on the day.'"`
 	FiltersDateBetween                         string                 `i18n:"label='Date: between', hint='Date filter operator: between two days.'"`
@@ -117,14 +117,14 @@ type Messages struct {
 	MonthNames                                 [13]string             `i18n:"hint='The names of the months, January first (the item 0 is unused).'"`
 	Year                                       string                 `i18n:"hint='Label of a year.'"`
 	PaginationRowsPerPage                      string                 `i18n:"label='Rows per page', hint='Label of how many records a page of a listing shows.'"`
-	PaginationPageInfo                         string                 `i18n:"label='Page info', hint='Which records the page shows. {currPageStart} and {currPageEnd} are the first and last, {total} how many there are.'"`
+	PaginationPageInfo                         string                 `i18n:"label='Page info', hint='Which records the page shows.', fields=(;'{currPageStart}'='the first record', '{currPageEnd}'='the last record', '{total}'='how many there are')"`
 	PaginationPage                             string                 `i18n:"label='Page', hint='Label before the page number.'"`
-	PaginationOfPage                           string                 `i18n:"label='Of pages', hint='After the page number. {total} is how many pages there are.'"`
+	PaginationOfPage                           string                 `i18n:"label='Of pages', hint='After the page number.', fields=(;'{total}'='how many pages there are')"`
 	ListingNoRecordToShow                      string                 `i18n:"label='No records', hint='Shown when a listing is empty.'"`
-	ListingSelectedCountNotice                 string                 `i18n:"label='Selected count', hint='How many records are selected. {count} is the number.'"`
+	ListingSelectedCountNotice                 string                 `i18n:"label='Selected count', hint='How many records are selected.', fields=(;'{count}'='the number')"`
 	ListingClearSelection                      string                 `i18n:"label='Clear selection', hint='Link that unselects every record.'"`
 	BulkActionNoAvailableRecords               string                 `i18n:"label='Bulk action: none possible', hint='Shown when no selected record can take the action.'"`
-	BulkActionSelectedIdsProcessNoticeTemplate string                 `i18n:"label='Bulk action: some impossible', hint='Shown when some selected records cannot take the action. {ids} are those records.'"`
+	BulkActionSelectedIdsProcessNoticeTemplate string                 `i18n:"label='Bulk action: some impossible', hint='Shown when some selected records cannot take the action.', fields=(;'{ids}'='those records')"`
 	ConfirmDialogPromptTitle                   string                 `i18n:"label='Confirmation title', hint='Title of a confirmation dialog.'"`
 	ConfirmDialogPromptText                    string                 `i18n:"label='Confirmation text', hint='Question of a confirmation dialog.'"`
 	Language                                   string                 `i18n:"hint='Label of a language.'"`
@@ -137,7 +137,7 @@ type Messages struct {
 	ListEditorActions                          string                 `i18n:"label='List: actions', hint='Title of the actions column of a list.'"`
 	PleaseSelectRecord                         string                 `i18n:"hint='Shown when an action needs a record and none was selected.'"`
 	PrinterOptions                             PrinterOptionsMessages `i18n:"hint='The words of the print options.'"`
-	BulkActionConfirmationTextTemplate         string                 `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the selected records (HTML). {Action} is the action, {count} how many records.'"`
+	BulkActionConfirmationTextTemplate         string                 `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the selected records (HTML).', fields=(;'{Action}'='the action', '{count}'='how many records')"`
 
 	TimeFormats TimeFormatMessages `i18n:"hint='How times and dates are written.'"`
 
@@ -152,8 +152,8 @@ type Messages struct {
 	// ErrRecordChangedBy takes the author's name and e-mail.
 	// ErrRecordChangedUnknownWhen is for a model with no UpdatedAt: the state
 	// hash says the record moved, and nothing says when or by whom.
-	ErrRecordChanged            string           `i18n:"hint='Error when someone else saved the record after the form was opened. %s is when.'"`
-	ErrRecordChangedBy          string           `i18n:"hint='Error when someone else saved the record after the form was opened. The %s are who, their account, and when.'"`
+	ErrRecordChanged            string           `i18n:"hint='Error when someone else saved the record after the form was opened.', fields=(;'%s'='when it was saved')"`
+	ErrRecordChangedBy          string           `i18n:"hint='Error when someone else saved the record after the form was opened.', fields=(;'%[1]s'='who saved it', '%[2]s'='their account', '%[3]s'='when it was saved')"`
 	ErrRecordChangedUnknownWhen i18n.ErrorString `i18n:"hint='Error when someone else saved the record after the form was opened, when not known.'"`
 	ErrRecordStampMissing       i18n.ErrorString `i18n:"hint='Error of a form too old to be saved.'"`
 
