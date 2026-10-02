@@ -29,6 +29,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ModuleDescription is the field of a struct of messages that describes its
+// module — what the module is, for whoever translates it —, by convention:
+//
+//	type Messages struct {
+//		ModuleDescription string `i18n:"hint='The description of the module.'"`
+//		…
+//	}
+//
+// It is a text as the others (Walk gives it, translated with them); a
+// module's description is its value (Description).
+const ModuleDescription = "ModuleDescription"
+
+// Description is the description of the module of msgs: its ModuleDescription
+// field, empty when it has none.
+func Description(msgs any) string {
+	v := reflect.Indirect(reflect.ValueOf(msgs))
+	if v.Kind() != reflect.Struct {
+		return ""
+	}
+	f := v.FieldByName(ModuleDescription)
+	if !f.IsValid() || f.Kind() != reflect.String {
+		return ""
+	}
+	return f.String()
+}
+
 // Type is how a text is edited.
 type Type string
 

@@ -16,6 +16,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription             string    `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	FileSystem                    string    `i18n:"hint='Title of the file system tools page.'"`
 	WebDavAccessTemplate          h.RawHTML `i18n:"type=html, label='WebDAV access', hint='How to reach the files through WebDAV (HTML).', fields=(;'%s'='the WebDAV URL')"`
 	WebDavProtocolTitle           string    `i18n:"label='WebDAV protocol title', hint='Title of the section about the WebDAV protocol.'"`
@@ -28,7 +29,8 @@ func (m *Messages) WebDavAccess(url string) h.RawHTML {
 
 var (
 	Messages_en_US = &Messages{
-		FileSystem: "File System",
+		ModuleDescription: "The file system tools: browsing the files and reaching them through WebDAV.",
+		FileSystem:        "File System",
 		WebDavAccessTemplate: "Access the files through the WEBDAV protocol at the URL: <code class='text-primary'>%s" +
 			"</code>, using your user login and password.",
 		WebDavProtocolTitle: "WEBDAV Protocol",
@@ -38,7 +40,8 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
-		FileSystem: "Sistema de Arquivos",
+		ModuleDescription: "As ferramentas do sistema de arquivos: navegar pelos arquivos e acessá-los por WebDAV.",
+		FileSystem:        "Sistema de Arquivos",
 		WebDavAccessTemplate: "Acesse os arquivos através do protocolo WEBDAV, pela URL: <code class='text-primary'>%s" +
 			"</code>, usando seu login e senha de usuário.",
 		WebDavProtocolTitle: "Protocolo WEBDAV",

@@ -13,6 +13,7 @@ func MustGetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription              string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	Category                       string           `i18n:"hint='Label of a page\\'s category.'"`
 	Preview                        string           `i18n:"hint='Button that shows the page as it will look.'"`
 	Containers                     string           `i18n:"hint='Title of the blocks (containers) a page is built of.'"`
@@ -38,6 +39,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:              "The page builder: pages made of containers.",
 	Category:                       "Category",
 	Preview:                        "Preview",
 	Containers:                     "Containers",
@@ -63,6 +65,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:              "页面构建器：由容器组成的页面。",
 	Category:                       "目录",
 	Preview:                        "预览",
 	Containers:                     "组件",
@@ -88,6 +91,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	ModuleDescription:              "ページビルダー：コンテナで構成されたページ。",
 	Category:                       "カテゴリー",
 	Preview:                        "プレビュー",
 	Containers:                     "コンテナ",
@@ -113,6 +117,7 @@ var Messages_ja_JP = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:              "O construtor de páginas: páginas feitas de contêineres.",
 	Category:                       "Categoria",
 	Preview:                        "Visualizar",
 	Containers:                     "Blocos",

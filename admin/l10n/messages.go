@@ -9,6 +9,7 @@ import (
 const I18nLocalizeKey i18n.ModuleKey = "I18nLocalizeKey"
 
 type Messages struct {
+	ModuleDescription                string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	Localize                         string `i18n:"hint='Action that copies a record to other languages.'"`
 	LocalizeFrom                     string `i18n:"label='Localize: from', hint='Label of the language a record is localized from.'"`
 	LocalizeTo                       string `i18n:"label='Localize: to', hint='Label of the languages a record is localized to.'"`
@@ -29,6 +30,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:                "The localization of records: their versions in each language.",
 	Localize:                         "Localize",
 	LocalizeFrom:                     "From",
 	LocalizeTo:                       "To",
@@ -49,6 +51,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:                "记录的本地化：每种语言的版本。",
 	Localize:                         "本地化",
 	LocalizeFrom:                     "从",
 	LocalizeTo:                       "到",
@@ -69,6 +72,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	ModuleDescription:                "レコードのローカライズ：言語ごとのバージョン。",
 	Localize:                         "ローカライズ",
 	LocalizeFrom:                     "から",
 	LocalizeTo:                       "に",
@@ -97,6 +101,7 @@ func MustGetMessages(ctx context.Context) *Messages {
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:                "A localização dos registros: suas versões em cada idioma.",
 	Localize:                         "Localizar",
 	LocalizeFrom:                     "De",
 	LocalizeTo:                       "Para",

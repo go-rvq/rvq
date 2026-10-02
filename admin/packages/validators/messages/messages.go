@@ -3,6 +3,7 @@ package messages
 // Messages holds the validators admin UI labels. The pt-BR and en-US variants
 // must keep all fields filled (see TestMessagesCompleteness).
 type Messages struct {
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	// Validators is the menu group / resource title.
 	Validators string `i18n:"hint='Name of the validators model in the plural (menu, listing title).'"`
 	Validator  string `i18n:"hint='Name of the validators model in the singular (detail and form titles).'"`

@@ -1,6 +1,7 @@
 package seo
 
 type Messages struct {
+	ModuleDescription    string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	Variable             string `i18n:"label='Variables setting', hint='Title of the SEO variables settings.'"`
 	VariableDescription  string `i18n:"hint='Description of the SEO variables, under their title.'"`
 	Basic                string `i18n:"hint='Title of the basic SEO fields (title, description, keywords).'"`
@@ -51,6 +52,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:    "The SEO settings: titles, descriptions and the Open Graph of the pages.",
 	Variable:             "Variables Setting",
 	Basic:                "Basic",
 	Title:                "Title",
@@ -101,6 +103,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:    "SEO 设置：页面的标题、描述和 Open Graph。",
 	Variable:             "变量设置",
 	Basic:                "基本信息",
 	Title:                "标题",
@@ -151,6 +154,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:    "As configurações de SEO: títulos, descrições e o Open Graph das páginas.",
 	Variable:             "Configuração das variáveis",
 	Basic:                "Básico",
 	Title:                "Título",

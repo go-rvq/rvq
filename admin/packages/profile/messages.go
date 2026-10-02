@@ -14,16 +14,19 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	ChangePassword string `i18n:"hint='Button of the user\\'s profile that opens the change of their password.'"`
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	ChangePassword    string `i18n:"hint='Button of the user\\'s profile that opens the change of their password.'"`
 }
 
 var (
 	Messages_en_US = &Messages{
-		ChangePassword: "Change Password",
+		ModuleDescription: "The profile of the signed-in user.",
+		ChangePassword:    "Change Password",
 	}
 
 	Messages_pt_BR = &Messages{
-		ChangePassword: "Alterar Senha",
+		ModuleDescription: "O perfil do usuário conectado.",
+		ChangePassword:    "Alterar Senha",
 	}
 )
 

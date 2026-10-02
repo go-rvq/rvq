@@ -3,6 +3,7 @@ package messages
 // Messages holds every people UI label, action name and error text. The pt-BR
 // and en-US variants must keep all fields filled (see TestMessagesCompleteness).
 type Messages struct {
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	// People is the menu group title of the package.
 	People string `i18n:"hint='Title of the people section in the menu.'"`
 

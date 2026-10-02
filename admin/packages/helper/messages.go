@@ -14,7 +14,8 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	ErrFieldRequired i18n.ErrorString `i18n:"hint='Error of a required field left empty.'"`
+	ModuleDescription string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	ErrFieldRequired  i18n.ErrorString `i18n:"hint='Error of a required field left empty.'"`
 }
 
 func (m *Messages) FromError(err error) error {
@@ -28,11 +29,13 @@ func (m *Messages) FromError(err error) error {
 
 var (
 	Messages_en_US = &Messages{
-		ErrFieldRequired: i18n.ErrorString(ErrFieldRequired.Error()),
+		ModuleDescription: "Words shared by the helper components.",
+		ErrFieldRequired:  i18n.ErrorString(ErrFieldRequired.Error()),
 	}
 
 	Messages_pt_BR = &Messages{
-		ErrFieldRequired: "Este campo não pode ser vazio",
+		ModuleDescription: "Palavras compartilhadas pelos componentes auxiliares.",
+		ErrFieldRequired:  "Este campo não pode ser vazio",
 	}
 )
 

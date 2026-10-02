@@ -2,8 +2,9 @@ package messages
 
 // Messages_pt_BR is the Brazilian Portuguese translation (module default).
 var Messages_pt_BR = &Messages{
-	Validators: "Validadores",
-	Validator:  "Validador",
+	ModuleDescription: "Os validadores: as regras contra as quais um valor é verificado.",
+	Validators:        "Validadores",
+	Validator:         "Validador",
 
 	Name:        "Nome",
 	Description: "Descrição",

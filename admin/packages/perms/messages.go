@@ -13,25 +13,26 @@ const I18nKey i18n.ModuleKey = "PermsI18n"
 
 // Messages holds the labels of the permission manager and the trash.
 type Messages struct {
-	ManageTitle    string `i18n:"hint='Title of the dialog that manages who may do what with a record.'"`
-	Subject        string `i18n:"hint='Label of the roles or users a permission is given to.'"`
-	SubjectHint    string `i18n:"label='Subject: hint', hint='Hint of the roles or users field: one per line, or separated by commas.'"`
-	Permissions    string `i18n:"hint='Title of the permissions given over a record.'"`
-	Actions        string `i18n:"hint='Title of the actions a permission covers.'"`
-	Pages          string `i18n:"hint='Title of the pages a permission covers.'"`
-	NoGrants       string `i18n:"hint='Shown when no permission was given over a record.'"`
-	Help           string `i18n:"hint='Explanation of the permissions dialog: how to give and how to revoke.'"`
-	View           string `i18n:"hint='Permission to see a record.'"`
-	Edit           string `i18n:"hint='Permission to change a record.'"`
-	Delete         string `i18n:"hint='Permission to delete a record.'"`
-	FieldsView     string `i18n:"label='Fields: view', hint='Permission to see only some fields of a record.'"`
-	FieldsEdit     string `i18n:"label='Fields: edit', hint='Permission to change only some fields of a record.'"`
-	FieldsHelp     string `i18n:"label='Fields: hint', hint='Hint of the fields a permission may be restricted to.'"`
-	RevokeHint     string `i18n:"label='Revoke: hint', hint='Hint that saving with nothing checked revokes the permissions of the roles or users given.'"`
-	TabAll         string `i18n:"label='Tab: all', hint='Tab of a listing that shows the records not deleted.'"`
-	TabTrash       string `i18n:"label='Tab: trash', hint='Tab of a listing that shows the deleted records.'"`
-	Restore        string `i18n:"hint='Action that restores deleted records.'"`
-	TrashEmptyHint string `i18n:"label='Trash empty', hint='Shown when there is no deleted record.'"`
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	ManageTitle       string `i18n:"hint='Title of the dialog that manages who may do what with a record.'"`
+	Subject           string `i18n:"hint='Label of the roles or users a permission is given to.'"`
+	SubjectHint       string `i18n:"label='Subject: hint', hint='Hint of the roles or users field: one per line, or separated by commas.'"`
+	Permissions       string `i18n:"hint='Title of the permissions given over a record.'"`
+	Actions           string `i18n:"hint='Title of the actions a permission covers.'"`
+	Pages             string `i18n:"hint='Title of the pages a permission covers.'"`
+	NoGrants          string `i18n:"hint='Shown when no permission was given over a record.'"`
+	Help              string `i18n:"hint='Explanation of the permissions dialog: how to give and how to revoke.'"`
+	View              string `i18n:"hint='Permission to see a record.'"`
+	Edit              string `i18n:"hint='Permission to change a record.'"`
+	Delete            string `i18n:"hint='Permission to delete a record.'"`
+	FieldsView        string `i18n:"label='Fields: view', hint='Permission to see only some fields of a record.'"`
+	FieldsEdit        string `i18n:"label='Fields: edit', hint='Permission to change only some fields of a record.'"`
+	FieldsHelp        string `i18n:"label='Fields: hint', hint='Hint of the fields a permission may be restricted to.'"`
+	RevokeHint        string `i18n:"label='Revoke: hint', hint='Hint that saving with nothing checked revokes the permissions of the roles or users given.'"`
+	TabAll            string `i18n:"label='Tab: all', hint='Tab of a listing that shows the records not deleted.'"`
+	TabTrash          string `i18n:"label='Tab: trash', hint='Tab of a listing that shows the deleted records.'"`
+	Restore           string `i18n:"hint='Action that restores deleted records.'"`
+	TrashEmptyHint    string `i18n:"label='Trash empty', hint='Shown when there is no deleted record.'"`
 	// The trash's columns — when, by whom and from where a record was
 	// deleted —, the action that shows where from, and its words.
 	// DeletedNotice is the warning of the detail of a deleted record.
@@ -49,6 +50,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription: "The permissions: who may do what, and the trash of deleted records.",
 	ManageTitle:       "Manage Permissions",
 	Subject:           "Roles or users",
 	SubjectHint:       "One per line (or comma-separated). Applies to all of them.",
@@ -82,6 +84,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription: "As permissões: quem pode fazer o quê, e a lixeira dos registros excluídos.",
 	ManageTitle:       "Gerenciar Permissões",
 	Subject:           "Papéis ou usuários",
 	SubjectHint:       "Um por linha (ou separados por vírgula). Aplica a todos os informados.",
@@ -121,6 +124,6 @@ func msgs(ctx context.Context) *Messages {
 // registerMessages registers the perms messages on the builder (idempotent).
 func registerMessages(b *presets.Builder) {
 	b.I18n().
-		RegisterForModule(language.AmericanEnglish, I18nKey, Messages_en_US).
+		RegisterForModule(language.English, I18nKey, Messages_en_US).
 		RegisterForModule(language.BrazilianPortuguese, I18nKey, Messages_pt_BR)
 }

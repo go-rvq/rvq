@@ -1,13 +1,14 @@
 package activity
 
 type Messages struct {
-	ActivityLogs string `i18n:"hint='Name of the activity log model in the plural (menu, listing title).'"`
-	Activities   string `i18n:"hint='Title of a record\\'s activity tab.'"`
-	ActionAll    string `i18n:"label='Action: all', hint='Filter option for every kind of action.'"`
-	ActionView   string `i18n:"label='Action: view', hint='Kind of action: a record was seen.'"`
-	ActionEdit   string `i18n:"label='Action: edit', hint='Kind of action: a record was changed.'"`
-	ActionCreate string `i18n:"label='Action: create', hint='Kind of action: a record was created.'"`
-	ActionDelete string `i18n:"label='Action: delete', hint='Kind of action: a record was deleted.'"`
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	ActivityLogs      string `i18n:"hint='Name of the activity log model in the plural (menu, listing title).'"`
+	Activities        string `i18n:"hint='Title of a record\\'s activity tab.'"`
+	ActionAll         string `i18n:"label='Action: all', hint='Filter option for every kind of action.'"`
+	ActionView        string `i18n:"label='Action: view', hint='Kind of action: a record was seen.'"`
+	ActionEdit        string `i18n:"label='Action: edit', hint='Kind of action: a record was changed.'"`
+	ActionCreate      string `i18n:"label='Action: create', hint='Kind of action: a record was created.'"`
+	ActionDelete      string `i18n:"label='Action: delete', hint='Kind of action: a record was deleted.'"`
 
 	ModelUserID    string `i18n:"label='Creator ID', hint='Label of the id of who did an action.'"`
 	ModelCreatedAt string `i18n:"label='Date time', hint='Label of when an action was done.'"`
@@ -40,13 +41,14 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
-	ActivityLogs: "Activity Logs",
-	Activities:   "Activities",
-	ActionAll:    "All",
-	ActionView:   "View",
-	ActionEdit:   "Edit",
-	ActionCreate: "Create",
-	ActionDelete: "Delete",
+	ModuleDescription: "The activity log: who did what, and when.",
+	ActivityLogs:      "Activity Logs",
+	Activities:        "Activities",
+	ActionAll:         "All",
+	ActionView:        "View",
+	ActionEdit:        "Edit",
+	ActionCreate:      "Create",
+	ActionDelete:      "Delete",
 
 	ModelUserID:    "Creator ID",
 	ModelCreatedAt: "Date Time",
@@ -79,12 +81,13 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
-	Activities:   "活动",
-	ActionAll:    "全部",
-	ActionView:   "查看",
-	ActionEdit:   "编辑",
-	ActionCreate: "创建",
-	ActionDelete: "删除",
+	ModuleDescription: "活动日志：谁在何时做了什么。",
+	Activities:        "活动",
+	ActionAll:         "全部",
+	ActionView:        "查看",
+	ActionEdit:        "编辑",
+	ActionCreate:      "创建",
+	ActionDelete:      "删除",
 
 	ModelUserID:    "操作者ID",
 	ModelCreatedAt: "日期时间",
@@ -116,13 +119,14 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
-	ActivityLogs: "Registros de atividade",
-	Activities:   "Atividades",
-	ActionAll:    "Todas",
-	ActionView:   "Consulta",
-	ActionEdit:   "Alteração",
-	ActionCreate: "Criação",
-	ActionDelete: "Exclusão",
+	ModuleDescription: "O registro de atividades: quem fez o quê, e quando.",
+	ActivityLogs:      "Registros de atividade",
+	Activities:        "Atividades",
+	ActionAll:         "Todas",
+	ActionView:        "Consulta",
+	ActionEdit:        "Alteração",
+	ActionCreate:      "Criação",
+	ActionDelete:      "Exclusão",
 
 	ModelUserID:    "ID do autor",
 	ModelCreatedAt: "Data e hora",

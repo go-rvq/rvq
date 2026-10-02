@@ -16,6 +16,7 @@ const MessagesKey i18n.ModuleKey = "admin/presets/fields/schemaform"
 // one: the errors of a value posted, the buttons, and — when the schema asks
 // for what cannot be drawn — why a field is not there.
 type Messages struct {
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	// NoSchema: a field drawn without a schema.
 	NoSchema string `i18n:"hint='Error when a schema form field has no schema.'"`
 	// FormWithoutSchema: a form field with no schema; %q is the field.
@@ -54,6 +55,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:      "The forms made from a schema, and their errors.",
 	NoSchema:               "schemaform: the field has no schema",
 	FormWithoutSchema:      "schemaform: the field %q is a form with no schema",
 	ItemsUnavailable:       "the values of %q could not be fetched: %v",
@@ -71,6 +73,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:      "Os formulários gerados a partir de um schema, e seus erros.",
 	NoSchema:               "schemaform: o campo não tem schema",
 	FormWithoutSchema:      "schemaform: o campo %q é um form sem schema",
 	ItemsUnavailable:       "os valores de %q não puderam ser obtidos: %v",

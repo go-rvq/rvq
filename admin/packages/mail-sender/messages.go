@@ -10,6 +10,7 @@ import (
 const MessagesKey i18n.ModuleKey = "rqv-admin/mail-sender"
 
 type Messages struct {
+	ModuleDescription                 string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	MailSender                        string           `i18n:"hint='Name of the mail sender settings (menu, title).'"`
 	TestMessageSubject                string           `i18n:"label='Test message: subject', hint='Subject of the test email.'"`
 	TestMessageBody                   string           `i18n:"label='Test message: body', hint='Body of the test email.'"`
@@ -51,6 +52,7 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription:                 "The mail senders: the accounts the e-mails are sent through.",
 		MailSender:                        "Mail Sender",
 		TestMessageSubject:                "Test Send Mail",
 		TestMessageBody:                   "Test OK.",
@@ -107,6 +109,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription:                 "Os remetentes de e-mail: as contas pelas quais os e-mails são enviados.",
 		MailSender:                        "Envio de Email",
 		TestMessageSubject:                "Teste de envio de email",
 		TestMessageBody:                   "Teste executado com sucesso.",

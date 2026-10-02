@@ -11,6 +11,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription           string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	Crop                        string `i18n:"hint='Button that crops an image.'"`
 	CropImage                   string `i18n:"hint='Title of the dialog that crops an image.'"`
 	ChooseFile                  string `i18n:"hint='Button that opens the choice of a file of the media library.'"`
@@ -42,6 +43,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:           "The media library: uploading, choosing and cropping files and images.",
 	Crop:                        "Crop",
 	CropImage:                   "Crop Image",
 	ChooseFile:                  "Choose File",
@@ -71,6 +73,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:           "媒体库：上传、选择和裁剪文件与图片。",
 	Crop:                        "剪裁",
 	CropImage:                   "剪裁图片",
 	ChooseFile:                  "选择文件",
@@ -93,6 +96,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	ModuleDescription:           "メディアライブラリ：ファイルと画像のアップロード、選択、トリミング。",
 	Crop:                        "トリミング",
 	CropImage:                   "画像をトリミング",
 	ChooseFile:                  "ファイルを選択",
@@ -115,6 +119,7 @@ var Messages_ja_JP = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:           "A biblioteca de mídia: envio, escolha e recorte de arquivos e imagens.",
 	Crop:                        "Recortar",
 	CropImage:                   "Recortar imagem",
 	ChooseFile:                  "Escolher arquivo",

@@ -13,7 +13,7 @@ const Key i18n.ModuleKey = "validators"
 // Register registers the validators messages for every supported language.
 func Register(b *i18n.Builder) {
 	b.RegisterForModules(language.BrazilianPortuguese, Key, Messages_pt_BR)
-	b.RegisterForModules(language.AmericanEnglish, Key, Messages_en_US)
+	b.RegisterForModules(language.English, Key, Messages_en_US)
 }
 
 // Get returns the validators messages for the request context, falling back to

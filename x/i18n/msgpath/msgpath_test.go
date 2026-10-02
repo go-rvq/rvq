@@ -22,6 +22,7 @@ type Option struct {
 }
 
 type msgs struct {
+	ModuleDescription string `i18n:"hint='The description of the module.'"`
 	Base
 	Title    string `i18n:"label='Page title', hint='The title of the page.'"`
 	Deleted  string `i18n:"hint='Shown once records were deleted.', fields=(;'%d'='how many', '%[2]s'='the model\\'s name')"`
@@ -37,16 +38,17 @@ type msgs struct {
 
 func newMsgs() *msgs {
 	return &msgs{
-		Base:     Base{Save: "Save"},
-		Title:    "Title",
-		Deleted:  "%d deleted",
-		Body:     "<b>x</b>",
-		Form:     Sub{Submit: "Go"},
-		Ptr:      &Sub{Submit: "Ptr"},
-		Help:     [][2]string{{"A", "a"}, {"B", "b"}},
-		Options:  []Option{{"one", 1}},
-		Format:   func(int) string { return "" },
-		internal: "not a text",
+		ModuleDescription: "The test messages.",
+		Base:              Base{Save: "Save"},
+		Title:             "Title",
+		Deleted:           "%d deleted",
+		Body:              "<b>x</b>",
+		Form:              Sub{Submit: "Go"},
+		Ptr:               &Sub{Submit: "Ptr"},
+		Help:              [][2]string{{"A", "a"}, {"B", "b"}},
+		Options:           []Option{{"one", 1}},
+		Format:            func(int) string { return "" },
+		internal:          "not a text",
 	}
 }
 
@@ -83,7 +85,7 @@ func TestWalk(t *testing.T) {
 		got = append(got, e.Path+"="+strings.TrimSpace(e.Value)+":"+string(e.Type))
 	}
 	want := []string{
-		"Save=Save:text", "Title=Title:text", "Deleted=%d deleted:text", "Body=<b>x</b>:html",
+		"ModuleDescription=The test messages.:text", "Save=Save:text", "Title=Title:text", "Deleted=%d deleted:text", "Body=<b>x</b>:html",
 		"Form.Submit=Go:text", "Ptr.Submit=Ptr:text",
 		"Help[0][0]=A:text", "Help[0][1]=a:text", "Help[1][0]=B:text", "Help[1][1]=b:text",
 		"Options=- name: one\n  value: 1:form",
@@ -98,8 +100,8 @@ func TestWalk(t *testing.T) {
 	if !reflect.DeepEqual(sk, []string{"Count", "Format"}) {
 		t.Errorf("skipped %q", sk)
 	}
-	if entries[0].Label() != "Save" || entries[1].Label() != "Page title" || entries[4].Label() != "Submit button" {
-		t.Errorf("labels %q %q %q", entries[0].Label(), entries[1].Label(), entries[4].Label())
+	if entries[1].Label() != "Save" || entries[2].Label() != "Page title" || entries[5].Label() != "Submit button" {
+		t.Errorf("labels %q %q %q", entries[1].Label(), entries[2].Label(), entries[5].Label())
 	}
 	if _, _, err := Walk("x"); err == nil {
 		t.Error("a string was walked")
@@ -154,5 +156,17 @@ func TestClone(t *testing.T) {
 	}
 	if c.Format == nil {
 		t.Error("the func was lost")
+	}
+}
+
+func TestDescription(t *testing.T) {
+	if got := Description(newMsgs()); got != "The test messages." {
+		t.Errorf("Description %q", got)
+	}
+	if got := Description(&Sub{}); got != "" {
+		t.Errorf("no ModuleDescription: %q", got)
+	}
+	if got := Description("x"); got != "" {
+		t.Errorf("a string: %q", got)
 	}
 }

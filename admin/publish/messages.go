@@ -12,6 +12,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription                       string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	StatusDraft                             string `i18n:"label='Status: draft', hint='Status of a record not published yet.'"`
 	StatusOnline                            string `i18n:"label='Status: online', hint='Status of a published record.'"`
 	StatusOffline                           string `i18n:"label='Status: offline', hint='Status of a record taken off the site.'"`
@@ -124,6 +125,7 @@ func (msgr *Messages) BulkActionNoRecordsText(action string) string {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:                       "Publishing: versions, schedules and putting records online.",
 	StatusDraft:                             "Draft",
 	StatusOnline:                            "Online",
 	StatusOffline:                           "Offline",
@@ -179,6 +181,7 @@ var Messages_en_US = &Messages{
 var DefaultMessages = Messages_en_US
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:                       "发布：版本、计划和上线记录。",
 	StatusDraft:                             "草稿",
 	StatusOnline:                            "在线",
 	StatusOffline:                           "离线",
@@ -221,6 +224,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	ModuleDescription:                       "公開：バージョン、スケジュール、レコードの公開。",
 	StatusDraft:                             "下書き",
 	StatusOnline:                            "公開中",
 	StatusOffline:                           "非公開中",
@@ -262,6 +266,7 @@ var Messages_ja_JP = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:                       "A publicação: versões, agendamentos e colocar registros no ar.",
 	StatusDraft:                             "Rascunho",
 	StatusOnline:                            "No ar",
 	StatusOffline:                           "Fora do ar",

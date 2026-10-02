@@ -2,8 +2,9 @@ package messages
 
 // Messages_en_US is the American English translation.
 var Messages_en_US = &Messages{
-	Validators: "Validators",
-	Validator:  "Validator",
+	ModuleDescription: "The validators: the rules a value is checked against.",
+	Validators:        "Validators",
+	Validator:         "Validator",
 
 	Name:        "Name",
 	Description: "Description",

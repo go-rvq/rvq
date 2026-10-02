@@ -2,7 +2,8 @@ package messages
 
 // Messages_pt_BR is the Brazilian Portuguese translation (module default).
 var Messages_pt_BR = &Messages{
-	People: "Pessoas",
+	ModuleDescription: "As pessoas.",
+	People:            "Pessoas",
 
 	TabAll:  "Tudo",
 	Trash:   "Lixeira",

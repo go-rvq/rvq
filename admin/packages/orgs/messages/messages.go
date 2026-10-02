@@ -3,7 +3,8 @@ package messages
 // Messages holds the org module UI labels. pt-BR and en-US must keep all fields
 // filled.
 type Messages struct {
-	Organizacoes string `i18n:"label='Organizations', hint='Name of the organizations model in the plural (menu, listing title).'"`
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	Organizacoes      string `i18n:"label='Organizations', hint='Name of the organizations model in the plural (menu, listing title).'"`
 
 	Organizacao          string `i18n:"label='Organization', hint='Name of the organizations model in the singular (detail and form titles).'"`
 	OrganizacaoNome      string `i18n:"label='Name', hint='Label of an organization\\'s name field.'"`
@@ -21,7 +22,8 @@ type Messages struct {
 
 // Messages_pt_BR is the Brazilian Portuguese translation (module default).
 var Messages_pt_BR = &Messages{
-	Organizacoes: "Organizações",
+	ModuleDescription: "As organizações.",
+	Organizacoes:      "Organizações",
 
 	Organizacao:          "Organização",
 	OrganizacaoNome:      "Nome",
@@ -37,7 +39,8 @@ var Messages_pt_BR = &Messages{
 
 // Messages_en_US is the American English translation.
 var Messages_en_US = &Messages{
-	Organizacoes: "Organizations",
+	ModuleDescription: "The organizations.",
+	Organizacoes:      "Organizations",
 
 	Organizacao:          "Organization",
 	OrganizacaoNome:      "Name",

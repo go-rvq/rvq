@@ -18,17 +18,18 @@ func getMessages(ctx context.Context) *Messages {
 func GetMessages(ctx context.Context) *Messages { return getMessages(ctx) }
 
 type Messages struct {
-	History         string `i18n:"hint='Title of a record\\'s history (its revisions).'"`
-	Revisions       string `i18n:"hint='Name of the revisions model in the plural (tab, listing title).'"`
-	HistoryEmpty    string `i18n:"hint='Shown when a record has no revision yet.'"`
-	Hash            string `i18n:"hint='Column with the short identifier of a revision.'"`
-	Published       string `i18n:"hint='Column with whether a revision was published.'"`
-	Tag             string `i18n:"hint='Column with the name given to a published revision.'"`
-	Accesses        string `i18n:"hint='Column with how many times a published revision was accessed.'"`
-	InitialRevision string `i18n:"hint='Shown for the first revision of a record.'"`
-	Unchanged       string `i18n:"hint='Shown for a field the revision did not change.'"`
-	Old             string `i18n:"label='Before', hint='Column with a field\\'s value before a change.'"`
-	New             string `i18n:"label='After', hint='Column with a field\\'s value after a change.'"`
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	History           string `i18n:"hint='Title of a record\\'s history (its revisions).'"`
+	Revisions         string `i18n:"hint='Name of the revisions model in the plural (tab, listing title).'"`
+	HistoryEmpty      string `i18n:"hint='Shown when a record has no revision yet.'"`
+	Hash              string `i18n:"hint='Column with the short identifier of a revision.'"`
+	Published         string `i18n:"hint='Column with whether a revision was published.'"`
+	Tag               string `i18n:"hint='Column with the name given to a published revision.'"`
+	Accesses          string `i18n:"hint='Column with how many times a published revision was accessed.'"`
+	InitialRevision   string `i18n:"hint='Shown for the first revision of a record.'"`
+	Unchanged         string `i18n:"hint='Shown for a field the revision did not change.'"`
+	Old               string `i18n:"label='Before', hint='Column with a field\\'s value before a change.'"`
+	New               string `i18n:"label='After', hint='Column with a field\\'s value after a change.'"`
 
 	Revision string `i18n:"hint='Name of the revisions model in the singular (detail title).'"`
 	// RevisionSnapshot is the detail's field of the record as of the revision.
@@ -66,6 +67,7 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription: "The history of revisions of records: comparing and restoring them.",
 		History:           "History",
 		Revisions:         "Revisions",
 		HistoryEmpty:      "No revisions yet.",
@@ -110,6 +112,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription: "O histórico de revisões dos registros: comparar e restaurar.",
 		History:           "Histórico",
 		Revisions:         "Revisões",
 		HistoryEmpty:      "Ainda não há revisões.",

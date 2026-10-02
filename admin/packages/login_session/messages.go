@@ -18,6 +18,7 @@ func ConfigureMessages(b *i18n.Builder) {
 }
 
 type Messages struct {
+	ModuleDescription          string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	SignOutAllOtherSessions    string `i18n:"label='Sign out all other sessions', hint='Button that ends every session of the user but the current one.'"`
 	SignOutAllSuccessfullyTips string `i18n:"label='Signed out of the others', hint='Shown once the user\\'s other sessions were ended.'"`
 	ChangePassword             string `i18n:"hint='Button that opens the change of the user\\'s password.'"`
@@ -35,6 +36,7 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription:          "The login sessions of the users: where and when they signed in.",
 		SignOutAllOtherSessions:    "Signout all other sessions",
 		SignOutAllSuccessfullyTips: "Sign out all successfully",
 		ChangePassword:             "Change password",
@@ -51,6 +53,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription:          "As sessões de login dos usuários: onde e quando entraram.",
 		ChangePassword:             "Alterar Senha",
 		LoginSessions:              "Sessões de Login",
 		LoginSessionsTips:          "Locais onde você está conectado ao administrador.",

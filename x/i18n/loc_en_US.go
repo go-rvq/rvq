@@ -8,10 +8,11 @@ import (
 )
 
 var Default_en = &DefaultMessages{
-	True:  "True",
-	False: "False",
-	Yes:   "Yes",
-	No:    "No",
+	ModuleDescription: "Words and formats common to every module: dates, times and numbers.",
+	True:              "True",
+	False:             "False",
+	Yes:               "Yes",
+	No:                "No",
 }
 
 func init() {

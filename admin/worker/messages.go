@@ -21,6 +21,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription        string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	StatusNew                string           `i18n:"hint='Status of a job created and not yet scheduled or started.'"`
 	StatusScheduled          string           `i18n:"hint='Status of a job waiting for its scheduled time.'"`
 	StatusRunning            string           `i18n:"hint='Status of a job being executed.'"`
@@ -52,6 +53,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:        "The jobs run in the background, and their progress.",
 	StatusNew:                "New",
 	StatusScheduled:          "Scheduled",
 	StatusRunning:            "Running",
@@ -83,6 +85,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:        "后台运行的任务及其进度。",
 	StatusNew:                "新建",
 	StatusScheduled:          "计划",
 	StatusRunning:            "运行中",
@@ -111,6 +114,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:        "Os trabalhos executados em segundo plano, e seu andamento.",
 	StatusNew:                "Novas",
 	StatusScheduled:          "Agendada",
 	StatusRunning:            "Executando",

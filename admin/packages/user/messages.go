@@ -14,6 +14,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription         string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	User                      string `i18n:"hint='Name of the users model in the singular (detail and form titles).'"`
 	Users                     string `i18n:"hint='Name of the users model in the plural (menu, listing title).'"`
 	UserCreatedAt             string `i18n:"label='Created', hint='Label of when a user was created.'"`
@@ -43,6 +44,7 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription:                 "The users of the admin.",
 		User:                              "User",
 		Users:                             "Users",
 		UserCreatedAt:                     "Created",
@@ -65,6 +67,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription:                 "Os usuários do admin.",
 		User:                              "Usuário",
 		Users:                             "Usuários",
 		UserCreatedAt:                     "Cadastro",

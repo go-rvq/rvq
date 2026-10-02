@@ -17,6 +17,7 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
+	ModuleDescription    string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	ErrScriptFailure     i18n.ErrorString `i18n:"hint='Error shown when a script of the rich text editor fails.'"`
 	ParseErrorTemplate   string           `i18n:"label='Parse error', hint='Error of a script that could not be read.', fields=(;'%[1]d'='the line', '%[2]d'='the column', '%[3]s'='what went wrong')"`
 	CompileErrorTemplate string           `i18n:"label='Compile error', hint='Error of a script that could not be compiled.', fields=(;'%[1]d'='the line', '%[2]d'='the column', '%[3]s'='what went wrong')"`
@@ -42,6 +43,7 @@ func (m *Messages) FormateTypeError(errType ScriptErrorType, pos source.FilePos,
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription:    "The scripts of the rich text editor, and their errors.",
 		ErrScriptFailure:     i18n.ErrorString(ErrScriptFailure.Error()),
 		ParseErrorTemplate:   "Parse ERROR at [%d:%d]: %s",
 		CompileErrorTemplate: "Compile ERROR at [%d:%d]: %s",
@@ -49,6 +51,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription:    "Os scripts do editor de texto rico, e seus erros.",
 		ErrScriptFailure:     "Falha de script",
 		ParseErrorTemplate:   "ERRO de interpretação em [%d:%d]: %s",
 		CompileErrorTemplate: "ERRO de compilação em [%d:%d]: %s",

@@ -59,6 +59,7 @@ type PrinterOptionsMessages struct {
 }
 
 type Messages struct {
+	ModuleDescription          string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	SuccessfullyUpdated        string `i18n:"hint='Shown once a record was saved.'"`
 	SuccessfullyCreated        string `i18n:"hint='Shown once a record was created.'"`
 	SuccessfullyDeleted        string `i18n:"hint='Shown once a record was deleted.'"`
@@ -247,6 +248,7 @@ func (msgr *Messages) ListingSelectedCountNoticeText(count int) string {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:                  "The words of every page of the admin: listing, editing, filters, actions and dialogs.",
 	YouAreHere:                         "You Are Here",
 	SuccessfullyUpdated:                "Successfully Updated",
 	SuccessfullyCreated:                "Successfully Created",
@@ -344,6 +346,7 @@ var Messages_en_US = &Messages{
 var DefaultMessages = Messages_en_US
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:                  "As palavras de todas as páginas do admin: listagem, edição, filtros, ações e diálogos.",
 	YouAreHere:                         "Você está aqui",
 	CopiedToClipboard:                  "Copiado para a área de transferência!",
 	TheFemaleTitle:                     "A %s",

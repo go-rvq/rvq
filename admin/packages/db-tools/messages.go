@@ -91,6 +91,7 @@ func (p *MessagesPersistence) Format(per *db_tools.Persistence) (s h.RawHTML, er
 }
 
 type Messages struct {
+	ModuleDescription                    string              `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	AutoBackup                           string              `i18n:"hint='Name of the automatic backup settings.'"`
 	DatabaseAutoBackup                   string              `i18n:"hint='Title of the automatic database backup job.'"`
 	Database                             string              `i18n:"hint='Title of the database tools.'"`
@@ -121,6 +122,7 @@ type Messages struct {
 
 var (
 	Messages_en_US = &Messages{
+		ModuleDescription:                    "The database tools: backups, their schedule and how long they are kept.",
 		PersistenceEnabled:                   "Enabled",
 		PersistenceYears:                     "Years",
 		PersistenceMonths:                    "Months",
@@ -164,6 +166,7 @@ var (
 	}
 
 	Messages_pt_BR = &Messages{
+		ModuleDescription:                    "As ferramentas do banco de dados: cópias de segurança, seu agendamento e por quanto tempo são mantidas.",
 		AutoBackup:                           "Cópia de Segurança Automática",
 		DatabaseAutoBackup:                   "Cópia de Segurança Automática do Banco de Dados",
 		Database:                             "Banco de Dados",

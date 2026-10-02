@@ -41,7 +41,7 @@ func nestedMenuAdmin(t *testing.T, pb *perm.Builder) (*presets.Builder, *gorm.DB
 		t.Fatal(err)
 	}
 	b := presets.New(i18n.New()).URIPrefix("/admin")
-	b.I18n().SupportLanguages(language.BrazilianPortuguese, language.AmericanEnglish)
+	b.I18n().SupportLanguages(language.BrazilianPortuguese, language.English)
 	b.DataOperator(gorm2op.DataOperator(db))
 	b.Permission(pb)
 	Configure(b, db)

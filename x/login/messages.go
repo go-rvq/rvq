@@ -67,6 +67,7 @@ func ErrorToMessageError(msgr *Messages, err error) (r error) {
 }
 
 type Messages struct {
+	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	// common
 	Confirm string `i18n:"hint='Button that confirms.'"`
 	Verify  string `i18n:"hint='Button that checks a passcode.'"`
@@ -151,6 +152,7 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ModuleDescription:                   "The sign-in: login, password recovery and two-factor authentication.",
 	Confirm:                             "Confirm",
 	Verify:                              "Verify",
 	LoginPageTitle:                      "Sign In",
@@ -222,6 +224,7 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	ModuleDescription:                   "登录：登录、找回密码和双重验证。",
 	Confirm:                             "确认",
 	Verify:                              "验证",
 	LoginPageTitle:                      "登录",
@@ -292,6 +295,7 @@ var Messages_zh_CN = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	ModuleDescription:                   "サインイン：ログイン、パスワードの再設定、二要素認証。",
 	Confirm:                             "確認する",
 	Verify:                              "検証",
 	LoginPageTitle:                      "ログイン",
@@ -362,6 +366,7 @@ var Messages_ja_JP = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ModuleDescription:                   "O login: entrar, recuperar a senha e a autenticação em duas etapas.",
 	Confirm:                             "Confirmar",
 	Verify:                              "Verificar",
 	LoginPageTitle:                      "Entrar",

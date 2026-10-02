@@ -2,7 +2,8 @@ package messages
 
 // Messages_en_US is the American English translation.
 var Messages_en_US = &Messages{
-	People: "People",
+	ModuleDescription: "The people.",
+	People:            "People",
 
 	TabAll:  "All",
 	Trash:   "Trash",

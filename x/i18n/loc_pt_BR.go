@@ -23,10 +23,11 @@ const (
 )
 
 var Default_pt_BR = &DefaultMessages{
-	True:  "Verdadeiro",
-	False: "Falso",
-	Yes:   "Sim",
-	No:    "Não",
+	ModuleDescription: "Palavras e formatos comuns a todos os módulos: datas, horas e números.",
+	True:              "Verdadeiro",
+	False:             "Falso",
+	Yes:               "Sim",
+	No:                "Não",
 	DateLayout: TimeLayoutSpec{
 		Default: PtDateDefaultFormat,
 		Short:   PtDateShortFormat,
