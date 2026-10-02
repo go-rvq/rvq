@@ -33,6 +33,17 @@
 // {%= admin.model("admin_locales").link %} is a link to the listing of the
 // model, by its label; admin.action, admin.page and admin.doc are the others.
 //
+// Documents of no part of the admin — a guide, a tutorial — go in the tree
+// where they are registered (Builder.Custom): under a node (a group, a model;
+// the top), first or last among its children, each node a document of its ID
+// (ID/README.md) in a package, titled by its heading in the request's
+// language:
+//
+//	docs.Custom(userdocs.Custom{First: true, Nodes: []*userdocs.CustomNode{
+//		{ID: "guides/getting-started", Icon: "mdi-school-outline",
+//			Children: []*userdocs.CustomNode{{ID: "guides/getting-started/01-post-types"}}},
+//	}})
+//
 // The documents are kept in the database, per admin language (UserDoc, one per
 // language, and its UserDocPackage, one per package): written from the code's
 // on boot (Sync) — the initial value: the language's own documents, else the

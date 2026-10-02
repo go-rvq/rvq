@@ -20,9 +20,9 @@ type Node struct {
 
 // Tree is the tree of the documentation: the side menu's, in its order — its
 // groups, the models and the pages in them —, each model with its actions and
-// the models nested in it.
+// the models nested in it; the custom documents where they were put (Custom).
 func (b *Builder) Tree(ctx *web.EventContext) []*Node {
-	return b.groupNodes(b.p.MenuTree(), ctx)
+	return b.withCustom(b.groupNodes(b.p.MenuTree(), ctx), ctx)
 }
 
 func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext) (nodes []*Node) {

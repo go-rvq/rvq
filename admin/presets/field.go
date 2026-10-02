@@ -48,25 +48,27 @@ func (p FieldPath) Fqn() string {
 
 type FieldContext struct {
 	ToComponentOptions *ToComponentOptions
-	Parent             *FieldContext
-	Mode               FieldModeStack
-	Field              *FieldBuilder
-	EventContext       *web.EventContext
-	Obj                interface{}
-	Name               string
-	FormKey            string
-	Path               FieldPath
-	Label              string
-	HintLoader         func() string
-	Hint               string
-	Errors             []string
-	SliceErrors        map[int][]string
-	ModelInfo          *ModelInfo
-	Nested             Nested
-	Context            context.Context
-	ReadOnly           bool
-	Required           bool
-	Disabled           bool
+	// probing: made only to know whether it is shown (ShownFields)
+	probing      bool
+	Parent       *FieldContext
+	Mode         FieldModeStack
+	Field        *FieldBuilder
+	EventContext *web.EventContext
+	Obj          interface{}
+	Name         string
+	FormKey      string
+	Path         FieldPath
+	Label        string
+	HintLoader   func() string
+	Hint         string
+	Errors       []string
+	SliceErrors  map[int][]string
+	ModelInfo    *ModelInfo
+	Nested       Nested
+	Context      context.Context
+	ReadOnly     bool
+	Required     bool
+	Disabled     bool
 	// MustInput asks the field component to render only the bare input, with no
 	// label, hint or surrounding container — suitable for placing inside a table
 	// cell (the column header carries the label). The default component funcs
@@ -492,8 +494,10 @@ func (b *FieldBuilder) ToComponent(ctx *FieldContext) (comp h.HTMLComponent) {
 		if panics {
 			if r := recover(); r != nil {
 				// the page shows the error where the field would be; the log
-				// says where it happened
-				log.Printf("presets: field %q: %v\n%s", b.name, r, debug.Stack())
+				// says where it happened — but of a probe (ShownFields)
+				if !ctx.probing {
+					log.Printf("presets: field %q: %v\n%s", b.name, r, debug.Stack())
+				}
 				comp = FieldComponentWrapper(func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 					return v.VAlert().
 						Type(v.TypeError).

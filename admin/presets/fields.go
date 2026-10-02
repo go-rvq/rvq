@@ -1104,6 +1104,9 @@ type ToComponentOptions struct {
 	// immediate ToComponentForEach level only (not propagated to nested lists).
 	// Defaults to identity when nil.
 	ItemFormKeyIndex func(slicePos int) int
+	// probing: the components are made only to know which there are
+	// (ShownFields) — one that fails is not logged
+	probing bool
 }
 
 func (b *FieldsBuilder) ToComponent(opts *ToComponentOptions, info *ModelInfo, obj interface{}, mode FieldModeStack, ctx *web.EventContext) h.HTMLComponent {
@@ -1323,6 +1326,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 
 	fctx := f.NewContext(info, ctx, parent, obj)
 	fctx.Mode = mode
+	fctx.probing = opts != nil && opts.probing
 	fctx.Errors = vErr.GetRemoveFieldErrors(fctx.FormKey)
 
 	if !opts.SkipsPermVerify() && info != nil {
@@ -1629,5 +1633,5 @@ func (b *FieldsBuilder) shows(info *ModelInfo, obj any, mode FieldModeStack, ctx
 			ok = true
 		}
 	}()
-	return b.fieldToComponentWithFormValueKey(&ToComponentOptions{}, info, obj, mode, nil, ctx, name, &web.ValidationErrors{}) != nil
+	return b.fieldToComponentWithFormValueKey(&ToComponentOptions{probing: true}, info, obj, mode, nil, ctx, name, &web.ValidationErrors{}) != nil
 }

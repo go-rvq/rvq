@@ -7,6 +7,7 @@ import (
 	"testing/fstest"
 
 	"github.com/gad-lang/gad"
+	"github.com/go-rvq/rvq/web"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -308,5 +309,48 @@ func TestRule(t *testing.T) {
 	}
 	if _, ok := b.rule("en", "things/actions/none", Messages_en_US); ok {
 		t.Error("a rule where none is written")
+	}
+}
+
+// Custom documents: under their parent, first or last, titled by their
+// heading in the language of the request; a parent not there, left out.
+func TestCustom(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(db); err != nil {
+		t.Fatal(err)
+	}
+	src := &Source{Package: "example.com/pkg", FS: fstest.MapFS{
+		"en/guides/start/README.md":     {Data: []byte("# Getting started\n")},
+		"pt-BR/guides/start/README.md":  {Data: []byte("# Primeiros passos\n")},
+		"en/guides/start/one/README.md": {Data: []byte("text, no heading\n")},
+		"en/guides/things/README.md":    {Data: []byte("# Things guide\n")},
+	}}
+	lang := "en"
+	forgetTitles()
+	b := &Builder{db: db, sources: []*Source{src}, locale: func(*web.EventContext) string { return lang }}
+	b.Custom(Custom{First: true, Nodes: []*CustomNode{{ID: "guides/start", Children: []*CustomNode{{ID: "guides/start/one"}}}}}).
+		Custom(Custom{Parent: "things", Nodes: []*CustomNode{{ID: "guides/things"}}}).
+		Custom(Custom{Parent: "nowhere", Nodes: []*CustomNode{{ID: "guides/lost"}}})
+	tree := func() []*Node {
+		return b.withCustom([]*Node{{ID: "groups/a"}, {ID: "things", Children: []*Node{{ID: "things/forms/new"}}}}, nil)
+	}
+	got := tree()
+	if len(got) != 3 || got[0].ID != "guides/start" || got[0].Title != "Getting started" ||
+		got[0].Children[0].Title != "One" {
+		t.Fatalf("tree %+v", got[0])
+	}
+	if th := got[2].Children; len(th) != 2 || th[1].ID != "guides/things" || th[1].Title != "Things guide" {
+		t.Errorf("under things %+v", th)
+	}
+	if findNode(got, "guides/lost") != nil {
+		t.Error("a node of a parent not there")
+	}
+	lang = "pt-BR"
+	forgetTitles()
+	if got := tree(); got[0].Title != "Primeiros passos" {
+		t.Errorf("title in pt-BR %q", got[0].Title)
 	}
 }

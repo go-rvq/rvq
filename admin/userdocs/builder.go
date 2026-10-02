@@ -45,6 +45,8 @@ type Builder struct {
 	// request's, chosen in the menu —; locales the languages there are.
 	locale  func(ctx *web.EventContext) string
 	locales func() []string
+	// customs are the documents of no part of the admin (Custom)
+	customs []Custom
 }
 
 // New is the documentation of p, kept in db. The words of its page are
@@ -462,6 +464,7 @@ func (b *Builder) configurePackages(pkg *presets.ModelBuilder) {
 			return err
 		}
 		row.Value = out
+		forgetTitles()
 		return nil
 	})
 	d := pkg.Detailing()
