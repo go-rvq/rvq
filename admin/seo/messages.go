@@ -1,53 +1,53 @@
 package seo
 
 type Messages struct {
-	Variable             string
-	VariableDescription  string
-	Basic                string
-	Title                string
-	Description          string
-	Keywords             string
-	OpenGraphInformation string
-	OpenGraphTitle       string
-	OpenGraphDescription string
-	OpenGraphURL         string
-	OpenGraphType        string
-	OpenGraphImageURL    string
-	OpenGraphImage       string
-	OpenGraphMetadata    string
-	Seo                  string
-	Customize            string
+	Variable             string `i18n:"label='Variables setting', hint='Title of the SEO variables settings.'"`
+	VariableDescription  string `i18n:"hint='Description of the SEO variables, under their title.'"`
+	Basic                string `i18n:"hint='Title of the basic SEO fields (title, description, keywords).'"`
+	Title                string `i18n:"hint='Label of the page title for search engines and the browser tab.'"`
+	Description          string `i18n:"hint='Label of the page description for search results.'"`
+	Keywords             string `i18n:"hint='Label of the page keywords.'"`
+	OpenGraphInformation string `i18n:"hint='Title of the Open Graph fields (how a page shows when shared).'"`
+	OpenGraphTitle       string `i18n:"hint='Label of the title shown when the page is shared.'"`
+	OpenGraphDescription string `i18n:"hint='Label of the description shown when the page is shared.'"`
+	OpenGraphURL         string `i18n:"label='Open Graph URL', hint='Label of the address shown when the page is shared.'"`
+	OpenGraphType        string `i18n:"hint='Label of the Open Graph type of the page (website, article…).'"`
+	OpenGraphImageURL    string `i18n:"label='Open Graph image URL', hint='Label of the address of the image shown when the page is shared.'"`
+	OpenGraphImage       string `i18n:"hint='Label of the image shown when the page is shared.'"`
+	OpenGraphMetadata    string `i18n:"hint='Label of extra Open Graph tags.'"`
+	Seo                  string `i18n:"label='SEO', hint='Name of the SEO section and tab.'"`
+	Customize            string `i18n:"hint='Switch that customizes the SEO of a record instead of inheriting it.'"`
 	// AddVariable labels the "+ Variable" menu button in the SEO editor.
-	AddVariable string
+	AddVariable string `i18n:"label='Add variable', hint='Button that inserts a variable into an SEO field.'"`
 
 	// Help overlay (see help.go). Body fields are HTML.
-	HelpTooltip          string
-	HelpTitle            string
-	HelpIntroTitle       string
-	HelpIntro            string
-	HelpVariablesTitle   string
-	HelpVariables        string
-	HelpInheritanceTitle string
-	HelpInheritance      string
+	HelpTooltip          string `i18n:"label='Help: tooltip', hint='Tooltip of the button that opens the SEO help.'"`
+	HelpTitle            string `i18n:"label='Help: title', hint='Title of the SEO help.'"`
+	HelpIntroTitle       string `i18n:"label='Help: intro title', hint='Title of the first section of the SEO help.'"`
+	HelpIntro            string `i18n:"type=html, label='Help: intro', hint='First section of the SEO help: what the fields become (HTML).'"`
+	HelpVariablesTitle   string `i18n:"label='Help: variables title', hint='Title of the section of the SEO help about variables.'"`
+	HelpVariables        string `i18n:"type=html, label='Help: variables', hint='Section of the SEO help about the variables, {{Name}} (HTML).'"`
+	HelpInheritanceTitle string `i18n:"type=html, label='Help: inheritance title', hint='Title of the section of the SEO help about inheritance (HTML).'"`
+	HelpInheritance      string `i18n:"type=html, label='Help: inheritance', hint='Section of the SEO help about how an empty field inherits (HTML).'"`
 
 	// Setting-variable labels: the label of a setting variable is looked up as
 	// strcase.ToCamel("SettingVar " + varName), so the built-in SiteName variable
 	// maps to SettingVarSiteName. An app that adds variables adds fields here (or
 	// registers them in this module).
-	SettingVarSiteName string
+	SettingVarSiteName string `i18n:"label='Variable: site name', hint='Name of the SiteName variable.'"`
 
 	// Custom variables editor.
-	CustomVars      string // section heading
-	CustomVarsGroup string // "+ Variable" menu group label
+	CustomVars      string `i18n:"hint='Title of the variables the user defines.'"`                                                                     // section heading
+	CustomVarsGroup string `i18n:"label='Custom variables group', hint='Title of the group of the variables the user defines, in the variables menu.'"` // "+ Variable" menu group label
 
 	// SEO configuration: the Google Maps API key field and its "?" help. The Help
 	// body is HTML.
-	SEOConfig          string
-	MapsKey            string
-	MapsKeyHint        string
-	MapsKeyHelpTooltip string
-	MapsKeyHelpTitle   string
-	MapsKeyHelp        string
+	SEOConfig          string `i18n:"label='SEO settings', hint='Name of the SEO settings model.'"`
+	MapsKey            string `i18n:"label='Google Maps API key', hint='Label of the Google Maps key used by the ZIP-codes variable.'"`
+	MapsKeyHint        string `i18n:"label='Google Maps API key: hint', hint='Hint of the Google Maps key: which APIs it needs.'"`
+	MapsKeyHelpTooltip string `i18n:"label='Google Maps API key: help tooltip', hint='Tooltip of the button that opens the help on the Google Maps key.'"`
+	MapsKeyHelpTitle   string `i18n:"label='Google Maps API key: help title', hint='Title of the help on how to get a Google Maps key.'"`
+	MapsKeyHelp        string `i18n:"type=html, label='Google Maps API key: help', hint='Steps to get a Google Maps key (HTML).'"`
 }
 
 var Messages_en_US = &Messages{

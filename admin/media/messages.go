@@ -11,34 +11,34 @@ func GetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	Crop                        string
-	CropImage                   string
-	ChooseFile                  string
-	Delete                      string
-	CopyLink                    string
-	LinkCopied                  string
-	Download                    string
-	ChooseAFile                 string
-	ChosenFileIsGone            string
-	RecommendedOriginalSize     string
-	Search                      string
-	UploadFiles                 string
-	Cropping                    string
-	DescriptionUpdated          string
-	DescriptionForAccessibility string
-	OrderBy                     string
-	UploadedAt                  string
-	UploadedAtDESC              string
-	All                         string
-	Images                      string
-	Videos                      string
-	Files                       string
-	MediaLibrary                string
-	MediaLibraries              string
-	ShowHidden                  string
-	OnlyHidden                  string
-	IncludeHidden               string
-	NotHidden                   string
+	Crop                        string `i18n:"hint='Button that crops an image.'"`
+	CropImage                   string `i18n:"hint='Title of the dialog that crops an image.'"`
+	ChooseFile                  string `i18n:"hint='Button that opens the choice of a file of the media library.'"`
+	Delete                      string `i18n:"hint='Button that removes a file from a field.'"`
+	CopyLink                    string `i18n:"hint='Button that copies the address of a file.'"`
+	LinkCopied                  string `i18n:"hint='Shown once the address of a file was copied.'"`
+	Download                    string `i18n:"hint='Button that downloads a file.'"`
+	ChooseAFile                 string `i18n:"label='Choose a file', hint='Title of the dialog that chooses a file of the media library.'"`
+	ChosenFileIsGone            string `i18n:"hint='Shown when the chosen file was removed from the media library meanwhile.'"`
+	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image. %d and %d are its width and height in pixels, %s its proportion (16:9).'"`
+	Search                      string `i18n:"hint='Placeholder of the search of the media library.'"`
+	UploadFiles                 string `i18n:"hint='Button that uploads files to the media library.'"`
+	Cropping                    string `i18n:"hint='Shown while an image is being cropped.'"`
+	DescriptionUpdated          string `i18n:"hint='Shown once the description of a file was saved.'"`
+	DescriptionForAccessibility string `i18n:"hint='Placeholder of a file\\'s description, read by screen readers.'"`
+	OrderBy                     string `i18n:"hint='Label of the order of the media library.'"`
+	UploadedAt                  string `i18n:"label='Date uploaded', hint='Order of the media library by upload date, oldest first.'"`
+	UploadedAtDESC              string `i18n:"label='Date uploaded (newest first)', hint='Order of the media library by upload date, newest first.'"`
+	All                         string `i18n:"hint='Filter of the media library that shows every file.'"`
+	Images                      string `i18n:"hint='Filter of the media library that shows the images.'"`
+	Videos                      string `i18n:"hint='Filter of the media library that shows the videos.'"`
+	Files                       string `i18n:"hint='Filter of the media library that shows the files that are not images or videos.'"`
+	MediaLibrary                string `i18n:"hint='Name of the media library model in the singular.'"`
+	MediaLibraries              string `i18n:"hint='Name of the media library model in the plural (menu, listing title).'"`
+	ShowHidden                  string `i18n:"hint='Filter of the hidden files of the media library.'"`
+	OnlyHidden                  string `i18n:"hint='Option of the hidden filter: only the hidden files.'"`
+	IncludeHidden               string `i18n:"hint='Option of the hidden filter: the hidden files too.'"`
+	NotHidden                   string `i18n:"hint='Option of the hidden filter: only the files that are not hidden.'"`
 }
 
 var Messages_en_US = &Messages{

@@ -1,42 +1,42 @@
 package activity
 
 type Messages struct {
-	ActivityLogs string
-	Activities   string
-	ActionAll    string
-	ActionView   string
-	ActionEdit   string
-	ActionCreate string
-	ActionDelete string
+	ActivityLogs string `i18n:"hint='Name of the activity log model in the plural (menu, listing title).'"`
+	Activities   string `i18n:"hint='Title of a record\\'s activity tab.'"`
+	ActionAll    string `i18n:"label='Action: all', hint='Filter option for every kind of action.'"`
+	ActionView   string `i18n:"label='Action: view', hint='Kind of action: a record was seen.'"`
+	ActionEdit   string `i18n:"label='Action: edit', hint='Kind of action: a record was changed.'"`
+	ActionCreate string `i18n:"label='Action: create', hint='Kind of action: a record was created.'"`
+	ActionDelete string `i18n:"label='Action: delete', hint='Kind of action: a record was deleted.'"`
 
-	ModelUserID    string
-	ModelCreatedAt string
-	ModelAction    string
-	ModelCreator   string
-	ModelKeys      string
-	ModelName      string
-	ModelLabel     string
-	ModelLink      string
-	ModelDiffs     string
-	ModelIP        string
-	ModelUserAgent string
+	ModelUserID    string `i18n:"label='Creator ID', hint='Label of the id of who did an action.'"`
+	ModelCreatedAt string `i18n:"label='Date time', hint='Label of when an action was done.'"`
+	ModelAction    string `i18n:"label='Action', hint='Label of the kind of an action.'"`
+	ModelCreator   string `i18n:"label='Creator', hint='Label of who did an action.'"`
+	ModelKeys      string `i18n:"label='Keys', hint='Label of the keys of the record an action was done on.'"`
+	ModelName      string `i18n:"label='Table name', hint='Label of the table of the record an action was done on.'"`
+	ModelLabel     string `i18n:"label='Menu name', hint='Label of the model of the record an action was done on, as the menu names it.'"`
+	ModelLink      string `i18n:"label='Link', hint='Label of the link to the record an action was done on.'"`
+	ModelDiffs     string `i18n:"label='Diffs', hint='Label of what an action changed.'"`
+	ModelIP        string `i18n:"label='IP address', hint='Label of the address an action came from.'"`
+	ModelUserAgent string `i18n:"label='Browser', hint='Label of the browser an action came from.'"`
 
-	LogAction string
-	LogEmpty  string
+	LogAction string `i18n:"label='Activity log', hint='Action that shows the activity log of a record.'"`
+	LogEmpty  string `i18n:"hint='Shown when no activity was recorded for a record.'"`
 
-	FilterAction    string
-	FilterCreatedAt string
-	FilterCreator   string
-	FilterModel     string
+	FilterAction    string `i18n:"label='Filter: action', hint='Filter of the activity log by kind of action.'"`
+	FilterCreatedAt string `i18n:"label='Filter: date', hint='Filter of the activity log by date.'"`
+	FilterCreator   string `i18n:"label='Filter: creator', hint='Filter of the activity log by who did the action.'"`
+	FilterModel     string `i18n:"label='Filter: model', hint='Filter of the activity log by model.'"`
 
-	DiffDetail  string
-	DiffNew     string
-	DiffDelete  string
-	DiffChanges string
-	DiffField   string
-	DiffOld     string
-	DiffNow     string
-	DiffValue   string
+	DiffDetail  string `i18n:"label='Diff: detail', hint='Title of the detail of a change.'"`
+	DiffNew     string `i18n:"label='Diff: new', hint='Title of the values of a created record.'"`
+	DiffDelete  string `i18n:"label='Diff: delete', hint='Title of the values of a deleted record.'"`
+	DiffChanges string `i18n:"label='Diff: changes', hint='Title of the values a change changed.'"`
+	DiffField   string `i18n:"label='Diff: field', hint='Column with the field that changed.'"`
+	DiffOld     string `i18n:"label='Diff: old', hint='Column with the value before the change.'"`
+	DiffNow     string `i18n:"label='Diff: now', hint='Column with the value after the change.'"`
+	DiffValue   string `i18n:"label='Diff: value', hint='Column with a value of a created or deleted record.'"`
 }
 
 var Messages_en_US = &Messages{

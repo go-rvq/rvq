@@ -17,40 +17,40 @@ const MessagesKey i18n.ModuleKey = "admin/presets/fields/schemaform"
 // for what cannot be drawn — why a field is not there.
 type Messages struct {
 	// NoSchema: a field drawn without a schema.
-	NoSchema string
+	NoSchema string `i18n:"hint='Error when a schema form field has no schema.'"`
 	// FormWithoutSchema: a form field with no schema; %q is the field.
-	FormWithoutSchema string
+	FormWithoutSchema string `i18n:"label='Form without schema', hint='Error when a field is a form and has no schema. %q is the field\\'s name.'"`
 	// ItemsUnavailable: the values a field may hold could not be fetched; %q
 	// the field, %v why.
-	ItemsUnavailable string
+	ItemsUnavailable string `i18n:"hint='Error when the values a field may hold could not be fetched. %q is the field, %v the error.'"`
 	// NoItems: a field that is a closed list has nothing to choose; %q the
 	// field.
-	NoItems string
+	NoItems string `i18n:"hint='Error when a field has no values to choose from. %q is the field.'"`
 	// ListTypeUnknown: a list's items are of a type with no component; %q the
 	// type, %v the ones there are.
-	ListTypeUnknown string
+	ListTypeUnknown string `i18n:"label='List type unknown', hint='Error when a list asks for a type with no component and no enum. %q is the type, %v the types there are.'"`
 	// FieldTypeUnknown: a field of a type with no component; %q the field,
 	// %q the type, %v the ones there are.
-	FieldTypeUnknown string
+	FieldTypeUnknown string `i18n:"hint='Error when a field asks for a type with no component and no enum. %q is the field, the second %q the type, %v the types there are.'"`
 
 	// ChooseValue: a required choice was left empty.
-	ChooseValue string
+	ChooseValue string `i18n:"hint='Placeholder of a field whose value is chosen from a list.'"`
 	// NotAmongItems: a value the list does not offer; %q the value, %s the
 	// ones it does.
-	NotAmongItems string
+	NotAmongItems string `i18n:"hint='Error when a value is not one of those a field may hold. %q is the value, %s the values it may hold.'"`
 	// ItemsUnavailableOnSave: the values could not be fetched to check the one
 	// posted (why follows it).
-	ItemsUnavailableOnSave string
+	ItemsUnavailableOnSave string `i18n:"label='Items unavailable on save', hint='Error on save when the values a field may hold could not be fetched.'"`
 
 	// Add is the button that adds an item to a list.
-	Add string
+	Add string `i18n:"hint='Button that adds an item to a list of a form.'"`
 	// ShowWhole is the hint of a listing cell cut with "…".
-	ShowWhole string
+	ShowWhole string `i18n:"hint='Hint of a shortened text that shows all of it when clicked.'"`
 	// OrderAsc, OrderDesc and OrderNone are the directions of a field of an
 	// order: ascending, descending, not ordered.
-	OrderAsc  string
-	OrderDesc string
-	OrderNone string
+	OrderAsc  string `i18n:"label='Order: ascending', hint='Short name of the ascending order of a sort.'"`
+	OrderDesc string `i18n:"label='Order: descending', hint='Short name of the descending order of a sort.'"`
+	OrderNone string `i18n:"label='Order: none', hint='Shown for a field that is not sorted.'"`
 }
 
 var Messages_en_US = &Messages{

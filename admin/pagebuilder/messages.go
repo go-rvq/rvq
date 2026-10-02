@@ -13,28 +13,28 @@ func MustGetMessages(ctx context.Context) *Messages {
 }
 
 type Messages struct {
-	Category                       string
-	Preview                        string
-	Containers                     string
-	AddContainers                  string
-	New                            string
-	Shared                         string
-	Select                         string
-	SelectedTemplateLabel          string
-	CreateFromTemplate             string
-	ChangeTemplate                 string
-	RelatedOnlinePages             string
-	RepublishAllRelatedOnlinePages string
-	Unnamed                        string
-	NotDescribed                   string
-	Blank                          string
-	NewPage                        string
-	FilterTabAllVersions           string
-	FilterTabOnlineVersion         string
-	FilterTabNamedVersions         string
-	Rename                         string
-	PageOverView                   string
-	ErrPermissionDenied            i18n.ErrorString
+	Category                       string           `i18n:"hint='Label of a page\\'s category.'"`
+	Preview                        string           `i18n:"hint='Button that shows the page as it will look.'"`
+	Containers                     string           `i18n:"hint='Title of the blocks (containers) a page is built of.'"`
+	AddContainers                  string           `i18n:"hint='Button that adds blocks to a page.'"`
+	New                            string           `i18n:"hint='Button that creates a new item of the page builder.'"`
+	Shared                         string           `i18n:"hint='Mark of a block shared between pages.'"`
+	Select                         string           `i18n:"hint='Button that chooses a block or a template.'"`
+	SelectedTemplateLabel          string           `i18n:"label='Selected template', hint='Label of the template a page was made from.'"`
+	CreateFromTemplate             string           `i18n:"hint='Action that creates a page from a template.'"`
+	ChangeTemplate                 string           `i18n:"hint='Action that changes the template of a page.'"`
+	RelatedOnlinePages             string           `i18n:"hint='Title of the published pages that use a shared block.'"`
+	RepublishAllRelatedOnlinePages string           `i18n:"label='Republish all related pages', hint='Button that publishes again every page that uses a shared block.'"`
+	Unnamed                        string           `i18n:"hint='Shown for a page or block with no name.'"`
+	NotDescribed                   string           `i18n:"hint='Shown for a page or block with no description.'"`
+	Blank                          string           `i18n:"hint='The template of an empty page.'"`
+	NewPage                        string           `i18n:"hint='Title of the creation of a page.'"`
+	FilterTabAllVersions           string           `i18n:"label='Tab: all versions', hint='Tab that shows every version of a page.'"`
+	FilterTabOnlineVersion         string           `i18n:"label='Tab: online versions', hint='Tab that shows the published versions of a page.'"`
+	FilterTabNamedVersions         string           `i18n:"label='Tab: named versions', hint='Tab that shows the versions given a name.'"`
+	Rename                         string           `i18n:"hint='Action that renames a version of a page.'"`
+	PageOverView                   string           `i18n:"label='Page overview', hint='Title of the summary of a page.'"`
+	ErrPermissionDenied            i18n.ErrorString `i18n:"hint='Error when the user may not do what was asked.'"`
 }
 
 var Messages_en_US = &Messages{
