@@ -1,5 +1,6 @@
 # The pictures of the documentation of the package (hermon-cms
-# tools/userdocs-shots).
+# tools/userdocs-shots), in each language beside it, the side menu hidden
+# (menu: true keeps it).
 - file: activity_logs/images/listing.png
   url: /admin/system/activity-logs
   wait: table

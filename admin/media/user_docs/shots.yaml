@@ -1,5 +1,6 @@
 # The pictures of the documentation of the package (hermon-cms
-# tools/userdocs-shots).
+# tools/userdocs-shots), in each language beside it, the side menu hidden
+# (menu: true keeps it).
 - file: media_libraries/images/listing.png
   url: /admin/content/media/media-library
   wait: .v-main
