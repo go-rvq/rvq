@@ -47,7 +47,10 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 		if len(tabs) == 0 {
 			tabs = append(tabs, &presets.FilterTab{Label: m.TabAll, Default: true})
 		}
-		return append(tabs, &presets.FilterTab{ID: FilterTabTrash, Label: m.TabTrash})
+		// on the right, its icon alone (its name a tooltip): apart from the
+		// tabs of the records there are
+		return append(tabs, &presets.FilterTab{ID: FilterTabTrash, Label: m.TabTrash,
+			Icon: "mdi-trash-can-outline", End: true})
 	})
 
 	// who deletes a record, and from where (softdelete.Deletion)

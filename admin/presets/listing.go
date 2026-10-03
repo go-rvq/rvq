@@ -869,6 +869,13 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	}
 	defaultTab := defaultFilterTab(ctx, tabsData)
 	value := -1
+	// the tabs of the end (FilterTab.End), apart
+	type endTab struct {
+		index   int
+		content h.HTMLComponent
+		onclick string
+	}
+	var endTabs []endTab
 	activeTabValue := qs.Get(ActiveFilterTabQueryKey)
 
 	for i, td := range tabsData {
@@ -881,6 +888,12 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		tabContent := h.Text(td.Label)
 		if td.AdvancedLabel != nil {
 			tabContent = td.AdvancedLabel
+		} else if td.Icon != "" {
+			// the icon, its label a tooltip (and what a screen reader says)
+			tabContent = h.Components(
+				VIcon(td.Icon).Attr("aria-label", td.Label),
+				VTooltip(h.Text(td.Label)).Activator("parent").Location("bottom"),
+			)
 		}
 
 		totalQuery := url.Values{}
@@ -900,10 +913,13 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		} else {
 			onclick.PushState(true)
 		}
-		tabs.AppendChild(
-			VTab(tabContent).
-				Attr("@click", onclick.Go()),
-		)
+		if td.End {
+			endTabs = append(endTabs, endTab{i, tabContent, onclick.Go()})
+			continue
+		}
+		tabs.AppendChild(VTab(tabContent).
+			Value(i).
+			Attr("@click", onclick.Go()))
 	}
 
 	if value == -1 {
@@ -923,7 +939,39 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		}
 	}
 
-	return tabs.ModelValue(value)
+	if len(endTabs) == 0 {
+		return tabs.ModelValue(value)
+	}
+	if value == -1 {
+		// none chosen: the first, as a bar alone forces it
+		for i, td := range tabsData {
+			if !td.End {
+				value = i
+				break
+			}
+		}
+	}
+	// the tabs of the end, in a bar of their own on the right: in sight
+	// when the others do not fit and scroll
+	// the tabs of the end: buttons that look like tabs — a bar of tabs forces
+	// one of its own chosen —, the chosen one in the colour and underlined
+	var ends []h.HTMLComponent
+	for _, t := range endTabs {
+		btn := VBtn("").Children(t.content).
+			Variant(VariantText).
+			Rounded(false).
+			Height(36).
+			MinWidth(48).
+			Attr("@click", t.onclick)
+		if t.index == value {
+			btn.Color("primary").Style("border-bottom: 2px solid currentColor")
+		}
+		ends = append(ends, btn)
+	}
+	return h.Div(
+		tabs.ModelValue(value).Mandatory(false).Class("flex-grow-1").Style("min-width: 0"),
+		h.Div(ends...).Class("d-flex flex-shrink-0"),
+	).Class("d-flex align-start")
 }
 
 type selectColumns struct {

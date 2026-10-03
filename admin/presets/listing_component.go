@@ -170,56 +170,53 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 	var searchBoxDefault h.HTMLComponent
 	if !lcb.SearchbarDisabled && (b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible) {
+		// the field takes the room there is — up to a width, centered on a
+		// wide screen —, the buttons beside it: on a narrow screen it is not
+		// squeezed between two spacers
 		searchBoxDefault = VResponsive(
 			web.Scope(
-				VRow(
-					VSpacer(),
-					VCol(
-						VTextField(
-							web.Slot(VIcon("mdi-magnify")).Name("append-inner"),
-						).Density(DensityCompact).
-							Variant(FieldVariantOutlined).
-							Label(msgr.Search).
-							Flat(true).
-							Clearable(true).
-							HideDetails(true).
-							SingleLine(true).
-							ModelValue(ctx.R.URL.Query().Get("keyword")).
-							Attr("@keyup.enter", web.Plaid().
-								ClearMergeQuery("page").
-								Query("keyword", web.Var("[$event.target.value]")).
-								MergeQuery(true).
-								PushState(true).
-								Go()).
-							Attr("@click:clear", web.Plaid().
-								Query("keyword", "").
-								PushState(true).
-								Go()),
+				h.Div(
+					VTextField(
+						web.Slot(VIcon("mdi-magnify")).Name("append-inner"),
+					).Density(DensityCompact).
+						Variant(FieldVariantOutlined).
+						Label(msgr.Search).
+						Flat(true).
+						Clearable(true).
+						HideDetails(true).
+						SingleLine(true).
+						ModelValue(ctx.R.URL.Query().Get("keyword")).
+						Attr("@keyup.enter", web.Plaid().
+							ClearMergeQuery("page").
+							Query("keyword", web.Var("[$event.target.value]")).
+							MergeQuery(true).
+							PushState(true).
+							Go()).
+						Attr("@click:clear", web.Plaid().
+							Query("keyword", "").
+							PushState(true).
+							Go()).
+						Class("flex-grow-1").
+						Style("max-width: 420px; min-width: 0"),
+					VBtn("").
+						// Size(SizeSmall).
+						Attr("@click", web.Plaid().
+							PushState(true).
+							Go()).
+						Icon(true).
+						Variant(VariantFlat).
+						Density(DensityCompact).
+						Children(VIcon("mdi-reload")),
+					h.If(filterBar != nil,
+						VBtn("").
+							Attr("@click", "filterBarVisible.value = !filterBarVisible.value").
+							Attr(":color", `filterBarVisible.value ? "primary": ""`).
+							Icon(true).
+							Variant(VariantFlat).
+							Density(DensityCompact).
+							Children(VIcon("mdi-filter")),
 					),
-					VCol(
-						VLayout(
-							VBtn("").
-								// Size(SizeSmall).
-								Attr("@click", web.Plaid().
-									PushState(true).
-									Go()).
-								Icon(true).
-								Variant(VariantFlat).
-								Density(DensityCompact).
-								Children(VIcon("mdi-reload")),
-							h.If(filterBar != nil,
-								VBtn("").
-									Attr("@click", "filterBarVisible.value = !filterBarVisible.value").
-									Attr(":color", `filterBarVisible.value ? "primary": ""`).
-									Icon(true).
-									Variant(VariantFlat).
-									Density(DensityCompact).
-									Children(VIcon("mdi-filter")),
-							),
-						),
-					).Class("ps-0"),
-					VSpacer(),
-				),
+				).Class("d-flex align-center justify-center ga-1 my-2"),
 			).Slot("{ locals }").LocalsInit(`{isFocus: false}`),
 		)
 	}

@@ -106,8 +106,13 @@ type FilterTab struct {
 	Label string
 	// render AdvancedLabel if it is not nil
 	AdvancedLabel h.HTMLComponent
-	Query         url.Values
-	Default       bool
+	// Icon, when set, is the tab: the icon alone, its Label a tooltip
+	Icon    string
+	Query   url.Values
+	Default bool
+	// End puts the tab at the end of the bar (on its right), apart from the
+	// others
+	End bool
 }
 
 type FilterTabsFunc func(ctx *web.EventContext) []*FilterTab

@@ -404,8 +404,11 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 			if b.onSelectAllFunc != nil {
 				onChange = b.onSelectAllFunc(idsOfPage, ctx)
 			}
-			heads = append(heads, h.Th("").Children(
-				web.Scope(
+			// no record: nothing to select — its value, empty, would be the
+			// checked one, and an empty list would show all selected
+			var selectAll h.HTMLComponent
+			if len(idsOfPage) > 0 {
+				selectAll = web.Scope(
 					v.VCheckbox().
 						Density(v.DensityCompact).
 						Class("mt-0").
@@ -414,8 +417,10 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 						Attr("v-model", "itemLocals.allInputValue").
 						Attr("style", "min-height: auto").
 						Attr("@update:model-value", onChange),
-				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue)),
-			).Style("width: 48px; min-width: 48px;").Class("pr-0"))
+				).Slot("{ locals: itemLocals }").LocalsInit(fmt.Sprintf(`{ allInputValue :"%v"} `, allInputValue))
+			}
+			heads = append(heads, h.Th("").Children(selectAll).
+				Style("width: 48px; min-width: 48px;").Class("pr-0"))
 		}
 
 		{
