@@ -21,7 +21,7 @@ termina no que é pedido dele:
 
 | Parte | Exemplo |
 | --- | --- |
-| o escopo: quem pede — sempre o primeiro; o do admin é vazio (veja abaixo) | `:…` |
+| o escopo: quem pede — sempre o primeiro; o do admin é `admin` (veja abaixo) | `admin:…` |
 | um grupo do menu: o nome e `/` | `site/` |
 | uma parte (model) | `seo_config` |
 | um registro: o id entre `<…>` | `<7>` — `<*>` qualquer um |
@@ -34,29 +34,29 @@ termina no que é pedido dele:
 Uma parte é alcançada de dois jeitos — **pelos grupos** e **pelo nome
 único**, o dela:
 
-    :site/:seo/:seo_config:<7>:@edit     pelos grupos
-    :seo_config:<7>:@edit                pelo nome único
+    admin:site/:seo/:seo_config:<7>:@edit     pelos grupos
+    admin:seo_config:<7>:@edit                pelo nome único
 
-`*` vale por qualquer coisa: `:site/:*` é tudo o que está no grupo
-*site*; `:seo_config:*`, tudo da parte *seo_config*, onde quer que o
+`*` vale por qualquer coisa: `admin:site/:*` é tudo o que está no grupo
+*site*; `admin:seo_config:*`, tudo da parte *seo_config*, onde quer que o
 menu a ponha.
 
 ## Os escopos
 
 A primeira parte de um recurso é o **escopo**: a parte do sistema que pede a
-permissão. O do admin é o **padrão**, **vazio** — por isso os
-recursos dele começam por `:` (`:content/:posts:<12>:@edit`) —, e contém tudo
+permissão. O do admin é **`admin`** — por isso os recursos dele começam
+por `admin:` (`admin:content/:posts:<12>:@edit`) —, e contém tudo
 o que está no menu: os grupos, as partes, os registros delas, campos, seções,
 ações e páginas. A biblioteca de mídia e as tarefas também são partes dele:
 
 | O quê | Recurso |
 | --- | --- |
-| enviar um arquivo, num campo de imagem ou de arquivo | `:media_libraries:@create` |
-| excluir um arquivo / editar a descrição dele | `:media_libraries:<5>:@delete` / `:media_libraries:<5>:@edit` |
-| executar uma tarefa de um tipo (criar, rodar de novo, abortar) | `:jobs:!upload_posts` |
+| enviar um arquivo, num campo de imagem ou de arquivo | `admin:media_libraries:@create` |
+| excluir um arquivo / editar a descrição dele | `admin:media_libraries:<5>:@delete` / `admin:media_libraries:<5>:@edit` |
+| executar uma tarefa de um tipo (criar, rodar de novo, abortar) | `admin:jobs:!upload_posts` |
 
 Um sistema feito sobre o admin pode ter escopos próprios, um nome antes do
-primeiro `:`; a árvore abaixo mostra cada escopo, o do admin como *padrão*.
+primeiro `:`; a árvore abaixo mostra cada escopo, o do admin como *Administração*.
 
 ## Qual decide
 

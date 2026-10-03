@@ -215,16 +215,16 @@ ends in what is asked: a permission, `@` and its name (`@list`, `@get`,
 its name (`!publish`, `ActionPerm`):
 
 ```
-:site/:seo/:seo_config:<7>:@edit     through the groups
-:seo_config:<7>:@edit                by the unique name
+admin:site/:seo/:seo_config:<7>:@edit     through the groups
+admin:seo_config:<7>:@edit                by the unique name
 ```
 
 The first part is the **scope**: who asks. The admin's (`PermModule`) is
-the default, **empty** — its resources begin with `:` (`:admin/:roles:@list`).
+`admin` — its resources begin with `admin:` (`admin:admin/:roles:@list`).
 The media library and the jobs are models of it: what the forms do with the
 files is the model's `@create`, `@delete`, `@edit`
-(`:media_libraries:<5>:@delete`), and doing a job of a kind an action of the
-model of the jobs (`:jobs:!upload_posts`). A record added with
+(`admin:media_libraries:<5>:@delete`), and doing a job of a kind an action of the
+model of the jobs (`admin:jobs:!upload_posts`). A record added with
 `perm.Verifier.ObjectOn` is `<id>` too.
 
 A model or a page of the menu is reached both ways: through the chain of its

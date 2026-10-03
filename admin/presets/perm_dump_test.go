@@ -114,33 +114,33 @@ func TestPermissionsDump(t *testing.T) {
 	}
 
 	// the groups, nested
-	site := want(":site/:", "")
-	if node(site, ":site/:content/:") == nil {
+	site := want("admin:site/:", "")
+	if node(site, "admin:site/:content/:") == nil {
 		t.Error("the group content is not inside site")
 	}
 	// the listing, the record
-	want(":site/:content/:posts:", ":posts:", PermList, PermCreate, "!archive", "!import", "!reindex_posts")
-	record := want(":site/:content/:posts:<*>:", ":posts:<*>:",
+	want("admin:site/:content/:posts:", "admin:posts:", PermList, PermCreate, "!archive", "!import", "!reindex_posts")
+	record := want("admin:site/:content/:posts:<*>:", "admin:posts:<*>:",
 		PermGet, PermUpdate, PermDelete, PermDeleteWithRelated, "!publish", "!duplicate")
 	if slices.Contains(actionNames(record), PermList) {
 		t.Error("the record is asked @list")
 	}
 	// the fields, the section, the pages
-	want(":site/:content/:posts:<*>:#Title:", ":posts:<*>:#Title:", PermGet, PermUpdate, PermCreate)
-	want(":site/:content/:posts:<*>:$Main:", ":posts:<*>:$Main:", PermGet, PermUpdate)
-	want(":site/:content/:posts:/export:", ":posts:/export:")
-	want(":site/:content/:posts:<*>:/report:", ":posts:<*>:/report:")
+	want("admin:site/:content/:posts:<*>:#Title:", "admin:posts:<*>:#Title:", PermGet, PermUpdate, PermCreate)
+	want("admin:site/:content/:posts:<*>:$Main:", "admin:posts:<*>:$Main:", PermGet, PermUpdate)
+	want("admin:site/:content/:posts:/export:", "admin:posts:/export:")
+	want("admin:site/:content/:posts:<*>:/report:", "admin:posts:<*>:/report:")
 	// the nested model, under any record, recursively the same
-	want(":site/:content/:posts:<*>:comments:", ":posts:<*>:comments:", PermList)
-	want(":site/:content/:posts:<*>:comments:<*>:", ":posts:<*>:comments:<*>:", PermGet, PermUpdate)
+	want("admin:site/:content/:posts:<*>:comments:", "admin:posts:<*>:comments:", PermList)
+	want("admin:site/:content/:posts:<*>:comments:<*>:", "admin:posts:<*>:comments:<*>:", PermGet, PermUpdate)
 	// the singleton: its record is its node
-	settings := want(":settings:", ":settings:", PermGet, PermUpdate)
-	if slices.Contains(actionNames(settings), PermList) || node(settings, ":settings:<*>:") != nil {
+	settings := want("admin:settings:", "admin:settings:", PermGet, PermUpdate)
+	if slices.Contains(actionNames(settings), PermList) || node(settings, "admin:settings:<*>:") != nil {
 		t.Error("the singleton has a listing")
 	}
 	// out of the menu: the model, at the root; the page of the admin
-	want(":hidden:", ":hidden:", PermList)
-	want(":site/:/report:", ":/report:")
+	want("admin:hidden:", "admin:hidden:", PermList)
+	want("admin:site/:/report:", "admin:/report:")
 
 	// the list holds every node, with its unique name
 	var uniques int

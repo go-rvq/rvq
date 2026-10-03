@@ -7,4 +7,4 @@ role. The unique name decides before the groups (a deny wins).
 
 See {%= admin.doc("guides/policies/01-permissions").link %}.
 
-The resources begin with `:`: the admin's **scope** is the default, empty — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.
+The resources begin with `admin:`, the admin's **scope** — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.

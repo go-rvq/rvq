@@ -58,8 +58,8 @@ type Messages struct {
 	PermSection           string `i18n:"hint='Column with a section of a detail.'"`
 	PermSectionsHint      string `i18n:"hint='Explains the permissions of the sections.'"`
 	PermParts             string `i18n:"hint='Title of the parts of a group, with their unique names.'"`
-	PermScopeHint         string `i18n:"hint='Says what the scope default is, in the tree of the permissions.'"`
-	PermScopeDefault      string `i18n:"hint='Name of the default scope (the admin one, empty) in the tree of the permissions.'"`
+	PermScopeAdminDesc    string `i18n:"hint='Description of the scope of the admin in the tree of the permissions.'"`
+	PermScopeAdmin        string `i18n:"hint='Name of the scope of the admin (its resources begin with admin:) in the tree of the permissions.'"`
 	PermPartsHint         string `i18n:"hint='Explains the parts of a group.'"`
 }
 
@@ -105,8 +105,8 @@ var Messages_en_US = &Messages{
 	PermSection:           "Section",
 	PermSectionsHint:      "A section is seen and edited in place by its own permission; the fields it writes still ask theirs.",
 	PermParts:             "Inside the group",
-	PermScopeHint:         "The admin's scope, empty: its resources begin with \":\"",
-	PermScopeDefault:      "default",
+	PermScopeAdminDesc:    "Everything of the admin: the groups of the menu, its models with their records, fields, sections and actions, and its pages",
+	PermScopeAdmin:        "Admin",
 	PermPartsHint:         "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
 }
 
@@ -152,8 +152,8 @@ var Messages_pt_BR = &Messages{
 	PermSection:           "Seção",
 	PermSectionsHint:      "Uma seção é vista e editada no lugar pela própria permissão; os campos que ela grava ainda pedem as deles.",
 	PermParts:             "Dentro do grupo",
-	PermScopeHint:         "O escopo do admin, vazio: os recursos dele começam por \":\"",
-	PermScopeDefault:      "padrão",
+	PermScopeAdminDesc:    "Tudo do admin: os grupos do menu, os modelos com seus registros, campos, seções e ações, e as páginas",
+	PermScopeAdmin:        "Administração",
 	PermPartsHint:         "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
 }
 

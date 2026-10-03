@@ -20,7 +20,7 @@ what is asked of it:
 
 | Part | Example |
 | --- | --- |
-| the scope: who asks — first, always; the admin's is empty (see below) | `:…` |
+| the scope: who asks — first, always; the admin's is `admin` (see below) | `admin:…` |
 | a group of the menu: its name and `/` | `site/` |
 | a part (model) | `seo_config` |
 | a record: its id in `<…>` | `<7>` — `<*>` any |
@@ -33,30 +33,30 @@ what is asked of it:
 A part is reached two ways — **through its groups** and **by its unique
 name**, its own:
 
-    :site/:seo/:seo_config:<7>:@edit     through the groups
-    :seo_config:<7>:@edit                by the unique name
+    admin:site/:seo/:seo_config:<7>:@edit     through the groups
+    admin:seo_config:<7>:@edit                by the unique name
 
-`*` stands for anything: `:site/:*` is everything inside the group
-*site*; `:seo_config:*` everything of the part *seo_config*, wherever
+`*` stands for anything: `admin:site/:*` is everything inside the group
+*site*; `admin:seo_config:*` everything of the part *seo_config*, wherever
 the menu puts it.
 
 ## The scopes
 
 The first part of a resource is its **scope**: the part of the system that
-asks for the permission. The admin's is the **default** one, **empty** — so
-its resources begin with `:` (`:content/:posts:<12>:@edit`) —, and it holds
+asks for the permission. The admin's is **`admin`** — so its resources
+begin with `admin:` (`admin:content/:posts:<12>:@edit`) —, and it holds
 everything of the menu: the groups, the parts, their records, fields,
 sections, actions and pages. The media library and the jobs are parts of it
 too:
 
 | What | Resource |
 | --- | --- |
-| sending a file, in a field of pictures or files | `:media_libraries:@create` |
-| deleting a file / editing its description | `:media_libraries:<5>:@delete` / `:media_libraries:<5>:@edit` |
-| doing a job of a kind (creating, rerunning, aborting it) | `:jobs:!upload_posts` |
+| sending a file, in a field of pictures or files | `admin:media_libraries:@create` |
+| deleting a file / editing its description | `admin:media_libraries:<5>:@delete` / `admin:media_libraries:<5>:@edit` |
+| doing a job of a kind (creating, rerunning, aborting it) | `admin:jobs:!upload_posts` |
 
 A system built on the admin may have scopes of its own, a name before the
-first `:`; the tree below shows each scope, the default one as *default*.
+first `:`; the tree below shows each scope, the admin's as *Admin*.
 
 ## Which one decides
 

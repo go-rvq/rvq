@@ -32,9 +32,9 @@ func TestPermissionsOfTheModel(t *testing.T) {
 	pb := presets.New(i18n.New()).URIPrefix("/admin")
 	pb.DataOperator(gorm2op.DataOperator(db)) // the key of a record
 	pb.Permission(perm.New().Policies(allow,
-		deny(":media_libraries:@create"),
-		deny(":media_libraries:<"+gone.String()+">:@delete"),
-		deny(":media_libraries:<"+gone.String()+">:@edit"),
+		deny("admin:media_libraries:@create"),
+		deny("admin:media_libraries:<"+gone.String()+">:@delete"),
+		deny("admin:media_libraries:<"+gone.String()+">:@edit"),
 	).SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
 	b := New(db)
 	if err := b.Install(pb); err != nil {

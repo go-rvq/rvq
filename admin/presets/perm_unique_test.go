@@ -37,7 +37,7 @@ func uniqueApp(roles []string, policies ...*perm.PolicyBuilder) (*Builder, *Mode
 func TestUniquePermResources(t *testing.T) {
 	_, posts, comments := uniqueApp(nil)
 	l := posts.Permissioner().ListVerifier()
-	if l.Resource() != ":content/:posts:" || l.PreferredResource() != ":posts:" {
+	if l.Resource() != "admin:content/:posts:" || l.PreferredResource() != "admin:posts:" {
 		t.Errorf("the listing: %q, %q", l.Resource(), l.PreferredResource())
 	}
 	if posts.UniquePermName() != "posts" {
@@ -45,7 +45,7 @@ func TestUniquePermResources(t *testing.T) {
 	}
 	// a nested model: under its parent, on both
 	c := comments.Permissioner().ListVerifier()
-	if c.Resource() != ":content/:posts:comments:" || c.PreferredResource() != ":posts:comments:" {
+	if c.Resource() != "admin:content/:posts:comments:" || c.PreferredResource() != "admin:posts:comments:" {
 		t.Errorf("the nested model: %q, %q", c.Resource(), c.PreferredResource())
 	}
 	if p := (&HttpPageBuilder{path: "/import"}).UniquePermName(); p != "/import" {
@@ -62,7 +62,7 @@ func TestUniquePermPrecedence(t *testing.T) {
 	deny := func(sub, res string) *perm.PolicyBuilder {
 		return perm.PolicyFor(sub).WhoAre(perm.Denied).ToDo(perm.Anything).On(res)
 	}
-	const group, unique = ":content/:*", ":posts:*"
+	const group, unique = "admin:content/:*", "admin:posts:*"
 	for _, c := range []struct {
 		name     string
 		roles    []string
@@ -99,7 +99,7 @@ func TestGroupPermPart(t *testing.T) {
 	if GroupPermPart("content") != "content/" {
 		t.Errorf("the group's part %q", GroupPermPart("content"))
 	}
-	if r := b.GetModelByID("content").Permissioner().ListVerifier().Resource(); r != ":content:" {
+	if r := b.GetModelByID("content").Permissioner().ListVerifier().Resource(); r != "admin:content:" {
 		t.Errorf("the model content: %q", r)
 	}
 	if ActionPerm("Publish") != "!publish" || PermUpdate != "@edit" {

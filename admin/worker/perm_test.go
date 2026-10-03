@@ -16,7 +16,7 @@ func TestJobPermissionIsAnActionOfTheModel(t *testing.T) {
 	pb := presets.New(i18n.New()).URIPrefix("/admin")
 	pb.Permission(perm.New().Policies(
 		perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(perm.Anything),
-		perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On(":jobs:!upload_posts"),
+		perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On("admin:jobs:!upload_posts"),
 	).SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
 	saved := jobsModel
 	defer func() { jobsModel = saved }()

@@ -9,4 +9,4 @@ them is allowed.
 The resource follows the menu: it is the chain of the groups the group sits
 in. See {%= admin.doc("guides/policies/01-permissions").link %}.
 
-The resources begin with `:`: the admin's **scope** is the default, empty — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.
+The resources begin with `admin:`, the admin's **scope** — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.
