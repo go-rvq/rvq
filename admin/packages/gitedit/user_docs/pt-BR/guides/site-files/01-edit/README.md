@@ -20,3 +20,12 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 Os arquivos ficam em pastas: `templates/` (as páginas, os layouts, os
 componentes), `static/` (estilos, scripts, imagens) e `config/` (as opções
 dos layouts).
+
+## Pelo WebDAV
+
+O mesmo rascunho pode ser aberto de um computador, como uma unidade de rede,
+pelo **WebDAV** do admin (o endereço está em **Administrador → Sistema de
+Arquivos**), na pasta `site-files`: edite os arquivos no programa que
+preferir. Valem as mesmas permissões do admin — ver pede `@get`, mudar pede
+`!edit` —, e a pasta `.git` não aparece. O commit e a publicação continuam
+aqui, nesta página.

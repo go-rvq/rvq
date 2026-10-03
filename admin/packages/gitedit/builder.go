@@ -71,6 +71,22 @@ type Builder struct {
 // Page is the page of the editor.
 func (b *Builder) Page() *presets.PageBuilder { return b.page }
 
+// Allowed says whether r may see the files of its draft, or change them
+// (write): the page's @get, and !edit — what the IDE asks, and whoever else
+// serves the draft (a WebDAV).
+func (b *Builder) Allowed(r *http.Request, write bool) bool {
+	perm := presets.PermGet
+	if write {
+		perm = presets.ActionPerm(ActionEdit)
+	}
+	ver := b.page.Page().ActionVerifier(r, perm)
+	return ver == nil || ver.Allowed()
+}
+
+// Hidden says whether p, a path in a draft ("/.git/config"), is kept from
+// whoever serves it.
+func Hidden(p string) bool { return inGit(p) }
+
 // Draft is the draft of the request.
 func (b *Builder) Draft(r *http.Request) (*Draft, Author, error) {
 	key, author := b.Identity(r)
@@ -99,14 +115,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.Identity(r); return key }
-	b.ide.Allowed = func(r *http.Request, p IdePerm) bool {
-		perm := presets.PermGet
-		if p == IdeWrite {
-			perm = presets.ActionPerm(ActionEdit)
-		}
-		ver := b.page.Page().ActionVerifier(r, perm)
-		return ver == nil || ver.Allowed()
-	}
+	b.ide.Allowed = func(r *http.Request, p IdePerm) bool { return b.Allowed(r, p == IdeWrite) }
 	// the IDE, in a frame: its app and its API, asking the page's permissions
 	b.idePage = presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
 	p.PagesRegistrator().AddHttpPage(b.idePage)

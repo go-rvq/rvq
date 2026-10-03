@@ -29,6 +29,10 @@ type Builder struct {
 	davPath string
 	fs      hackpadfs.FS
 	log     *slog.Logger
+	// page is the page of the files: its permissions are the WebDAV's
+	page *presets.PageBuilder
+	// mounts are the directories of each request (AddMount)
+	mounts []*Mount
 }
 
 func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, err error) {
@@ -77,6 +81,9 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			})).
 		Private().
 		Layout(b.pageFunc)
+	b.page = page
+	// the WebDAV: reading asks the page's @get, writing !write
+	page.Page().PermActions("!write")
 
 	defer page.Build()
 	return
@@ -103,11 +110,17 @@ func (b *Builder) init() {
 }
 
 func (b *Builder) WebDavHandler() (h http.Handler) {
+	return b.lb.BasichAuthMiddleware(b.davHandler())
+}
+
+// davHandler is the WebDAV of the user of the request (authenticated by
+// WebDavHandler): its permissions verified.
+func (b *Builder) davHandler() (h http.Handler) {
 	log := b.log.With("handler", "webdav")
 
 	h = &webdav.Handler{
 		Prefix:     b.davPath,
-		FileSystem: fs.NewWebDavFS(b.fs),
+		FileSystem: &mountedFS{b: b, base: fs.NewWebDavFS(b.fs)},
 		LockSystem: webdav.NewMemLS(),
 		Logger: func(r *http.Request, err error) {
 			// We're totally abusing the logger here to update
@@ -135,6 +148,6 @@ func (b *Builder) WebDavHandler() (h http.Handler) {
 		},
 	}
 
-	h = b.lb.BasichAuthMiddleware(h)
-	return
+	// each request by its permissions: the page's, a mount's
+	return b.permissions(h)
 }

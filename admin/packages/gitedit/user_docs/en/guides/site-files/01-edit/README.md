@@ -19,3 +19,12 @@ only — the site and the drafts of the others stay as they are.
 The files are in folders: `templates/` (the pages, the layouts, the
 components), `static/` (styles, scripts, images) and `config/` (the options
 of the layouts).
+
+## By WebDAV
+
+The same draft can be opened from a computer, as a network drive, by the
+admin's **WebDAV** (its address is in **Administrator → File System**), in
+the folder `site-files`: edit the files in the program you like. The same
+permissions as in the admin hold — seeing asks `@get`, changing asks
+`!edit` —, and the `.git` folder is not shown. Committing and publishing
+stay here, on this page.
