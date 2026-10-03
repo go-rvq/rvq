@@ -1,0 +1,6 @@
+# The pictures of the documentation's own documents (hermon-cms
+# tools/userdocs-shots), in each language beside it, the side menu hidden
+# (menu: true keeps it).
+- file: guides/policies/02-trash/images/trash.png
+  url: /admin/content/posts?active_filter_tab=trash
+  wait: tbody tr .item-selector
