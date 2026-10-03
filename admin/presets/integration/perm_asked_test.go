@@ -55,7 +55,7 @@ type PASetting struct {
 	Name string
 }
 
-var paSeq int64
+var paSeq, paPublished int64
 
 // paAsked are the permissions asked, as perm.Builder.OnAsk tells them.
 type paAsked struct {
@@ -116,6 +116,12 @@ func paApp(t *testing.T, policies ...*perm.PolicyBuilder) (*presets.Builder, htt
 	posts.AddChild(comments)
 
 	p.Model(&PASetting{}, presets.ModelConfig().SetSingleton(true).SetId("settings")).Editing("Name")
+
+	// a page of the admin with an action: asked with no more said
+	files := p.PagesRegistrator().New(presets.HttpPage("/files")).Private().
+		Layout(func(*web.EventContext) (r web.PageResponse, err error) { return })
+	files.Action("Publish").UpdateFunc(func(string, *web.EventContext) error { atomic.AddInt64(&paPublished, 1); return nil })
+	files.Build()
 	p.MenuOrder(p.MenuGroup("content").Add(presets.ModelItem("posts")), presets.ModelItem("settings"))
 	mux := http.NewServeMux()
 	p.Build(mux)
@@ -203,6 +209,8 @@ func TestAskedPermissionsAreTheDump(t *testing.T) {
 		{"the nested model", func() { get(list + "/1/comments") }, []string{"admin:content/:posts:<*>:comments:@list"}},
 		{"the singleton", func() { get(p.GetModel(&PASetting{}).Info().ListingHref()) }, []string{"admin:settings:@get"}},
 		{"deleting", func() { event(list, actions.DoDelete, id, nil) }, []string{"admin:content/:posts:<*>:@delete"}},
+		{"an action of a page", func() { event("/admin/files", actions.DoAction, [][2]string{{presets.ParamAction, "Publish"}}, nil) },
+			[]string{"admin:/files:!publish"}},
 	}
 
 	// the dump: each resource, by the groups and by the unique name, with
@@ -271,5 +279,23 @@ func TestPagePermissionByMethod(t *testing.T) {
 		if w.Code != want {
 			t.Errorf("%s: %d, want %d", method, w.Code, want)
 		}
+	}
+}
+
+// An action of a page asks the page's permission of it: a policy denying
+// it denies the action, not the page.
+func TestPageActionPermission(t *testing.T) {
+	_, h, _ := paApp(t, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On("admin:/files:!publish"))
+	before := atomic.LoadInt64(&paPublished)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/admin/files", nil))
+	if w.Code != http.StatusOK {
+		t.Errorf("the page: %d", w.Code)
+	}
+	b := multipartestutils.NewMultipartBuilder().PageURL("/admin/files").EventFunc(actions.DoAction).Query(presets.ParamAction, "Publish")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, b.BuildEventFuncRequest())
+	if n := atomic.LoadInt64(&paPublished) - before; n != 0 {
+		t.Errorf("the action denied ran %d times: %d %.300s", n, w.Code, w.Body.String())
 	}
 }

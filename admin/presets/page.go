@@ -171,10 +171,14 @@ func (b *PageBuilder) buildPage(p *web.PageBuilder) {
 	p.MergeHub((&b.events).Wrap(WrapEventHandler))
 }
 
+// Action adds an action to the page. With a permission of the page
+// (Private, AutoPerm), it asks the page's resource and the action
+// ("…:/files:!publish"): no action passes by the permissions unasked.
 func (b *PageBuilder) Action(name string) *ActionBuilder {
 	action := Action(b.r.b, name)
 	action.typ = ActionTypePage
 	b.actions = append(b.actions, action)
+	b.page.PermActions(ActionPerm(name))
 	return action
 }
 
@@ -203,6 +207,14 @@ func (b *PageBuilder) Private(md ...RequestPermVerifierMiddleware) *PageBuilder 
 }
 
 func (b *PageBuilder) Build() {
+	// the actions with no verifier of their own ask the page's permission of
+	// them
+	for _, a := range b.actions {
+		if a.verifier == nil && b.page.verififer != nil {
+			name := ActionPerm(a.name)
+			a.SetVerifier(func(ctx *web.EventContext) *perm.Verifier { return b.page.ActionVerifier(ctx.R, name) })
+		}
+	}
 	if b.pf != nil {
 		b.page.HandlerFromPageFunc(b.handler, b.pf)
 	}

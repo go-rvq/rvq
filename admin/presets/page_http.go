@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -30,6 +31,9 @@ type HttpPageBuilder struct {
 	descriptionFunc func(ctx context.Context) string
 	menuItemFunc    func(ctx *web.EventContext, uri string) h.HTMLComponent
 	autoPerm        bool
+	// permActions are the actions of the page, each its permission
+	// ("!publish"): asked by ActionVerifier, listed in the dump
+	permActions []string
 	// verified says the handler checks the verifier itself
 	// (HandlerFromPageFunc); a plain Handler is wrapped in the check on Build
 	verified    bool
@@ -247,6 +251,30 @@ func (b *HttpPageBuilder) GetMenuIcon() string {
 func (b *HttpPageBuilder) VerifierWithBase(base *perm.Verifier, r *http.Request) *perm.Verifier {
 	return b.verififer.BuildDo(base.Spawn().WithReq(r), PermFromRequest(r))
 }
+
+// ActionVerifier verifies doing the action of the page: its resource and the
+// action ("…:/files:!publish", ActionPerm). nil when the page has no
+// permission of its own.
+func (b *HttpPageBuilder) ActionVerifier(r *http.Request, action string) *perm.Verifier {
+	if b.verififer == nil {
+		return nil
+	}
+	return b.verififer.Build(b.baseVerifier.Verifier(r).Spawn().WithReq(r)).Do(action)
+}
+
+// PermActions registers actions of the page by their permissions ("!publish"):
+// what ActionVerifier asks, listed in the dump of the permissions.
+func (b *HttpPageBuilder) PermActions(perms ...string) *HttpPageBuilder {
+	for _, p := range perms {
+		if !slices.Contains(b.permActions, p) {
+			b.permActions = append(b.permActions, p)
+		}
+	}
+	return b
+}
+
+// GetPermActions are the permissions of the actions of the page.
+func (b *HttpPageBuilder) GetPermActions() []string { return b.permActions }
 
 func (b *HttpPageBuilder) Verifier(r *http.Request) *perm.Verifier {
 	return b.VerifierWithBase(b.baseVerifier.Verifier(r), r)
