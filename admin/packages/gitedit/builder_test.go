@@ -86,7 +86,7 @@ func TestBuilder(t *testing.T) {
 	}
 	// the IDE's app, in the frame: its assets relative to the page
 	w = httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/", nil))
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/index.html", nil))
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `src="./assets/`) {
 		t.Errorf("the IDE's app: %d %.300s", w.Code, w.Body.String())
 	}

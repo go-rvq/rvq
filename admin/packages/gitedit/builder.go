@@ -60,8 +60,9 @@ type Builder struct {
 	// gad IDE's (rvq/js GadIDE) when not set.
 	Assets fs.FS
 
-	ide  *IDE
-	page *presets.PageBuilder
+	ide     *IDE
+	page    *presets.PageBuilder
+	idePage *presets.HttpPageBuilder
 }
 
 // Page is the page of the editor.
@@ -104,8 +105,14 @@ func (b *Builder) Install(p *presets.Builder) error {
 		return ver == nil || ver.Allowed()
 	}
 	// the IDE, in a frame: its app and its API, asking the page's permissions
-	ide := presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
-	p.PagesRegistrator().AddHttpPage(ide)
+	b.idePage = presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
+	p.PagesRegistrator().AddHttpPage(b.idePage)
+	// under the page wherever the menu puts it (its groups are in its URL)
+	b.page.Page().PostBuild(func(*presets.PageHandler) {
+		if g := b.page.Page().GetMenuGroupBuilder(); g != nil {
+			b.idePage.SetMenuGroup(g)
+		}
+	})
 
 	if b.PreviewPath != "" {
 		b.page.Page().PermActions(presets.ActionPerm(ActionPreview))
@@ -156,6 +163,20 @@ func (b *Builder) serveIDE(w http.ResponseWriter, r *http.Request) {
 	}
 	if b.Assets == nil {
 		http.Error(w, "the IDE is not built", http.StatusNotFound)
+		return
+	}
+	if rest == "/" || rest == "/index.html" {
+		// itself: a server that drops the trailing slash of a URL would
+		// send "…/ide/" away from its assets ("./assets/…"), and the files
+		// server sends "index.html" to "./"
+		index, err := fs.ReadFile(b.Assets, "index.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Write(index)
 		return
 	}
 	r2 := *r
@@ -374,7 +395,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 				).Variant(v.VariantOutlined),
 			).Cols(12).Lg(4),
 			v.VCol(
-				h.Iframe().Src(b.page.Page().FullPath()+"/ide/").Attr("title", m.Files).
+				h.Iframe().Src(strings.TrimSuffix(b.idePage.FullPath(), "{rest...}")+"index.html").Attr("title", m.Files).
 					Style("width: 100%; height: calc(100vh - 160px); border: 0"),
 			).Cols(12).Lg(8),
 		),
