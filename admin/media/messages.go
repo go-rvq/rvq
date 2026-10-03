@@ -40,6 +40,10 @@ type Messages struct {
 	OnlyHidden                  string `i18n:"hint='Option of the hidden filter: only the hidden files.'"`
 	IncludeHidden               string `i18n:"hint='Option of the hidden filter: the hidden files too.'"`
 	NotHidden                   string `i18n:"hint='Option of the hidden filter: only the files that are not hidden.'"`
+	MediaLibraryDeletedByID     string `i18n:"hint='Label of the deleted by field of a media file.'"`
+	MediaLibraryDeletedOrigin   string `i18n:"hint='Label of the deleted from field of a media file.'"`
+	MediaLibraryHidden          string `i18n:"hint='Label of the hidden field of a media file.'"`
+	MediaLibrarySelectedType    string `i18n:"hint='Label of the selected type field of a media file.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -70,6 +74,10 @@ var Messages_en_US = &Messages{
 	OnlyHidden:                  "Only hidden",
 	IncludeHidden:               "Include hidden",
 	NotHidden:                   "Not hidden",
+	MediaLibraryDeletedByID:     "Deleted by",
+	MediaLibraryDeletedOrigin:   "Deleted from",
+	MediaLibraryHidden:          "Hidden",
+	MediaLibrarySelectedType:    "Selected type",
 }
 
 var Messages_zh_CN = &Messages{
@@ -148,4 +156,8 @@ var Messages_pt_BR = &Messages{
 	OnlyHidden:                  "Somente ocultos",
 	IncludeHidden:               "Incluir ocultos",
 	NotHidden:                   "Não ocultos",
+	MediaLibraryDeletedByID:     "Excluído por",
+	MediaLibraryDeletedOrigin:   "Excluído de",
+	MediaLibraryHidden:          "Oculto",
+	MediaLibrarySelectedType:    "Tipo selecionado",
 }

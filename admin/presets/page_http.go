@@ -26,14 +26,16 @@ type HttpPageBuilder struct {
 	baseVerifier  RequestPermVerifier
 	titleFunc     func(ctx context.Context) string
 	subTitleFunc  func(ctx context.Context) string
-	menuItemFunc  func(ctx *web.EventContext, uri string) h.HTMLComponent
-	autoPerm      bool
-	notInMenu     bool
-	menuIcon      string
-	postBuild     []func(ph *PageHandler)
-	pageHandler   *PageHandler
-	preWraper     web.PageFuncWrapper
-	wraper        web.PageFuncWrapper
+	// descriptionFunc is what the page is, in the language of the request
+	descriptionFunc func(ctx context.Context) string
+	menuItemFunc    func(ctx *web.EventContext, uri string) h.HTMLComponent
+	autoPerm        bool
+	notInMenu       bool
+	menuIcon        string
+	postBuild       []func(ph *PageHandler)
+	pageHandler     *PageHandler
+	preWraper       web.PageFuncWrapper
+	wraper          web.PageFuncWrapper
 }
 
 func HttpPage(pth string) *HttpPageBuilder {
@@ -201,6 +203,24 @@ func (b *HttpPageBuilder) TTitle(ctx context.Context) string {
 		return ""
 	}
 	return b.titleFunc(ctx)
+}
+
+func (b *HttpPageBuilder) DescriptionFunc(f func(ctx context.Context) string) *HttpPageBuilder {
+	b.descriptionFunc = f
+	return b
+}
+
+func (b *HttpPageBuilder) GetDescriptionFunc() func(ctx context.Context) string {
+	return b.descriptionFunc
+}
+
+// TDescription is what the page is, in the language of ctx; "" when it has
+// none.
+func (b *HttpPageBuilder) TDescription(ctx context.Context) string {
+	if b.descriptionFunc == nil {
+		return ""
+	}
+	return b.descriptionFunc(ctx)
 }
 
 func (b *HttpPageBuilder) InMenu(v bool) (r *HttpPageBuilder) {

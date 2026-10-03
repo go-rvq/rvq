@@ -118,7 +118,9 @@ func (b *AssociationManagerBuilder) Build() {
 		presets.ModelConfig().
 			SetId(b.Field).
 			SetUriName(strcase.ToKebab(b.Field)).
-			SetDataOperator(do),
+			SetDataOperator(do).
+			// its texts beside its parent's
+			SetModuleKey(b.Parent.I18nModuleKeyOrDefault()),
 	)
 
 	b.Parent.AddChildH(Child, func(mb *presets.ModelBuilder) {

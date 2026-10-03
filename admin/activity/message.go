@@ -30,14 +30,26 @@ type Messages struct {
 	FilterCreator   string `i18n:"label='Filter: creator', hint='Filter of the activity log by who did the action.'"`
 	FilterModel     string `i18n:"label='Filter: model', hint='Filter of the activity log by model.'"`
 
-	DiffDetail  string `i18n:"label='Diff: detail', hint='Title of the detail of a change.'"`
-	DiffNew     string `i18n:"label='Diff: new', hint='Title of the values of a created record.'"`
-	DiffDelete  string `i18n:"label='Diff: delete', hint='Title of the values of a deleted record.'"`
-	DiffChanges string `i18n:"label='Diff: changes', hint='Title of the values a change changed.'"`
-	DiffField   string `i18n:"label='Diff: field', hint='Column with the field that changed.'"`
-	DiffOld     string `i18n:"label='Diff: old', hint='Column with the value before the change.'"`
-	DiffNow     string `i18n:"label='Diff: now', hint='Column with the value after the change.'"`
-	DiffValue   string `i18n:"label='Diff: value', hint='Column with a value of a created or deleted record.'"`
+	DiffDetail               string `i18n:"label='Diff: detail', hint='Title of the detail of a change.'"`
+	DiffNew                  string `i18n:"label='Diff: new', hint='Title of the values of a created record.'"`
+	DiffDelete               string `i18n:"label='Diff: delete', hint='Title of the values of a deleted record.'"`
+	DiffChanges              string `i18n:"label='Diff: changes', hint='Title of the values a change changed.'"`
+	DiffField                string `i18n:"label='Diff: field', hint='Column with the field that changed.'"`
+	DiffOld                  string `i18n:"label='Diff: old', hint='Column with the value before the change.'"`
+	DiffNow                  string `i18n:"label='Diff: now', hint='Column with the value after the change.'"`
+	DiffValue                string `i18n:"label='Diff: value', hint='Column with a value of a created or deleted record.'"`
+	ActivityLog              string `i18n:"hint='Name of the activity log model in the singular (detail and form titles).'"`
+	ActivityLogCreator       string `i18n:"hint='Label of the creator field of an activity log.'"`
+	ActivityLogDetail        string `i18n:"hint='Label of the detail field of an activity log.'"`
+	ActivityLogIP            string `i18n:"hint='Label of the IP field of an activity log.'"`
+	ActivityLogModelKeys     string `i18n:"hint='Label of the record keys field of an activity log.'"`
+	ActivityLogModelLabel    string `i18n:"hint='Label of the model label field of an activity log.'"`
+	ActivityLogModelLink     string `i18n:"hint='Label of the record link field of an activity log.'"`
+	ActivityLogModelName     string `i18n:"hint='Label of the model field of an activity log.'"`
+	ActivityLogRevisionHash  string `i18n:"hint='Label of the revision hash field of an activity log.'"`
+	ActivityLogRevisionTable string `i18n:"hint='Label of the revision table field of an activity log.'"`
+	ActivityLogUserAgent     string `i18n:"hint='Label of the user agent field of an activity log.'"`
+	ActivityLogUserID        string `i18n:"hint='Label of the user field of an activity log.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -70,14 +82,26 @@ var Messages_en_US = &Messages{
 	FilterCreator:   "Creator",
 	FilterModel:     "Model Name",
 
-	DiffDetail:  "Detail",
-	DiffNew:     "New",
-	DiffDelete:  "Delete",
-	DiffChanges: "Changes",
-	DiffField:   "Filed",
-	DiffOld:     "Old",
-	DiffNow:     "Now",
-	DiffValue:   "Value",
+	DiffDetail:               "Detail",
+	DiffNew:                  "New",
+	DiffDelete:               "Delete",
+	DiffChanges:              "Changes",
+	DiffField:                "Filed",
+	DiffOld:                  "Old",
+	DiffNow:                  "Now",
+	DiffValue:                "Value",
+	ActivityLog:              "Activity Log",
+	ActivityLogCreator:       "Creator",
+	ActivityLogDetail:        "Detail",
+	ActivityLogIP:            "IP",
+	ActivityLogModelKeys:     "Record keys",
+	ActivityLogModelLabel:    "Model label",
+	ActivityLogModelLink:     "Record link",
+	ActivityLogModelName:     "Model",
+	ActivityLogRevisionHash:  "Revision hash",
+	ActivityLogRevisionTable: "Revision table",
+	ActivityLogUserAgent:     "User agent",
+	ActivityLogUserID:        "User",
 }
 
 var Messages_zh_CN = &Messages{
@@ -148,12 +172,24 @@ var Messages_pt_BR = &Messages{
 	FilterCreator:   "Autor",
 	FilterModel:     "Modelo",
 
-	DiffDetail:  "Detalhe",
-	DiffNew:     "Novo",
-	DiffDelete:  "Excluído",
-	DiffChanges: "Alterações",
-	DiffField:   "Campo",
-	DiffOld:     "Antes",
-	DiffNow:     "Agora",
-	DiffValue:   "Valor",
+	DiffDetail:               "Detalhe",
+	DiffNew:                  "Novo",
+	DiffDelete:               "Excluído",
+	DiffChanges:              "Alterações",
+	DiffField:                "Campo",
+	DiffOld:                  "Antes",
+	DiffNow:                  "Agora",
+	DiffValue:                "Valor",
+	ActivityLog:              "Registro de atividade",
+	ActivityLogCreator:       "Autor",
+	ActivityLogDetail:        "Detalhe",
+	ActivityLogIP:            "IP",
+	ActivityLogModelKeys:     "Chaves do registro",
+	ActivityLogModelLabel:    "Rótulo do modelo",
+	ActivityLogModelLink:     "Link do registro",
+	ActivityLogModelName:     "Modelo",
+	ActivityLogRevisionHash:  "Hash da revisão",
+	ActivityLogRevisionTable: "Tabela da revisão",
+	ActivityLogUserAgent:     "Navegador (user agent)",
+	ActivityLogUserID:        "Usuário",
 }

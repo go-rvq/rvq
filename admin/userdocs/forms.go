@@ -74,7 +74,7 @@ func fieldsTable(mb *presets.ModelBuilder, form string, ctx *web.EventContext) s
 			if label == "" {
 				label = presets.HumanizeString(name)
 			}
-			desc := f.ContextHint(info, ctx.Context())
+			desc := f.ContextFormHint(info, ctx.Context())
 			if f.Enabled() != nil {
 				desc = strings.TrimSpace(desc + " *" + msgs.Conditional + "*")
 			}

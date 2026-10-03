@@ -133,6 +133,14 @@ func (b *Builder) NewJob(name string) *JobBuilder {
 	return j
 }
 
+// jobTitle is the title of the job of the kind name, in the language of ctx.
+func (b *Builder) jobTitle(ctx *web.EventContext, name string) string {
+	if jb := b.getJobBuilder(name); jb != nil {
+		return jb.GetTitle(ctx)
+	}
+	return getTJob(ctx.Context(), name)
+}
+
 func (b *Builder) getJobBuilder(name string) *JobBuilder {
 	for _, jb := range b.jbs {
 		if jb.name == name {
@@ -195,14 +203,10 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	mb.AppendListPermActions(func() (actions []*presets.PermNodeAction) {
 		for _, jb := range b.jbs {
 			job := jb
+			// its own title and description, in the language of the request
 			actions = append(actions, &presets.PermNodeAction{Name: presets.ActionPerm(job.name),
-				// its title, in the language of the request
-				Title: func(ctx context.Context) string {
-					if ec := web.EventContextFromContext(ctx); ec != nil {
-						return job.GetTitle(ec)
-					}
-					return getTJob(ctx, job.name)
-				}})
+				Title:       func(ctx context.Context) string { return job.GetTitle(eventContextOf(ctx)) },
+				Description: func(ctx context.Context) string { return job.GetDescription(eventContextOf(ctx)) }})
 		}
 		return
 	})
@@ -418,7 +422,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		}
 
 		return Div(
-			Div(Text(getTJob(ctx.Context(), job.Job))).Class("mb-3 text-h6 font-weight-regular"),
+			Div(Text(b.jobTitle(ctx, job.Job))).Class("mb-3 text-h6 font-weight-regular"),
 			If(inst.Status == JobStatusScheduled,
 				scheduledJobDetailing...,
 			).Else(
@@ -1123,4 +1127,14 @@ func renameLegacy(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+// eventContextOf is the event context of ctx; one made of ctx when it has
+// none, as the dump of the permissions is asked with a plain context.
+func eventContextOf(ctx context.Context) *web.EventContext {
+	if ec := web.EventContextFromContext(ctx); ec != nil {
+		return ec
+	}
+	r, _ := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+	return &web.EventContext{R: r}
 }

@@ -12,10 +12,12 @@ type PermVerifierFunc func(v *Verifier) *Verifier
 type ActionsWithTitleMap map[string]func(context context.Context) string
 
 type PermVerifierBuilder struct {
-	v       *Verifier
-	vFunc   PermVerifierFunc
-	title   func(context context.Context) string
-	actions ActionsWithTitleMap
+	v     *Verifier
+	vFunc PermVerifierFunc
+	title func(context context.Context) string
+	// description is what it allows, in the language of the request
+	description func(context context.Context) string
+	actions     ActionsWithTitleMap
 }
 
 func PermVerifier(v ...*Verifier) *PermVerifierBuilder {
@@ -123,6 +125,24 @@ func (b *PermVerifierBuilder) TTitle(context context.Context) string {
 		return ""
 	}
 	return b.title(context)
+}
+
+func (b *PermVerifierBuilder) Description(f func(ctx context.Context) string) *PermVerifierBuilder {
+	b.description = f
+	return b
+}
+
+func (b *PermVerifierBuilder) GetDescription() func(context context.Context) string {
+	return b.description
+}
+
+// TDescription is what it allows, in the language of ctx; "" when it has
+// none.
+func (b *PermVerifierBuilder) TDescription(context context.Context) string {
+	if b.description == nil {
+		return ""
+	}
+	return b.description(context)
 }
 
 func (b *PermVerifierBuilder) Valid() bool {

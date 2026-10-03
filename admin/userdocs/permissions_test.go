@@ -1,6 +1,7 @@
 package userdocs
 
 import (
+	"context"
 	"encoding/json"
 	"html"
 	"net/http"
@@ -49,6 +50,10 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	posts.AddChild(presets.NewModelBuilder(pb, &treeComment{}, presets.ModelConfig().SetId("comments")))
 	pb.Model(&treeSetting{}, presets.ModelConfig().SetSingleton(true).SetId("settings"))
 	pb.PagesRegistrator().AddHttpPage(presets.HttpPage("/tools").Handler(nop).AutoPerm().MenuGroup("site"))
+	// descriptions of their own: they win over the one by the kind
+	own := func(s string) func(context.Context) string { return func(context.Context) string { return s } }
+	posts.DescriptionFunc(own("All the posts of the site"))
+	pb.MenuGroup("site").DescriptionFunc(own("The site"))
 	pb.MenuOrder(pb.MenuGroup("site").Add(presets.ModelItem("posts")), presets.ModelItem("settings"))
 	pb.Build(http.NewServeMux())
 
@@ -85,8 +90,8 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		t.Errorf("the scope %q", pt[0].Title)
 	}
 	for res, prefix := range map[string]string{
-		"admin:site/:":                              "Tudo o que está no grupo",
-		"admin:site/:posts:":                        "A listagem de",
+		"admin:site/:":                              "The site",
+		"admin:site/:posts:":                        "All the posts of the site",
 		"admin:site/:posts:<*>:":                    "Qualquer registro de",
 		"admin:site/:posts:<*>:#Title:":             "O campo",
 		"admin:site/:posts:<*>:$Main:":              "A seção",
@@ -105,7 +110,7 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	}
 	en := tree("en")
 	walk(en, Messages_en_US)
-	if en[0].Title != Messages_en_US.PermScopeAdmin || !strings.HasPrefix(descs["admin:site/:"], "Everything in the group") {
-		t.Errorf("in English: %q, %q", en[0].Title, descs["admin:site/:"])
+	if en[0].Title != Messages_en_US.PermScopeAdmin || !strings.HasPrefix(descs["admin:settings:"], "The single record of") {
+		t.Errorf("in English: %q, %q", en[0].Title, descs["admin:settings:"])
 	}
 }

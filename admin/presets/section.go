@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/sunfmin/reflectutils"
 )
@@ -165,6 +167,16 @@ func (d *SectionBuilder) AlwaysShowListLabel() *SectionBuilder {
 // SectionBuilder
 // save: 	   fetcher => setter => saver
 // show, edit: fetcher => setter
+// TDescription is what the section is, in the language of ctx: its
+// SetI18nDescription, or the "<Name>_Desc" of the model's hints; "" when
+// there is none.
+func (b *SectionBuilder) TDescription(mb *ModelBuilder, ctx context.Context) string {
+	if b.i18nDescription != nil {
+		return b.i18nDescription(ctx)
+	}
+	return i18n.TranslateD(mb.HintTranslator(), nil, ctx, b.name+"_Desc")
+}
+
 type SectionBuilder struct {
 	NameLabel
 	// if the field can switch status to edit and show, switchable must be true

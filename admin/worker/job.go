@@ -42,6 +42,7 @@ type JobBuilder struct {
 	global         bool
 	system         bool
 	title          func(ctx *web.EventContext) string
+	description    func(ctx *web.EventContext) string
 	cronConfig     JobCronConfig
 }
 
@@ -72,6 +73,21 @@ func (jb *JobBuilder) GetTitle(ctx *web.EventContext) (t string) {
 		t = getTJob(ctx.Context(), jb.name)
 	}
 	return
+}
+
+func (jb *JobBuilder) Description(f func(ctx *web.EventContext) string) *JobBuilder {
+	jb.description = f
+	return jb
+}
+
+// GetDescription is what the job does, in the language of ctx: its
+// Description, or the "WorkerJob<Name>_Desc" of the models' messages; ""
+// when there is none.
+func (jb *JobBuilder) GetDescription(ctx *web.EventContext) string {
+	if jb.description != nil {
+		return jb.description(ctx)
+	}
+	return getTJobHint(ctx.Context(), jb.name)
 }
 
 func (jb *JobBuilder) System(v bool) *JobBuilder {

@@ -111,7 +111,7 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 		"Permissions",
 	)
 
-	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{})
+	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{}, presets.ModelConfig().SetModuleKey(MessagesKey))
 	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
 	ed.Field("Permissions").AutoNested(policeModel, permFb)
 

@@ -52,6 +52,8 @@ type Messages struct {
 	ErrGmailSenderCredentialsInvalid  i18n.ErrorString `i18n:"hint='Error when the credentials file is not of a Desktop application.'"`
 	ErrGmailSenderScopeNotGranted     string           `i18n:"hint='Error when Google gave a token without the scope needed.', fields=(;'%s'='the scope')"`
 	SendMailSuccessfully              string           `i18n:"label='Mail sent', hint='Shown once an email was sent.'"`
+	GmailSenderToken                  string           `i18n:"hint='Label of the token field of the Gmail sender.'"`
+	GmailSenderUser                   string           `i18n:"hint='Label of the user field of the Gmail sender.'"`
 }
 
 var (
@@ -114,6 +116,8 @@ var (
 		ErrGmailSenderScopeNotGranted:    "Google issued the token without the %s scope, so this sender cannot send mail. Declare that scope on the consent screen under \"Data access\", then Sign Out and sign in again, ticking the permission that lets the app send email on your behalf.",
 		ErrGmailSenderCredentialsInvalid: "The credentials is not a valid DESKTOP APPLICATION credentials",
 		SendMailSuccessfully:             "Send mail successfully",
+		GmailSenderToken:                 "Token",
+		GmailSenderUser:                  "User",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -175,6 +179,8 @@ var (
 		ErrGmailSenderScopeNotGranted:    "O Google emitiu o token sem o escopo %s, então este remetente não consegue enviar. Declare esse escopo na tela de consentimento, em \"Acesso a dados\", depois clique em Sign Out e entre de novo, marcando a permissão que autoriza o app a enviar email em seu nome.",
 		ErrGmailSenderCredentialsInvalid: "Estas crendencias não são do tipo DESKTOP APPLICATION (Aplicação de Desktop).",
 		SendMailSuccessfully:             "Email enviado com sucesso",
+		GmailSenderToken:                 "Token",
+		GmailSenderUser:                  "Usuário",
 	}
 )
 

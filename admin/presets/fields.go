@@ -44,6 +44,9 @@ type NameLabel struct {
 	labelKey    string
 	i18nLabel   func(ctx context.Context) string
 	hiddenLabel bool
+	// i18nDescription is what it is, in the language of the request; nil:
+	// the "<key>_Hint" of its translator
+	i18nDescription func(ctx context.Context) string
 }
 
 func (n *NameLabel) Name() string {
@@ -76,6 +79,14 @@ func (n *NameLabel) I18nLabel() func(ctx context.Context) string {
 
 func (n *NameLabel) SetI18nLabel(i18nLabel func(ctx context.Context) string) {
 	n.i18nLabel = i18nLabel
+}
+
+func (n *NameLabel) SetI18nDescription(f func(ctx context.Context) string) {
+	n.i18nDescription = f
+}
+
+func (n *NameLabel) I18nDescription() func(ctx context.Context) string {
+	return n.i18nDescription
 }
 
 func (n *NameLabel) HiddenLabel() bool {

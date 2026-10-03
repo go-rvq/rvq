@@ -102,6 +102,13 @@ func (b *ActionBuilder) SetI18nLabel(i18nLabel func(ctx context.Context) string)
 	return b
 }
 
+// SetI18nDescription sets what the action does, in the language of the
+// request (RequestDescription).
+func (b *ActionBuilder) SetI18nDescription(f func(ctx context.Context) string) *ActionBuilder {
+	b.NameLabel.SetI18nDescription(f)
+	return b
+}
+
 // ButtonCompFunc defines the components of the button area.
 func (b *ActionBuilder) ButtonCompFunc(v ButtonComponentFunc) (r *ActionBuilder) {
 	b.buttonCompFunc = v
@@ -239,6 +246,20 @@ func (b *ActionBuilder) RequestTitle(mb *ModelBuilder, ctx context.Context) (lab
 	}
 
 	return i18n.Translate(mb.ActionTranslator(), ctx, label)
+}
+
+// RequestDescription is what the action does, in the language of ctx: its
+// SetI18nDescription, or the "<Model>_Action_<Name>_Desc" of the model's
+// actions; "" when there is none.
+func (b *ActionBuilder) RequestDescription(mb *ModelBuilder, ctx context.Context) string {
+	if b.i18nDescription != nil {
+		return b.i18nDescription(ctx)
+	}
+	key := b.labelKey
+	if key == "" {
+		key = b.name
+	}
+	return i18n.TranslateD(mb.KeyFormatTranslatorD("%s_Action_%s", true), nil, ctx, key+"_Desc")
 }
 
 func (b *ActionBuilder) LinkHandler() ActionLinkHandler {

@@ -71,7 +71,9 @@ type ModelBuilder struct {
 	deletedFunc func(obj any) bool
 	// listPermActions are actions of its listing no builder knows, for the
 	// permissions (AppendListPermActions)
-	listPermActions     []func() []*PermNodeAction
+	listPermActions []func() []*PermNodeAction
+	// descriptionFunc is what the model is, in the language of the request
+	descriptionFunc     func(ctx context.Context) string
 	defaultURLQueryFunc func(*http.Request) url.Values
 	fieldLabels         map[string]func(ctx *web.EventContext) string
 	fieldHints          map[string]func(ctx *web.EventContext) string
@@ -646,7 +648,7 @@ func (mb *ModelBuilder) FieldHint(field *FieldBuilder, ctx *web.EventContext) (r
 	if f := mb.fieldHints[field.name]; f != nil {
 		return f(ctx)
 	}
-	return field.ContextHint(mb.Info(), ctx.Context())
+	return field.ContextFormHint(mb.Info(), ctx.Context())
 }
 
 func (b *ModelBuilder) Verifier(vf ...*perm.PermVerifierBuilder) (r *ModelBuilder) {
@@ -715,6 +717,23 @@ func (mb *ModelBuilder) TTitleAuto(ctx context.Context, args ...string) string {
 
 func (mb *ModelBuilder) TTitle(ctx context.Context, args ...string) string {
 	return i18n.Translate(mb.Translator(), ctx, mb.label, args...)
+}
+
+// DescriptionFunc sets what the model is, in the language of the request
+// (TDescription).
+func (mb *ModelBuilder) DescriptionFunc(f func(ctx context.Context) string) *ModelBuilder {
+	mb.descriptionFunc = f
+	return mb
+}
+
+// TDescription is what the model is, in the language of ctx: its
+// DescriptionFunc, or the "<Label>_Desc" of its translator; "" when there is
+// none.
+func (mb *ModelBuilder) TDescription(ctx context.Context) string {
+	if mb.descriptionFunc != nil {
+		return mb.descriptionFunc(ctx)
+	}
+	return i18n.TranslateD(mb.KeyFormatTranslatorD("%[2]s", true), nil, ctx, mb.label+"_Desc")
 }
 
 func (mb *ModelBuilder) TTitlePlural(ctx context.Context, args ...string) string {

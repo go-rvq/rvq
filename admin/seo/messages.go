@@ -43,12 +43,16 @@ type Messages struct {
 
 	// SEO configuration: the Google Maps API key field and its "?" help. The Help
 	// body is HTML.
-	SEOConfig          string `i18n:"label='SEO settings', hint='Name of the SEO settings model.'"`
-	MapsKey            string `i18n:"label='Google Maps API key', hint='Label of the Google Maps key used by the ZIP-codes variable.'"`
-	MapsKeyHint        string `i18n:"label='Google Maps API key: hint', hint='Hint of the Google Maps key: which APIs it needs.'"`
-	MapsKeyHelpTooltip string `i18n:"label='Google Maps API key: help tooltip', hint='Tooltip of the button that opens the help on the Google Maps key.'"`
-	MapsKeyHelpTitle   string `i18n:"label='Google Maps API key: help title', hint='Title of the help on how to get a Google Maps key.'"`
-	MapsKeyHelp        string `i18n:"type=html, label='Google Maps API key: help', hint='Steps to get a Google Maps key (HTML).'"`
+	SEOConfig                 string `i18n:"label='SEO settings', hint='Name of the SEO settings model.'"`
+	MapsKey                   string `i18n:"label='Google Maps API key', hint='Label of the Google Maps key used by the ZIP-codes variable.'"`
+	MapsKeyHint               string `i18n:"label='Google Maps API key: hint', hint='Hint of the Google Maps key: which APIs it needs.'"`
+	MapsKeyHelpTooltip        string `i18n:"label='Google Maps API key: help tooltip', hint='Tooltip of the button that opens the help on the Google Maps key.'"`
+	MapsKeyHelpTitle          string `i18n:"label='Google Maps API key: help title', hint='Title of the help on how to get a Google Maps key.'"`
+	MapsKeyHelp               string `i18n:"type=html, label='Google Maps API key: help', hint='Steps to get a Google Maps key (HTML).'"`
+	SEOConfigGoogleMapsAPIKey string `i18n:"hint='Label of the Google Maps API key field of the SEO settings.'"`
+	SEOConfigYAML             string `i18n:"hint='Label of the YAML field of the SEO settings.'"`
+	SEOSetting                string `i18n:"hint='Name of the SEO setting of a record.'"`
+	SEOVariables              string `i18n:"hint='Label of the variables field of the SEO settings.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -100,6 +104,10 @@ var Messages_en_US = &Messages{
 		"<li>Copy the key and paste it in the \"Google Maps API Key\" field.</li>" +
 		"</ol>" +
 		"<p>Without the key, the ZIP-codes variable still works as plain text.</p>",
+	SEOConfigGoogleMapsAPIKey: "Google Maps API key",
+	SEOConfigYAML:             "YAML",
+	SEOSetting:                "Setting",
+	SEOVariables:              "Variables",
 }
 
 var Messages_zh_CN = &Messages{
@@ -202,4 +210,8 @@ var Messages_pt_BR = &Messages{
 		"<li>Copie a chave e cole no campo \"Google Maps API Key\".</li>" +
 		"</ol>" +
 		"<p>Sem a chave, a variável de CEPs continua funcionando como texto simples.</p>",
+	SEOConfigGoogleMapsAPIKey: "Chave da API do Google Maps",
+	SEOConfigYAML:             "YAML",
+	SEOSetting:                "Configuração",
+	SEOVariables:              "Variáveis",
 }

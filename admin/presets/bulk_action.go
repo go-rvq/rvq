@@ -65,6 +65,27 @@ func (b *BulkActionBuilder) SetI18nLabel(i18nLabel func(ctx context.Context) str
 	return b
 }
 
+// SetI18nDescription sets what the action does, in the language of the
+// request (RequestDescription).
+func (b *BulkActionBuilder) SetI18nDescription(f func(ctx context.Context) string) *BulkActionBuilder {
+	b.NameLabel.SetI18nDescription(f)
+	return b
+}
+
+// RequestDescription is what the action does, in the language of ctx: its
+// SetI18nDescription, or the "<Model>_BulkAction_<Name>_Desc" of the model's
+// bulk actions; "" when there is none.
+func (b *BulkActionBuilder) RequestDescription(ctx context.Context) string {
+	if b.i18nDescription != nil {
+		return b.i18nDescription(ctx)
+	}
+	key := b.labelKey
+	if key == "" {
+		key = b.name
+	}
+	return i18n.TranslateD(b.l.mb.KeyFormatTranslatorD("%s_BulkAction_%s", true), nil, ctx, key+"_Desc")
+}
+
 func (b *BulkActionBuilder) Icon(v string) *BulkActionBuilder {
 	b.icon = v
 	return b

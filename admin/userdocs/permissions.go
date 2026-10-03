@@ -278,6 +278,12 @@ func (r *renderer) permissionsTree() string {
 	}
 	// what the node is, in the language of the request
 	describe := func(n *presets.PermNode, label string) string {
+		// its own, when it has one
+		if n.Description != nil {
+			if d := n.Description(ctx); d != "" {
+				return d
+			}
+		}
 		parent := title(n.Parent)
 		switch n.Kind {
 		case presets.PermNodeGroup:

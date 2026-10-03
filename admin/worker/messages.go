@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/iancoleman/strcase"
 	"golang.org/x/text/language"
 )
 
@@ -50,6 +51,10 @@ type Messages struct {
 	Job                      string           `i18n:"hint='Name of the jobs model in the singular (detail and form titles).'"`
 	WorkersJob               string           `i18n:"label='Job (field)', hint='Label of the field that says which job a worker record runs.'"`
 	ErrJobRunsOnce           i18n.ErrorString `i18n:"hint='Error shown when a job that runs only once is started again.'"`
+	Workers                  string           `i18n:"hint='Name of the jobs model in the singular (detail and form titles).'"`
+	WorkersArgs              string           `i18n:"hint='Label of the arguments field of a job.'"`
+	WorkersDetailingPage     string           `i18n:"hint='Label of the detail page field of a job.'"`
+	WorkersTimeline          string           `i18n:"hint='Label of the timeline field of a job.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -82,6 +87,10 @@ var Messages_en_US = &Messages{
 	Job:                      "Job",
 	WorkersJob:               "Job",
 	ErrJobRunsOnce:           "This job runs once",
+	Workers:                  "System Job",
+	WorkersArgs:              "Arguments",
+	WorkersDetailingPage:     "Detail page",
+	WorkersTimeline:          "Timeline",
 }
 
 var Messages_zh_CN = &Messages{
@@ -143,6 +152,10 @@ var Messages_pt_BR = &Messages{
 	Job:                      "Processo de Sistema",
 	WorkersJob:               "Tarefa",
 	ErrJobRunsOnce:           "Esta tarefa só pode ser executada uma única vez",
+	Workers:                  "Processo de Sistema",
+	WorkersArgs:              "Argumentos",
+	WorkersDetailingPage:     "Página de detalhe",
+	WorkersTimeline:          "Linha do tempo",
 }
 
 func (m *Messages) GetStatus(status string) string {
@@ -167,4 +180,12 @@ func (m *Messages) GetStatus(status string) string {
 
 func getTJob(ctx context.Context, v string) string {
 	return i18n.PT(ctx, presets.ModelsI18nModuleKey, "WorkerJob", v)
+}
+
+// getTJobHint is the description of the job v: "WorkerJob<V>_Desc", "" when
+// there is none.
+func getTJobHint(ctx context.Context, v string) string {
+	return i18n.PTFk(ctx, presets.ModelsI18nModuleKey, func() string {
+		return strcase.ToCamel("WorkerJob "+v) + "_Desc"
+	}, "")
 }

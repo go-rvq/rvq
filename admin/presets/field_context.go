@@ -131,7 +131,7 @@ func (b *FieldContextBuilder) Build() (fctx *FieldContext) {
 			if options.Hint != "" {
 				return options.Hint
 			}
-			return b.field.ContextHint(b.info, b.ctx.Context())
+			return b.field.ContextFormHint(b.info, b.ctx.Context())
 		},
 		Nested:  b.field.nested,
 		Context: b.field.context,

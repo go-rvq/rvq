@@ -479,6 +479,32 @@ func (b *FieldBuilder) ContextHint(info *ModelInfo, ctx context.Context) string 
 	return msgr.Common.Get(b.name)
 }
 
+// ContextDescription is what the field is, in the language of ctx: the
+// "<Model><Field>_Desc" of the model's hints; "" when there is none.
+func (b *FieldBuilder) ContextDescription(info *ModelInfo, ctx context.Context) string {
+	if info == nil {
+		return ""
+	}
+	return i18n.TranslateD(info.mb.HintTranslator(), nil, ctx, b.name+"_Desc")
+}
+
+// ContextFormHint is the text under the field in a form: its description
+// (ContextDescription), then its hint (ContextHint) — how to fill it.
+func (b *FieldBuilder) ContextFormHint(info *ModelInfo, ctx context.Context) string {
+	return joinText(b.ContextDescription(info, ctx), b.ContextHint(info, ctx))
+}
+
+// joinText is the texts not empty, separated by a space.
+func joinText(texts ...string) string {
+	var parts []string
+	for _, t := range texts {
+		if t = strings.TrimSpace(t); t != "" {
+			parts = append(parts, t)
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
 func (b *FieldBuilder) DefaultContextHint(ctx context.Context) string {
 	return b.ContextHint(nil, ctx)
 }

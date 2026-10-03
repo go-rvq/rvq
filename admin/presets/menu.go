@@ -72,9 +72,11 @@ func (i *MenuItem) Group() *MenuGroupBuilder {
 type MenuGroupBuilder struct {
 	item  *MenuItem
 	title func(ctx context.Context) string
-	name  string
-	icon  string
-	items []*MenuItem
+	// description is what is in the group, in the language of the request
+	description func(ctx context.Context) string
+	name        string
+	icon        string
+	items       []*MenuItem
 	// uriName is the group's segment in its models' URIs; nil is its name.
 	uriName *string
 
@@ -121,6 +123,27 @@ func (b *MenuGroupBuilder) TTitle(ctx context.Context) string {
 		return b.title(ctx)
 	}
 	return HumanizeString(b.name)
+}
+
+func (b *MenuGroupBuilder) DescriptionFunc(f func(ctx context.Context) string) *MenuGroupBuilder {
+	b.description = f
+	return b
+}
+
+func (b *MenuGroupBuilder) Description(s string) *MenuGroupBuilder {
+	b.description = func(context.Context) string {
+		return s
+	}
+	return b
+}
+
+// TDescription is what is in the group, in the language of ctx; "" when it
+// has none.
+func (b *MenuGroupBuilder) TDescription(ctx context.Context) string {
+	if b == nil || b.description == nil {
+		return ""
+	}
+	return b.description(ctx)
 }
 
 func (b *MenuGroupBuilder) Icon(v string) (r *MenuGroupBuilder) {

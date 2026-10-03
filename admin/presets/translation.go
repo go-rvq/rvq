@@ -68,17 +68,29 @@ func KeyFormatTranslatorD(prefix, keyFormat string, allowEmpty bool, module ...i
 //	                                                   passes the singular,
 //	                                                   TTitlePlural the plural
 //	FieldTranslator       <Model><Field>               a field's label
-//	HintTranslator        <Model><Field>_Hint          the text under a field;
-//	                                                   the _Hint is added by the
-//	                                                   caller, not by the format
+//	HintTranslator        <Model><Field>_Desc          what a field is, and
+//	                      <Model><Field>_Hint          how to fill it: the text
+//	                                                   under it in a form is
+//	                                                   both, _Desc then _Hint;
+//	                                                   the suffix is added by
+//	                                                   the caller, not by the
+//	                                                   format
 //	FilterTranslator      <Model>_Filter_<Key>         a filter's label, and the
 //	                                                   text of each of its
 //	                                                   options
 //	ActionTranslator      <Model>_Action_<Name>        an action's label
 //	BulkActionTranslator  <Model>_BulkAction_<Name>    a bulk action's label
 //
-// So a Subject field on ContactService is ContactServiceSubject, its hint
-// ContactServiceSubject_Hint, and the "enabled" tab of its listing
+// The descriptions — what a model, an action, a section is — are their keys
+// with "_Desc", as a field's, none required: <Model>_Desc (TDescription),
+// <Model>_Action_<Name>_Desc, <Model>_BulkAction_<Name>_Desc
+// (RequestDescription), <Model><Section>_Desc; a job's,
+// WorkerJob<Name>_Desc. A group, a page and a verifier of permissions take
+// theirs as their title, by a function (DescriptionFunc, Description).
+//
+// So a Subject field on ContactService is ContactServiceSubject, what it is
+// ContactServiceSubject_Desc, its hint ContactServiceSubject_Hint, and the
+// "enabled" tab of its listing
 // ContactService_Filter_Enabled.
 //
 // A format that is needed only once is passed directly to TFormat, as the row
