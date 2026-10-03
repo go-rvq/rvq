@@ -11,3 +11,5 @@ A permission by the **unique name** decides before one through the
 only when none is given by it do the groups decide. The groups follow the
 menu: moving this part to another group changes its resource by the groups,
 never its unique name.
+
+The resources begin with `presets`, the **scope** of the admin — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.

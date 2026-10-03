@@ -221,7 +221,8 @@ func (b *Verifier) ObjectOn(v interface{}) (r *Verifier) {
 	id, err := reflectutils.Get(v, "ID")
 	if err == nil && !zeroer.IsZero(id) {
 		b.vr.objs = append(b.vr.objs, v)
-		b.SnakeOn(fmt.Sprint(id))
+		// a record: its id in <…>, "<12>"
+		b.On("<" + fmt.Sprint(id) + ">")
 	}
 
 	return b

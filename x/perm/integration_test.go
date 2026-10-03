@@ -113,7 +113,7 @@ var cases = []struct {
 	{
 		name: "anonymous should not have permission for upload on the post",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:12:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:<12>:*"),
 		},
 		subjects:           nil,
 		dontWantPermission: "upload",
@@ -122,7 +122,7 @@ var cases = []struct {
 	{
 		name: "developer should have permission for upload on the post",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:12:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:<12>:*"),
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",
@@ -131,7 +131,7 @@ var cases = []struct {
 	{
 		name: "developer should not have permission for upload on another record",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:99:*"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("presets:<99>:*"),
 		},
 		subjects:           []string{"developer"},
 		dontWantPermission: "upload",
@@ -140,7 +140,7 @@ var cases = []struct {
 	{
 		name: "developer should have permission for upload on the nested record 33",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:33:*"), // the verb ends the resource asked: "…:33:Upload"
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:<33>:*"), // the verb ends the resource asked: "…:<33>:Upload"
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",

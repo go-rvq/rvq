@@ -6,3 +6,5 @@ O nome único decide antes dos grupos (negar prevalece).
 {%= admin.permissions() %}
 
 Veja {%= admin.doc("guides/policies/01-permissions").link %}.
+
+Os recursos começam por `presets`, o **escopo** do admin — veja os escopos em {%= admin.doc("guides/policies/01-permissions").link %}.

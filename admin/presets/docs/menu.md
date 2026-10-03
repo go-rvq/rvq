@@ -219,6 +219,13 @@ presets:site/:seo/:seo_config:<7>:@edit     through the groups
 presets:seo_config:<7>:@edit                by the unique name
 ```
 
+The first part is the **scope**: who asks. `presets` (`PermModule`) is the
+admin's; the media library has its own for what the forms do with the files
+(`media_library:media_libraries:@upload`, `…:<5>:@delete`,
+`…:<5>:@update_desc`), the worker for editing a job by its name
+(`workers:<job>:@edit`). A record added with `perm.Verifier.ObjectOn` is
+`<id>` too.
+
 A model or a page of the menu is reached both ways: through the chain of its
 groups, which follows the menu, and by its **unique name** — the model's id,
 the page's path —, which does not. The unique name decides first

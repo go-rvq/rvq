@@ -8,3 +8,5 @@ permitida.
 
 O recurso acompanha o menu: é a cadeia dos grupos em que o grupo está. Veja
 {%= admin.doc("guides/policies/01-permissions").link %}.
+
+Os recursos começam por `presets`, o **escopo** do admin — veja os escopos em {%= admin.doc("guides/policies/01-permissions").link %}.

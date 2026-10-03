@@ -20,6 +20,7 @@ what is asked of it:
 
 | Part | Example |
 | --- | --- |
+| the scope: who asks — first, always (see below) | `presets` |
 | a group of the menu: its name and `/` | `site/` |
 | a part (model) | `seo_config` |
 | a record: its id in `<…>` | `<7>` — `<*>` any |
@@ -38,6 +39,21 @@ name**, its own:
 `*` stands for anything: `presets:site/:*` is everything inside the group
 *site*; `presets:seo_config:*` everything of the part *seo_config*, wherever
 the menu puts it.
+
+## The scopes
+
+The first part of a resource is its **scope**: the part of the system that
+asks for the permission. A policy names it, or `*` for any:
+
+| Scope | What it guards | Example |
+| --- | --- | --- |
+| `presets` | the admin: every item of the menu — its groups, its parts, their records, fields, sections, actions and pages | `presets:content/:posts:<12>:@edit` |
+| `media_library` | the media library as the fields of pictures and files use it, in a form: sending a file, deleting one, editing its description | `media_library:media_libraries:@upload`, `media_library:media_libraries:<5>:@delete`, `…:<5>:@update_desc` |
+| `workers` | the jobs: editing one — a job that takes arguments —, by its name | `workers:upload_posts:@edit` |
+
+The listing of the media library in the menu is a part of `presets`
+(`presets:content/:media/:media_libraries:…`); `media_library` is only what
+the forms do with the files.
 
 ## Which one decides
 

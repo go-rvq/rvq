@@ -2,9 +2,12 @@ package worker
 
 import "net/http"
 
-// examples:.
+// The scope workers: the jobs, each by its name — editing one, a job that
+// takes arguments, is "workers:<name>:@edit".
+//
+// examples:
 // permPolicy.On("*")
-// permPolicy.On("workers:upload_posts")
+// permPolicy.On("workers:upload_posts:*")
 const (
 	PermEdit = "@edit"
 )

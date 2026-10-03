@@ -6,3 +6,5 @@ role. The unique name decides before the groups (a deny wins).
 {%= admin.permissions() %}
 
 See {%= admin.doc("guides/policies/01-permissions").link %}.
+
+The resources begin with `presets`, the **scope** of the admin — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.

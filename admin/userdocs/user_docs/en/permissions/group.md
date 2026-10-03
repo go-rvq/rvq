@@ -8,3 +8,5 @@ them is allowed.
 
 The resource follows the menu: it is the chain of the groups the group sits
 in. See {%= admin.doc("guides/policies/01-permissions").link %}.
+
+The resources begin with `presets`, the **scope** of the admin — see the scopes in {%= admin.doc("guides/policies/01-permissions").link %}.

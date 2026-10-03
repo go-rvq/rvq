@@ -21,6 +21,7 @@ termina no que é pedido dele:
 
 | Parte | Exemplo |
 | --- | --- |
+| o escopo: quem pede — sempre o primeiro (veja abaixo) | `presets` |
 | um grupo do menu: o nome e `/` | `site/` |
 | uma parte (model) | `seo_config` |
 | um registro: o id entre `<…>` | `<7>` — `<*>` qualquer um |
@@ -39,6 +40,21 @@ Uma parte é alcançada de dois jeitos — **pelos grupos** e **pelo nome
 `*` vale por qualquer coisa: `presets:site/:*` é tudo o que está no grupo
 *site*; `presets:seo_config:*`, tudo da parte *seo_config*, onde quer que o
 menu a ponha.
+
+## Os escopos
+
+A primeira parte de um recurso é o **escopo**: a parte do sistema que pede a
+permissão. Uma política o nomeia, ou usa `*` para qualquer um:
+
+| Escopo | O que protege | Exemplo |
+| --- | --- | --- |
+| `presets` | o admin: cada item do menu — os grupos, as partes, os registros delas, campos, seções, ações e páginas | `presets:content/:posts:<12>:@edit` |
+| `media_library` | a biblioteca de mídia como os campos de imagem e de arquivo a usam, num formulário: enviar um arquivo, excluir um, editar a descrição dele | `media_library:media_libraries:@upload`, `media_library:media_libraries:<5>:@delete`, `…:<5>:@update_desc` |
+| `workers` | as tarefas: editar uma — uma tarefa que recebe argumentos —, pelo nome dela | `workers:upload_posts:@edit` |
+
+A listagem da biblioteca de mídia no menu é uma parte de `presets`
+(`presets:content/:media/:media_libraries:…`); `media_library` é só o que os
+formulários fazem com os arquivos.
 
 ## Qual decide
 
