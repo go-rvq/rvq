@@ -43,7 +43,7 @@ func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder
 		r.Insert(mb.EditingRestriction)
 	})
 	d.DeletingRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
-		r.Insert(mb.DetailingRestriction)
+		r.Insert(mb.DeletingRestriction)
 	})
 	d.DeletingWithRelatedRestriction = NewObjRestriction(d, func(r *ObjRestriction[*DetailingBuilder]) {
 		r.Insert(mb.DeletingWithRelatedRestriction)
@@ -277,7 +277,10 @@ func (b *DetailingBuilder) pageTitle(obj any, ctx *web.EventContext) string {
 
 func (b *DetailingBuilder) pageComponent(ctx *web.EventContext, id string, obj any) h.HTMLComponent {
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
-	form.mode = DETAIL
+	// DETAIL, with TRASH for a deleted record: in the context, for what the
+	// detail offers (configureForm), and its fields
+	form.mode = b.mb.detailMode(obj)
+	WithFieldMode(ctx, form.mode)
 	return b.hostedComponent(ctx, id, form)
 }
 
@@ -468,7 +471,10 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 	}
 
 	form := NewFormBuilder(ctx, b.mb, &b.FieldsBuilder, obj)
-	form.mode = DETAIL
+	// DETAIL, with TRASH for a deleted record: in the context, for what the
+	// detail offers (configureForm), and its fields
+	form.mode = b.mb.detailMode(obj)
+	WithFieldMode(ctx, form.mode)
 
 	f := b.hostedComponent(ctx, id, form)
 
@@ -559,6 +565,9 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 
 	f.Portal = portalName
 
+	// a deleted record (DETAIL | TRASH) is read only
+	inTrash := b.mb.IsDeleted(obj)
+
 	if !b.mb.editingDisabled && b.EditingRestriction.CanObj(obj, ctx) {
 		// The edit form is hosted HERE, around the button: the host declares the
 		// scope variable and renders the guarded block next to it, so clicking
@@ -600,7 +609,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	f.MainPortals = append(f.MainPortals, web.Portal().Name(sharedPortal))
 
 	var menus h.HTMLComponents
-	b.RowMenu().listingItemFuncs(ctx).
+	b.RowMenu().listingItemFuncsWhere(ctx, func(it *RowMenuItemBuilder) bool { return it.availableIn(inTrash) }).
 		ForEachRowMenuItemFunc(sharedPortal, func(rctx *RecordMenuItemContext, name string) string {
 			name = sharedPortal + "--" + name
 			f.MainPortals = append(f.MainPortals, web.Portal().Name(name))

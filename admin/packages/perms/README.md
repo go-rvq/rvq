@@ -54,7 +54,13 @@ gated by the `trash` listing permission:
   default, when it has none. It is added when the listing renders
   (`presets.FilterTabsWrapper`), so a `FilterTabsFunc` set before or after keeps
   it; the tab only shows for subjects allowed the trash verb;
-- the unscoped trash query and a **restore** bulk action, both backend-gated;
+- the unscoped trash query and a **restore** bulk action (`TrashOnly`), both
+  backend-gated;
+- where the trash is, for `presets`: the listing of the Trash tab, to who may
+  see it (`ListingBuilder.SetInTrashFunc`: `LIST | TRASH`), and a record with
+  a time of deletion (`ModelBuilder.SetDeletedFunc`: `DETAIL | TRASH`) — read
+  only, none of its actions but those available in the trash (see the
+  presets' [trash](../../presets/docs/trash.md));
 - a record of the trash opens — its detail, its history, as the parent of its
   children —: fetched deleted or not, by who may see the trash;
 - an optional `OnRestore` hook to audit restores.

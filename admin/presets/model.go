@@ -64,9 +64,11 @@ type ModelBuilder struct {
 	notInMenu bool
 	// noRecordStateStamp turns off the state-hash fallback of the optimistic
 	// lock for a model with no UpdatedAt (see SetRecordStateStamp).
-	noRecordStateStamp  bool
-	menuIcon            string
-	menuChildren        MenuChildrenFunc
+	noRecordStateStamp bool
+	menuIcon           string
+	menuChildren       MenuChildrenFunc
+	// deletedFunc says a record is deleted: in the trash (SetDeletedFunc)
+	deletedFunc         func(obj any) bool
 	defaultURLQueryFunc func(*http.Request) url.Values
 	fieldLabels         map[string]func(ctx *web.EventContext) string
 	fieldHints          map[string]func(ctx *web.EventContext) string
@@ -188,8 +190,12 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 			return r.dot.permissioner.ReqCreator(ctx.R).Denied(), true
 		}))
 	})
+	// a deleted record (the trash) is read only: not edited, not deleted
+	deleted := OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+		return mb.IsDeleted(obj), mb.IsDeleted(obj)
+	})
 	mb.EditingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
-		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+		r.ObjHandler(deleted, OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
 			return r.dot.permissioner.ReqObjectUpdater(ctx.R, obj).Denied(), true
 		}))
 	})
@@ -199,12 +205,12 @@ func NewModelBuilder(p *Builder, model interface{}, options ...ModelBuilderOptio
 		}))
 	})
 	mb.DeletingRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
-		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+		r.ObjHandler(deleted, OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
 			return r.dot.permissioner.ReqObjectDeleter(ctx.R, obj).Denied(), true
 		}))
 	})
 	mb.DeletingWithRelatedRestriction = NewObjRestriction(mb, func(r *ObjRestriction[*ModelBuilder]) {
-		r.ObjHandler(OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
+		r.ObjHandler(deleted, OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (_, _ bool) {
 			return r.dot.permissioner.ReqObjectWithRelatedDeleter(ctx.R, obj).Denied(), true
 		}))
 	})

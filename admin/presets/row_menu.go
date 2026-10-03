@@ -49,13 +49,14 @@ func (b *RowMenuBuilder) Empty() {
 	b.items = make(map[string]*RowMenuItemBuilder)
 }
 
-func (b *RowMenuBuilder) listingItemFuncs(ctx *web.EventContext) (fs RecordMenuItemFuncs) {
+// listingItemFuncsWhere are the items of the menu keep keeps (all, keep nil).
+func (b *RowMenuBuilder) listingItemFuncsWhere(ctx *web.EventContext, keep func(it *RowMenuItemBuilder) bool) (fs RecordMenuItemFuncs) {
 	listings := b.defaultListings
 	if len(b.listings) > 0 {
 		listings = b.listings
 	}
 	for _, li := range listings {
-		if ib, ok := b.items[strcase.ToSnake(li)]; ok {
+		if ib, ok := b.items[strcase.ToSnake(li)]; ok && (keep == nil || keep(ib)) {
 			comp := ib.getComponentFunc(ctx)
 			if comp != nil {
 				fs = append(fs, comp)
@@ -75,6 +76,8 @@ type RowMenuItemBuilder struct {
 	eventID    string
 	title      func(ctx context.Context) string
 	child      *ModelBuilder
+	// trash is where it is available (TrashPolicy)
+	trash TrashPolicy
 }
 
 // Items are the items of the menu, in the order of the menu.

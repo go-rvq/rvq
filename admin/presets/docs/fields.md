@@ -45,7 +45,7 @@ Passed to every component/setter. Important fields:
 | `Obj` | the record |
 | `Name` / `FormKey` | field name / full form key (`Parcelas[2].Valor`) |
 | `Value()` / `StringValue()` | the current value |
-| `Mode` | `FieldModeStack` (LIST / DETAIL / EDIT / NEW) |
+| `Mode` | `FieldModeStack` (LIST / DETAIL / EDIT / NEW; `TRASH` qualifies LIST and DETAIL — test with `Has`, `IsList`, `IsDetail`, `IsTrash`: see [the trash](trash.md)) |
 | `Label` / `InputLabel()` | display label / label to put on the input |
 | `Errors` | validation errors for the field |
 | `ReadOnly`, `Required`, `Disabled` | render flags |

@@ -42,6 +42,8 @@ type BulkActionBuilder struct {
 
 	perm *perm.PermVerifierBuilder
 	l    *ListingBuilder
+	// trash is where it is available (TrashPolicy)
+	trash TrashPolicy
 }
 
 func getBulkAction(actions []*BulkActionBuilder, name string) *BulkActionBuilder {
@@ -288,6 +290,9 @@ func (b *BulkActionBuilder) component(selectedIds []string, ctx *web.EventContex
 }
 
 func (b *BulkActionBuilder) View(baseModel *ModelBuilder, selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+	if !b.trashAllows(ctx) {
+		return ErrActionNotAllowed
+	}
 	if b.linkHandler != nil {
 		q := ctx.R.URL.Query()
 		q.Del("__execute_event__")
@@ -305,6 +310,9 @@ func (b *BulkActionBuilder) View(baseModel *ModelBuilder, selectedIds []string, 
 }
 
 func (b *BulkActionBuilder) Do(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) (err error) {
+	if !b.trashAllows(ctx) {
+		return ErrActionNotAllowed
+	}
 	return b.updateFunc(selectedIds, ctx, r)
 }
 

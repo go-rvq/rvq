@@ -59,6 +59,8 @@ type ActionBuilder struct {
 	db                          *DetailingBuilder
 	primaryActionPositionBottom bool
 	verifier                    func(ctx *web.EventContext) *perm.Verifier
+	// trash is where it is available (TrashPolicy)
+	trash TrashPolicy
 }
 
 func Action(p *Builder, name string) *ActionBuilder {
@@ -263,6 +265,9 @@ func (b *ActionBuilder) View(baseModel *ModelBuilder, id string, ctx *web.EventC
 			return perm.PermissionDenied
 		}
 	}
+	if !b.trashAllows(baseModel, id, ctx) {
+		return ErrActionNotAllowed
+	}
 
 	if b.linkHandler != nil {
 		q := ctx.R.URL.Query()
@@ -293,6 +298,9 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		if b.verifier(ctx).Denied() {
 			return false, perm.PermissionDenied
 		}
+	}
+	if !b.trashAllows(baseModel, id, ctx) {
+		return false, ErrActionNotAllowed
 	}
 
 	if b.enabledFunc != nil {
@@ -502,8 +510,10 @@ func (b *ActionBuilder) BuildButton(defaultBtnBuilder ButtonComponentFunc, oncli
 }
 
 func BuildMenuItemCompomentsOfActions(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, actionBuilders ...*ActionBuilder) (items []*VListItemBuilder, errors h.HTMLComponents) {
+	// a record of the trash: only the actions available there
+	inTrash := InTrash(ctx) || mb.IsDeleted(obj)
 	for _, action := range actionBuilders {
-		if mb.permissioner.ReqObjectActioner(ctx.R, obj, action.PermName()).Denied() {
+		if mb.permissioner.ReqObjectActioner(ctx.R, obj, action.PermName()).Denied() || !action.trash.Available(inTrash) {
 			continue
 		}
 

@@ -22,15 +22,18 @@ import (
 )
 
 type ListingBuilder struct {
-	mb                                    *ModelBuilder
-	bulkActions                           []*BulkActionBuilder
-	footerActions                         []*FooterActionBuilder
-	actions                               []*ActionBuilder
-	actionsAsMenu                         bool
-	filterDataFunc                        FilterDataFunc
-	filterTabsFunc                        FilterTabsFunc
-	filterTabsWrappers                    []FilterTabsWrapper
-	trailingFields                        []string
+	mb                 *ModelBuilder
+	bulkActions        []*BulkActionBuilder
+	footerActions      []*FooterActionBuilder
+	actions            []*ActionBuilder
+	actionsAsMenu      bool
+	filterDataFunc     FilterDataFunc
+	filterTabsFunc     FilterTabsFunc
+	filterTabsWrappers []FilterTabsWrapper
+	trailingFields     []string
+	// trailingFieldBuilders are the trailing fields as they were when added:
+	// a layout set after (Only) keeps them
+	trailingFieldBuilders                 map[string]*FieldBuilder
 	relatedDeletionConfig                 RelatedDeletionFunc
 	newBtnFunc                            ComponentFunc
 	pageFunc                              web.PageFunc
@@ -43,6 +46,8 @@ type ListingBuilder struct {
 	itemActions                           []*ActionBuilder
 	prependListButtons                    []func(ctx *web.EventContext) h.HTMLComponents
 	appendListButtons                     []func(ctx *web.EventContext) h.HTMLComponents
+	// inTrashFunc says the listing of a request is of the trash (SetInTrashFunc)
+	inTrashFunc func(ctx *web.EventContext) bool
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -105,7 +110,7 @@ func NewListingBuilder(mb *ModelBuilder, fieldsBuilder FieldsBuilder) *ListingBu
 		r.Insert(mb.DetailingRestriction)
 	})
 	lb.DeletingRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
-		r.Insert(mb.DetailingRestriction)
+		r.Insert(mb.DeletingRestriction)
 	})
 	lb.DeletingWithRelatedRestriction = NewObjRestriction(lb, func(r *ObjRestriction[*ListingBuilder]) {
 		r.Insert(mb.DeletingWithRelatedRestriction)
@@ -268,7 +273,10 @@ func (b *ListingBuilder) GetPageFunc() web.PageFunc {
 }
 
 func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuItemFuncs) {
-	fs = b.RowMenu().listingItemFuncs(ctx)
+	// in the trash, its items available there: the nested models; the
+	// actions, filtered (BuildMenuItemCompomentsOfActions); the pages
+	inTrash := b.requestMode(ctx).IsTrash()
+	fs = b.RowMenu().listingItemFuncsWhere(ctx, func(it *RowMenuItemBuilder) bool { return it.availableIn(inTrash) })
 	actions := b.itemActions
 
 	for _, action := range b.mb.detailing.actions {

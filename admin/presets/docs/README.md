@@ -24,6 +24,10 @@ Reference notes for the `presets` admin package. See the package
   `openCallbacks`/`closeCallbacks`, where a closer comes from (and how adoption
   avoids duplicating them), and the clean page address an open overlay puts in
   the address bar (LIFO, Back closes the top one).
+- [The trash](trash.md) — the `TRASH` mode (`LIST | TRASH`, `DETAIL | TRASH`,
+  in the request's context), saying where the trash is (`SetInTrashFunc`,
+  `SetDeletedFunc`), where an action is available (`TrashPolicy`), what the
+  trash offers and what the server refuses: a deleted record is read only.
 - [Record stamp](record-stamp.md) — the edit form refuses to overwrite what
   somebody else saved while it was open: the signed `__formSign` field it
   carries (`RVQ_FORM_SECRET`), the check before any validation, and the message

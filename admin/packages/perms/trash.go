@@ -39,6 +39,15 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 	registerMessages(mb.Builder())
 	lb := mb.Listing()
 
+	// the trash is the listing's tab of it, to who may see it (LIST | TRASH);
+	// a record with a time of deletion is in it (DETAIL | TRASH): read only,
+	// none of its actions but those available there (presets.TrashPolicy)
+	lb.SetInTrashFunc(func(ctx *web.EventContext) bool {
+		return ctx.R.URL.Query().Get(presets.ActiveFilterTabQueryKey) == FilterTabTrash &&
+			mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed()
+	})
+	mb.SetDeletedFunc(func(obj any) bool { return !deletedAtOf(obj).IsZero() })
+
 	lb.AppendFilterTabsWrapper(func(ctx *web.EventContext, tabs []*presets.FilterTab) []*presets.FilterTab {
 		if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Denied() {
 			return tabs
@@ -96,6 +105,8 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 	lb.BulkAction("restore").
 		SetI18nLabel(func(ctx context.Context) string { return msgs(ctx).Restore }).
 		Icon("mdi-restore").
+		// in the trash only: what it brings back is there
+		SetTrash(presets.TrashOnly).
 		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) error {
 			if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Denied() {
 				return perm.PermissionDenied

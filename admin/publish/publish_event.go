@@ -51,6 +51,9 @@ func (p PublishExecutor) Execute(mb *presets.ModelBuilder, publisher *Builder, a
 	if err != nil {
 		return
 	}
+	if err = notDeleted(mb, obj); err != nil {
+		return
+	}
 	err = p.Do(mb, publisher, actionName, ctx, obj)
 	return
 }
@@ -139,6 +142,9 @@ type UnpublishExecutor struct {
 func (e UnpublishExecutor) Execute(mb *presets.ModelBuilder, publisher *Builder, actionName string, ctx *web.EventContext, mid model.ID) (obj any, err error) {
 	obj = mb.NewModel()
 	if err = mb.Editing().Fetcher(obj, mid, ctx); err != nil {
+		return
+	}
+	if err = notDeleted(mb, obj); err != nil {
 		return
 	}
 	err = e.Do(mb, publisher, actionName, ctx, obj)

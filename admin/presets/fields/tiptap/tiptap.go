@@ -205,11 +205,11 @@ func (b *Builder) ComponentFunc(mode presets.FieldMode) presets.FieldComponentFu
 		return b.AutoComponentFunc
 	}
 
-	if mode.Is(presets.DETAIL) && b.mb.HasDetailing() {
+	if mode.Has(presets.DETAIL) && b.mb.HasDetailing() {
 		return b.DetailComponentFunc
 	}
 
-	if mode.Is(presets.LIST) {
+	if mode.Has(presets.LIST) {
 		return b.TableComponentFunc
 	}
 

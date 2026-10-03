@@ -47,6 +47,9 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 		if err != nil {
 			return
 		}
+		if err = notDeleted(mb, obj); err != nil {
+			return
+		}
 
 		valStartAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledStartAt)
 		valEndAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledEndAt)
@@ -106,6 +109,9 @@ func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 
 		obj := mb.NewModel()
 		if err = mb.Editing().Fetcher(obj, mid, ctx); err != nil {
+			return
+		}
+		if err = notDeleted(mb, obj); err != nil {
 			return
 		}
 

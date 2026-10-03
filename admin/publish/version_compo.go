@@ -45,6 +45,9 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 		)
 		msgr := GetMessages(ctx.Context())
 		utilsMsgr := i18n.MustGetModuleMessages(ctx.Context(), utils.I18nUtilsKey, utils.Messages_en_US).(*utils.Messages)
+		// a deleted record (DETAIL | TRASH): its status, its versions, no
+		// action — not published, duplicated, scheduled
+		inTrash := field.Mode.IsTrash() || b.IsDeleted(obj)
 
 		primarySlugger, ok = obj.(presets.SlugEncoder)
 		if !ok {
@@ -80,9 +83,11 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			versionSwitch.AppendIcon("mdi-chevron-down")
 
 			div.AppendChildren(versionSwitch)
-			div.AppendChildren(v.VBtn(msgr.Duplicate).PrependIcon("mdi-file-document-multiple").
-				Height(40).Class("ml-2").Variant(v.VariantOutlined).
-				Attr("@click", fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventDuplicateVersion)))
+			if !inTrash {
+				div.AppendChildren(v.VBtn(msgr.Duplicate).PrependIcon("mdi-file-document-multiple").
+					Height(40).Class("ml-2").Variant(v.VariantOutlined).
+					Attr("@click", fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventDuplicateVersion)))
+			}
 		}
 
 		if status, ok = obj.(StatusInterface); ok {
@@ -92,8 +97,10 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 				Attr("target", `_blank`).
 				Class("v-btn v-btn--icon v-theme--light v-btn--density-comfortable v-btn--size-default v-btn--variant-flat")
 
-			switch status.EmbedStatus().Status {
-			case StatusDraft, StatusOffline:
+			switch st := status.EmbedStatus().Status; {
+			case inTrash:
+				publishBtn = gotoPublishedURL
+			case st == StatusDraft, st == StatusOffline:
 				publishEvent := fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventPublish)
 				if config.PublishEvent != nil {
 					publishEvent = config.PublishEvent(obj, field, ctx)
@@ -103,7 +110,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 						Class("rounded-s ml-2").Variant(v.VariantFlat).Color(v.ColorPrimary).Height(40),
 					gotoPublishedURL,
 				)
-			case StatusOnline:
+			case st == StatusOnline:
 				unPublishEvent := fmt.Sprintf(`locals.action="%s";locals.commonConfirmDialog = true`, EventUnpublish)
 				if config.UnPublishEvent != nil {
 					unPublishEvent = config.UnPublishEvent(obj, field, ctx)
@@ -136,7 +143,7 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 			}
 		}
 
-		if _, ok = obj.(ScheduleInterface); ok {
+		if _, ok = obj.(ScheduleInterface); ok && !inTrash {
 			var scheduleBtn h.HTMLComponent
 			clickEvent := web.POST().
 				EventFunc(eventSchedulePublishDialog).

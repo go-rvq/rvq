@@ -32,12 +32,21 @@ func (f FieldMode) IsEdit() bool {
 	return f.Is(EDIT)
 }
 
+// IsDetail says f is a detail's — in the trash too (DETAIL | TRASH).
 func (f FieldMode) IsDetail() bool {
-	return f.Is(DETAIL)
+	return f.Has(DETAIL)
 }
 
+// IsList says f is a listing's — in the trash too (LIST | TRASH).
 func (f FieldMode) IsList() bool {
-	return f.Is(LIST)
+	return f.Has(LIST)
+}
+
+// IsTrash says f is of the trash: the deleted records, listed (LIST | TRASH)
+// or shown (DETAIL | TRASH) — read only, none of their actions but those
+// available in the trash (TrashPolicy).
+func (f FieldMode) IsTrash() bool {
+	return f.Has(TRASH)
 }
 
 func (f FieldMode) IsWrite() bool {
@@ -85,6 +94,8 @@ const (
 	DETAIL
 	NEW
 	EDIT
+	// TRASH qualifies LIST or DETAIL: the deleted records (IsTrash)
+	TRASH
 
 	WRITE = NEW | EDIT
 	READ  = LIST | DETAIL
@@ -126,11 +137,15 @@ func (f FieldModeStack) IsEdit() bool {
 }
 
 func (f FieldModeStack) IsDetail() bool {
-	return f.Is(DETAIL)
+	return len(f) > 0 && f.Dot().IsDetail()
 }
 
 func (f FieldModeStack) IsList() bool {
-	return f.Is(LIST)
+	return len(f) > 0 && f.Dot().IsList()
+}
+
+func (f FieldModeStack) IsTrash() bool {
+	return len(f) > 0 && f.Dot().IsTrash()
 }
 
 func (f FieldModeStack) IsWrite() bool {

@@ -56,7 +56,7 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 
 	// if not is embedded
 	if !opts.SkipMode && info != nil && len(info.Schema().PrimaryFields()) > 0 {
-		if !info.mb.singleton && !mode.Dot().Is(LIST, DETAIL) {
+		if !info.mb.singleton && !mode.Dot().HasAny(LIST, DETAIL) {
 			id, _, _ := info.LookupID(obj)
 			if id.IsZero() {
 				mode = append(mode, NEW)

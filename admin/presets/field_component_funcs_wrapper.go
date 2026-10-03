@@ -22,7 +22,7 @@ func FieldComponentFuncWrapper(r, w FieldComponentFunc) FieldComponentFunc {
 		if mode.HasAny(NEW, EDIT) {
 			return wfw(field, ctx)
 		}
-		if mode.Is(LIST) {
+		if mode.Has(LIST) {
 			return lfw(field, ctx)
 		}
 		return dfw(field, ctx)
@@ -33,7 +33,7 @@ func ReadOnlyFieldComponentFuncWrapper(f FieldComponentFunc) FieldComponentFunc 
 	l, d := ListingFieldComponentFuncWrapper(f), FieldComponentWrapper(f)
 
 	return func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		if field.Mode.Dot().Is(LIST) {
+		if field.Mode.Dot().Has(LIST) {
 			return l(field, ctx)
 		}
 		return d(field, ctx)

@@ -196,6 +196,9 @@ func renameVersion(mb *presets.ModelBuilder) web.EventFunc {
 		if err != nil {
 			return
 		}
+		if err = notDeleted(mb, obj); err != nil {
+			return
+		}
 
 		name := ctx.R.FormValue("VersionName")
 		if err = reflectutils.Set(obj, "Version.VersionName", name); err != nil {

@@ -120,6 +120,11 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 				return
 			}
 		}
+		// a deleted record is read only (the trash)
+		if b.mb.IsDeleted(obj) {
+			err = ErrUpdateRecordNotAllowed
+			return
+		}
 	} else {
 		err = ErrRecordNotFound
 		return

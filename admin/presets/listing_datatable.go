@@ -22,7 +22,7 @@ func (b *ListingBuilder) SetDataTableDensity(dataTableDensity string) *ListingBu
 func (b *ListingBuilder) cellComponentFunc(f *FieldBuilder) vx.CellComponentFunc {
 	return func(obj interface{}, fieldName string, ctx *web.EventContext) h.HTMLComponent {
 		fctx := f.NewContext(b.mb.Info(), ctx, nil, obj)
-		fctx.Mode = FieldModeStack{LIST}
+		fctx.Mode = FieldModeStack{b.requestMode(ctx)}
 		f.Setup.Setup(fctx)
 		f.ToComponentSetup.Setup(fctx)
 		return f.ToComponent(fctx)
@@ -84,7 +84,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		inDialog = overlayMode.IsDialog()
 	)
 
-	haveCheckboxes := !lcb.selection && len(b.bulkActions) > 0
+	haveCheckboxes := !lcb.selection && len(b.availableBulkActions(ctx)) > 0
 
 	tempPortal := lcb.portals.Temp()
 
@@ -349,6 +349,7 @@ func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*F
 				}
 			} else {
 				fcb := node.Field.NewContext(b.mb.Info(), ctx, nil, nil)
+				fcb.Mode = FieldModeStack{b.requestMode(ctx)}
 				if !fcb.Disabled && node.Field.IsEnabled(fcb) {
 					displayFields = append(displayFields, node.Field)
 					t.Name(node.Field.name)
@@ -374,6 +375,14 @@ func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*F
 // from where of a deletion, in its tab only.
 func (b *ListingBuilder) AppendTrailingFields(names ...string) *ListingBuilder {
 	b.trailingFields = append(b.trailingFields, names...)
+	for _, name := range names {
+		if f := b.fields.Get(name); f != nil {
+			if b.trailingFieldBuilders == nil {
+				b.trailingFieldBuilders = map[string]*FieldBuilder{}
+			}
+			b.trailingFieldBuilders[name] = f
+		}
+	}
 	return b
 }
 
@@ -389,9 +398,14 @@ names:
 		}
 		f := b.fields.Get(name)
 		if f == nil {
-			continue
+			// left out by a layout set after it (Only): as it was added
+			if f = b.trailingFieldBuilders[name]; f == nil {
+				continue
+			}
 		}
-		if fcb := f.NewContext(b.mb.Info(), ctx, nil, nil); !fcb.Disabled && f.IsEnabled(fcb) {
+		fcb := f.NewContext(b.mb.Info(), ctx, nil, nil)
+		fcb.Mode = FieldModeStack{b.requestMode(ctx)}
+		if !fcb.Disabled && f.IsEnabled(fcb) {
 			r = append(r, f)
 		}
 	}
@@ -433,7 +447,7 @@ func (b *ListingBuilder) Columns(ctx *web.EventContext) []*ListingColumn {
 func (b *ListingBuilder) columns(ctx *web.EventContext, fields []*FieldBuilder) (cols []*ListingColumn) {
 	for _, f := range fields {
 		fctx := f.NewContext(b.mb.Info(), ctx, nil, nil)
-		fctx.Mode = FieldModeStack{LIST}
+		fctx.Mode = FieldModeStack{b.requestMode(ctx)}
 
 		if !f.IsEnabled(fctx) {
 			continue
@@ -441,7 +455,11 @@ func (b *ListingBuilder) columns(ctx *web.EventContext, fields []*FieldBuilder) 
 		if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
 			continue
 		}
-		f = b.GetFieldOrDefault(f.name) // fill in empty compFunc and setter func with default
+		if f.compFunc == nil {
+			// fill in empty compFunc and setter func with default; a field
+			// with its own (a trailing one a layout left out) keeps it
+			f = b.GetFieldOrDefault(f.name)
+		}
 		cols = append(cols, &ListingColumn{
 			Name:  f.name,
 			Label: fctx.Label,
@@ -534,23 +552,26 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		actionBtns h.HTMLComponents
 	)
 
-	for _, f := range b.prependListButtons {
-		if c := f(ctx); len(c) > 0 {
-			actionBtns = append(actionBtns, c...)
+	// in the trash (LIST | TRASH) the bar has only the actions available
+	// there: none of the buttons added to it, its pages, its new button
+	inTrash := b.requestMode(ctx).IsTrash()
+
+	if !inTrash {
+		for _, f := range b.prependListButtons {
+			if c := f(ctx); len(c) > 0 {
+				actionBtns = append(actionBtns, c...)
+			}
 		}
 	}
 
 	// Render bulk actions
-	for _, ba := range b.bulkActions {
-		if ba.Verifier(b.mb.permissioner.ReqList(ctx.R)).Denied() {
-			continue
-		}
+	for _, ba := range b.availableBulkActions(ctx) {
 		actionBtns = append(actionBtns, ba.Button(ctx))
 	}
 
 	// Render actions
 	for _, a := range b.actions {
-		if b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied() {
+		if b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied() || !a.trash.Available(inTrash) {
 			continue
 		}
 
@@ -580,6 +601,10 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 					Class("ml-2").
 					Attr("@click", onclick.String())
 			}, onclick, "", nil, ctx))
+	}
+
+	if inTrash {
+		return actionBtns
 	}
 
 	for _, f := range b.appendListButtons {

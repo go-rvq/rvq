@@ -117,7 +117,7 @@ func userName(db *gorm.DB, id *uuid.UUID) (name string) {
 // action that shows where from with a map.
 func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) {
 	inTrash := func(ctx *presets.FieldContext) bool {
-		return ctx.EventContext != nil && ctx.EventContext.R.URL.Query().Get(presets.ActiveFilterTabQueryKey) == FilterTabTrash
+		return ctx.Mode.IsTrash()
 	}
 	label := func(f func(*Messages) string) func(context.Context) string {
 		return func(c context.Context) string { return f(msgs(c)) }
@@ -163,6 +163,7 @@ func installDeletedColumns(mb *presets.ModelBuilder, db *gorm.DB, table string) 
 	mb.Detailing().Action(ActionDeletedOrigin).
 		SetI18nLabel(label(func(m *Messages) string { return m.DeletedOrigin })).
 		Icon("mdi-map-marker-remove-outline").
+		SetTrash(presets.TrashOnly).
 		// of a deleted record only: the trash's column opens it
 		SetEnabledObj(func(obj any, _ string, _ *web.EventContext) (bool, error) {
 			d := deletionOf(obj)

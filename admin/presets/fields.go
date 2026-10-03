@@ -1163,7 +1163,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 
 	// changes mode if not is embedded
 	if s := info.Schema(); s != nil && model.HasPrimaryFields(s) {
-		if !mode.Dot().Is(LIST, DETAIL) {
+		if !mode.Dot().HasAny(LIST, DETAIL) {
 			if id, _, _ := info.LookupID(obj); id.IsZero() {
 				mode = append(mode, NEW)
 			}
