@@ -299,6 +299,8 @@ func (r *renderer) permissionsTree() string {
 			return fmt.Sprintf(msgs.PermDescRecord, label)
 		case presets.PermNodeField:
 			return fmt.Sprintf(msgs.PermDescField, label, parent)
+		case presets.PermNodeInline:
+			return fmt.Sprintf(msgs.PermDescInline, label, parent)
 		case presets.PermNodeSection:
 			return fmt.Sprintf(msgs.PermDescSection, label, parent)
 		case presets.PermNodePage:
@@ -309,14 +311,100 @@ func (r *renderer) permissionsTree() string {
 		}
 		return fmt.Sprintf(msgs.PermDescCheck, label)
 	}
+	// resources is the subtitle part of the resources of n: by the groups,
+	// by the unique name
+	resources := func(n *presets.PermNode, suffix string) []string {
+		r := []string{n.Name + suffix}
+		if n.Unique != "" && n.Unique != n.Name {
+			r = append(r, n.Unique+suffix)
+		}
+		return r
+	}
 	var items func(nodes []*presets.PermNode) []*permTreeItem
-	items = func(nodes []*presets.PermNode) (out []*permTreeItem) {
-		for _, n := range nodes {
-			label := title(n)
-			sub := []string{describe(n, label), n.Name}
-			if n.Unique != "" && n.Unique != n.Name {
-				sub = append(sub, n.Unique)
+	var item func(n *presets.PermNode) *permTreeItem
+	// grouped is what is inside a model — its record's too —, in groups:
+	// its permissions, actions, fields, sections, pages, nested models and
+	// permissions of its own
+	grouped := func(n *presets.PermNode, label string) (out []*permTreeItem) {
+		type owned struct {
+			node *presets.PermNode
+			a    *presets.PermNodeAction
+		}
+		var verbs, actions []owned
+		var fields, inlines, sections, pages, models, checks []*presets.PermNode
+		var collect func(n *presets.PermNode)
+		collect = func(n *presets.PermNode) {
+			for _, a := range n.Actions {
+				if strings.HasPrefix(a.Name, "@") {
+					verbs = append(verbs, owned{n, a})
+				} else {
+					actions = append(actions, owned{n, a})
+				}
 			}
+			for _, c := range n.Children {
+				switch c.Kind {
+				case presets.PermNodeRecord:
+					collect(c) // the record is inside the model
+				case presets.PermNodeField:
+					fields = append(fields, c)
+				case presets.PermNodeInline:
+					inlines = append(inlines, c)
+				case presets.PermNodeSection:
+					sections = append(sections, c)
+				case presets.PermNodePage:
+					pages = append(pages, c)
+				case presets.PermNodeModel, presets.PermNodeSingleton:
+					models = append(models, c)
+				default:
+					checks = append(checks, c)
+				}
+			}
+		}
+		collect(n)
+		group := func(key, title, desc string, children []*permTreeItem) {
+			if len(children) == 0 {
+				return
+			}
+			out = append(out, &permTreeItem{Title: fmt.Sprintf("%s (%d)", title, len(children)),
+				Subtitle: fmt.Sprintf(desc, label), Value: n.Name + "(" + key + ")", Children: children})
+		}
+		var vi, ai []*permTreeItem
+		for _, o := range verbs {
+			vi = append(vi, &permTreeItem{Title: verbLabel(msgs, o.a, ctx),
+				Subtitle: strings.Join(resources(o.node, o.a.Name), " · "), Value: o.node.Name + o.a.Name})
+		}
+		for _, o := range actions {
+			t := verbLabel(msgs, o.a, ctx)
+			d := ""
+			if o.a.Description != nil {
+				d = o.a.Description(ctx)
+			}
+			if d == "" {
+				d = fmt.Sprintf(msgs.PermDescAction, t, label)
+			}
+			ai = append(ai, &permTreeItem{Title: t,
+				Subtitle: strings.Join(append([]string{d}, resources(o.node, o.a.Name)...), " · "), Value: o.node.Name + o.a.Name})
+		}
+		group("verbs", msgs.PermGroupVerbs, msgs.PermGroupVerbsDesc, vi)
+		group("actions", msgs.PermGroupActions, msgs.PermGroupActionsDesc, ai)
+		group("fields", msgs.PermGroupFields, msgs.PermGroupFieldsDesc, items(fields))
+		group("inlines", msgs.PermGroupInlines, msgs.PermGroupInlinesDesc, items(inlines))
+		group("sections", msgs.PermGroupSections, msgs.PermGroupSectionsDesc, items(sections))
+		group("pages", msgs.PermGroupPages, msgs.PermGroupPagesDesc, items(pages))
+		group("models", msgs.PermGroupModels, msgs.PermGroupModelsDesc, items(models))
+		group("checks", msgs.PermGroupChecks, msgs.PermGroupChecksDesc, items(checks))
+		return
+	}
+	item = func(n *presets.PermNode) *permTreeItem {
+		label := title(n)
+		sub := append([]string{describe(n, label)}, resources(n, "")...)
+		it := &permTreeItem{Title: label, Value: n.Name}
+		switch n.Kind {
+		case presets.PermNodeModel, presets.PermNodeSingleton, presets.PermNodeInline:
+			// a model edited in place too: its structure inside the field
+			it.Children = grouped(n, label)
+		default:
+			// a field, a section: what is asked of it, beside it
 			var verbs []string
 			for _, a := range n.Actions {
 				verbs = append(verbs, verbLabel(msgs, a, ctx)+" ("+a.Name+")")
@@ -324,8 +412,14 @@ func (r *renderer) permissionsTree() string {
 			if len(verbs) > 0 {
 				sub = append(sub, strings.Join(verbs, " "))
 			}
-			out = append(out, &permTreeItem{Title: label, Subtitle: strings.Join(sub, " · "), Value: n.Name,
-				Children: items(n.Children)})
+			it.Children = items(n.Children)
+		}
+		it.Subtitle = strings.Join(sub, " · ")
+		return it
+	}
+	items = func(nodes []*presets.PermNode) (out []*permTreeItem) {
+		for _, n := range nodes {
+			out = append(out, item(n))
 		}
 		return
 	}

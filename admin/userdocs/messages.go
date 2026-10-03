@@ -72,6 +72,24 @@ type Messages struct {
 	PermDescCheck         string `i18n:"hint='Description of a permission of its own (a verifier) in the tree of the permissions.', fields=(;'%s'='what it allows')"`
 	PermUntitled          string `i18n:"hint='Label of a part of the tree of the permissions with no title of its own.', fields=(;'%s'='its name')"`
 	PermPartsHint         string `i18n:"hint='Explains the parts of a group.'"`
+	PermGroupVerbs        string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions (list, see, edit…).'"`
+	PermGroupVerbsDesc    string `i18n:"hint='Description of the group of the permissions of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupActions      string `i18n:"hint='Group of the tree of the permissions under a model or record: its actions.'"`
+	PermGroupActionsDesc  string `i18n:"hint='Description of the group of the actions of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupFields       string `i18n:"hint='Group of the tree of the permissions under a model or record: its fields.'"`
+	PermGroupFieldsDesc   string `i18n:"hint='Description of the group of the fields of a record.', fields=(;'%s'='the model or record')"`
+	PermGroupSections     string `i18n:"hint='Group of the tree of the permissions under a model or record: the sections of its detail.'"`
+	PermGroupSectionsDesc string `i18n:"hint='Description of the group of the sections of a record.', fields=(;'%s'='the model or record')"`
+	PermGroupPages        string `i18n:"hint='Group of the tree of the permissions under a model or record: its pages.'"`
+	PermGroupPagesDesc    string `i18n:"hint='Description of the group of the pages of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupModels       string `i18n:"hint='Group of the tree of the permissions under a model or record: the models nested in it.'"`
+	PermGroupModelsDesc   string `i18n:"hint='Description of the group of the models nested in a record.', fields=(;'%s'='the model or record')"`
+	PermGroupChecks       string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions of its own.'"`
+	PermGroupChecksDesc   string `i18n:"hint='Description of the group of the permissions of its own of a model or record.', fields=(;'%s'='the model or record')"`
+	PermDescAction        string `i18n:"hint='Description of an action with none of its own, in the tree of the permissions.', fields=(;'%s'='the action, then the model or record')"`
+	PermDescInline        string `i18n:"hint='Description of a field of a model edited in place (its fields under it), in the tree of the permissions.', fields=(;'%s'='the field, then its record')"`
+	PermGroupInlines      string `i18n:"hint='Group of the tree of the permissions under a model or record: the models edited in place in its fields.'"`
+	PermGroupInlinesDesc  string `i18n:"hint='Description of the group of the models edited in place of a record.', fields=(;'%s'='the model or record')"`
 }
 
 var Messages_en_US = &Messages{
@@ -130,6 +148,24 @@ var Messages_en_US = &Messages{
 	PermUntitled:          "Permission %s",
 	PermScopeAdmin:        "Admin",
 	PermPartsHint:         "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
+	PermGroupVerbs:        "Permissions",
+	PermGroupVerbsDesc:    "What may be done with %s",
+	PermGroupActions:      "Actions",
+	PermGroupActionsDesc:  "The actions of %s",
+	PermGroupFields:       "Fields",
+	PermGroupFieldsDesc:   "The fields of %s, each seen, edited or filled in the forms",
+	PermGroupSections:     "Sections",
+	PermGroupSectionsDesc: "The sections of the detail of %s",
+	PermGroupPages:        "Pages",
+	PermGroupPagesDesc:    "The pages of %s",
+	PermGroupModels:       "Nested models",
+	PermGroupModelsDesc:   "The models inside a record of %s",
+	PermGroupChecks:       "Permissions of its own",
+	PermGroupChecksDesc:   "The permissions of its own of %s",
+	PermDescAction:        "The action %s of %s",
+	PermDescInline:        "The field %s of %s: a record edited in place, its fields inside it",
+	PermGroupInlines:      "Models edited in place",
+	PermGroupInlinesDesc:  "The records edited in place inside %s, each with its fields",
 }
 
 var Messages_pt_BR = &Messages{
@@ -188,6 +224,24 @@ var Messages_pt_BR = &Messages{
 	PermUntitled:          "Permissão %s",
 	PermScopeAdmin:        "Administração",
 	PermPartsHint:         "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
+	PermGroupVerbs:        "Permissões",
+	PermGroupVerbsDesc:    "O que se pode fazer com %s",
+	PermGroupActions:      "Ações",
+	PermGroupActionsDesc:  "As ações de %s",
+	PermGroupFields:       "Campos",
+	PermGroupFieldsDesc:   "Os campos de %s, cada um visto, editado ou preenchido nos formulários",
+	PermGroupSections:     "Seções",
+	PermGroupSectionsDesc: "As seções do detalhe de %s",
+	PermGroupPages:        "Páginas",
+	PermGroupPagesDesc:    "As páginas de %s",
+	PermGroupModels:       "Modelos filhos",
+	PermGroupModelsDesc:   "Os modelos dentro de um registro de %s",
+	PermGroupChecks:       "Permissões próprias",
+	PermGroupChecksDesc:   "As permissões próprias de %s",
+	PermDescAction:        "A ação %s de %s",
+	PermDescInline:        "O campo %s de %s: um registro editado no lugar, com os seus campos dentro",
+	PermGroupInlines:      "Modelos em linha",
+	PermGroupInlinesDesc:  "Os registros editados no lugar dentro de %s, cada um com os seus campos",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

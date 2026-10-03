@@ -52,6 +52,7 @@ const (
 	PermNodeSingleton PermNodeKind = "singleton" // a singleton: its record
 	PermNodeRecord    PermNodeKind = "record"    // a record of a model, <*>
 	PermNodeField     PermNodeKind = "field"     // a field of a record
+	PermNodeInline    PermNodeKind = "inline"    // a field of a model edited in place: its fields under it
 	PermNodeSection   PermNodeKind = "section"   // a section of a detail
 	PermNodePage      PermNodeKind = "page"      // a page
 	PermNodeCheck     PermNodeKind = "check"     // a verifier of its own
@@ -457,6 +458,7 @@ func fieldPermNodes(mb *ModelBuilder, record *PermNode) []*PermNode {
 				sub := info
 				if m := nested.Model(); m != nil {
 					sub = m.Info()
+					node.Kind = PermNodeInline
 				}
 				add(nested.FieldsBuilder(), sub, verb, node, depth+1)
 			}

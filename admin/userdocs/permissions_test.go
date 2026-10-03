@@ -20,6 +20,13 @@ import (
 type treePost struct {
 	ID    uint
 	Title string
+	Meta  treeMeta
+}
+
+// treeMeta is a model edited in place, in a field of a post.
+type treeMeta struct {
+	ID   uint
+	Note string
 }
 
 type treeComment struct {
@@ -43,7 +50,8 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	nop := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	posts := pb.Model(&treePost{}, presets.ModelWithID("posts"))
 	posts.Listing("Title").PagesRegistrator().AddHttpPage(presets.HttpPage("/export").Handler(nop))
-	posts.Editing("Title")
+	meta := presets.NewModelBuilder(pb, &treeMeta{}, presets.ModelConfig().SetId("meta"))
+	posts.Editing("Title", "Meta").Field("Meta").AutoNested(meta, &meta.Editing("Note").FieldsBuilder)
 	d := posts.Detailing("Title")
 	d.Section("Main")
 	d.PagesRegistrator().AddHttpPage(presets.HttpPage("/report").Handler(nop))
@@ -90,9 +98,20 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		t.Errorf("the scope %q", pt[0].Title)
 	}
 	for res, prefix := range map[string]string{
-		"admin:site/:":                              "The site",
-		"admin:site/:posts:":                        "All the posts of the site",
-		"admin:site/:posts:<*>:":                    "Qualquer registro de",
+		"admin:site/:":       "The site",
+		"admin:site/:posts:": "All the posts of the site",
+		// inside the model, in groups — its record's too
+		"admin:site/:posts:(verbs)":    "O que se pode fazer com",
+		"admin:site/:posts:(fields)":   "Os campos de",
+		"admin:site/:posts:(sections)": "As seções do detalhe de",
+		"admin:site/:posts:(pages)":    "As páginas de",
+		"admin:site/:posts:(models)":   "Os modelos dentro de",
+		"admin:site/:posts:<*>:@edit":  "admin:site/:posts:<*>:@edit",
+		// a model edited in place: its structure inside the field
+		"admin:site/:posts:<*>:#Meta:":              "O campo",
+		"admin:site/:posts:(inlines)":               "Os registros editados no lugar dentro de",
+		"admin:site/:posts:<*>:#Meta:(fields)":      "Os campos de",
+		"admin:site/:posts:<*>:#Meta:#Note:":        "O campo",
 		"admin:site/:posts:<*>:#Title:":             "O campo",
 		"admin:site/:posts:<*>:$Main:":              "A seção",
 		"admin:site/:posts:/export:":                "A página",

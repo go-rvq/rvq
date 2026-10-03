@@ -70,7 +70,7 @@ var (
 		ModuleDescription:                 "Os usuários do admin.",
 		User:                              "Usuário",
 		Users:                             "Usuários",
-		UserCreatedAt:                     "Cadastro",
+		UserCreatedAt:                     "Criado em",
 		UserName:                          "Nome",
 		UserStatus:                        "Situação",
 		UserRegistrationDate:              "Registro",

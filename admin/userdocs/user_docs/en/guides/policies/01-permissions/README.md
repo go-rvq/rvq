@@ -71,8 +71,10 @@ group denied while one part of it is allowed by its name.
 ## The permissions of the admin
 
 Every part of the admin and what may be asked of it — open a node to see what
-is inside it. Each part of the documentation also has its own
-**Permissions** item.
+is inside it. Inside a model — its records too — what it has is in groups:
+its permissions, actions, fields, sections, pages, nested models and
+permissions of its own, each with its resource. Each part of the
+documentation also has its own **Permissions** item.
 
 {%= admin.permissionsTree() %}
 

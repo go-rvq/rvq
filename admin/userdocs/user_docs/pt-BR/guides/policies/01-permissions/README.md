@@ -71,8 +71,10 @@ grupo negado com uma parte dele permitida pelo nome.
 ## As permissões do admin
 
 Cada parte do admin e o que pode ser pedido dela — abra um nó para ver o que
-está dentro dele. Cada parte da documentação tem também o seu item
-**Permissões**.
+está dentro dele. Dentro de um modelo — e dos registros dele — o que ele
+tem fica em grupos: permissões, ações, campos, seções, páginas, modelos
+filhos e permissões próprias, cada um com o seu recurso. Cada parte da
+documentação tem também o seu item **Permissões**.
 
 {%= admin.permissionsTree() %}
 
