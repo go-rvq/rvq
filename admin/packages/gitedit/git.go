@@ -47,13 +47,25 @@ var ErrUncommitted = errors.New("the draft has changes not committed")
 func git(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C")
+	cmd.Env = append(gitEnv(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C")
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
 		return out.String(), fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()))
 	}
 	return out.String(), nil
+}
+
+// gitEnv is the environment of the process without git's own variables
+// (GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE…): run from a git hook, they would
+// point every command at that repository instead of dir's.
+func gitEnv() (env []string) {
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "GIT_") {
+			env = append(env, e)
+		}
+	}
+	return
 }
 
 func (r *Repo) branch() string {
