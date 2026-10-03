@@ -67,6 +67,9 @@ type Builder struct {
 	contextFunc  ContextFunc
 	dbPolicy     *DBPolicyBuilder
 	onAsk        func(Asked)
+	// dbIDs are the ids of the policies loaded from the database
+	// (ReloadDBPolicies): those gone from it are removed from memory
+	dbIDs map[string]bool
 }
 
 // Asked is a permission asked: the resource with its verb at the end, by
@@ -181,11 +184,46 @@ func (b *Builder) GetContextFunc() ContextFunc {
 	return b.contextFunc
 }
 
+// DBPolicy keeps the policies of the database in memory: reloaded every
+// LoadFrequency, or, with LoadFrequency(0), by whoever calls ReloadDBPolicies
+// (a LISTEN of the database announcing their changes).
 func (b *Builder) DBPolicy(dpb *DBPolicyBuilder) (r *Builder) {
 	b.dbPolicy = dpb
 
-	go b.loopLoadDBPolicies(dpb.db, dpb.loadFrequency)
+	if dpb.loadFrequency > 0 {
+		go b.loopLoadDBPolicies(dpb.db, dpb.loadFrequency)
+	}
 	return b
+}
+
+// ReloadDBPolicies loads every policy of the database into memory, and
+// removes from memory those loaded before that are not there any more
+// (deleted, soft or for good).
+func (b *Builder) ReloadDBPolicies(db *gorm.DB) {
+	if b.dbPolicy == nil {
+		return
+	}
+	loaded, _ := b.dbPolicy.model.LoadDBPolicies(db, nil)
+	ids := make(map[string]bool, len(loaded))
+	for _, p := range loaded {
+		ids[p.GetID()] = true
+	}
+	var gone []*PolicyBuilder
+	b.m.Lock()
+	for id := range b.dbIDs {
+		if !ids[id] {
+			if i := b.findPolicyIndex(id); i >= 0 {
+				gone = append(gone, b.policies[i])
+			}
+		}
+	}
+	b.dbIDs = ids
+	b.m.Unlock()
+	b.DeletePolicies(gone...)
+	b.UpdateOrCreatePolicies(loaded...)
+	if Verbose {
+		b.printPolices()
+	}
 }
 
 func (b *Builder) CreatePolicies(ps ...*PolicyBuilder) {
@@ -222,6 +260,17 @@ func (b *Builder) DeletePolicies(toDelete ...*PolicyBuilder) {
 
 func (b *Builder) LoadDBPoliciesToMemory(db *gorm.DB, startFrom *time.Time) {
 	toUpdateOrCreate, toDelete := b.dbPolicy.model.LoadDBPolicies(db, startFrom)
+	b.m.Lock()
+	if b.dbIDs == nil {
+		b.dbIDs = map[string]bool{}
+	}
+	for _, p := range toUpdateOrCreate {
+		b.dbIDs[p.GetID()] = true
+	}
+	for _, p := range toDelete {
+		delete(b.dbIDs, p.GetID())
+	}
+	b.m.Unlock()
 	b.DeletePolicies(toDelete...)
 	b.UpdateOrCreatePolicies(toUpdateOrCreate...)
 	if Verbose {
