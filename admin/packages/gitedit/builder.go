@@ -169,9 +169,14 @@ func (b *Builder) serveIDE(w http.ResponseWriter, r *http.Request) {
 		b.ide.ServeHTTP(w, &r2)
 		return
 	}
-	if ver := b.page.Page().ActionVerifier(r, presets.PermGet); ver != nil && ver.Denied() {
-		http.Error(w, "permission denied", http.StatusForbidden)
-		return
+	// the app's assets — its code, the same for everybody — are served as
+	// the static files they are: the login lets them by with no session
+	// (no user to ask a permission of); its page and its API ask the page's
+	if !strings.HasPrefix(rest, "/assets/") {
+		if ver := b.page.Page().ActionVerifier(r, presets.PermGet); ver != nil && ver.Denied() {
+			http.Error(w, "permission denied", http.StatusForbidden)
+			return
+		}
 	}
 	if b.Assets == nil {
 		http.Error(w, "the IDE is not built", http.StatusNotFound)

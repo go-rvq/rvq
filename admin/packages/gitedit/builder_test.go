@@ -3,12 +3,16 @@ package gitedit
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	rvqjs "github.com/go-rvq/rvq/js"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
@@ -131,6 +135,18 @@ func TestBuilderPermissions(t *testing.T) {
 	}
 	h, repo, served := app(t, &invalid, deny("admin:/site-files:!publish"), deny("admin:/site-files:!edit"),
 		deny("admin:/site-files:!preview"))
+	// the app's assets: served with no permission (the login lets static
+	// files by with no session); its page asks it
+	if w := httptest.NewRecorder(); func() int {
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/index.html", nil))
+		i := strings.Index(w.Body.String(), "./assets/")
+		asset := w.Body.String()[i+2 : i+strings.IndexByte(w.Body.String()[i:], '"')]
+		w2 := httptest.NewRecorder()
+		h.ServeHTTP(w2, httptest.NewRequest("GET", "/admin/site-files/ide/"+asset, nil))
+		return w2.Code
+	}() != http.StatusOK {
+		t.Error("an asset of the IDE's app not served")
+	}
 	if w := httptest.NewRecorder(); func() int {
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-preview/", nil))
 		return w.Code
@@ -155,5 +171,30 @@ func TestBuilderPermissions(t *testing.T) {
 	doAction(h, ActionPublish, nil, nil)
 	if b, _ := os.ReadFile(filepath.Join(served, "index.gadx")); string(b) != "old\n" {
 		t.Errorf("published with no !publish: %q", b)
+	}
+}
+
+// The app's assets are served with no permission — the login lets static
+// files by with no session, no user to ask one of —; its page asks @get.
+func TestBuilderIDEAssets(t *testing.T) {
+	var invalid error
+	h, _, _ := app(t, &invalid, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On("admin:/site-files:@get"))
+	index, err := fs.ReadFile(rvqjs.GadIDE(), "index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`src="\./(assets/[^"]+)"`).FindSubmatch(index)
+	if m == nil {
+		t.Fatal("no asset in the index")
+	}
+	for path, want := range map[string]int{
+		"/admin/site-files/ide/index.html":      http.StatusForbidden,
+		"/admin/site-files/ide/" + string(m[1]): http.StatusOK,
+	} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != want {
+			t.Errorf("%s: %d, want %d", path, w.Code, want)
+		}
 	}
 }
