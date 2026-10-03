@@ -60,6 +60,17 @@ type Messages struct {
 	PermParts             string `i18n:"hint='Title of the parts of a group, with their unique names.'"`
 	PermScopeAdminDesc    string `i18n:"hint='Description of the scope of the admin in the tree of the permissions.'"`
 	PermScopeAdmin        string `i18n:"hint='Name of the scope of the admin (its resources begin with admin:) in the tree of the permissions.'"`
+	PermDescGroup         string `i18n:"hint='Description of a group of the menu in the tree of the permissions.', fields=(;'%s'='the group')"`
+	PermDescModel         string `i18n:"hint='Description of a model (its listing) in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescNested        string `i18n:"hint='Description of a model nested in a record of another, in the tree of the permissions.', fields=(;'%s'='the model; the second %s, the parent')"`
+	PermDescSingleton     string `i18n:"hint='Description of a model with a single record in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescRecord        string `i18n:"hint='Description of the records of a model in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescField         string `i18n:"hint='Description of a field in the tree of the permissions.', fields=(;'%s'='the field; the second %s, its record or field')"`
+	PermDescSection       string `i18n:"hint='Description of a section of a detail in the tree of the permissions.', fields=(;'%s'='the section; the second %s, the record')"`
+	PermDescPage          string `i18n:"hint='Description of a page of the admin in the tree of the permissions.', fields=(;'%s'='the page')"`
+	PermDescPageOf        string `i18n:"hint='Description of a page of a model or record in the tree of the permissions.', fields=(;'%s'='the page; the second %s, its model or record')"`
+	PermDescCheck         string `i18n:"hint='Description of a permission of its own (a verifier) in the tree of the permissions.', fields=(;'%s'='what it allows')"`
+	PermUntitled          string `i18n:"hint='Label of a part of the tree of the permissions with no title of its own.', fields=(;'%s'='its name')"`
 	PermPartsHint         string `i18n:"hint='Explains the parts of a group.'"`
 }
 
@@ -106,6 +117,17 @@ var Messages_en_US = &Messages{
 	PermSectionsHint:      "A section is seen and edited in place by its own permission; the fields it writes still ask theirs.",
 	PermParts:             "Inside the group",
 	PermScopeAdminDesc:    "Everything of the admin: the groups of the menu, its models with their records, fields, sections and actions, and its pages",
+	PermDescGroup:         "Everything in the group %s of the menu",
+	PermDescModel:         "The listing of %s: listing and creating records, and its actions",
+	PermDescNested:        "The records of %s inside a record of %s",
+	PermDescSingleton:     "The single record of %s: seeing and editing it, and its actions",
+	PermDescRecord:        "Any record of %s (<*>), or one by its id (<7>): seeing, editing, deleting it, and its actions",
+	PermDescField:         "The field %s of %s, in the forms that hold it",
+	PermDescSection:       "The section %s of the detail of %s, seen and edited in place",
+	PermDescPage:          "The page %s",
+	PermDescPageOf:        "The page %s of %s",
+	PermDescCheck:         "A permission of its own: %s",
+	PermUntitled:          "Permission %s",
 	PermScopeAdmin:        "Admin",
 	PermPartsHint:         "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
 }
@@ -153,6 +175,17 @@ var Messages_pt_BR = &Messages{
 	PermSectionsHint:      "Uma seção é vista e editada no lugar pela própria permissão; os campos que ela grava ainda pedem as deles.",
 	PermParts:             "Dentro do grupo",
 	PermScopeAdminDesc:    "Tudo do admin: os grupos do menu, os modelos com seus registros, campos, seções e ações, e as páginas",
+	PermDescGroup:         "Tudo o que está no grupo %s do menu",
+	PermDescModel:         "A listagem de %s: listar e criar registros, e as ações dela",
+	PermDescNested:        "Os registros de %s dentro de um registro de %s",
+	PermDescSingleton:     "O registro único de %s: ver e editar, e as ações dele",
+	PermDescRecord:        "Qualquer registro de %s (<*>), ou um pelo id (<7>): ver, editar, excluir, e as ações dele",
+	PermDescField:         "O campo %s de %s, nos formulários que o contêm",
+	PermDescSection:       "A seção %s do detalhe de %s, vista e editada no lugar",
+	PermDescPage:          "A página %s",
+	PermDescPageOf:        "A página %s de %s",
+	PermDescCheck:         "Uma permissão própria: %s",
+	PermUntitled:          "Permissão %s",
 	PermScopeAdmin:        "Administração",
 	PermPartsHint:         "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
 }

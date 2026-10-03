@@ -3,6 +3,7 @@ package userdocs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"html"
 	"strings"
 
@@ -263,19 +264,50 @@ type permTreeItem struct {
 func (r *renderer) permissionsTree() string {
 	ctx := r.ctx.Context()
 	msgs := GetMessages(ctx)
+	title := func(n *presets.PermNode) string {
+		if n == nil {
+			return ""
+		}
+		if n.Title != nil {
+			if t := n.Title(ctx); t != "" {
+				return t
+			}
+		}
+		parts := strings.Split(strings.TrimSuffix(n.Name, ":"), ":")
+		return fmt.Sprintf(msgs.PermUntitled, presets.HumanizeString(strings.TrimLeft(parts[len(parts)-1], "#$/<")))
+	}
+	// what the node is, in the language of the request
+	describe := func(n *presets.PermNode, label string) string {
+		parent := title(n.Parent)
+		switch n.Kind {
+		case presets.PermNodeGroup:
+			return fmt.Sprintf(msgs.PermDescGroup, label)
+		case presets.PermNodeModel:
+			if n.Parent != nil && n.Parent.Kind == presets.PermNodeRecord {
+				return fmt.Sprintf(msgs.PermDescNested, label, parent)
+			}
+			return fmt.Sprintf(msgs.PermDescModel, label)
+		case presets.PermNodeSingleton:
+			return fmt.Sprintf(msgs.PermDescSingleton, label)
+		case presets.PermNodeRecord:
+			return fmt.Sprintf(msgs.PermDescRecord, label)
+		case presets.PermNodeField:
+			return fmt.Sprintf(msgs.PermDescField, label, parent)
+		case presets.PermNodeSection:
+			return fmt.Sprintf(msgs.PermDescSection, label, parent)
+		case presets.PermNodePage:
+			if n.Parent != nil && n.Parent.Kind != presets.PermNodeGroup && n.Parent.Kind != "" {
+				return fmt.Sprintf(msgs.PermDescPageOf, label, parent)
+			}
+			return fmt.Sprintf(msgs.PermDescPage, label)
+		}
+		return fmt.Sprintf(msgs.PermDescCheck, label)
+	}
 	var items func(nodes []*presets.PermNode) []*permTreeItem
 	items = func(nodes []*presets.PermNode) (out []*permTreeItem) {
 		for _, n := range nodes {
-			title := ""
-			if n.Title != nil {
-				title = n.Title(ctx)
-			}
-			if title == "" {
-				parts := strings.Split(strings.TrimSuffix(n.Name, ":"), ":")
-				title = parts[len(parts)-1]
-			}
-			var sub []string
-			sub = append(sub, n.Name)
+			label := title(n)
+			sub := []string{describe(n, label), n.Name}
 			if n.Unique != "" && n.Unique != n.Name {
 				sub = append(sub, n.Unique)
 			}
@@ -286,7 +318,7 @@ func (r *renderer) permissionsTree() string {
 			if len(verbs) > 0 {
 				sub = append(sub, strings.Join(verbs, " "))
 			}
-			out = append(out, &permTreeItem{Title: title, Subtitle: strings.Join(sub, " · "), Value: n.Name,
+			out = append(out, &permTreeItem{Title: label, Subtitle: strings.Join(sub, " · "), Value: n.Name,
 				Children: items(n.Children)})
 		}
 		return

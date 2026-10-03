@@ -42,6 +42,21 @@ func SectionPerm(name string) string {
 //
 // A singleton has no listing: its node is its record.
 
+// PermNodeKind is what a node of the permissions is: a group of the menu, a
+// model's listing, …
+type PermNodeKind string
+
+const (
+	PermNodeGroup     PermNodeKind = "group"     // a group of the menu
+	PermNodeModel     PermNodeKind = "model"     // a model: its listing
+	PermNodeSingleton PermNodeKind = "singleton" // a singleton: its record
+	PermNodeRecord    PermNodeKind = "record"    // a record of a model, <*>
+	PermNodeField     PermNodeKind = "field"     // a field of a record
+	PermNodeSection   PermNodeKind = "section"   // a section of a detail
+	PermNodePage      PermNodeKind = "page"      // a page
+	PermNodeCheck     PermNodeKind = "check"     // a verifier of its own
+)
+
 // PermMenu is a group of the menu in the permissions, or a page of the admin
 // (no Resources).
 type PermMenu struct {
@@ -50,6 +65,7 @@ type PermMenu struct {
 	// (a page)
 	Name      string                           `yaml:",omitempty" json:",omitempty"`
 	Unique    string                           `yaml:",omitempty" json:",omitempty"`
+	Kind      PermNodeKind                     `yaml:",omitempty" json:",omitempty"`
 	Title     func(ctx context.Context) string `yaml:"-" json:"-"`
 	Resources []*ModelPerm                     `yaml:",omitempty" json:",omitempty"`
 	Children  []*PermMenu                      `yaml:",omitempty" json:",omitempty"`
@@ -64,7 +80,7 @@ func (m *PermMenu) AddChildren(children ...*PermMenu) {
 
 // Tree is the menu as a tree of nodes.
 func (m *PermMenu) Tree() (n *PermNode) {
-	n = &PermNode{Name: m.Name, Unique: m.Unique, Title: m.Title}
+	n = &PermNode{Name: m.Name, Unique: m.Unique, Kind: m.Kind, Title: m.Title}
 	for _, res := range m.Resources {
 		n.AddChildren(res.Tree())
 	}
@@ -102,6 +118,7 @@ type PermNode struct {
 	Parent   *PermNode                        `yaml:"-" json:"-"`
 	Name     string                           `yaml:",omitempty" json:",omitempty"`
 	Unique   string                           `yaml:",omitempty" json:",omitempty"`
+	Kind     PermNodeKind                     `yaml:",omitempty" json:",omitempty"`
 	Title    func(ctx context.Context) string `yaml:"-" json:"-"`
 	Actions  []*PermNodeAction                `yaml:",omitempty" json:",omitempty"`
 	Children []*PermNode                      `yaml:",omitempty" json:",omitempty"`
@@ -167,7 +184,7 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 				for _, name := range v.PathNames() {
 					parts = append(parts, GroupPermPart(name))
 				}
-				sub := &PermMenu{Name: strings.Join(parts, ":") + ":", Title: v.TTitle}
+				sub := &PermMenu{Name: strings.Join(parts, ":") + ":", Kind: PermNodeGroup, Title: v.TTitle}
 				group(v, sub)
 				into.AddChildren(sub)
 			case *ModelBuilder:
@@ -211,7 +228,7 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 		v := verifier.Build(b.verifier.Spawn())
 		if !seen[v.Resource()] {
 			seen[v.Resource()] = true
-			rootMenu.AddChildren(&PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Title: verifier.GetTitle()})
+			rootMenu.AddChildren(&PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodeCheck, Title: verifier.GetTitle()})
 		}
 	}
 	sortMenu(rootMenu)
@@ -238,7 +255,7 @@ func (b *Builder) pagePerm(page *HttpPageBuilder) *PermMenu {
 		return nil
 	}
 	v := page.GetVerifier().Build(b.verifier.Spawn())
-	return &PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Title: page.TTitle}
+	return &PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodePage, Title: page.TTitle}
 }
 
 // anyID is the id of any record: "<*>".
@@ -262,12 +279,16 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 		}
 	}
 	lv := mb.Permissioner().ListVerifier(parents...)
-	n := &PermNode{Name: lv.Resource(), Unique: lv.PreferredResource(), Title: func(ctx context.Context) string { return mb.TTitleAuto(ctx) }}
+	n := &PermNode{Name: lv.Resource(), Unique: lv.PreferredResource(), Kind: PermNodeModel,
+		Title: func(ctx context.Context) string { return mb.TTitleAuto(ctx) }}
+	if mb.singleton {
+		n.Kind = PermNodeSingleton
+	}
 
 	// the verifiers of its own (pages, custom checks)
 	for node := range perm.WalkPermVerififierBuilders(mb.AllVerifiers()) {
 		v := node.Elem.Build(mb.Permissioner().ListVerifier(parents...))
-		n.AddChildren(&PermNode{Name: v.Resource(), Unique: v.PreferredResource(), Title: node.Elem.GetTitle()})
+		n.AddChildren(&PermNode{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodeCheck, Title: node.Elem.GetTitle()})
 	}
 
 	record := n
@@ -291,12 +312,12 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 		// the pages of its listing
 		if mb.listing.pagesRegistrator != nil {
 			for _, p := range mb.listing.pagesRegistrator.HttpPages() {
-				n.AddChildren(&PermNode{Name: n.Name + p.path + ":", Unique: suffixed(n.Unique, p.path+":"), Title: p.TTitle})
+				n.AddChildren(&PermNode{Name: n.Name + p.path + ":", Unique: suffixed(n.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle})
 			}
 		}
 
 		rv := mb.Permissioner().Verifier(anyID(), parents...)
-		record = &PermNode{Name: rv.Resource(), Unique: rv.PreferredResource(),
+		record = &PermNode{Name: rv.Resource(), Unique: rv.PreferredResource(), Kind: PermNodeRecord,
 			Title: func(ctx context.Context) string { return mb.TTitle(ctx) }}
 		n.AddChildren(record)
 	}
@@ -318,7 +339,7 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	}
 	for _, verifier := range mb.detailing.verifiers {
 		v := verifier.Build(mb.Permissioner().Verifier(anyID(), parents...))
-		record.AddChildren(&PermNode{Name: v.Resource(), Unique: v.PreferredResource(), Title: verifier.GetTitle()})
+		record.AddChildren(&PermNode{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodeCheck, Title: verifier.GetTitle()})
 	}
 
 	// its fields — of the detail, of the edit, of the new record —, nested
@@ -327,7 +348,7 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	for _, s := range mb.detailing.GetSections() {
 		section := s
 		part := SectionPerm(section.name) + ":"
-		record.AddChildren(&PermNode{Name: record.Name + part, Unique: suffixed(record.Unique, part),
+		record.AddChildren(&PermNode{Name: record.Name + part, Unique: suffixed(record.Unique, part), Kind: PermNodeSection,
 			// its label, in the language of the request
 			Title: func(ctx context.Context) string {
 				label := section.label
@@ -343,7 +364,7 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	}
 	if mb.detailing.pagesRegistrator != nil {
 		for _, p := range mb.detailing.pagesRegistrator.HttpPages() {
-			record.AddChildren(&PermNode{Name: record.Name + p.path + ":", Unique: suffixed(record.Unique, p.path+":"), Title: p.TTitle})
+			record.AddChildren(&PermNode{Name: record.Name + p.path + ":", Unique: suffixed(record.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle})
 		}
 	}
 	for _, child := range mb.children {
@@ -410,7 +431,7 @@ func fieldPermNodes(mb *ModelBuilder, record *PermNode) []*PermNode {
 			}
 			if node == nil {
 				field, fieldInfo := f, info
-				node = &PermNode{Name: under.Name + part, Unique: suffixed(under.Unique, part),
+				node = &PermNode{Name: under.Name + part, Unique: suffixed(under.Unique, part), Kind: PermNodeField,
 					// its label, in the language of the request
 					Title: func(ctx context.Context) string { return field.ContextLabel(fieldInfo, ctx) }}
 				under.AddChildren(node)
