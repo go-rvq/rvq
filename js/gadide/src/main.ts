@@ -31,10 +31,31 @@ const save = (key: string, v: unknown) => {
   }
 };
 
+// a layout saved that shows neither the explorer nor the editor — closed, or
+// of an older version — would open a blank IDE: the default one instead
+const usableLayout = (l: SerializedDockview | null): SerializedDockview | null => {
+  const panels = (l as { panels?: Record<string, unknown> } | null)?.panels;
+  return panels && ("explorer" in panels || "editor" in panels) ? l : null;
+};
+
+// an error shows on the page, not a blank one
+const showError = (msg: string) => {
+  let el = document.getElementById("gadide-error");
+  if (!el) {
+    el = document.createElement("pre");
+    el.id = "gadide-error";
+    el.className = "gadide-error";
+    document.body.prepend(el);
+  }
+  el.textContent += msg + "\n";
+};
+window.addEventListener("error", (e) => showError(String(e.error?.stack || e.message)));
+window.addEventListener("unhandledrejection", (e) => showError(String(e.reason?.stack || e.reason)));
+
 const App = defineComponent(() => {
   const workspace = ref<Workspace>();
   const error = ref("");
-  const layout = ref<SerializedDockview | null>(load("gadide.layout"));
+  const layout = ref<SerializedDockview | null>(usableLayout(load("gadide.layout")));
   const config = ref<Record<string, unknown>>(load("gadide.config") ?? {});
   watch(layout, (v) => save("gadide.layout", v));
   watch(config, (v) => save("gadide.config", v), { deep: true });
