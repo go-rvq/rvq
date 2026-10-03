@@ -108,10 +108,10 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		"admin:site/:posts:(models)":   "Os modelos dentro de",
 		"admin:site/:posts:<*>:@edit":  "admin:site/:posts:<*>:@edit",
 		// a model edited in place: its structure inside the field
-		"admin:site/:posts:<*>:#Meta:":              "O campo",
+		"admin:site/:posts:<*>:&Meta:":              "O campo",
 		"admin:site/:posts:(inlines)":               "Os registros editados no lugar dentro de",
-		"admin:site/:posts:<*>:#Meta:(fields)":      "Os campos de",
-		"admin:site/:posts:<*>:#Meta:#Note:":        "O campo",
+		"admin:site/:posts:<*>:&Meta:(fields)":      "Os campos de",
+		"admin:site/:posts:<*>:&Meta:#Note:":        "O campo",
 		"admin:site/:posts:<*>:#Title:":             "O campo",
 		"admin:site/:posts:<*>:$Main:":              "A seção",
 		"admin:site/:posts:/export:":                "A página",

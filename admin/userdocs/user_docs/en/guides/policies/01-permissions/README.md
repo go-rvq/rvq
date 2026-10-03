@@ -25,6 +25,7 @@ what is asked of it:
 | a part (model) | `seo_config` |
 | a record: its id in `<…>` | `<7>` — `<*>` any |
 | a field | `#Title` |
+| a record edited in place, in a field: `&` and the field; its fields under it | `&Config`, `&Config:#Title` |
 | a section of the detail | `$Main` |
 | a page | `/report` |
 | a permission: `@` and its name | `@list`, `@get`, `@create`, `@edit`, `@delete` |

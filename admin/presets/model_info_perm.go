@@ -2,6 +2,7 @@ package presets
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/x/perm"
@@ -81,7 +82,41 @@ func (p *ModelPermissioner) ReqObjector(r *http.Request, obj any) *perm.Verifier
 }
 
 func (p *ModelPermissioner) ReqObjectFielder(r *http.Request, obj any, field string) *perm.Verifier {
-	return p.ReqObjector(r, obj).On(FieldPerm(field))
+	return p.ReqObjector(r, obj).On(p.FieldPermParts(field)...)
+}
+
+// FieldPermParts are the parts of the resource of the field of path field
+// ("Title", "Config.Title"): a field "#Title"; a field holding a model edited
+// in place "&Config", its fields under it ("&Config", "#Title"); a field of
+// a nested struct under it too ("#Gmail", "#User").
+func (p *ModelPermissioner) FieldPermParts(field string) (parts []string) {
+	fbs := []*FieldsBuilder{&p.mb.editing.FieldsBuilder, &p.mb.detailing.FieldsBuilder}
+	segs := strings.Split(field, ".")
+	for i, seg := range segs {
+		if i == len(segs)-1 {
+			return append(parts, FieldPerm(seg))
+		}
+		var nested *FieldsBuilder
+		inline := false
+		for _, fb := range fbs {
+			if fb == nil {
+				continue
+			}
+			if f := fb.GetField(seg); f != nil {
+				if n := f.GetNested(); n != nil && n.FieldsBuilder() != nil {
+					nested, inline = n.FieldsBuilder(), n.Model() != nil
+					break
+				}
+			}
+		}
+		if inline {
+			parts = append(parts, InlinePerm(seg))
+		} else {
+			parts = append(parts, FieldPerm(seg))
+		}
+		fbs = []*FieldsBuilder{nested}
+	}
+	return
 }
 
 // ReqObjectFieldReader verifies reading a field of obj, and

@@ -26,6 +26,7 @@ termina no que é pedido dele:
 | uma parte (model) | `seo_config` |
 | um registro: o id entre `<…>` | `<7>` — `<*>` qualquer um |
 | um campo | `#Title` |
+| um registro editado no lugar, num campo: `&` e o campo; os campos dele embaixo | `&Config`, `&Config:#Title` |
 | uma seção do detalhe | `$Main` |
 | uma página | `/report` |
 | uma permissão: `@` e o nome | `@list`, `@get`, `@create`, `@edit`, `@delete` |

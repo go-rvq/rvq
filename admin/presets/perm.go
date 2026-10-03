@@ -16,6 +16,13 @@ func FieldPerm(name string) string {
 	return "#" + name
 }
 
+// InlinePerm is the resource of a field of a record that holds a model
+// edited in place (a nested model): "&Config"; its fields are under it,
+// "&Config:#Title".
+func InlinePerm(name string) string {
+	return "&" + name
+}
+
 // SectionPerm is the resource of a section of a record's detail page:
 // "$Main". A section is seen (get) and edited in place (create/update) by its
 // own permission; the fields it writes are still asked theirs (FieldPerm).
@@ -33,7 +40,9 @@ func SectionPerm(name string) string {
 //	    model       :site/:seo/:seo_config:      @list @create !bulk…
 //	      record    :site/:seo/:seo_config:<*>:  @get @edit @delete !action…
 //	        field   …:<*>:#Title:                       @get @edit @create
-//	          field …:<*>:#Config:#Title:               (nested)
+//	          field …:<*>:#Gmail:#User:                 (a nested struct)
+//	        inline  …:<*>:&Config:                      a model edited in place
+//	          field …:<*>:&Config:#Title:
 //	        section …:<*>:$Main:                        @get @edit
 //	        page    …:<*>:/report:
 //	        model   …:<*>:revisions:                    (nested, the same way)
@@ -437,6 +446,9 @@ func fieldPermNodes(mb *ModelBuilder, record *PermNode) []*PermNode {
 				continue
 			}
 			part := FieldPerm(name) + ":"
+			if n := f.GetNested(); n != nil && n.Model() != nil && n.FieldsBuilder() != nil {
+				part = InlinePerm(name) + ":"
+			}
 			var node *PermNode
 			for _, c := range under.Children {
 				if c.Name == under.Name+part {

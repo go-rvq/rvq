@@ -1,6 +1,8 @@
 package perms
 
 import (
+	"strings"
+
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 )
@@ -138,9 +140,5 @@ func PageResource(mb *presets.ModelBuilder, mode string, id model.ID, pagePath s
 // the same computation the runtime field-permission check uses, so a policy
 // stored with this resource is matched for that field.
 func FieldResource(mb *presets.ModelBuilder, id model.ID, path ...string) string {
-	v := mb.Permissioner().Verifier(id)
-	for _, seg := range path {
-		v = v.SnakeOn(presets.FieldPerm(seg))
-	}
-	return uniqueResource(v)
+	return uniqueResource(mb.Permissioner().Verifier(id).On(mb.Permissioner().FieldPermParts(strings.Join(path, "."))...))
 }

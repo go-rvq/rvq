@@ -10,7 +10,9 @@ import (
 // The parts of a resource of a permission are separated by colons: the
 // module, the groups of the menu — each with a "/" at its end, so a group is
 // never taken for a model —, the model, a record ("<7>"), a field ("#Title"),
-// a section ("$Main"), a nested model…, and, last, the permission asked
+// a field of a model edited in place ("&Config", its fields under it:
+// "&Config:#Title"), a section ("$Main"), a nested model…, and, last, the
+// permission asked
 // ("@edit") or the action ("!publish"):
 //
 //	:site/:seo/:seo_config:<7>:@edit   by the groups

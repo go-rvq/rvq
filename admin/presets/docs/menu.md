@@ -209,10 +209,12 @@ Prefer `ModelItem` / `PageItem` / `GroupItem` with `Add`.
 The resource of a permission is made of parts separated by `:` — the module,
 each group of the chain with a `/` at its end (so a group is never taken for a
 model of its name), the model, a record (`<7>`, `<*>` any), a field
-(`#Title`), a section (`$Main`), a page (`/report`), a nested model —, and it
-ends in what is asked: a permission, `@` and its name (`@list`, `@get`,
-`@create`, `@edit`, `@delete`, `@delete_with_related`), or an action, `!` and
-its name (`!publish`, `ActionPerm`):
+(`#Title`; a field holding a model edited in place `&Config`, its fields
+under it, `&Config:#Title`; a nested struct's under it as fields,
+`#Gmail:#User`), a section (`$Main`), a page (`/report`), a nested model —,
+and it ends in what is asked: a permission, `@` and its name (`@list`,
+`@get`, `@create`, `@edit`, `@delete`, `@delete_with_related`), or an
+action, `!` and its name (`!publish`, `ActionPerm`):
 
 ```
 admin:site/:seo/:seo_config:<7>:@edit     through the groups
