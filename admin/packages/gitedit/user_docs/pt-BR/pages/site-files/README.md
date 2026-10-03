@@ -4,6 +4,8 @@ Os arquivos de que o site é feito — templates, estilos, scripts e imagens —
 editados aqui, num **rascunho** só seu: o site muda só quando você
 **publica**.
 
+Passo a passo, com o desenvolvimento local: o guia {%= admin.doc("guides/site-files").link %} — também o botão **Ajuda** da página.
+
 - **Arquivos** é o editor: a árvore dos arquivos, e cada arquivo aberto numa
   aba. Salvar muda só o seu rascunho.
 - **Seu rascunho** diz onde ele está: commits para publicar, commits que

@@ -33,6 +33,7 @@ type Messages struct {
 	History           string `i18n:"hint='Title of the list of the last commits.'"`
 	Files             string `i18n:"hint='Title of the editor of the files (the IDE).'"`
 	Preview           string `i18n:"hint='Button that opens the site as the draft makes it.'"`
+	Help              string `i18n:"hint='Button that opens the documentation of the editor of the files.'"`
 
 	CommitAction      string `i18n:"label='Commit', hint='Action that records the changes of the draft, with a message.'"`
 	UpdateAction      string `i18n:"label='Update', hint='Action that brings into the draft what others published.'"`
@@ -66,6 +67,7 @@ var Messages_en_US = &Messages{
 	History:           "History",
 	Files:             "Files",
 	Preview:           "Preview the site",
+	Help:              "Help",
 	CommitAction:      "Commit",
 	UpdateAction:      "Update",
 	PublishAction:     "Publish",
@@ -97,6 +99,7 @@ var Messages_pt_BR = &Messages{
 	History:           "Histórico",
 	Files:             "Arquivos",
 	Preview:           "Ver o site do rascunho",
+	Help:              "Ajuda",
 	CommitAction:      "Commit",
 	UpdateAction:      "Atualizar",
 	PublishAction:     "Publicar",

@@ -55,7 +55,18 @@ func OpenRepo(ctx context.Context, workTree, draftsDir string) (*Repo, error) {
 		}
 		gitDir = p
 	}
-	branch, err := git(ctx, workTree, "symbolic-ref", "--short", "HEAD")
+	// the git directory and the worktree said: the repository's
+	// core.worktree may name a path of another machine (the host of a
+	// container; a deploy tool writes it)
+	absGit, err := filepath.Abs(gitDir)
+	if err != nil {
+		return nil, err
+	}
+	absWork, err := filepath.Abs(workTree)
+	if err != nil {
+		return nil, err
+	}
+	branch, err := git(ctx, workTree, "--git-dir="+absGit, "--work-tree="+absWork, "symbolic-ref", "--short", "HEAD")
 	if err != nil {
 		return nil, err
 	}

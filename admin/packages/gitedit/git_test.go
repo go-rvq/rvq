@@ -30,8 +30,10 @@ func site(t *testing.T) (repo *Repo, served string) {
 	os.WriteFile(filepath.Join(served, "index.gadx"), []byte("old\n"), 0o644)
 	run(served, "add", ".")
 	run(served, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "first")
-	// as on the server: the repository and its worktree by relative paths
-	run(served, "config", "core.worktree", "../public")
+	// as on the server: the repository named by a relative path, its
+	// core.worktree a path of another machine (written by the deploy tool,
+	// on the host of the container)
+	run(served, "config", "core.worktree", "/nonexistent/host/v/app/public")
 	os.WriteFile(filepath.Join(served, ".git"), []byte("gitdir: ../.public.git\n"), 0o644)
 	return &Repo{GitDir: filepath.Join(root, ".public.git"), WorkTree: served, Branch: "main", DraftsDir: filepath.Join(root, "drafts")}, served
 }

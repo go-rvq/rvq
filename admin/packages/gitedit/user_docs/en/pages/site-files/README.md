@@ -4,6 +4,8 @@ The files the site is made of — its templates, styles, scripts and images —
 edited here, in a **draft** of your own: the site changes only when you
 **publish**.
 
+Step by step, with the local development: the guide {%= admin.doc("guides/site-files").link %} — also the page's **Help** button.
+
 - **Files** is the editor: the tree of the files, and each file open in a tab.
   Saving changes your draft only.
 - **Your draft** says where it stands: commits to publish, commits others

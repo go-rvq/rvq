@@ -56,6 +56,9 @@ type Builder struct {
 	// PreviewURL is where the site of the draft is seen (PreviewPath's,
 	// when not set).
 	PreviewURL string
+	// HelpURL, when set, is the documentation of the editor, opened by the
+	// page's Help button.
+	HelpURL string
 	// Assets are the files of the IDE's app (its index.html at the root); the
 	// gad IDE's (rvq/js GadIDE) when not set.
 	Assets fs.FS
@@ -367,6 +370,11 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		).Density(v.DensityCompact))
 	}
 
+	var help h.HTMLComponent
+	if b.HelpURL != "" {
+		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
+			Class("me-2 mb-2").Href(b.HelpURL).Attr("target", "_blank")
+	}
 	var preview h.HTMLComponent
 	if b.PreviewURL != "" {
 		preview = v.VBtn(m.Preview).PrependIcon("mdi-eye-outline").Variant(v.VariantTonal).Size(v.SizeSmall).
@@ -387,6 +395,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 						btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
 						preview,
 						btn(ActionReset, m.ResetAction, "mdi-restore", true),
+						help,
 						h.H4(m.Changes).Class("mt-4 mb-2"),
 						changesComp,
 						h.H4(m.History).Class("mt-4 mb-2"),
