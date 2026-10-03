@@ -4,6 +4,8 @@ Each person edits a **draft** of their own: a copy of the files of the site,
 made the first time they open the page. What you save changes your draft
 only — the site and the drafts of the others stay as they are.
 
+![A file changed in the draft, its diff open](images/changes.png)
+
 - **Files**, on the right, is the editor: the tree of the files at its left,
   each file open in a tab. Save with the tab's button or Ctrl+S.
 - Create, rename and delete files and folders: from the tree's menu.

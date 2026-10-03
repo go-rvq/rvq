@@ -1,0 +1,31 @@
+# The pictures of the documentation of the editor of the files of the site
+# (hermon-cms tools/userdocs-shots): its page needs a site whose public/ is a
+# git repository (-site).
+- file: pages/site-files/images/page.png
+  url: /admin/site/site-files
+  wait: iframe
+  # the IDE in the frame: its tree of the files
+  expect: "(() => { const d = document.querySelector('iframe')?.contentDocument; return !!d && d.body.innerText.includes('templates') })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/01-edit/images/changes.png
+  url: /admin/site/site-files
+  wait: iframe
+  # a file of the draft changed by the IDE, once; the page again, its diff open
+  before: "fetch(location.pathname + '/ide/api/ide/file?path=templates/main.gad').then(r => r.json()).then(f => f.content.includes('by the editor') ? false : fetch(location.pathname + '/ide/api/ide/file', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: 'templates/main.gad', content: f.content + '\\n// the footer, by the editor\\n'})}).then(() => true)).then(changed => { if (changed) location.reload() })"
+  expect: "(() => { const t = document.querySelector('.v-expansion-panel-title'); if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-expansion-panel-text pre') })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/03-commit/images/commit.png
+  url: /admin/site/site-files
+  wait: iframe
+  # the dialog of the commit: its message
+  expect: "(() => { const b = [...document.querySelectorAll('.v-btn')].find(b => /commit/i.test(b.innerText)); if (b && !window.zzOpen) { window.zzOpen = 1; b.click() } return !!document.querySelector('.v-overlay--active input, .v-overlay--active textarea') })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/02-preview/images/preview.png
+  url: /admin/site-preview/en-us
+  # the page of the site, by the templates of the draft
+  wait: p
+  width: 1280
+  height: 800

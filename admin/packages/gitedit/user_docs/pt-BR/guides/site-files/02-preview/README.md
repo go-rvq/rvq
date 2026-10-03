@@ -4,6 +4,8 @@
 faz: os templates, os estilos e as imagens dele, com o conteúdo de verdade do
 site (as páginas e os posts publicados).
 
+![O site como o rascunho o faz](images/preview.png)
+
 - Navegue à vontade: os links continuam dentro da pré-visualização
   (`/admin/site-preview/…`).
 - Só você vê o seu rascunho; os visitantes continuam vendo o site.

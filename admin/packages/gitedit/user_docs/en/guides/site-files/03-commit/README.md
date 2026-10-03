@@ -4,6 +4,8 @@ A **commit** records the changes of the draft, with a **message** saying what
 they are ("Fix the footer", "New services page"). It carries your name and
 e-mail and goes into the **History**.
 
+![The message of the commit](images/commit.png)
+
 - A commit does not change the site yet: it stays in the draft until you
   publish.
 - Before the commit, the draft is checked: the index page of each language is

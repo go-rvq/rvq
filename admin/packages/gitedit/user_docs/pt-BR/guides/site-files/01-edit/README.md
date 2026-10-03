@@ -4,6 +4,8 @@ Cada pessoa edita um **rascunho** só seu: uma cópia dos arquivos do site,
 feita na primeira vez que abre a página. O que você salva muda só o seu
 rascunho — o site e os rascunhos dos outros ficam como estão.
 
+![Um arquivo alterado no rascunho, com o diff aberto](images/changes.png)
+
 - **Arquivos**, à direita, é o editor: a árvore dos arquivos à esquerda dele,
   cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
 - Criar, renomear e apagar arquivos e pastas: pelo menu da árvore.
