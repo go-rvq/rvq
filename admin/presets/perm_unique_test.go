@@ -102,6 +102,9 @@ func TestGroupPermPart(t *testing.T) {
 	if r := b.GetModelByID("content").Permissioner().ListVerifier().Resource(); r != "admin:content:" {
 		t.Errorf("the model content: %q", r)
 	}
+	if ActionPerm("geo_ip:update") != "!geo_ip.update" {
+		t.Errorf("a \":\" in an action %q", ActionPerm("geo_ip:update"))
+	}
 	if ActionPerm("Publish") != "!publish" || PermUpdate != "@edit" {
 		t.Errorf("the verbs %q, %q", ActionPerm("Publish"), PermUpdate)
 	}

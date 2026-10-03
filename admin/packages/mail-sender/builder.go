@@ -275,7 +275,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 				return h.SimplifyComponent(comps)
 			}))
 
-	d.AddPageFunc(perm.PermVerifier(), oauthLoginUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
+	d.AddPageFunc(perm.PermVerifier().Title(func(ctx context.Context) string { return GetMessages(ctx).GmailSenderConnectPage }), oauthLoginUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
 		c := obj.(*MailSender).Gmail
 		var config *oauth2.Config
 		if config, err = getConfig(&c, ctx.R); err != nil {
@@ -285,7 +285,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		return
 	})
 
-	d.AddPageFunc(perm.PermVerifier(), oauthLogoutUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
+	d.AddPageFunc(perm.PermVerifier().Title(func(ctx context.Context) string { return GetMessages(ctx).GmailSenderLogoutPage }), oauthLogoutUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
 		if err = reset(false); err == nil {
 			ctx.Flash = GetMessages(ctx.Context()).GmailSenderLogOutSuccessfully
 			r.RedirectURL = mb.Info().DetailingHref("")
@@ -293,7 +293,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		return
 	})
 
-	d.AddPageFunc(perm.PermVerifier(), oauthCallbackUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
+	d.AddPageFunc(perm.PermVerifier().Title(func(ctx context.Context) string { return GetMessages(ctx).GmailSenderCallbackPage }), oauthCallbackUri, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
 		var (
 			c      = obj.(*MailSender).Gmail
 			config *oauth2.Config
@@ -354,7 +354,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		return
 	})
 
-	d.AddPageFunc(perm.PermVerifier(), oauthCallbackSuccess, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
+	d.AddPageFunc(perm.PermVerifier().Title(func(ctx context.Context) string { return GetMessages(ctx).GmailSenderSuccessPage }), oauthCallbackSuccess, func(ctx *web.EventContext, obj any, mid model.ID, r *web.PageResponse) (err error) {
 		ctx.Flash = GetMessages(ctx.Context()).GmailSenderConfiguredSuccessfully
 		r.RedirectURL = path.Join(ctx.R.URL.Path, "../../..")
 		return

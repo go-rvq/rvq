@@ -194,7 +194,15 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	// the kinds of jobs, actions of the model in the permissions
 	mb.AppendListPermActions(func() (actions []*presets.PermNodeAction) {
 		for _, jb := range b.jbs {
-			actions = append(actions, &presets.PermNodeAction{Name: presets.ActionPerm(jb.name)})
+			job := jb
+			actions = append(actions, &presets.PermNodeAction{Name: presets.ActionPerm(job.name),
+				// its title, in the language of the request
+				Title: func(ctx context.Context) string {
+					if ec := web.EventContextFromContext(ctx); ec != nil {
+						return job.GetTitle(ec)
+					}
+					return getTJob(ctx, job.name)
+				}})
 		}
 		return
 	})

@@ -21,6 +21,10 @@ type Messages struct {
 	MailSender_Action_TestSendMail    string           `i18n:"label='Send test mail', hint='Action that sends a test email.'"`
 	GmailSenderConfiguredSuccessfully string           `i18n:"label='Gmail configured', hint='Shown once the Gmail sender was authorized.'"`
 	GmailSenderLogOutSuccessfully     string           `i18n:"label='Gmail logged out', hint='Shown once the Gmail sender was signed out.'"`
+	GmailSenderConnectPage            string           `i18n:"label='Gmail: connect', hint='Page that sends to Google to authorize the Gmail sender (a permission of its own).'"`
+	GmailSenderLogoutPage             string           `i18n:"label='Gmail: disconnect', hint='Page that signs the Gmail sender out (a permission of its own).'"`
+	GmailSenderCallbackPage           string           `i18n:"label='Gmail: authorization return', hint='Page Google returns to after the authorization (a permission of its own).'"`
+	GmailSenderSuccessPage            string           `i18n:"label='Gmail: authorized', hint='Page shown once the Gmail sender was authorized (a permission of its own).'"`
 	GmailSenderCallbackURI            string           `i18n:"label='Gmail: callback URI', hint='Label of the address Google returns to after the authorization.'"`
 	GmailSenderCredentials            string           `i18n:"label='Gmail: app credentials', hint='Label of the OAuth credentials of the Gmail sender.'"`
 	GmailSenderCredentialsFile        string           `i18n:"label='Gmail: app credentials file', hint='Label of the field that uploads the credentials file.'"`
@@ -63,6 +67,10 @@ var (
 		MailSender_Action_TestSendMail:    "Send Test Mail",
 		GmailSenderConfiguredSuccessfully: "Gmail Sender configured Successfully",
 		GmailSenderLogOutSuccessfully:     "Gmail Log Out Successfully",
+		GmailSenderConnectPage:            "Connect Gmail",
+		GmailSenderLogoutPage:             "Disconnect Gmail",
+		GmailSenderCallbackPage:           "Gmail authorization return",
+		GmailSenderSuccessPage:            "Gmail authorized",
 		GmailSenderCallbackURI:            "CallbackURI",
 		GmailSenderCredentials:            "App Credentials",
 		GmailSenderCredentialsFile:        "App Credentials File",
@@ -120,6 +128,10 @@ var (
 		MailSender_Action_TestSendMail:    "Enviar email de Teste",
 		GmailSenderConfiguredSuccessfully: "Envio por Gmail configurado com sucesso",
 		GmailSenderLogOutSuccessfully:     "Desconectado do GMAIL com sucesso",
+		GmailSenderConnectPage:            "Conectar ao Gmail",
+		GmailSenderLogoutPage:             "Desconectar do Gmail",
+		GmailSenderCallbackPage:           "Retorno da autorização do Gmail",
+		GmailSenderSuccessPage:            "Gmail autorizado",
 		GmailSenderCallbackURI:            "CallbackURI",
 		GmailSenderCredentials:            "Credenciais de App",
 		GmailSenderCredentialsFile:        "Arquivo de Credenciais de App",

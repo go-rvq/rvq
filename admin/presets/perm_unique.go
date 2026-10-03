@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/iancoleman/strcase"
 )
@@ -28,9 +29,11 @@ func GroupPermPart(name string) string {
 	return strcase.ToSnakeWithIgnore(name, ".") + "/"
 }
 
-// ActionPerm is the permission of the action name: "!publish".
+// ActionPerm is the permission of the action name: "!publish". A ":" of the
+// name — "geo_ip:update", a kind of job — becomes ".": ":" separates the
+// parts of a resource.
 func ActionPerm(name string) string {
-	return "!" + strcase.ToSnake(name)
+	return "!" + strings.ReplaceAll(strcase.ToSnake(name), ":", ".")
 }
 
 // UniquePermName is the unique name of the model in a permission: its id,

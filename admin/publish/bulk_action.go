@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -142,7 +143,8 @@ func (ba *BulkAction) Build() *presets.BulkActionBuilder {
 	}
 
 	l := ba.m.Listing()
-	b := l.BulkAction("Publisher")
+	b := l.BulkAction("Publisher").
+		SetI18nLabel(func(ctx context.Context) string { return GetMessages(ctx).Publication })
 	return b.
 		ButtonCompFunc(func(ctx *web.EventContext, title func() string, onclick *web.VueEventTagBuilder) h.HTMLComponent {
 			var (
