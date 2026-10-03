@@ -211,11 +211,15 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/mb0/diff v0.0.0-20131118162322-d8d9a906c24d // indirect
+	github.com/moisespsena-go/path-helpers v0.0.3 // indirect
+	github.com/phayes/permbits v0.0.0-20190612203442-39d7c581d2ee // indirect
 	github.com/shurcooL/go v0.0.0-20200502201357-93f07166e636 // indirect
 	github.com/shurcooL/go-goon v0.0.0-20210110234559-7585751d9a17 // indirect
+	github.com/unapu-go/cmd-utils v0.0.0-20210819145619-98d5bccf2672 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	mvdan.cc/sh/v3 v3.3.1 // indirect
 )
 
 //replace github.com/theplant/docgo => ../../docgo/
