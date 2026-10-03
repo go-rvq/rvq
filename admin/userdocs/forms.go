@@ -194,6 +194,7 @@ func (b *Builder) rule(locale, node string, msgs *Messages) (string, bool) {
 // modelOf is the model of node — a model's, or of a form, an action, a page
 // of it —, nil when none is.
 func (b *Builder) modelOf(node string) *presets.ModelBuilder {
+	node = strings.TrimSuffix(node, "/permissions")
 	for _, sep := range []string{"/forms/", "/actions/", "/pages/"} {
 		if i := strings.LastIndex(node, sep); i >= 0 {
 			node = node[:i]

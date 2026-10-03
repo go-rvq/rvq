@@ -37,6 +37,8 @@ func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext)
 			if len(children) == 0 {
 				continue
 			}
+			// its permissions, after what it holds
+			children = append(children, permissionsNode("groups/"+sub.Name(), GetMessages(ctx.Context())))
 			nodes = append(nodes, &Node{ID: "groups/" + sub.Name(), Title: sub.TTitle(ctx.Context()),
 				Icon: "mdi-folder-outline", Children: children})
 		case presets.MenuItemModel:
@@ -50,8 +52,9 @@ func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext)
 			if page == nil {
 				continue
 			}
-			nodes = append(nodes, &Node{ID: "pages/" + strings.Trim(page.Path(), "/"),
-				Title: page.TTitle(ctx.Context()), Icon: "mdi-file-document-outline"})
+			id := "pages/" + strings.Trim(page.Path(), "/")
+			nodes = append(nodes, &Node{ID: id, Title: page.TTitle(ctx.Context()), Icon: "mdi-file-document-outline",
+				Children: []*Node{permissionsNode(id, GetMessages(ctx.Context()))}})
 		}
 	}
 	return
@@ -70,6 +73,8 @@ func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventC
 
 	// its forms: of a new record, of an edit, the detail
 	n.Children = append(n.Children, formNodes(mb, id, msgs)...)
+	// its permissions: of its records, fields, sections, actions, pages
+	n.Children = append(n.Children, permissionsNode(id, msgs))
 
 	actions := &Node{ID: id + "/actions", Title: msgs.Actions, Icon: "mdi-gesture-tap"}
 	for _, a := range detailingActions(mb) {

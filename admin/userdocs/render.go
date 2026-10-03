@@ -101,7 +101,8 @@ func DocFile(node string) string {
 	if i := strings.Index(node, "/"); i >= 0 {
 		rest = node[i:]
 	}
-	if strings.Contains("/"+node, "/actions/") || strings.Contains("/"+node, "/forms/") || strings.Contains(rest, "/pages/") {
+	if strings.Contains("/"+node, "/actions/") || strings.Contains("/"+node, "/forms/") ||
+		strings.HasSuffix(node, "/permissions") || strings.Contains(rest, "/pages/") {
 		return node + ".md"
 	}
 	return node + "/README.md"
@@ -129,7 +130,10 @@ type renderer struct {
 // admin.doc — each a record of its label, its href and a markdown link —;
 // of the model of the document (the one of its node): admin.fields(form) —
 // the table of the fields of a form (FormNew, FormEdit, FormDetail) —,
-// admin.menu() — the menu of its detail —, and doc.model, its title.
+// admin.menu() — the menu of its detail —, admin.permissions() — the
+// permissions of the part of a permissions node, from the menu as it is —,
+// admin.permissionsTree() — the tree of all the permissions, a VTreeview —,
+// and doc.model, its title.
 func (r *renderer) globals() gad.Dict {
 	link := func(label, href string) gad.Dict {
 		return gad.Dict{
@@ -160,6 +164,12 @@ func (r *renderer) globals() gad.Dict {
 				return nil, fmt.Errorf("admin.fields: %s is of no model", r.node)
 			}
 			return gad.Str(fieldsTable(mb, form, r.ctx)), nil
+		}),
+		"permissions": gad.NewFunction("permissions", func(c gad.Call) (gad.Object, error) {
+			return gad.Str(r.permissions()), nil
+		}),
+		"permissionsTree": gad.NewFunction("permissionsTree", func(c gad.Call) (gad.Object, error) {
+			return gad.Str(r.permissionsTree()), nil
 		}),
 		"menu": gad.NewFunction("menu", func(c gad.Call) (gad.Object, error) {
 			if mb == nil {

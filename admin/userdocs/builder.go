@@ -336,6 +336,9 @@ func DocFiles(node string) []string {
 		files = append(files, "actions/"+node[i+len("/actions/"):]+".md")
 	} else if i := strings.LastIndex(node, "/forms/"); i >= 0 && !strings.Contains(node[i+len("/forms/"):], "/") {
 		files = append(files, "forms/"+node[i+len("/forms/"):]+".md")
+	} else if strings.HasSuffix(node, "/permissions") {
+		kind, _ := permissionsKind(node)
+		files = append(files, "permissions/"+kind+".md")
 	} else if i := strings.LastIndex(node, "/children/"); i >= 0 {
 		key := node[i+len("/children/"):]
 		if j := strings.LastIndex(key, "_"); j >= 0 {

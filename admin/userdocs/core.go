@@ -11,7 +11,9 @@ import (
 // coreFS is the documentation's own documents: the forms of every model
 // (forms/new.md, forms/edit.md, forms/detail.md), which a model's own
 // documents may stand in for; the policies of the admin
-// (guides/policies/…), which an application puts in its tree (Custom).
+// (guides/policies/…), which an application puts in its tree (Custom); the
+// permissions of a model, a group, a page (permissions/model.md, group.md,
+// page.md), the resources made from the menu as it is.
 //
 //go:embed user_docs/en user_docs/pt-BR
 var coreFS embed.FS

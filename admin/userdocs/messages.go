@@ -17,69 +17,138 @@ func GetMessages(ctx context.Context) *Messages {
 
 // Messages are the words of the documentation page.
 type Messages struct {
-	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	NothingWritten    string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
-	SeeAlso           string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
-	EditDocuments     string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
-	RenderError       string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
-	ResetDocuments    string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
-	Actions           string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
-	Pages             string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
-	FormNew           string `i18n:"hint='Node of the tree with the form of a new record of a model.'"`
-	FormEdit          string `i18n:"hint='Node of the tree with the form of an edit of a record of a model.'"`
-	FormDetail        string `i18n:"hint='Node of the tree with the detail of a record of a model.'"`
-	Field             string `i18n:"hint='Column of the table of the fields of a form: the field.'"`
-	Description       string `i18n:"hint='Column of the table of the fields of a form: what the field is.'"`
-	Conditional       string `i18n:"hint='Said of a field shown depending on the record.'"`
-	NoFields          string `i18n:"hint='Shown for a form with no field.'"`
-	Children          string `i18n:"hint='Title of the models nested in a record, in the menu of its detail.'"`
-	NothingInMenu     string `i18n:"hint='Shown for a detail whose menu has nothing.'"`
-	RuleHeading       string `i18n:"hint='Heading of the section of the document of an action that says when it is available: the text under it is shown in the menu of the detail. The documents use the same.'"`
-	RuleUndocumented  string `i18n:"hint='Shown for an action available by a rule its document does not say.'"`
+	ModuleDescription     string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	NothingWritten        string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
+	SeeAlso               string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
+	EditDocuments         string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
+	RenderError           string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
+	ResetDocuments        string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
+	Actions               string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
+	Pages                 string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
+	FormNew               string `i18n:"hint='Node of the tree with the form of a new record of a model.'"`
+	FormEdit              string `i18n:"hint='Node of the tree with the form of an edit of a record of a model.'"`
+	FormDetail            string `i18n:"hint='Node of the tree with the detail of a record of a model.'"`
+	Field                 string `i18n:"hint='Column of the table of the fields of a form: the field.'"`
+	Description           string `i18n:"hint='Column of the table of the fields of a form: what the field is.'"`
+	Conditional           string `i18n:"hint='Said of a field shown depending on the record.'"`
+	NoFields              string `i18n:"hint='Shown for a form with no field.'"`
+	Children              string `i18n:"hint='Title of the models nested in a record, in the menu of its detail.'"`
+	NothingInMenu         string `i18n:"hint='Shown for a detail whose menu has nothing.'"`
+	RuleHeading           string `i18n:"hint='Heading of the section of the document of an action that says when it is available: the text under it is shown in the menu of the detail. The documents use the same.'"`
+	RuleUndocumented      string `i18n:"hint='Shown for an action available by a rule its document does not say.'"`
+	Permissions           string `i18n:"hint='Node of the tree with the permissions of a part of the admin.'"`
+	PermNone              string `i18n:"hint='Shown for a part with no permission of its own.'"`
+	PermResources         string `i18n:"hint='Title of the resources of a part.'"`
+	PermBy                string `i18n:"hint='Column of the table of the resources: how the resource names the part.'"`
+	PermResource          string `i18n:"hint='Column with a resource of a permission.'"`
+	PermUnique            string `i18n:"hint='Says a resource names the part by its unique name: it decides first.'"`
+	PermByGroups          string `i18n:"hint='Says a resource names the part through the groups of the menu.'"`
+	PermRecords           string `i18n:"hint='Title of the permissions of the records of a model.'"`
+	PermWhat              string `i18n:"hint='Column with what a permission allows.'"`
+	PermVerb              string `i18n:"hint='Column with the verb (action) of a permission.'"`
+	PermList              string `i18n:"hint='Permission to list the records.'"`
+	PermGet               string `i18n:"hint='Permission to see a record.'"`
+	PermCreate            string `i18n:"hint='Permission to create a record.'"`
+	PermUpdate            string `i18n:"hint='Permission to edit a record.'"`
+	PermDelete            string `i18n:"hint='Permission to delete a record.'"`
+	PermDeleteWithRelated string `i18n:"hint='Permission to delete a record with the records related to it.'"`
+	PermFields            string `i18n:"hint='Title of the permissions of the fields of a model.'"`
+	PermFieldsHint        string `i18n:"hint='Explains the permissions of the fields.'"`
+	PermSections          string `i18n:"hint='Title of the permissions of the sections of a detail.'"`
+	PermSection           string `i18n:"hint='Column with a section of a detail.'"`
+	PermSectionsHint      string `i18n:"hint='Explains the permissions of the sections.'"`
+	PermParts             string `i18n:"hint='Title of the parts of a group, with their unique names.'"`
+	PermPartsHint         string `i18n:"hint='Explains the parts of a group.'"`
 }
 
 var Messages_en_US = &Messages{
-	ModuleDescription: "The documentation of the admin: the page that explains each part of it.",
-	NothingWritten:    "Nothing was written about this yet.",
-	SeeAlso:           "In this part",
-	EditDocuments:     "Edit the documents",
-	RenderError:       "This document could not be shown: %s",
-	ResetDocuments:    "Reset to the initial documents",
-	Actions:           "Actions",
-	Pages:             "Pages",
-	FormNew:           "New record",
-	FormEdit:          "Edit",
-	FormDetail:        "Detail",
-	Field:             "Field",
-	Description:       "Description",
-	Conditional:       "Shown depending on the record.",
-	NoFields:          "No fields.",
-	Children:          "Nested records",
-	NothingInMenu:     "The menu has nothing.",
-	RuleHeading:       "When it is available",
-	RuleUndocumented:  "Available depending on the record (the rule is not documented).",
+	ModuleDescription:     "The documentation of the admin: the page that explains each part of it.",
+	NothingWritten:        "Nothing was written about this yet.",
+	SeeAlso:               "In this part",
+	EditDocuments:         "Edit the documents",
+	RenderError:           "This document could not be shown: %s",
+	ResetDocuments:        "Reset to the initial documents",
+	Actions:               "Actions",
+	Pages:                 "Pages",
+	FormNew:               "New record",
+	FormEdit:              "Edit",
+	FormDetail:            "Detail",
+	Field:                 "Field",
+	Description:           "Description",
+	Conditional:           "Shown depending on the record.",
+	NoFields:              "No fields.",
+	Children:              "Nested records",
+	NothingInMenu:         "The menu has nothing.",
+	RuleHeading:           "When it is available",
+	RuleUndocumented:      "Available depending on the record (the rule is not documented).",
+	Permissions:           "Permissions",
+	PermNone:              "This part has no permission of its own.",
+	PermResources:         "Resources",
+	PermBy:                "By",
+	PermResource:          "Resource",
+	PermUnique:            "Its unique name (decides first)",
+	PermByGroups:          "Its groups",
+	PermRecords:           "Records",
+	PermWhat:              "What",
+	PermVerb:              "Verb",
+	PermList:              "List",
+	PermGet:               "See a record",
+	PermCreate:            "Create",
+	PermUpdate:            "Edit",
+	PermDelete:            "Delete",
+	PermDeleteWithRelated: "Delete with the related",
+	PermFields:            "Fields",
+	PermFieldsHint:        "A field allowed to see but not to edit is shown read only; one not allowed to see is not shown.",
+	PermSections:          "Sections",
+	PermSection:           "Section",
+	PermSectionsHint:      "A section is seen and edited in place by its own permission; the fields it writes still ask theirs.",
+	PermParts:             "Inside the group",
+	PermPartsHint:         "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
 }
 
 var Messages_pt_BR = &Messages{
-	ModuleDescription: "A documentação do admin: a página que explica cada parte dele.",
-	NothingWritten:    "Ainda não há nada escrito sobre isto.",
-	SeeAlso:           "Nesta parte",
-	EditDocuments:     "Editar os documentos",
-	RenderError:       "Este documento não pôde ser mostrado: %s",
-	ResetDocuments:    "Restaurar os documentos iniciais",
-	Actions:           "Ações",
-	Pages:             "Páginas",
-	FormNew:           "Cadastro",
-	FormEdit:          "Edição",
-	FormDetail:        "Detalhe",
-	Field:             "Campo",
-	Description:       "Descrição",
-	Conditional:       "Aparece conforme o registro.",
-	NoFields:          "Nenhum campo.",
-	Children:          "Registros filhos",
-	NothingInMenu:     "O menu não tem nada.",
-	RuleHeading:       "Quando está disponível",
-	RuleUndocumented:  "Disponível conforme o registro (a regra não está documentada).",
+	ModuleDescription:     "A documentação do admin: a página que explica cada parte dele.",
+	NothingWritten:        "Ainda não há nada escrito sobre isto.",
+	SeeAlso:               "Nesta parte",
+	EditDocuments:         "Editar os documentos",
+	RenderError:           "Este documento não pôde ser mostrado: %s",
+	ResetDocuments:        "Restaurar os documentos iniciais",
+	Actions:               "Ações",
+	Pages:                 "Páginas",
+	FormNew:               "Cadastro",
+	FormEdit:              "Edição",
+	FormDetail:            "Detalhe",
+	Field:                 "Campo",
+	Description:           "Descrição",
+	Conditional:           "Aparece conforme o registro.",
+	NoFields:              "Nenhum campo.",
+	Children:              "Registros filhos",
+	NothingInMenu:         "O menu não tem nada.",
+	RuleHeading:           "Quando está disponível",
+	RuleUndocumented:      "Disponível conforme o registro (a regra não está documentada).",
+	Permissions:           "Permissões",
+	PermNone:              "Esta parte não tem permissão própria.",
+	PermResources:         "Recursos",
+	PermBy:                "Por",
+	PermResource:          "Recurso",
+	PermUnique:            "Nome único (decide primeiro)",
+	PermByGroups:          "Grupos",
+	PermRecords:           "Registros",
+	PermWhat:              "O quê",
+	PermVerb:              "Verbo",
+	PermList:              "Listar",
+	PermGet:               "Ver um registro",
+	PermCreate:            "Criar",
+	PermUpdate:            "Editar",
+	PermDelete:            "Excluir",
+	PermDeleteWithRelated: "Excluir com os relacionados",
+	PermFields:            "Campos",
+	PermFieldsHint:        "Um campo permitido para ver mas não para editar aparece somente leitura; um não permitido para ver não aparece.",
+	PermSections:          "Seções",
+	PermSection:           "Seção",
+	PermSectionsHint:      "Uma seção é vista e editada no lugar pela própria permissão; os campos que ela grava ainda pedem as deles.",
+	PermParts:             "Dentro do grupo",
+	PermPartsHint:         "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
 }
 
 // PackageMessages are the words of the documentation of a package: what its
