@@ -16,8 +16,8 @@ b.MenuOrder(
 
 ## The key
 
-An entry is identified by its TYPE and its NAME — `model:posts`, `page:/import`,
-`group:content`. The type is half of the key, so a model, a page and a group may
+An entry is identified by its TYPE and its NAME — `m:posts`, `p:/import`,
+`g:content` (the type a single letter: `m` a model, `p` a page, `g` a group). The type is half of the key, so a model, a page and a group may
 share a name without colliding.
 
 | Type | Reference | Name |
@@ -32,9 +32,9 @@ label for a singleton — or whatever `presets.ModelWithID("…")` set when the
 model was registered:
 
 ```go
-b.Model(&BlogPost{})                                  // model:blog_posts
-b.Model(&BlogPost{}).URIName("articles")              // model:blog_posts still
-b.Model(&BlogPost{}, presets.ModelWithID("articles")) // model:articles
+b.Model(&BlogPost{})                                  // m:blog_posts
+b.Model(&BlogPost{}).URIName("articles")              // m:blog_posts still
+b.Model(&BlogPost{}, presets.ModelWithID("articles")) // m:articles
 ```
 
 A reference (`MenuRef`) names an entry without requiring it to exist. That is
@@ -46,8 +46,8 @@ registered later in the file, or in a plugin installed afterwards.
 Two things can happen to a key:
 
 - **Registration** gives it its value — `b.Model(&Post{})` registers
-  `model:posts`, `b.PagesRegistrator().AddHttpPage(page)` registers
-  `page:/import`, `b.MenuGroup("content")` registers `group:content`.
+  `m:posts`, `b.PagesRegistrator().AddHttpPage(page)` registers
+  `p:/import`, `b.MenuGroup("content")` registers `g:content`.
 - **Reference** puts the key in place with no value yet: a *reservation*. It
   holds the position and renders nothing until the value arrives.
 
@@ -64,7 +64,7 @@ registration, takes no key, and so cannot collide with the model that does want
 the entry:
 
 ```go
-b.Model(&Post{})                                   // model:posts
+b.Model(&Post{})                                   // m:posts
 b.Model(&Post{}, presets.ModelNotInMenu()).        // no key at all
     URIName("dialog-select-favor-posts")
 ```
@@ -119,7 +119,7 @@ b.Model(&SEOConfig{}, presets.ModelWithID("seo_config")).URIName("seo_config")
 b.MenuGroup("site").Add(b.MenuGroup("seo").Add(presets.ModelItem("seo_config")))
 // menu:       Site > SEO > Seo Config
 // URL:        /admin/site/seo/seo_config
-// permission: …:site:seo:seo_config
+// permission: presets:site/:seo/:seo_config:   (and presets:seo_config:)
 ```
 
 `group.Path()` is that chain as `"site/seo"`, `group.PathNames()` its segments,
@@ -138,7 +138,7 @@ A group's segment in the URLs is its name unless it says otherwise:
 b.MenuGroup("admin").Add(presets.GroupItem("panel"))
 b.MenuGroup("panel").URIName("painel").Add(presets.ModelItem("locales"))
 // URL:        /admin/admin/painel/locales
-// permission: …:admin:panel:locales        (the names, as before)
+// permission: presets:admin/:panel/:locales:   (the names, as before)
 
 b.MenuGroup("admin").URIName("")             // no segment of its own
 // URL:        /admin/painel/locales
@@ -203,3 +203,35 @@ b.MenuOrder("books", b.MenuGroup("Media").SubItems("videos", "musics"))
 
 A bare string cannot say *the group named x*, which is what its ambiguity costs.
 Prefer `ModelItem` / `PageItem` / `GroupItem` with `Add`.
+
+## Permissions: the groups and the unique name
+
+The resource of a permission is made of parts separated by `:` — the module,
+each group of the chain with a `/` at its end (so a group is never taken for a
+model of its name), the model, a record (`<7>`, `<*>` any), a field
+(`#Title`), a section (`$Main`), a page (`/report`), a nested model —, and it
+ends in what is asked: a permission, `@` and its name (`@list`, `@get`,
+`@create`, `@edit`, `@delete`, `@delete_with_related`), or an action, `!` and
+its name (`!publish`, `ActionPerm`):
+
+```
+presets:site/:seo/:seo_config:<7>:@edit     through the groups
+presets:seo_config:<7>:@edit                by the unique name
+```
+
+A model or a page of the menu is reached both ways: through the chain of its
+groups, which follows the menu, and by its **unique name** — the model's id,
+the page's path —, which does not. The unique name decides first
+(`perm.Verifier.Prefer`):
+
+1. its policies, for all the roles of the request: a **deny** of any of them
+   denies, an allow allows;
+2. only when none of them matches does the resource through the groups
+   decide, as before: an allow of any role allows.
+
+`GroupPermPart`, `RecordPermPart`, `ActionPerm` and `UniquePermName` make the
+parts. `Builder.Permissions()` is the tree of every resource of the admin —
+the groups, nested; each model's listing and record, by both resources, with
+the permissions and actions asked, its fields (nested ones too), sections,
+pages and nested models; the pages; what has permissions out of the menu —:
+`Tree().Zip()` is it as a list.

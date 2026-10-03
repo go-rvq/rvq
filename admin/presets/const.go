@@ -3,13 +3,16 @@ package presets
 import "net/http"
 
 const (
-	PermModule            = "presets"
-	PermList              = "presets:list"
-	PermGet               = "presets:get"
-	PermCreate            = "presets:create"
-	PermUpdate            = "presets:update"
-	PermDelete            = "presets:delete"
-	PermDeleteWithRelated = "presets:delete_with_related"
+	PermModule = "presets"
+	// The permissions of a resource — the last part of the resource asked,
+	// "presets:site/:seo/:seo_config:<7>:@edit" —: an "@", then its name; an
+	// action is a "!" and its name ("…:<7>:!publish", ActionPerm).
+	PermList              = "@list"
+	PermGet               = "@get"
+	PermCreate            = "@create"
+	PermUpdate            = "@edit"
+	PermDelete            = "@delete"
+	PermDeleteWithRelated = "@delete_with_related"
 
 	PermActions         = "action"
 	PermDoListingAction = "do_listing_action"

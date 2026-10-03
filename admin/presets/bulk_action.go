@@ -179,7 +179,7 @@ func (b *BulkActionBuilder) Verifier(parent *perm.Verifier) *perm.Verifier {
 	if b.perm != nil {
 		return b.perm.Build(parent)
 	}
-	return parent.Do("bulk:" + b.name)
+	return parent.Do(ActionPerm(b.name))
 }
 
 func (b *BulkActionBuilder) Component(selectedIds []string, overlay actions.OverlayMode, ctx *web.EventContext) h.HTMLComponent {

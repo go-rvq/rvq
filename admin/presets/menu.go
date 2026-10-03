@@ -11,9 +11,9 @@ import (
 type MenuItemType string
 
 const (
-	MenuItemGroup MenuItemType = "group"
-	MenuItemModel MenuItemType = "model"
-	MenuItemPage  MenuItemType = "page"
+	MenuItemGroup MenuItemType = "g"
+	MenuItemModel MenuItemType = "m"
+	MenuItemPage  MenuItemType = "p"
 )
 
 // menuKey is the identity of a menu item: its type and its name.

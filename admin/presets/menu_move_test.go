@@ -95,7 +95,7 @@ func TestMoveKeepsAndChoosesOrder(t *testing.T) {
 	b := menuBuilder()
 	g := b.MenuGroup("g").Add(ModelItem("one"), ModelItem("two"), ModelItem("three"))
 
-	if got, want := joinKeys(g), "model:one model:two model:three"; got != want {
+	if got, want := joinKeys(g), "m:one m:two m:three"; got != want {
 		t.Errorf("ordem = %q, want %q", got, want)
 	}
 
@@ -103,7 +103,7 @@ func TestMoveKeepsAndChoosesOrder(t *testing.T) {
 	if err := b.MoveMenuItem(ModelItem("three"), g, 0); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := joinKeys(g), "model:three model:one model:two"; got != want {
+	if got, want := joinKeys(g), "m:three m:one m:two"; got != want {
 		t.Errorf("depois do índice 0 = %q, want %q", got, want)
 	}
 
@@ -111,7 +111,7 @@ func TestMoveKeepsAndChoosesOrder(t *testing.T) {
 	if err := b.MoveMenuItem(ModelItem("three"), g, 1); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := joinKeys(g), "model:one model:three model:two"; got != want {
+	if got, want := joinKeys(g), "m:one m:three m:two"; got != want {
 		t.Errorf("depois do índice 1 = %q, want %q", got, want)
 	}
 
@@ -120,7 +120,7 @@ func TestMoveKeepsAndChoosesOrder(t *testing.T) {
 		if err := b.MoveMenuItem(ModelItem("one"), g, idx); err != nil {
 			t.Fatal(err)
 		}
-		if got, want := joinKeys(g), "model:three model:two model:one"; got != want {
+		if got, want := joinKeys(g), "m:three m:two m:one"; got != want {
 			t.Errorf("índice %d = %q, want %q", idx, got, want)
 		}
 	}
@@ -186,7 +186,7 @@ func TestMovePendingThenRegister(t *testing.T) {
 	if got := mb.MenuGroup(); got != second {
 		t.Errorf("grupo = %v, want second", got)
 	}
-	if got, want := joinKeys(second), "model:menu_gammas"; got != want {
+	if got, want := joinKeys(second), "m:menu_gammas"; got != want {
 		t.Errorf("second = %q, want %q", got, want)
 	}
 	if len(first.Items()) != 0 {

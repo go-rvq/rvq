@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"strings"
 )
 
 // Permission verbs granted per record. They map to the presets action names
@@ -23,11 +24,11 @@ var (
 
 // PermTrash is the listing permission verb that gates the trash view and the
 // restore action.
-const PermTrash = "trash"
+const PermTrash = "@trash"
 
 // PermManage is the perm verb (and action name) that guards the permission
 // manager itself.
-const PermManage = "managePermissions"
+const PermManage = "!manage_permissions"
 
 // RecordResource returns the exact permission resource string of a record, as
 // computed by the presets permissioner (the module "presets" is already seeded
@@ -35,19 +36,34 @@ const PermManage = "managePermissions"
 // parent ids (the same the request carries) so the resource matches the runtime
 // check.
 func RecordResource(mb *presets.ModelBuilder, id model.ID, parentID ...model.ID) string {
-	return mb.Permissioner().Verifier(id, parentID...).Resource()
+	return uniqueResource(mb.Permissioner().Verifier(id, parentID...))
+}
+
+// uniqueResource is the resource of v by the unique name of what it is of —
+// which decides first, and does not change when a model moves in the menu
+// (perm.Verifier.Prefer) —, else its resource.
+func uniqueResource(v *perm.Verifier) string {
+	if r := v.PreferredResource(); r != "" {
+		return r
+	}
+	return v.Resource()
 }
 
 // ListResource returns the permission resource of the whole listing. For a
 // nested resource, pass the parent ids.
 func ListResource(mb *presets.ModelBuilder, parentID ...model.ID) string {
-	return mb.Permissioner().ListVerifier(parentID...).Resource()
+	return uniqueResource(mb.Permissioner().ListVerifier(parentID...))
 }
 
 // Grant creates or updates a DB policy granting subject the actions on
 // resource, keyed by referID (so it can be updated or revoked later).
 func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*perm.DefaultDBPolicy, error) {
 	uuidkey.MustRegister(db) // policies have UUID keys
+	// the resource asked ends in its verb ("…:<7>:@edit"): a resource that
+	// ends a part holds the verbs after it
+	if strings.HasSuffix(resource, ":") {
+		resource += "*"
+	}
 	p := &perm.DefaultDBPolicy{}
 	err := db.Where("refer_id = ?", referID).First(p).Error
 	switch err {

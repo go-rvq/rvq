@@ -207,7 +207,7 @@ func spTagNames(a SPArticle) string {
 // of the detail page: the field is the record's ("#Title"), whichever of them
 // writes it. Denied, the field is kept and shown read only; the others save.
 func TestFieldWritePermissionIsTheSameInFormAndSection(t *testing.T) {
-	denyTitle := perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermUpdate).On("*#Title:")
+	denyTitle := perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermUpdate).On("*#Title:*")
 
 	t.Run("section", func(t *testing.T) {
 		h, db := spApp(t, denyTitle)
@@ -281,7 +281,7 @@ func TestSectionPermission(t *testing.T) {
 	})
 
 	t.Run("may see, not edit", func(t *testing.T) {
-		h, db := spApp(t, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermUpdate).On("*$Main:"))
+		h, db := spApp(t, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermUpdate).On("*$Main:*"))
 
 		main := sectionHTML(detailPage(t, h), "Main")
 		if !strings.Contains(main, "v-card") {
@@ -311,7 +311,7 @@ func TestSectionPermission(t *testing.T) {
 	})
 
 	t.Run("may not see", func(t *testing.T) {
-		h, _ := spApp(t, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermGet).On("*$Main:"))
+		h, _ := spApp(t, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(presets.PermGet).On("*$Main:*"))
 		body := detailPage(t, h)
 		if main := sectionHTML(body, "Main"); strings.Contains(main, "v-card") {
 			t.Errorf("a section that may not be seen is shown: %.300s", main)

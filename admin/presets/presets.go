@@ -846,7 +846,7 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		// opened
 		Attr(":load-children", menuLoadChildrenScript).
 		// Navigate when a leaf (value is a path) is activated; group values are
-		// "group:<name>" and are ignored.
+		// "g:<name>" and are ignored.
 		Attr("@update:activated", `(v) => { const p = Array.isArray(v) ? v[v.length-1] : v; if (p && String(p).charAt(0) === '/') { plaid().vars(vars).pushStateURL(String(p)).go(); } }`)
 
 	r = web.Scope(tree).Slot("{ locals }").LocalsInit(

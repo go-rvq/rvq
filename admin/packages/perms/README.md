@@ -2,7 +2,7 @@
 
 Reusable, resource-agnostic permission tooling for presets admins: a per-record
 **permission manager** (a shortcut to the `x/perm` API, backed by
-`perm.DefaultDBPolicy`) and a soft-delete **trash** gated by a `trash` listing
+`perm.DefaultDBPolicy`) and a soft-delete **trash** gated by a `@trash` listing
 permission. Both work with any `*presets.ModelBuilder`.
 
 ## Permission manager
@@ -48,7 +48,7 @@ public so you can build a custom UI:
 ## Trash
 
 `SetupTrash(mb, db, opts)` turns a soft-delete listing into a trash-enabled one,
-gated by the `trash` listing permission:
+gated by the `@trash` listing permission:
 
 - a **Trash** filter tab after the model's own tabs — after an **All** one, the
   default, when it has none. It is added when the listing renders

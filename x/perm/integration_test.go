@@ -140,7 +140,7 @@ var cases = []struct {
 	{
 		name: "developer should have permission for upload on the nested record 33",
 		policies: []*perm.PolicyBuilder{
-			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:33:"),
+			perm.PolicyFor("developer").WhoAre(perm.Allowed).ToDo(Upload).On("*:33:*"), // the verb ends the resource asked: "…:33:Upload"
 		},
 		subjects:       []string{"developer"},
 		wantPermission: "upload",

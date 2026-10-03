@@ -283,9 +283,16 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 	if b.autoPerm {
 		// The whole chain of groups, not only the innermost: the permission
 		// follows the same path the URL does.
-		parts := append(append([]string{}, groups...), b.path)
+		var parts []string
+		for _, g := range groups {
+			parts = append(parts, GroupPermPart(g))
+		}
+		parts = append(parts, b.path)
+		unique := b.UniquePermName()
 		b.verififer.Func(func(v *perm.Verifier) *perm.Verifier {
-			return v.On(parts...)
+			// and its unique name, which decides before its groups
+			base := v.ResourceParts()
+			return v.On(parts...).Prefer(append(base, unique)...)
 		})
 	}
 

@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-rvq/rvq/admin/model"
@@ -24,33 +23,43 @@ func (i *ModelInfo) Permissioner() *ModelPermissioner {
 }
 
 func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
-	if p.parent != nil {
+	switch {
+	case p.parent != nil:
 		v = p.parent.Verifier(id, parentID...)
-	} else {
-		if p.mb.parent != nil {
-			var pid ID
-			if !p.mb.parent.singleton && len(parentID) > 0 {
-				pid = parentID[0]
-				parentID = parentID[1:]
-			}
-			v = p.mb.parent.Info().Permissioner().Verifier(pid, parentID...)
-		} else {
-			mb := p.mb.GetVerifierModel()
-			v = mb.p.verifier.Spawn()
-			for _, name := range mb.MenuGroup().PathNames() {
-				v.SnakeOn(name)
-			}
+		v.SnakeOn(p.mb.id)
+	case p.mb.parent != nil:
+		var pid ID
+		if !p.mb.parent.singleton && len(parentID) > 0 {
+			pid = parentID[0]
+			parentID = parentID[1:]
 		}
+		// under its parent's record: by its groups and by its unique name
+		v = p.mb.parent.Info().Permissioner().Verifier(pid, parentID...)
+		v.SnakeOn(p.mb.id)
+	default:
+		v = p.rootVerifier()
 	}
-
-	v.SnakeOn(p.mb.id)
 
 	if !p.mb.singleton && !id.IsZero() {
 		if id := id.GetValue("ID"); id != nil {
-			v.SnakeOn(fmt.Sprint(id))
+			v.On(RecordPermPart(id))
 		}
 	}
 	return
+}
+
+// rootVerifier is the verifier of a model of the menu: its resource by the
+// chain of its groups ("site/:seo/") and its id, and the one by its unique
+// name (its id, UniquePermName), which decides before (perm.Verifier.Prefer).
+func (p *ModelPermissioner) rootVerifier() *perm.Verifier {
+	mb := p.mb.GetVerifierModel()
+	v := mb.p.verifier.Spawn()
+	base := v.ResourceParts()
+	for _, name := range mb.MenuGroup().PathNames() {
+		v.On(GroupPermPart(name))
+	}
+	v.SnakeOn(p.mb.id)
+	return v.Prefer(append(base, p.mb.UniquePermName())...)
 }
 
 func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
@@ -61,16 +70,10 @@ func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
 			parentID = parentID[1:]
 		}
 		v = p.mb.parent.Info().Permissioner().Verifier(pid, parentID...)
-	} else {
-		mb := p.mb.GetVerifierModel()
-		v = mb.p.verifier.Spawn()
-		for _, name := range mb.MenuGroup().PathNames() {
-			v.SnakeOn(name)
-		}
+		v.SnakeOn(p.mb.id)
+		return
 	}
-
-	v.SnakeOn(p.mb.id)
-	return
+	return p.rootVerifier()
 }
 
 func (p *ModelPermissioner) ReqObjector(r *http.Request, obj any) *perm.Verifier {
@@ -147,7 +150,7 @@ func (p *ModelPermissioner) ReqCreator(r *http.Request) *perm.Verifier {
 }
 
 func (p *ModelPermissioner) Actioner(r *http.Request, action string, id ID, parentID ...ID) *perm.Verifier {
-	return p.Reader(r, id, parentID...).SnakeDo(action)
+	return p.Reader(r, id, parentID...).Do(ActionPerm(action))
 }
 
 func (p *ModelPermissioner) ReqList(r *http.Request) *perm.Verifier {

@@ -159,7 +159,7 @@ func TestModelPagesTakeNoKeyInTheMenuTree(t *testing.T) {
 	settings.Listing().PagesRegistrator().AddHttpPage(HttpPage("/import").Handler(nopHandler()))
 	invoices.Detailing().PagesRegistrator().AddHttpPage(HttpPage("/log").Handler(nopHandler()))
 
-	for _, key := range []string{"page:/import", "page:/log"} {
+	for _, key := range []string{"p:/import", "p:/log"} {
 		if _, ok := b.MenuItems()[key]; ok {
 			t.Errorf("%s entrou na árvore do menu", key)
 		}
@@ -176,7 +176,7 @@ func TestBuilderPagesStillTakeAKeyInTheMenuTree(t *testing.T) {
 	b := New(i18n.New())
 	b.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()))
 
-	if _, ok := b.MenuItems()["page:/report"]; !ok {
+	if _, ok := b.MenuItems()["p:/report"]; !ok {
 		t.Error("a página do builder não entrou na árvore do menu")
 	}
 }

@@ -126,9 +126,9 @@ func PageNodes(mb *presets.ModelBuilder) (out []PageNode) {
 func PageResource(mb *presets.ModelBuilder, mode string, id model.ID, pagePath string) string {
 	var base string
 	if mode == ModeDetail {
-		base = mb.Permissioner().Verifier(id).On(pagePath).Resource()
+		base = uniqueResource(mb.Permissioner().Verifier(id).On(pagePath))
 	} else {
-		base = mb.Permissioner().ListVerifier().On(pagePath).Resource()
+		base = uniqueResource(mb.Permissioner().ListVerifier().On(pagePath))
 	}
 	return base
 }
@@ -142,5 +142,5 @@ func FieldResource(mb *presets.ModelBuilder, id model.ID, path ...string) string
 	for _, seg := range path {
 		v = v.SnakeOn(presets.FieldPerm(seg))
 	}
-	return v.Resource()
+	return uniqueResource(v)
 }

@@ -6,7 +6,7 @@ import "net/http"
 // permPolicy.On("*")
 // permPolicy.On("workers:upload_posts")
 const (
-	PermEdit = "perm_worker_edit"
+	PermEdit = "@edit"
 )
 
 func editIsAllowed(r *http.Request, jobName string) error {

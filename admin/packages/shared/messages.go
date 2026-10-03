@@ -8,7 +8,7 @@ import (
 )
 
 // PermShare is the perm verb (and detail-action name) guarding the share action.
-const PermShare = "share"
+const PermShare = "!share"
 
 // I18nSharedKey is the i18n module key of the shared package.
 const I18nSharedKey i18n.ModuleKey = "SharedManager"

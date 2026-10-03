@@ -25,6 +25,10 @@ type verReq struct {
 	r              *http.Request
 	req            *ladon.Request
 	resourcesParts []string
+	// preferredParts, when set, are the resource by the unique name of what
+	// is verified (Prefer): its policies decide before the ones of
+	// resourcesParts
+	preferredParts []string
 }
 
 type VerifierMode uint8
@@ -100,6 +104,9 @@ func (b *Verifier) Spawn() (r *Verifier) {
 		resourcesParts: append([]string{}, resourceParts...),
 		req:            &ladon.Request{},
 	}
+	if b.vr != nil && b.vr.preferredParts != nil {
+		r.vr.preferredParts = append([]string{}, b.vr.preferredParts...)
+	}
 
 	if b.vr != nil {
 		r.vr.r = b.vr.r
@@ -120,6 +127,34 @@ func (b *Verifier) Do(v string) (r *Verifier) {
 
 func (b *Verifier) Resource() string {
 	return strings.Join(b.resourceParts(), ":") + ":"
+}
+
+// ResourceParts are a copy of the parts of the resource: what a resource by
+// a unique name (Prefer) is made under.
+func (b *Verifier) ResourceParts() []string {
+	return append([]string{}, b.resourceParts()...)
+}
+
+// Prefer sets the resource by the unique name of what is verified — the
+// parts under the root and its name, "posts" —: the parts added after
+// (On, SnakeOn) go to both resources. Its policies decide first (IsAllowed):
+// a deny of any subject by the unique name denies, an allow allows; only when
+// none matches it does the resource of the ancestors decide.
+func (b *Verifier) Prefer(parts ...string) *Verifier {
+	if b.builder == nil {
+		return b
+	}
+	b.vr.preferredParts = append([]string{}, parts...)
+	return b
+}
+
+// PreferredResource is the resource by the unique name (Prefer), "" when
+// there is none.
+func (b *Verifier) PreferredResource() string {
+	if b.vr == nil || b.vr.preferredParts == nil {
+		return ""
+	}
+	return strings.Join(b.vr.preferredParts, ":") + ":"
 }
 
 // resourceParts is nil-safe: NewVerifier accepts a nil Builder (an app with no
@@ -155,6 +190,9 @@ func (b *Verifier) On(vs ...string) (r *Verifier) {
 	}
 
 	b.vr.resourcesParts = append(b.vr.resourcesParts, vs...)
+	if b.vr.preferredParts != nil {
+		b.vr.preferredParts = append(b.vr.preferredParts, vs...)
+	}
 	return b
 }
 
@@ -195,6 +233,9 @@ func (b *Verifier) RemoveOn(length int) (r *Verifier) {
 	}
 	if len(b.vr.resourcesParts) >= length {
 		b.vr.resourcesParts = b.vr.resourcesParts[:len(b.vr.resourcesParts)-length]
+	}
+	if len(b.vr.preferredParts) >= length {
+		b.vr.preferredParts = b.vr.preferredParts[:len(b.vr.preferredParts)-length]
 	}
 	return b
 }
@@ -237,7 +278,9 @@ func (b *Verifier) IsAllowed() error {
 		return nil
 	}
 
-	b.vr.req.Resource = b.Resource()
+	// the permission asked is the resource with its verb at the end:
+	// "presets:site/:seo/:seo_config:7:@edit", "…:7:!publish"
+	b.vr.req.Resource = b.Resource() + b.vr.req.Action
 
 	if len(b.vr.subjects) == 0 && b.builder.subjectsFunc != nil {
 		b.vr.subjects = b.builder.subjectsFunc(b.vr.r)
@@ -254,6 +297,14 @@ func (b *Verifier) IsAllowed() error {
 				newContext[k] = v
 			}
 			b.vr.req.Context = newContext
+		}
+	}
+
+	// the unique name first (Prefer): a deny of any subject denies, an allow
+	// allows; when no policy of it matches, the ancestors decide
+	if b.mode == VerifierModeDefault && b.vr.preferredParts != nil {
+		if decided, err := b.preferredDecision(); decided {
+			return err
 		}
 	}
 
@@ -279,6 +330,30 @@ func (b *Verifier) IsAllowed() error {
 	}
 
 	return err
+}
+
+// preferredDecision is the decision of the policies of the resource by the
+// unique name (Prefer), for all the subjects: denied when one of them is
+// denied by a policy (deny wins), allowed when one is allowed; undecided when
+// no policy matches it for any subject.
+func (b *Verifier) preferredDecision() (decided bool, err error) {
+	req := *b.vr.req
+	req.Resource = b.PreferredResource() + req.Action
+	allowed := false
+	for _, sub := range b.vr.subjects {
+		req.Subject = sub
+		e := b.builder.ladon.IsAllowed(context.TODO(), &req)
+		if Verbose {
+			fmt.Printf("by the unique name: %v, req: {%s}\n", e, RequestToString(&req))
+		}
+		switch {
+		case e == nil:
+			allowed = true
+		case errors.Is(e, ladon.ErrRequestForcefullyDenied):
+			return true, e
+		}
+	}
+	return allowed, nil
 }
 
 func RequestToString(r *ladon.Request) string {

@@ -11,7 +11,6 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	"github.com/iancoleman/strcase"
 )
 
 type ActionLinkHandler func(baseModel *ModelBuilder, ctx *web.EventContext, q url.Values, id string)
@@ -477,13 +476,9 @@ func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.Overla
 	return cb.BuildOverlay(), nil
 }
 
+// PermName is the permission of the action: "!publish" (ActionPerm).
 func (b *ActionBuilder) PermName() string {
-	switch b.typ {
-	case ActionTypeList, ActionTypeDetailing:
-		return strcase.ToSnake(b.name)
-	default:
-		return "list_item:" + strcase.ToSnake(b.name)
-	}
+	return ActionPerm(b.name)
 }
 
 func (b *ActionBuilder) BuildButton(defaultBtnBuilder ButtonComponentFunc, onclick *web.VueEventTagBuilder, id string, obj any, ctx *web.EventContext) h.HTMLComponent {

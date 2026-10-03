@@ -8,9 +8,9 @@ import "net/http"
 // right: permPolicy.On("*:media_libraries:*")
 // right: permPolicy.On("*:media_libraries:1")
 const (
-	PermUpload     = "perm_media_library_upload"
-	PermDelete     = "perm_media_library_delete"
-	PermUpdateDesc = "perm_media_library_update_desc"
+	PermUpload     = "@upload"
+	PermDelete     = "@delete"
+	PermUpdateDesc = "@update_desc"
 )
 
 func (mb *Builder) uploadIsAllowed(r *http.Request) error {
