@@ -49,12 +49,12 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	pb.Permission(perm.New())
 	nop := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	posts := pb.Model(&treePost{}, presets.ModelWithID("posts"))
-	posts.Listing("Title").PagesRegistrator().AddHttpPage(presets.HttpPage("/export").Handler(nop))
+	posts.Listing("Title").PagesRegistrator().AddHttpPage(presets.HttpPage("/export").Handler(nop).AutoPerm())
 	meta := presets.NewModelBuilder(pb, &treeMeta{}, presets.ModelConfig().SetId("meta"))
 	posts.Editing("Title", "Meta").Field("Meta").AutoNested(meta, &meta.Editing("Note").FieldsBuilder)
 	d := posts.Detailing("Title")
 	d.Section("Main")
-	d.PagesRegistrator().AddHttpPage(presets.HttpPage("/report").Handler(nop))
+	d.PagesRegistrator().AddHttpPage(presets.HttpPage("/report").Handler(nop).AutoPerm())
 	posts.AddChild(presets.NewModelBuilder(pb, &treeComment{}, presets.ModelConfig().SetId("comments")))
 	pb.Model(&treeSetting{}, presets.ModelConfig().SetSingleton(true).SetId("settings"))
 	pb.PagesRegistrator().AddHttpPage(presets.HttpPage("/tools").Handler(nop).AutoPerm().MenuGroup("site"))
@@ -80,7 +80,7 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		return
 	}
 
-	descs := map[string]string{}
+	descs, subs := map[string]string{}, map[string]string{}
 	var walk func(items []*permTreeItem, msgs *Messages)
 	walk = func(items []*permTreeItem, msgs *Messages) {
 		for _, it := range items {
@@ -88,7 +88,7 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 				t.Errorf("%s: no label or description: %+v", it.Value, it)
 			}
 			desc, _, _ := strings.Cut(it.Subtitle, " · ")
-			descs[it.Value] = desc
+			descs[it.Value], subs[it.Value] = desc, it.Subtitle
 			walk(it.Children, msgs)
 		}
 	}
@@ -108,24 +108,28 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		"admin:site/:posts:(models)":   "Os modelos dentro de",
 		"admin:site/:posts:<*>:@edit":  "admin:site/:posts:<*>:@edit",
 		// a model edited in place: its structure inside the field
-		"admin:site/:posts:<*>:&Meta:":              "O campo",
-		"admin:site/:posts:(inlines)":               "Os registros editados no lugar dentro de",
-		"admin:site/:posts:<*>:&Meta:(fields)":      "Os campos de",
-		"admin:site/:posts:<*>:&Meta:#Note:":        "O campo",
-		"admin:site/:posts:<*>:#Title:":             "O campo",
-		"admin:site/:posts:<*>:$Main:":              "A seção",
-		"admin:site/:posts:/export:":                "A página",
-		"admin:site/:posts:<*>:/report:":            "A página",
-		"admin:site/:posts:<*>:comments:":           "Os registros de",
-		"admin:site/:posts:<*>:comments:<*>:#Text:": "O campo",
-		"admin:settings:":                           "O registro único de",
-		"admin:site/:/tools:":                       "A página",
+		"admin:site/:posts:&Meta:":              "O campo",
+		"admin:site/:posts:(inlines)":           "Os registros editados no lugar dentro de",
+		"admin:site/:posts:&Meta:(fields)":      "Os campos de",
+		"admin:site/:posts:&Meta:#Note:":        "O campo",
+		"admin:site/:posts:#Title:":             "O campo",
+		"admin:site/:posts:<*>:$Main:":          "A seção",
+		"admin:site/:posts:/export:":            "A página",
+		"admin:site/:posts:<*>:/report:":        "A página",
+		"admin:site/:posts:<*>:comments:":       "Os registros de",
+		"admin:site/:posts:<*>:comments:#Text:": "O campo",
+		"admin:settings:":                       "O registro único de",
+		"admin:site/:/tools:":                   "A página",
 	} {
 		if d, ok := descs[res]; !ok {
 			t.Errorf("%s: not in the tree", res)
 		} else if !strings.HasPrefix(d, prefix) {
 			t.Errorf("%s: description %q, want %q…", res, d, prefix)
 		}
+	}
+	// a page's permissions: one by HTTP method it registers, localized
+	if sub := subs["admin:site/:/tools:"]; !strings.Contains(sub, "Abrir (GET) (@get)") || !strings.Contains(sub, "Enviar (POST) (@post)") {
+		t.Errorf("the permissions of a page by its methods: %q", sub)
 	}
 	en := tree("en")
 	walk(en, Messages_en_US)

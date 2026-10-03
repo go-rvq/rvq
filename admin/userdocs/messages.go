@@ -90,6 +90,11 @@ type Messages struct {
 	PermDescInline        string `i18n:"hint='Description of a field of a model edited in place (its fields under it), in the tree of the permissions.', fields=(;'%s'='the field, then its record')"`
 	PermGroupInlines      string `i18n:"hint='Group of the tree of the permissions under a model or record: the models edited in place in its fields.'"`
 	PermGroupInlinesDesc  string `i18n:"hint='Description of the group of the models edited in place of a record.', fields=(;'%s'='the model or record')"`
+	PermMethodGet         string `i18n:"hint='Permission of a page asked by the HTTP method GET: opening it.'"`
+	PermMethodPost        string `i18n:"hint='Permission of a page asked by the HTTP method POST: sending to it.'"`
+	PermMethodPut         string `i18n:"hint='Permission of a page asked by the HTTP method PUT: replacing.'"`
+	PermMethodPatch       string `i18n:"hint='Permission of a page asked by the HTTP method PATCH: changing.'"`
+	PermMethodDelete      string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -166,6 +171,11 @@ var Messages_en_US = &Messages{
 	PermDescInline:        "The field %s of %s: a record edited in place, its fields inside it",
 	PermGroupInlines:      "Models edited in place",
 	PermGroupInlinesDesc:  "The records edited in place inside %s, each with its fields",
+	PermMethodGet:         "Open (GET)",
+	PermMethodPost:        "Send (POST)",
+	PermMethodPut:         "Replace (PUT)",
+	PermMethodPatch:       "Change (PATCH)",
+	PermMethodDelete:      "Delete (DELETE)",
 }
 
 var Messages_pt_BR = &Messages{
@@ -242,6 +252,11 @@ var Messages_pt_BR = &Messages{
 	PermDescInline:        "O campo %s de %s: um registro editado no lugar, com os seus campos dentro",
 	PermGroupInlines:      "Modelos em linha",
 	PermGroupInlinesDesc:  "Os registros editados no lugar dentro de %s, cada um com os seus campos",
+	PermMethodGet:         "Abrir (GET)",
+	PermMethodPost:        "Enviar (POST)",
+	PermMethodPut:         "Substituir (PUT)",
+	PermMethodPatch:       "Alterar (PATCH)",
+	PermMethodDelete:      "Excluir (DELETE)",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

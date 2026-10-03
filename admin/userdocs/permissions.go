@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net/http"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -322,6 +323,52 @@ func (r *renderer) permissionsTree() string {
 	}
 	var items func(nodes []*presets.PermNode) []*permTreeItem
 	var item func(n *presets.PermNode) *permTreeItem
+	// fieldItems are the fields of a model and of its record as one item a
+	// field — its resources each with what is asked of it: of the model, a
+	// new record's and the listing's (@create, @list); of the record, the
+	// rest —, the fields nested in it merged the same way
+	var fieldItems func(nodes []*presets.PermNode) []*permTreeItem
+	fieldItems = func(nodes []*presets.PermNode) (out []*permTreeItem) {
+		var order []string
+		same := map[string][]*presets.PermNode{}
+		for _, n := range nodes {
+			parts := strings.Split(strings.TrimSuffix(n.Name, ":"), ":")
+			key := parts[len(parts)-1]
+			if same[key] == nil {
+				order = append(order, key)
+			}
+			same[key] = append(same[key], n)
+		}
+		for _, key := range order {
+			ns := same[key]
+			first := ns[0]
+			label := title(first)
+			sub := []string{describe(first, label)}
+			var children []*presets.PermNode
+			for _, n := range ns {
+				var verbs []string
+				for _, a := range n.Actions {
+					verbs = append(verbs, verbLabel(msgs, a, ctx)+" ("+a.Name+")")
+				}
+				res := strings.Join(resources(n, ""), " · ")
+				if len(verbs) > 0 {
+					res += " " + strings.Join(verbs, " ")
+				}
+				sub = append(sub, res)
+				children = append(children, n.Children...)
+			}
+			it := &permTreeItem{Title: label, Subtitle: strings.Join(sub, " · "), Value: first.Name}
+			if sub := fieldItems(children); first.Kind == presets.PermNodeInline && len(sub) > 0 {
+				// a model edited in place: its structure inside, grouped
+				it.Children = []*permTreeItem{{Title: fmt.Sprintf("%s (%d)", msgs.PermGroupFields, len(sub)),
+					Subtitle: fmt.Sprintf(msgs.PermGroupFieldsDesc, label), Value: first.Name + "(fields)", Children: sub}}
+			} else {
+				it.Children = sub
+			}
+			out = append(out, it)
+		}
+		return
+	}
 	// grouped is what is inside a model — its record's too —, in groups:
 	// its permissions, actions, fields, sections, pages, nested models and
 	// permissions of its own
@@ -387,8 +434,8 @@ func (r *renderer) permissionsTree() string {
 		}
 		group("verbs", msgs.PermGroupVerbs, msgs.PermGroupVerbsDesc, vi)
 		group("actions", msgs.PermGroupActions, msgs.PermGroupActionsDesc, ai)
-		group("fields", msgs.PermGroupFields, msgs.PermGroupFieldsDesc, items(fields))
-		group("inlines", msgs.PermGroupInlines, msgs.PermGroupInlinesDesc, items(inlines))
+		group("fields", msgs.PermGroupFields, msgs.PermGroupFieldsDesc, fieldItems(fields))
+		group("inlines", msgs.PermGroupInlines, msgs.PermGroupInlinesDesc, fieldItems(inlines))
 		group("sections", msgs.PermGroupSections, msgs.PermGroupSectionsDesc, items(sections))
 		group("pages", msgs.PermGroupPages, msgs.PermGroupPagesDesc, items(pages))
 		group("models", msgs.PermGroupModels, msgs.PermGroupModelsDesc, items(models))
@@ -404,10 +451,14 @@ func (r *renderer) permissionsTree() string {
 			// a model edited in place too: its structure inside the field
 			it.Children = grouped(n, label)
 		default:
-			// a field, a section: what is asked of it, beside it
+			// a field, a section, a page: what is asked of it, beside it
+			label := verbLabel
+			if n.Kind == presets.PermNodePage {
+				label = pageVerbLabel
+			}
 			var verbs []string
 			for _, a := range n.Actions {
-				verbs = append(verbs, verbLabel(msgs, a, ctx)+" ("+a.Name+")")
+				verbs = append(verbs, label(msgs, a, ctx)+" ("+a.Name+")")
 			}
 			if len(verbs) > 0 {
 				sub = append(sub, strings.Join(verbs, " "))
@@ -440,6 +491,23 @@ func (r *renderer) permissionsTree() string {
 // verbLabel is what a permission or an action asked of a resource is, in the
 // language of ctx: the presets' permissions by their messages, an action by
 // its title.
+// pageVerbLabel is the label of the permission of a page by its HTTP method.
+func pageVerbLabel(msgs *Messages, a *presets.PermNodeAction, ctx context.Context) string {
+	switch a.Name {
+	case presets.PermFromHttpMethod(http.MethodGet):
+		return msgs.PermMethodGet
+	case presets.PermFromHttpMethod(http.MethodPost):
+		return msgs.PermMethodPost
+	case presets.PermFromHttpMethod(http.MethodPut):
+		return msgs.PermMethodPut
+	case presets.PermFromHttpMethod(http.MethodPatch):
+		return msgs.PermMethodPatch
+	case presets.PermFromHttpMethod(http.MethodDelete):
+		return msgs.PermMethodDelete
+	}
+	return verbLabel(msgs, a, ctx)
+}
+
 func verbLabel(msgs *Messages, a *presets.PermNodeAction, ctx context.Context) string {
 	switch a.Name {
 	case presets.PermList:

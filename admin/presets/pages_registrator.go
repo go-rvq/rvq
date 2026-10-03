@@ -96,6 +96,11 @@ func (pr *PagesRegistrator) Get(pth string) *PageBuilder {
 func (pr *PagesRegistrator) AddHttpPage(page ...*HttpPageBuilder) {
 	pr.httpPages = append(pr.httpPages, page...)
 	for _, p := range page {
+		// its permission is asked from the registrator's: the model's
+		// listing, or its record
+		if p.baseVerifier == nil {
+			p.baseVerifier = pr.baseVerifier
+		}
 		pr.registerMenu(p)
 	}
 }

@@ -1006,7 +1006,7 @@ func (b *ListingBuilder) selectColumnsBtn(
 	)
 
 	b.fields.EachHavesComponent(func(f *FieldBuilder) bool {
-		if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
+		if b.mb.permissioner.ReqLister(ctx.R).On(FieldPerm(f.name)).Denied() {
 			originalColumns = append(originalColumns, f.name)
 		}
 		return true

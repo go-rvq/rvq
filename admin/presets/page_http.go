@@ -30,12 +30,15 @@ type HttpPageBuilder struct {
 	descriptionFunc func(ctx context.Context) string
 	menuItemFunc    func(ctx *web.EventContext, uri string) h.HTMLComponent
 	autoPerm        bool
-	notInMenu       bool
-	menuIcon        string
-	postBuild       []func(ph *PageHandler)
-	pageHandler     *PageHandler
-	preWraper       web.PageFuncWrapper
-	wraper          web.PageFuncWrapper
+	// verified says the handler checks the verifier itself
+	// (HandlerFromPageFunc); a plain Handler is wrapped in the check on Build
+	verified    bool
+	notInMenu   bool
+	menuIcon    string
+	postBuild   []func(ph *PageHandler)
+	pageHandler *PageHandler
+	preWraper   web.PageFuncWrapper
+	wraper      web.PageFuncWrapper
 }
 
 func HttpPage(pth string) *HttpPageBuilder {
@@ -274,6 +277,7 @@ func (b *HttpPageBuilder) Wrap(f func(old web.PageFuncWrapper) web.PageFuncWrapp
 
 func (b *HttpPageBuilder) HandlerFromPageFunc(wrap func(f web.PageFunc) http.Handler, f web.PageFunc) *HttpPageBuilder {
 	f = b.wraper(b.preWraper(f))
+	b.verified = true
 	b.handler = wrap(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		if b.verififer != nil && b.Verifier(ctx.R).Denied() {
 			err = perm.PermissionDenied
@@ -310,6 +314,10 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 		parts = append(parts, b.path)
 		unique := b.UniquePermName()
 		b.verififer.Func(func(v *perm.Verifier) *perm.Verifier {
+			if v.PreferredResource() != "" {
+				// a page of a model: under the model's unique name too
+				return v.On(parts...)
+			}
 			// and its unique name, which decides before its groups
 			base := v.ResourceParts()
 			return v.On(parts...).Prefer(append(base, unique)...)
@@ -318,6 +326,19 @@ func (b *HttpPageBuilder) Build(prefix string) *PageHandler {
 
 	if b.verififer != nil && b.titleFunc != nil {
 		b.verififer.Title(b.titleFunc)
+	}
+
+	if b.verififer != nil && !b.verified && b.handler != nil {
+		// a plain handler: the page's permission is checked before it
+		h := b.handler
+		b.verified = true
+		b.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if b.Verifier(r).Denied() {
+				http.Error(w, perm.PermissionDenied.Error(), http.StatusForbidden)
+				return
+			}
+			h.ServeHTTP(w, r)
+		})
 	}
 
 	b.fullPath = path.Join("/", prefix, path.Join(b.menuGroupURIPathNames()...), b.path)

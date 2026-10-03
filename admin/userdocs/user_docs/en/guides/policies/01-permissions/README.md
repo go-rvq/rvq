@@ -28,6 +28,7 @@ what is asked of it:
 | a record edited in place, in a field: `&` and the field; its fields under it | `&Config`, `&Config:#Title` |
 | a section of the detail | `$Main` |
 | a page | `/report` |
+| what is asked of a page: `@` and its HTTP method, one for each the page answers | `/report:@get`, `/report:@post` |
 | a permission: `@` and its name | `@list`, `@get`, `@create`, `@edit`, `@delete` |
 | an action: `!` and its name | `!publish` |
 

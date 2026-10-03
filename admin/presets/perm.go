@@ -80,8 +80,10 @@ type PermMenu struct {
 	// Description is what it is, in the language of the request; nil or
 	// "": none of its own
 	Description func(ctx context.Context) string `yaml:"-" json:"-"`
-	Resources   []*ModelPerm                     `yaml:",omitempty" json:",omitempty"`
-	Children    []*PermMenu                      `yaml:",omitempty" json:",omitempty"`
+	// Actions are what is asked of a page (its methods)
+	Actions   []*PermNodeAction `yaml:",omitempty" json:",omitempty"`
+	Resources []*ModelPerm      `yaml:",omitempty" json:",omitempty"`
+	Children  []*PermMenu       `yaml:",omitempty" json:",omitempty"`
 }
 
 func (m *PermMenu) AddChildren(children ...*PermMenu) {
@@ -93,7 +95,7 @@ func (m *PermMenu) AddChildren(children ...*PermMenu) {
 
 // Tree is the menu as a tree of nodes.
 func (m *PermMenu) Tree() (n *PermNode) {
-	n = &PermNode{Name: m.Name, Unique: m.Unique, Kind: m.Kind, Title: m.Title, Description: m.Description}
+	n = &PermNode{Name: m.Name, Unique: m.Unique, Kind: m.Kind, Title: m.Title, Description: m.Description, Actions: m.Actions}
 	for _, res := range m.Resources {
 		n.AddChildren(res.Tree())
 	}
@@ -273,7 +275,8 @@ func (b *Builder) pagePerm(page *HttpPageBuilder) *PermMenu {
 		return nil
 	}
 	v := page.GetVerifier().Build(b.verifier.Spawn())
-	return &PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodePage, Title: page.TTitle, Description: page.TDescription}
+	return &PermMenu{Name: v.Resource(), Unique: v.PreferredResource(), Kind: PermNodePage, Title: page.TTitle, Description: page.TDescription,
+		Actions: pagePermActions(page)}
 }
 
 // anyID is the id of any record: "<*>".
@@ -332,7 +335,11 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 		// the pages of its listing
 		if mb.listing.pagesRegistrator != nil {
 			for _, p := range mb.listing.pagesRegistrator.HttpPages() {
-				n.AddChildren(&PermNode{Name: n.Name + p.path + ":", Unique: suffixed(n.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle, Description: p.TDescription})
+				if p.verififer == nil {
+					continue // asks nothing of its own: not AutoPerm
+				}
+				n.AddChildren(&PermNode{Name: n.Name + p.path + ":", Unique: suffixed(n.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle, Description: p.TDescription,
+					Actions: pagePermActions(p)})
 			}
 		}
 
@@ -366,7 +373,12 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 
 	// its fields — of the detail, of the edit, of the new record —, nested
 	// ones under theirs; its sections; its pages; the models nested in it
-	record.AddChildren(fieldPermNodes(mb, record)...)
+	record.AddChildren(fieldPermNodes(record, recordForms(mb))...)
+	if record != n {
+		// a new record's fields and the listing's columns: of the model, no
+		// record yet ("posts:#Title:@create", "posts:#Title:@list")
+		n.AddChildren(fieldPermNodes(n, listForms(mb))...)
+	}
 	for _, s := range mb.detailing.GetSections() {
 		section := s
 		part := SectionPerm(section.name) + ":"
@@ -387,7 +399,11 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	}
 	if mb.detailing.pagesRegistrator != nil {
 		for _, p := range mb.detailing.pagesRegistrator.HttpPages() {
-			record.AddChildren(&PermNode{Name: record.Name + p.path + ":", Unique: suffixed(record.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle, Description: p.TDescription})
+			if p.verififer == nil {
+				continue // asks nothing of its own: not AutoPerm
+			}
+			record.AddChildren(&PermNode{Name: record.Name + p.path + ":", Unique: suffixed(record.Unique, p.path+":"), Kind: PermNodePage, Title: p.TTitle, Description: p.TDescription,
+				Actions: pagePermActions(p)})
 		}
 	}
 	for _, child := range mb.children {
@@ -401,6 +417,25 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	sortNodes(n.Children)
 	sortNodes(record.Children)
 	return n
+}
+
+// pagePermActions are what is asked of the page: one permission a method
+// it answers (PermFromHttpMethod: "@get", "@post"…); every one
+// (PageHttpMethods) when it names none.
+func pagePermActions(page *HttpPageBuilder) (actions []*PermNodeAction) {
+	methods := page.methods
+	if len(methods) == 0 {
+		methods = PageHttpMethods
+	}
+	seen := map[string]bool{}
+	for _, m := range methods {
+		if name := PermFromHttpMethod(m); !seen[name] {
+			seen[name] = true
+			actions = append(actions, &PermNodeAction{Name: name})
+		}
+	}
+	sortActions(actions)
+	return
 }
 
 // suffixed is s with part after it, "" for no s.
@@ -418,22 +453,43 @@ func permFields(fb *FieldsBuilder) (names []string) {
 	return
 }
 
-// fieldPermNodes are the nodes of the fields of mb under record: each with
-// the permissions its forms ask — of the detail (@get), of the edit (@edit),
-// of the new record (@create) —, its nested fields under it.
-func fieldPermNodes(mb *ModelBuilder, record *PermNode) []*PermNode {
-	type form struct {
-		fb   *FieldsBuilder
-		verb string
-	}
-	forms := []form{{&mb.detailing.FieldsBuilder, PermGet}}
-	if !mb.editingDisabled {
-		forms = append(forms, form{&mb.editing.FieldsBuilder, PermUpdate})
-	}
-	if !mb.singleton && !mb.creatingDisabled {
-		forms = append(forms, form{&mb.editing.CreatingBuilder().FieldsBuilder, PermCreate})
-	}
+// permForm is a form of fields and the permission it asks of each.
+type permForm struct {
+	fb   *FieldsBuilder
+	info *ModelInfo
+	verb string
+}
 
+// recordForms are the forms of a record of mb: the detail (@get), the edit
+// (@edit), the sections edited in place (@get, @edit).
+func recordForms(mb *ModelBuilder) []permForm {
+	forms := []permForm{{&mb.detailing.FieldsBuilder, mb.Info(), PermGet}}
+	if !mb.editingDisabled {
+		forms = append(forms, permForm{&mb.editing.FieldsBuilder, mb.Info(), PermUpdate})
+	}
+	for _, s := range mb.detailing.GetSections() {
+		forms = append(forms, permForm{&s.editingFB, mb.Info(), PermGet})
+		if !mb.editingDisabled {
+			forms = append(forms, permForm{&s.editingFB, mb.Info(), PermUpdate})
+		}
+	}
+	return forms
+}
+
+// listForms are the forms of mb with no record: the listing's columns
+// (@list), the new record (@create).
+func listForms(mb *ModelBuilder) []permForm {
+	forms := []permForm{{&mb.listing.FieldsBuilder, mb.Info(), PermList}}
+	if !mb.creatingDisabled {
+		forms = append(forms, permForm{&mb.editing.CreatingBuilder().FieldsBuilder, mb.Info(), PermCreate})
+	}
+	return forms
+}
+
+// fieldPermNodes are the nodes of the fields of the forms under record: each
+// with the permissions its forms ask, its nested fields under it — a model
+// edited in place "&Name".
+func fieldPermNodes(record *PermNode, forms []permForm) []*PermNode {
 	root := &PermNode{Name: record.Name, Unique: record.Unique}
 	var add func(fb *FieldsBuilder, info *ModelInfo, verb string, under *PermNode, depth int)
 	add = func(fb *FieldsBuilder, info *ModelInfo, verb string, under *PermNode, depth int) {
@@ -477,7 +533,7 @@ func fieldPermNodes(mb *ModelBuilder, record *PermNode) []*PermNode {
 		}
 	}
 	for _, fm := range forms {
-		add(fm.fb, mb.Info(), fm.verb, root, 0)
+		add(fm.fb, fm.info, fm.verb, root, 0)
 	}
 	var tidy func(nodes []*PermNode)
 	tidy = func(nodes []*PermNode) {

@@ -452,7 +452,7 @@ func (b *ListingBuilder) columns(ctx *web.EventContext, fields []*FieldBuilder) 
 		if !f.IsEnabled(fctx) {
 			continue
 		}
-		if b.mb.permissioner.ReqLister(ctx.R).SnakeOn(FieldPerm(f.name)).Denied() {
+		if b.mb.permissioner.ReqLister(ctx.R).On(FieldPerm(f.name)).Denied() {
 			continue
 		}
 		if f.compFunc == nil {

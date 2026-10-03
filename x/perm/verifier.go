@@ -282,6 +282,13 @@ func (b *Verifier) IsAllowed() error {
 	// the permission asked is the resource with its verb at the end:
 	// "presets:site/:seo/:seo_config:7:@edit", "…:7:!publish"
 	b.vr.req.Resource = b.Resource() + b.vr.req.Action
+	if b.builder.onAsk != nil {
+		a := Asked{Request: b.vr.r, Resource: b.vr.req.Resource, Action: b.vr.req.Action}
+		if b.vr.preferredParts != nil {
+			a.Preferred = b.PreferredResource() + b.vr.req.Action
+		}
+		b.builder.onAsk(a)
+	}
 
 	if len(b.vr.subjects) == 0 && b.builder.subjectsFunc != nil {
 		b.vr.subjects = b.builder.subjectsFunc(b.vr.r)

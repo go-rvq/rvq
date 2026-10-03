@@ -1,6 +1,9 @@
 package presets
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 const (
 	// PermModule is the scope of the admin — its resources begin with
@@ -73,15 +76,17 @@ func PermFromRequest(r *http.Request) string {
 	return PermFromHttpMethod(method)
 }
 
+// PermFromHttpMethod is the permission of a page asked by method: "@" and
+// the method, "@get", "@post", "@put", "@patch", "@delete" (a HEAD, or none,
+// "@get").
 func PermFromHttpMethod(method string) string {
-	switch method {
-	case "POST":
-		return PermCreate
-	case "PUT":
-		return PermUpdate
-	case "DELETE":
-		return PermDelete
-	default:
+	switch method = strings.ToUpper(method); method {
+	case "", http.MethodHead:
 		return PermGet
+	default:
+		return "@" + strings.ToLower(method)
 	}
 }
+
+// PageHttpMethods are the methods a page answers when it names none.
+var PageHttpMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}

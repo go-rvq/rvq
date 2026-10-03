@@ -93,9 +93,6 @@ func (p *ModelPermissioner) FieldPermParts(field string) (parts []string) {
 	fbs := []*FieldsBuilder{&p.mb.editing.FieldsBuilder, &p.mb.detailing.FieldsBuilder}
 	segs := strings.Split(field, ".")
 	for i, seg := range segs {
-		if i == len(segs)-1 {
-			return append(parts, FieldPerm(seg))
-		}
 		var nested *FieldsBuilder
 		inline := false
 		for _, fb := range fbs {
@@ -113,6 +110,9 @@ func (p *ModelPermissioner) FieldPermParts(field string) (parts []string) {
 			parts = append(parts, InlinePerm(seg))
 		} else {
 			parts = append(parts, FieldPerm(seg))
+		}
+		if i == len(segs)-1 {
+			return
 		}
 		fbs = []*FieldsBuilder{nested}
 	}
@@ -155,7 +155,7 @@ func (p *ModelPermissioner) writeAction(obj any) string {
 func (p *ModelPermissioner) ReqObjectFieldConder(r *http.Request, obj any, ok bool, field string) *perm.Verifier {
 	v := p.ReqObjector(r, obj)
 	if ok {
-		return v.SnakeOn(FieldPerm(field))
+		return v.On(p.FieldPermParts(field)...)
 	}
 	return v
 }
@@ -248,7 +248,12 @@ func (p *ModelPermissioner) Creator(r *http.Request, parentID ...ID) *perm.Verif
 	return p.ListDo(r, PermCreate, parentID...)
 }
 
+// Lister verifies listing the records; a singleton's, seeing its record
+// (it has no listing: its page is its record).
 func (p *ModelPermissioner) Lister(r *http.Request, parentID ...ID) *perm.Verifier {
+	if p.mb.singleton {
+		return p.ListDo(r, PermGet, parentID...)
+	}
 	return p.ListDo(r, PermList, parentID...)
 }
 

@@ -41,7 +41,7 @@ func TestInlinePerm(t *testing.T) {
 	p := posts.Permissioner()
 	for field, want := range map[string]string{
 		"Title":        "#Title",
-		"Config":       "#Config",
+		"Config":       "&Config",
 		"Config.Title": "&Config:#Title",
 		"Gmail.User":   "#Gmail:#User",
 	} {

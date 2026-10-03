@@ -20,7 +20,17 @@ func (d *DetailingBuilder) setupPagesRegistrator() {
 			return d.mb.p.Wrap(pf, do)
 		},
 		RequestPermVerifierFunc(func(r *http.Request) *perm.Verifier {
-			return d.mb.permissioner.Reader(r, r.Context().Value(ModelIDKey).(model.ID), r.Context().Value(ParentsModelIDKey).(model.IDSlice)...)
+			// the record of the page: put in the context by its page func, or,
+			// for a plain handler, the one of the path
+			mid, ok := r.Context().Value(ModelIDKey).(model.ID)
+			if !ok {
+				mid, _ = d.mb.ParseRecordID(r.PathValue(ParamID))
+			}
+			parents, ok := r.Context().Value(ParentsModelIDKey).(model.IDSlice)
+			if !ok {
+				parents = ParentsModelID(r)
+			}
+			return d.mb.permissioner.Reader(r, mid, parents...)
 		}),
 	).
 		Model(d.mb).

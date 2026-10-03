@@ -214,7 +214,12 @@ under it, `&Config:#Title`; a nested struct's under it as fields,
 `#Gmail:#User`), a section (`$Main`), a page (`/report`), a nested model —,
 and it ends in what is asked: a permission, `@` and its name (`@list`,
 `@get`, `@create`, `@edit`, `@delete`, `@delete_with_related`), or an
-action, `!` and its name (`!publish`, `ActionPerm`):
+action, `!` and its name (`!publish`, `ActionPerm`). A page with a permission
+(`AutoPerm`) is asked the one of the request's HTTP method — `@get`,
+`@post`, `@put`, `@patch`, `@delete` (`PermFromHttpMethod`) —: it answers
+the methods it registers (`HttpPageBuilder.Methods`), each a permission of
+it, or every one (`PageHttpMethods`) when it registers none; a method it does
+not register is not answered:
 
 ```
 admin:site/:seo/:seo_config:<7>:@edit     through the groups

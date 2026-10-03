@@ -164,7 +164,8 @@ func (b *PermVerifierBuilder) Path(pth string) *PermVerifierBuilder {
 func (b *PermVerifierBuilder) BuildDo(dot *Verifier, action string) *Verifier {
 	v := b.Build(dot)
 	if len(b.actions) == 0 || b.actions[action] != nil {
-		return v.On(action)
+		// the verb at the end of the resource, as every permission
+		return v.Do(action)
 	}
 	return v.Deny()
 }

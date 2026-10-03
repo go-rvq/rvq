@@ -29,6 +29,7 @@ termina no que é pedido dele:
 | um registro editado no lugar, num campo: `&` e o campo; os campos dele embaixo | `&Config`, `&Config:#Title` |
 | uma seção do detalhe | `$Main` |
 | uma página | `/report` |
+| o que se pede de uma página: `@` e o método HTTP, um para cada que ela atende | `/report:@get`, `/report:@post` |
 | uma permissão: `@` e o nome | `@list`, `@get`, `@create`, `@edit`, `@delete` |
 | uma ação: `!` e o nome | `!publish` |
 

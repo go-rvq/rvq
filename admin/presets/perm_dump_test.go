@@ -44,20 +44,20 @@ func dumpApp(t *testing.T) *Builder {
 	l.BulkAction("Archive")
 	l.Action("Import")
 	l.ItemAction("Duplicate")
-	l.PagesRegistrator().AddHttpPage(HttpPage("/export").Handler(nopHandler()))
+	l.PagesRegistrator().AddHttpPage(HttpPage("/export").Handler(nopHandler()).AutoPerm())
 	// actions no builder knows (a worker's jobs)
 	posts.AppendListPermActions(func() []*PermNodeAction { return []*PermNodeAction{{Name: ActionPerm("ReindexPosts")}} })
 	posts.Editing("Title", "Body")
 	d := posts.Detailing("Title", "Body")
 	d.Action("Publish")
 	d.Section("Main")
-	d.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()))
+	d.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().Methods("GET", "POST"))
 	comments := NewModelBuilder(b, &dumpComment{}, ModelConfig().SetId("comments"))
 	posts.AddChild(comments)
 
 	b.Model(&dumpSetting{}, ModelConfig().SetSingleton(true).SetId("settings"))
 	b.Model(&dumpHidden{}, ModelWithID("hidden"), ModelNotInMenu())
-	b.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().MenuGroup("site"))
+	b.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().MenuGroup("site").Methods("GET", "DELETE"))
 
 	b.MenuOrder(b.MenuGroup("site").Add(b.MenuGroup("content").Add(ModelItem("posts"))), ModelItem("settings"))
 	b.Build(http.NewServeMux())
@@ -126,10 +126,13 @@ func TestPermissionsDump(t *testing.T) {
 		t.Error("the record is asked @list")
 	}
 	// the fields, the section, the pages
-	want("admin:site/:content/:posts:<*>:#Title:", "admin:posts:<*>:#Title:", PermGet, PermUpdate, PermCreate)
+	want("admin:site/:content/:posts:<*>:#Title:", "admin:posts:<*>:#Title:", PermGet, PermUpdate)
+	// a new record's fields and the listing's columns: of the model
+	want("admin:site/:content/:posts:#Title:", "admin:posts:#Title:", PermCreate, PermList)
 	want("admin:site/:content/:posts:<*>:$Main:", "admin:posts:<*>:$Main:", PermGet, PermUpdate)
-	want("admin:site/:content/:posts:/export:", "admin:posts:/export:")
-	want("admin:site/:content/:posts:<*>:/report:", "admin:posts:<*>:/report:")
+	// the pages: a permission a HTTP method; every method when it names none
+	want("admin:site/:content/:posts:/export:", "admin:posts:/export:", "@get", "@post", "@put", "@patch", "@delete")
+	want("admin:site/:content/:posts:<*>:/report:", "admin:posts:<*>:/report:", "@get", "@post")
 	// the nested model, under any record, recursively the same
 	want("admin:site/:content/:posts:<*>:comments:", "admin:posts:<*>:comments:", PermList)
 	want("admin:site/:content/:posts:<*>:comments:<*>:", "admin:posts:<*>:comments:<*>:", PermGet, PermUpdate)
@@ -140,7 +143,13 @@ func TestPermissionsDump(t *testing.T) {
 	}
 	// out of the menu: the model, at the root; the page of the admin
 	want("admin:hidden:", "admin:hidden:", PermList)
-	want("admin:site/:/report:", "admin:/report:")
+	want("admin:site/:/report:", "admin:/report:", "@get", "@delete")
+	// the methods a page registers are its permissions, and only them
+	for _, name := range []string{"admin:site/:/report:", "admin:site/:content/:posts:<*>:/report:"} {
+		if got := actionNames(node(tree, name)); slices.Contains(got, "@put") || slices.Contains(got, "@patch") {
+			t.Errorf("%s: a method it does not register: %v", name, got)
+		}
+	}
 
 	// the list holds every node, with its unique name
 	var uniques int

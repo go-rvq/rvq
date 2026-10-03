@@ -66,6 +66,24 @@ type Builder struct {
 	subjectsFunc SubjectsFunc
 	contextFunc  ContextFunc
 	dbPolicy     *DBPolicyBuilder
+	onAsk        func(Asked)
+}
+
+// Asked is a permission asked: the resource with its verb at the end, by
+// the ancestors and by the unique name ("" when there is none), for the
+// request.
+type Asked struct {
+	Request   *http.Request
+	Resource  string
+	Preferred string
+	Action    string
+}
+
+// OnAsk sets f to be told every permission asked (Verifier.IsAllowed), before
+// it is decided: to see, or to test, what a request asks.
+func (b *Builder) OnAsk(f func(Asked)) *Builder {
+	b.onAsk = f
+	return b
 }
 
 func New() *Builder {
