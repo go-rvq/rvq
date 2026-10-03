@@ -19,7 +19,6 @@ import (
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
-	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/google/uuid"
@@ -176,15 +175,12 @@ func (b *Builder) ModelBuilder() *presets.ModelBuilder {
 	return b.mb
 }
 
-var permVerifier *perm.Verifier
-
 func (b *Builder) URI() string {
 	return b.mb.Info().ListingHref()
 }
 
 func (b *Builder) Install(pb *presets.Builder) error {
 	b.pb = pb
-	permVerifier = perm.NewVerifier("workers", pb.GetPermission())
 
 	ConfigureMessages(pb.I18n())
 
@@ -194,6 +190,14 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		MenuIcon("mdi-briefcase")
 
 	b.mb = mb
+	jobsModel = mb
+	// the kinds of jobs, actions of the model in the permissions
+	mb.AppendListPermActions(func() (actions []*presets.PermNodeAction) {
+		for _, jb := range b.jbs {
+			actions = append(actions, &presets.PermNodeAction{Name: presets.ActionPerm(jb.name)})
+		}
+		return
+	})
 	mb.RegisterEventFunc(EventSelectJob, b.eventSelectJob)
 	mb.RegisterEventFunc(EventAbortJob, b.eventAbortJob)
 	mb.RegisterEventFunc(EventRerunJob, b.eventRerunJob)

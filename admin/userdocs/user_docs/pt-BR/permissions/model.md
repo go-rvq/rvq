@@ -11,4 +11,4 @@ negar pelo nome único — em qualquer papel — nega, permitir permite; só qua
 nada é dado por ele os grupos decidem. Os grupos acompanham o menu: mover esta
 parte para outro grupo muda o recurso pelos grupos, nunca o nome único.
 
-Os recursos começam por `presets`, o **escopo** do admin — veja os escopos em {%= admin.doc("guides/policies/01-permissions").link %}.
+Os recursos começam por `:`: o **escopo** do admin é o padrão, vazio — veja os escopos em {%= admin.doc("guides/policies/01-permissions").link %}.

@@ -1,17 +1,23 @@
 package worker
 
-import "net/http"
+import (
+	"net/http"
 
-// The scope workers: the jobs, each by its name — editing one, a job that
-// takes arguments, is "workers:<name>:@edit".
-//
-// examples:
-// permPolicy.On("*")
-// permPolicy.On("workers:upload_posts:*")
-const (
-	PermEdit = "@edit"
+	"github.com/go-rvq/rvq/admin/presets"
 )
 
+// The jobs are a model of the admin (scope presets): doing a job of a kind —
+// creating it, rerunning it, aborting it, updating it — is an action of the
+// model, "!" and the job's name:
+//
+//	:system/:jobs:!upload_posts
+//
+// — through its groups, or by its unique name (:jobs:…); "*" for
+// any kind.
+
+// jobsModel is the model of the jobs (Install).
+var jobsModel *presets.ModelBuilder
+
 func editIsAllowed(r *http.Request, jobName string) error {
-	return permVerifier.Do(PermEdit).SnakeOn(jobName).WithReq(r).IsAllowed()
+	return jobsModel.Permissioner().ReqListActioner(r, presets.ActionPerm(jobName)).IsAllowed()
 }

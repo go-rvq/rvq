@@ -28,17 +28,17 @@ func SectionPerm(name string) string {
 // and, for a model or a page, by its unique name, which decides first — and
 // the permissions and actions asked of it.
 //
-//	group           presets:site/:
-//	  group         presets:site/:seo/:
-//	    model       presets:site/:seo/:seo_config:      @list @create !bulk…
-//	      record    presets:site/:seo/:seo_config:<*>:  @get @edit @delete !action…
+//	group           :site/:
+//	  group         :site/:seo/:
+//	    model       :site/:seo/:seo_config:      @list @create !bulk…
+//	      record    :site/:seo/:seo_config:<*>:  @get @edit @delete !action…
 //	        field   …:<*>:#Title:                       @get @edit @create
 //	          field …:<*>:#Config:#Title:               (nested)
 //	        section …:<*>:$Main:                        @get @edit
 //	        page    …:<*>:/report:
 //	        model   …:<*>:revisions:                    (nested, the same way)
-//	      page      presets:site/:seo/:seo_config:/import:
-//	  page          presets:site/:/report:
+//	      page      :site/:seo/:seo_config:/import:
+//	  page          :site/:/report:
 //
 // A singleton has no listing: its node is its record.
 
@@ -199,12 +199,15 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 			rootMenu.Resources = append(rootMenu.Resources, mp)
 		}
 	}
+	// the builder's verifiers and its pages' — not added to the builder:
+	// the tree is made again on every call (the menu may have changed)
+	verifiers := append(perm.PermVerifiers{}, b.verifiers...)
 	for _, page := range b.pagesRegistrator.httpPages {
 		if page.verififer != nil {
-			b.verifiers.Add(page.GetVerifier())
+			verifiers = append(verifiers, page.GetVerifier())
 		}
 	}
-	for _, verifier := range b.verifiers {
+	for _, verifier := range verifiers {
 		v := verifier.Build(b.verifier.Spawn())
 		if !seen[v.Resource()] {
 			seen[v.Resource()] = true
@@ -218,6 +221,14 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 func sortMenu(m *PermMenu) {
 	sort.SliceStable(m.Resources, func(i, j int) bool { return m.Resources[i].Name < m.Resources[j].Name })
 	sort.SliceStable(m.Children, func(i, j int) bool { return m.Children[i].Name < m.Children[j].Name })
+}
+
+// AppendListPermActions adds, to the permissions of the model's listing,
+// actions of its own no builder of it knows — the kinds of jobs of a worker,
+// "!upload_posts" —: f is asked when the permissions are made.
+func (mb *ModelBuilder) AppendListPermActions(f func() []*PermNodeAction) *ModelBuilder {
+	mb.listPermActions = append(mb.listPermActions, f)
+	return mb
 }
 
 // pagePerm is a page of the admin in the permissions, nil when it has no
@@ -273,6 +284,9 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 			action := a
 			n.Actions = append(n.Actions, &PermNodeAction{Name: action.PermName(),
 				Title: func(ctx context.Context) string { return action.RequestTitle(mb, ctx) }})
+		}
+		for _, f := range mb.listPermActions {
+			n.Actions = append(n.Actions, f()...)
 		}
 		// the pages of its listing
 		if mb.listing.pagesRegistrator != nil {

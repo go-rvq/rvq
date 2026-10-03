@@ -119,7 +119,7 @@ b.Model(&SEOConfig{}, presets.ModelWithID("seo_config")).URIName("seo_config")
 b.MenuGroup("site").Add(b.MenuGroup("seo").Add(presets.ModelItem("seo_config")))
 // menu:       Site > SEO > Seo Config
 // URL:        /admin/site/seo/seo_config
-// permission: presets:site/:seo/:seo_config:   (and presets:seo_config:)
+// permission: :site/:seo/:seo_config:   (and :seo_config:)
 ```
 
 `group.Path()` is that chain as `"site/seo"`, `group.PathNames()` its segments,
@@ -138,7 +138,7 @@ A group's segment in the URLs is its name unless it says otherwise:
 b.MenuGroup("admin").Add(presets.GroupItem("panel"))
 b.MenuGroup("panel").URIName("painel").Add(presets.ModelItem("locales"))
 // URL:        /admin/admin/painel/locales
-// permission: presets:admin/:panel/:locales:   (the names, as before)
+// permission: :admin/:panel/:locales:   (the names, as before)
 
 b.MenuGroup("admin").URIName("")             // no segment of its own
 // URL:        /admin/painel/locales
@@ -215,16 +215,17 @@ ends in what is asked: a permission, `@` and its name (`@list`, `@get`,
 its name (`!publish`, `ActionPerm`):
 
 ```
-presets:site/:seo/:seo_config:<7>:@edit     through the groups
-presets:seo_config:<7>:@edit                by the unique name
+:site/:seo/:seo_config:<7>:@edit     through the groups
+:seo_config:<7>:@edit                by the unique name
 ```
 
-The first part is the **scope**: who asks. `presets` (`PermModule`) is the
-admin's; the media library has its own for what the forms do with the files
-(`media_library:media_libraries:@upload`, `…:<5>:@delete`,
-`…:<5>:@update_desc`), the worker for editing a job by its name
-(`workers:<job>:@edit`). A record added with `perm.Verifier.ObjectOn` is
-`<id>` too.
+The first part is the **scope**: who asks. The admin's (`PermModule`) is
+the default, **empty** — its resources begin with `:` (`:admin/:roles:@list`).
+The media library and the jobs are models of it: what the forms do with the
+files is the model's `@create`, `@delete`, `@edit`
+(`:media_libraries:<5>:@delete`), and doing a job of a kind an action of the
+model of the jobs (`:jobs:!upload_posts`). A record added with
+`perm.Verifier.ObjectOn` is `<id>` too.
 
 A model or a page of the menu is reached both ways: through the chain of its
 groups, which follows the menu, and by its **unique name** — the model's id,

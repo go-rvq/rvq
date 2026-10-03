@@ -12,8 +12,8 @@ import (
 // a section ("$Main"), a nested model…, and, last, the permission asked
 // ("@edit") or the action ("!publish"):
 //
-//	presets:site/:seo/:seo_config:<7>:@edit   by the groups
-//	presets:seo_config:<7>:@edit              by the unique name
+//	:site/:seo/:seo_config:<7>:@edit   by the groups
+//	:seo_config:<7>:@edit              by the unique name
 //
 // The resource by the unique name — the model's id, a page's path, under the
 // module — decides before the one by the groups (perm.Verifier.Prefer).

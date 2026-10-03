@@ -45,6 +45,8 @@ func dumpApp(t *testing.T) *Builder {
 	l.Action("Import")
 	l.ItemAction("Duplicate")
 	l.PagesRegistrator().AddHttpPage(HttpPage("/export").Handler(nopHandler()))
+	// actions no builder knows (a worker's jobs)
+	posts.AppendListPermActions(func() []*PermNodeAction { return []*PermNodeAction{{Name: ActionPerm("ReindexPosts")}} })
 	posts.Editing("Title", "Body")
 	d := posts.Detailing("Title", "Body")
 	d.Action("Publish")
@@ -112,33 +114,33 @@ func TestPermissionsDump(t *testing.T) {
 	}
 
 	// the groups, nested
-	site := want("presets:site/:", "")
-	if node(site, "presets:site/:content/:") == nil {
+	site := want(":site/:", "")
+	if node(site, ":site/:content/:") == nil {
 		t.Error("the group content is not inside site")
 	}
 	// the listing, the record
-	want("presets:site/:content/:posts:", "presets:posts:", PermList, PermCreate, "!archive", "!import")
-	record := want("presets:site/:content/:posts:<*>:", "presets:posts:<*>:",
+	want(":site/:content/:posts:", ":posts:", PermList, PermCreate, "!archive", "!import", "!reindex_posts")
+	record := want(":site/:content/:posts:<*>:", ":posts:<*>:",
 		PermGet, PermUpdate, PermDelete, PermDeleteWithRelated, "!publish", "!duplicate")
 	if slices.Contains(actionNames(record), PermList) {
 		t.Error("the record is asked @list")
 	}
 	// the fields, the section, the pages
-	want("presets:site/:content/:posts:<*>:#Title:", "presets:posts:<*>:#Title:", PermGet, PermUpdate, PermCreate)
-	want("presets:site/:content/:posts:<*>:$Main:", "presets:posts:<*>:$Main:", PermGet, PermUpdate)
-	want("presets:site/:content/:posts:/export:", "presets:posts:/export:")
-	want("presets:site/:content/:posts:<*>:/report:", "presets:posts:<*>:/report:")
+	want(":site/:content/:posts:<*>:#Title:", ":posts:<*>:#Title:", PermGet, PermUpdate, PermCreate)
+	want(":site/:content/:posts:<*>:$Main:", ":posts:<*>:$Main:", PermGet, PermUpdate)
+	want(":site/:content/:posts:/export:", ":posts:/export:")
+	want(":site/:content/:posts:<*>:/report:", ":posts:<*>:/report:")
 	// the nested model, under any record, recursively the same
-	want("presets:site/:content/:posts:<*>:comments:", "presets:posts:<*>:comments:", PermList)
-	want("presets:site/:content/:posts:<*>:comments:<*>:", "presets:posts:<*>:comments:<*>:", PermGet, PermUpdate)
+	want(":site/:content/:posts:<*>:comments:", ":posts:<*>:comments:", PermList)
+	want(":site/:content/:posts:<*>:comments:<*>:", ":posts:<*>:comments:<*>:", PermGet, PermUpdate)
 	// the singleton: its record is its node
-	settings := want("presets:settings:", "presets:settings:", PermGet, PermUpdate)
-	if slices.Contains(actionNames(settings), PermList) || node(settings, "presets:settings:<*>:") != nil {
+	settings := want(":settings:", ":settings:", PermGet, PermUpdate)
+	if slices.Contains(actionNames(settings), PermList) || node(settings, ":settings:<*>:") != nil {
 		t.Error("the singleton has a listing")
 	}
 	// out of the menu: the model, at the root; the page of the admin
-	want("presets:hidden:", "presets:hidden:", PermList)
-	want("presets:site/:/report:", "presets:/report:")
+	want(":hidden:", ":hidden:", PermList)
+	want(":site/:/report:", ":/report:")
 
 	// the list holds every node, with its unique name
 	var uniques int

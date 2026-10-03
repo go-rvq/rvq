@@ -17,6 +17,7 @@ func configList(b *presets.Builder, mb *Builder) {
 			SetModuleKey(I18nMediaLibraryKey)).
 		MenuIcon("mdi-multimedia").
 		URIName("media-library")
+	mb.model = mm
 
 	mm.Listing().PageFunc(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 		r.PageTitle = mm.TTitlePlural(ctx.Context())

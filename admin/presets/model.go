@@ -68,7 +68,10 @@ type ModelBuilder struct {
 	menuIcon           string
 	menuChildren       MenuChildrenFunc
 	// deletedFunc says a record is deleted: in the trash (SetDeletedFunc)
-	deletedFunc         func(obj any) bool
+	deletedFunc func(obj any) bool
+	// listPermActions are actions of its listing no builder knows, for the
+	// permissions (AppendListPermActions)
+	listPermActions     []func() []*PermNodeAction
 	defaultURLQueryFunc func(*http.Request) url.Values
 	fieldLabels         map[string]func(ctx *web.EventContext) string
 	fieldHints          map[string]func(ctx *web.EventContext) string

@@ -15,7 +15,6 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
-	"github.com/go-rvq/rvq/x/perm"
 	"github.com/go-rvq/rvq/x/ui/cropper"
 	"github.com/go-rvq/rvq/x/ui/fileicons"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -36,7 +35,6 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 	if err != nil {
 		panic(err)
 	}
-	mb.permVerifier = perm.NewVerifier("media_library", b.GetPermission())
 
 	b.ExtraAsset("/cropper.js", "text/javascript", cropper.JSComponentsPack())
 	b.ExtraAsset("/cropper.css", "text/css", cropper.CSSComponentsPack())

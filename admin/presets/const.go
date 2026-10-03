@@ -3,9 +3,11 @@ package presets
 import "net/http"
 
 const (
-	PermModule = "presets"
+	// PermModule is the scope of the admin: empty, the default — its
+	// resources begin with ":" (":admin/:roles:<7>:@edit")
+	PermModule = ""
 	// The permissions of a resource — the last part of the resource asked,
-	// "presets:site/:seo/:seo_config:<7>:@edit" —: an "@", then its name; an
+	// ":site/:seo/:seo_config:<7>:@edit" —: an "@", then its name; an
 	// action is a "!" and its name ("…:<7>:!publish", ActionPerm).
 	PermList              = "@list"
 	PermGet               = "@get"

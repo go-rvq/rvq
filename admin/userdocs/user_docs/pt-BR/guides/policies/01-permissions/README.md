@@ -21,7 +21,7 @@ termina no que é pedido dele:
 
 | Parte | Exemplo |
 | --- | --- |
-| o escopo: quem pede — sempre o primeiro (veja abaixo) | `presets` |
+| o escopo: quem pede — sempre o primeiro; o do admin é vazio (veja abaixo) | `:…` |
 | um grupo do menu: o nome e `/` | `site/` |
 | uma parte (model) | `seo_config` |
 | um registro: o id entre `<…>` | `<7>` — `<*>` qualquer um |
@@ -34,27 +34,29 @@ termina no que é pedido dele:
 Uma parte é alcançada de dois jeitos — **pelos grupos** e **pelo nome
 único**, o dela:
 
-    presets:site/:seo/:seo_config:<7>:@edit     pelos grupos
-    presets:seo_config:<7>:@edit                pelo nome único
+    :site/:seo/:seo_config:<7>:@edit     pelos grupos
+    :seo_config:<7>:@edit                pelo nome único
 
-`*` vale por qualquer coisa: `presets:site/:*` é tudo o que está no grupo
-*site*; `presets:seo_config:*`, tudo da parte *seo_config*, onde quer que o
+`*` vale por qualquer coisa: `:site/:*` é tudo o que está no grupo
+*site*; `:seo_config:*`, tudo da parte *seo_config*, onde quer que o
 menu a ponha.
 
 ## Os escopos
 
 A primeira parte de um recurso é o **escopo**: a parte do sistema que pede a
-permissão. Uma política o nomeia, ou usa `*` para qualquer um:
+permissão. O do admin é o **padrão**, **vazio** — por isso os
+recursos dele começam por `:` (`:content/:posts:<12>:@edit`) —, e contém tudo
+o que está no menu: os grupos, as partes, os registros delas, campos, seções,
+ações e páginas. A biblioteca de mídia e as tarefas também são partes dele:
 
-| Escopo | O que protege | Exemplo |
-| --- | --- | --- |
-| `presets` | o admin: cada item do menu — os grupos, as partes, os registros delas, campos, seções, ações e páginas | `presets:content/:posts:<12>:@edit` |
-| `media_library` | a biblioteca de mídia como os campos de imagem e de arquivo a usam, num formulário: enviar um arquivo, excluir um, editar a descrição dele | `media_library:media_libraries:@upload`, `media_library:media_libraries:<5>:@delete`, `…:<5>:@update_desc` |
-| `workers` | as tarefas: editar uma — uma tarefa que recebe argumentos —, pelo nome dela | `workers:upload_posts:@edit` |
+| O quê | Recurso |
+| --- | --- |
+| enviar um arquivo, num campo de imagem ou de arquivo | `:media_libraries:@create` |
+| excluir um arquivo / editar a descrição dele | `:media_libraries:<5>:@delete` / `:media_libraries:<5>:@edit` |
+| executar uma tarefa de um tipo (criar, rodar de novo, abortar) | `:jobs:!upload_posts` |
 
-A listagem da biblioteca de mídia no menu é uma parte de `presets`
-(`presets:content/:media/:media_libraries:…`); `media_library` é só o que os
-formulários fazem com os arquivos.
+Um sistema feito sobre o admin pode ter escopos próprios, um nome antes do
+primeiro `:`; a árvore abaixo mostra cada escopo, o do admin como *padrão*.
 
 ## Qual decide
 

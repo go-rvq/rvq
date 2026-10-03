@@ -2,33 +2,24 @@ package media
 
 import "net/http"
 
-// The scope media_library: the media library as the fields of pictures and
-// files use it — uploading, deleting, describing a file —, apart from the
-// admin's listing of it (scope presets). Its resources:
+// The media library is a model of the admin (media_libraries, scope
+// presets): what the fields of pictures and files do with it in a form is
+// asked of it, as of any model —
 //
-//	media_library:media_libraries:@upload
-//	media_library:media_libraries:<5>:@delete
-//	media_library:media_libraries:<5>:@update_desc
+//	uploading a file      :…:media_libraries:@create
+//	deleting one          :…:media_libraries:<5>:@delete
+//	describing one        :…:media_libraries:<5>:@edit
 //
-// DO NOT associate media_library permissions with parent resources
-// WRONG: permPolicy.On("*:post:*")
-// right: permPolicy.On("*")
-// right: permPolicy.On("media_library:media_libraries:*")
-// right: permPolicy.On("media_library:media_libraries:<1>:*")
-const (
-	PermUpload     = "@upload"
-	PermDelete     = "@delete"
-	PermUpdateDesc = "@update_desc"
-)
+// — through its groups, or by its unique name (:media_libraries:…).
 
 func (mb *Builder) uploadIsAllowed(r *http.Request) error {
-	return mb.permVerifier.Do(PermUpload).On("media_libraries").WithReq(r).IsAllowed()
+	return mb.model.Permissioner().ReqCreator(r).IsAllowed()
 }
 
 func (mb *Builder) deleteIsAllowed(r *http.Request, obj interface{}) error {
-	return mb.permVerifier.Do(PermDelete).On("media_libraries").ObjectOn(obj).WithReq(r).IsAllowed()
+	return mb.model.Permissioner().ReqObjectDeleter(r, obj).IsAllowed()
 }
 
 func (mb *Builder) updateDescIsAllowed(r *http.Request, obj interface{}) error {
-	return mb.permVerifier.Do(PermUpdateDesc).On("media_libraries").ObjectOn(obj).WithReq(r).IsAllowed()
+	return mb.model.Permissioner().ReqObjectUpdater(r, obj).IsAllowed()
 }

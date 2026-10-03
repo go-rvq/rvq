@@ -291,7 +291,16 @@ func (r *renderer) permissionsTree() string {
 		}
 		return
 	}
-	tree := items(r.b.p.Permissions().Tree().Children)
+	// the scopes first: the admin's is the default, empty — its resources
+	// begin with ":"
+	scope := presets.PermModule
+	title := scope
+	if title == "" {
+		title = msgs.PermScopeDefault
+	}
+	tree := []*permTreeItem{{Title: title, Subtitle: msgs.PermScopeHint + " · " + scope + ":*", Value: scope + ":",
+		// made now, as the dump: from the menu as it is
+		Children: items(r.b.p.BuildPermissions().Tree().Children)}}
 	data, err := json.Marshal(tree)
 	if err != nil {
 		return ""

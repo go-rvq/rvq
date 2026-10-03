@@ -4,14 +4,15 @@ import (
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
-	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/gorm"
 )
 
 type Builder struct {
 	db                  *gorm.DB
-	permVerifier        *perm.Verifier
 	mediaLibraryPerPage int
+	// model is the media library in the admin: its permissions are the
+	// ones of what the forms do with the files (perm.go)
+	model *presets.ModelBuilder
 
 	base.WithConfigField
 }

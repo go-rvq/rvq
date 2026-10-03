@@ -20,7 +20,7 @@ what is asked of it:
 
 | Part | Example |
 | --- | --- |
-| the scope: who asks — first, always (see below) | `presets` |
+| the scope: who asks — first, always; the admin's is empty (see below) | `:…` |
 | a group of the menu: its name and `/` | `site/` |
 | a part (model) | `seo_config` |
 | a record: its id in `<…>` | `<7>` — `<*>` any |
@@ -33,27 +33,30 @@ what is asked of it:
 A part is reached two ways — **through its groups** and **by its unique
 name**, its own:
 
-    presets:site/:seo/:seo_config:<7>:@edit     through the groups
-    presets:seo_config:<7>:@edit                by the unique name
+    :site/:seo/:seo_config:<7>:@edit     through the groups
+    :seo_config:<7>:@edit                by the unique name
 
-`*` stands for anything: `presets:site/:*` is everything inside the group
-*site*; `presets:seo_config:*` everything of the part *seo_config*, wherever
+`*` stands for anything: `:site/:*` is everything inside the group
+*site*; `:seo_config:*` everything of the part *seo_config*, wherever
 the menu puts it.
 
 ## The scopes
 
 The first part of a resource is its **scope**: the part of the system that
-asks for the permission. A policy names it, or `*` for any:
+asks for the permission. The admin's is the **default** one, **empty** — so
+its resources begin with `:` (`:content/:posts:<12>:@edit`) —, and it holds
+everything of the menu: the groups, the parts, their records, fields,
+sections, actions and pages. The media library and the jobs are parts of it
+too:
 
-| Scope | What it guards | Example |
-| --- | --- | --- |
-| `presets` | the admin: every item of the menu — its groups, its parts, their records, fields, sections, actions and pages | `presets:content/:posts:<12>:@edit` |
-| `media_library` | the media library as the fields of pictures and files use it, in a form: sending a file, deleting one, editing its description | `media_library:media_libraries:@upload`, `media_library:media_libraries:<5>:@delete`, `…:<5>:@update_desc` |
-| `workers` | the jobs: editing one — a job that takes arguments —, by its name | `workers:upload_posts:@edit` |
+| What | Resource |
+| --- | --- |
+| sending a file, in a field of pictures or files | `:media_libraries:@create` |
+| deleting a file / editing its description | `:media_libraries:<5>:@delete` / `:media_libraries:<5>:@edit` |
+| doing a job of a kind (creating, rerunning, aborting it) | `:jobs:!upload_posts` |
 
-The listing of the media library in the menu is a part of `presets`
-(`presets:content/:media/:media_libraries:…`); `media_library` is only what
-the forms do with the files.
+A system built on the admin may have scopes of its own, a name before the
+first `:`; the tree below shows each scope, the default one as *default*.
 
 ## Which one decides
 
