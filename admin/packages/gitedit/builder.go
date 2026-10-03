@@ -11,6 +11,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
@@ -45,7 +46,8 @@ type Builder struct {
 	Validate func(ctx context.Context, dir string) error
 	// PreviewURL, when set, is where the site of the draft is seen.
 	PreviewURL string
-	// Assets are the files of the IDE's app (its index.html at the root).
+	// Assets are the files of the IDE's app (its index.html at the root); the
+	// gad IDE's (rvq/js GadIDE) when not set.
 	Assets fs.FS
 
 	ide  *IDE
@@ -66,6 +68,9 @@ func (b *Builder) Install(p *presets.Builder) error {
 	ConfigureMessages(p.I18n())
 	if b.Path == "" {
 		b.Path = "/site-files"
+	}
+	if b.Assets == nil {
+		b.Assets = rvqjs.GadIDE()
 	}
 	b.page = p.PagesRegistrator().New(
 		presets.HttpPage(b.Path).
