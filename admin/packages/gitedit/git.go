@@ -32,6 +32,36 @@ type Repo struct {
 	DraftsDir string
 }
 
+// OpenRepo is the repository of the files of workTree — its .git a
+// directory, or a file naming it ("gitdir: ../.public.git", a submodule's or
+// a worktree's) —, the branch checked out there, the drafts in draftsDir.
+func OpenRepo(ctx context.Context, workTree, draftsDir string) (*Repo, error) {
+	gitDir := filepath.Join(workTree, ".git")
+	st, err := os.Stat(gitDir)
+	if err != nil {
+		return nil, fmt.Errorf("gitedit: %s is no git worktree: %w", workTree, err)
+	}
+	if !st.IsDir() {
+		b, err := os.ReadFile(gitDir)
+		if err != nil {
+			return nil, err
+		}
+		p, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir:")
+		if !ok {
+			return nil, fmt.Errorf("gitedit: %s: no gitdir", gitDir)
+		}
+		if p = strings.TrimSpace(p); !filepath.IsAbs(p) {
+			p = filepath.Join(workTree, p)
+		}
+		gitDir = p
+	}
+	branch, err := git(ctx, workTree, "symbolic-ref", "--short", "HEAD")
+	if err != nil {
+		return nil, err
+	}
+	return &Repo{GitDir: gitDir, WorkTree: workTree, Branch: strings.TrimSpace(branch), DraftsDir: draftsDir}, nil
+}
+
 // Author is who commits.
 type Author struct {
 	Name, Email string

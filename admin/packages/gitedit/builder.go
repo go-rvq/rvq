@@ -26,6 +26,8 @@ const (
 	ActionReset   = "Reset"
 	// ActionEdit is changing the files of the draft, by the IDE.
 	ActionEdit = "Edit"
+	// ActionPreview is seeing the site as the draft makes it.
+	ActionPreview = "Preview"
 )
 
 // CommitForm is the form of a commit.
@@ -44,7 +46,15 @@ type Builder struct {
 	// Validate says whether the files of a draft work (the templates
 	// compile): asked before a commit and before publishing.
 	Validate func(ctx context.Context, dir string) error
-	// PreviewURL, when set, is where the site of the draft is seen.
+	// PreviewPath is where the site of the draft is seen, under the admin
+	// ("/site-preview"): Preview serves it. "" is no preview.
+	PreviewPath string
+	// Preview serves r — its path the site's ("/en-us/about"), of the
+	// draft d — as d makes the site; the URIs of the site written under
+	// prefix ("/admin/site-preview").
+	Preview func(w http.ResponseWriter, r *http.Request, d *Draft, prefix string)
+	// PreviewURL is where the site of the draft is seen (PreviewPath's,
+	// when not set).
 	PreviewURL string
 	// Assets are the files of the IDE's app (its index.html at the root); the
 	// gad IDE's (rvq/js GadIDE) when not set.
@@ -96,7 +106,38 @@ func (b *Builder) Install(p *presets.Builder) error {
 	// the IDE, in a frame: its app and its API, asking the page's permissions
 	ide := presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
 	p.PagesRegistrator().AddHttpPage(ide)
+
+	if b.PreviewPath != "" {
+		b.page.Page().PermActions(presets.ActionPerm(ActionPreview))
+		prefix := strings.TrimSuffix(p.GetURIPrefix(), "/") + b.PreviewPath
+		if b.PreviewURL == "" {
+			b.PreviewURL = prefix + "/"
+		}
+		p.PagesRegistrator().AddHttpPage(presets.HttpPage(b.PreviewPath + "/{rest...}").InMenu(false).
+			Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { b.servePreview(w, r, prefix) })))
+	}
 	return nil
+}
+
+// servePreview serves the site as the draft of the request makes it.
+func (b *Builder) servePreview(w http.ResponseWriter, r *http.Request, prefix string) {
+	if ver := b.page.Page().ActionVerifier(r, presets.ActionPerm(ActionPreview)); ver != nil && ver.Denied() {
+		http.Error(w, "permission denied", http.StatusForbidden)
+		return
+	}
+	if b.Preview == nil {
+		http.NotFound(w, r)
+		return
+	}
+	d, _, err := b.Draft(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = "/" + strings.TrimPrefix(strings.TrimPrefix(r.URL.Path, prefix), "/")
+	r2.URL.RawPath = ""
+	b.Preview(w, r2, d, prefix)
 }
 
 func (b *Builder) serveIDE(w http.ResponseWriter, r *http.Request) {

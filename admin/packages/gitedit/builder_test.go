@@ -36,7 +36,13 @@ func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Ha
 	p.Permission(pb.SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
 	b := &Builder{Repo: repo,
 		Identity: func(*http.Request) (string, Author) { return "u1", Author{"Ana", "ana@x"} },
-		Validate: func(context.Context, string) error { return *invalid }}
+		Validate: func(context.Context, string) error { return *invalid },
+		// the site of the draft: what it was given
+		PreviewPath: "/site-preview",
+		Preview: func(w http.ResponseWriter, r *http.Request, d *Draft, prefix string) {
+			b, _ := os.ReadFile(filepath.Join(d.Dir, "index.gadx"))
+			w.Write([]byte(prefix + " " + r.URL.Path + " " + string(b)))
+		}}
 	if err := b.Install(p); err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +77,12 @@ func TestBuilder(t *testing.T) {
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "/admin/site-files/ide/") {
 		t.Fatalf("the page: %d %.300s", w.Code, w.Body.String())
+	}
+	// the site of the draft, under the admin
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-preview/en-us/about", nil))
+	if got := w.Body.String(); got != "/admin/site-preview /en-us/about old\n" {
+		t.Errorf("the preview: %d %q", w.Code, got)
 	}
 	// the IDE's app, in the frame: its assets relative to the page
 	w = httptest.NewRecorder()
@@ -117,7 +129,14 @@ func TestBuilderPermissions(t *testing.T) {
 	deny := func(res string) *perm.PolicyBuilder {
 		return perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On(res)
 	}
-	h, repo, served := app(t, &invalid, deny("admin:/site-files:!publish"), deny("admin:/site-files:!edit"))
+	h, repo, served := app(t, &invalid, deny("admin:/site-files:!publish"), deny("admin:/site-files:!edit"),
+		deny("admin:/site-files:!preview"))
+	if w := httptest.NewRecorder(); func() int {
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-preview/", nil))
+		return w.Code
+	}() != http.StatusForbidden {
+		t.Error("the preview with no !preview")
+	}
 	draft := filepath.Join(repo.DraftsDir, "u1")
 
 	w := httptest.NewRecorder()

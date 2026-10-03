@@ -140,3 +140,19 @@ func TestDraftUpdateDiscard(t *testing.T) {
 		}
 	}
 }
+
+// A repository is found from its worktree: its .git a file naming it, the
+// branch checked out.
+func TestOpenRepo(t *testing.T) {
+	repo, served := site(t)
+	r, err := OpenRepo(context.Background(), served, repo.DraftsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Clean(r.GitDir) != filepath.Clean(repo.GitDir) || r.Branch != "main" || r.WorkTree != served {
+		t.Errorf("repo %+v", r)
+	}
+	if _, err := OpenRepo(context.Background(), t.TempDir(), ""); err == nil {
+		t.Error("a repository of no worktree")
+	}
+}
