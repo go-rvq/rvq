@@ -8,8 +8,9 @@ editados aqui, num **rascunho** só seu: o site muda só quando você
 
 Passo a passo, com o desenvolvimento local: o guia {%= admin.doc("guides/site-files").link %} — também o botão **Ajuda** da página.
 
-- **Arquivos** é o editor: a árvore dos arquivos, e cada arquivo aberto numa
-  aba. Salvar muda só o seu rascunho.
+- **Arquivos** é o editor, à direita (em telas estreitas, abaixo): a árvore
+  dos arquivos, e cada arquivo aberto numa aba. **Abrir o editor** o abre numa
+  aba só dele, na janela inteira. Salvar muda só o seu rascunho.
 - **Seu rascunho** diz onde ele está: commits para publicar, commits que
   outros publicaram e ele não tem.
 - **Alterações sem commit** lista cada arquivo mudado desde o último commit;

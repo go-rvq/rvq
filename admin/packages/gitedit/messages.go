@@ -34,6 +34,7 @@ type Messages struct {
 	Files             string `i18n:"hint='Title of the editor of the files (the IDE).'"`
 	Preview           string `i18n:"hint='Button that opens the site as the draft makes it.'"`
 	Help              string `i18n:"hint='Button that opens the documentation of the editor of the files.'"`
+	OpenIDE           string `i18n:"hint='Button that opens the editor of the files (the IDE) in a tab of its own.'"`
 
 	CommitAction      string `i18n:"label='Commit', hint='Action that records the changes of the draft, with a message.'"`
 	UpdateAction      string `i18n:"label='Update', hint='Action that brings into the draft what others published.'"`
@@ -68,6 +69,7 @@ var Messages_en_US = &Messages{
 	Files:             "Files",
 	Preview:           "Preview the site",
 	Help:              "Help",
+	OpenIDE:           "Open the editor",
 	CommitAction:      "Commit",
 	UpdateAction:      "Update",
 	PublishAction:     "Publish",
@@ -100,6 +102,7 @@ var Messages_pt_BR = &Messages{
 	Files:             "Arquivos",
 	Preview:           "Ver o site do rascunho",
 	Help:              "Ajuda",
+	OpenIDE:           "Abrir o editor",
 	CommitAction:      "Commit",
 	UpdateAction:      "Atualizar",
 	PublishAction:     "Publicar",

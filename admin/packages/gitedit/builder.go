@@ -379,6 +379,10 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		).Density(v.DensityCompact))
 	}
 
+	ideURL := strings.TrimSuffix(b.idePage.FullPath(), "{rest...}") + "index.html"
+	// the IDE in a tab of its own, the whole window
+	openIDE := v.VBtn(m.OpenIDE).PrependIcon("mdi-open-in-new").Variant(v.VariantTonal).Color("primary").
+		Size(v.SizeSmall).Class("me-2 mb-2").Href(ideURL).Attr("target", "_blank")
 	var help h.HTMLComponent
 	if b.HelpURL != "" {
 		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
@@ -399,6 +403,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 					v.VCardSubtitle(h.Text(m.DraftHint)),
 					v.VCardText(
 						h.P(h.Text(state)).Class("mb-3"),
+						openIDE,
 						btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
 						btn(ActionUpdate, m.UpdateAction, "mdi-source-pull", sync.Behind > 0),
 						btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
@@ -413,7 +418,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 				).Variant(v.VariantOutlined),
 			).Cols(12).Lg(4),
 			v.VCol(
-				h.Iframe().Src(strings.TrimSuffix(b.idePage.FullPath(), "{rest...}")+"index.html").Attr("title", m.Files).
+				h.Iframe().Src(ideURL).Attr("title", m.Files).
 					Style("width: 100%; height: calc(100vh - 160px); border: 0"),
 			).Cols(12).Lg(8),
 		),

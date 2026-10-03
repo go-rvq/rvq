@@ -75,7 +75,7 @@ func TestBuilder(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "/admin/site-files/ide/") {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "/admin/site-files/ide/index.html") || !strings.Contains(w.Body.String(), "Open the editor") {
 		t.Fatalf("the page: %d %.300s", w.Code, w.Body.String())
 	}
 	// the site of the draft, under the admin
