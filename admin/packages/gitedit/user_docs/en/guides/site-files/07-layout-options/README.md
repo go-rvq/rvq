@@ -34,6 +34,14 @@ The file ends in the classes the admin reads:
   the layout of its posts; then every post of that type shows those fields in
   its options. A type that chose none: its posts have no options.
 
+![A post type choosing the layout of its posts, in its Layout Config](images/post-type.png)
+
+And a post of that type, in **Page Options → Layout Config**: the fields of
+the layout its type chose — here `BookOptions`, its `format` a select of its
+`options`:
+
+![The options of a post: the layout of its type, a select open](images/post-options.png)
+
 So, to give the posts of a type new options, add the fields to the class the
 type chose (or write a new class, add it to `PostLayout` and choose it in the
 type). Changing the class a type chose leaves the options its posts saved

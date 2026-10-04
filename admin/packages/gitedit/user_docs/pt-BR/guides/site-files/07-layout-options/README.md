@@ -36,6 +36,14 @@ O arquivo termina nas classes que o admin lê:
   desse tipo mostra esses campos nas suas opções. Um tipo que não escolheu
   nenhum: as postagens dele não têm opções.
 
+![Um tipo de postagem escolhendo o layout das postagens dele, na Configuração do Layout](images/post-type.png)
+
+E uma postagem desse tipo, em **Opções da Página → Configuração do Layout**:
+os campos do layout que o tipo dela escolheu — aqui `BookOptions`, o
+`format` dele um select das suas `options`:
+
+![As opções de uma postagem: o layout do tipo dela, um select aberto](images/post-options.png)
+
 Por isso, para dar novas opções às postagens de um tipo, acrescente os campos
 à classe que o tipo escolheu (ou escreva uma classe nova, acrescente-a ao
 `PostLayout` e escolha-a no tipo). Trocar a classe que um tipo escolheu deixa
