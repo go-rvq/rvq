@@ -11,8 +11,11 @@ import (
 )
 
 var DefaultViewCommon = &ViewCommon{
-	WrapperClass: "d-flex pt-16 flex-column mx-auto",
-	WrapperStyle: "max-width: 28rem;",
+	// px-4: a margin of 16px on the sides, the form off the edges of a narrow
+	// screen — a phone, the frame of the login dialog —; the max-width counts
+	// it, the form as wide as before on a wide one
+	WrapperClass: "d-flex pt-16 px-4 flex-column mx-auto",
+	WrapperStyle: "max-width: calc(28rem + 2rem);",
 	TitleClass:   "text-h5 mb-6 font-weight-bold",
 	LabelClass:   "d-block mb-1 grey--text text--darken-2 text-sm-body-2",
 }
