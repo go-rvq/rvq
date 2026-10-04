@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
@@ -205,6 +206,23 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 	mb.Detailing().FetchFunc(func(obj any, id model.ID, ctx *web.EventContext) error {
 		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
 	})
+	// the permissions in the detail: each resource and its actions
+	mb.Detailing().Field("Permissions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		k := field.Obj.(*AccessKey)
+		m := GetMessages(ctx.Context())
+		var items []h.HTMLComponent
+		for _, pol := range k.Permissions {
+			for _, res := range pol.Resources {
+				items = append(items, h.Li(h.Code(res), h.Text(" — "+strings.Join(pol.Actions, ", "))))
+			}
+		}
+		body := h.HTMLComponent(h.P(h.Text(m.NoPermissions)).Class("text-medium-emphasis"))
+		if len(items) > 0 {
+			body = h.Ul(items...).Class("ps-4")
+		}
+		return h.Div(h.Div(h.Text(field.Label)).Class("text-caption text-medium-emphasis"), body).
+			Class("mb-4").Attr("data-key-permissions", true)
+	})
 
 	ed.Validators.AppendFunc(func(obj any, _ presets.FieldModeStack, ctx *web.EventContext) (errs web.ValidationErrors) {
 		k := obj.(*AccessKey)
@@ -330,6 +348,7 @@ func (b *Builder) configureUses(mb *presets.ModelBuilder) {
 		OrderBy("created_at DESC")
 	mb.Detailing("CreatedAt", "Kind", "Method", "Path", "Status", "IP", "Place", "UserAgent")
 	// the history is kept, not made nor changed
+	mb.SetCreatingDisabled(true).SetEditingDisabled(true).SetDeletingDisabled(true)
 	mb.Editing().SaveFunc(func(any, model.ID, *web.EventContext) error {
 		return errors.New("accesskeys: the history is read only")
 	})

@@ -19,6 +19,14 @@ import (
 // TestMain: the test binary is the hook of the pushes, as the application is
 // (RunGitHookIfInvoked).
 func TestMain(m *testing.M) {
+	// the hook runs where the server does (its .env, say), not in the
+	// repository's directory git runs it in
+	if marker := os.Getenv("RVQ_TEST_SERVER_MARKER"); marker != "" && os.Getenv(envHook) != "" {
+		if _, err := os.Stat(marker); err != nil {
+			println("the hook is not where the server is:", err.Error())
+			os.Exit(1)
+		}
+	}
 	RunGitHookIfInvoked()
 	os.Exit(m.Run())
 }
@@ -56,6 +64,12 @@ func gitTry(dir string, args ...string) (string, error) {
 // its PostReceive; its middleware first, then its permission; two of them,
 // each its own; only git's smart protocol.
 func TestGitRepos(t *testing.T) {
+	// the server in a directory of its own, a file of it there (the hook must
+	// run there: TestMain)
+	serverDir := t.TempDir()
+	os.WriteFile(filepath.Join(serverDir, "server.marker"), []byte("x"), 0o644)
+	t.Chdir(serverDir)
+	t.Setenv("RVQ_TEST_SERVER_MARKER", "server.marker")
 	root := t.TempDir()
 	// two repositories: a bare one, and a working one (a .git in it)
 	bare := filepath.Join(root, "bare.git")

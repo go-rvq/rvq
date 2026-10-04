@@ -88,6 +88,7 @@ type Messages struct {
 	CodeOnce        string `i18n:"hint='Says the code is shown only now.'"`
 	Code            string `i18n:"hint='Label of the code of a key just made.'"`
 	ErrNameRequired string `i18n:"hint='Error: the key has no name.'"`
+	NoPermissions   string `i18n:"hint='Said of a key with no permission: it does nothing.'"`
 	ErrTooLong      string `i18n:"hint='Error: the key expires too far ahead.', fields=(;'%d'='the most days')"`
 }
 
@@ -159,6 +160,7 @@ var Messages_en_US = &Messages{
 	CodeOnce:        "This is the only time the code is shown. Copy it and keep it safe: it acts in your name.",
 	Code:            "Code",
 	ErrNameRequired: "Give the key a name.",
+	NoPermissions:   "None: the key does nothing.",
 	ErrTooLong:      "A key lasts at most %d days.",
 }
 
@@ -230,5 +232,6 @@ var Messages_pt_BR = &Messages{
 	CodeOnce:        "É a única vez que o código aparece. Copie e guarde num lugar seguro: ele age em seu nome.",
 	Code:            "Código",
 	ErrNameRequired: "Dê um nome à chave.",
+	NoPermissions:   "Nenhuma: a chave não faz nada.",
 	ErrTooLong:      "Uma chave dura no máximo %d dias.",
 }

@@ -245,7 +245,14 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 			}
 
 			if staticFileRe.MatchString(strings.ToLower(r.URL.Path)) {
-				next.ServeHTTP(w, r)
+				// a file: not asked a login — but its user known when it tells
+				// one (a key, a session), for a file that is not public (the
+				// preview of a draft)
+				if code := b.keyCode(r); code != "" {
+					b.serveKey(w, r, code, next)
+					return
+				}
+				next.ServeHTTP(w, b.withSessionUser(r))
 				return
 			}
 
@@ -431,4 +438,28 @@ func IsLoginWIP(r *http.Request) bool {
 		return false
 	}
 	return v
+}
+
+// withSessionUser is r with the user of its session in its context, when it
+// has a valid one (its claims, its user there and not locked); r as it is
+// otherwise — nothing asked, nothing refused.
+func (b *Builder) withSessionUser(r *http.Request) *http.Request {
+	if b.userModel == nil {
+		return r
+	}
+	claims, err := b.ParseClaims(r)
+	if err != nil {
+		return r
+	}
+	user, err := b.findUserByID(claims.UserID)
+	if err != nil {
+		return r
+	}
+	if claims.Provider == "" {
+		up := user.(UserPasser)
+		if up.GetPasswordUpdatedAt() != claims.PassUpdatedAt || up.GetLocked() {
+			return r
+		}
+	}
+	return r.WithContext(context.WithValue(r.Context(), UserKey, user))
 }

@@ -1,0 +1,33 @@
+# The pictures of the documentation of the access keys (hermon-cms
+# tools/userdocs-shots); {access_key:laptop}: a key of its seed.
+- file: my_access_keys/images/listing.png
+  url: /admin/my-access-keys
+  wait: table
+  width: 1280
+  height: 450
+- file: my_access_keys/images/new.png
+  url: /admin/my-access-keys
+  wait: table
+  click: [".v-main .mdi-plus"]
+  expect: "!!document.querySelector('[data-permissions-help]')"
+  width: 1280
+  height: 700
+- file: my_access_keys/images/created.png
+  url: /admin/my-access-keys
+  wait: table
+  click: [".v-main .mdi-plus"]
+  # a key made: its code shown once
+  expect: "(() => { const w = window; if (!document.querySelector('[data-permissions-help]') && !w.zzSaved) return false; if (!w.zzSaved) { const f = [...document.querySelectorAll('.v-navigation-drawer--active input, .v-overlay--active input')].find(i => /Nome|Name/.test(i.closest('.v-input')?.innerText || '')); if (!f) return false; f.value = 'CI on the server'; f.dispatchEvent(new Event('input', {bubbles: true})); w.zzSaved = 1; setTimeout(() => document.querySelector('.v-navigation-drawer--active .mdi-content-save, .v-overlay--active .mdi-content-save')?.closest('button')?.click(), 400); return false } return [...document.querySelectorAll('.v-snackbar')].some(s => s.innerText.includes('hck_')) })()"
+  width: 1280
+  height: 450
+- file: my_access_keys/images/detail.png
+  url: /admin/my-access-keys/{access_key:laptop}
+  wait: .v-main
+  expect: "document.body.innerText.includes('Deploy from the laptop')"
+  width: 1280
+  height: 1000
+- file: my_access_keys/images/history.png
+  url: /admin/my-access-keys/{access_key:laptop}/access-key-uses-my-access-keys
+  wait: table
+  width: 1280
+  height: 450

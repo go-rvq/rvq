@@ -4,7 +4,11 @@ Uma **chave de acesso** é um código com que uma automação — o **git**, um
 programa de **WebDAV**, um script — entra em seu nome, sem senha e sem
 sessão: cada requisição traz a chave.
 
+![As suas chaves](images/listing.png)
+
 ## Criar uma chave
+
+![Uma chave nova: nome, validade, ativada e permissões](images/new.png)
 
 1. Em **Minhas chaves**, crie uma chave: dê um **nome** (para que ela serve),
    a **validade** (90 dias se ficar vazia; no máximo 1 ano) e as
@@ -12,6 +16,8 @@ sessão: cada requisição traz a chave.
 2. Ao salvar, o **código** aparece **uma única vez**:
    `hck_…`. Copie e guarde num lugar seguro. Ele não é guardado em lugar
    nenhum — só um resumo (hash) dele —; perdeu, crie outra chave.
+   ![A chave criada: o código, só desta vez](images/created.png)
+
 3. Para parar uma chave na hora: desmarque **Ativada**, ou exclua a chave.
 
 ## As permissões
@@ -29,6 +35,8 @@ permitem:
 | `admin:*` | tudo o que você pode |
 | `admin:/site-files:!git`, `admin:/site-files:@get` e as ações dos arquivos | usar os arquivos do site pelo git |
 | `admin:/site-files:<static/*>:!edit` | só mudar os arquivos de `static/` |
+
+![Uma chave e as permissões dela](images/detail.png)
 
 Uma chave nunca cria nem altera chaves — nem as suas.
 
@@ -49,6 +57,8 @@ Uma chave nunca cria nem altera chaves — nem as suas.
   ```
 
 ## O histórico
+
+![O histórico de uma chave](images/history.png)
 
 Cada pedido feito pela chave fica no **Histórico** dela: quando, de onde
 (endereço e lugar), por qual programa, o quê (git, webdav, api; o caminho) e

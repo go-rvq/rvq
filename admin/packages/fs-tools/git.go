@@ -252,6 +252,8 @@ const (
 	envHook      = "RVQ_GIT_HOOK"
 	envHookURL   = "RVQ_GIT_HOOK_URL"
 	envHookToken = "RVQ_GIT_HOOK_TOKEN"
+	// envHookCwd is where git ran the hook (the repository's directory).
+	envHookCwd = "RVQ_GIT_HOOK_CWD"
 )
 
 func (s *gitServer) register(p *pendingPush) string {
@@ -280,13 +282,22 @@ func (s *gitServer) hooks() (string, string, error) {
 			s.hookErr = err
 			return
 		}
+		// the application runs where the server does (its .env, its
+		// configuration): git runs a hook in the repository's directory, told
+		// to it (envHookCwd) for the paths of git's environment
+		wd, err := os.Getwd()
+		if err != nil {
+			s.hookErr = err
+			return
+		}
 		dir, err := os.MkdirTemp("", "rvq-git-hooks-")
 		if err != nil {
 			s.hookErr = err
 			return
 		}
 		for _, name := range []string{"pre-receive", "post-receive"} {
-			script := "#!/bin/sh\n" + envHook + "=" + name + " exec " + shellQuote(exe) + "\n"
+			script := "#!/bin/sh\n" + envHookCwd + "=\"$PWD\"; export " + envHookCwd + "\ncd " + shellQuote(wd) +
+				" || exit 1\n" + envHook + "=" + name + " exec " + shellQuote(exe) + "\n"
 			if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
 				s.hookErr = err
 				return
@@ -432,7 +443,10 @@ func runGitHook(stdin io.Reader, stderr io.Writer) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	cwd, _ := os.Getwd()
+	cwd := os.Getenv(envHookCwd)
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
 	body, _ := json.Marshal(hookRequest{Hook: hook, Token: os.Getenv(envHookToken), Input: string(input),
 		Env: os.Environ(), Cwd: cwd})
 	resp, err := http.Post(os.Getenv(envHookURL), "application/json", bytes.NewReader(body))

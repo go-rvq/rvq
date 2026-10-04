@@ -4,7 +4,11 @@ An **access key** is a code an automation — **git**, a **WebDAV** program,
 a script — signs in with in your name, with no password and no session: each
 request carries the key.
 
+![Your keys](images/listing.png)
+
 ## Making a key
+
+![A new key: name, expiration, enabled and permissions](images/new.png)
 
 1. In **My keys**, make a key: give it a **name** (what it is for), how long
    it **lasts** (90 days when left empty; 1 year at most) and its
@@ -12,6 +16,8 @@ request carries the key.
 2. When saved, its **code** is shown **only once**: `hck_…`. Copy it and
    keep it safe. It is not kept anywhere — only a digest (hash) of it —; lost,
    make another key.
+   ![The key made: its code, this time only](images/created.png)
+
 3. To stop a key at once: untick **Enabled**, or delete the key.
 
 ## The permissions
@@ -28,6 +34,8 @@ They are written as a role's are (see
 | `admin:*` | all you may |
 | `admin:/site-files:!git`, `admin:/site-files:@get` and the files' actions | use the site's files by git |
 | `admin:/site-files:<static/*>:!edit` | only change the files of `static/` |
+
+![A key and its permissions](images/detail.png)
 
 A key never makes nor changes keys — not even yours.
 
@@ -48,6 +56,8 @@ A key never makes nor changes keys — not even yours.
   ```
 
 ## The history
+
+![The history of a key](images/history.png)
 
 Each request by the key is in its **History**: when, from where (address
 and place), by which program, what (git, webdav, api; the path) and how it
