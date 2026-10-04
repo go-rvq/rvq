@@ -100,6 +100,11 @@ func (b *Middlewares) ValidateSessionToken(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// by an access key: each request alone, no session either
+		if login.IsKeyAuthenticated(r.Context()) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if login.IsLoginWIP(r) {
 			next.ServeHTTP(w, r)
 			return

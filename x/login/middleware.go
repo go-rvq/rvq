@@ -111,6 +111,13 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// an access key's code (the password, or a bearer token): the request
+		// alone, no session
+		if code := b.keyCode(r); code != "" {
+			b.serveKey(w, r, code, next)
+			return
+		}
+
 		if err != nil {
 			if err.Error() == "no token string" {
 				if b.userPassEnabled {
@@ -244,6 +251,12 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 			if _, ok := b.whiteList[r.URL.Path]; ok {
 				next.ServeHTTP(w, r)
+				return
+			}
+
+			// an access key's bearer token: the request alone, no session
+			if code := b.keyCode(r); code != "" {
+				b.serveKey(w, r, code, next)
 				return
 			}
 

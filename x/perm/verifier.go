@@ -308,17 +308,32 @@ func (b *Verifier) IsAllowed() error {
 		}
 	}
 
-	// the unique name first (Prefer): a deny of any subject denies, an allow
-	// allows; when no policy of it matches, the ancestors decide
+	if err := b.decide(b.vr.subjects); err != nil {
+		return err
+	}
+	// a request restricted (an access key's): what its own subjects allow,
+	// only when the restriction's allow it too — an intersection
+	if b.mode == VerifierModeDefault && b.vr.r != nil {
+		if rs := RestrictionOf(b.vr.r.Context()); len(rs) > 0 {
+			return b.decide(rs)
+		}
+	}
+	return nil
+}
+
+// decide is the decision of the policies for subjects: the unique name first
+// (Prefer) — a deny of any subject denies, an allow allows —; when no policy
+// of it matches, the ancestors: an allow of any subject allows.
+func (b *Verifier) decide(subjects []string) error {
 	if b.mode == VerifierModeDefault && b.vr.preferredParts != nil {
-		if decided, err := b.preferredDecision(); decided {
+		if decided, err := b.preferredDecision(subjects); decided {
 			return err
 		}
 	}
 
 	var err error
 	// any of the subjects have permission, then have permission
-	for _, sub := range b.vr.subjects {
+	for _, sub := range subjects {
 		b.vr.req.Subject = sub
 
 		switch b.mode {
@@ -344,11 +359,11 @@ func (b *Verifier) IsAllowed() error {
 // unique name (Prefer), for all the subjects: denied when one of them is
 // denied by a policy (deny wins), allowed when one is allowed; undecided when
 // no policy matches it for any subject.
-func (b *Verifier) preferredDecision() (decided bool, err error) {
+func (b *Verifier) preferredDecision(subjects []string) (decided bool, err error) {
 	req := *b.vr.req
 	req.Resource = b.PreferredResource() + req.Action
 	allowed := false
-	for _, sub := range b.vr.subjects {
+	for _, sub := range subjects {
 		req.Subject = sub
 		e := b.builder.ladon.IsAllowed(context.TODO(), &req)
 		if Verbose {

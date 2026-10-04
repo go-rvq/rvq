@@ -159,6 +159,8 @@ type Builder struct {
 	initialUserLogged  bool
 
 	whiteList map[string]any
+	// keyAuth authenticates by access keys (KeyAuth)
+	keyAuth KeyAuthenticator
 }
 
 func (b *Builder) I18nBuilder() *i18n.Builder {

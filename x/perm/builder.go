@@ -259,6 +259,9 @@ func (b *Builder) DeletePolicies(toDelete ...*PolicyBuilder) {
 }
 
 func (b *Builder) LoadDBPoliciesToMemory(db *gorm.DB, startFrom *time.Time) {
+	if b.dbPolicy == nil {
+		return // no policies of the database
+	}
 	toUpdateOrCreate, toDelete := b.dbPolicy.model.LoadDBPolicies(db, startFrom)
 	b.m.Lock()
 	if b.dbIDs == nil {
