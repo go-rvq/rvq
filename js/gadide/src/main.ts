@@ -75,6 +75,8 @@ const App = defineComponent(() => {
           workspace: workspace.value,
           dark,
           runMode: "none",
+          // it runs no code: no Output, no debugger panels
+          panels: ["explorer", "editor", "docs"],
           layoutConfig: layout.value,
           "onUpdate:layoutConfig": (v: SerializedDockview) => (layout.value = v),
           config: config.value,
