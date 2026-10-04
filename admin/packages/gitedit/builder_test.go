@@ -101,6 +101,14 @@ func TestBuilder(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("the IDE writing: %d %s", w.Code, w.Body.String())
 	}
+	// an image of the draft, as it is: shown by the IDE
+	os.WriteFile(filepath.Join(draft, "logo.png"), []byte("\x89PNG\r\n\x1a\n"), 0o644)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/api/ide/file?raw=1&path=logo.png", nil))
+	if w.Code != 200 || w.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("the IDE's image: %d %q", w.Code, w.Header().Get("Content-Type"))
+	}
+	os.Remove(filepath.Join(draft, "logo.png"))
 	os.WriteFile(filepath.Join(draft, "wip.txt"), []byte("wip"), 0o644)
 	doAction(h, ActionDiscard, [][2]string{{"path", "wip.txt"}}, nil)
 	if _, err := os.Stat(filepath.Join(draft, "wip.txt")); err == nil {
