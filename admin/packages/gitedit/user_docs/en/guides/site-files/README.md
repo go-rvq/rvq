@@ -1,4 +1,4 @@
-# Site files
+# Step by step
 
 How to edit the files the site is made of — templates, styles, scripts,
 images — from the admin, in **{%= admin.page("/site-files").menu %}**, leaving the site

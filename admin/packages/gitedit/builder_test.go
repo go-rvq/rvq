@@ -298,3 +298,67 @@ func TestDavAllowed(t *testing.T) {
 		}
 	}
 }
+
+// The examples of the documentation (user_docs …/05-permissions, "Examples by
+// path"), each its policies on the page's resource, do what it says.
+func TestPermissionExamples(t *testing.T) {
+	var invalid error
+	r := httptest.NewRequest("GET", "/admin/site-files", nil)
+	const res = "admin:/site-files:" // what admin.page("/site-files").resource is here
+	type rule struct{ effect, perm string }
+	type check struct {
+		op   IdeOp
+		path string
+		want bool
+	}
+	for _, ex := range []struct {
+		name   string
+		rules  []rule
+		checks []check
+	}{
+		{"only the styles", []rule{{perm.Allowed, "@get"}, {perm.Allowed, "<static/css/*>:!edit"}, {perm.Allowed, "<static/css/*>:!create"}},
+			[]check{{IdeEdit, "static/css/site.css", true}, {IdeCreate, "static/css/new.css", true}, {IdeEdit, "static/js/a.js", false},
+				{IdeEdit, "templates/main.gad", false}, {IdeDelete, "static/css/site.css", false}, {IdeRead, "templates/main.gad", true}}},
+		{"all but config, read only", []rule{{perm.Allowed, "*"}, {perm.Denied, "<config/*>:!*"}},
+			[]check{{IdeEdit, "templates/main.gad", true}, {IdeDelete, "static/a.css", true}, {IdeEdit, "config/layout_config.gad", false},
+				{IdeCreate, "config/new.gad", false}, {IdeDelete, "config/layout_config.gad", false}, {IdeRead, "config/layout_config.gad", true}}},
+		{"images into static/img", []rule{{perm.Allowed, "@get"}, {perm.Allowed, "<static/img/*>:!import"},
+			{perm.Allowed, "<static/img/*>:!create"}, {perm.Allowed, "<static/img/*>:!edit"}},
+			[]check{{IdeImport, "static/img/logo.png", true}, {IdeCreate, "static/img/logo.png", true}, {IdeImport, "static/css/a.css", false},
+				{IdeImport, "", false}}},
+		{"layouts never deleted nor moved", []rule{{perm.Allowed, "*"}, {perm.Denied, "<templates/layouts/*>:!delete"},
+			{perm.Denied, "<templates/layouts/*>:!move"}, {perm.Denied, "<templates/layouts/*>:!rename"}},
+			[]check{{IdeDelete, "templates/layouts/default.gadx", false}, {IdeMove, "templates/layouts/default.gadx", false},
+				{IdeRename, "templates/layouts/default.gadx", false}, {IdeEdit, "templates/layouts/default.gadx", true},
+				{IdeDelete, "templates/main.gad", true}}},
+		{"rename and move inside static", []rule{{perm.Allowed, "@get"}, {perm.Allowed, "<static/*>:!rename"}, {perm.Allowed, "<static/*>:!move"}},
+			[]check{{IdeMove, "static/a.css", true}, {IdeMove, "static/css/a.css", true}, {IdeMove, "templates/a.css", false},
+				{IdeRename, "static/a.css", true}, {IdeRename, "config/x.gad", false}}},
+		{"a single file", []rule{{perm.Allowed, "@get"}, {perm.Allowed, "<config/layout_config.gad>:!edit"}},
+			[]check{{IdeEdit, "config/layout_config.gad", true}, {IdeEdit, "config/other.gad", false}}},
+	} {
+		pb := perm.New()
+		for _, ru := range ex.rules {
+			pb.CreatePolicies(perm.PolicyFor(perm.Anybody).WhoAre(ru.effect).ToDo(perm.Anything).On(res + ru.perm))
+		}
+		_, _, _, b := appWith(t, &invalid, pb)
+		for _, c := range ex.checks {
+			if got := b.AllowedOp(r, c.op, c.path); got != c.want {
+				t.Errorf("%s: %s %q: %v", ex.name, opPerms[c.op], c.path, got)
+			}
+		}
+	}
+	// a move asks both paths: out of static/ is denied
+	pb := perm.New()
+	pb.CreatePolicies(perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(res+"<static/*>:!move"),
+		perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(res+"@get"))
+	_, _, _, b := appWith(t, &invalid, pb)
+	needs := asks("rename", &ideBody{Path: "static/a.css", To: "templates/a.css"}, "")
+	allowed := true
+	for _, n := range needs {
+		allowed = allowed && b.AllowedOp(r, n.Op, n.Path)
+	}
+	if allowed {
+		t.Error("a move out of static/ allowed")
+	}
+}

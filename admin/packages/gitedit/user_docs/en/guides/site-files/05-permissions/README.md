@@ -65,3 +65,52 @@ How it decides, in order:
 So, for a role that may only change the styles: give `@get` on the page and
 `<static/css/*>:!edit` (and `!create`, if it creates files there), and nothing
 else of the files.
+
+## Examples by path
+
+Each line is a policy of a role: its effect and its permission, whole — the
+scope and the page as the admin makes them now (they change with the menu, and
+so do these lines). An action is `!create`, `!edit`, `!rename`, `!move`,
+`!delete` or `!import`; `!*` is all of them, and `*` adds seeing (`@get`).
+
+**Only the styles: changes `static/css/` and nothing else**
+
+| Effect | Permission |
+| --- | --- |
+| Allow | `{%= admin.page("/site-files").resource %}@get` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/css/*>:!edit` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/css/*>:!create` |
+
+**Everything, except `config/`, which is read only**
+
+| Effect | Permission |
+| --- | --- |
+| Allow | `{%= admin.page("/site-files").resource %}*` |
+| Deny | `{%= admin.page("/site-files").resource %}<config/*>:!*` |
+
+**Images: imports into `static/img/` only**
+
+| Effect | Permission |
+| --- | --- |
+| Allow | `{%= admin.page("/site-files").resource %}@get` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!import` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!create` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!edit` |
+
+**The layouts are never deleted nor moved, whatever else the role may**
+
+| Effect | Permission |
+| --- | --- |
+| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!delete` |
+| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!move` |
+| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!rename` |
+
+**Rename and move only inside `static/`** — a move asks the permission on
+both paths, so out of `static/` (or into it) is denied:
+
+| Effect | Permission |
+| --- | --- |
+| Allow | `{%= admin.page("/site-files").resource %}<static/*>:!rename` |
+| Allow | `{%= admin.page("/site-files").resource %}<static/*>:!move` |
+
+**A single file**: the path whole, no `*` — `{%= admin.page("/site-files").resource %}<config/layout_config.gad>:!edit`.

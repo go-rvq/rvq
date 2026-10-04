@@ -49,7 +49,9 @@ func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext)
 			nodes = append(nodes, b.modelTree(mb, mb.MenuID(), ctx))
 		case presets.MenuItemPage:
 			page, _ := it.Value.(*presets.HttpPageBuilder)
-			if page == nil {
+			// a page out of the menu (an editor's frame, a preview) is
+			// documented where its page is, not on its own
+			if page == nil || !page.IsInMenu() {
 				continue
 			}
 			id := "pages/" + strings.Trim(page.Path(), "/")

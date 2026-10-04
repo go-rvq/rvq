@@ -2,6 +2,7 @@ package userdocs
 
 import (
 	"context"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -371,5 +372,28 @@ func TestPageMenuPath(t *testing.T) {
 	page.SetMenuGroup(g)
 	if got := PageMenuPath(context.Background(), page); got != "Site Settings → Site files" {
 		t.Errorf("in a group: %q", got)
+	}
+}
+
+// The tree has the pages of the menu, in their groups; a page out of the menu
+// (a frame, a preview) is not a node of its own.
+func TestTreePagesInMenu(t *testing.T) {
+	p := presets.New(i18n.New())
+	g := p.MenuGroup("site").Title("Site Settings")
+	shown := presets.HttpPage("/site-files").TitleFunc(func(context.Context) string { return "Site files" })
+	hidden := presets.HttpPage("/site-preview/{rest...}").InMenu(false)
+	p.PagesRegistrator().AddHttpPage(shown)
+	p.PagesRegistrator().AddHttpPage(hidden)
+	shown.SetMenuGroup(g)
+	b := &Builder{p: p}
+	nodes := b.groupNodes(p.MenuTree(), &web.EventContext{R: httptest.NewRequest("GET", "/", nil)})
+	if len(nodes) != 1 || nodes[0].ID != "groups/site" {
+		t.Fatalf("the tree: %+v", nodes)
+	}
+	if n := findNode(nodes, "pages/site-files"); n == nil || n.Title != "Site files" {
+		t.Errorf("the page in its group: %+v", nodes[0].Children)
+	}
+	if findNode(nodes, "pages/site-preview/{rest...}") != nil {
+		t.Error("a page out of the menu is a node")
 	}
 }
