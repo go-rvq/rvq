@@ -21,6 +21,13 @@ type Messages struct {
 	DefaultDbpolicy          string `i18n:"hint='Name of a permission of a role.'"`
 	DefaultDbpolicyActions   string `i18n:"hint='Label of the actions a permission of a role applies to.'"`
 	PermissionsHelp          string `i18n:"hint='Title of the help button of the permissions of a role: it opens the documentation of policies and permissions.'"`
+	RoleSystemKey            string `i18n:"label='System', hint='Label of the mark of a role of the system.'"`
+	SystemRole               string `i18n:"hint='Said of a role of the system: made by the application, not deleted.'"`
+	ResetPermissions         string `i18n:"hint='Action that resets the permissions of a role of the system to its originals.'"`
+	PermissionsReset         string `i18n:"hint='Shown once the permissions of a role were reset.'"`
+	ErrSystemRoleDelete      string `i18n:"hint='Error: a role of the system is not deleted.'"`
+	ErrSystemRoleRename      string `i18n:"hint='Error: a role of the system is not renamed.'"`
+	ErrSystemRoleFixed       string `i18n:"hint='Error: the permissions of a fixed role of the system are not changed.'"`
 }
 
 var (
@@ -36,6 +43,13 @@ var (
 		DefaultDbpolicy:          "Permission",
 		DefaultDbpolicyActions:   "Actions",
 		PermissionsHelp:          "Help: policies and permissions",
+		RoleSystemKey:            "System",
+		SystemRole:               "System role",
+		ResetPermissions:         "Reset the permissions",
+		PermissionsReset:         "The permissions are the originals again.",
+		ErrSystemRoleDelete:      "A role of the system is not deleted.",
+		ErrSystemRoleRename:      "A role of the system keeps its name.",
+		ErrSystemRoleFixed:       "This role may everything, by the application: its permissions are not changed.",
 	}
 	Messages_pt_BR = &Messages{
 		ModuleDescription:        "Os papéis dos usuários.",
@@ -49,6 +63,13 @@ var (
 		DefaultDbpolicy:          "Permissão",
 		DefaultDbpolicyActions:   "Ações",
 		PermissionsHelp:          "Ajuda: políticas e permissões",
+		RoleSystemKey:            "Sistema",
+		SystemRole:               "Papel do sistema",
+		ResetPermissions:         "Restaurar as permissões",
+		PermissionsReset:         "As permissões voltaram às originais.",
+		ErrSystemRoleDelete:      "Um papel do sistema não é excluído.",
+		ErrSystemRoleRename:      "Um papel do sistema mantém o nome.",
+		ErrSystemRoleFixed:       "Este papel pode tudo, pela aplicação: as permissões dele não mudam.",
 	}
 )
 

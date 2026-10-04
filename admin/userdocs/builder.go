@@ -47,6 +47,23 @@ type Builder struct {
 	locales func() []string
 	// customs are the documents of no part of the admin (Custom)
 	customs []Custom
+	// funcs are the application's functions of the templates (Func)
+	funcs map[string]Func
+}
+
+// Func is a function of the templates of the documents, admin.<name>(args…),
+// of the application: the markdown it puts there, in the language of ctx.
+type Func func(ctx *web.EventContext, args ...string) (string, error)
+
+// Func registers f as admin.<name> in the templates of the documents — what
+// the application documents from what it is (its roles, its settings), never
+// a copy of it that would go stale.
+func (b *Builder) Func(name string, f Func) *Builder {
+	if b.funcs == nil {
+		b.funcs = map[string]Func{}
+	}
+	b.funcs[name] = f
+	return b
 }
 
 // New is the documentation of p, kept in db. The words of its page are

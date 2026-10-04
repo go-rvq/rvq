@@ -28,6 +28,9 @@ type Builder struct {
 	editorSubject    string
 	roleMb           *presets.ModelBuilder
 	AfterInstallFunc presets.ModelInstallFunc
+	// systemRoles are the roles the application needs (SystemRoles)
+	systemRoles []SystemRole
+	pb          *presets.Builder
 	// permissionsHelp is the URL of the documentation of the permissions,
 	// opened by the help button of the form's permissions ("" none)
 	permissionsHelp func(ctx *web.EventContext) string
@@ -79,6 +82,7 @@ func (b *Builder) EditorSubject(v string) *Builder {
 
 func (b *Builder) Install(pb *presets.Builder) (err error) {
 	ConfigureMessages(pb.I18n())
+	b.pb = pb
 
 	if b.editorSubject != "" {
 		permB := pb.GetPermission()
@@ -197,10 +201,11 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 
 	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
 		err = b.db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", id).Error; err != nil {
+			// the id as text: a model.ID is no SQL value
+			if err := tx.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", id.String()).Error; err != nil {
 				return err
 			}
-			if err := tx.Delete(&Role{}, "id = ?", id).Error; err != nil {
+			if err := tx.Delete(&Role{}, "id = ?", id.String()).Error; err != nil {
 				return err
 			}
 
@@ -210,7 +215,15 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 		return
 	})
 
-	b.roleMb.Detailing()
+	b.roleMb.Listing("Name", "SystemKey")
+	b.roleMb.Detailing("Name", "SystemKey", "Permissions")
+	b.installSystem(b.roleMb)
+	if len(b.systemRoles) > 0 {
+		if err = b.EnsureSystemRoles(); err != nil {
+			return err
+		}
+		b.reloadPolicies()
+	}
 
 	if b.AfterInstallFunc != nil {
 		return b.AfterInstallFunc(b.roleMb)

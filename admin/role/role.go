@@ -13,6 +13,9 @@ type Role struct {
 	UpdatedAt time.Time
 
 	Name string `admin:"required" gorm:"unique"`
+	// SystemKey, when set, marks a role the application needs (SystemRole):
+	// not deleted nor renamed, its permissions reset to its originals.
+	SystemKey string `gorm:"index"`
 	// Permissions are the policies whose ReferID is this role's key. The column
 	// is text — it also holds free-form references — so the relation is read
 	// but creates no foreign key (-:migration).

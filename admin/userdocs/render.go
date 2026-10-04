@@ -137,7 +137,7 @@ type renderer struct {
 // admin.menu() — the menu of its detail —, admin.permissions() — the
 // permissions of the part of a permissions node, from the menu as it is —,
 // admin.permissionsTree() — the tree of all the permissions, a VTreeview —,
-// and doc.model, its title.
+// the application's functions (Builder.Func), and doc.model, its title.
 func (r *renderer) globals() gad.Dict {
 	link := func(label, href string) gad.Dict {
 		return gad.Dict{
@@ -158,7 +158,7 @@ func (r *renderer) globals() gad.Dict {
 	if mb != nil {
 		model = gad.Str(mb.TTitleAuto(ctx))
 	}
-	return gad.Dict{"doc": gad.Dict{"model": model}, "admin": gad.Dict{
+	admin := gad.Dict{
 		"fields": gad.NewFunction("fields", func(c gad.Call) (gad.Object, error) {
 			form, err := arg(c, 0, "admin.fields")
 			if err != nil {
@@ -256,7 +256,22 @@ func (r *renderer) globals() gad.Dict {
 			}
 			return link(title, r.b.DocHref(r.ctx, node)), nil
 		}),
-	}}
+	}
+	// the application's (Func)
+	for name, f := range r.b.funcs {
+		admin[name] = gad.NewFunction(name, func(c gad.Call) (gad.Object, error) {
+			args := make([]string, c.Args.Length())
+			for i := range args {
+				args[i] = c.Args.Get(i).ToString()
+			}
+			md, err := f(r.ctx, args...)
+			if err != nil {
+				return nil, fmt.Errorf("admin.%s: %w", name, err)
+			}
+			return gad.Str(md), nil
+		})
+	}
+	return gad.Dict{"doc": gad.Dict{"model": model}, "admin": admin}
 }
 
 // actionTitle is the title of the action name of mb: of its detail, or of its

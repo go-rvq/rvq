@@ -72,6 +72,40 @@ func (p DefaultDBPolicy) LoadDBPolicies(db *gorm.DB, startFrom *time.Time) (toUp
 }
 
 func (p DefaultDBPolicy) ToPolicy() *PolicyBuilder {
-	res := strings.Split(strings.Join(p.Resources, ","), ",")
+	var res []string
+	for _, r := range p.Resources {
+		res = append(res, SplitResources(r)...)
+	}
 	return PolicyFor(p.Subject).WhoAre(p.Effect).ToDo(p.Actions...).On(res...).ID(p.ID.String())
+}
+
+// SplitResources is the resources of s, separated by commas — out of the
+// alternatives of a pattern, "{a,b}", and of a record, "<…>", whose commas
+// are theirs —, trimmed, the empty ones left out.
+func SplitResources(s string) (res []string) {
+	depth, start := 0, 0
+	add := func(end int) {
+		if r := strings.TrimSpace(s[start:end]); r != "" {
+			res = append(res, r)
+		}
+	}
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			i++
+		case '{', '<', '[':
+			depth++
+		case '}', '>', ']':
+			if depth > 0 {
+				depth--
+			}
+		case ',':
+			if depth == 0 {
+				add(i)
+				start = i + 1
+			}
+		}
+	}
+	add(len(s))
+	return
 }
