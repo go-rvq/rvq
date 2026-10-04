@@ -412,3 +412,36 @@ func TestPermissionsByUniqueName(t *testing.T) {
 		}
 	}
 }
+
+// The page shows the URLs by git to whoever may (!git): the draft's, and the
+// site's to whoever may publish.
+func TestPageGitURLs(t *testing.T) {
+	var invalid error
+	page := func(policies ...*perm.PolicyBuilder) string {
+		pb := perm.New().AllowAll()
+		pb.CreatePolicies(policies...)
+		h, _, _, b := appWith(t, &invalid, pb)
+		b.GitURL = func(_ *http.Request, draft bool) string {
+			if draft {
+				return "https://example.com/admin/site-files-draft.git"
+			}
+			return "https://example.com/admin/site-files.git"
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
+		return w.Body.String()
+	}
+	deny := func(res string) *perm.PolicyBuilder {
+		return perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On(res)
+	}
+	all := page()
+	if !strings.Contains(all, "example.com/admin/site-files-draft.git") || !strings.Contains(all, "example.com/admin/site-files.git") {
+		t.Errorf("the URLs by git not shown:\n%.400s", all)
+	}
+	if got := page(deny("admin:/site-files:!publish")); !strings.Contains(got, "site-files-draft.git") || strings.Contains(got, "/admin/site-files.git") {
+		t.Error("with no !publish: the draft's only")
+	}
+	if got := page(deny("admin:/site-files:!git")); strings.Contains(got, "example.com") {
+		t.Error("with no !git: shown")
+	}
+}

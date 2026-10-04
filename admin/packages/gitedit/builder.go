@@ -75,6 +75,10 @@ type Builder struct {
 	// Assets are the files of the IDE's app (its index.html at the root); the
 	// gad IDE's (rvq/js GadIDE) when not set.
 	Assets fs.FS
+	// GitURL, when set, is the URL by git of the files of the site (draft
+	// false: a push publishes, GitRepo) or of the draft of the user of r
+	// (DraftGitRepo), shown on the page to whoever may (!git).
+	GitURL func(r *http.Request, draft bool) string
 
 	ide     *IDE
 	page    *presets.PageBuilder
@@ -202,6 +206,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 		ActionMove:    func(m *Messages) (string, string) { return m.MoveAction, m.MoveAction_Desc },
 		ActionDelete:  func(m *Messages) (string, string) { return m.DeleteAction, m.DeleteAction_Desc },
 		ActionImport:  func(m *Messages) (string, string) { return m.ImportAction, m.ImportAction_Desc },
+		ActionGit:     func(m *Messages) (string, string) { return m.GitAction, m.GitAction_Desc },
 		ActionCommit:  func(m *Messages) (string, string) { return m.CommitAction, m.CommitAction_Desc },
 		ActionUpdate:  func(m *Messages) (string, string) { return m.UpdateAction, m.UpdateAction_Desc },
 		ActionPublish: func(m *Messages) (string, string) { return m.PublishAction, m.PublishAction_Desc },
@@ -523,6 +528,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 						changesComp,
 						h.H4(m.History).Class("mt-4 mb-2"),
 						v.VList(logItems...).Density(v.DensityCompact),
+						b.gitURLs(ctx, m, allowed),
 					),
 				).Variant(v.VariantOutlined),
 			).Cols(12).Lg(4),
@@ -533,4 +539,28 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		),
 	)
 	return
+}
+
+// gitURLs are the URLs by git (GitURL) of the draft and — to whoever may
+// publish — of the site, each with a button that copies it; nothing to whoever
+// may not reach them by git (!git).
+func (b *Builder) gitURLs(ctx *web.EventContext, m *Messages, allowed func(string) bool) h.HTMLComponent {
+	if b.GitURL == nil || !allowed(ActionGit) {
+		return nil
+	}
+	field := func(label, url string) h.HTMLComponent {
+		return v.VTextField().Label(label).ModelValue(url).Readonly(true).
+			Variant(v.FieldVariantOutlined).Density(v.DensityCompact).HideDetails(true).Class("mb-2").
+			Attr("append-inner-icon", "mdi-content-copy").Attr("data-git-url", url).
+			Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", url))
+	}
+	items := []h.HTMLComponent{
+		h.H4(m.ByGit).Class("mt-4 mb-1"),
+		h.P(h.Text(m.ByGitHint)).Class("text-caption mb-2"),
+		field(m.GitDraftURL, b.GitURL(ctx.R, true)),
+	}
+	if allowed(ActionPublish) {
+		items = append(items, field(m.GitSiteURL, b.GitURL(ctx.R, false)))
+	}
+	return h.Div(items...)
 }

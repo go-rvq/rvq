@@ -35,6 +35,7 @@ user may not do are not shown.
 | Move a file to another folder | `!move` | MOVE to another folder |
 | Delete a file or a folder | `!delete` | DELETE |
 | Import: upload from the computer, download from the internet | `!import` | — |
+| Clone and push by git (see the step **By git**) | `!git` | — |
 
 Importing asks `!import` **and** what it writes: `!create` for each new file,
 `!edit` for each one that is there (overwritten). The download from the

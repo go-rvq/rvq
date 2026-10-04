@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -30,7 +31,18 @@ type Repo struct {
 	Branch   string
 	// DraftsDir holds the drafts, one directory each.
 	DraftsDir string
+
+	// mu is held while the branch the site serves moves: a publishing, a push
+	// to it (Lock).
+	mu sync.Mutex
 }
+
+// Lock is held while the branch the site serves moves — a publishing, a push
+// to the repository —: one at a time.
+func (r *Repo) Lock() { r.mu.Lock() }
+
+// Unlock releases Lock.
+func (r *Repo) Unlock() { r.mu.Unlock() }
 
 // OpenRepo is the repository of the files of workTree — its .git a
 // directory, or a file naming it ("gitdir: ../.public.git", a submodule's or
@@ -320,54 +332,80 @@ func (d *Draft) Publish(ctx context.Context) error {
 	return d.repo.checkout(ctx, d.Dir)
 }
 
-// checkout makes the branch the commit checked out in the draft dir, and the
-// site's files those of it: a fast-forward, the files as committed.
-func (r *Repo) checkout(ctx context.Context, dir string) error {
+// site runs git on the repository the site serves, its git directory and
+// worktree said: its core.worktree may name a path of another machine (the
+// host of a container; a deploy tool writes it).
+func (r *Repo) site(ctx context.Context, args ...string) (string, error) {
 	gitDir, err := filepath.Abs(r.GitDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 	workTree, err := filepath.Abs(r.WorkTree)
 	if err != nil {
+		return "", err
+	}
+	return git(ctx, workTree, append([]string{"--git-dir=" + gitDir, "--work-tree=" + workTree}, args...)...)
+}
+
+// Head is the commit of the branch the site serves.
+func (r *Repo) Head(ctx context.Context) (string, error) {
+	head, err := r.site(ctx, "rev-parse", "HEAD")
+	return strings.TrimSpace(head), err
+}
+
+// SiteClean refuses (ErrSiteChanged) when the site's files are not the ones
+// committed: changed out of the editor, they would be overwritten.
+func (r *Repo) SiteClean(ctx context.Context) error {
+	if _, err := r.site(ctx, "update-index", "-q", "--ignore-submodules", "--refresh"); err != nil {
 		return err
 	}
-	site := func(args ...string) (string, error) {
-		return git(ctx, workTree, append([]string{"--git-dir=" + gitDir, "--work-tree=" + workTree}, args...)...)
+	if _, err := r.site(ctx, "diff-files", "--quiet", "--ignore-submodules", "--"); err != nil {
+		return ErrSiteChanged
 	}
-	// the site's files as committed
-	if _, err := site("update-index", "-q", "--ignore-submodules", "--refresh"); err != nil {
+	if _, err := r.site(ctx, "diff-index", "--quiet", "--cached", "--ignore-submodules", "HEAD", "--"); err != nil {
+		return ErrSiteChanged
+	}
+	return nil
+}
+
+// Advance makes the site's files those of next, from those of head: a
+// fast-forward of the worktree (the branch moved by whoever called it).
+func (r *Repo) Advance(ctx context.Context, head, next string) error {
+	_, err := r.site(ctx, "read-tree", "-u", "-m", head, next)
+	return err
+}
+
+// checkout makes the branch the commit checked out in the draft dir, and the
+// site's files those of it: a fast-forward, the files as committed.
+func (r *Repo) checkout(ctx context.Context, dir string) error {
+	r.Lock()
+	defer r.Unlock()
+	if err := r.SiteClean(ctx); err != nil {
 		return err
 	}
-	if _, err := site("diff-files", "--quiet", "--ignore-submodules", "--"); err != nil {
-		return ErrSiteChanged
-	}
-	if _, err := site("diff-index", "--quiet", "--cached", "--ignore-submodules", "HEAD", "--"); err != nil {
-		return ErrSiteChanged
-	}
-	head, err := site("rev-parse", "HEAD")
+	head, err := r.Head(ctx)
 	if err != nil {
 		return err
 	}
-	head = strings.TrimSpace(head)
 	draftDir, err := filepath.Abs(dir)
 	if err != nil {
 		return err
 	}
-	if _, err := site("fetch", "--quiet", draftDir, "HEAD"); err != nil {
+	if _, err := r.site(ctx, "fetch", "--quiet", draftDir, "HEAD"); err != nil {
 		return err
 	}
-	next, err := site("rev-parse", "FETCH_HEAD")
+	next, err := r.site(ctx, "rev-parse", "FETCH_HEAD")
 	if err != nil {
 		return err
 	}
 	next = strings.TrimSpace(next)
-	if _, err := site("merge-base", "--is-ancestor", head, next); err != nil {
+	if _, err := r.site(ctx, "merge-base", "--is-ancestor", head, next); err != nil {
 		return ErrNotFastForward
 	}
-	if _, err := site("read-tree", "-u", "-m", head, next); err != nil {
+	if err := r.Advance(ctx, head, next); err != nil {
 		return err
 	}
-	_, err = site("update-ref", "refs/heads/"+r.branch(), next, head)
+	_, err = r.site(ctx, "update-ref", "refs/heads/"+r.branch(), next, head)
 	return err
 }
 

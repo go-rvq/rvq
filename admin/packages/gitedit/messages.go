@@ -64,6 +64,12 @@ type Messages struct {
 	DeleteAction_Desc  string `i18n:"hint='Description of the permission of deleting files and folders.'"`
 	ImportAction       string `i18n:"label='Import files', hint='Title of the permission of uploading and downloading from the internet.'"`
 	ImportAction_Desc  string `i18n:"hint='Description of the permission of uploading and downloading from the internet.'"`
+	GitAction          string `i18n:"label='Access by git', hint='Title of the permission of cloning and pushing the files by git.'"`
+	ByGit              string `i18n:"hint='Title of the box of the URLs of the files by git.'"`
+	ByGitHint          string `i18n:"hint='Explains the URLs by git: cloned and pushed with the login and password.'"`
+	GitDraftURL        string `i18n:"hint='Label of the URL by git of the draft of the user.'"`
+	GitSiteURL         string `i18n:"hint='Label of the URL by git of the site: a push to it publishes.'"`
+	GitAction_Desc     string `i18n:"hint='Description of the permission of cloning and pushing the files by git.'"`
 
 	Committed      string `i18n:"hint='Shown once the changes were committed.', fields=(;'%s'='the short hash')"`
 	Updated        string `i18n:"hint='Shown once the draft was updated.'"`
@@ -117,6 +123,12 @@ var Messages_en_US = &Messages{
 	DeleteAction_Desc:  "Deletes files and folders.",
 	ImportAction:       "Import files",
 	ImportAction_Desc:  "Uploads files from the computer and downloads them from the internet (with Create files or Edit files for what it writes).",
+	GitAction:          "Access by git",
+	ByGit:              "By git",
+	ByGitHint:          "Clone and push with git, with your login and password.",
+	GitDraftURL:        "Your draft (a push changes it; publish here)",
+	GitSiteURL:         "The site (a push publishes)",
+	GitAction_Desc:     "Clones and pushes the files by git — the draft, and the site with Publish —, each file changed asking what the editor asks.",
 	Committed:          "Committed: %s",
 	Updated:            "The draft has what was published.",
 	Published:          "Published: the site has your commits.",
@@ -169,6 +181,12 @@ var Messages_pt_BR = &Messages{
 	DeleteAction_Desc:  "Exclui arquivos e pastas.",
 	ImportAction:       "Importar arquivos",
 	ImportAction_Desc:  "Faz upload de arquivos do computador e os baixa da internet (com Criar arquivos ou Editar arquivos para o que grava).",
+	GitAction:          "Acessar por git",
+	ByGit:              "Pelo git",
+	ByGitHint:          "Clone e faça push com o git, com o seu login e senha.",
+	GitDraftURL:        "Seu rascunho (um push o muda; publique aqui)",
+	GitSiteURL:         "O site (um push publica)",
+	GitAction_Desc:     "Clona e envia (push) os arquivos por git — o rascunho, e o site com Publicar —, cada arquivo alterado pedindo o que o editor pede.",
 	Committed:          "Commit feito: %s",
 	Updated:            "O rascunho tem o que foi publicado.",
 	Published:          "Publicado: o site tem os seus commits.",

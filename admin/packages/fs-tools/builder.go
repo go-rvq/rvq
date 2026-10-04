@@ -33,6 +33,8 @@ type Builder struct {
 	page *presets.PageBuilder
 	// mounts are the directories of each request (AddMount)
 	mounts []*Mount
+	// git serves the repositories added (AddGitRepo)
+	git *gitServer
 }
 
 func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, err error) {

@@ -16,3 +16,4 @@ O caminho, passo a passo:
    feitos no computador de quem desenvolve.
 7. **Opções dos layouts** — os campos dos formulários delas, e um select de
    valores com `options`.
+8. **Pelo git** — clone e faça push do rascunho, ou do site, do seu computador.

@@ -16,3 +16,4 @@ Step by step:
    made on the developer's computer.
 7. **Options of the layouts** — the fields of their forms, and a select of
    values with `options`.
+8. **By git** — clone and push the draft, or the site, from your computer.

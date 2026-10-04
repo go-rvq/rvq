@@ -35,6 +35,7 @@ não pode fazer não aparecem.
 | Mover um arquivo para outra pasta | `!move` | MOVE para outra pasta |
 | Excluir um arquivo ou uma pasta | `!delete` | DELETE |
 | Importar: upload do computador, download da internet | `!import` | — |
+| Clonar e enviar (push) pelo git (veja o passo **Pelo git**) | `!git` | — |
 
 Importar pede `!import` **e** o que ele grava: `!create` para cada arquivo
 novo, `!edit` para cada um que já existe (sobrescrito). O download da
