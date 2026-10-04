@@ -39,8 +39,8 @@ func TestWebDavPermissions(t *testing.T) {
 	}
 	b.SetFS(root)
 	b.AddMount(&Mount{
-		Name:    "site-files",
-		Dir:     func(r *http.Request) (string, error) { return filepath.Join(drafts, r.Header.Get("X-User")), nil },
+		Name: "site-files",
+		Dir:  func(r *http.Request) (string, error) { return filepath.Join(drafts, r.Header.Get("X-User")), nil },
 		Allowed: func(r *http.Request, a MountAccess) bool {
 			asked = append(asked, r.Method+" "+a.Path+" "+a.Dest)
 			return !a.Write || r.Header.Get("X-Edit") == "1"
