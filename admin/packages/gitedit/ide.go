@@ -65,6 +65,10 @@ var ideOps = map[string]struct{ read, write bool }{
 	"fetch":     {write: true},
 }
 
+// maxBody is the most a write of the IDE may hold: an upload's bytes, in
+// base64 (the IDE's own limit, web/ide MaxUploadBody).
+const maxBody = 32 << 20
+
 // ideBody is what the IDE's writes say of the paths: the file, where a
 // rename puts it, the files of an upload.
 type ideBody struct {
@@ -228,7 +232,7 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var b ideBody
 	if r.Body != nil && write {
-		body, err := io.ReadAll(io.LimitReader(r.Body, ide.MaxUploadBody))
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxBody))
 		if err != nil {
 			ideError(w, http.StatusBadRequest, err.Error())
 			return
