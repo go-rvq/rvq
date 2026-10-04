@@ -9,8 +9,8 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 - **Arquivos**, à direita, é o editor: a árvore dos arquivos à esquerda dele,
   cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
 - Criar, renomear e apagar arquivos e pastas: pelo menu da árvore.
-- O editor formata e confere os arquivos `.gad`/`.gadx` e mostra a
-  documentação da linguagem; ele não executa código.
+- O editor formata e confere os arquivos `.gad`/`.gadx`; ele não executa
+  código.
 - **Alterações sem commit**, à esquerda, lista cada arquivo mudado desde o
   último commit; abra um para ver o que mudou. **Descartar** desfaz as
   alterações dele.
@@ -20,6 +20,27 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 Os arquivos ficam em pastas: `templates/` (as páginas, os layouts, os
 componentes), `static/` (estilos, scripts, imagens) e `config/` (as opções
 dos layouts).
+
+## O editor numa aba própria
+
+**Abrir o editor** abre o editor numa aba do navegador, com mais espaço. Ele
+tem três painéis: **Explorer** (a árvore dos arquivos), **Editor** (os
+arquivos abertos, um por aba) e **Preview**, que mostra o arquivo aberto
+conforme o tipo dele:
+
+- um arquivo `.gad`, `.gadt` ou `.gadx`: a **documentação** escrita nos
+  comentários dele (`/*** … ***/` para o arquivo, `/** … **/` antes de uma
+  declaração) — **Generate** gera a documentação completa;
+- um arquivo **Markdown** (`.md`), renderizado; um **HTML**, renderizado sem
+  executar os scripts dele;
+- uma **imagem**: ela mesma.
+
+![O editor numa aba própria: as opções dos layouts e a documentação delas no Preview](images/ide.png)
+
+Uma imagem (png, jpg, gif, webp, svg…) abre como imagem, inteira e sem
+distorcer, no editor e no Preview — não como texto:
+
+![Uma imagem aberta no editor e no Preview](images/ide-image.png)
 
 ## Pelo WebDAV
 

@@ -9,8 +9,8 @@ only — the site and the drafts of the others stay as they are.
 - **Files**, on the right, is the editor: the tree of the files at its left,
   each file open in a tab. Save with the tab's button or Ctrl+S.
 - Create, rename and delete files and folders: from the tree's menu.
-- The editor formats and checks the `.gad`/`.gadx` files and shows the
-  language's documentation; it does not run code.
+- The editor formats and checks the `.gad`/`.gadx` files; it does not run
+  code.
 - **Changes not committed**, on the left, lists each file changed since the
   last commit; open one to see what changed. **Discard** drops its changes.
 - **Start over** drops the whole draft (the commits not published too): a new
@@ -19,6 +19,27 @@ only — the site and the drafts of the others stay as they are.
 The files are in folders: `templates/` (the pages, the layouts, the
 components), `static/` (styles, scripts, images) and `config/` (the options
 of the layouts).
+
+## The editor in a tab of its own
+
+**Open the editor** opens the editor in a tab of the browser, with more room.
+It has three panels: **Explorer** (the tree of the files), **Editor** (the
+files open, one per tab) and **Preview**, which shows the open file as its
+type is:
+
+- a `.gad`, `.gadt` or `.gadx` file: the **documentation** written in its
+  comments (`/*** … ***/` for the file, `/** … **/` before a declaration) —
+  **Generate** generates the whole documentation;
+- a **Markdown** file (`.md`), rendered; an **HTML** one, rendered without
+  running its scripts;
+- an **image**: the image.
+
+![The editor in a tab of its own: the layouts' options and their documentation in the Preview](images/ide.png)
+
+An image (png, jpg, gif, webp, svg…) opens as an image, whole and not
+stretched, in the editor and in the Preview — not as text:
+
+![An image open in the editor and in the Preview](images/ide-image.png)
 
 ## By WebDAV
 
