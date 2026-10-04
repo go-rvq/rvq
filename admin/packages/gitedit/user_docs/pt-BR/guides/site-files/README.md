@@ -14,3 +14,5 @@ O caminho, passo a passo:
 5. **Permissões** — quem pode cada coisa.
 6. **Sincronizar com o desenvolvimento local** — os commits feitos aqui e os
    feitos no computador de quem desenvolve.
+7. **Opções dos layouts** — os campos dos formulários delas, e um select de
+   valores com `options`.

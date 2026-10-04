@@ -14,3 +14,5 @@ Step by step:
 5. **Permissions** — who may do each thing.
 6. **Sync with the local development** — the commits made here and the ones
    made on the developer's computer.
+7. **Options of the layouts** — the fields of their forms, and a select of
+   values with `options`.

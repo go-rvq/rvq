@@ -123,8 +123,12 @@ type Enum struct {
 	Names []string
 	// Items are the members' labels and hints when the schema itself gives
 	// them — a choice of classes read as their names (Builder.ChoiceAsName)
-	// takes each class's metadata; nil otherwise.
+	// takes each class's metadata, a field's `[options=…]` its labels; nil
+	// otherwise.
 	Items []EnumItem
+	// Options says the enum is the field's own `[options=…]`, not a type: it
+	// is drawn as a select whatever the field's type is.
+	Options bool
 }
 
 // Field is one entry of a form.

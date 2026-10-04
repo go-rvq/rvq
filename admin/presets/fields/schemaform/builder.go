@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -406,6 +407,10 @@ func (b *Builder) TypeFunc(name string) (ComponentFunc, bool) {
 func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
 	if c.Field.ReadOnly {
 		return ReadOnlyComponentFunc, true
+	}
+	if c.Field.Enum != nil && c.Field.Enum.Options {
+		// the field's own `[options=…]`: a select, whatever its type
+		return EnumComponentFunc, true
 	}
 	draw, registered := b.TypeFunc(c.Field.Type)
 	if registered && c.Field.Type != DefaultType {
@@ -939,10 +944,10 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 	if len(items) == 0 {
 		return errorComponent(fmt.Sprintf(c.Messages().NoItems, c.Field.Name))
 	}
-	options := make([]map[string]string, len(items))
+	options := make([]map[string]any, len(items))
 	var anyHint bool
 	for i, it := range items {
-		options[i] = map[string]string{"value": it.Name, "title": it.Label}
+		options[i] = map[string]any{"value": itemValue(c.Field, it.Name), "title": it.Label}
 		if it.Hint != "" {
 			options[i]["subtitle"] = it.Hint
 			anyHint = true
@@ -963,6 +968,23 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		Clearable(!c.Field.Required()).
 		Attr("required", c.Field.Required()).
 		Attr("v-model", c.Value)
+}
+
+// itemValue is the value an item puts in the record, typed as the field is: a
+// number for a number field — what the decoder stores, and what a default or a
+// saved value is —, so the select shows it chosen; the name otherwise.
+func itemValue(f *Field, name string) any {
+	switch f.Type {
+	case "int", "uint":
+		if n, err := strconv.ParseInt(name, 10, 64); err == nil {
+			return n
+		}
+	case "float", "decimal":
+		if n, err := strconv.ParseFloat(name, 64); err == nil {
+			return n
+		}
+	}
+	return name
 }
 
 // ReadOnlyComponentFunc draws a field declared `get name Type`: its value,

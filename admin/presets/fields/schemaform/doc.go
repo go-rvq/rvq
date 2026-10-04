@@ -129,8 +129,16 @@
 // # Enums, and lists of values the schema cannot know
 //
 // A field may hold one of a CLOSED LIST of values, and is then a select. The
-// list comes from one of two places:
+// list comes from one of three places:
 //
+//   - the field's own `[options=…]` (MetaOptions), its values with their
+//     labels in the order written — a key-value array
+//     `[options=(;opt1="option 1")] value str`, an array of pairs
+//     `[options=[[1, "one"], [2, "two"]]] n int`, or of values alone
+//     `[options=["a", "b"]]`. The VALUE goes into the record (as text, a
+//     number for a number field), the label is only shown. It is a select
+//     whatever the field's type — it wins over a registered component —, and
+//     on a list of plain values (`tags []str`) each item is one.
 //   - an `enum` the schema declares, beside it or inline —
 //     `enum Perm { Read, Write }` / `{perm enum { Read, Write }}`. What goes
 //     into the record is the member's NAME (`Read`), never the number behind

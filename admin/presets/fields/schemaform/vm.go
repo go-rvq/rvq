@@ -215,6 +215,9 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		if err := r.typeInto(f, types); err != nil {
 			return nil, fmt.Errorf("%s: %w", f.Name, err)
 		}
+		if err := options(f, cf.Meta); err != nil {
+			return nil, fmt.Errorf("%s: %w", f.Name, err)
+		}
 		if cf.Value != nil && cf.Value != gad.Nil {
 			f.Default = metaValue(cf.Value)
 		}
@@ -445,7 +448,103 @@ func (r *reader) field(o gad.Object) (*Field, error) {
 	if err := r.typeInto(f, types); err != nil {
 		return nil, fmt.Errorf("%s: %w", f.Name, err)
 	}
+	rawMeta, err := r.index(o, "@meta")
+	if err != nil {
+		return nil, err
+	}
+	if err := options(f, rawMeta); err != nil {
+		return nil, fmt.Errorf("%s: %w", f.Name, err)
+	}
 	return f, nil
+}
+
+// MetaOptions is the metadata of a field that gives the values it may hold,
+// with their labels — a select, whatever the field's type:
+//
+//	[options=(;opt1="option 1", opt2="option 2")] value str
+//	[options=[["opt1", "option 1"], ["opt2", "option 2"]]] value str
+//	[options=["opt1", "opt2"]] value str
+//
+// in the order written: a key-value array (the key the value, the value its
+// label), or an array of pairs [value, label] — or of values alone, each its
+// own label. The value is what the record holds, as text.
+const MetaOptions = "options"
+
+// options reads the field's `[options=…]` into the enum of the values it may
+// hold — the item's, for a list of plain values (each item a select).
+func options(f *Field, rawMeta gad.Object) error {
+	kva, _ := rawMeta.(gad.KeyValueArray)
+	for _, kv := range kva {
+		if kv.K.ToString() != MetaOptions {
+			continue
+		}
+		e, err := optionsEnum(kv.V)
+		if err != nil {
+			return fmt.Errorf("%s: %w", MetaOptions, err)
+		}
+		target := f
+		if f.Schema != nil && f.Schema.Slice && f.Schema.Item != nil && f.Schema.Item.Schema == nil {
+			target = f.Schema.Item
+		} else if f.Schema != nil {
+			return fmt.Errorf("%s: a record has no options; only a value has", MetaOptions)
+		}
+		target.Enum = e
+	}
+	return nil
+}
+
+// optionsEnum reads an `[options=…]` value into an enum, in its order.
+func optionsEnum(v gad.Object) (*Enum, error) {
+	e := &Enum{Options: true}
+	add := func(value, label gad.Object) error {
+		if value == gad.Nil {
+			return fmt.Errorf("an option with no value")
+		}
+		it := EnumItem{Name: value.ToString()}
+		if label != nil && label != gad.Nil {
+			it.Label = label.ToString()
+		}
+		for _, n := range e.Names {
+			if n == it.Name {
+				return fmt.Errorf("the value %q twice", it.Name)
+			}
+		}
+		e.Names = append(e.Names, it.Name)
+		e.Items = append(e.Items, it)
+		return nil
+	}
+	switch t := v.(type) {
+	case gad.KeyValueArray:
+		for _, kv := range t {
+			if err := add(kv.K, kv.V); err != nil {
+				return nil, err
+			}
+		}
+	case gad.Array:
+		for i, item := range t {
+			var err error
+			switch p := item.(type) {
+			case gad.Array:
+				if len(p) != 2 {
+					return nil, fmt.Errorf("[%d]: a pair is [value, label], got %d items", i, len(p))
+				}
+				err = add(p[0], p[1])
+			case *gad.KeyValue:
+				err = add(p.K, p.V)
+			default:
+				err = add(p, nil)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("[%d]: %w", i, err)
+			}
+		}
+	default:
+		return nil, fmt.Errorf("want a key-value array or an array of [value, label], got %s", v.Type().Name())
+	}
+	if len(e.Names) == 0 {
+		return nil, fmt.Errorf("no option")
+	}
+	return e, nil
 }
 
 // getter reads a property of an interface that is a getter alone — `get name
