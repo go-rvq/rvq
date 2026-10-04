@@ -28,6 +28,17 @@ type Builder struct {
 	editorSubject    string
 	roleMb           *presets.ModelBuilder
 	AfterInstallFunc presets.ModelInstallFunc
+	// permissionsHelp is the URL of the documentation of the permissions,
+	// opened by the help button of the form's permissions ("" none)
+	permissionsHelp func(ctx *web.EventContext) string
+}
+
+// PermissionsHelpURL sets where the help button (?) of the permissions of the
+// role's form leads: the documentation of policies and permissions. Without
+// it, or when it says "", there is no button.
+func (b *Builder) PermissionsHelpURL(f func(ctx *web.EventContext) string) *Builder {
+	b.permissionsHelp = f
+	return b
 }
 
 func New(db *gorm.DB) *Builder {
@@ -114,6 +125,27 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{}, presets.ModelConfig().SetModuleKey(MessagesKey))
 	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
 	ed.Field("Permissions").AutoNested(policeModel, permFb)
+	// the help of the permissions: a ? that opens their documentation
+	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
+		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			comp := old(field, ctx)
+			if b.permissionsHelp == nil {
+				return comp
+			}
+			href := b.permissionsHelp(ctx)
+			if href == "" {
+				return comp
+			}
+			return h.Div(
+				h.Div(
+					VBtn("").Icon("mdi-help-circle-outline").Variant(VariantText).Size(SizeSmall).
+						Attr("href", href).Attr("target", "_blank").Attr("rel", "noopener").
+						Attr("title", GetMessages(ctx.Context()).PermissionsHelp).Attr("data-permissions-help", true),
+				).Style("position: absolute; top: -8px; right: 0; z-index: 1"),
+				comp,
+			).Style("position: relative")
+		}
+	})
 
 	permFb.Field("Effect").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		p := field.Obj.(*perm.DefaultDBPolicy)

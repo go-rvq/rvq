@@ -39,6 +39,15 @@ Uma parte é alcançada de dois jeitos — **pelos grupos** e **pelo nome
     admin:site/:seo/:seo_config:<7>:@edit     pelos grupos
     admin:seo_config:<7>:@edit                pelo nome único
 
+Uma **página** também: o nome único dela é o seu caminho, então uma permissão
+dela pode ser declarada **fora do grupo** — sem grupo nenhum:
+
+    admin:site/:/site-files:!edit             pelo grupo site
+    admin:/site-files:!edit                   pelo nome único (sem grupo)
+
+O nome único segue, parte por parte, para o que está abaixo dele: um
+registro, um campo, uma ação, um caminho (`admin:/site-files:<static/*>:!edit`).
+
 `*` vale por qualquer coisa: `admin:site/:*` é tudo o que está no grupo
 *site*; `admin:seo_config:*`, tudo da parte *seo_config*, onde quer que o
 menu a ponha.
@@ -68,7 +77,11 @@ primeiro `:`; a árvore abaixo mostra cada escopo, o do admin como *Administraç
    qualquer papel permite.
 
 Assim, um grupo pode ser permitido com uma parte dele negada pelo nome, ou um
-grupo negado com uma parte dele permitida pelo nome.
+grupo negado com uma parte dele permitida pelo nome. Uma permissão declarada
+**fora do grupo** (`admin:/site-files:!edit`) tem prioridade sobre a declarada
+junto com o grupo (`admin:site/:/site-files:!edit`): com as duas, decide a de
+fora do grupo. E ela continua valendo quando o menu muda a parte de grupo — a
+declarada com o grupo deixa de casar.
 
 ## As permissões do admin
 

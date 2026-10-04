@@ -46,14 +46,25 @@ the server itself nor from its network.
 Any of the permissions of the files can be given or taken **for a path and
 everything under it**. The path goes in the resource, between `<` and `>`,
 before the action; `*` is any text, so `<static/*>` is all of `static/`, in
-every subfolder. The resource of this page is
-`{%= admin.page("/site-files").resource %}`:
+every subfolder.
+
+The page's permissions are declared two ways — **with its group**, where the
+menu puts it now, and **out of the group**, by its unique name:
+
+| Declared | Resource |
+| --- | --- |
+| with the group | `{%= admin.page("/site-files").resource %}` |
+| out of the group | `{%= admin.page("/site-files").uniqueResource %}` |
+
+The one **out of the group has priority**: with both, it decides. And it keeps
+holding if the menu moves the page to another group. So the policies below
+are declared out of the group:
 
 | Policy | Effect |
 | --- | --- |
-| Deny `{%= admin.page("/site-files").resource %}<config/*>:!edit` | no one of the role edits under `config/` |
-| Allow `{%= admin.page("/site-files").resource %}<static/*>:*` | the role does anything under `static/` |
-| Allow `{%= admin.page("/site-files").resource %}<static/img/*>:!import` | the role imports images into `static/img/` |
+| Deny `{%= admin.page("/site-files").uniqueResource %}<config/*>:!edit` | no one of the role edits under `config/` |
+| Allow `{%= admin.page("/site-files").uniqueResource %}<static/*>:*` | the role does anything under `static/` |
+| Allow `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!import` | the role imports images into `static/img/` |
 
 How it decides, in order:
 
@@ -69,48 +80,48 @@ else of the files.
 ## Examples by path
 
 Each line is a policy of a role: its effect and its permission, whole — the
-scope and the page as the admin makes them now (they change with the menu, and
-so do these lines). An action is `!create`, `!edit`, `!rename`, `!move`,
+scope and the page, out of the group (the same wherever the menu puts the
+page). With the group, the same lines start by `{%= admin.page("/site-files").resource %}`. An action is `!create`, `!edit`, `!rename`, `!move`,
 `!delete` or `!import`; `!*` is all of them, and `*` adds seeing (`@get`).
 
 **Only the styles: changes `static/css/` and nothing else**
 
 | Effect | Permission |
 | --- | --- |
-| Allow | `{%= admin.page("/site-files").resource %}@get` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/css/*>:!edit` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/css/*>:!create` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}@get` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/css/*>:!edit` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/css/*>:!create` |
 
 **Everything, except `config/`, which is read only**
 
 | Effect | Permission |
 | --- | --- |
-| Allow | `{%= admin.page("/site-files").resource %}*` |
-| Deny | `{%= admin.page("/site-files").resource %}<config/*>:!*` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}*` |
+| Deny | `{%= admin.page("/site-files").uniqueResource %}<config/*>:!*` |
 
 **Images: imports into `static/img/` only**
 
 | Effect | Permission |
 | --- | --- |
-| Allow | `{%= admin.page("/site-files").resource %}@get` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!import` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!create` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/img/*>:!edit` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}@get` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!import` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!create` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!edit` |
 
 **The layouts are never deleted nor moved, whatever else the role may**
 
 | Effect | Permission |
 | --- | --- |
-| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!delete` |
-| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!move` |
-| Deny | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!rename` |
+| Deny | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!delete` |
+| Deny | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!move` |
+| Deny | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!rename` |
 
 **Rename and move only inside `static/`** — a move asks the permission on
 both paths, so out of `static/` (or into it) is denied:
 
 | Effect | Permission |
 | --- | --- |
-| Allow | `{%= admin.page("/site-files").resource %}<static/*>:!rename` |
-| Allow | `{%= admin.page("/site-files").resource %}<static/*>:!move` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/*>:!rename` |
+| Allow | `{%= admin.page("/site-files").uniqueResource %}<static/*>:!move` |
 
-**A single file**: the path whole, no `*` — `{%= admin.page("/site-files").resource %}<config/layout_config.gad>:!edit`.
+**A single file**: the path whole, no `*` — `{%= admin.page("/site-files").uniqueResource %}<config/layout_config.gad>:!edit`.

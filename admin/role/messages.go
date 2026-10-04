@@ -20,6 +20,7 @@ type Messages struct {
 	Denied                   string `i18n:"hint='Effect of a permission that denies what it names.'"`
 	DefaultDbpolicy          string `i18n:"hint='Name of a permission of a role.'"`
 	DefaultDbpolicyActions   string `i18n:"hint='Label of the actions a permission of a role applies to.'"`
+	PermissionsHelp          string `i18n:"hint='Title of the help button of a role\'s permissions: it opens the documentation of policies and permissions.'"`
 }
 
 var (
@@ -34,6 +35,7 @@ var (
 		Denied:                   "Denied",
 		DefaultDbpolicy:          "Permission",
 		DefaultDbpolicyActions:   "Actions",
+		PermissionsHelp:          "Help: policies and permissions",
 	}
 	Messages_pt_BR = &Messages{
 		ModuleDescription:        "Os papéis dos usuários.",
@@ -46,6 +48,7 @@ var (
 		Denied:                   "Negar",
 		DefaultDbpolicy:          "Permissão",
 		DefaultDbpolicyActions:   "Ações",
+		PermissionsHelp:          "Ajuda: políticas e permissões",
 	}
 )
 

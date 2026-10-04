@@ -36,7 +36,7 @@ func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Ha
 
 // appWith is the admin with the editor of the site's files, by the
 // permissions pb; its builder too.
-func appWith(t *testing.T, invalid *error, pb *perm.Builder) (http.Handler, *Repo, string, *Builder) {
+func appWith(t *testing.T, invalid *error, pb *perm.Builder, group ...string) (http.Handler, *Repo, string, *Builder) {
 	t.Helper()
 	repo, served := site(t)
 	p := presets.New(i18n.New()).URIPrefix("/admin")
@@ -57,6 +57,9 @@ func appWith(t *testing.T, invalid *error, pb *perm.Builder) (http.Handler, *Rep
 		}}
 	if err := b.Install(p); err != nil {
 		t.Fatal(err)
+	}
+	for _, g := range group {
+		b.Page().Page().SetMenuGroup(p.MenuGroup(g))
 	}
 	mux := http.NewServeMux()
 	p.Build(mux)
@@ -300,11 +303,14 @@ func TestDavAllowed(t *testing.T) {
 }
 
 // The examples of the documentation (user_docs …/05-permissions, "Examples by
-// path"), each its policies on the page's resource, do what it says.
+// path"), each its policies on the page's resource out of its group, do what
+// it says — the page in a group of the menu.
 func TestPermissionExamples(t *testing.T) {
 	var invalid error
 	r := httptest.NewRequest("GET", "/admin/site-files", nil)
-	const res = "admin:/site-files:" // what admin.page("/site-files").resource is here
+	// the page in a group, the policies out of it — by its unique name, what
+	// admin.page("/site-files").uniqueResource is
+	const res = "admin:/site-files:"
 	type rule struct{ effect, perm string }
 	type check struct {
 		op   IdeOp
@@ -341,7 +347,7 @@ func TestPermissionExamples(t *testing.T) {
 		for _, ru := range ex.rules {
 			pb.CreatePolicies(perm.PolicyFor(perm.Anybody).WhoAre(ru.effect).ToDo(perm.Anything).On(res + ru.perm))
 		}
-		_, _, _, b := appWith(t, &invalid, pb)
+		_, _, _, b := appWith(t, &invalid, pb, "site")
 		for _, c := range ex.checks {
 			if got := b.AllowedOp(r, c.op, c.path); got != c.want {
 				t.Errorf("%s: %s %q: %v", ex.name, opPerms[c.op], c.path, got)
@@ -352,7 +358,7 @@ func TestPermissionExamples(t *testing.T) {
 	pb := perm.New()
 	pb.CreatePolicies(perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(res+"<static/*>:!move"),
 		perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(res+"@get"))
-	_, _, _, b := appWith(t, &invalid, pb)
+	_, _, _, b := appWith(t, &invalid, pb, "site")
 	needs := asks("rename", &ideBody{Path: "static/a.css", To: "templates/a.css"}, "")
 	allowed := true
 	for _, n := range needs {
@@ -360,5 +366,49 @@ func TestPermissionExamples(t *testing.T) {
 	}
 	if allowed {
 		t.Error("a move out of static/ allowed")
+	}
+}
+
+// In a group of the menu the page has two resources: by the group
+// ("admin:site/:/site-files:") and by its unique name, out of the group
+// ("admin:/site-files:"), which decides first — for the page's actions and
+// for the paths alike.
+func TestPermissionsByUniqueName(t *testing.T) {
+	var invalid error
+	r := httptest.NewRequest("GET", "/admin/site/site-files", nil)
+	const group, unique = "admin:site/:/site-files:", "admin:/site-files:"
+	policy := func(effect, res string) *perm.PolicyBuilder {
+		return perm.PolicyFor(perm.Anybody).WhoAre(effect).ToDo(perm.Anything).On(res)
+	}
+	_, _, _, b := appWith(t, &invalid, perm.New(), "site")
+	v := b.Page().Page().ActionVerifier(r, "!edit")
+	if v.Resource() != group || v.PreferredResource() != unique {
+		t.Fatalf("the resources: %q, %q", v.Resource(), v.PreferredResource())
+	}
+	for _, c := range []struct {
+		name     string
+		policies []*perm.PolicyBuilder
+		op       IdeOp
+		path     string
+		want     bool
+	}{
+		{"the group allows", []*perm.PolicyBuilder{policy(perm.Allowed, group+"!edit")}, IdeEdit, "a.css", true},
+		{"the unique name denies over the group", []*perm.PolicyBuilder{policy(perm.Allowed, group+"!edit"),
+			policy(perm.Denied, unique+"!edit")}, IdeEdit, "a.css", false},
+		{"the unique name allows over the group", []*perm.PolicyBuilder{policy(perm.Denied, group+"!edit"),
+			policy(perm.Allowed, unique+"!edit")}, IdeEdit, "a.css", true},
+		{"a path denied by the unique name, the group allowing", []*perm.PolicyBuilder{policy(perm.Allowed, group+"*"),
+			policy(perm.Denied, unique+"<config/*>:!edit")}, IdeEdit, "config/x.gad", false},
+		{"a path allowed by the unique name, nothing of the page", []*perm.PolicyBuilder{
+			policy(perm.Allowed, unique+"<static/*>:!edit")}, IdeEdit, "static/a.css", true},
+		{"a path allowed by the group, the unique name denying the page", []*perm.PolicyBuilder{
+			policy(perm.Allowed, group+"<static/*>:!edit"), policy(perm.Denied, unique+"!edit")}, IdeEdit, "static/a.css", false},
+	} {
+		pb := perm.New()
+		pb.CreatePolicies(c.policies...)
+		_, _, _, b := appWith(t, &invalid, pb, "site")
+		if got := b.AllowedOp(r, c.op, c.path); got != c.want {
+			t.Errorf("%s: %v", c.name, got)
+		}
 	}
 }

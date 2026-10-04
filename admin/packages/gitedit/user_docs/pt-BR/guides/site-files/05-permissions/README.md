@@ -46,14 +46,25 @@ servidor nem da rede dele.
 Qualquer permissão dos arquivos pode ser dada ou tirada **para um caminho e
 tudo abaixo dele**. O caminho vai no recurso, entre `<` e `>`, antes da ação;
 `*` é qualquer texto, então `<static/*>` é todo o `static/`, em todas as
-subpastas. O recurso desta página é
-`{%= admin.page("/site-files").resource %}`:
+subpastas.
+
+As permissões da página são declaradas de dois jeitos — **com o grupo**, onde o
+menu a põe agora, e **fora do grupo**, pelo nome único dela:
+
+| Declarada | Recurso |
+| --- | --- |
+| com o grupo | `{%= admin.page("/site-files").resource %}` |
+| fora do grupo | `{%= admin.page("/site-files").uniqueResource %}` |
+
+A **de fora do grupo tem prioridade**: com as duas, decide ela. E continua
+valendo se o menu mudar a página de grupo. Por isso as políticas abaixo são
+declaradas fora do grupo:
 
 | Política | Efeito |
 | --- | --- |
-| Negar `{%= admin.page("/site-files").resource %}<config/*>:!edit` | ninguém do papel edita em `config/` |
-| Permitir `{%= admin.page("/site-files").resource %}<static/*>:*` | o papel faz qualquer coisa em `static/` |
-| Permitir `{%= admin.page("/site-files").resource %}<static/img/*>:!import` | o papel importa imagens em `static/img/` |
+| Negar `{%= admin.page("/site-files").uniqueResource %}<config/*>:!edit` | ninguém do papel edita em `config/` |
+| Permitir `{%= admin.page("/site-files").uniqueResource %}<static/*>:*` | o papel faz qualquer coisa em `static/` |
+| Permitir `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!import` | o papel importa imagens em `static/img/` |
 
 Como decide, nesta ordem:
 
@@ -69,48 +80,48 @@ dos arquivos.
 ## Exemplos por caminho
 
 Cada linha é uma política de um papel: o efeito e a permissão, inteira — o
-escopo e a página como o admin os faz agora (mudam com o menu, e estas linhas
-também). Uma ação é `!create`, `!edit`, `!rename`, `!move`, `!delete` ou
+escopo e a página, fora do grupo (a mesma onde quer que o menu ponha a
+página). Com o grupo, as mesmas linhas começam por `{%= admin.page("/site-files").resource %}`. Uma ação é `!create`, `!edit`, `!rename`, `!move`, `!delete` ou
 `!import`; `!*` é todas elas, e `*` inclui ver (`@get`).
 
 **Só os estilos: muda `static/css/` e mais nada**
 
 | Efeito | Permissão |
 | --- | --- |
-| Permitir | `{%= admin.page("/site-files").resource %}@get` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/css/*>:!edit` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/css/*>:!create` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}@get` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/css/*>:!edit` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/css/*>:!create` |
 
 **Tudo, menos `config/`, que fica só para leitura**
 
 | Efeito | Permissão |
 | --- | --- |
-| Permitir | `{%= admin.page("/site-files").resource %}*` |
-| Negar | `{%= admin.page("/site-files").resource %}<config/*>:!*` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}*` |
+| Negar | `{%= admin.page("/site-files").uniqueResource %}<config/*>:!*` |
 
 **Imagens: importa só em `static/img/`**
 
 | Efeito | Permissão |
 | --- | --- |
-| Permitir | `{%= admin.page("/site-files").resource %}@get` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/img/*>:!import` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/img/*>:!create` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/img/*>:!edit` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}@get` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!import` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!create` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/img/*>:!edit` |
 
 **Os layouts nunca são excluídos nem movidos, pode o papel o que puder**
 
 | Efeito | Permissão |
 | --- | --- |
-| Negar | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!delete` |
-| Negar | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!move` |
-| Negar | `{%= admin.page("/site-files").resource %}<templates/layouts/*>:!rename` |
+| Negar | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!delete` |
+| Negar | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!move` |
+| Negar | `{%= admin.page("/site-files").uniqueResource %}<templates/layouts/*>:!rename` |
 
 **Renomear e mover só dentro de `static/`** — mover pede a permissão nos dois
 caminhos, então para fora de `static/` (ou para dentro) é negado:
 
 | Efeito | Permissão |
 | --- | --- |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/*>:!rename` |
-| Permitir | `{%= admin.page("/site-files").resource %}<static/*>:!move` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/*>:!rename` |
+| Permitir | `{%= admin.page("/site-files").uniqueResource %}<static/*>:!move` |
 
-**Um arquivo só**: o caminho inteiro, sem `*` — `{%= admin.page("/site-files").resource %}<config/layout_config.gad>:!edit`.
+**Um arquivo só**: o caminho inteiro, sem `*` — `{%= admin.page("/site-files").uniqueResource %}<config/layout_config.gad>:!edit`.

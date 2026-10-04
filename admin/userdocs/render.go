@@ -129,8 +129,9 @@ type renderer struct {
 
 // globals are the template's: admin.model, admin.action, admin.page and
 // admin.doc — each a record of its label, its href and a markdown link; a
-// page's also its menu, where it is in the main menu (PageMenuPath), and its
-// resource, of its permissions —;
+// page's also its menu, where it is in the main menu (PageMenuPath), its
+// resource, of its permissions, by its groups, and its uniqueResource, by its
+// unique name, out of the groups, which decides first —;
 // of the model of the document (the one of its node): admin.fields(form) —
 // the table of the fields of a form (FormNew, FormEdit, FormDetail) —,
 // admin.menu() — the menu of its detail —, admin.permissions() — the
@@ -227,13 +228,18 @@ func (r *renderer) globals() gad.Dict {
 			l["menu"] = gad.Str(PageMenuPath(ctx, page))
 			// the resource of its permissions, "admin:site/:/site-files:"
 			// ("" with no permissions)
-			res := ""
+			// and by its unique name, out of the groups, "admin:/site-files:"
+			res, unique := "", ""
 			if r.ctx.R != nil {
 				if v := page.ActionVerifier(r.ctx.R, ""); v != nil {
-					res = v.Resource()
+					res, unique = v.Resource(), v.PreferredResource()
 				}
 			}
+			if unique == "" {
+				unique = res // at the top of the menu: one and the same
+			}
 			l["resource"] = gad.Str(res)
+			l["uniqueResource"] = gad.Str(unique)
 			return l, nil
 		}),
 		"doc": gad.NewFunction("doc", func(c gad.Call) (gad.Object, error) {

@@ -38,6 +38,15 @@ name**, its own:
     admin:site/:seo/:seo_config:<7>:@edit     through the groups
     admin:seo_config:<7>:@edit                by the unique name
 
+A **page** too: its unique name is its path, so a permission of it may be
+declared **out of its group** — with no group at all:
+
+    admin:site/:/site-files:!edit             through the group site
+    admin:/site-files:!edit                   by the unique name (no group)
+
+The unique name goes on, part by part, to whatever is under it: a record, a
+field, an action, a path (`admin:/site-files:<static/*>:!edit`).
+
 `*` stands for anything: `admin:site/:*` is everything inside the group
 *site*; `admin:seo_config:*` everything of the part *seo_config*, wherever
 the menu puts it.
@@ -68,7 +77,11 @@ first `:`; the tree below shows each scope, the admin's as *Admin*.
    allow of any role allows.
 
 So a group may be allowed while one part of it is denied by its name, or a
-group denied while one part of it is allowed by its name.
+group denied while one part of it is allowed by its name. A permission
+declared **out of the group** (`admin:/site-files:!edit`) has priority over
+the one declared with the group (`admin:site/:/site-files:!edit`): with both,
+the one out of the group decides. And it keeps holding when the menu moves the
+part to another group — the one with the group no longer matches.
 
 ## The permissions of the admin
 
