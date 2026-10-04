@@ -16,15 +16,25 @@ import (
 
 // Mount is a directory of each request, shown in the WebDAV at /Name: the
 // draft of the user's files, say. Dir is the directory of the request;
-// Allowed says whether the request may read it, or write in it (write).
-// Hidden paths (".git") are not served.
+// Allowed says whether the request may do what it asks (MountAccess: the
+// path, the destination of a COPY or a MOVE, its method in r). Hidden paths
+// (".git") are not served.
 type Mount struct {
 	Name    string
 	Dir     func(r *http.Request) (string, error)
-	Allowed func(r *http.Request, write bool) bool
+	Allowed func(r *http.Request, a MountAccess) bool
 	// Hidden says whether the path, in the mount ("/.git/config"), is not
 	// served.
 	Hidden func(p string) bool
+}
+
+// MountAccess is what a request asks of a mount: its path in it ("/a.css"),
+// where a COPY or a MOVE puts it, in the same mount ("" otherwise), and whether
+// it changes the files (Write; r.Method says how).
+type MountAccess struct {
+	Path  string
+	Dest  string
+	Write bool
 }
 
 // AddMount adds a directory of each request to the WebDAV.
@@ -54,14 +64,30 @@ func (b *Builder) split(p string) (*Mount, string) {
 	return nil, p
 }
 
-// allowed says whether r may do its method on p: in a mount, as it says;
-// else by the page's permissions — reading @get, writing !write.
-func (b *Builder) allowed(r *http.Request, p string, write bool) bool {
+// allowed says whether r may do its method on p (to dest, of a COPY or a
+// MOVE: "" otherwise): in a mount, as it says — once, both paths told it, when
+// they are in the same one —; else by the page's permissions — reading @get,
+// writing !write.
+func (b *Builder) allowed(r *http.Request, p, dest string, write bool) bool {
 	if m, rest := b.split(p); m != nil {
 		if m.Hidden != nil && m.Hidden(rest) {
 			return false
 		}
-		return m.Allowed == nil || m.Allowed(r, write)
+		a := MountAccess{Path: rest, Write: write}
+		if dest != "" {
+			if dm, drest := b.split(dest); dm == m {
+				if m.Hidden != nil && m.Hidden(drest) {
+					return false
+				}
+				a.Dest = drest
+			} else if !b.allowed(r, dest, "", write) {
+				return false
+			}
+		}
+		return m.Allowed == nil || m.Allowed(r, a)
+	}
+	if dest != "" && !b.allowed(r, dest, "", write) {
+		return false
 	}
 	if b.page == nil {
 		return true
@@ -79,18 +105,16 @@ func (b *Builder) allowed(r *http.Request, p string, write bool) bool {
 func (b *Builder) permissions(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		write := writeMethods[r.Method]
-		paths := []string{strings.TrimPrefix(r.URL.Path, b.davPath)}
-		if dest := r.Header.Get("Destination"); dest != "" {
-			if u, err := url.Parse(dest); err == nil {
-				paths = append(paths, strings.TrimPrefix(u.Path, b.davPath))
+		p, dest := strings.TrimPrefix(r.URL.Path, b.davPath), ""
+		if d := r.Header.Get("Destination"); d != "" {
+			if u, err := url.Parse(d); err == nil {
+				dest = strings.TrimPrefix(u.Path, b.davPath)
 				write = true
 			}
 		}
-		for _, p := range paths {
-			if !b.allowed(r, p, write) {
-				http.Error(w, "permission denied", http.StatusForbidden)
-				return
-			}
+		if !b.allowed(r, p, dest, write) {
+			http.Error(w, "permission denied", http.StatusForbidden)
+			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), davRequestKey{}, r)))
 	})

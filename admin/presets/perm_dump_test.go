@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"strings"
@@ -160,5 +161,29 @@ func TestPermissionsDump(t *testing.T) {
 	}
 	if uniques < 10 {
 		t.Errorf("%d entries with a unique name", uniques)
+	}
+}
+
+// A page's action tells the permissions its title and description
+// (PermActionInfo); one without, none.
+func TestPagePermActionInfo(t *testing.T) {
+	page := HttpPage("/files").Methods(http.MethodGet).PermActions("!reset").
+		PermActionInfo("!create", func(context.Context) string { return "Create files" },
+			func(context.Context) string { return "Creates a file or a folder." })
+	var create, reset *PermNodeAction
+	for _, a := range pagePermActions(page) {
+		switch a.Name {
+		case "!create":
+			create = a
+		case "!reset":
+			reset = a
+		}
+	}
+	if create == nil || create.Title == nil || create.Title(context.Background()) != "Create files" ||
+		create.Description(context.Background()) != "Creates a file or a folder." {
+		t.Fatalf("!create: %+v", create)
+	}
+	if reset == nil || reset.Title != nil {
+		t.Errorf("!reset: %+v", reset)
 	}
 }

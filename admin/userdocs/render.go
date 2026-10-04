@@ -2,6 +2,7 @@ package userdocs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"path"
@@ -127,7 +128,9 @@ type renderer struct {
 }
 
 // globals are the template's: admin.model, admin.action, admin.page and
-// admin.doc — each a record of its label, its href and a markdown link —;
+// admin.doc — each a record of its label, its href and a markdown link; a
+// page's also its menu, where it is in the main menu (PageMenuPath), and its
+// resource, of its permissions —;
 // of the model of the document (the one of its node): admin.fields(form) —
 // the table of the fields of a form (FormNew, FormEdit, FormDetail) —,
 // admin.menu() — the menu of its detail —, admin.permissions() — the
@@ -220,7 +223,18 @@ func (r *renderer) globals() gad.Dict {
 			if page == nil {
 				return nil, fmt.Errorf("admin.page: no page %q", p)
 			}
-			return link(page.TTitle(ctx), page.FullPath()), nil
+			l := link(page.TTitle(ctx), page.FullPath())
+			l["menu"] = gad.Str(PageMenuPath(ctx, page))
+			// the resource of its permissions, "admin:site/:/site-files:"
+			// ("" with no permissions)
+			res := ""
+			if r.ctx.R != nil {
+				if v := page.ActionVerifier(r.ctx.R, ""); v != nil {
+					res = v.Resource()
+				}
+			}
+			l["resource"] = gad.Str(res)
+			return l, nil
 		}),
 		"doc": gad.NewFunction("doc", func(c gad.Call) (gad.Object, error) {
 			node, err := arg(c, 0, "admin.doc")
@@ -297,4 +311,15 @@ func (r *renderer) Render(src *Source, file, content string) (string, error) {
 // the language's directory: locale's, where it has it (AssetsHandler).
 func (b *Builder) AssetHref(src *Source, file, locale string) string {
 	return b.assetsPath + "/" + url.PathEscape(src.Package) + "/" + file + "?" + url.Values{"locale": {locale}}.Encode()
+}
+
+// PageMenuPath is where page is in the main menu, from the top: the titles of
+// its groups and its own, "Site Settings → Site files" — wherever the
+// application mounted it.
+func PageMenuPath(ctx context.Context, page *presets.HttpPageBuilder) string {
+	var parts []string
+	for g := page.GetMenuGroupBuilder(); g != nil; g = g.Parent() {
+		parts = append([]string{g.TTitle(ctx)}, parts...)
+	}
+	return strings.Join(append(parts, page.TTitle(ctx)), " → ")
 }

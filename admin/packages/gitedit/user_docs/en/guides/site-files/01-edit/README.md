@@ -8,7 +8,11 @@ only — the site and the drafts of the others stay as they are.
 
 - **Files**, on the right, is the editor: the tree of the files at its left,
   each file open in a tab. Save with the tab's button or Ctrl+S.
-- Create, rename and delete files and folders: from the tree's menu.
+- From the buttons above the tree: create files and folders; **upload** files
+  from the computer (or drop them on the tree) and **import from a URL** —
+  images and fonts too, as they are —; **rename**, **move** to another folder
+  and **delete** the open file. Each is shown only to whoever may do it (see
+  the step **Permissions**).
 - The editor formats and checks the `.gad`/`.gadx` files; it does not run
   code.
 - **Changes not committed**, on the left, lists each file changed since the
@@ -46,6 +50,7 @@ stretched, in the editor and in the Preview — not as text:
 The same draft can be opened from a computer, as a network drive, by the
 admin's **WebDAV** (its address is in **Administrator → File System**), in
 the folder `site-files`: edit the files in the program you like. The same
-permissions as in the admin hold — seeing asks `@get`, changing asks
-`!edit` —, and the `.git` folder is not shown. Committing and publishing
+permissions as in the admin hold — seeing asks `@get`; creating, editing,
+renaming, moving and deleting each its own, of each path (see the step
+**Permissions**) —, and the `.git` folder is not shown. Committing and publishing
 stay here, on this page.

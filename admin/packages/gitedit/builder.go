@@ -14,6 +14,7 @@ import (
 	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	"github.com/ory/ladon"
 )
 
 // The actions of the page, each its permission ("!commit", ActionPerm): the
@@ -24,8 +25,20 @@ const (
 	ActionPublish = "Publish"
 	ActionDiscard = "Discard"
 	ActionReset   = "Reset"
-	// ActionEdit is changing the files of the draft, by the IDE.
+	// ActionCreate is creating a file or a folder in the draft.
+	ActionCreate = "Create"
+	// ActionEdit is changing a file of the draft that is there.
 	ActionEdit = "Edit"
+	// ActionRename is renaming a file or a folder in its folder.
+	ActionRename = "Rename"
+	// ActionMove is moving a file or a folder to another folder.
+	ActionMove = "Move"
+	// ActionDelete is deleting a file or a folder of the draft.
+	ActionDelete = "Delete"
+	// ActionImport is bringing files into the draft: uploaded from the
+	// computer, or downloaded from a URL by the server. What it writes asks
+	// ActionCreate or ActionEdit too.
+	ActionImport = "Import"
 	// ActionPreview is seeing the site as the draft makes it.
 	ActionPreview = "Preview"
 )
@@ -71,16 +84,87 @@ type Builder struct {
 // Page is the page of the editor.
 func (b *Builder) Page() *presets.PageBuilder { return b.page }
 
-// Allowed says whether r may see the files of its draft, or change them
-// (write): the page's @get, and !edit — what the IDE asks, and whoever else
-// serves the draft (a WebDAV).
-func (b *Builder) Allowed(r *http.Request, write bool) bool {
-	perm := presets.PermGet
-	if write {
-		perm = presets.ActionPerm(ActionEdit)
-	}
+// opPerms are the permissions of the operations on the files.
+var opPerms = map[IdeOp]string{
+	IdeRead:   presets.PermGet,
+	IdeCreate: presets.ActionPerm(ActionCreate),
+	IdeEdit:   presets.ActionPerm(ActionEdit),
+	IdeRename: presets.ActionPerm(ActionRename),
+	IdeMove:   presets.ActionPerm(ActionMove),
+	IdeDelete: presets.ActionPerm(ActionDelete),
+	IdeImport: presets.ActionPerm(ActionImport),
+}
+
+// AllowedOp says whether r may do op on the file (or folder) at p, a path of
+// the draft ("static/css/a.css"; "" the files as a whole) — what the IDE asks,
+// and whoever else serves the draft (a WebDAV, DavAllowed).
+//
+// The path is a part of the resource, between "<" and ">":
+// "admin:…/site-files:<static/css/a.css>:!edit"; its policies are globs, so
+// "<static/*>" is all under static/, recursively. It decides with the page's
+// permission ("admin:…/site-files:!edit"):
+//
+//   - a deny of the path denies;
+//   - an allow of the page allows;
+//   - a deny of the page denies — whatever the path —;
+//   - no policy of the page: an allow of the path allows (a role that may
+//     edit only under static/: "…:<static/*>:!edit", nothing of the page).
+func (b *Builder) AllowedOp(r *http.Request, op IdeOp, p string) bool {
+	perm := opPerms[op]
 	ver := b.page.Page().ActionVerifier(r, perm)
-	return ver == nil || ver.Allowed()
+	if ver == nil {
+		return true
+	}
+	var pathErr error = ladon.ErrRequestDenied // no path: no policy of it
+	if p = strings.Trim(p, "/"); p != "" {
+		pathErr = b.page.Page().ActionVerifier(r, perm).On("<" + p + ">").IsAllowed()
+		if errors.Is(pathErr, ladon.ErrRequestForcefullyDenied) {
+			return false
+		}
+	}
+	switch pageErr := ver.IsAllowed(); {
+	case pageErr == nil:
+		return true
+	case errors.Is(pageErr, ladon.ErrRequestForcefullyDenied):
+		return false
+	}
+	return pathErr == nil
+}
+
+// DavAllowed says whether r, a request of a WebDAV on the draft, may do its
+// method on p (to dest, of a COPY or a MOVE: "" otherwise), paths of the draft
+// ("/static/a.css"): reading asks @get; PUT !create or !edit (the file is
+// there or not); MKCOL and COPY !create; DELETE !delete; MOVE !rename or
+// !move — on each path —; the rest of the writes (locks, properties) !edit.
+func (b *Builder) DavAllowed(r *http.Request, p, dest string, write bool) bool {
+	if !write {
+		return b.AllowedOp(r, IdeRead, p)
+	}
+	ok := func(op IdeOp, paths ...string) bool {
+		for _, q := range paths {
+			if !b.AllowedOp(r, op, q) {
+				return false
+			}
+		}
+		return true
+	}
+	switch r.Method {
+	case http.MethodPut:
+		d, _, err := b.Draft(r)
+		if err != nil {
+			return false
+		}
+		return ok(writeNeeds(d.Dir, p)[0].Op, p)
+	case "MKCOL":
+		return ok(IdeCreate, p)
+	case "COPY":
+		return ok(IdeRead, p) && ok(IdeCreate, dest)
+	case http.MethodDelete:
+		return ok(IdeDelete, p)
+	case "MOVE":
+		return ok(renameOp(p, dest), p, dest)
+	}
+	return ok(IdeEdit, p)
 }
 
 // Hidden says whether p, a path in a draft ("/.git/config"), is kept from
@@ -109,13 +193,31 @@ func (b *Builder) Install(p *presets.Builder) error {
 		Private().
 		Layout(b.pageFunc)
 	defer b.page.Build()
-	b.page.Page().PermActions(presets.ActionPerm(ActionEdit))
+	// the actions on the files, each its permission, named in the
+	// permissions as the messages say
+	for action, words := range map[string]func(*Messages) (string, string){
+		ActionCreate:  func(m *Messages) (string, string) { return m.CreateAction, m.CreateAction_Desc },
+		ActionEdit:    func(m *Messages) (string, string) { return m.EditAction, m.EditAction_Desc },
+		ActionRename:  func(m *Messages) (string, string) { return m.RenameAction, m.RenameAction_Desc },
+		ActionMove:    func(m *Messages) (string, string) { return m.MoveAction, m.MoveAction_Desc },
+		ActionDelete:  func(m *Messages) (string, string) { return m.DeleteAction, m.DeleteAction_Desc },
+		ActionImport:  func(m *Messages) (string, string) { return m.ImportAction, m.ImportAction_Desc },
+		ActionCommit:  func(m *Messages) (string, string) { return m.CommitAction, m.CommitAction_Desc },
+		ActionUpdate:  func(m *Messages) (string, string) { return m.UpdateAction, m.UpdateAction_Desc },
+		ActionPublish: func(m *Messages) (string, string) { return m.PublishAction, m.PublishAction_Desc },
+		ActionDiscard: func(m *Messages) (string, string) { return m.DiscardAction, m.DiscardAction_Desc },
+		ActionReset:   func(m *Messages) (string, string) { return m.ResetAction, m.ResetAction_Desc },
+	} {
+		b.page.Page().PermActionInfo(presets.ActionPerm(action),
+			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
+			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
+	}
 
 	b.setupActions(p)
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.Identity(r); return key }
-	b.ide.Allowed = func(r *http.Request, p IdePerm) bool { return b.Allowed(r, p == IdeWrite) }
+	b.ide.Allowed = b.AllowedOp
 	// the IDE, in a frame: its app and its API, asking the page's permissions
 	b.idePage = presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
 	p.PagesRegistrator().AddHttpPage(b.idePage)
@@ -127,7 +229,9 @@ func (b *Builder) Install(p *presets.Builder) error {
 	})
 
 	if b.PreviewPath != "" {
-		b.page.Page().PermActions(presets.ActionPerm(ActionPreview))
+		b.page.Page().PermActionInfo(presets.ActionPerm(ActionPreview),
+			func(ctx context.Context) string { return GetMessages(ctx).PreviewAction },
+			func(ctx context.Context) string { return GetMessages(ctx).PreviewAction_Desc })
 		prefix := strings.TrimSuffix(p.GetURIPrefix(), "/") + b.PreviewPath
 		if b.PreviewURL == "" {
 			b.PreviewURL = prefix + "/"

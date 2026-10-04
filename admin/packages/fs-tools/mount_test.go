@@ -22,7 +22,9 @@ func TestWebDavPermissions(t *testing.T) {
 	os.MkdirAll(filepath.Join(drafts, "ana", ".git"), 0o755)
 	os.WriteFile(filepath.Join(drafts, "ana", ".git", "config"), []byte("x"), 0o644)
 	os.WriteFile(filepath.Join(drafts, "ana", "index.gadx"), []byte("old"), 0o644)
+	os.MkdirAll(filepath.Join(drafts, "ana", "sub"), 0o755)
 
+	var asked []string // what the mount was asked: "METHOD path dest"
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	pb := perm.New().AllowAll()
 	pb.CreatePolicies(perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On("admin:/fs-tools:!write"))
@@ -39,7 +41,10 @@ func TestWebDavPermissions(t *testing.T) {
 	b.AddMount(&Mount{
 		Name:    "site-files",
 		Dir:     func(r *http.Request) (string, error) { return filepath.Join(drafts, r.Header.Get("X-User")), nil },
-		Allowed: func(r *http.Request, write bool) bool { return !write || r.Header.Get("X-Edit") == "1" },
+		Allowed: func(r *http.Request, a MountAccess) bool {
+			asked = append(asked, r.Method+" "+a.Path+" "+a.Dest)
+			return !a.Write || r.Header.Get("X-Edit") == "1"
+		},
 		Hidden: func(p string) bool {
 			return p == "/.git" || strings.HasPrefix(p, "/.git/")
 		},
@@ -85,6 +90,15 @@ func TestWebDavPermissions(t *testing.T) {
 	if w := do("PROPFIND", "/site-files/", "", "Depth", "1"); strings.Contains(w.Body.String(), ".git") {
 		t.Errorf(".git listed: %s", w.Body.String())
 	}
+	// a move in the draft: the mount told both paths, once
+	asked = nil
+	if w := do("MOVE", "/site-files/index.gadx", "", "Destination", b.davPath+"/site-files/sub/index.gadx", "X-Edit", "1"); w.Code >= 300 {
+		t.Errorf("moving in the draft: %d", w.Code)
+	}
+	if len(asked) != 1 || asked[0] != "MOVE /index.gadx /sub/index.gadx" {
+		t.Errorf("the mount was asked %q", asked)
+	}
+	do("MOVE", "/site-files/sub/index.gadx", "", "Destination", b.davPath+"/site-files/index.gadx", "X-Edit", "1")
 	// nothing moves out of the draft
 	if w := do("MOVE", "/site-files/index.gadx", "", "Destination", b.davPath+"/data/x", "X-Edit", "1"); w.Code < 300 {
 		t.Errorf("moved out of the draft: %d", w.Code)

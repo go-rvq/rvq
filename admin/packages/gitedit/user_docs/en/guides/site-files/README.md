@@ -1,7 +1,7 @@
 # Site files
 
 How to edit the files the site is made of — templates, styles, scripts,
-images — from the admin, in **Site Settings → Site files**, leaving the site
+images — from the admin, in **{%= admin.page("/site-files").menu %}**, leaving the site
 as it is until you publish; and how that goes along with whoever develops the
 site on their own computer.
 

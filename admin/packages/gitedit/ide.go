@@ -5,27 +5,50 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/gad-lang/gad/web/ide"
 )
 
-// IdePerm is what an operation of the IDE asks: to see the files (read) or
-// to change them (write).
-type IdePerm int
+// IdeOp is what an operation of the IDE asks: to see the files, or one of
+// the ways of changing them — each its own permission (Builder.AllowedOp).
+type IdeOp int
 
 const (
-	IdeRead IdePerm = iota
-	IdeWrite
+	// IdeRead is seeing the files.
+	IdeRead IdeOp = iota
+	// IdeCreate is creating a file or a folder that is not there.
+	IdeCreate
+	// IdeEdit is changing a file that is there.
+	IdeEdit
+	// IdeRename is renaming a file or a folder in its folder.
+	IdeRename
+	// IdeMove is moving a file or a folder to another folder.
+	IdeMove
+	// IdeDelete is deleting a file or a folder.
+	IdeDelete
+	// IdeImport is bringing files in — uploaded, or downloaded from a URL by
+	// the server —: what it writes asks IdeCreate (a new file) or IdeEdit
+	// (one that is there) too.
+	IdeImport
 )
 
-// ideOps are the operations of the IDE served, each with what it asks; the
-// others — running, evaluating, debugging code, fetching URLs into the files
-// — run code or reach out from the server, and are not served.
-var ideOps = map[string]struct {
-	read, write bool // by method: GET reads; PUT/POST of a write op writes
-}{
+// IdeOps are the ways of changing the files, by the name the IDE is told
+// them (the workspace's "actions").
+var IdeOps = map[string]IdeOp{
+	"create": IdeCreate, "edit": IdeEdit, "rename": IdeRename, "move": IdeMove, "delete": IdeDelete,
+	"import": IdeImport,
+}
+
+// ideOps are the operations of the IDE served — the files' and the language's
+// —, whether a GET reads them, and whether another method changes the files
+// (what it asks is said by the request: ServeHTTP). The others — running,
+// evaluating, debugging code — run code, and are not served.
+var ideOps = map[string]struct{ read, write bool }{
 	"workspace": {read: true},
 	"tree":      {read: true},
 	"file":      {read: true, write: true}, // GET ?path / PUT
@@ -38,19 +61,35 @@ var ideOps = map[string]struct {
 	"mkdir":     {write: true},
 	"delete":    {write: true},
 	"rename":    {write: true},
+	"upload":    {write: true},
+	"fetch":     {write: true},
+}
+
+// ideBody is what the IDE's writes say of the paths: the file, where a
+// rename puts it, the files of an upload.
+type ideBody struct {
+	Path  string `json:"path"`
+	To    string `json:"to"`
+	Files []struct {
+		Path string `json:"path"`
+	} `json:"files"`
 }
 
 // IDE serves the API of the gad IDE (web/ide) on the draft of each editor:
 // the operations on its files and the language's, not the ones that run
-// code; no path in .git.
+// code; no path in .git; each change asking its permission.
 type IDE struct {
 	repo *Repo
 	// Name is the workspace's name the IDE shows.
 	Name string
 	// DraftKey is the draft of the request (its user's).
 	DraftKey func(r *http.Request) string
-	// Allowed says whether the request may do what op asks.
-	Allowed func(r *http.Request, p IdePerm) bool
+	// Allowed says whether the request may do op on the file at path ("static/a.css";
+	// "" the files as a whole).
+	Allowed func(r *http.Request, op IdeOp, path string) bool
+	// HTTPClient downloads the URLs imported (fetch); one that reaches no
+	// address of the server's own network (SafeHTTPClient) when not set.
+	HTTPClient *http.Client
 
 	mu      sync.Mutex
 	servers map[string]*ide.Server
@@ -75,6 +114,10 @@ func (h *IDE) server(r *http.Request) (*ide.Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.HTTPClient = h.HTTPClient
+	if s.HTTPClient == nil {
+		s.HTTPClient = SafeHTTPClient()
+	}
 	h.servers[key] = s
 	return s, nil
 }
@@ -92,6 +135,69 @@ func ideError(w http.ResponseWriter, status int, msg string) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
+// cleanPath is p as a path of the workspace: from its root, no `..` out of it.
+func cleanPath(p string) string {
+	return path.Clean("/" + strings.ReplaceAll(p, `\`, "/"))
+}
+
+// renameOp is what a rename of from to to asks: a move when it changes the
+// folder.
+func renameOp(from, to string) IdeOp {
+	if path.Dir(cleanPath(from)) != path.Dir(cleanPath(to)) {
+		return IdeMove
+	}
+	return IdeRename
+}
+
+// ideNeed is an operation asked on the file at Path (of the draft, "static/a.css").
+type ideNeed struct {
+	Op   IdeOp
+	Path string
+}
+
+// relPath is p as a path of the draft: "static/a.css".
+func relPath(p string) string { return strings.TrimPrefix(cleanPath(p), "/") }
+
+// writeNeeds are what writing the files at paths asks, in root: IdeCreate for
+// one that is not there, IdeEdit for one that is.
+func writeNeeds(root string, paths ...string) (needs []ideNeed) {
+	for _, p := range paths {
+		op := IdeCreate
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(cleanPath(p)))); err == nil {
+			op = IdeEdit
+		}
+		needs = append(needs, ideNeed{op, relPath(p)})
+	}
+	return
+}
+
+// asks are what the write of op asks, its body read (b), in root: each
+// operation on the files it touches — a rename on both its paths, an import
+// what it writes too.
+func asks(op string, b *ideBody, root string) []ideNeed {
+	switch op {
+	case "file", "mkdir":
+		return writeNeeds(root, b.Path)
+	case "config":
+		return []ideNeed{{IdeEdit, ""}}
+	case "delete":
+		return []ideNeed{{IdeDelete, relPath(b.Path)}}
+	case "rename":
+		o := renameOp(b.Path, b.To)
+		return []ideNeed{{o, relPath(b.Path)}, {o, relPath(b.To)}}
+	case "upload":
+		var needs []ideNeed
+		for _, f := range b.Files {
+			needs = append(needs, ideNeed{IdeImport, relPath(f.Path)})
+			needs = append(needs, writeNeeds(root, f.Path)...)
+		}
+		return needs
+	case "fetch":
+		return append([]ideNeed{{IdeImport, relPath(b.Path)}}, writeNeeds(root, b.Path)...)
+	}
+	return nil
+}
+
 // ServeHTTP serves /api/ide/<op> (its prefix stripped).
 func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	op, ok := strings.CutPrefix(r.URL.Path, "/api/ide/")
@@ -100,21 +206,18 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ideError(w, http.StatusNotFound, "not available")
 		return
 	}
-	need := IdeRead
-	if r.Method != http.MethodGet {
-		if !spec.write {
-			if !spec.read {
-				ideError(w, http.StatusMethodNotAllowed, "method not allowed")
-				return
-			}
-		} else {
-			need = IdeWrite
-		}
-	} else if !spec.read {
+	write := r.Method != http.MethodGet
+	if (write && !spec.write && !spec.read) || (!write && !spec.read) {
 		ideError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	if h.Allowed != nil && !h.Allowed(r, need) {
+	allowed := func(op IdeOp, p string) bool { return h.Allowed == nil || h.Allowed(r, op, p) }
+	// a file read is asked of it; the rest, of the files as a whole
+	readPath := ""
+	if op == "file" && !write {
+		readPath = relPath(r.URL.Query().Get("path"))
+	}
+	if !allowed(IdeRead, readPath) {
 		ideError(w, http.StatusForbidden, "permission denied")
 		return
 	}
@@ -123,19 +226,22 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ideError(w, http.StatusForbidden, "path not allowed")
 		return
 	}
-	if r.Body != nil && r.Method != http.MethodGet {
-		body, err := io.ReadAll(io.LimitReader(r.Body, 16<<20))
+	var b ideBody
+	if r.Body != nil && write {
+		body, err := io.ReadAll(io.LimitReader(r.Body, ide.MaxUploadBody))
 		if err != nil {
 			ideError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		var fields map[string]any
-		if json.Unmarshal(body, &fields) == nil {
-			for _, k := range []string{"path", "to"} {
-				if s, _ := fields[k].(string); inGit(s) {
-					ideError(w, http.StatusForbidden, "path not allowed")
-					return
-				}
+		_ = json.Unmarshal(body, &b)
+		paths := []string{b.Path, b.To}
+		for _, f := range b.Files {
+			paths = append(paths, f.Path)
+		}
+		for _, p := range paths {
+			if inGit(p) {
+				ideError(w, http.StatusForbidden, "path not allowed")
+				return
 			}
 		}
 		r.Body = io.NopCloser(bytes.NewReader(body))
@@ -145,10 +251,23 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ideError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if write && spec.write {
+		for _, need := range asks(op, &b, s.Root) {
+			if !allowed(need.Op, need.Path) {
+				ideError(w, http.StatusForbidden, "permission denied")
+				return
+			}
+		}
+	}
 	if op == "workspace" {
-		// not the path on the server
+		// not the path on the server; what the user may do with the files
+		actions := map[string]bool{}
+		for name, o := range IdeOps {
+			actions[name] = allowed(o, "")
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"root": "/", "name": h.Name, "openFile": "", "compute": "server"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"root": "/", "name": h.Name, "openFile": "", "compute": "server",
+			"actions": actions})
 		return
 	}
 	s.Handler().ServeHTTP(w, r)

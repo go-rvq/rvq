@@ -438,7 +438,8 @@ func pagePermActions(page *HttpPageBuilder) (actions []*PermNodeAction) {
 	for _, name := range page.permActions {
 		if !seen[name] {
 			seen[name] = true
-			actions = append(actions, &PermNodeAction{Name: name})
+			info := page.permActionInfo[name]
+			actions = append(actions, &PermNodeAction{Name: name, Title: info.title, Description: info.description})
 		}
 	}
 	sortActions(actions)

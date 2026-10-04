@@ -28,6 +28,16 @@ import (
 // app is the admin with the editor of the site's files, the policies given.
 func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Handler, *Repo, string) {
 	t.Helper()
+	pb := perm.New().AllowAll()
+	pb.CreatePolicies(policies...)
+	h, repo, served, _ := appWith(t, invalid, pb)
+	return h, repo, served
+}
+
+// appWith is the admin with the editor of the site's files, by the
+// permissions pb; its builder too.
+func appWith(t *testing.T, invalid *error, pb *perm.Builder) (http.Handler, *Repo, string, *Builder) {
+	t.Helper()
 	repo, served := site(t)
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
@@ -35,8 +45,6 @@ func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Ha
 		t.Fatal(err)
 	}
 	p.DataOperator(gorm2op.DataOperator(db))
-	pb := perm.New().AllowAll()
-	pb.CreatePolicies(policies...)
 	p.Permission(pb.SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
 	b := &Builder{Repo: repo,
 		Identity: func(*http.Request) (string, Author) { return "u1", Author{"Ana", "ana@x"} },
@@ -52,7 +60,7 @@ func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Ha
 	}
 	mux := http.NewServeMux()
 	p.Build(mux)
-	return mux, repo, served
+	return mux, repo, served, b
 }
 
 func doAction(h http.Handler, action string, query [][2]string, form [][2]string) *httptest.ResponseRecorder {
@@ -203,6 +211,90 @@ func TestBuilderIDEAssets(t *testing.T) {
 		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
 		if w.Code != want {
 			t.Errorf("%s: %d, want %d", path, w.Code, want)
+		}
+	}
+}
+
+// The permissions of a path, recursive ("<static/*>"), with the page's: a deny
+// of the path denies; an allow of the page allows; a deny of the page denies,
+// whatever the path; with nothing of the page, an allow of the path allows.
+func TestAllowedOpPaths(t *testing.T) {
+	var invalid error
+	r := httptest.NewRequest("GET", "/admin/site-files", nil)
+	policy := func(effect, res string) *perm.PolicyBuilder {
+		return perm.PolicyFor(perm.Anybody).WhoAre(effect).ToDo(perm.Anything).On(res)
+	}
+
+	// everything allowed, config/ denied for editing; creating denied on the
+	// page, allowed under static/ — the page's deny wins
+	pb := perm.New().AllowAll()
+	pb.CreatePolicies(policy(perm.Denied, "admin:/site-files:<config/*>:!edit"),
+		policy(perm.Denied, "admin:/site-files:!create"), policy(perm.Allowed, "admin:/site-files:<static/*>:!create"))
+	_, _, _, b := appWith(t, &invalid, pb)
+	for _, c := range []struct {
+		op   IdeOp
+		path string
+		want bool
+	}{
+		{IdeEdit, "config/layout_config.gad", false},
+		{IdeEdit, "config/sub/deep.gad", false}, // recursive
+		{IdeEdit, "templates/main.gad", true},
+		{IdeEdit, "", true},
+		{IdeCreate, "static/new.css", false},
+		{IdeCreate, "templates/new.gadx", false},
+	} {
+		if got := b.AllowedOp(r, c.op, c.path); got != c.want {
+			t.Errorf("%s %q: %v", opPerms[c.op], c.path, got)
+		}
+	}
+
+	// only under static/: nothing of the page, editing allowed of static/
+	pb = perm.New()
+	pb.CreatePolicies(policy(perm.Allowed, "admin:/site-files:@get"),
+		policy(perm.Allowed, "admin:/site-files:<static/*>:!edit"))
+	_, _, _, b = appWith(t, &invalid, pb)
+	for p, want := range map[string]bool{"static/css/a.css": true, "static/x": true, "templates/main.gad": false, "": false} {
+		if got := b.AllowedOp(r, IdeEdit, p); got != want {
+			t.Errorf("only static/: %q: %v", p, got)
+		}
+	}
+	if b.AllowedOp(r, IdeDelete, "static/css/a.css") {
+		t.Error("only static/: deleting allowed with editing")
+	}
+	if !b.AllowedOp(r, IdeRead, "templates/main.gad") {
+		t.Error("only static/: reading denied")
+	}
+}
+
+// The WebDAV on the draft asks what the IDE asks, by its method.
+func TestDavAllowed(t *testing.T) {
+	var invalid error
+	pb := perm.New()
+	allow := func(res string) *perm.PolicyBuilder {
+		return perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On(res)
+	}
+	pb.CreatePolicies(allow("admin:/site-files:@get"), allow("admin:/site-files:!edit"), allow("admin:/site-files:!rename"))
+	_, repo, _, b := appWith(t, &invalid, pb)
+	if _, err := repo.Draft(context.Background(), "u1"); err != nil {
+		t.Fatal(err)
+	}
+	req := func(method string) *http.Request { return httptest.NewRequest(method, "/x", nil) }
+	for _, c := range []struct {
+		method, p, dest string
+		write, want     bool
+	}{
+		{"GET", "/index.gadx", "", false, true},
+		{"PUT", "/index.gadx", "", true, true}, // there: !edit
+		{"PUT", "/new.gadx", "", true, false},  // not there: !create
+		{"MKCOL", "/dir", "", true, false},     // !create
+		{"DELETE", "/index.gadx", "", true, false},
+		{"MOVE", "/index.gadx", "/main.gadx", true, true},       // in its folder: !rename
+		{"MOVE", "/index.gadx", "/sub/index.gadx", true, false}, // to another: !move
+		{"COPY", "/index.gadx", "/copy.gadx", true, false},      // !create
+		{"PROPPATCH", "/index.gadx", "", true, true},            // !edit
+	} {
+		if got := b.DavAllowed(req(c.method), c.p, c.dest, c.write); got != c.want {
+			t.Errorf("%s %s %s: %v", c.method, c.p, c.dest, got)
 		}
 	}
 }

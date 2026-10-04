@@ -1,13 +1,16 @@
 package userdocs
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/gad-lang/gad"
+	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -352,5 +355,21 @@ func TestCustom(t *testing.T) {
 	forgetTitles()
 	if got := tree(); got[0].Title != "Primeiros passos" {
 		t.Errorf("title in pt-BR %q", got[0].Title)
+	}
+}
+
+// A page's menu is where the application mounted it: its group's title and
+// its own; with no group, its own alone.
+func TestPageMenuPath(t *testing.T) {
+	p := presets.New(i18n.New())
+	g := p.MenuGroup("site").Title("Site Settings")
+	page := presets.HttpPage("/site-files").TitleFunc(func(context.Context) string { return "Site files" })
+	p.PagesRegistrator().AddHttpPage(page)
+	if got := PageMenuPath(context.Background(), page); got != "Site files" {
+		t.Errorf("no group: %q", got)
+	}
+	page.SetMenuGroup(g)
+	if got := PageMenuPath(context.Background(), page); got != "Site Settings → Site files" {
+		t.Errorf("in a group: %q", got)
 	}
 }

@@ -1,7 +1,7 @@
 # Arquivos do site
 
 Como editar os arquivos de que o site é feito — templates, estilos, scripts,
-imagens — pelo admin, em **Configurações do Site → Arquivos do site**, sem
+imagens — pelo admin, em **{%= admin.page("/site-files").menu %}**, sem
 mexer no site até a hora de publicar; e como isso convive com quem
 desenvolve o site no próprio computador.
 

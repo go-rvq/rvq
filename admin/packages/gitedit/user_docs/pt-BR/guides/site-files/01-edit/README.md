@@ -8,7 +8,11 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 
 - **Arquivos**, à direita, é o editor: a árvore dos arquivos à esquerda dele,
   cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
-- Criar, renomear e apagar arquivos e pastas: pelo menu da árvore.
+- Pelos botões acima da árvore: criar arquivos e pastas; fazer **upload** de
+  arquivos do computador (ou soltá-los na árvore) e **importar de uma URL** —
+  imagens e fontes também, como são —; **renomear**, **mover** para outra
+  pasta e **excluir** o arquivo aberto. Cada um só aparece para quem pode
+  fazê-lo (veja o passo **Permissões**).
 - O editor formata e confere os arquivos `.gad`/`.gadx`; ele não executa
   código.
 - **Alterações sem commit**, à esquerda, lista cada arquivo mudado desde o
@@ -47,6 +51,7 @@ distorcer, no editor e no Preview — não como texto:
 O mesmo rascunho pode ser aberto de um computador, como uma unidade de rede,
 pelo **WebDAV** do admin (o endereço está em **Administrador → Sistema de
 Arquivos**), na pasta `site-files`: edite os arquivos no programa que
-preferir. Valem as mesmas permissões do admin — ver pede `@get`, mudar pede
-`!edit` —, e a pasta `.git` não aparece. O commit e a publicação continuam
+preferir. Valem as mesmas permissões do admin — ver pede `@get`; criar, editar,
+renomear, mover e excluir, cada um a sua, de cada caminho (veja o passo
+**Permissões**) —, e a pasta `.git` não aparece. O commit e a publicação continuam
 aqui, nesta página.

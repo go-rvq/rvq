@@ -34,6 +34,8 @@ type HttpPageBuilder struct {
 	// permActions are the actions of the page, each its permission
 	// ("!publish"): asked by ActionVerifier, listed in the dump
 	permActions []string
+	// permActionInfo are the titles and descriptions of permActions
+	permActionInfo map[string]permActionInfo
 	// verified says the handler checks the verifier itself
 	// (HandlerFromPageFunc); a plain Handler is wrapped in the check on Build
 	verified    bool
@@ -270,6 +272,23 @@ func (b *HttpPageBuilder) PermActions(perms ...string) *HttpPageBuilder {
 			b.permActions = append(b.permActions, p)
 		}
 	}
+	return b
+}
+
+// permActionInfo is how the permissions call an action of the page.
+type permActionInfo struct {
+	title, description func(ctx context.Context) string
+}
+
+// PermActionInfo gives the action perm of the page ("!publish", registered by
+// PermActions) its title and its description in the permissions (the tree of
+// the roles, the documentation); without, its name humanized.
+func (b *HttpPageBuilder) PermActionInfo(perm string, title, description func(ctx context.Context) string) *HttpPageBuilder {
+	b.PermActions(perm)
+	if b.permActionInfo == nil {
+		b.permActionInfo = map[string]permActionInfo{}
+	}
+	b.permActionInfo[perm] = permActionInfo{title, description}
 	return b
 }
 
