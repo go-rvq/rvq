@@ -20,7 +20,7 @@ type Messages struct {
 	Denied                   string `i18n:"hint='Effect of a permission that denies what it names.'"`
 	DefaultDbpolicy          string `i18n:"hint='Name of a permission of a role.'"`
 	DefaultDbpolicyActions   string `i18n:"hint='Label of the actions a permission of a role applies to.'"`
-	PermissionsHelp          string `i18n:"hint='Title of the help button of a role\'s permissions: it opens the documentation of policies and permissions.'"`
+	PermissionsHelp          string `i18n:"hint='Title of the help button of the permissions of a role: it opens the documentation of policies and permissions.'"`
 }
 
 var (
