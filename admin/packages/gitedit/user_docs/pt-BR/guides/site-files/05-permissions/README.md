@@ -16,6 +16,8 @@ Usuário** (veja as políticas e permissões). A página é
 | Descartar | `!discard` |
 | Recomeçar | `!reset` |
 | Pré-visualizar | `!preview` |
+| Compartilhar o seu rascunho (e revogar) | `!share` |
+| Ver e acessar o rascunho de qualquer usuário, revogar qualquer compartilhamento | `!drafts` |
 
 Assim, publicar pode ficar com menos gente que editar: quem edita faz o
 commit, e outra pessoa, que revisa, publica.

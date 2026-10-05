@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,7 +135,7 @@ func (r *Repo) Draft(ctx context.Context, key string) (*Draft, error) {
 	if key == "" || strings.ContainsAny(key, `/\.`) {
 		return nil, fmt.Errorf("gitedit: invalid draft key %q", key)
 	}
-	d := &Draft{Dir: filepath.Join(r.DraftsDir, key), repo: r}
+	d := &Draft{Dir: filepath.Join(r.DraftsDir, key), Key: key, repo: r}
 	if _, err := os.Stat(filepath.Join(d.Dir, ".git")); err == nil {
 		return d, nil
 	}
@@ -154,9 +155,45 @@ func (r *Repo) Draft(ctx context.Context, key string) (*Draft, error) {
 
 // Draft is the clone an editor works on.
 type Draft struct {
-	Dir  string
+	Dir string
+	// Key is its owner's (the user whose draft it is).
+	Key  string
 	repo *Repo
 }
+
+// editorsFile holds the keys of the users who changed the files of the draft
+// since its last commit, one a line: its co-authors.
+const editorsFile = "rvq-editors"
+
+// NoteEditor notes that the user of key changed the files of the draft (a
+// co-author of its next commit).
+func (d *Draft) NoteEditor(key string) error {
+	if key == "" || slices.Contains(d.Editors(), key) {
+		return nil
+	}
+	f, err := os.OpenFile(filepath.Join(d.Dir, ".git", editorsFile), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(key + "\n")
+	return err
+}
+
+// Editors are the keys of the users who changed the files of the draft since
+// its last commit (NoteEditor), in the order they did.
+func (d *Draft) Editors() (keys []string) {
+	b, _ := os.ReadFile(filepath.Join(d.Dir, ".git", editorsFile))
+	for _, k := range strings.Split(string(b), "\n") {
+		if k = strings.TrimSpace(k); k != "" && !slices.Contains(keys, k) {
+			keys = append(keys, k)
+		}
+	}
+	return
+}
+
+// clearEditors forgets the editors: a commit took their changes.
+func (d *Draft) clearEditors() { _ = os.Remove(filepath.Join(d.Dir, ".git", editorsFile)) }
 
 // Change is a file changed in the draft, not committed: its status (git
 // porcelain: "M", "A", "D", "R", "??") and path.
@@ -218,6 +255,7 @@ func (d *Draft) Commit(ctx context.Context, message string, author Author) (stri
 		"commit", "--quiet", "--message", message); err != nil {
 		return "", err
 	}
+	d.clearEditors()
 	out, err := git(ctx, d.Dir, "rev-parse", "--short", "HEAD")
 	return strings.TrimSpace(out), err
 }

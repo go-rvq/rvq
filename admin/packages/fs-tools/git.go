@@ -69,6 +69,8 @@ func (rc *GitReceive) Git(ctx context.Context, args ...string) (string, error) {
 // their login.
 type GitRepo struct {
 	// Name is its name in the URL: "site-files" is <admin>/site-files.git.
+	// Ending in "/{key}", it is a repository of each key: "drafts/{key}" is
+	// <admin>/drafts/<key>.git, the key told by GitRepoKey.
 	Name string
 	// Dir is the repository of the request (its .git, or the directory
 	// holding it): one of each user, say.
@@ -155,13 +157,80 @@ func (b *Builder) GitHandler() http.Handler {
 func (b *Builder) gitHandler() http.Handler {
 	mux := http.NewServeMux()
 	for _, repo := range b.git.repos {
-		var h http.Handler = b.git.repoHandler(repo, b.GitPath(repo.Name))
-		for i := len(repo.Middleware) - 1; i >= 0; i-- {
-			h = repo.Middleware[i](h)
+		wrap := func(h http.Handler) http.Handler {
+			for i := len(repo.Middleware) - 1; i >= 0; i-- {
+				h = repo.Middleware[i](h)
+			}
+			return h
 		}
-		mux.Handle(b.GitPath(repo.Name)+"/", h)
+		if base, ok := strings.CutSuffix(repo.Name, "/"+GitKeyPattern); ok {
+			// a repository of each key: <admin>/<base>/<key>.git/…
+			prefix := strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/" + base + "/"
+			mux.Handle(prefix, wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				seg, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, prefix), "/")
+				key, ok := strings.CutSuffix(seg, ".git")
+				if !ok || !validGitKey(key) {
+					http.NotFound(w, r)
+					return
+				}
+				r = r.WithContext(context.WithValue(r.Context(), gitKeyCtx{}, key))
+				b.git.repoHandler(repo, prefix+seg).ServeHTTP(w, r)
+			})))
+			continue
+		}
+		mux.Handle(b.GitPath(repo.Name)+"/", wrap(b.git.repoHandler(repo, b.GitPath(repo.Name))))
 	}
 	return mux
+}
+
+// GitMountPaths are the paths GitHandler serves, each ending in "/": a
+// repository's (<admin>/<name>.git/), or the folder of the repositories of
+// each key (<admin>/<base>/) — to mount it on another mux.
+func (b *Builder) GitMountPaths() (paths []string) {
+	if b.git == nil {
+		return nil
+	}
+	for _, repo := range b.git.repos {
+		if base, ok := strings.CutSuffix(repo.Name, "/"+GitKeyPattern); ok {
+			paths = append(paths, strings.TrimSuffix(b.p.GetURIPrefix(), "/")+"/"+base+"/")
+			continue
+		}
+		paths = append(paths, b.GitPath(repo.Name)+"/")
+	}
+	return
+}
+
+// GitKeyPattern ends the Name of a repository of each key (GitRepo).
+const GitKeyPattern = "{key}"
+
+type gitKeyCtx struct{}
+
+// GitRepoKey is the key of the repository of r, of a GitRepo of each key
+// ("drafts/{key}": the <key> of <admin>/drafts/<key>.git); "" for one of its
+// own.
+func GitRepoKey(r *http.Request) string {
+	k, _ := r.Context().Value(gitKeyCtx{}).(string)
+	return k
+}
+
+// GitKeyPath is the path of the repository of key of name ("drafts/{key}"):
+// <admin>/drafts/<key>.git.
+func (b *Builder) GitKeyPath(name, key string) string {
+	return b.GitPath(strings.Replace(name, GitKeyPattern, key, 1))
+}
+
+// validGitKey says whether key names a repository: letters, digits, "-"
+// and "_", nothing that walks a path.
+func validGitKey(key string) bool {
+	if key == "" || len(key) > 128 {
+		return false
+	}
+	for _, c := range key {
+		if !(c == '-' || c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
+			return false
+		}
+	}
+	return true
 }
 
 // gitService is what a request of the smart protocol asks, by its path:

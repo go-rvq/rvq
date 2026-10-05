@@ -43,8 +43,10 @@ type HttpPageBuilder struct {
 	menuIcon    string
 	postBuild   []func(ph *PageHandler)
 	pageHandler *PageHandler
-	preWraper   web.PageFuncWrapper
-	wraper      web.PageFuncWrapper
+	// parent is the page this one is under (Sub): its group, its title
+	parent    *HttpPageBuilder
+	preWraper web.PageFuncWrapper
+	wraper    web.PageFuncWrapper
 }
 
 func HttpPage(pth string) *HttpPageBuilder {
@@ -79,6 +81,20 @@ func (b *HttpPageBuilder) GetHandler() http.Handler {
 // MenuGroup puts the page in the group of that name, creating the group when it
 // does not exist yet. A page built before it is registered has no builder to
 // resolve the name against, so the name waits until registration.
+// Sub is a page under b, at b's path and sub ("/u/{user}", a pattern of
+// http.ServeMux): in b's group of the menu wherever the menu puts b — its
+// groups are in its URL —, out of the menu, with b's title when it has none
+// of its own; no permission of its own: its handler asks b's (Parent).
+func (b *HttpPageBuilder) Sub(sub string) *HttpPageBuilder {
+	p := HttpPage(path.Join(b.path, sub))
+	p.parent = b
+	p.notInMenu = true
+	return p
+}
+
+// Parent is the page this one is under (Sub); nil for a page of its own.
+func (b *HttpPageBuilder) Parent() *HttpPageBuilder { return b.parent }
+
 func (b *HttpPageBuilder) MenuGroup(menuGroup string) *HttpPageBuilder {
 	if menuGroup == "" {
 		return b
@@ -94,6 +110,9 @@ func (b *HttpPageBuilder) MenuGroup(menuGroup string) *HttpPageBuilder {
 // named before the page had a builder.
 func (b *HttpPageBuilder) registerMenu(bd *Builder) {
 	b.b = bd
+	if b.parent != nil {
+		return // its parent's place: no entry of its own
+	}
 	if _, err := bd.RegisterMenuItem(MenuItemPage, b.path, b); err != nil {
 		panic(err)
 	}
@@ -107,7 +126,7 @@ func (b *HttpPageBuilder) registerMenu(bd *Builder) {
 // listing or of the detailing — has nothing to move: it keeps the name, which
 // is what shapes its URL.
 func (b *HttpPageBuilder) SetMenuGroup(g *MenuGroupBuilder) *HttpPageBuilder {
-	if g == nil {
+	if g == nil || b.parent != nil { // a page under another follows it
 		return b
 	}
 	b.menuGroupName = g.Path()
@@ -124,6 +143,9 @@ func (b *HttpPageBuilder) SetMenuGroup(g *MenuGroupBuilder) *HttpPageBuilder {
 // at the root. Read from the tree, never copied onto the page: a copy would go
 // stale the moment something moved the entry.
 func (b *HttpPageBuilder) GetMenuGroupBuilder() *MenuGroupBuilder {
+	if b.parent != nil {
+		return b.parent.GetMenuGroupBuilder()
+	}
 	if b.b == nil {
 		return nil
 	}
@@ -142,6 +164,9 @@ func (b *HttpPageBuilder) GetMenuGroup() string {
 // or of the detailing, not a side-menu item — so it keeps the name it was
 // given, which still shapes its URL and its permission.
 func (b *HttpPageBuilder) menuGroupPathNames() []string {
+	if b.parent != nil {
+		return b.parent.menuGroupPathNames()
+	}
 	if b.b != nil {
 		// In the tree, and the tree is the only authority: a page moved back to
 		// the root has no group, whatever name it was given before.
@@ -157,6 +182,9 @@ func (b *HttpPageBuilder) menuGroupPathNames() []string {
 // (MenuGroupBuilder.URIName): what its URL is made of, while its permission
 // keeps the groups' names (menuGroupPathNames).
 func (b *HttpPageBuilder) menuGroupURIPathNames() []string {
+	if b.parent != nil {
+		return b.parent.menuGroupURIPathNames()
+	}
 	if b.b != nil {
 		return b.GetMenuGroupBuilder().URIPathNames()
 	}
@@ -204,14 +232,17 @@ func (b *HttpPageBuilder) MenuItem(f func(ctx *web.EventContext, uri string) h.H
 }
 
 func (b *HttpPageBuilder) GetTitleFunc() func(ctx context.Context) string {
+	if b.titleFunc == nil && b.parent != nil {
+		return b.parent.GetTitleFunc()
+	}
 	return b.titleFunc
 }
 
 func (b *HttpPageBuilder) TTitle(ctx context.Context) string {
-	if b.titleFunc == nil {
-		return ""
+	if f := b.GetTitleFunc(); f != nil {
+		return f(ctx)
 	}
-	return b.titleFunc(ctx)
+	return ""
 }
 
 func (b *HttpPageBuilder) DescriptionFunc(f func(ctx context.Context) string) *HttpPageBuilder {

@@ -53,7 +53,29 @@ func gitSite(t *testing.T, pb *perm.Builder, invalid *error) (url func(name stri
 	fsb.AddGitRepo(b.GitRepo("site-files")).AddGitRepo(b.DraftGitRepo("site-files-draft"))
 	srv := httptest.NewServer(fsb.GitHandler())
 	t.Cleanup(srv.Close)
+	// the hook commit-msg of the user, as the page serves it: the commits of
+	// the clones say who made them on the site (Site-User)
+	w := httptest.NewRecorder()
+	b.serveHook(w, httptest.NewRequest("GET", srv.URL+"/admin/site-files/commit-msg", nil))
+	testHook = w.Body.String()
+	t.Cleanup(func() { testHook = "" })
 	return func(name string) string { return srv.URL + fsb.GitPath(name) }, repo, served, b
+}
+
+// testHook is the hook commit-msg the clones of the test have (gitSite).
+var testHook string
+
+// installHook gives the clone the hook of the test, when it has none.
+func installHook(t *testing.T, clone string) {
+	t.Helper()
+	p := filepath.Join(clone, ".git", "hooks", "commit-msg")
+	if _, err := os.Stat(p); err == nil || testHook == "" {
+		return
+	}
+	os.MkdirAll(filepath.Dir(p), 0o755)
+	if err := os.WriteFile(p, []byte(testHook), 0o755); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // mustGit runs gitClient, failing on an error.
@@ -71,6 +93,7 @@ func commitFile(t *testing.T, clone, path, content string) {
 	t.Helper()
 	os.MkdirAll(filepath.Dir(filepath.Join(clone, path)), 0o755)
 	os.WriteFile(filepath.Join(clone, path), []byte(content), 0o644)
+	installHook(t, clone)
 	mustGit(t, clone, "add", "-A")
 	mustGit(t, clone, "commit", "-q", "-m", "change "+path)
 }

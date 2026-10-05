@@ -133,6 +133,39 @@ func TestEnsureSystemRoles(t *testing.T) {
 	}
 }
 
+// An original changed (Formerly): a role made before loses the former one on
+// boot — kept when it was changed by its users —, and gets the new.
+func TestSystemRoleFormerly(t *testing.T) {
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	b := New(db)
+	if err := db.AutoMigrate(&Role{}, &perm.DefaultDBPolicy{}); err != nil {
+		t.Fatal(err)
+	}
+	old := SystemRole{Key: "dev", Name: "Dev", Policies: []SystemPolicy{Allow("admin:/files:*"), Allow("admin:docs:*")}}
+	b.SystemRoles(old)
+	if err := b.EnsureSystemRoles(); err != nil {
+		t.Fatal(err)
+	}
+	var r Role
+	db.First(&r, "system_key = ?", "dev")
+	// one of its users' too
+	db.Create(&perm.DefaultDBPolicy{ReferID: r.ID.String(), Subject: "Dev", Effect: perm.Allowed,
+		Actions: pq.StringArray{"*"}, Resources: pq.StringArray{"admin:mine:*"}})
+
+	b2 := New(db)
+	b2.SystemRoles(SystemRole{Key: "dev", Name: "Dev",
+		Policies: []SystemPolicy{Allow("admin:/files:!{edit,git}"), Allow("admin:docs:*")},
+		Formerly: []SystemPolicy{Allow("admin:/files:*")}})
+	for i := 0; i < 2; i++ { // and again: nothing more
+		if err := b2.EnsureSystemRoles(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := resourcesOf(db, r); got != "admin:/files:!{edit,git}=allow/Dev;admin:docs:*=allow/Dev;admin:mine:*=allow/Dev" {
+		t.Errorf("after the change: %s", got)
+	}
+}
+
 // In the admin: a system role is not deleted nor renamed; its permissions
 // are reset by its action; a role of the users is deleted.
 func TestSystemRolesAdmin(t *testing.T) {

@@ -454,8 +454,8 @@ func TestPageGitURLs(t *testing.T) {
 		pb := perm.New().AllowAll()
 		pb.CreatePolicies(policies...)
 		h, _, _, b := appWith(t, &invalid, pb)
-		b.GitURL = func(_ *http.Request, draft bool) string {
-			if draft {
+		b.GitURL = func(_ *http.Request, draft string) string {
+			if draft != "" {
 				return "https://example.com/admin/site-files-draft.git"
 			}
 			return "https://example.com/admin/site-files.git"

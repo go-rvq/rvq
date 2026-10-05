@@ -42,6 +42,29 @@ And:
   compile, and the site's files were not changed out of git. A push and a
   publishing from the page never happen at once.
 
+## Who made each commit
+
+Each commit pushed must say **who made it on this site**: a line at the end
+of its message, as git's `Co-authored-by` —
+
+    Site-User: your-login <your-key@the-site's-address>
+
+A push of a commit without it (or of another site, or of a user the site does
+not know) is refused, and git shows the line missing. The **hook**
+`commit-msg` adds the line to each commit; in **By git**, on the page, is the
+command that installs it in your clone:
+
+    curl -fsSL -u your-login …/site-files/commit-msg -o .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+
+To sign commits already made: `git rebase -x 'git commit --amend --no-edit'
+<the commit before them>`.
+
+## Another user's draft
+
+A draft shared with you (step **Work together**) is cloned and pushed by git
+too: `…/site-files-drafts/<the owner's key>.git` — the address is on the page
+of the draft. Your commits stay yours.
+
 ## Cloning
 
 A clone hands over **every** file: so it asks `@get` of each one. If a path

@@ -42,6 +42,29 @@ Além disso:
   e os arquivos do site não foram mudados fora do git. Um push e uma
   publicação pela página nunca acontecem ao mesmo tempo.
 
+## Quem fez cada commit
+
+Cada commit enviado precisa dizer **quem o fez neste site**: uma linha no fim
+da mensagem, como a `Co-authored-by` do git —
+
+    Site-User: o-seu-login <a-sua-chave@o-endereço-do-site>
+
+Um push com um commit sem ela (ou de outro site, ou de um usuário que o site
+não conhece) é recusado, e o git mostra a linha que falta. O **hook**
+`commit-msg` acrescenta a linha a cada commit; em **Pelo git**, na página, está
+o comando que o instala no seu clone:
+
+    curl -fsSL -u o-seu-login …/site-files/commit-msg -o .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+
+Para assinar commits já feitos: `git rebase -x 'git commit --amend --no-edit'
+<o commit anterior a eles>`.
+
+## O rascunho de outro usuário
+
+Um rascunho compartilhado com você (passo **Trabalhar em conjunto**) também
+é clonado e enviado pelo git: `…/site-files-drafts/<a chave do dono>.git` — o
+endereço está na página do rascunho. Os seus commits continuam seus.
+
 ## Clonar
 
 Clonar entrega **todos** os arquivos: por isso pede `@get` de cada um. Se um

@@ -91,6 +91,9 @@ type IDE struct {
 	// Allowed says whether the request may do op on the file at path ("static/a.css";
 	// "" the files as a whole).
 	Allowed func(r *http.Request, op IdeOp, path string) bool
+	// OnWrite, when set, is told of a change of the files allowed (before it
+	// is made): who changes them.
+	OnWrite func(r *http.Request)
 	// HTTPClient downloads the URLs imported (fetch); one that reaches no
 	// address of the server's own network (SafeHTTPClient) when not set.
 	HTTPClient *http.Client
@@ -262,6 +265,9 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+	if write && spec.write && h.OnWrite != nil {
+		h.OnWrite(r)
 	}
 	if op == "workspace" {
 		// not the path on the server; what the user may do with the files

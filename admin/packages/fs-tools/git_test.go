@@ -202,6 +202,82 @@ func TestGitRepos(t *testing.T) {
 	}
 }
 
+// A repository of each key ("drafts/{key}"): <admin>/drafts/<key>.git, the
+// key told to Dir, Allowed and the hooks (GitRepoKey); a key that walks a
+// path, or no ".git", not found.
+func TestGitReposByKey(t *testing.T) {
+	serverDir := t.TempDir()
+	os.WriteFile(filepath.Join(serverDir, "server.marker"), []byte("x"), 0o644)
+	t.Chdir(serverDir)
+	t.Setenv("RVQ_TEST_SERVER_MARKER", "server.marker")
+	root := t.TempDir()
+	repos := map[string]string{}
+	for _, k := range []string{"ana", "bia"} {
+		dir := filepath.Join(root, k)
+		gitRun(t, root, "init", "-q", dir)
+		os.WriteFile(filepath.Join(dir, "who.txt"), []byte(k+"\n"), 0o644)
+		gitRun(t, dir, "add", "-A")
+		gitRun(t, dir, "commit", "-q", "-m", k)
+		repos[k] = dir
+	}
+	p := presets.New(i18n.New()).URIPrefix("/admin")
+	b, err := New(p, p.I18n(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pushedTo []string
+	b.AddGitRepo(&GitRepo{
+		Name: "drafts/" + GitKeyPattern,
+		Dir: func(r *http.Request) (string, error) {
+			if d, ok := repos[GitRepoKey(r)]; ok {
+				return d, nil
+			}
+			return "", errors.New("no such draft")
+		},
+		Allowed: func(r *http.Request, _ GitAccess) bool { return GitRepoKey(r) != "" },
+		Config:  []string{"receive.denyCurrentBranch=updateInstead"},
+		PreReceive: func(_ context.Context, rc *GitReceive) error {
+			pushedTo = append(pushedTo, GitRepoKey(rc.Request))
+			return nil
+		},
+	})
+	srv := httptest.NewServer(b.gitHandler())
+	defer srv.Close()
+	if got := b.GitKeyPath("drafts/"+GitKeyPattern, "bia"); got != "/admin/drafts/bia.git" {
+		t.Errorf("GitKeyPath: %q", got)
+	}
+	if got := b.GitMountPaths(); len(got) != 1 || got[0] != "/admin/drafts/" {
+		t.Errorf("GitMountPaths: %q", got)
+	}
+
+	clone := filepath.Join(root, "clone")
+	gitRun(t, root, "clone", "-q", srv.URL+"/admin/drafts/bia.git", clone)
+	if got, _ := os.ReadFile(filepath.Join(clone, "who.txt")); string(got) != "bia\n" {
+		t.Fatalf("the clone of bia has %q", got)
+	}
+	os.WriteFile(filepath.Join(clone, "who.txt"), []byte("bia2\n"), 0o644)
+	gitRun(t, clone, "commit", "-q", "-am", "bia2")
+	gitRun(t, clone, "push", "-q", "origin", "HEAD")
+	if got, _ := os.ReadFile(filepath.Join(repos["bia"], "who.txt")); string(got) != "bia2\n" {
+		t.Errorf("the push did not reach bia's: %q", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(repos["ana"], "who.txt")); string(got) != "ana\n" {
+		t.Errorf("ana's changed: %q", got)
+	}
+	if len(pushedTo) != 1 || pushedTo[0] != "bia" {
+		t.Errorf("the hook was told %v", pushedTo)
+	}
+	for _, path := range []string{"/admin/drafts/../bia.git/info/refs?service=git-upload-pack",
+		"/admin/drafts/b.ia.git/info/refs?service=git-upload-pack", "/admin/drafts/bia/info/refs?service=git-upload-pack",
+		"/admin/drafts/zoe.git/info/refs?service=git-upload-pack"} {
+		w := httptest.NewRecorder()
+		b.gitHandler().ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code == http.StatusOK {
+			t.Errorf("%s: %d", path, w.Code)
+		}
+	}
+}
+
 // The refs a hook is told, a line each.
 func TestParseRefUpdates(t *testing.T) {
 	got := parseRefUpdates(ZeroID + " abc refs/heads/main\nold new refs/tags/v1\n\n")

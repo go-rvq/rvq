@@ -229,6 +229,9 @@ func (b *Builder) GitRepo(name string) *fs_tools.GitRepo {
 			if err := b.checkPush(ctx, rc, b.Repo.branch()); err != nil {
 				return err
 			}
+			if err := b.checkSignatures(ctx, rc); err != nil {
+				return err
+			}
 			if err := b.Repo.SiteClean(ctx); err != nil {
 				return err
 			}
@@ -248,8 +251,24 @@ func (b *Builder) GitRepo(name string) *fs_tools.GitRepo {
 // <admin>/<name>.git (made the first time): a push to it changes the draft —
 // seen by the editor and the preview at once —, published from the page. It
 // asks !git and, of each file changed, what the IDE asks; refused while the
-// draft has changes not committed.
+// draft has changes not committed, or of a commit that does not say who made
+// it on the site (Site-User).
 func (b *Builder) DraftGitRepo(name string) *fs_tools.GitRepo {
+	return b.draftGitRepo(name)
+}
+
+// DraftsGitRepo is the draft of another user, by git at
+// <admin>/<base>/<key>.git — name "<base>/{key}" (fs_tools.GitKeyPattern) —:
+// shared with the user of the request, or any with !drafts (as the page of
+// their draft); as DraftGitRepo otherwise, its commits by whoever pushes them.
+func (b *Builder) DraftsGitRepo(name string) *fs_tools.GitRepo {
+	if !strings.HasSuffix(name, "/"+fs_tools.GitKeyPattern) {
+		name += "/" + fs_tools.GitKeyPattern
+	}
+	return b.draftGitRepo(name)
+}
+
+func (b *Builder) draftGitRepo(name string) *fs_tools.GitRepo {
 	draftDir := func(r *http.Request) (string, error) {
 		d, _, err := b.Draft(r)
 		if err != nil {
@@ -264,6 +283,17 @@ func (b *Builder) DraftGitRepo(name string) *fs_tools.GitRepo {
 			dir, err := draftDir(r)
 			return err == nil && b.gitAllowed(r, a, filepath.Join(dir, ".git"), "", "HEAD")
 		},
+		Middleware: []func(http.Handler) http.Handler{func(next http.Handler) http.Handler {
+			// a push, the whole of it: the draft held (another user on it waits)
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/git-receive-pack") {
+					if owner, _ := b.ownerKey(r); b.mayReach(r, owner) {
+						defer b.lockDraft(owner)()
+					}
+				}
+				next.ServeHTTP(w, r)
+			})
+		}},
 		Config: []string{"receive.denyCurrentBranch=updateInstead", "receive.denyNonFastForwards=true",
 			"receive.denyDeletes=true"},
 		PreReceive: func(ctx context.Context, rc *fs_tools.GitReceive) error {
@@ -276,7 +306,10 @@ func (b *Builder) DraftGitRepo(name string) *fs_tools.GitRepo {
 			} else if len(changes) > 0 {
 				return errors.New("the draft has changes not committed (in the editor): commit or discard them first")
 			}
-			return b.checkPush(ctx, rc, b.Repo.branch())
+			if err := b.checkPush(ctx, rc, b.Repo.branch()); err != nil {
+				return err
+			}
+			return b.checkSignatures(ctx, rc)
 		},
 	}
 }

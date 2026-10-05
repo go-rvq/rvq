@@ -15,6 +15,10 @@ The page has three tabs:
   below, the changes and the history.
 - **Files** is the editor: the tree of the files, and each file open in a
   tab. Saving changes your draft only.
+- **Sharing**: whom your draft is shared with, and **Share**/**Revoke** (see
+  {%= admin.doc("guides/site-files/09-sharing").link %}).
+- **Drafts**: the drafts of others shared with you — and, to whoever may,
+  every user's.
 - **Open the editor**, at the right of the others, opens the editor in a tab
   of the browser of its own, the whole window; the page stays on the tab it
   was on. At its top, a header: the admin's logo and name, your login,

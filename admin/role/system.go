@@ -33,6 +33,10 @@ type SystemRole struct {
 	Policies []SystemPolicy
 	// Fixed says its permissions are the code's: none editable.
 	Fixed bool
+	// Formerly are originals of its former versions: a role that still has
+	// one as it was loses it on boot (an original changed — narrowed, say —
+	// reaches the roles made before).
+	Formerly []SystemPolicy
 }
 
 // SystemPolicy is a permission of a SystemRole: allows (Effect "allow",
@@ -108,7 +112,7 @@ func (b *Builder) EnsureSystemRoles() error {
 			var r Role
 			err := tx.Where("system_key = ?", sr.Key).First(&r).Error
 			if err == nil {
-				return nil
+				return b.dropFormer(tx, &r, &sr)
 			}
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
@@ -119,6 +123,9 @@ func (b *Builder) EnsureSystemRoles() error {
 				}
 				if sr.Fixed {
 					return nil
+				}
+				if err := b.dropFormer(tx, &r, &sr); err != nil {
+					return err
 				}
 				return addPolicies(tx, &r, sr.policies(&r))
 			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -140,6 +147,39 @@ func (b *Builder) EnsureSystemRoles() error {
 	return nil
 }
 
+// dropFormer takes from r the originals of its former versions it still has
+// (Formerly), and gives it the originals it lacks then.
+func (b *Builder) dropFormer(tx *gorm.DB, r *Role, sr *SystemRole) error {
+	if len(sr.Formerly) == 0 || sr.Fixed {
+		return nil
+	}
+	former := (&SystemRole{Policies: sr.Formerly}).policies(r)
+	var has []perm.DefaultDBPolicy
+	if err := tx.Where("refer_id = ?", r.ID.String()).Find(&has).Error; err != nil {
+		return err
+	}
+	dropped := false
+	for i := range has {
+		for _, f := range former {
+			if policyKey(&has[i]) == policyKey(f) {
+				if err := tx.Delete(&has[i]).Error; err != nil {
+					return err
+				}
+				dropped = true
+			}
+		}
+	}
+	if !dropped {
+		return nil
+	}
+	return addPolicies(tx, r, sr.policies(r))
+}
+
+// policyKey is what tells two policies the same: effect, actions, resources.
+func policyKey(p *perm.DefaultDBPolicy) string {
+	return p.Effect + "|" + strings.Join(p.Actions, ",") + "|" + strings.Join(p.Resources, ",")
+}
+
 // addPolicies adds to r the policies of ps it has not (the same effect,
 // actions and resources).
 func addPolicies(tx *gorm.DB, r *Role, ps []*perm.DefaultDBPolicy) error {
@@ -147,16 +187,13 @@ func addPolicies(tx *gorm.DB, r *Role, ps []*perm.DefaultDBPolicy) error {
 	if err := tx.Where("refer_id = ?", r.ID.String()).Find(&has).Error; err != nil {
 		return err
 	}
-	key := func(p *perm.DefaultDBPolicy) string {
-		return p.Effect + "|" + strings.Join(p.Actions, ",") + "|" + strings.Join(p.Resources, ",")
-	}
 	seen := map[string]bool{}
 	for i := range has {
-		seen[key(&has[i])] = true
+		seen[policyKey(&has[i])] = true
 	}
 	var add []*perm.DefaultDBPolicy
 	for _, p := range ps {
-		if !seen[key(p)] {
+		if !seen[policyKey(p)] {
 			add = append(add, p)
 		}
 	}

@@ -75,16 +75,54 @@ type Messages struct {
 	GitSiteURL         string `i18n:"hint='Label of the URL by git of the site: a push to it publishes.'"`
 	GitAction_Desc     string `i18n:"hint='Description of the permission of cloning and pushing the files by git.'"`
 
-	Committed      string `i18n:"hint='Shown once the changes were committed.', fields=(;'%s'='the short hash')"`
-	Updated        string `i18n:"hint='Shown once the draft was updated.'"`
-	Published      string `i18n:"hint='Shown once the draft was published: the site changed.'"`
-	Discarded      string `i18n:"hint='Shown once the changes of a file were dropped.', fields=(;'%s'='the file')"`
-	Reset          string `i18n:"hint='Shown once the draft was dropped.'"`
-	ErrUncommitted string `i18n:"hint='Error: there are changes not committed, commit or discard them before publishing.'"`
-	ErrBehind      string `i18n:"hint='Error: others published since; update the draft before publishing.'"`
-	ErrSiteChanged string `i18n:"hint='Error: files of the site were changed out of the editor; nothing was overwritten.'"`
-	ErrNothing     string `i18n:"hint='Error: nothing to commit.'"`
-	ErrInvalid     string `i18n:"hint='Error: the files of the draft do not work; the commit or the publishing was not made.', fields=(;'%s'='what is wrong')"`
+	Committed          string `i18n:"hint='Shown once the changes were committed.', fields=(;'%s'='the short hash')"`
+	Updated            string `i18n:"hint='Shown once the draft was updated.'"`
+	Published          string `i18n:"hint='Shown once the draft was published: the site changed.'"`
+	Discarded          string `i18n:"hint='Shown once the changes of a file were dropped.', fields=(;'%s'='the file')"`
+	Reset              string `i18n:"hint='Shown once the draft was dropped.'"`
+	ErrUncommitted     string `i18n:"hint='Error: there are changes not committed, commit or discard them before publishing.'"`
+	ErrBehind          string `i18n:"hint='Error: others published since; update the draft before publishing.'"`
+	ErrSiteChanged     string `i18n:"hint='Error: files of the site were changed out of the editor; nothing was overwritten.'"`
+	ErrNothing         string `i18n:"hint='Error: nothing to commit.'"`
+	ErrInvalid         string `i18n:"hint='Error: the files of the draft do not work; the commit or the publishing was not made.', fields=(;'%s'='what is wrong')"`
+	ShareAction        string `i18n:"hint='Action that shares the draft of the user with other users.'"`
+	ShareAction_Desc   string `i18n:"hint='What sharing the draft allows.'"`
+	DraftsAction       string `i18n:"hint='Permission to see and reach every draft.'"`
+	DraftsAction_Desc  string `i18n:"hint='What seeing every draft allows.'"`
+	RevokeAction       string `i18n:"hint='Action that revokes a sharing of a draft.'"`
+	Shared             string `i18n:"hint='Shown once a draft was shared.'"`
+	Revoked            string `i18n:"hint='Shown once a sharing was revoked.'"`
+	SharesTab          string `i18n:"hint='Tab of the sharings of the draft.'"`
+	DraftsTab          string `i18n:"hint='Tab of the drafts the user reaches.'"`
+	SharesHint         string `i18n:"hint='Explains the sharing of a draft.'"`
+	SharesNone         string `i18n:"hint='Said when the draft is shared with no one.'"`
+	SharesHistory      string `i18n:"hint='Title of the past sharings (revoked, expired).'"`
+	ShareUser          string `i18n:"hint='Header of the column of whom a draft is shared with.'"`
+	ShareSince         string `i18n:"hint='Header of the column of when and by whom it was shared.'"`
+	ShareState         string `i18n:"hint='Header of the column of how a sharing stands.'"`
+	ShareForever       string `i18n:"hint='A sharing with no end.'"`
+	ShareUntil         string `i18n:"hint='A sharing until a date.'"`
+	ShareExpiredOn     string `i18n:"hint='A sharing that expired.'"`
+	ShareRevokedOn     string `i18n:"hint='A sharing revoked.'"`
+	ShareExpiresHint   string `i18n:"hint='Hint of the date a sharing ends.'"`
+	ShareFormUser      string `i18n:"hint='Label of whom to share the draft with.'"`
+	ShareFormExpiresAt string `i18n:"hint='Label of the date a sharing ends.'"`
+	ErrShareUser       string `i18n:"hint='Error of a sharing with no user chosen.'"`
+	ErrShareSelf       string `i18n:"hint='Error of a draft shared with its owner.'"`
+	ErrShareExpired    string `i18n:"hint='Error of a sharing ending in the past.'"`
+	SharedWithMe       string `i18n:"hint='Title of the drafts shared with the user.'"`
+	SharedWithMeNone   string `i18n:"hint='Said when no draft is shared with the user.'"`
+	AllDrafts          string `i18n:"hint='Title of every draft (with the permission).'"`
+	NoDrafts           string `i18n:"hint='Said when there is no draft.'"`
+	DraftOwner         string `i18n:"hint='Header of the column of the owner of a draft.'"`
+	LastCommit         string `i18n:"hint='Header of the column of the last commit of a draft.'"`
+	SharedWithCol      string `i18n:"hint='Header of the column of whom a draft is shared with.'"`
+	ChangesCount       string `i18n:"hint='How many files of a draft changed, not committed.'"`
+	DraftOf            string `i18n:"hint='Title of the page of the draft of another user.'"`
+	ViaShare           string `i18n:"hint='Said of a draft reached by a sharing.'"`
+	ViaDrafts          string `i18n:"hint='Said of a draft reached by the permission of every draft.'"`
+	GitHookHint        string `i18n:"hint='Explains the hook that signs the commits of a clone.'"`
+	GitHook            string `i18n:"hint='Label of the command that installs the hook.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -147,6 +185,44 @@ var Messages_en_US = &Messages{
 	ErrSiteChanged:     "Files of the site were changed out of the editor: nothing was overwritten.",
 	ErrNothing:         "Nothing to commit.",
 	ErrInvalid:         "The files of the draft do not work: %s",
+	ShareAction:        "Share",
+	ShareAction_Desc:   "Share your draft with other users: they reach it whole — the editor, git, the preview — and commit in it with their own name; publishing still asks its permission.",
+	DraftsAction:       "Every draft",
+	DraftsAction_Desc:  "See and reach every user's draft — its editor, git, preview — and revoke any sharing.",
+	RevokeAction:       "Revoke",
+	Shared:             "Shared with %s.",
+	Revoked:            "Sharing with %s revoked.",
+	SharesTab:          "Sharing",
+	DraftsTab:          "Drafts",
+	SharesHint:         "Whom you share your draft with reaches it whole — the editor, git, the preview — and commits in it with their own name, until the date you choose or until you revoke it. Publishing still asks the permission to publish.",
+	SharesNone:         "Not shared with anyone.",
+	SharesHistory:      "Past sharings",
+	ShareUser:          "User",
+	ShareSince:         "Shared on, by",
+	ShareState:         "State",
+	ShareForever:       "until revoked",
+	ShareUntil:         "until %s",
+	ShareExpiredOn:     "expired on %s",
+	ShareRevokedOn:     "revoked on %s by %s",
+	ShareExpiresHint:   "Empty: until revoked.",
+	ShareFormUser:      "User",
+	ShareFormExpiresAt: "Until",
+	ErrShareUser:       "Choose a user.",
+	ErrShareSelf:       "A draft is not shared with its owner.",
+	ErrShareExpired:    "The date is past.",
+	SharedWithMe:       "Shared with you",
+	SharedWithMeNone:   "No draft is shared with you.",
+	AllDrafts:          "Every draft",
+	NoDrafts:           "No draft yet.",
+	DraftOwner:         "Draft of",
+	LastCommit:         "Last commit",
+	SharedWithCol:      "Shared with",
+	ChangesCount:       "%d not committed",
+	DraftOf:            "Draft of %s",
+	ViaShare:           "shared with you",
+	ViaDrafts:          "you reach every draft",
+	GitHookHint:        "Each commit pushed says who made it on this site (Site-User). In each clone, install the hook that adds it:",
+	GitHook:            "The hook commit-msg",
 }
 
 var Messages_pt_BR = &Messages{
@@ -209,4 +285,42 @@ var Messages_pt_BR = &Messages{
 	ErrSiteChanged:     "Arquivos do site foram alterados fora do editor: nada foi sobrescrito.",
 	ErrNothing:         "Nada para o commit.",
 	ErrInvalid:         "Os arquivos do rascunho não funcionam: %s",
+	ShareAction:        "Compartilhar",
+	ShareAction_Desc:   "Compartilhar o seu rascunho com outros usuários: eles o acessam por inteiro — o editor, o git, o preview — e fazem commits nele com o próprio nome; publicar continua pedindo a permissão de publicar.",
+	DraftsAction:       "Todos os rascunhos",
+	DraftsAction_Desc:  "Ver e acessar o rascunho de qualquer usuário — o editor, o git, o preview — e revogar qualquer compartilhamento.",
+	RevokeAction:       "Revogar",
+	Shared:             "Compartilhado com %s.",
+	Revoked:            "Compartilhamento com %s revogado.",
+	SharesTab:          "Compartilhamentos",
+	DraftsTab:          "Rascunhos",
+	SharesHint:         "Com quem você compartilha o seu rascunho o acessa por inteiro — o editor, o git, o preview — e faz commits nele com o próprio nome, até a data que você escolher ou até você revogar. Publicar continua pedindo a permissão de publicar.",
+	SharesNone:         "Não está compartilhado com ninguém.",
+	SharesHistory:      "Compartilhamentos anteriores",
+	ShareUser:          "Usuário",
+	ShareSince:         "Compartilhado em, por",
+	ShareState:         "Situação",
+	ShareForever:       "até ser revogado",
+	ShareUntil:         "até %s",
+	ShareExpiredOn:     "expirou em %s",
+	ShareRevokedOn:     "revogado em %s por %s",
+	ShareExpiresHint:   "Vazio: até ser revogado.",
+	ShareFormUser:      "Usuário",
+	ShareFormExpiresAt: "Até",
+	ErrShareUser:       "Escolha um usuário.",
+	ErrShareSelf:       "Um rascunho não é compartilhado com o próprio dono.",
+	ErrShareExpired:    "A data já passou.",
+	SharedWithMe:       "Compartilhados com você",
+	SharedWithMeNone:   "Nenhum rascunho está compartilhado com você.",
+	AllDrafts:          "Todos os rascunhos",
+	NoDrafts:           "Nenhum rascunho ainda.",
+	DraftOwner:         "Rascunho de",
+	LastCommit:         "Último commit",
+	SharedWithCol:      "Compartilhado com",
+	ChangesCount:       "%d sem commit",
+	DraftOf:            "Rascunho de %s",
+	ViaShare:           "compartilhado com você",
+	ViaDrafts:          "você acessa todos os rascunhos",
+	GitHookHint:        "Cada commit enviado diz quem o fez neste site (Site-User). Em cada clone, instale o hook que o acrescenta:",
+	GitHook:            "O hook commit-msg",
 }

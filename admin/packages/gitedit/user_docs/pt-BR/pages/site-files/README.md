@@ -15,6 +15,10 @@ A página tem três abas:
   alterações e o histórico.
 - **Arquivos** é o editor: a árvore dos arquivos, e cada arquivo aberto numa
   aba. Salvar muda só o seu rascunho.
+- **Compartilhamentos**: com quem o seu rascunho está compartilhado, e
+  **Compartilhar**/**Revogar** (veja {%= admin.doc("guides/site-files/09-sharing").link %}).
+- **Rascunhos**: os rascunhos de outros compartilhados com você — e, a quem
+  pode, o de todos os usuários.
 - **Abrir o editor**, à direita das outras, abre o editor numa aba do
   navegador só dele, na janela inteira; a página fica na aba em que estava.
   No alto dele, um cabeçalho: o logo e o nome do admin, o seu login,

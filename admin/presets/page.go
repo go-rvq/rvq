@@ -27,6 +27,13 @@ func Page(r *PagesRegistrator, page *HttpPageBuilder) *PageBuilder {
 	}
 }
 
+// SubPage is a page under b (HttpPageBuilder.Sub), of the same registrator:
+// its own actions and events, b's group and title, and no permission of its
+// own — what it serves asks b's.
+func (b *PageBuilder) SubPage(sub string) *PageBuilder {
+	return b.r.New(b.page.Sub(sub))
+}
+
 func (b *PageBuilder) Page() *HttpPageBuilder {
 	return b.page
 }

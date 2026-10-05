@@ -16,6 +16,8 @@ Roles** (see the policies and permissions). The page is
 | Discard | `!discard` |
 | Start over | `!reset` |
 | Preview | `!preview` |
+| Share your draft (and revoke it) | `!share` |
+| See and reach any user's draft, revoke any sharing | `!drafts` |
 
 So publishing can stay with fewer people than editing: whoever edits commits,
 and someone else, who reviews, publishes.
