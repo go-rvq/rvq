@@ -180,9 +180,11 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 
 	policyModel := presets.NewModelBuilder(b.p, &perm.DefaultDBPolicy{}, presets.ModelConfig().SetModuleKey(MessagesKey))
 	permFb := &policyModel.Editing("Actions", "Resources").FieldsBuilder
+	ed.Field("Permissions").AutoNested(policyModel, permFb)
+	// lists of text — after AutoNested, which would set them otherwise: the
+	// form posts each item as its __value
 	permFb.Field("Actions").AsSlice()
 	permFb.Field("Resources").AsSlice()
-	ed.Field("Permissions").AutoNested(policyModel, permFb)
 	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
 		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			comp := old(field, ctx)

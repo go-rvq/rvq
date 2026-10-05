@@ -222,3 +222,23 @@ func TestSystemRolesAdmin(t *testing.T) {
 		t.Errorf("the reset action: %s %.300s", got, w.Body.String())
 	}
 }
+
+// A permission as the form posts it, with no Effect — its lists only, each
+// item its __value —: saved.
+func TestRolePermissionsAsTheFormPosts(t *testing.T) {
+	db, _, h := systemApp(t, nil)
+	mb := multipartestutils.NewMultipartBuilder().PageURL("/admin/roles").EventFunc(actions.Create)
+	for _, f := range [][2]string{{"Name", "Lists"}, {"Permissions.__present", "1"}, {"Permissions[0].__pos", "0"},
+		{"Permissions[0].__index", "0"}, {"Permissions[0].__new", "true"},
+		{"Permissions[0].Resources[0].__value", "admin:x:*"}, {"Permissions[0].Resources[0].$id", "1"}} {
+		mb = mb.AddField(f[0], f[1])
+	}
+	h.ServeHTTP(httptest.NewRecorder(), mb.BuildEventFuncRequest())
+	var r Role
+	db.First(&r, "name = ?", "Lists")
+	var ps []perm.DefaultDBPolicy
+	db.Where("refer_id = ?", r.ID.String()).Find(&ps)
+	if len(ps) != 1 || strings.Join(ps[0].Resources, ",") != "admin:x:*" || strings.Join(ps[0].Actions, ",") != "*" {
+		t.Errorf("the permission: %+v", ps)
+	}
+}

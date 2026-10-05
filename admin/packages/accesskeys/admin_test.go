@@ -132,3 +132,33 @@ func TestMyKeys(t *testing.T) {
 		t.Errorf("a key reached the keys: %d", w.Code)
 	}
 }
+
+// The permissions as the form posts them — each list item its __value, the
+// editor's flags, no plain field of the item —: saved; with no actions, any
+// (*): the resource says all.
+func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
+	db, p, _, do := keysApp(t)
+	ana := uuid.New()
+	db.Create(&keyUser{ID: ana, Name: "Ana"})
+	my := p.GetModelByID(MyKeysModelID).Info().ListingHref()
+	for _, c := range []struct {
+		name, actions string
+		form          [][2]string
+	}{
+		{"only-resources", "*", [][2]string{
+			{"Permissions[0].Resources[0].__value", "admin:/site-files:{@get,!git}"}, {"Permissions[0].Resources[0].$id", "1"}}},
+		{"both", "@get", [][2]string{
+			{"Permissions[0].Actions[0].__value", "@get"}, {"Permissions[0].Actions[0].$id", "1"},
+			{"Permissions[0].Resources[0].__value", "admin:/site-files:{@get,!git}"}, {"Permissions[0].Resources[0].$id", "2"}}},
+	} {
+		form := append([][2]string{{"Name", c.name}, {"Enabled", "true"}, {"Permissions.__present", "1"},
+			{"Permissions[0].__pos", "0"}, {"Permissions[0].__index", "0"}, {"Permissions[0].__new", "true"}}, c.form...)
+		do(ana, createKey(my, form...))
+		var k AccessKey
+		db.Preload("Permissions").First(&k, "name = ?", c.name)
+		if len(k.Permissions) != 1 || strings.Join(k.Permissions[0].Resources, ",") != "admin:/site-files:{@get,!git}" ||
+			strings.Join(k.Permissions[0].Actions, ",") != c.actions {
+			t.Errorf("%s: %+v", c.name, k.Permissions)
+		}
+	}
+}

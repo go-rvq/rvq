@@ -778,12 +778,16 @@ func (b *FieldsBuilder) setWithChildFromObjs(
 		info = f.nested.Model().Info().ChildOf(info, fromObj)
 	}
 
+	fieldFormKey := parent.ChildFieldFormKey(f.name)
+	// an item the form carries no plain field of — only lists of text
+	// ("…[0].Resources[0].__value") and the editor's flags — the decoder made
+	// none of: one each index the form names
+	growFormItems(fromObj, f.name, fieldFormKey, ctx)
+
 	childFromObjs := reflectutils.MustGet(fromObj, f.name)
 	if childFromObjs == nil || reflect.TypeOf(childFromObjs).Kind() != reflect.Slice {
 		return
 	}
-
-	fieldFormKey := parent.ChildFieldFormKey(f.name)
 
 	i := 0
 
@@ -1645,4 +1649,37 @@ func (b *FieldsBuilder) shows(info *ModelInfo, obj any, mode FieldModeStack, ctx
 		}
 	}()
 	return b.fieldToComponentWithFormValueKey(&ToComponentOptions{probing: true}, info, obj, mode, nil, ctx, name, &web.ValidationErrors{}) != nil
+}
+
+// growFormItems makes the slice name of obj as long as the items the form
+// names under formKey (formKey[i].…), the missing ones new — the decoder makes
+// an item only of a plain field of it it carries.
+func growFormItems(obj any, name, formKey string, ctx *web.EventContext) {
+	keys := ctx.FormSliceKeys(formKey)
+	if len(keys) == 0 {
+		return
+	}
+	n := keys[len(keys)-1].Index + 1
+	rt := reflectutils.GetType(obj, name)
+	if rt == nil || rt.Kind() != reflect.Slice {
+		return
+	}
+	cur := reflect.MakeSlice(rt, 0, n)
+	if v := reflectutils.MustGet(obj, name); v != nil {
+		cur = reflect.AppendSlice(cur, reflect.ValueOf(v))
+	}
+	if cur.Len() >= n {
+		return
+	}
+	elem := rt.Elem()
+	for cur.Len() < n {
+		if elem.Kind() == reflect.Ptr {
+			cur = reflect.Append(cur, reflect.New(elem.Elem()))
+		} else {
+			cur = reflect.Append(cur, reflect.Zero(elem))
+		}
+	}
+	if err := reflectutils.Set(obj, name, cur.Interface()); err != nil {
+		panic(err)
+	}
 }

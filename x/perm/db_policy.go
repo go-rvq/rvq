@@ -53,6 +53,24 @@ type DefaultDBPolicy struct {
 	SharedID *uuid.UUID `gorm:"type:uuid;index"`
 }
 
+// BeforeSave makes a policy of no actions one of any (*): the action asked
+// is the end of its resource too ("…:@edit", "…:!git"), so a permission is
+// whole by its resources alone — and a policy of no actions would allow
+// nothing.
+func (p *DefaultDBPolicy) BeforeSave(*gorm.DB) error {
+	var actions pq.StringArray
+	for _, a := range p.Actions {
+		if a = strings.TrimSpace(a); a != "" {
+			actions = append(actions, a)
+		}
+	}
+	if len(actions) == 0 {
+		actions = pq.StringArray{"*"}
+	}
+	p.Actions = actions
+	return nil
+}
+
 func (p DefaultDBPolicy) LoadDBPolicies(db *gorm.DB, startFrom *time.Time) (toUpdateOrCreate []*PolicyBuilder, toDelete []*PolicyBuilder) {
 	var ps []DefaultDBPolicy
 	if startFrom == nil || startFrom.IsZero() {

@@ -46,3 +46,19 @@ func TestDBPolicyAlternatives(t *testing.T) {
 		}
 	}
 }
+
+// A policy of no actions is saved as one of any: its resources say all.
+func TestDBPolicyNoActions(t *testing.T) {
+	for _, in := range []pq.StringArray{nil, {}, {""}, {" "}} {
+		p := &DefaultDBPolicy{Actions: in, Resources: pq.StringArray{"admin:x:*"}}
+		_ = p.BeforeSave(nil)
+		if len(p.Actions) != 1 || p.Actions[0] != "*" {
+			t.Errorf("%q: %q", in, p.Actions)
+		}
+	}
+	p := &DefaultDBPolicy{Actions: pq.StringArray{"@get", " "}}
+	_ = p.BeforeSave(nil)
+	if len(p.Actions) != 1 || p.Actions[0] != "@get" {
+		t.Errorf("kept: %q", p.Actions)
+	}
+}
