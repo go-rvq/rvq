@@ -6,8 +6,8 @@ only — the site and the drafts of the others stay as they are.
 
 ![A file changed in the draft, its diff open](images/changes.png)
 
-- **Files**, on the right, is the editor: the tree of the files at its left,
-  each file open in a tab. Save with the tab's button or Ctrl+S.
+- The tab **Files** is the editor: the tree of the files at its left, each
+  file open in a tab. Save with the tab's button or Ctrl+S.
 - From the buttons above the tree: create files and folders; **upload** files
   from the computer (or drop them on the tree) and **import from a URL** —
   images and fonts too, as they are —; **rename**, **move** to another folder
@@ -15,7 +15,7 @@ only — the site and the drafts of the others stay as they are.
   the step **Permissions**).
 - The editor formats and checks the `.gad`/`.gadx` files; it does not run
   code.
-- **Changes not committed**, on the left, lists each file changed since the
+- **Changes not committed**, in the tab **Your draft**, lists each file changed since the
   last commit; open one to see what changed. **Discard** drops its changes.
 - **Start over** drops the whole draft (the commits not published too): a new
   one is made from the site.
@@ -26,7 +26,8 @@ of the layouts).
 
 ## The editor in a tab of its own
 
-**Open the editor** opens the editor in a tab of the browser, with more room.
+**Open the editor**, the tab at the right of the others, opens the editor in
+a tab of the browser, with more room.
 It has three panels: **Explorer** (the tree of the files), **Editor** (the
 files open, one per tab) and **Preview**, which shows the open file as its
 type is:

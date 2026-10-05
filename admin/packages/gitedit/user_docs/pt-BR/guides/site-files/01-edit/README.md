@@ -6,7 +6,7 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 
 ![Um arquivo alterado no rascunho, com o diff aberto](images/changes.png)
 
-- **Arquivos**, à direita, é o editor: a árvore dos arquivos à esquerda dele,
+- A aba **Arquivos** é o editor: a árvore dos arquivos à esquerda dele,
   cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
 - Pelos botões acima da árvore: criar arquivos e pastas; fazer **upload** de
   arquivos do computador (ou soltá-los na árvore) e **importar de uma URL** —
@@ -15,7 +15,7 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
   fazê-lo (veja o passo **Permissões**).
 - O editor formata e confere os arquivos `.gad`/`.gadx`; ele não executa
   código.
-- **Alterações sem commit**, à esquerda, lista cada arquivo mudado desde o
+- **Alterações sem commit**, na aba **Seu rascunho**, lista cada arquivo mudado desde o
   último commit; abra um para ver o que mudou. **Descartar** desfaz as
   alterações dele.
 - **Recomeçar** descarta o rascunho inteiro (os commits não publicados
@@ -27,7 +27,8 @@ dos layouts).
 
 ## O editor numa aba própria
 
-**Abrir o editor** abre o editor numa aba do navegador, com mais espaço. Ele
+**Abrir o editor**, a aba à direita das outras, abre o editor numa aba do
+navegador, com mais espaço. Ele
 tem três painéis: **Explorer** (a árvore dos arquivos), **Editor** (os
 arquivos abertos, um por aba) e **Preview**, que mostra o arquivo aberto
 conforme o tipo dele:

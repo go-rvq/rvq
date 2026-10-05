@@ -494,9 +494,6 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 	}
 
 	ideURL := strings.TrimSuffix(b.idePage.FullPath(), "{rest...}") + "index.html"
-	// the IDE in a tab of its own, the whole window
-	openIDE := v.VBtn(m.OpenIDE).PrependIcon("mdi-open-in-new").Variant(v.VariantTonal).Color("primary").
-		Size(v.SizeSmall).Class("me-2 mb-2").Href(ideURL).Attr("target", "_blank")
 	var help h.HTMLComponent
 	if b.HelpURL != "" {
 		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
@@ -508,36 +505,49 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 			Class("me-2 mb-2").Href(b.PreviewURL).Attr("target", "_blank")
 	}
 
+	draft := v.VCard(
+		v.VCardSubtitle(h.Text(m.DraftHint)).Class("pt-4"),
+		v.VCardText(
+			h.P(h.Text(state)).Class("mb-3"),
+			btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
+			btn(ActionUpdate, m.UpdateAction, "mdi-source-pull", sync.Behind > 0),
+			btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
+			preview,
+			btn(ActionReset, m.ResetAction, "mdi-restore", true),
+			help,
+			h.H4(m.Changes).Class("mt-4 mb-2"),
+			changesComp,
+			h.H4(m.History).Class("mt-4 mb-2"),
+			v.VList(logItems...).Density(v.DensityCompact),
+			b.gitURLs(ctx, m, allowed),
+		),
+	).Variant(v.VariantOutlined)
+
+	// the draft and the IDE in tabs; at their right, a tab that opens the IDE
+	// in a tab of the browser of its own, the whole window — a link: it is
+	// never the tab shown (the update of the model leaves it out)
+	tabs := web.Scope(
+		v.VTabs(
+			v.VTab(h.Text(m.Draft)).Value("draft").PrependIcon("mdi-source-branch"),
+			v.VTab(h.Text(m.Files)).Value("ide").PrependIcon("mdi-file-code-outline"),
+			v.VTab(h.Text(m.OpenIDE)).Value("open").PrependIcon("mdi-open-in-new").
+				Attr("href", ideURL).Attr("target", "_blank").Attr("data-open-ide", true),
+		).Attr(":model-value", "locals.tab").
+			Attr("@update:model-value", "(t) => { if (t !== 'open') locals.tab = t }").
+			Color("primary").Class("mb-4"),
+		v.VTabsWindow(
+			v.VTabsWindowItem(draft).Value("draft"),
+			v.VTabsWindowItem(
+				h.Iframe().Src(ideURL).Attr("title", m.Files).
+					Style("width: 100%; height: calc(100vh - 220px); border: 0"),
+			).Value("ide"),
+		).Attr("v-model", "locals.tab"),
+	).Slot("{ locals }").LocalsInit(`{tab: "draft"}`)
+
 	r.Body = h.Div(
 		web.Portal().Name(portal),
-		v.VRow(
-			v.VCol(
-				v.VCard(
-					v.VCardTitle(h.Text(m.Draft)),
-					v.VCardSubtitle(h.Text(m.DraftHint)),
-					v.VCardText(
-						h.P(h.Text(state)).Class("mb-3"),
-						openIDE,
-						btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
-						btn(ActionUpdate, m.UpdateAction, "mdi-source-pull", sync.Behind > 0),
-						btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
-						preview,
-						btn(ActionReset, m.ResetAction, "mdi-restore", true),
-						help,
-						h.H4(m.Changes).Class("mt-4 mb-2"),
-						changesComp,
-						h.H4(m.History).Class("mt-4 mb-2"),
-						v.VList(logItems...).Density(v.DensityCompact),
-						b.gitURLs(ctx, m, allowed),
-					),
-				).Variant(v.VariantOutlined),
-			).Cols(12).Lg(4),
-			v.VCol(
-				h.Iframe().Src(ideURL).Attr("title", m.Files).
-					Style("width: 100%; height: calc(100vh - 160px); border: 0"),
-			).Cols(12).Lg(8),
-		),
-	)
+		tabs,
+	).Class("pa-4")
 	return
 }
 

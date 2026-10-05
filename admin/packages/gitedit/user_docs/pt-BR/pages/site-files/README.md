@@ -4,15 +4,24 @@ Os arquivos de que o site é feito — templates, estilos, scripts e imagens —
 editados aqui, num **rascunho** só seu: o site muda só quando você
 **publica**.
 
-![O editor dos arquivos do site: o rascunho, as alterações e o histórico, e os arquivos](images/page.png)
+![A aba Seu rascunho: o estado do rascunho, as ações, as alterações e o histórico](images/page.png)
 
 Passo a passo, com o desenvolvimento local: o guia {%= admin.doc("guides/site-files").link %} — também o botão **Ajuda** da página.
 
-- **Arquivos** é o editor, à direita (em telas estreitas, abaixo): a árvore
-  dos arquivos, e cada arquivo aberto numa aba. **Abrir o editor** o abre numa
-  aba só dele, na janela inteira. Salvar muda só o seu rascunho.
-- **Seu rascunho** diz onde ele está: commits para publicar, commits que
-  outros publicaram e ele não tem.
+A página tem três abas:
+
+- **Seu rascunho** — a primeira — diz onde ele está: commits para publicar,
+  commits que outros publicaram e ele não tem; e reúne as ações abaixo, as
+  alterações e o histórico.
+- **Arquivos** é o editor: a árvore dos arquivos, e cada arquivo aberto numa
+  aba. Salvar muda só o seu rascunho.
+- **Abrir o editor**, à direita das outras, abre o editor numa aba do
+  navegador só dele, na janela inteira; a página fica na aba em que estava.
+
+![A aba Arquivos: o editor](images/files.png)
+
+Em **Seu rascunho**:
+
 - **Alterações sem commit** lista cada arquivo mudado desde o último commit;
   abra para ver o que mudou. **Descartar** desfaz as alterações de um arquivo.
 - **Commit** registra as alterações, com uma mensagem dizendo o que são; o
