@@ -15,6 +15,7 @@ type Attachment struct {
 
 type MessageBuilder struct {
 	to          []string
+	replyTo     string
 	subject     string
 	body        string
 	labels      []string
@@ -28,6 +29,17 @@ func Message() *MessageBuilder {
 func (b *MessageBuilder) To(v ...string) *MessageBuilder {
 	b.to = append(b.to, v...)
 	return b
+}
+
+// ReplyTo is the address an answer to the mail goes to: who wrote what it
+// carries (a form's visitor), not the sender.
+func (b *MessageBuilder) ReplyTo(v string) *MessageBuilder {
+	b.replyTo = v
+	return b
+}
+
+func (b *MessageBuilder) GetReplyTo() string {
+	return b.replyTo
 }
 
 func (b *MessageBuilder) GetTo() []string {
@@ -112,6 +124,11 @@ func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
 	m = mail.NewMsg()
 	if err = m.To(b.to...); err != nil {
 		return
+	}
+	if b.replyTo != "" {
+		if err = m.ReplyTo(b.replyTo); err != nil {
+			return
+		}
 	}
 	m.Subject(b.FormattedSubject())
 	m.SetBodyString(mail.TypeTextHTML, b.body)

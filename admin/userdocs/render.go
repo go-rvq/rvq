@@ -102,7 +102,11 @@ func DocFile(node string) string {
 	if i := strings.Index(node, "/"); i >= 0 {
 		rest = node[i:]
 	}
-	if strings.Contains("/"+node, "/actions/") || strings.Contains("/"+node, "/forms/") ||
+	// an action or a form is the last word under actions/ or forms/ — a
+	// model may be called forms itself (forms/children/…)
+	parts := strings.Split(node, "/")
+	n := len(parts)
+	if (n >= 2 && parts[n-2] == "actions") || (n >= 3 && parts[n-2] == "forms") ||
 		strings.HasSuffix(node, "/permissions") || strings.Contains(rest, "/pages/") {
 		return node + ".md"
 	}

@@ -124,6 +124,12 @@ func TestDocFile(t *testing.T) {
 		"posts/actions":         "posts/actions/README.md",
 		"posts/forms/new":       "posts/forms/new.md",
 		"things/forms/detail":   "things/forms/detail.md",
+		// a model called forms: its children and actions are not forms
+		"forms":                       "forms/README.md",
+		"forms/children/form_locales": "forms/children/form_locales/README.md",
+		"forms/actions/Clean":         "forms/actions/Clean.md",
+		"forms/children/form_submissions/actions/Resend": "forms/children/form_submissions/actions/Resend.md",
+		"forms/forms/new": "forms/forms/new.md",
 	} {
 		if got := DocFile(node); got != file {
 			t.Errorf("DocFile(%s) = %s, want %s", node, got, file)
