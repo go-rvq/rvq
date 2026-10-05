@@ -123,6 +123,10 @@ type Messages struct {
 	ViaDrafts          string `i18n:"hint='Said of a draft reached by the permission of every draft.'"`
 	GitHookHint        string `i18n:"hint='Explains the hook that signs the commits of a clone.'"`
 	GitHook            string `i18n:"hint='Label of the command that installs the hook.'"`
+	DraftOther         string `i18n:"hint='Tab of the draft of another user (shared, or every draft).'"`
+	DraftHintOther     string `i18n:"hint='Explains the draft of another user: whoever reaches it edits it; the site changes only when published.'"`
+	GitOtherDraftURL   string `i18n:"hint='Label of the URL by git of the draft of another user.'"`
+	OpenDraft          string `i18n:"hint='Link to the page of a draft, in the list of the drafts.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -171,7 +175,7 @@ var Messages_en_US = &Messages{
 	ImportAction_Desc:  "Uploads files from the computer and downloads them from the internet (with Create files or Edit files for what it writes).",
 	GitAction:          "Access by git",
 	ByGit:              "By git",
-	ByGitHint:          "Clone and push with git, with your login and password.",
+	ByGitHint:          "Clone and push with git, with your login and an access key (or your password).",
 	GitDraftURL:        "Your draft (a push changes it; publish here)",
 	GitSiteURL:         "The site (a push publishes)",
 	GitAction_Desc:     "Clones and pushes the files by git — the draft, and the site with Publish —, each file changed asking what the editor asks.",
@@ -223,6 +227,10 @@ var Messages_en_US = &Messages{
 	ViaDrafts:          "you reach every draft",
 	GitHookHint:        "Each commit pushed says who made it on this site (Site-User). In each clone, install the hook that adds it:",
 	GitHook:            "The hook commit-msg",
+	DraftOther:         "Draft",
+	DraftHintOther:     "You edit the draft of another user, with them: your commits are yours; the site changes only when someone publishes.",
+	GitOtherDraftURL:   "The draft of %s (a push changes it)",
+	OpenDraft:          "Open",
 }
 
 var Messages_pt_BR = &Messages{
@@ -271,7 +279,7 @@ var Messages_pt_BR = &Messages{
 	ImportAction_Desc:  "Faz upload de arquivos do computador e os baixa da internet (com Criar arquivos ou Editar arquivos para o que grava).",
 	GitAction:          "Acessar por git",
 	ByGit:              "Pelo git",
-	ByGitHint:          "Clone e faça push com o git, com o seu login e senha.",
+	ByGitHint:          "Clone e faça push com o git, com o seu login e uma chave de acesso (ou a sua senha).",
 	GitDraftURL:        "Seu rascunho (um push o muda; publique aqui)",
 	GitSiteURL:         "O site (um push publica)",
 	GitAction_Desc:     "Clona e envia (push) os arquivos por git — o rascunho, e o site com Publicar —, cada arquivo alterado pedindo o que o editor pede.",
@@ -323,4 +331,8 @@ var Messages_pt_BR = &Messages{
 	ViaDrafts:          "você acessa todos os rascunhos",
 	GitHookHint:        "Cada commit enviado diz quem o fez neste site (Site-User). Em cada clone, instale o hook que o acrescenta:",
 	GitHook:            "O hook commit-msg",
+	DraftOther:         "Rascunho",
+	DraftHintOther:     "Você edita o rascunho de outro usuário, junto com ele: os seus commits são seus; o site muda só quando alguém publica.",
+	GitOtherDraftURL:   "O rascunho de %s (um push o muda)",
+	OpenDraft:          "Abrir",
 }

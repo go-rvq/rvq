@@ -777,8 +777,13 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		reset = btn(ActionReset, m.ResetAction, "mdi-restore", true)
 	}
 
+	// the own draft's words, or another's
+	draftTab, draftHint := m.Draft, m.DraftHint
+	if !own {
+		draftTab, draftHint = m.DraftOther, m.DraftHintOther
+	}
 	draft := v.VCard(
-		v.VCardSubtitle(h.Text(m.DraftHint)).Class("pt-4"),
+		v.VCardSubtitle(h.Text(draftHint)).Class("pt-4"),
 		v.VCardText(
 			h.P(h.Text(state)).Class("mb-3"),
 			btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
@@ -799,7 +804,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 	// in a tab of the browser of its own, the whole window — a link: it is
 	// never the tab shown (the update of the model leaves it out)
 	tabItems := []h.HTMLComponent{
-		v.VTab(h.Text(m.Draft)).Value("draft").PrependIcon("mdi-source-branch"),
+		v.VTab(h.Text(draftTab)).Value("draft").PrependIcon("mdi-source-branch"),
 		v.VTab(h.Text(m.Files)).Value("ide").PrependIcon("mdi-file-code-outline"),
 	}
 	windows := []h.HTMLComponent{
@@ -850,11 +855,15 @@ func (b *Builder) gitURLs(ctx *web.EventContext, m *Messages, allowed func(strin
 			Attr("append-inner-icon", "mdi-content-copy").Attr("data-git-url", url).
 			Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", url))
 	}
-	owner, _ := b.ownerKey(ctx.R)
+	owner, own := b.ownerKey(ctx.R)
+	draftLabel := m.GitDraftURL
+	if !own {
+		draftLabel = fmt.Sprintf(m.GitOtherDraftURL, b.user(ctx.R, owner).Label())
+	}
 	items := []h.HTMLComponent{
 		h.H4(m.ByGit).Class("mt-4 mb-1"),
 		h.P(h.Text(m.ByGitHint)).Class("text-caption mb-2"),
-		field(m.GitDraftURL, b.GitURL(ctx.R, owner)),
+		field(draftLabel, b.GitURL(ctx.R, owner)),
 	}
 	if allowed(ActionPublish) {
 		items = append(items, field(m.GitSiteURL, b.GitURL(ctx.R, "")))

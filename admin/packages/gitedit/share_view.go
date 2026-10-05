@@ -134,7 +134,7 @@ func (b *Builder) draftsView(ctx *web.EventContext, m *Messages, all bool) h.HTM
 			page = b.page.Page().FullPath()
 		}
 		items := []h.HTMLComponent{
-			link(m.Draft, page, "mdi-source-branch"),
+			link(m.OpenDraft, page, "mdi-source-branch"),
 			link(m.OpenIDE, page+"/editor", "mdi-open-in-new").Attr("target", "_blank"),
 		}
 		if b.previewPrefix != "" {

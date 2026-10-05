@@ -14,6 +14,10 @@ In the tab **Sharing** of the page {%= admin.page("/site-files").link %}:
 - The sharings that ended (revoked or expired) stay listed, with when and by
   whom: who had access is recorded.
 
+![The tab Sharing: whom the draft is shared with, and the past sharings](images/shares.png)
+
+![Share: the user, and until when](images/share.png)
+
 Sharing asks the permission `!share`; a draft is shared by its owner only.
 
 ## What whoever receives it reaches
@@ -26,6 +30,8 @@ in the tab **Drafts** of whoever receives it:
 - the **preview** of the site as the draft makes it;
 - **git**: `…/site-files-drafts/<the owner's key>.git` (see the step
   **By git**).
+
+![The draft of another user, shared with you](images/shared-draft.png)
 
 Each one's permissions still hold: sharing opens the door, it gives no more
 than the role gives. **Start over** and sharing the draft stay with its owner.
@@ -50,3 +56,5 @@ Whoever has the permission `!drafts` — the **Administrator** — sees, in the
 tab **Drafts**, each user's draft: how it stands, its last commit, whom it is
 shared with; opens the page, the editor and the preview of each, and revokes
 any sharing.
+
+![The tab Drafts: the ones shared with you, and every draft](images/drafts.png)

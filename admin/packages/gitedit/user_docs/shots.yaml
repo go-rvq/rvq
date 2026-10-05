@@ -66,3 +66,30 @@
   expect: "[...document.querySelectorAll('.gad-ide__image img')].length === 2 && [...document.querySelectorAll('.gad-ide__image img')].every(i => i.naturalWidth > 0)"
   width: 1440
   height: 900
+# the step "Work together": the tab Sharing — whom the draft is shared with,
+# the past ones —, sharing it, the tab Drafts, and another's draft (the
+# sharings of the seed: tools/userdocs-shots seedSharing)
+- file: guides/site-files/09-sharing/images/shares.png
+  url: /admin/site/site-files
+  wait: .v-tabs
+  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][2]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-window-item--active [data-share]') && !!document.querySelector('.v-window-item--active [data-revoke]') })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/09-sharing/images/share.png
+  url: /admin/site/site-files
+  wait: .v-tabs
+  # the dialog of Share: the user, until when
+  expect: "(() => { const w = window; if (!w.zzTab) { const t = [...document.querySelectorAll('.v-tab')][2]; if (t) { w.zzTab = 1; t.click() } return false } const b = document.querySelector('.v-window-item--active [data-share-action]'); if (b && !w.zzOpen) { w.zzOpen = 1; b.click() } return !!document.querySelector('.v-overlay--active [data-share-user]') })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/09-sharing/images/drafts.png
+  url: /admin/site/site-files
+  wait: .v-tabs
+  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][3]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-window-item--active [data-shared-draft]') && document.querySelectorAll('.v-window-item--active [data-draft]').length >= 2 })()"
+  width: 1440
+  height: 900
+- file: guides/site-files/09-sharing/images/shared-draft.png
+  url: /admin/site/site-files/u/{user:bia}
+  wait: "[data-draft-owner]"
+  width: 1440
+  height: 900
