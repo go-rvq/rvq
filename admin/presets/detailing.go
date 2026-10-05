@@ -34,6 +34,10 @@ type DetailingBuilder struct {
 	EditingRestrictionField[*DetailingBuilder]
 	DeletingRestrictionField[*DetailingBuilder]
 	DeletingWithRelatedRestrictionField[*DetailingBuilder]
+	// pageTitleFunc is the title of the page of a record (PageTitleFunc)
+	pageTitleFunc func(obj any, ctx *web.EventContext) string
+	// breadcrumbsFunc adds the breadcrumbs of the page of a record (Breadcrumbs)
+	breadcrumbsFunc func(obj any, ctx *web.EventContext, bc *BreadcrumbsBuilder)
 }
 
 func NewDetailingBuilder(mb *ModelBuilder, sb SectionsBuilder) *DetailingBuilder {
@@ -258,6 +262,9 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 		return
 	}
 
+	if b.breadcrumbsFunc != nil && !IsSkipAutoBreadcrumb(ctx) {
+		b.breadcrumbsFunc(obj, ctx, GetOrInitBreadcrumbs(ctx.R))
+	}
 	r.PageTitle = b.pageTitle(obj, ctx)
 
 	// The body lives in a portal so a save can bring the page up to date without
@@ -268,7 +275,28 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	return
 }
 
+// Breadcrumbs sets f to add the breadcrumbs of the page of a record — after
+// the ones of its model, before the page's title, the last —: where in the
+// record the page is (a TreePage's node).
+func (b *DetailingBuilder) Breadcrumbs(f func(obj any, ctx *web.EventContext, bc *BreadcrumbsBuilder)) *DetailingBuilder {
+	b.breadcrumbsFunc = f
+	return b
+}
+
+// PageTitleFunc sets the title of the page of a record — the last of its
+// breadcrumbs, the title of the window —: the model's (a singleton), or the
+// record's, when not set.
+func (b *DetailingBuilder) PageTitleFunc(f func(obj any, ctx *web.EventContext) string) *DetailingBuilder {
+	b.pageTitleFunc = f
+	return b
+}
+
 func (b *DetailingBuilder) pageTitle(obj any, ctx *web.EventContext) string {
+	if b.pageTitleFunc != nil {
+		if t := b.pageTitleFunc(obj, ctx); t != "" {
+			return t
+		}
+	}
 	if b.mb.singleton {
 		return b.mb.TTitle(ctx.Context())
 	}
