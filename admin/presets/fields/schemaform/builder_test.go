@@ -15,7 +15,8 @@ import (
 func render(t *testing.T, b *Builder, src string) string {
 	t.Helper()
 
-	schema, err := Parse(src)
+	// read by b: its types are the schema's
+	schema, err := b.Parse(src)
 	if err != nil {
 		t.Fatal(err)
 	}

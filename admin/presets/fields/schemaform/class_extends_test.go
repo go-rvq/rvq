@@ -1,9 +1,11 @@
 package schemaform
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gad-lang/gad"
+	"github.com/go-rvq/rvq/web"
 )
 
 // runClass runs src — the builder's types in scope (Builtins), and extra
@@ -91,5 +93,31 @@ func TestClassName(t *testing.T) {
 	s := runClass(t, b, `class Form { *P; b str }; return Form`, map[string]gad.Object{"P": parent})
 	if s.Fields[0].Name != "a" || s.Fields[0].Owner != "forms.base" || s.Fields[1].Owner != "" {
 		t.Errorf("fields: %s %q, %s %q", s.Fields[0].Name, s.Fields[0].Owner, s.Fields[1].Name, s.Fields[1].Owner)
+	}
+}
+
+// A type of the application whose values EnumItems answers — the fields of
+// a form, `form_field` — is a select; a list of lists of records is a grid of
+// rows.
+func TestEnumTypeAndGrid(t *testing.T) {
+	b := New().Type("form_field", EnumComponentFunc).
+		EnumItems(func(_ *web.EventContext, _ string, f *Field) ([]EnumItem, error) {
+			if f.Type == "form_field" {
+				return []EnumItem{{Name: "name", Label: "Name"}, {Name: "email", Label: "E-mail"}}, nil
+			}
+			return nil, nil
+		})
+	const src = `[][]{ fieldName form_field; maxWidth? int }`
+	s, err := b.Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the rows: lists of records
+	rec := s.Item.Schema
+	if !s.Slice || !rec.Slice || len(rec.Fields) != 2 || rec.Fields[0].Type != "form_field" || rec.Fields[1].Type != "int" {
+		t.Fatalf("the grid: %+v %+v", s, rec)
+	}
+	if got := render(t, b, src); !strings.Contains(got, "E-mail") || !strings.Contains(got, "v-select") {
+		t.Errorf("the select of the fields is not drawn:\n%.2000s", got)
 	}
 }
