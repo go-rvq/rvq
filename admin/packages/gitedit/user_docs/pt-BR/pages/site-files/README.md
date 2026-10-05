@@ -17,6 +17,9 @@ A página tem três abas:
   aba. Salvar muda só o seu rascunho.
 - **Abrir o editor**, à direita das outras, abre o editor numa aba do
   navegador só dele, na janela inteira; a página fica na aba em que estava.
+  No alto dele, um cabeçalho: o logo e o nome do admin, o seu login,
+  **Painel admin** (volta ao admin), **Sair** e o botão do tema claro ou
+  escuro — a escolha fica guardada no navegador.
 
 ![A aba Arquivos: o editor](images/files.png)
 

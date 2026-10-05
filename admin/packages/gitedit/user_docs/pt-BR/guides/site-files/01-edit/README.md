@@ -28,8 +28,9 @@ dos layouts).
 ## O editor numa aba própria
 
 **Abrir o editor**, a aba à direita das outras, abre o editor numa aba do
-navegador, com mais espaço. Ele
-tem três painéis: **Explorer** (a árvore dos arquivos), **Editor** (os
+navegador, com mais espaço, sob um cabeçalho com o logo do admin, o seu
+login, **Painel admin**, **Sair** e o tema claro ou escuro. Ele tem três
+painéis: **Explorer** (a árvore dos arquivos), **Editor** (os
 arquivos abertos, um por aba) e **Preview**, que mostra o arquivo aberto
 conforme o tipo dele:
 

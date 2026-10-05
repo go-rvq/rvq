@@ -33,6 +33,8 @@ import CodeMirror from '@/lib/CodeMirror'
 import DiffHunks from '@/lib/DiffHunks.vue'
 import SeoVars from '@/lib/SeoVars.vue'
 import SeoVarZipcodes from '@/lib/SeoVarZipcodes.vue'
+import GadIde from '@/lib/GadIde'
+import ThemeToggle from '@/lib/ThemeToggle'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -68,6 +70,8 @@ const vuetifyx = {
     app.component('vx-diff-hunks', DiffHunks)
     app.component('vx-seo-vars', SeoVars)
     app.component('vx-seo-var-zipcodes', SeoVarZipcodes)
+    app.component('vx-gad-ide', GadIde)
+    app.component('vx-theme-toggle', ThemeToggle)
   }
 }
 declare const window: any

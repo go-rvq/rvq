@@ -3,20 +3,17 @@ package gitedit
 import (
 	"context"
 	"errors"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
-
-	rvqjs "github.com/go-rvq/rvq/js"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
@@ -90,8 +87,13 @@ func TestBuilder(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "/admin/site-files/ide/index.html") || !strings.Contains(w.Body.String(), "Open the editor") {
-		t.Fatalf("the page: %d %.300s", w.Code, w.Body.String())
+	// the IDE in its tab, by the component; the editor's page in a tab of
+	// the browser
+	if body := w.Body.String(); w.Code != 200 || !strings.Contains(body, "vx-gad-ide src=") ||
+		!strings.Contains(body, "/admin/site-files/ide/gadide.js?") ||
+		!strings.Contains(body, "base=&#39;/admin/site-files/ide/&#39;") ||
+		!strings.Contains(body, "href=&#39;/admin/site-files/editor&#39;") || !strings.Contains(body, "Open the editor") {
+		t.Fatalf("the page: %d %.300s", w.Code, body)
 	}
 	// the site of the draft, under the admin
 	w = httptest.NewRecorder()
@@ -99,11 +101,20 @@ func TestBuilder(t *testing.T) {
 	if got := w.Body.String(); got != "/admin/site-preview /en-us/about old\n" {
 		t.Errorf("the preview: %d %q", w.Code, got)
 	}
-	// the IDE's app, in the frame: its assets relative to the page
+	// the editor: a page of the admin with no menu — the IDE under a header:
+	// the brand (the page's title, no Brand), the user, the admin, the theme
 	w = httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/index.html", nil))
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `src="./assets/`) {
-		t.Errorf("the IDE's app: %d %.300s", w.Code, w.Body.String())
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/editor", nil))
+	body := w.Body.String()
+	for _, want := range []string{"vx-gad-ide src=", "base=&#39;/admin/site-files/ide/&#39;", "data-editor-brand",
+		"ana@x", "Admin panel", "href=&#39;/admin&#39;", "vx-theme-toggle", "Light theme"} {
+		if w.Code != 200 || !strings.Contains(body, want) {
+			t.Errorf("the editor: %d, no %q", w.Code, want)
+		}
+	}
+	// no LogoutURL: no button to sign out; no menu of the admin
+	if strings.Contains(body, "data-editor-logout") || strings.Contains(body, "v-navigation-drawer") {
+		t.Error("the editor: a sign out with no LogoutURL, or the menu")
 	}
 	// the IDE, under the page
 	w = httptest.NewRecorder()
@@ -154,17 +165,13 @@ func TestBuilderPermissions(t *testing.T) {
 	}
 	h, repo, served := app(t, &invalid, deny("admin:/site-files:!publish"), deny("admin:/site-files:!edit"),
 		deny("admin:/site-files:!preview"))
-	// the app's assets: served with no permission (the login lets static
-	// files by with no session); its page asks it
-	if w := httptest.NewRecorder(); func() int {
-		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/index.html", nil))
-		i := strings.Index(w.Body.String(), "./assets/")
-		asset := w.Body.String()[i+2 : i+strings.IndexByte(w.Body.String()[i:], '"')]
-		w2 := httptest.NewRecorder()
-		h.ServeHTTP(w2, httptest.NewRequest("GET", "/admin/site-files/ide/"+asset, nil))
-		return w2.Code
-	}() != http.StatusOK {
-		t.Error("an asset of the IDE's app not served")
+	// the IDE's code: served with no permission (the same for everybody)
+	for _, f := range []string{"gadide.js", "gadide.css"} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/ide/"+f, nil))
+		if w.Code != http.StatusOK || w.Body.Len() == 0 {
+			t.Errorf("%s of the IDE not served: %d", f, w.Code)
+		}
 	}
 	if w := httptest.NewRecorder(); func() int {
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-preview/", nil))
@@ -193,27 +200,53 @@ func TestBuilderPermissions(t *testing.T) {
 	}
 }
 
-// The app's assets are served with no permission — the login lets static
-// files by with no session, no user to ask one of —; its page asks @get.
+// The IDE's code is served with no permission — the same for everybody —;
+// the editor and the IDE's API ask the page's @get.
 func TestBuilderIDEAssets(t *testing.T) {
 	var invalid error
 	h, _, _ := app(t, &invalid, perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On("admin:/site-files:@get"))
-	index, err := fs.ReadFile(rvqjs.GadIDE(), "index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	m := regexp.MustCompile(`src="\./(assets/[^"]+)"`).FindSubmatch(index)
-	if m == nil {
-		t.Fatal("no asset in the index")
-	}
 	for path, want := range map[string]int{
-		"/admin/site-files/ide/index.html":      http.StatusForbidden,
-		"/admin/site-files/ide/" + string(m[1]): http.StatusOK,
+		"/admin/site-files/ide/gadide.js":             http.StatusOK,
+		"/admin/site-files/ide/gadide.css":            http.StatusOK,
+		"/admin/site-files/ide/api/ide/workspace":     http.StatusForbidden,
+		"/admin/site-files/ide/api/ide/file?path=a.x": http.StatusForbidden,
 	} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
 		if w.Code != want {
 			t.Errorf("%s: %d, want %d", path, w.Code, want)
+		}
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/editor", nil))
+	if strings.Contains(w.Body.String(), "vx-gad-ide") {
+		t.Errorf("the editor with no @get: %d", w.Code)
+	}
+}
+
+// With Brand and LogoutURL: the header of the editor shows the admin's name
+// and logo, and signs out.
+func TestEditorBrand(t *testing.T) {
+	var invalid error
+	repo, _ := site(t)
+	p := presets.New(i18n.New()).URIPrefix("/admin")
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	p.DataOperator(gorm2op.DataOperator(db))
+	p.Permission(perm.New().AllowAll().SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
+	b := &Builder{Repo: repo, LogoutURL: func() string { return "/auth/logout" },
+		Identity: func(*http.Request) (string, Author) { return "u1", Author{"Ana", "ana@x"} },
+		Validate: func(context.Context, string) error { return invalid },
+		Brand:    func(*web.EventContext) (string, string) { return "Zz Admin", "/system/logo.png" }}
+	if err := b.Install(p); err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	p.Build(mux)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/editor", nil))
+	for _, want := range []string{"Zz Admin", "src=&#39;/system/logo.png&#39;", "data-editor-logout", "href=&#39;/auth/logout&#39;"} {
+		if !strings.Contains(w.Body.String(), want) {
+			t.Errorf("the editor's header: no %q", want)
 		}
 	}
 }

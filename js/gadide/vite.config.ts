@@ -14,21 +14,40 @@ const src = (rel: string) => {
   return p;
 };
 
+// A library for the admin's page: Vue and Vuetify are the page's globals
+// (window.Vue, window.Vuetify) — one of each, the admin's theme and its
+// components —, the rest in gadide.js and gadide.css.
 export default defineConfig({
-  // served under the page of the admin: its URLs relative
-  base: "./",
   plugins: [vue(), vueJsx()],
+  define: { "process.env.NODE_ENV": JSON.stringify("production") },
   resolve: {
     alias: {
       "@gad-lang/ide-vuetify": src("web/ide-vuetify/src/index.ts"),
       "@gad-lang/codemirror-gad": src("web/plugins/js/codemirror-gad/src/index.ts"),
       "@gad-lang/prism-gad": src("web/plugins/js/prism-gad/src/index.ts"),
     },
-    // one of each: CodeMirror's state fields and Vuetify's injection need it
-    dedupe: ["vue", "vuetify", "@codemirror/state", "@codemirror/view", "@codemirror/language",
+    // one of each: CodeMirror's state fields need it
+    dedupe: ["@codemirror/state", "@codemirror/view", "@codemirror/language",
       "@codemirror/autocomplete", "@codemirror/lint", "@codemirror/commands",
       "@lezer/common", "@lezer/highlight", "@lezer/lr", "dockview-vue", "dockview-core", "prismjs"],
   },
-  server: { fs: { allow: [__dirname, gad] } },
-  build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 4096 },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 4096,
+    cssCodeSplit: false,
+    lib: { entry: resolve(__dirname, "src/main.ts"), formats: ["iife"], name: "gadidejs", fileName: () => "gadide.js" },
+    rollupOptions: {
+      external: ["vue", "vuetify", "vuetify/components", "vuetify/directives"],
+      output: {
+        globals: {
+          vue: "Vue",
+          vuetify: "Vuetify",
+          "vuetify/components": "Vuetify.components",
+          "vuetify/directives": "Vuetify.directives",
+        },
+        assetFileNames: () => "gadide.css",
+      },
+    },
+  },
 });

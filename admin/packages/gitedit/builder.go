@@ -13,6 +13,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	rvqjs "github.com/go-rvq/rvq/js"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/ory/ladon"
 )
@@ -72,17 +73,29 @@ type Builder struct {
 	// HelpURL, when set, is the documentation of the editor, opened by the
 	// page's Help button.
 	HelpURL string
-	// Assets are the files of the IDE's app (its index.html at the root); the
-	// gad IDE's (rvq/js GadIDE) when not set.
+	// Assets are the files of the IDE — gadide.js and gadide.css, the
+	// component the admin's <vx-gad-ide> renders —; the gad IDE's (rvq/js
+	// GadIDE) when not set.
 	Assets fs.FS
+	// Brand is what the header of the editor (the page that has only the
+	// IDE, opened in a tab of the browser of its own) shows of the admin:
+	// its name and the URL of its logo ("" none). The page's title when not
+	// set.
+	Brand func(ctx *web.EventContext) (title, logo string)
+	// LogoutURL, when set, is where the header of the editor signs the user
+	// out ("" none): asked each time — a login knows its URLs once installed.
 	// GitURL, when set, is the URL by git of the files of the site (draft
 	// false: a push publishes, GitRepo) or of the draft of the user of r
 	// (DraftGitRepo), shown on the page to whoever may (!git).
 	GitURL func(r *http.Request, draft bool) string
 
-	ide     *IDE
-	page    *presets.PageBuilder
-	idePage *presets.HttpPageBuilder
+	LogoutURL func() string
+
+	ide        *IDE
+	page       *presets.PageBuilder
+	idePage    *presets.HttpPageBuilder
+	editorPage *presets.PageBuilder
+	adminURL   string
 }
 
 // Page is the page of the editor.
@@ -223,13 +236,27 @@ func (b *Builder) Install(p *presets.Builder) error {
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.Identity(r); return key }
 	b.ide.Allowed = b.AllowedOp
-	// the IDE, in a frame: its app and its API, asking the page's permissions
+	b.adminURL = p.GetURIPrefix()
+	if b.adminURL == "" {
+		b.adminURL = "/"
+	}
+	// the IDE: its code (Assets) and its API, the API asking the page's
+	// permissions
 	b.idePage = presets.HttpPage(b.Path + "/ide/{rest...}").InMenu(false).Handler(http.HandlerFunc(b.serveIDE))
 	p.PagesRegistrator().AddHttpPage(b.idePage)
+	// the editor: the IDE alone, the whole window, under a header — the page
+	// "Open the editor" opens in a tab of the browser —; seeing it is seeing
+	// the page (no permission of its own)
+	b.editorPage = p.PagesRegistrator().New(
+		presets.HttpPage(b.Path + "/editor").InMenu(false).
+			TitleFunc(func(ctx context.Context) string { return GetMessages(ctx).Title })).
+		Raw(p.PlainLayout(b.editorFunc))
+	defer b.editorPage.Build()
 	// under the page wherever the menu puts it (its groups are in its URL)
 	b.page.Page().PostBuild(func(*presets.PageHandler) {
 		if g := b.page.Page().GetMenuGroupBuilder(); g != nil {
 			b.idePage.SetMenuGroup(g)
+			b.editorPage.Page().SetMenuGroup(g)
 		}
 	})
 
@@ -278,38 +305,81 @@ func (b *Builder) serveIDE(w http.ResponseWriter, r *http.Request) {
 		b.ide.ServeHTTP(w, &r2)
 		return
 	}
-	// the app's assets — its code, the same for everybody — are served as
-	// the static files they are: the login lets them by with no session
-	// (no user to ask a permission of); its page and its API ask the page's
-	if !strings.HasPrefix(rest, "/assets/") {
-		if ver := b.page.Page().ActionVerifier(r, presets.PermGet); ver != nil && ver.Denied() {
-			http.Error(w, "permission denied", http.StatusForbidden)
-			return
-		}
-	}
+	// the IDE's code (gadide.js, gadide.css) — the same for everybody —,
+	// served as the static files it is
 	if b.Assets == nil {
 		http.Error(w, "the IDE is not built", http.StatusNotFound)
-		return
-	}
-	if rest == "/" || rest == "/index.html" {
-		// itself: a server that drops the trailing slash of a URL would
-		// send "…/ide/" away from its assets ("./assets/…"), and the files
-		// server sends "index.html" to "./"
-		index, err := fs.ReadFile(b.Assets, "index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Write(index)
 		return
 	}
 	r2 := *r
 	u := *r.URL
 	u.Path, u.RawPath = rest, ""
 	r2.URL = &u
+	w.Header().Set("Cache-Control", "no-cache")
 	http.FileServerFS(b.Assets).ServeHTTP(w, &r2)
+}
+
+// ideBase is where the IDE's files and its API are ("/admin/site/site-files/ide/").
+func (b *Builder) ideBase() string {
+	return strings.TrimSuffix(b.idePage.FullPath(), "{rest...}")
+}
+
+// EditorURL is the page of the editor: the IDE alone, under a header.
+func (b *Builder) EditorURL() string { return b.editorPage.Page().FullPath() }
+
+// ideComponent is the IDE (<vx-gad-ide>), height tall.
+func (b *Builder) ideComponent(height string) h.HTMLComponent {
+	base := b.ideBase()
+	return h.Tag("vx-gad-ide").Attr("src", base+"gadide.js?"+web.ExeMTime).Attr("css", base+"gadide.css?"+web.ExeMTime).
+		Attr("base", base).Attr("height", height)
+}
+
+// editorFunc is the page of the editor: a header — the admin's brand, the
+// title, the user, the way back to the admin, signing out, the theme — and
+// the IDE under it, the rest of the window.
+func (b *Builder) editorFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
+	if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
+		return r, perm.PermissionDenied
+	}
+	m := GetMessages(ctx.Context())
+	title, logo := m.Title, ""
+	if b.Brand != nil {
+		title, logo = b.Brand(ctx)
+	}
+	_, author := b.Identity(ctx.R)
+	user := author.Email
+	if user == "" {
+		user = author.Name
+	}
+	var logout h.HTMLComponent
+	if b.LogoutURL != nil {
+		if u := b.LogoutURL(); u != "" {
+			logout = v.VBtn(m.SignOut).PrependIcon("mdi-logout").Variant(v.VariantText).Href(u).
+				Attr("data-editor-logout", true)
+		}
+	}
+	r.PageTitle = m.Title
+	r.Body = h.Div(
+		v.VToolbar(
+			h.A(
+				h.If(logo != "", h.Img(logo).Attr("alt", "").Style("height: 36px; max-width: 160px; object-fit: contain")),
+				h.Span(title).Class("text-h6 ms-2"),
+			).Href(b.adminURL).Class("d-flex align-center ms-4 text-decoration-none text-high-emphasis").
+				Attr("data-editor-brand", true),
+			v.VDivider().Vertical(true).Class("mx-4 my-3"),
+			h.Span(m.Title).Class("text-subtitle-1 text-medium-emphasis text-truncate"),
+			v.VSpacer(),
+			v.VChip(h.Text(user)).PrependIcon("mdi-account-circle").Variant(v.VariantText).
+				Attr("title", author.Name).Attr("data-editor-user", true).Class("d-none d-sm-flex"),
+			v.VBtn(m.BackToAdmin).PrependIcon("mdi-view-dashboard-outline").Variant(v.VariantText).
+				Href(b.adminURL).Attr("data-editor-admin", true),
+			logout,
+			h.Tag("vx-theme-toggle").Attr("storage-key", "rvq.gitedit.theme").
+				Attr("light-title", m.ThemeLight).Attr("dark-title", m.ThemeDark),
+		).Density(v.DensityCompact).Height(56).Class("border-b").Flat(true),
+		b.ideComponent("calc(100vh - 57px)"),
+	)
+	return
 }
 
 // do runs f on the draft of the request: the flash says how it went.
@@ -493,7 +563,6 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		).Density(v.DensityCompact))
 	}
 
-	ideURL := strings.TrimSuffix(b.idePage.FullPath(), "{rest...}") + "index.html"
 	var help h.HTMLComponent
 	if b.HelpURL != "" {
 		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
@@ -531,15 +600,14 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 			v.VTab(h.Text(m.Draft)).Value("draft").PrependIcon("mdi-source-branch"),
 			v.VTab(h.Text(m.Files)).Value("ide").PrependIcon("mdi-file-code-outline"),
 			v.VTab(h.Text(m.OpenIDE)).Value("open").PrependIcon("mdi-open-in-new").
-				Attr("href", ideURL).Attr("target", "_blank").Attr("data-open-ide", true),
+				Attr("href", b.EditorURL()).Attr("target", "_blank").Attr("data-open-ide", true),
 		).Attr(":model-value", "locals.tab").
 			Attr("@update:model-value", "(t) => { if (t !== 'open') locals.tab = t }").
 			Color("primary").Class("mb-4"),
 		v.VTabsWindow(
 			v.VTabsWindowItem(draft).Value("draft"),
 			v.VTabsWindowItem(
-				h.Iframe().Src(ideURL).Attr("title", m.Files).
-					Style("width: 100%; height: calc(100vh - 220px); border: 0"),
+				b.ideComponent("calc(100vh - 220px)"),
 			).Value("ide"),
 		).Attr("v-model", "locals.tab"),
 	).Slot("{ locals }").LocalsInit(`{tab: "draft"}`)

@@ -27,8 +27,9 @@ of the layouts).
 ## The editor in a tab of its own
 
 **Open the editor**, the tab at the right of the others, opens the editor in
-a tab of the browser, with more room.
-It has three panels: **Explorer** (the tree of the files), **Editor** (the
+a tab of the browser, with more room, under a header with the admin's logo,
+your login, **Admin panel**, **Sign out** and the light or dark theme. It
+has three panels: **Explorer** (the tree of the files), **Editor** (the
 files open, one per tab) and **Preview**, which shows the open file as its
 type is:
 

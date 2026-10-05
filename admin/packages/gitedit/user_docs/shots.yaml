@@ -12,7 +12,7 @@
   url: /admin/site/site-files
   wait: .v-tabs
   # the tab Files: the IDE in the frame, its tree of the files
-  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][1]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } const d = document.querySelector('.v-window-item--active iframe')?.contentDocument; return !!d && d.body.innerText.includes('templates') })()"
+  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][1]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } const d = document.querySelector('.v-window-item--active .gadide-host'); return !!d && d.innerText.includes('templates') })()"
   width: 1440
   height: 900
 - file: guides/site-files/01-edit/images/changes.png
@@ -49,18 +49,19 @@
   # its form: the options of its type's layout, the select of the format open
   expect: "(() => { const w = window; if (!w.zzEdit) { const b = document.querySelector('.mdi-pencil'); if (b) { w.zzEdit = 1; b.click() } return false } const f = document.querySelector('.v-navigation-drawer--active.v-navigation-drawer--right, .v-overlay--active .v-card'); if (!f) return false; f.querySelectorAll('.v-expansion-panel:not(.v-expansion-panel--active) .v-expansion-panel-title').forEach(t => t.click()); const l = [...f.querySelectorAll('.v-select')].find(e => e.innerText.includes('Formato')); if (!l) return false; l.scrollIntoView({block: 'center'}); if (!w.zzOpen) { w.zzOpen = 1; setTimeout(() => l.querySelector('.v-field').dispatchEvent(new MouseEvent('mousedown', {bubbles: true})), 500) } return [...document.querySelectorAll('.v-overlay--active .v-list-item')].some(i => i.innerText.includes('Capa dura')) })()"
   height: 900
-# the IDE in a tab of its own ("Open the editor"): a file open — the layouts'
-# options, their documentation in the Preview —, and an image
+# the editor in a tab of its own ("Open the editor"): its header, the IDE — a
+# file open, the layouts' options, their documentation in the Preview —; an
+# image
 - file: guides/site-files/01-edit/images/ide.png
-  url: /admin/site/site-files/ide/index.html
-  wait: "#app"
+  url: /admin/site/site-files/editor
+  wait: .gadide-host
   before: "(() => { const steps = [['config', 0], ['layout_config.gad', 0]]; let i = 0; const tick = () => { if (i >= steps.length) return; const [n, k] = steps[i]; const r = [...document.querySelectorAll('.pnl-row')].filter(e => e.innerText.trim() === n)[k]; if (r) { r.click(); i++ } setTimeout(tick, 600) }; setTimeout(tick, 1500); return true })()"
   expect: "!!document.querySelector('.gad-ide__doc h4, .gad-ide__doc p') && document.querySelector('.editor-tab--active')?.innerText.includes('layout_config')"
   width: 1440
   height: 900
 - file: guides/site-files/01-edit/images/ide-image.png
-  url: /admin/site/site-files/ide/index.html
-  wait: "#app"
+  url: /admin/site/site-files/editor
+  wait: .gadide-host
   before: "(() => { const steps = [['static', 0], ['static', 1], ['img', 0], ['logo.svg', 0]]; let i = 0; const tick = () => { if (i >= steps.length) return; const [n, k] = steps[i]; const r = [...document.querySelectorAll('.pnl-row')].filter(e => e.innerText.trim() === n)[k]; if (r) { r.click(); i++ } setTimeout(tick, 600) }; setTimeout(tick, 1500); return true })()"
   expect: "[...document.querySelectorAll('.gad-ide__image img')].length === 2 && [...document.querySelectorAll('.gad-ide__image img')].every(i => i.naturalWidth > 0)"
   width: 1440

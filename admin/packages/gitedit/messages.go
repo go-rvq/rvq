@@ -35,6 +35,10 @@ type Messages struct {
 	Preview           string `i18n:"hint='Button that opens the site as the draft makes it.'"`
 	Help              string `i18n:"hint='Button that opens the documentation of the editor of the files.'"`
 	OpenIDE           string `i18n:"hint='Button that opens the editor of the files (the IDE) in a tab of its own.'"`
+	BackToAdmin       string `i18n:"hint='Button of the header of the editor (opened in a tab of its own) that goes back to the admin.'"`
+	SignOut           string `i18n:"hint='Button of the header of the editor that signs the user out.'"`
+	ThemeLight        string `i18n:"hint='Title of the button that turns the editor light.'"`
+	ThemeDark         string `i18n:"hint='Title of the button that turns the editor dark.'"`
 
 	CommitAction      string `i18n:"label='Commit', hint='Action that records the changes of the draft, with a message.'"`
 	UpdateAction      string `i18n:"label='Update', hint='Action that brings into the draft what others published.'"`
@@ -98,6 +102,10 @@ var Messages_en_US = &Messages{
 	Preview:            "Preview the site",
 	Help:               "Help",
 	OpenIDE:            "Open the editor",
+	BackToAdmin:        "Admin panel",
+	SignOut:            "Sign out",
+	ThemeLight:         "Light theme",
+	ThemeDark:          "Dark theme",
 	CommitAction:       "Commit",
 	UpdateAction:       "Update",
 	PublishAction:      "Publish",
@@ -156,6 +164,10 @@ var Messages_pt_BR = &Messages{
 	Preview:            "Ver o site do rascunho",
 	Help:               "Ajuda",
 	OpenIDE:            "Abrir o editor",
+	BackToAdmin:        "Painel admin",
+	SignOut:            "Sair",
+	ThemeLight:         "Tema claro",
+	ThemeDark:          "Tema escuro",
 	CommitAction:       "Commit",
 	UpdateAction:       "Atualizar",
 	PublishAction:      "Publicar",

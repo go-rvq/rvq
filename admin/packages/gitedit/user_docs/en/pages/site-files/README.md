@@ -17,7 +17,9 @@ The page has three tabs:
   tab. Saving changes your draft only.
 - **Open the editor**, at the right of the others, opens the editor in a tab
   of the browser of its own, the whole window; the page stays on the tab it
-  was on.
+  was on. At its top, a header: the admin's logo and name, your login,
+  **Admin panel** (back to the admin), **Sign out** and the button of the
+  light or dark theme — the choice is kept in the browser.
 
 ![The tab Files: the editor](images/files.png)
 
