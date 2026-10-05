@@ -47,6 +47,8 @@ type Builder struct {
 	locales func() []string
 	// customs are the documents of no part of the admin (Custom)
 	customs []Custom
+	// models are the ones out of the menu documented too (Models)
+	models []*presets.ModelBuilder
 	// funcs are the application's functions of the templates (Func)
 	funcs map[string]Func
 }

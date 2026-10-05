@@ -42,6 +42,10 @@ type Builder struct {
 	// DefaultValidity is how long a key made without an expiration lasts;
 	// MaxValidity the most a key may.
 	DefaultValidity, MaxValidity time.Duration
+	// Profile, when set, is the model of the profile of the user
+	// (my_profile): My keys under it, as what is the user's own; in the menu
+	// when not set.
+	Profile *presets.ModelBuilder
 
 	p *presets.Builder
 }
@@ -117,8 +121,17 @@ func (b *Builder) Install(p *presets.Builder, users *presets.ModelBuilder) error
 	users.AddChild(userKeys)
 	b.configureKeys(userKeys, parentID)
 
-	myKeys := p.Model(&AccessKey{}, config(MyKeysModelID)).Label("MyAccessKey").SetPluralLabel("MyAccessKeys").
-		MenuIcon("mdi-key-chain")
+	var myKeys *presets.ModelBuilder
+	if b.Profile != nil {
+		myKeys = presets.NewModelBuilder(p, &AccessKey{}, config(MyKeysModelID))
+	} else {
+		myKeys = p.Model(&AccessKey{}, config(MyKeysModelID))
+	}
+	// its labels before it goes under the profile: the item of its menu
+	myKeys.Label("MyAccessKey").SetPluralLabel("MyAccessKeys").MenuIcon("mdi-key-chain")
+	if b.Profile != nil {
+		b.Profile.AddChild(myKeys)
+	}
 	b.configureKeys(myKeys, currentUserID)
 
 	for _, keys := range []*presets.ModelBuilder{userKeys, myKeys} {

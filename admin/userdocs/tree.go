@@ -22,7 +22,22 @@ type Node struct {
 // groups, the models and the pages in them —, each model with its actions and
 // the models nested in it; the custom documents where they were put (Custom).
 func (b *Builder) Tree(ctx *web.EventContext) []*Node {
-	return b.withCustom(b.groupNodes(b.p.MenuTree(), ctx), ctx)
+	tree := b.groupNodes(b.p.MenuTree(), ctx)
+	// the models out of the menu, reached otherwise (Models)
+	for _, mb := range b.models {
+		if b.canList(mb, ctx) {
+			tree = append(tree, b.modelTree(mb, b.modelNode(mb), ctx))
+		}
+	}
+	return b.withCustom(tree, ctx)
+}
+
+// Models documents models out of the menu — reached otherwise: the profile of
+// the user, by their avatar —, after the menu's, each with what is under it
+// (its forms, actions, the models nested in it).
+func (b *Builder) Models(mbs ...*presets.ModelBuilder) *Builder {
+	b.models = append(b.models, mbs...)
+	return b
 }
 
 func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext) (nodes []*Node) {

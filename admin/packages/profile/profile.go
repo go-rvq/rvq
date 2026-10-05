@@ -37,7 +37,14 @@ type Builder struct {
 	userMb                    *presets.ModelBuilder
 	mgr                       *login_session.Manager
 	notificationComponentFunc func(ctx *web.EventContext, u user.User) h.HTMLComponent
+	// mb is the model of the profile (Model), once installed
+	mb *presets.ModelBuilder
 }
+
+// Model is the model of the profile of the user (my_profile), once
+// installed: what is the user's own goes under it (AddChild) — their keys,
+// their credentials.
+func (c *Builder) Model() *presets.ModelBuilder { return c.mb }
 
 func New(db *gorm.DB, mgr *login_session.Manager, lb *login.Builder, userMb *presets.ModelBuilder) *Builder {
 	ConfigureMessages(userMb.Builder().I18n())
@@ -149,6 +156,7 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		InMenu(false)
 
 	m.Singleton(true)
+	c.mb = m
 	m.DeletingRestriction.ObjHandler(presets.OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (ok, handled bool) {
 		return true, true
 	}))
