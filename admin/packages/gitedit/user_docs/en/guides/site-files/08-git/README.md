@@ -22,7 +22,8 @@ git push
 ## The permissions of each repository
 
 The tab **Git** shows, for each repository, the permissions it asks and which
-you have (✓) or not (✗).
+you have (✓) or not (✗) — and, under them, all of them as one permission
+(`…:{@get,!git,…}`), with a button to copy it, for a role or a key.
 
 They are those of the page {%= admin.page("/site-files").link %} (step
 **Permissions**), the editor's own. Declared out of the group — they hold

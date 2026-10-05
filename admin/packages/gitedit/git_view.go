@@ -72,8 +72,10 @@ func (b *Builder) gitSection(ctx *web.EventContext, m *Messages, kind, title, wh
 			Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", value))
 	}
 	var rows []h.HTMLComponent
+	var all []string
 	refused := false
 	for _, p := range perms {
+		all = append(all, p.perm)
 		icon, color := "mdi-check", "success"
 		if !p.ok {
 			icon, color, refused = "mdi-close", "error", true
@@ -106,6 +108,8 @@ func (b *Builder) gitSection(ctx *web.EventContext, m *Messages, kind, title, wh
 			h.H4(m.GitPermsTitle).Class("mt-2 mb-1"),
 			missing,
 			v.VTable(h.Tbody(rows...)).Density(v.DensityCompact).Class("mb-3"),
+			// all of them, one permission (a policy of a role, of a key)
+			copyField(m.GitPermsAll, base+"{"+strings.Join(all, ",")+"}", "data-git-perms"),
 			h.P(h.Text(m.GitHookHint)).Class("text-caption mb-2"),
 			copyField(m.GitHook, hook, "data-git-hook"),
 			key,

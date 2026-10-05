@@ -136,6 +136,7 @@ type Messages struct {
 	GitPermPush        string `i18n:"hint='A permission of a repository by git: pushing.'"`
 	GitKeyHint         string `i18n:"hint='Explains the access key for git.'"`
 	GitKeyHelp         string `i18n:"hint='Link to the documentation of git with an access key.'"`
+	GitPermsAll        string `i18n:"hint='Label of all the permissions a repository asks, as one (a policy).'"`
 }
 
 var Messages_en_US = &Messages{
@@ -249,6 +250,7 @@ var Messages_en_US = &Messages{
 	GitPermPush:        "Push",
 	GitKeyHint:         "Use an access key as the password: it needs these same permissions, and your role too.",
 	GitKeyHelp:         "How to",
+	GitPermsAll:        "All of them, one permission",
 }
 
 var Messages_pt_BR = &Messages{
@@ -362,4 +364,5 @@ var Messages_pt_BR = &Messages{
 	GitPermPush:        "Enviar (push)",
 	GitKeyHint:         "Use uma chave de acesso como senha: ela precisa destas mesmas permissões, e o seu papel também.",
 	GitKeyHelp:         "Como",
+	GitPermsAll:        "Todas, numa permissão",
 }

@@ -22,7 +22,8 @@ git push
 ## As permissões de cada repositório
 
 A aba **Git** mostra, para cada repositório, as permissões que ele pede e
-quais você tem (✓) ou não (✗).
+quais você tem (✓) ou não (✗) — e, abaixo, todas numa permissão só
+(`…:{@get,!git,…}`), com um botão de copiar, para um papel ou uma chave.
 
 São as da página {%= admin.page("/site-files").link %} (passo **Permissões**),
 as mesmas do editor. Declaradas fora do grupo — valem onde quer que o menu

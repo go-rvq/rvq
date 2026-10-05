@@ -511,6 +511,11 @@ func TestPageGit(t *testing.T) {
 		!strings.Contains(site, "example.com/admin/site-files.git") {
 		t.Error("the site's section: its URL, !publish its own")
 	}
+	// all of them, one permission, to copy
+	if !strings.Contains(draft, "admin:/site-files:{@get,!git,!create,!edit,!rename,!move,!delete}") ||
+		!strings.Contains(site, "admin:/site-files:{@get,!git,!create,!edit,!rename,!move,!delete,!publish}") {
+		t.Error("all the permissions, one: not shown")
+	}
 	if permOK(draft, "!git") != "ok" || permOK(site, "!publish") != "ok" {
 		t.Error("a permission had not marked ✓")
 	}
