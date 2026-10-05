@@ -196,7 +196,8 @@ func TypeMarker(name string) gad.Object { return &typeMarker{name: name} }
 // of the form; a type only the application knows is named by TypeOf. vm is
 // the VM that ran the code the class comes from.
 func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
-	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf, choiceAsName: b.choiceAsName}
+	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf,
+		choiceAsName: b.choiceAsName, className: b.className}
 	s, err := r.class(c)
 	if err != nil {
 		return nil, err
@@ -225,8 +226,14 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", p.Type.Name(), err)
 		}
+		owner := p.Type.Name()
+		if r.className != nil {
+			if n := r.className(p.Type); n != "" {
+				owner = n
+			}
+		}
 		for _, f := range ps.Fields {
-			f.Owner = p.Type.Name()
+			f.Owner = owner
 		}
 		s.Fields = append(s.Fields, ps.Fields...)
 	}
@@ -334,6 +341,8 @@ type reader struct {
 	// choiceAsName reads a union of classes as the choice of a class's name
 	// (Builder.ChoiceAsName).
 	choiceAsName bool
+	// className names the classes a class extends (Builder.ClassName).
+	className ClassNameFunc
 }
 
 // index is obj[key] through the object's own reflection.

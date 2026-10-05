@@ -238,6 +238,7 @@ type Builder struct {
 	encode    EncodeFunc
 	decode    DecodeFunc
 	typeOf    TypeOfFunc
+	className ClassNameFunc
 	// choiceAsName reads a union of classes as the choice of a class's NAME
 	// (ChoiceAsName).
 	choiceAsName bool
@@ -251,6 +252,18 @@ type TypeOfFunc func(t gad.Object) string
 
 // TypeOf sets the function that names the types only the application knows
 // (TypeOfFunc). It is asked first, for every field of a single type.
+// ClassNameFunc names a class a form extends (`*Parent`) — Field.Owner of
+// the fields it gives —: "" leaves its own name.
+type ClassNameFunc func(c *gad.Class) string
+
+// ClassName names the classes a form extends, for an application whose
+// classes are not told apart by their names: forms of its own, each a class
+// Form, extended by others (`*forms.quote`: "forms.quote").
+func (b *Builder) ClassName(f ClassNameFunc) *Builder {
+	b.className = f
+	return b
+}
+
 func (b *Builder) TypeOf(f TypeOfFunc) *Builder {
 	b.typeOf = f
 	return b

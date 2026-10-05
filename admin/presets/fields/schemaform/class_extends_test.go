@@ -68,3 +68,28 @@ func TestClassTypeMarker(t *testing.T) {
 		t.Errorf("field = %s %s", f.Name, f.Type)
 	}
 }
+
+// ClassName names a class extended: the fields it gives are of that name,
+// not of the class's own (two classes Form, one extending the other).
+func TestClassName(t *testing.T) {
+	b := New()
+	var parent *gad.Class
+	b.ClassName(func(c *gad.Class) string {
+		if c == parent {
+			return "forms.base"
+		}
+		return ""
+	})
+	bi := b.Builtins()
+	res, _ := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte(`class Form { a str }; return Form`), gad.CompileOptions{})
+	vm := gad.NewVM(bi.Build(), res.Bytecode)
+	ret, err := vm.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent = ret.(*gad.Class)
+	s := runClass(t, b, `class Form { *P; b str }; return Form`, map[string]gad.Object{"P": parent})
+	if s.Fields[0].Name != "a" || s.Fields[0].Owner != "forms.base" || s.Fields[1].Owner != "" {
+		t.Errorf("fields: %s %q, %s %q", s.Fields[0].Name, s.Fields[0].Owner, s.Fields[1].Name, s.Fields[1].Owner)
+	}
+}
