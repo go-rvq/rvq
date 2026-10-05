@@ -78,7 +78,7 @@ func newShareApp(t *testing.T) *shareApp {
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	p.DataOperator(gorm2op.DataOperator(db))
 	p.Permission(pb)
-	b := &Builder{Repo: repo, Users: people, DB: db, PreviewPath: "/site-preview",
+	b := &Builder{Repo: repo, Users: people, DB: db, PreviewPath: "/site-preview", PublicPreviewPath: "/_preview",
 		Identity: func(r *http.Request) (string, Author) { u := people[userOf(r)]; return u.Key, u.Author },
 		Preview: func(w http.ResponseWriter, r *http.Request, d *Draft, prefix string) {
 			w.Write([]byte("the draft of " + d.Key + " at " + prefix))

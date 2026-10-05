@@ -73,6 +73,10 @@ type Builder struct {
 	// PreviewURL is where the site of the draft is seen (PreviewPath's,
 	// when not set).
 	PreviewURL string
+	// PublicPreviewPath, when set, is where the site serves the public
+	// previews ("/_preview"): the application mounts PublicPreviewHandler
+	// there, out of the admin. "" is no public preview.
+	PublicPreviewPath string
 	// HelpURL, when set, is the documentation of the editor, opened by the
 	// page's Help button.
 	HelpURL string
@@ -261,13 +265,19 @@ func (b *Builder) Install(p *presets.Builder) error {
 	for action, words := range map[string]func(*Messages) (string, string){
 		ActionShare:  func(m *Messages) (string, string) { return m.ShareAction, m.ShareAction_Desc },
 		ActionDrafts: func(m *Messages) (string, string) { return m.DraftsAction, m.DraftsAction_Desc },
+		ActionPublicPreview: func(m *Messages) (string, string) {
+			return m.PublicPreviewAction, m.PublicPreviewAction_Desc
+		},
 	} {
+		if action == ActionPublicPreview && b.PublicPreviewPath == "" {
+			continue
+		}
 		b.page.Page().PermActionInfo(presets.ActionPerm(action),
 			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
 			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
 	}
 	if b.DB != nil {
-		if err := b.DB.AutoMigrate(&DraftShare{}); err != nil {
+		if err := b.DB.AutoMigrate(&DraftShare{}, &PublicPreview{}); err != nil {
 			return err
 		}
 	}
@@ -623,6 +633,10 @@ func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 		return nil
 	}).Build()
 
+	if b.PublicPreviewPath != "" {
+		b.setupPublicPreviewActions(p, pg, action, label)
+	}
+
 	// revoking: the owner's (!share), any (!drafts)
 	pg.Action(ActionRevoke).Icon("mdi-account-cancel-outline").
 		SetVerifier(func(ctx *web.EventContext) *perm.Verifier {
@@ -772,6 +786,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		preview = v.VBtn(m.Preview).PrependIcon("mdi-eye-outline").Variant(v.VariantTonal).Size(v.SizeSmall).
 			Class("me-2 mb-2").Href(u).Attr("target", "_blank").Attr("data-preview", true)
 	}
+	publicPreview := b.publicPreviewView(ctx, m, portal, owner, own)
 	var reset h.HTMLComponent
 	if b.isOwnerOrAdmin(ctx.R) {
 		reset = btn(ActionReset, m.ResetAction, "mdi-restore", true)
@@ -792,6 +807,7 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 			preview,
 			reset,
 			help,
+			publicPreview,
 			h.H4(m.Changes).Class("mt-4 mb-2"),
 			changesComp,
 			h.H4(m.History).Class("mt-4 mb-2"),
