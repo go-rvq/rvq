@@ -31,7 +31,7 @@ listado na aba **Rascunhos** de quem o recebe:
 - o **editor** (as abas Arquivos e Abrir o editor);
 - o **preview** do site como o rascunho o faz;
 - o **git**: `…/site-files-drafts/<a chave do dono>.git` (veja o passo
-  **Pelo git**).
+  **Pelo git**; o endereço está na aba **Git** do rascunho).
 
 ![O rascunho de outro usuário, compartilhado com você](images/shared-draft.png)
 

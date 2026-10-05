@@ -446,9 +446,11 @@ func TestPermissionsByUniqueName(t *testing.T) {
 	}
 }
 
-// The page shows the URLs by git to whoever may (!git): the draft's, and the
-// site's to whoever may publish.
-func TestPageGitURLs(t *testing.T) {
+// The tab Git, to whoever may (!git): a section each repository — the
+// draft's, the site's —, its URL, the clone, the permissions it asks, each
+// marked had (✓) or not (✗) — the site's to whoever may not publish too, its
+// !publish ✗ —, and the hook.
+func TestPageGit(t *testing.T) {
 	var invalid error
 	page := func(policies ...*perm.PolicyBuilder) string {
 		pb := perm.New().AllowAll()
@@ -462,19 +464,72 @@ func TestPageGitURLs(t *testing.T) {
 		}
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
-		return w.Body.String()
+		return strings.NewReplacer("&#39;", "'", `\u003c`, "<", `\u003e`, ">").Replace(w.Body.String())
 	}
 	deny := func(res string) *perm.PolicyBuilder {
 		return perm.PolicyFor(perm.Anybody).WhoAre(perm.Denied).ToDo(perm.Anything).On(res)
 	}
+	section := func(body, kind string) string {
+		i := strings.Index(body, "data-git-repo='"+kind+"'")
+		if i < 0 {
+			return ""
+		}
+		rest := body[i+1:]
+		if j := strings.Index(rest, "data-git-repo="); j >= 0 {
+			rest = rest[:j]
+		}
+		return rest
+	}
+	permOK := func(sec, p string) string {
+		i := strings.Index(sec, "data-git-perm='"+p+"'")
+		if i < 0 {
+			return "none"
+		}
+		rest := sec[i:]
+		j := strings.Index(rest, "data-git-perm-ok=")
+		if j < 0 {
+			return "none"
+		}
+		if strings.HasPrefix(rest[j:], "data-git-perm-ok='true'") {
+			return "ok"
+		}
+		return "no"
+	}
+
 	all := page()
-	if !strings.Contains(all, "example.com/admin/site-files-draft.git") || !strings.Contains(all, "example.com/admin/site-files.git") {
-		t.Errorf("the URLs by git not shown:\n%.400s", all)
+	if !strings.Contains(all, "Git") || !strings.Contains(all, "data-git-repo='draft'") || !strings.Contains(all, "data-git-repo='site'") {
+		t.Fatalf("the tab Git, its sections:\n%.400s", all)
 	}
-	if got := page(deny("admin:/site-files:!publish")); !strings.Contains(got, "site-files-draft.git") || strings.Contains(got, "/admin/site-files.git") {
-		t.Error("with no !publish: the draft's only")
+	draft, site := section(all, "draft"), section(all, "site")
+	for _, want := range []string{"example.com/admin/site-files-draft.git", "git clone https://example.com/admin/site-files-draft.git",
+		"admin:/site-files:!git", "admin:/site-files:@get", "admin:/site-files:!edit", "commit-msg"} {
+		if !strings.Contains(draft, want) {
+			t.Errorf("the draft's section: no %q", want)
+		}
 	}
-	if got := page(deny("admin:/site-files:!git")); strings.Contains(got, "example.com") {
-		t.Error("with no !git: shown")
+	if strings.Contains(draft, "!publish") || !strings.Contains(site, "admin:/site-files:!publish") ||
+		!strings.Contains(site, "example.com/admin/site-files.git") {
+		t.Error("the site's section: its URL, !publish its own")
+	}
+	if permOK(draft, "!git") != "ok" || permOK(site, "!publish") != "ok" {
+		t.Error("a permission had not marked ✓")
+	}
+
+	// no !publish: the site's shown, its !publish ✗; the draft's all ✓
+	got := page(deny("admin:/site-files:!publish"))
+	if site := section(got, "site"); site == "" || permOK(site, "!publish") != "no" || permOK(site, "!git") != "ok" {
+		t.Error("with no !publish: the site's section, its !publish ✗")
+	}
+	if permOK(section(got, "draft"), "!git") != "ok" {
+		t.Error("with no !publish: the draft's !git")
+	}
+	// no !edit: ✗ in both
+	got = page(deny("admin:/site-files:!edit"))
+	if permOK(section(got, "draft"), "!edit") != "no" || permOK(section(got, "site"), "!edit") != "no" {
+		t.Error("with no !edit: not ✗")
+	}
+	// no !git: no tab
+	if got := page(deny("admin:/site-files:!git")); strings.Contains(got, "data-git-repo") || strings.Contains(got, "example.com") {
+		t.Error("with no !git: the tab shown")
 	}
 }

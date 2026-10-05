@@ -796,7 +796,6 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 			changesComp,
 			h.H4(m.History).Class("mt-4 mb-2"),
 			v.VList(logItems...).Density(v.DensityCompact),
-			b.gitURLs(ctx, m, allowed),
 		),
 	).Variant(v.VariantOutlined)
 
@@ -820,6 +819,11 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		tabItems = append(tabItems, v.VTab(h.Text(m.DraftsTab)).Value("drafts").PrependIcon("mdi-folder-account-outline"))
 		windows = append(windows, v.VTabsWindowItem(b.draftsView(ctx, m, allowed(ActionDrafts))).Value("drafts"))
 	}
+	// the repositories by git: the draft's and the site's
+	if b.hasGit(ctx) {
+		tabItems = append(tabItems, v.VTab(h.Text(m.GitTab)).Value("git").PrependIcon("mdi-git"))
+		windows = append(windows, v.VTabsWindowItem(b.gitView(ctx, m)).Value("git"))
+	}
 	tabItems = append(tabItems, v.VTab(h.Text(m.OpenIDE)).Value("open").PrependIcon("mdi-open-in-new").
 		Attr("href", b.EditorURL(ctx.R)).Attr("target", "_blank").Attr("data-open-ide", true))
 
@@ -840,39 +844,4 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		tabs,
 	).Class("pa-4")
 	return
-}
-
-// gitURLs are the URLs by git (GitURL) of the draft and — to whoever may
-// publish — of the site, each with a button that copies it; nothing to whoever
-// may not reach them by git (!git).
-func (b *Builder) gitURLs(ctx *web.EventContext, m *Messages, allowed func(string) bool) h.HTMLComponent {
-	if b.GitURL == nil || !allowed(ActionGit) {
-		return nil
-	}
-	field := func(label, url string) h.HTMLComponent {
-		return v.VTextField().Label(label).ModelValue(url).Readonly(true).
-			Variant(v.FieldVariantOutlined).Density(v.DensityCompact).HideDetails(true).Class("mb-2").
-			Attr("append-inner-icon", "mdi-content-copy").Attr("data-git-url", url).
-			Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", url))
-	}
-	owner, own := b.ownerKey(ctx.R)
-	draftLabel := m.GitDraftURL
-	if !own {
-		draftLabel = fmt.Sprintf(m.GitOtherDraftURL, b.user(ctx.R, owner).Label())
-	}
-	items := []h.HTMLComponent{
-		h.H4(m.ByGit).Class("mt-4 mb-1"),
-		h.P(h.Text(m.ByGitHint)).Class("text-caption mb-2"),
-		field(draftLabel, b.GitURL(ctx.R, owner)),
-	}
-	if allowed(ActionPublish) {
-		items = append(items, field(m.GitSiteURL, b.GitURL(ctx.R, "")))
-	}
-	// the hook that signs the commits of a clone (Site-User)
-	hook := fmt.Sprintf("curl -fsSL -u %s %s -o .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg",
-		shellQuote(b.actor(ctx.R).Login), absURL(ctx.R, b.hookPath()))
-	items = append(items,
-		h.P(h.Text(m.GitHookHint)).Class("text-caption mt-3 mb-2"),
-		field(m.GitHook, hook))
-	return h.Div(items...)
 }

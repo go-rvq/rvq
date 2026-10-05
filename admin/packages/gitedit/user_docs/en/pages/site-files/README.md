@@ -19,6 +19,10 @@ The page has three tabs:
   {%= admin.doc("guides/site-files/09-sharing").link %}).
 - **Drafts**: the drafts of others shared with you — and, to whoever may,
   every user's.
+- **Git**: your draft and the site by git — each with its address, the
+  clone, the permissions it asks (✓ the ones you have, ✗ the ones you do
+  not) and the hook that signs the commits (see
+  {%= admin.doc("guides/site-files/08-git").link %}).
 - **Open the editor**, at the right of the others, opens the editor in a tab
   of the browser of its own, the whole window; the page stays on the tab it
   was on. At its top, a header: the admin's logo and name, your login,

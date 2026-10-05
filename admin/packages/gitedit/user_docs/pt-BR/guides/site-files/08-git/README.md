@@ -3,7 +3,7 @@
 Os mesmos arquivos podem ser clonados e enviados (push) com o **git**, do seu
 computador, com o seu **login** e uma **chave de acesso** (veja abaixo) — ou a
 sua senha do admin. Há dois repositórios — as
-URLs estão na página {%= admin.page("/site-files").link %}, em **Pelo git**:
+URLs estão na página {%= admin.page("/site-files").link %}, na aba **Git**:
 
 | Repositório | Um push… | Pede |
 | --- | --- | --- |
@@ -17,7 +17,12 @@ cd site-files-draft
 git push
 ```
 
+![A aba Git: o seu rascunho e o site, cada um com o endereço, o clone, as permissões que pede — ✓ as que você tem, ✗ as que não — e o hook](images/git.png)
+
 ## As permissões de cada repositório
+
+A aba **Git** mostra, para cada repositório, as permissões que ele pede e
+quais você tem (✓) ou não (✗).
 
 São as da página {%= admin.page("/site-files").link %} (passo **Permissões**),
 as mesmas do editor. Declaradas fora do grupo — valem onde quer que o menu
@@ -145,7 +150,7 @@ da mensagem, como a `Co-authored-by` do git —
 
 Um push com um commit sem ela (ou de outro site, ou de um usuário que o site
 não conhece) é recusado, e o git mostra a linha que falta. O **hook**
-`commit-msg` acrescenta a linha a cada commit; em **Pelo git**, na página, está
+`commit-msg` acrescenta a linha a cada commit; na aba **Git** da página está
 o comando que o instala no seu clone:
 
     curl -fsSL -u o-seu-login …/site-files/commit-msg -o .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg

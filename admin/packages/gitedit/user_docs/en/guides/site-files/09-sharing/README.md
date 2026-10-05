@@ -29,7 +29,7 @@ in the tab **Drafts** of whoever receives it:
 - the **editor** (the tabs Files and Open the editor);
 - the **preview** of the site as the draft makes it;
 - **git**: `…/site-files-drafts/<the owner's key>.git` (see the step
-  **By git**).
+  **By git**; the address is in the tab **Git** of the draft).
 
 ![The draft of another user, shared with you](images/shared-draft.png)
 

@@ -3,7 +3,7 @@
 The same files can be cloned and pushed with **git**, from your computer,
 with your **login** and an **access key** (see below) — or your admin
 password. There are two repositories — their
-URLs are on the page {%= admin.page("/site-files").link %}, under **By git**:
+URLs are on the page {%= admin.page("/site-files").link %}, in the tab **Git**:
 
 | Repository | A push… | Asks |
 | --- | --- | --- |
@@ -17,7 +17,12 @@ cd site-files-draft
 git push
 ```
 
+![The tab Git: your draft and the site, each with its address, the clone, the permissions it asks — ✓ the ones you have, ✗ the ones you do not — and the hook](images/git.png)
+
 ## The permissions of each repository
+
+The tab **Git** shows, for each repository, the permissions it asks and which
+you have (✓) or not (✗).
 
 They are those of the page {%= admin.page("/site-files").link %} (step
 **Permissions**), the editor's own. Declared out of the group — they hold
@@ -147,7 +152,7 @@ of its message, as git's `Co-authored-by` —
 
 A push of a commit without it (or of another site, or of a user the site does
 not know) is refused, and git shows the line missing. The **hook**
-`commit-msg` adds the line to each commit; in **By git**, on the page, is the
+`commit-msg` adds the line to each commit; in the tab **Git** of the page is the
 command that installs it in your clone:
 
     curl -fsSL -u your-login …/site-files/commit-msg -o .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg

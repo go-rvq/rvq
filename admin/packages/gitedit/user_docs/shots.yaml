@@ -93,3 +93,10 @@
   wait: "[data-draft-owner]"
   width: 1440
   height: 900
+# the tab Git: the draft and the site, each its section (the step "By git")
+- file: guides/site-files/08-git/images/git.png
+  url: /admin/site/site-files
+  wait: .v-tabs
+  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][4]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-window-item--active [data-git-repo=site]') })()"
+  width: 1440
+  height: 1500

@@ -69,10 +69,6 @@ type Messages struct {
 	ImportAction       string `i18n:"label='Import files', hint='Title of the permission of uploading and downloading from the internet.'"`
 	ImportAction_Desc  string `i18n:"hint='Description of the permission of uploading and downloading from the internet.'"`
 	GitAction          string `i18n:"label='Access by git', hint='Title of the permission of cloning and pushing the files by git.'"`
-	ByGit              string `i18n:"hint='Title of the box of the URLs of the files by git.'"`
-	ByGitHint          string `i18n:"hint='Explains the URLs by git: cloned and pushed with the login and password.'"`
-	GitDraftURL        string `i18n:"hint='Label of the URL by git of the draft of the user.'"`
-	GitSiteURL         string `i18n:"hint='Label of the URL by git of the site: a push to it publishes.'"`
 	GitAction_Desc     string `i18n:"hint='Description of the permission of cloning and pushing the files by git.'"`
 
 	Committed          string `i18n:"hint='Shown once the changes were committed.', fields=(;'%s'='the short hash')"`
@@ -125,8 +121,21 @@ type Messages struct {
 	GitHook            string `i18n:"hint='Label of the command that installs the hook.'"`
 	DraftOther         string `i18n:"hint='Tab of the draft of another user (shared, or every draft).'"`
 	DraftHintOther     string `i18n:"hint='Explains the draft of another user: whoever reaches it edits it; the site changes only when published.'"`
-	GitOtherDraftURL   string `i18n:"hint='Label of the URL by git of the draft of another user.'"`
 	OpenDraft          string `i18n:"hint='Link to the page of a draft, in the list of the drafts.'"`
+	GitTab             string `i18n:"hint='Tab of the repositories by git.'"`
+	GitDraftTitle      string `i18n:"hint='Title of the section of the draft of the user by git.'"`
+	GitOtherDraftTitle string `i18n:"hint='Title of the section of the draft of another user by git.'"`
+	GitSiteTitle       string `i18n:"hint='Title of the section of the site by git.'"`
+	GitDraftWhat       string `i18n:"hint='What a push to the draft does.'"`
+	GitSiteWhat        string `i18n:"hint='What a push to the site does.'"`
+	GitURLLabel        string `i18n:"hint='Label of the URL of a repository by git.'"`
+	GitCloneLabel      string `i18n:"hint='Label of the command that clones a repository.'"`
+	GitPermsTitle      string `i18n:"hint='Title of the permissions a repository by git asks.'"`
+	GitPermsMissing    string `i18n:"hint='Said when the user lacks a permission a repository asks.'"`
+	GitPermGet         string `i18n:"hint='A permission of a repository by git: seeing the files.'"`
+	GitPermPush        string `i18n:"hint='A permission of a repository by git: pushing.'"`
+	GitKeyHint         string `i18n:"hint='Explains the access key for git.'"`
+	GitKeyHelp         string `i18n:"hint='Link to the documentation of git with an access key.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -174,10 +183,6 @@ var Messages_en_US = &Messages{
 	ImportAction:       "Import files",
 	ImportAction_Desc:  "Uploads files from the computer and downloads them from the internet (with Create files or Edit files for what it writes).",
 	GitAction:          "Access by git",
-	ByGit:              "By git",
-	ByGitHint:          "Clone and push with git, with your login and an access key (or your password).",
-	GitDraftURL:        "Your draft (a push changes it; publish here)",
-	GitSiteURL:         "The site (a push publishes)",
 	GitAction_Desc:     "Clones and pushes the files by git — the draft, and the site with Publish —, each file changed asking what the editor asks.",
 	Committed:          "Committed: %s",
 	Updated:            "The draft has what was published.",
@@ -229,8 +234,21 @@ var Messages_en_US = &Messages{
 	GitHook:            "The hook commit-msg",
 	DraftOther:         "Draft",
 	DraftHintOther:     "You edit the draft of another user, with them: your commits are yours; the site changes only when someone publishes.",
-	GitOtherDraftURL:   "The draft of %s (a push changes it)",
 	OpenDraft:          "Open",
+	GitTab:             "Git",
+	GitDraftTitle:      "Your draft by git",
+	GitOtherDraftTitle: "The draft of %s by git",
+	GitSiteTitle:       "The site by git",
+	GitDraftWhat:       "A push changes the draft: the editor and the preview show it at once; publish from the page.",
+	GitSiteWhat:        "A push publishes at once — checking what Publish does: the templates compile, a fast-forward, the files of the site untouched.",
+	GitURLLabel:        "Address",
+	GitCloneLabel:      "Clone",
+	GitPermsTitle:      "The permissions it asks",
+	GitPermsMissing:    "Without the ones marked ✗, git refuses what asks them.",
+	GitPermGet:         "Clone and fetch (each file)",
+	GitPermPush:        "Push",
+	GitKeyHint:         "Use an access key as the password: it needs these same permissions, and your role too.",
+	GitKeyHelp:         "How to",
 }
 
 var Messages_pt_BR = &Messages{
@@ -278,10 +296,6 @@ var Messages_pt_BR = &Messages{
 	ImportAction:       "Importar arquivos",
 	ImportAction_Desc:  "Faz upload de arquivos do computador e os baixa da internet (com Criar arquivos ou Editar arquivos para o que grava).",
 	GitAction:          "Acessar por git",
-	ByGit:              "Pelo git",
-	ByGitHint:          "Clone e faça push com o git, com o seu login e uma chave de acesso (ou a sua senha).",
-	GitDraftURL:        "Seu rascunho (um push o muda; publique aqui)",
-	GitSiteURL:         "O site (um push publica)",
 	GitAction_Desc:     "Clona e envia (push) os arquivos por git — o rascunho, e o site com Publicar —, cada arquivo alterado pedindo o que o editor pede.",
 	Committed:          "Commit feito: %s",
 	Updated:            "O rascunho tem o que foi publicado.",
@@ -333,6 +347,19 @@ var Messages_pt_BR = &Messages{
 	GitHook:            "O hook commit-msg",
 	DraftOther:         "Rascunho",
 	DraftHintOther:     "Você edita o rascunho de outro usuário, junto com ele: os seus commits são seus; o site muda só quando alguém publica.",
-	GitOtherDraftURL:   "O rascunho de %s (um push o muda)",
 	OpenDraft:          "Abrir",
+	GitTab:             "Git",
+	GitDraftTitle:      "O seu rascunho pelo git",
+	GitOtherDraftTitle: "O rascunho de %s pelo git",
+	GitSiteTitle:       "O site pelo git",
+	GitDraftWhat:       "Um push muda o rascunho: o editor e o preview mostram na hora; publique pela página.",
+	GitSiteWhat:        "Um push publica direto — conferindo o mesmo que Publicar: os templates compilam, um fast-forward, os arquivos do site intactos.",
+	GitURLLabel:        "Endereço",
+	GitCloneLabel:      "Clonar",
+	GitPermsTitle:      "As permissões que pede",
+	GitPermsMissing:    "Sem as marcadas com ✗, o git recusa o que as pede.",
+	GitPermGet:         "Clonar e buscar (cada arquivo)",
+	GitPermPush:        "Enviar (push)",
+	GitKeyHint:         "Use uma chave de acesso como senha: ela precisa destas mesmas permissões, e o seu papel também.",
+	GitKeyHelp:         "Como",
 }

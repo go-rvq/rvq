@@ -19,6 +19,9 @@ A página tem três abas:
   **Compartilhar**/**Revogar** (veja {%= admin.doc("guides/site-files/09-sharing").link %}).
 - **Rascunhos**: os rascunhos de outros compartilhados com você — e, a quem
   pode, o de todos os usuários.
+- **Git**: o seu rascunho e o site pelo git — cada um com o endereço, o
+  clone, as permissões que pede (✓ as que você tem, ✗ as que não) e o hook
+  que assina os commits (veja {%= admin.doc("guides/site-files/08-git").link %}).
 - **Abrir o editor**, à direita das outras, abre o editor numa aba do
   navegador só dele, na janela inteira; a página fica na aba em que estava.
   No alto dele, um cabeçalho: o logo e o nome do admin, o seu login,
