@@ -20,6 +20,8 @@ mainCmd.Sub(admincli.HttpApiCommand(admincli.Config{
 
 - The request is tagged with `web.RequestSourceCLI` (context only, not a header,
   so it cannot be forged over HTTP); read it with `web.IsCLIRequest(r)`.
+- `URIPrefix` (optional) is the admin's path (`/admin`): a URI may then be the
+  admin's subpath (`/content/posts`), in-process as remotely.
 - With a login, the request runs as that user via `login.WithTrustedUser`, which
   the login middleware honours in place of a session cookie.
 
@@ -43,6 +45,24 @@ app http_api a.json b.json
 
 Flags (`--http-method`, `--user`, `--content-type`, `--data`, `--raw`) are
 optional; in the JSON form they only provide defaults for omitted spec fields.
+
+## Remote server
+
+`--remote URL` sends the requests to a running server instead of serving them
+in-process. `URL` is its address, a path included (`https://example.com/admin`);
+the URI — a spec's too — is the admin's subpath, joined to it: `/content/posts`
+and `/admin/content/posts` are the same request.
+
+The user is the **access key**'s: its code goes as a bearer token, read from
+`--token-file FILE`, else from `$HTTP_API_TOKEN` — never from a flag, which the
+process list shows. The flags take their defaults from the environment:
+`HTTP_API_REMOTE` (`--remote`), `HTTP_API_TOKEN_FILE` (`--token-file`). `--user` and `skipFormSign` belong to the in-process mode
+and are refused remotely.
+
+```sh
+app http_api --remote https://example.com/admin --token-file .key \
+  --http-method POST --data '{"Title":"Hi"}' '/content/posts?__execute_event__=presets_Update'
+```
 
 ## Spec format
 

@@ -12,6 +12,7 @@ import (
 
 	"context"
 	"net/http"
+	"net/http/httptest"
 
 	"github.com/go-rvq/rvq/cli"
 
@@ -314,5 +315,118 @@ func TestServeCarriesSkipFormSignInTheContext(t *testing.T) {
 		if got != skip {
 			t.Errorf("web.SkipFormSign = %v, want %v", got, skip)
 		}
+	}
+}
+
+func TestRemoteURL(t *testing.T) {
+	for _, c := range []struct{ base, uri, want string }{
+		{"https://h.com/admin", "/content/posts?__execute_event__=x", "https://h.com/admin/content/posts?__execute_event__=x"},
+		{"https://h.com/admin", "/admin/content/posts", "https://h.com/admin/content/posts"},
+		{"https://h.com/admin/", "/admin/pages", "https://h.com/admin/pages"},
+		{"https://h.com/admin", "/admin", "https://h.com/admin"},
+		{"https://h.com/admin", "/administrators", "https://h.com/admin/administrators"},
+		{"https://h.com", "pages", "https://h.com/pages"},
+	} {
+		got, err := remoteURL(c.base, c.uri)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != c.want {
+			t.Errorf("remoteURL(%q, %q) = %q, want %q", c.base, c.uri, got, c.want)
+		}
+	}
+	if _, err := remoteURL("h.com/admin", "/x"); err == nil {
+		t.Error("an address without scheme must be refused")
+	}
+}
+
+func TestServeRemote(t *testing.T) {
+	var auth, ct, path, title string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth, ct, path = r.Header.Get("Authorization"), r.Header.Get("Content-Type"), r.URL.RequestURI()
+		title = r.FormValue("Title")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"updatePortals":[{"name":"flash","body":"<b>Saved</b>"}]}`))
+	}))
+	defer srv.Close()
+
+	res, err := Serve(context.Background(), Config{}, Dispatch{
+		Method: http.MethodPost, URI: "/pages?__execute_event__=presets_Update",
+		ContentType: "application/json", RawBody: []byte(`{"Title":"Oi"}`),
+		Remote: srv.URL + "/admin", Token: "k3y",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if auth != "Bearer k3y" {
+		t.Errorf("Authorization = %q", auth)
+	}
+	if !strings.HasPrefix(ct, "multipart/form-data") || title != "Oi" {
+		t.Errorf("body: Content-Type %q, Title %q", ct, title)
+	}
+	if path != "/admin/pages?__execute_event__=presets_Update" {
+		t.Errorf("path = %q", path)
+	}
+	if res.Status != 200 || len(res.Flash) != 1 || res.Flash[0] != "Saved" {
+		t.Errorf("result = %+v", res)
+	}
+
+	if _, err := Serve(context.Background(), Config{}, Dispatch{Method: "GET", URI: "/x", Remote: srv.URL, SkipFormSign: true}); err == nil {
+		t.Error("skipFormSign must be refused remotely")
+	}
+}
+
+func TestRemoteToken(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "key")
+	os.WriteFile(f, []byte("  abc\n"), 0o600)
+	if tok, err := remoteToken(f); err != nil || tok != "abc" {
+		t.Errorf("remoteToken(file) = %q, %v", tok, err)
+	}
+	t.Setenv("HTTP_API_TOKEN", "env")
+	if tok, err := remoteToken(""); err != nil || tok != "env" {
+		t.Errorf("remoteToken(env) = %q, %v", tok, err)
+	}
+	t.Setenv("HTTP_API_TOKEN", "")
+	if _, err := remoteToken(""); err == nil {
+		t.Error("no key must be an error")
+	}
+}
+
+func TestServeJoinsTheURIPrefix(t *testing.T) {
+	for _, uri := range []string{"/content/posts?x=1", "/admin/content/posts?x=1"} {
+		var got string
+		cfg := Config{
+			Handler: func(*http.ServeMux) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { got = r.URL.RequestURI() })
+			},
+			URIPrefix: func() string { return "/admin" },
+		}
+		if _, err := Serve(context.Background(), cfg, Dispatch{Method: "GET", URI: uri}); err != nil {
+			t.Fatal(err)
+		}
+		if got != "/admin/content/posts?x=1" {
+			t.Errorf("%s: served %q", uri, got)
+		}
+	}
+}
+
+func TestRemoteAsked(t *testing.T) {
+	t.Setenv("HTTP_API_REMOTE", "")
+	for args, want := range map[string]bool{
+		"--remote https://h/admin /x": true,
+		"-remote=https://h/admin /x":  true,
+		"--user admin /x":             false,
+		"--remote= /x":                false,
+	} {
+		if got := remoteAsked(strings.Fields(args)); got != want {
+			t.Errorf("remoteAsked(%q) = %v", args, got)
+		}
+	}
+	t.Setenv("HTTP_API_REMOTE", "https://h/admin")
+	if !remoteAsked([]string{"/x"}) {
+		t.Error("$HTTP_API_REMOTE asks a remote run")
+	}
+	if handled, _ := RunRemoteIfAsked([]string{"app", "serve"}); handled {
+		t.Error("another command is not handled")
 	}
 }

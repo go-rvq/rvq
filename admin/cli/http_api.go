@@ -30,6 +30,9 @@ import (
 type Config struct {
 	Handler  func(mux *http.ServeMux) http.Handler
 	FindUser func(account string) (any, error)
+	// URIPrefix is the admin's path ("/admin"): a URI of the admin's subpath
+	// ("/content/posts") is joined to it. Nil, the URI is served as given.
+	URIPrefix func() string
 }
 
 // HttpApiCommand runs an HTTP request against the application handler in the same
@@ -94,6 +97,19 @@ OUTPUT
   stripped) into "flash" and that portal is removed from "response".
   --raw prints the untouched response body instead.
 
+REMOTE SERVER
+  --remote URL sends the requests to a running server (its address, a path
+  included: https://example.com/admin) instead of serving them in-process. The
+  URI — of a spec too — is the admin's subpath, joined to it: "/content/posts"
+  and "/admin/content/posts" are the same request. The user is the access
+  key's: its code goes as a bearer token, read from --token-file FILE, else
+  from $HTTP_API_TOKEN (never a flag: it would be seen in the process list).
+  --user and skipFormSign are of the in-process mode only.
+  ENV: HTTP_API_REMOTE (--remote), HTTP_API_TOKEN_FILE (--token-file),
+  HTTP_API_TOKEN (the code).
+    app http_api --remote https://example.com/admin --token-file .key \
+      --http-method POST --data '{"Title":"Hi"}' '/content/posts?__execute_event__=presets_Update'
+
 EXAMPLE SPEC
   {
     "login": "admin",
@@ -116,6 +132,8 @@ func HttpApiCommand(cfg Config) *cli.Command {
 		contentType  string
 		rawOut       bool
 		skipFormSign bool
+		remote       string
+		tokenFile    string
 	)
 
 	return &cli.Command{
@@ -130,6 +148,8 @@ func HttpApiCommand(cfg Config) *cli.Command {
 			fs.StringVar(&contentType, "content-type", "application/json", "request Content-Type (default for JSON specs)")
 			fs.BoolVar(&rawOut, "raw", false, "print the raw response body without extracting the flash portal")
 			fs.BoolVar(&skipFormSign, "skip-form-sign", false, "skip the admin form-stamp (optimistic-lock) check on saves")
+			fs.StringVar(&remote, "remote", os.Getenv("HTTP_API_REMOTE"), "address of a running server (https://host/admin) to send the requests to, instead of in-process (env HTTP_API_REMOTE)")
+			fs.StringVar(&tokenFile, "token-file", os.Getenv("HTTP_API_TOKEN_FILE"), "with --remote: file with the access key's code (env HTTP_API_TOKEN_FILE; else env HTTP_API_TOKEN, the code)")
 			return nil
 		},
 		Help: func(ctx *cli.CommandContext) error {
@@ -144,6 +164,17 @@ func HttpApiCommand(cfg Config) *cli.Command {
 				contentType:  contentType,
 				raw:          rawOut,
 				skipFormSign: skipFormSign,
+				remote:       remote,
+			}
+			if remote != "" {
+				if userAccount != "" {
+					return fmt.Errorf("http_api: --user is of the in-process mode; remotely the user is the access key's")
+				}
+				token, err := remoteToken(tokenFile)
+				if err != nil {
+					return err
+				}
+				o.token = token
 			}
 			args := ctx.Args
 			// A single positional that is not an existing file is the URI: the
@@ -167,6 +198,27 @@ type httpApiOptions struct {
 	uri          string
 	raw          bool
 	skipFormSign bool
+	remote       string
+	token        string
+}
+
+// remoteToken is the access key's code of a remote run: the file's (blanks
+// trimmed), else $HTTP_API_TOKEN.
+func remoteToken(file string) (string, error) {
+	if file != "" {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			return "", fmt.Errorf("token file: %w", err)
+		}
+		if t := strings.TrimSpace(string(b)); t != "" {
+			return t, nil
+		}
+		return "", fmt.Errorf("token file %s is empty", file)
+	}
+	if t := strings.TrimSpace(os.Getenv("HTTP_API_TOKEN")); t != "" {
+		return t, nil
+	}
+	return "", fmt.Errorf("http_api: --remote needs an access key: --token-file FILE or $HTTP_API_TOKEN")
 }
 
 // requestSpec is one request described in JSON. It carries everything a request
@@ -218,11 +270,16 @@ type DispatchResult struct {
 }
 
 func runSingle(ctx *cli.CommandContext, cfg Config, o httpApiOptions) error {
-	if cfg.Handler == nil {
+	if cfg.Handler == nil && o.remote == "" {
 		return fmt.Errorf("http_api: no in-process handler configured")
 	}
 
-	rawBody, err := loadHTTPBody(o.data)
+	data := o.data
+	if data == "" && (o.method == http.MethodGet || o.method == http.MethodHead) {
+		// a GET has no body: a stdin left open (a pipe) is not waited for
+		data = "@none"
+	}
+	rawBody, err := loadHTTPBody(data)
 	if err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}
@@ -235,6 +292,8 @@ func runSingle(ctx *cli.CommandContext, cfg Config, o httpApiOptions) error {
 		RawBody:      rawBody,
 		Raw:          o.raw,
 		SkipFormSign: o.skipFormSign,
+		Remote:       o.remote,
+		Token:        o.token,
 	})
 	if err != nil {
 		return err
@@ -244,7 +303,7 @@ func runSingle(ctx *cli.CommandContext, cfg Config, o httpApiOptions) error {
 }
 
 func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []string) error {
-	if cfg.Handler == nil {
+	if cfg.Handler == nil && o.remote == "" {
 		return fmt.Errorf("http_api: no in-process handler configured")
 	}
 
@@ -279,6 +338,8 @@ func runFromJSON(ctx *cli.CommandContext, cfg Config, o httpApiOptions, files []
 			Raw:          o.raw,
 			SkipFormSign: spec.SkipFormSign || o.skipFormSign,
 			Expected:     spec.ExpectedResponse,
+			Remote:       o.remote,
+			Token:        o.token,
 		})
 		if err != nil {
 			return fmt.Errorf("request %d (%s): %w", i, spec.URI, err)
@@ -311,6 +372,11 @@ type Dispatch struct {
 	Raw          bool
 	SkipFormSign bool
 	Expected     *ExpectedResponse
+	// Remote is the address of a running server to send the request to
+	// (https://host/admin), instead of serving it in-process; Token is the
+	// access key's code it carries, as a bearer token.
+	Remote string
+	Token  string
 }
 
 // Serve builds one request from d, dispatches it into the app handler in-process
@@ -326,6 +392,9 @@ func Serve(baseCtx context.Context, cfg Config, d Dispatch) (*DispatchResult, er
 	c := baseCtx
 	if c == nil {
 		c = context.Background()
+	}
+	if d.Remote != "" {
+		return serveRemote(c, d, wireBody, wireContentType)
 	}
 	c = web.WithRequestSource(c, web.RequestSourceCLI)
 	if d.SkipFormSign {
@@ -348,7 +417,16 @@ func Serve(baseCtx context.Context, cfg Config, d Dispatch) (*DispatchResult, er
 		bodyReader = bytes.NewReader(wireBody)
 	}
 
-	req := httptest.NewRequest(d.Method, d.URI, bodyReader).WithContext(c)
+	uri := d.URI
+	if cfg.URIPrefix != nil {
+		u, err := url.Parse(uri)
+		if err != nil {
+			return nil, fmt.Errorf("http_api: uri %q: %w", uri, err)
+		}
+		u.Path, u.RawPath = joinPrefix(cfg.URIPrefix(), u.Path), ""
+		uri = u.String()
+	}
+	req := httptest.NewRequest(d.Method, uri, bodyReader).WithContext(c)
 	if wireContentType != "" && len(wireBody) > 0 {
 		req.Header.Set("Content-Type", wireContentType)
 	}
@@ -369,6 +447,74 @@ func Serve(baseCtx context.Context, cfg Config, d Dispatch) (*DispatchResult, er
 		return &DispatchResult{Status: rec.Code, Raw: string(respBody)}, nil
 	}
 	return processResponse(rec.Code, respBody), nil
+}
+
+// serveRemote sends the request of d to the server d.Remote, as the access key
+// d.Token, and returns the processed result as Serve does.
+func serveRemote(c context.Context, d Dispatch, wireBody []byte, wireContentType string) (*DispatchResult, error) {
+	if d.SkipFormSign {
+		return nil, fmt.Errorf("http_api: skipFormSign is of the in-process mode")
+	}
+	target, err := remoteURL(d.Remote, d.URI)
+	if err != nil {
+		return nil, err
+	}
+	var bodyReader io.Reader
+	if len(wireBody) > 0 {
+		bodyReader = bytes.NewReader(wireBody)
+	}
+	req, err := http.NewRequestWithContext(c, d.Method, target, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	if wireContentType != "" && len(wireBody) > 0 {
+		req.Header.Set("Content-Type", wireContentType)
+	}
+	if d.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+d.Token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateResponse(d.Expected, resp.StatusCode, respBody); err != nil {
+		return nil, err
+	}
+	if d.Raw || !isJSONContentType(resp.Header.Get("Content-Type")) {
+		return &DispatchResult{Status: resp.StatusCode, Raw: string(respBody)}, nil
+	}
+	return processResponse(resp.StatusCode, respBody), nil
+}
+
+// remoteURL joins uri to the server's address base: its path once — a URI
+// that already starts with it ("/admin/pages" of https://host/admin) is kept.
+func remoteURL(base, uri string) (string, error) {
+	b, err := url.Parse(base)
+	if err != nil || b.Scheme == "" || b.Host == "" {
+		return "", fmt.Errorf("http_api: --remote %q is not an address (https://host/path)", base)
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", fmt.Errorf("http_api: uri %q: %w", uri, err)
+	}
+	b.Path, b.RawPath, b.RawQuery, b.Fragment = joinPrefix(b.Path, u.Path), "", u.RawQuery, ""
+	return b.String(), nil
+}
+
+// joinPrefix is the path p under prefix, once: a p that already starts with
+// it is kept.
+func joinPrefix(prefix, p string) string {
+	prefix = strings.TrimSuffix(prefix, "/")
+	p = "/" + strings.TrimPrefix(p, "/")
+	if prefix != "" && p != prefix && !strings.HasPrefix(p, prefix+"/") {
+		p = prefix + p
+	}
+	return p
 }
 
 // validateResponse checks a served response against expected. It reports the
@@ -509,6 +655,8 @@ func isJSONContentType(ct string) bool {
 // literal string is the body.
 func loadHTTPBody(data string) ([]byte, error) {
 	switch {
+	case data == "@none":
+		return nil, nil
 	case data == "@-":
 		return io.ReadAll(os.Stdin)
 	case strings.HasPrefix(data, "@"):
