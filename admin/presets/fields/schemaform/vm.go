@@ -148,19 +148,7 @@ func (b *Builder) run(program string) (*gad.VM, *gad.Interface, error) {
 // runProgram compiles and runs the program, with the builder's types in scope,
 // and returns the VM and what the program returned.
 func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
-	builtins := gad.NewBuiltins()
-	for name := range b.types {
-		// A name gad already has as a TYPE stays gad's — `str`, `int`, `bool`
-		// are the same thing to both. Any other is declared as a marker: `color`
-		// is not a gad type, and `time` is gad's time NAMESPACE, not a type.
-		if t, ok := builtins.NameSet[name]; ok {
-			if _, isType := builtins.Objects[t].(gad.ObjectType); isType {
-				continue
-			}
-		}
-		builtins.Set(name, &typeMarker{name: name})
-	}
-
+	builtins := b.Builtins()
 	st := gad.NewSymbolTable(builtins.NameSet)
 	res, err := gad.Compile(st, []byte(program), gad.CompileOptions{})
 	if err != nil {
@@ -177,6 +165,30 @@ func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 	}
 	return vm, ret, nil
 }
+
+// Builtins are gad's, with the builder's types in scope: what a program whose
+// classes are read as forms (Class) runs with — an application adds its own
+// names to them.
+func (b *Builder) Builtins() *gad.Builtins {
+	builtins := gad.NewBuiltins()
+	for name := range b.types {
+		// A name gad already has as a TYPE stays gad's — `str`, `int`, `bool`
+		// are the same thing to both. Any other is declared as a marker: `color`
+		// is not a gad type, and `time` is gad's time NAMESPACE, not a type.
+		if t, ok := builtins.NameSet[name]; ok {
+			if _, isType := builtins.Objects[t].(gad.ObjectType); isType {
+				continue
+			}
+		}
+		builtins.Set(name, &typeMarker{name: name})
+	}
+	return builtins
+}
+
+// TypeMarker is the object a program sees for the type name — a type gad has
+// not (`color`, `contact_form.email`): a field typed by it is of that type.
+// An application puts it where its programs find it (a module's member).
+func TypeMarker(name string) gad.Object { return &typeMarker{name: name} }
 
 // Class reads a gad class as a form: a record of its fields, the way an
 // interface's are read, with the default each one has. A field typed by a
@@ -206,6 +218,18 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 	defer delete(r.visitingClass, c)
 
 	s := &Schema{}
+	// the fields of its parents (`*Parent`) first, in their order: a class
+	// extends them
+	for _, p := range c.RawParents() {
+		ps, err := r.class(p.Type)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", p.Type.Name(), err)
+		}
+		for _, f := range ps.Fields {
+			f.Owner = p.Type.Name()
+		}
+		s.Fields = append(s.Fields, ps.Fields...)
+	}
 	for _, cf := range c.RawFields() {
 		types := make(gad.Array, len(cf.Types))
 		for i, t := range cf.Types {
@@ -283,6 +307,13 @@ var _ gad.Object = (*typeMarker)(nil)
 func (m *typeMarker) Type() gad.ObjectType { return gad.TStr }
 func (m *typeMarker) ToString() string     { return m.name }
 func (m *typeMarker) IsFalsy() bool        { return false }
+
+// AssignTo and CanAssign make it a type a class field may declare
+// (`m text`): the value is the form's to check (DecodeForm), not gad's.
+func (m *typeMarker) AssignTo(_ *gad.VM, obj gad.Object, _ gad.TypeAssigner) (gad.Object, error) {
+	return obj, nil
+}
+func (m *typeMarker) CanAssign(gad.Object) (bool, error) { return true, nil }
 func (m *typeMarker) Equal(right gad.Object) bool {
 	r, ok := right.(*typeMarker)
 	return ok && r.name == m.name

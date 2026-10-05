@@ -154,6 +154,10 @@ type Field struct {
 	// edited. The form draws it read-only, and Schema.KeepReadOnly puts back
 	// the value stored over whatever a post said of it.
 	ReadOnly bool
+	// Owner is the class that declared it, when the schema is a class
+	// extending others: the parent's name for a field it took from one
+	// (`*ContactForm`), "" for its own.
+	Owner string
 }
 
 // Clone is a copy of the schema that may be changed — a schema Parse returns
