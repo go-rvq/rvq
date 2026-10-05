@@ -161,11 +161,15 @@ func (b *Builder) AssetsHandler() http.Handler {
 	}))
 }
 
-// DocHref is the URL of the document of a node: in the language of the
-// request that opens it (the one chosen in the menu).
+// DocHref is the URL of the document of a node: its address under the
+// documentation (presets.TreePage), "/admin/docs/guides/policies".
 func (b *Builder) DocHref(_ *web.EventContext, node string) string {
-	return b.mb.Info().ListingHref() + "?" + url.Values{"doc": {node}}.Encode()
+	return DocPath(b.mb.Info().ListingHref(), node)
 }
+
+// DocPath is the address of the document of node under the documentation at
+// base ("/admin/docs"): its path under it, "/admin/docs/guides/policies".
+func DocPath(base, node string) string { return presets.TreePageHref(base, node) }
 
 // packagesLocale is the language of the documents of the packages listed:
 // the one asked for (?locale=, the link of a document to its package's), else
@@ -198,7 +202,11 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	mb.Detailing().Field("Documentation").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return b.page(ctx)
 	})
-	mb.MenuChildren(b.menuChildren)
+	// a tree of documents, each at its address: the menu, the breadcrumbs,
+	// the title of the page following the one shown (presets.TreePage)
+	mb.TreePage(func(ctx *web.EventContext) []*presets.TreePageNode {
+		return treePageNodes(b.Tree(ctx))
+	})
 
 	b.configurePackages(pkg)
 }
@@ -215,29 +223,23 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 	).Class("user-docs").Attr("@click", b.openScript())
 }
 
-// shown is the node the request shows: its doc, else the first.
-func (b *Builder) shown(ctx *web.EventContext, tree []*Node) string {
-	node := ctx.R.FormValue("doc")
-	if node == "" && len(tree) > 0 {
-		node = tree[0].ID
+// treePageNodes are the nodes of the documentation as the tree page's.
+func treePageNodes(tree []*Node) (out []*presets.TreePageNode) {
+	for _, n := range tree {
+		out = append(out, &presets.TreePageNode{ID: n.ID, Title: n.Title, Icon: n.Icon, Children: treePageNodes(n.Children)})
 	}
-	return node
+	return
 }
 
-// menuChildren are the nodes of the tree as the children of the item of the
-// documentation in the menu, each its document's page; the one shown active.
-func (b *Builder) menuChildren(ctx *web.EventContext) ([]*presets.MenuNode, string) {
-	tree := b.Tree(ctx)
-	var nodes func(tree []*Node) []*presets.MenuNode
-	nodes = func(tree []*Node) (r []*presets.MenuNode) {
-		for _, n := range tree {
-			href := b.DocHref(ctx, n.ID)
-			r = append(r, &presets.MenuNode{Title: n.Title, Value: href,
-				Props: map[string]any{"href": href, "prependIcon": n.Icon}, Children: nodes(n.Children)})
-		}
-		return
+// shown is the node the request shows: of its address, else the first.
+func (b *Builder) shown(ctx *web.EventContext, tree []*Node) string {
+	if id := presets.TreePageNodeOf(ctx.R); id != "" {
+		return id
 	}
-	return nodes(tree), b.DocHref(ctx, b.shown(ctx, tree))
+	if len(tree) > 0 {
+		return tree[0].ID
+	}
+	return ""
 }
 
 // openScript is the click of the document: a link to another document opens
@@ -253,7 +255,8 @@ func (b *Builder) openScript() string {
 	if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
 	const w = a.ownerDocument.defaultView;
 	const u = new w.URL(a.getAttribute("href"), w.location.href);
-	if (u.pathname !== ` + base + ` || !u.searchParams.get("doc")) return;
+	const base = ` + base + `;
+	if (!u.pathname.startsWith(base + "/")) return;
 	e.preventDefault();
 	plaid().vars(vars).pushStateURL(u.pathname + u.search).go();
 }`

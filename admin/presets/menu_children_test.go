@@ -17,8 +17,8 @@ func TestMenuNodeJSON(t *testing.T) {
 	if strings.Contains(string(leaf), "children") {
 		t.Errorf("leaf %s", leaf)
 	}
-	loaded, _ := json.Marshal([]*MenuNode{{Value: "/docs", lazy: true, Children: []*MenuNode{{Value: "/docs?doc=a"}}}})
-	if !strings.Contains(string(loaded), `"children":[{"title":"","value":"/docs?doc=a"}]`) {
+	loaded, _ := json.Marshal([]*MenuNode{{Value: "/docs", lazy: true, Children: []*MenuNode{{Value: "/docs/a"}}}})
+	if !strings.Contains(string(loaded), `"children":[{"title":"","value":"/docs/a"}]`) {
 		t.Errorf("loaded %s", loaded)
 	}
 }
