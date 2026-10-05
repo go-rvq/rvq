@@ -1,7 +1,8 @@
 # By git
 
 The same files can be cloned and pushed with **git**, from your computer,
-with your admin **login and password**. There are two repositories — their
+with your **login** and an **access key** (see below) — or your admin
+password. There are two repositories — their
 URLs are on the page {%= admin.page("/site-files").link %}, under **By git**:
 
 | Repository | A push… | Asks |
@@ -15,6 +16,75 @@ cd site-files-draft
 # … edit, commit …
 git push
 ```
+
+## With an access key
+
+Instead of your password, use an **access key** — the way for git: it works
+even when you sign in to the admin with Google or a second factor, it can be
+for the site files only, it expires and is revoked without touching your
+password. Make yours in {%= admin.model("my_access_keys").link %}, with the
+permissions of the site files (`admin:/site-files:@get`, `!git` and the
+actions on the files you will change); its **code** shows only once — copy
+it.
+
+### Clone
+
+git asks for the username and the password: the username is your **login**;
+the **password**, the key's **code**.
+
+```
+git clone https://<the-site>/admin/site-files-draft.git
+Username for 'https://<the-site>': <your-login>
+Password for 'https://<your-login>@<the-site>': <the-key-code>
+```
+
+### Not asked again
+
+With nothing else, git asks for the code at each `pull` and `push`. Keep it
+in git's **credential helper**, once for the site:
+
+- **In the file** `~/.git-credentials` (text, readable by you only):
+
+  ```
+  git config --global credential.https://<the-site>.helper store
+  ```
+
+  The next `git pull` (or `push`) asks for the username and the code and
+  keeps them; the next ones do not ask. The file gets a line
+  `https://<your-login>:<the-code>@<the-site>`.
+
+- **In the system's keychain**, encrypted: instead of `store`,
+  `osxkeychain` (macOS), `manager` (Windows, the Git Credential Manager) or
+  `libsecret` (Linux, when installed).
+
+Do not put the code **in the URL** (`https://login:code@…`): it is written in
+the clone's `.git/config`, in plain sight, and goes along if the clone is
+copied.
+
+### When the key expires (or is revoked)
+
+git starts answering `Authentication failed`. Make a **new key** in
+{%= admin.model("my_access_keys").link %} and change the one kept:
+
+1. Forget the old one:
+
+   ```
+   printf 'protocol=https\nhost=<the-site>\n\n' | git credential reject
+   ```
+
+   (with `store`, editing the site's line of `~/.git-credentials` also
+   does.)
+
+2. The next `git pull` asks for the username and the code: give the **new**
+   one — it is kept in place of the old.
+
+If the code was in the clone's URL, take it out:
+
+```
+git remote set-url origin https://<the-site>/admin/site-files-draft.git
+```
+
+Each use of a key is in its history and in your access log.
 
 ## What a push checks
 

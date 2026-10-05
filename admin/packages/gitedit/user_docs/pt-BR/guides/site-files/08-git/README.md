@@ -1,7 +1,8 @@
 # Pelo git
 
 Os mesmos arquivos podem ser clonados e enviados (push) com o **git**, do seu
-computador, com o seu **login e senha** do admin. Há dois repositórios — as
+computador, com o seu **login** e uma **chave de acesso** (veja abaixo) — ou a
+sua senha do admin. Há dois repositórios — as
 URLs estão na página {%= admin.page("/site-files").link %}, em **Pelo git**:
 
 | Repositório | Um push… | Pede |
@@ -15,6 +16,74 @@ cd site-files-draft
 # … edite, commit …
 git push
 ```
+
+## Com uma chave de acesso
+
+Em vez da sua senha, use uma **chave de acesso** — o jeito para o git: ela
+funciona mesmo quando você entra no admin pelo Google ou com o segundo fator,
+pode ser só para os arquivos do site, expira e é revogada sem mexer na sua
+senha. Crie a sua em {%= admin.model("my_access_keys").link %}, com as
+permissões dos arquivos do site (`admin:/site-files:@get`, `!git` e as ações
+dos arquivos que você vai mudar); o **código** aparece uma única vez —
+copie-o.
+
+### Clonar
+
+O git pede o usuário e a senha: o usuário é o seu **login**; a **senha**, o
+**código** da chave.
+
+```
+git clone https://<o-site>/admin/site-files-draft.git
+Username for 'https://<o-site>': <o-seu-login>
+Password for 'https://<o-seu-login>@<o-site>': <o-código-da-chave>
+```
+
+### Não pedir de novo
+
+Sem mais nada, o git pede o código a cada `pull` e `push`. Guarde-o no
+**gerenciador de credenciais** do git, uma vez para o site:
+
+- **No arquivo** `~/.git-credentials` (texto, só legível por você):
+
+  ```
+  git config --global credential.https://<o-site>.helper store
+  ```
+
+  O próximo `git pull` (ou `push`) pede o usuário e o código e os grava; os
+  seguintes não pedem mais. O arquivo fica com uma linha
+  `https://<o-seu-login>:<o-código>@<o-site>`.
+
+- **No chaveiro do sistema**, cifrado: no lugar de `store`, `osxkeychain`
+  (macOS), `manager` (Windows, o Git Credential Manager) ou `libsecret`
+  (Linux, quando instalado).
+
+Não ponha o código **na URL** (`https://login:código@…`): ele fica gravado
+no `.git/config` do clone, à vista, e vai junto se o clone for copiado.
+
+### Quando a chave expira (ou é revogada)
+
+O git passa a responder `Authentication failed`. Crie uma **chave nova** em
+{%= admin.model("my_access_keys").link %} e troque a guardada:
+
+1. Esqueça a antiga:
+
+   ```
+   printf 'protocol=https\nhost=<o-site>\n\n' | git credential reject
+   ```
+
+   (com `store`, também dá para editar a linha do site em
+   `~/.git-credentials`.)
+
+2. O próximo `git pull` pede o usuário e o código: informe o **novo** — ele é
+   guardado no lugar do antigo.
+
+Se o código estava na URL do clone, tire-o de lá:
+
+```
+git remote set-url origin https://<o-site>/admin/site-files-draft.git
+```
+
+Cada uso de uma chave fica no histórico dela e no seu registro de acessos.
 
 ## O que um push confere
 
