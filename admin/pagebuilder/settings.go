@@ -91,7 +91,7 @@ func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuil
 			h.Div(
 				h.A(h.Text(previewDevelopUrl)).Href(previewDevelopUrl),
 				VBtn("").Icon("mdi-file-document-multiple").Variant(VariantText).Size(SizeXSmall).Class("ml-1").
-					Attr("@click", fmt.Sprintf(`$event.view.window.navigator.clipboard.writeText($event.view.window.location.origin+"%s");vars.presetsMessage = { show: true, message: "success", color: "%s"}`, previewDevelopUrl, ColorSuccess)),
+					Attr("@click", fmt.Sprintf(`copyToClipboard($event.view.window.location.origin+%s)`, h.JSONString(previewDevelopUrl))),
 			).Class("d-inline-flex align-center"),
 		).Class("my-10")
 	}

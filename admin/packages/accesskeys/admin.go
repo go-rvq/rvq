@@ -352,7 +352,7 @@ func codeMessage(ctx context.Context, k *AccessKey) *presets.FlashMessage {
 			v.VTextField().Label(m.Code).ModelValue(k.Code).Readonly(true).Variant(v.FieldVariantOutlined).
 				Density(v.DensityCompact).HideDetails(true).Attr("data-access-key-code", true).
 				Attr("append-inner-icon", "mdi-content-copy").
-				Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", k.Code)),
+				Attr("@click:append-inner", "copyToClipboard("+h.JSONString(k.Code)+")"),
 		),
 	}
 }

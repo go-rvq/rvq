@@ -276,7 +276,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 						).
 							PrependIcon("mdi-content-copy").
 							Attr("v-for", "item in items").
-							Attr("@click", `(e) => copy(e, item.uri)`).
+							Attr("@click", `copyToClipboard(item.uri)`).
 							Attr("@click.middle", `(e) => e.view.window.open(item.uri, "_blank")`),
 					).Density("compact"),
 				),
@@ -443,15 +443,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 				).Class("d-flex align-center justify-center pt-2"),
 			).Attr("v-if", "vars.mediaName").Attr("@click", "vars.mediaName = null").ZIndex(10),
 		).Attr(web.VAssign("vars", `{snackbarShow: false, mediaShow: null, mediaName: null, isImage: false}`)...),
-	).
-		Scope("copy").
-		Setup(`({ scope }) => {
-scope.copy = (e, uri) => {
-	e.view.navigator.clipboard.writeText(uri)
-	vars.presetsMessage = { show: true, message: ` + strconv.Quote(msgr.LinkCopied) + `, color: "info"}
-	e.view.setTimeout(() => { vars.presetsMessage.show = false }, 1000)
-}
-}`)
+	)
 }
 
 func fileChips(f *media_library.MediaLibrary) h.HTMLComponent {

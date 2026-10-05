@@ -69,7 +69,7 @@ func (b *Builder) gitSection(ctx *web.EventContext, m *Messages, kind, title, wh
 		return v.VTextField().Label(label).ModelValue(value).Readonly(true).
 			Variant(v.FieldVariantOutlined).Density(v.DensityCompact).HideDetails(true).Class("mb-3").
 			Attr("append-inner-icon", "mdi-content-copy").Attr(attr, value).
-			Attr("@click:append-inner", fmt.Sprintf("navigator.clipboard.writeText(%q)", value))
+			Attr("@click:append-inner", "copyToClipboard("+h.JSONString(value)+")")
 	}
 	var rows []h.HTMLComponent
 	var all []string
