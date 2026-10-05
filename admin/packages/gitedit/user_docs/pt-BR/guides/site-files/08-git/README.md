@@ -7,7 +7,7 @@ URLs estão na página {%= admin.page("/site-files").link %}, em **Pelo git**:
 
 | Repositório | Um push… | Pede |
 | --- | --- | --- |
-| **o seu rascunho** — `…/site-files-draft.git` | muda o rascunho: o editor e o **preview** mostram na hora; depois **publique** pela página | `!git` |
+| **o seu rascunho** — `…/site-files-draft.git` | muda o rascunho: o editor e o **preview** mostram na hora; depois **publique** pela página | `!git` (veja abaixo) |
 | **o site** — `…/site-files.git` | **publica** direto | `!git` e `!publish` |
 
 ```
@@ -16,6 +16,31 @@ cd site-files-draft
 # … edite, commit …
 git push
 ```
+
+## As permissões de cada repositório
+
+São as da página {%= admin.page("/site-files").link %} (passo **Permissões**),
+as mesmas do editor. Declaradas fora do grupo — valem onde quer que o menu
+ponha a página —:
+
+| Para | O seu rascunho | O rascunho de outro usuário | O site |
+| --- | --- | --- | --- |
+| clonar, `fetch`, `pull` | `{%= admin.page("/site-files").uniqueResource %}@get` de **cada** arquivo e `{%= admin.page("/site-files").uniqueResource %}!git` | o mesmo, e o rascunho **compartilhado com você** (ou `{%= admin.page("/site-files").uniqueResource %}!drafts`) | `{%= admin.page("/site-files").uniqueResource %}@get` de cada arquivo e `{%= admin.page("/site-files").uniqueResource %}!git` |
+| enviar (`push`) | `{%= admin.page("/site-files").uniqueResource %}!git` e, de cada arquivo alterado, o que o editor pede (`!create`, `!edit`, `!rename`, `!move`, `!delete` — veja **O que um push confere**) | o mesmo, e o rascunho compartilhado com você (ou `{%= admin.page("/site-files").uniqueResource %}!drafts`) | o mesmo do rascunho, e `{%= admin.page("/site-files").uniqueResource %}!publish` |
+
+- Uma permissão pode ser **de um caminho** e de tudo abaixo dele:
+  `{%= admin.page("/site-files").uniqueResource %}<static/*>:!edit` muda só o `static/` (passo **Permissões**).
+- No rascunho, o push é recusado enquanto houver alterações **sem commit**
+  feitas no editor; no site, o push confere o mesmo que **Publicar**.
+- Uma **chave de acesso** só restringe: ela precisa ter as permissões acima
+  **e** o seu papel também. Para o seu rascunho, uma chave com:
+
+  ```
+  {%= admin.page("/site-files").uniqueResource %}@get
+  {%= admin.page("/site-files").uniqueResource %}!{git,create,edit,rename,move,delete,import}
+  ```
+
+  e, para enviar também ao site, `{%= admin.page("/site-files").uniqueResource %}!publish`.
 
 ## Com uma chave de acesso
 

@@ -7,7 +7,7 @@ URLs are on the page {%= admin.page("/site-files").link %}, under **By git**:
 
 | Repository | A push… | Asks |
 | --- | --- | --- |
-| **your draft** — `…/site-files-draft.git` | changes the draft: the editor and the **preview** show it at once; then **publish** from the page | `!git` |
+| **your draft** — `…/site-files-draft.git` | changes the draft: the editor and the **preview** show it at once; then **publish** from the page | `!git` (see below) |
 | **the site** — `…/site-files.git` | **publishes** at once | `!git` and `!publish` |
 
 ```
@@ -16,6 +16,32 @@ cd site-files-draft
 # … edit, commit …
 git push
 ```
+
+## The permissions of each repository
+
+They are those of the page {%= admin.page("/site-files").link %} (step
+**Permissions**), the editor's own. Declared out of the group — they hold
+wherever the menu puts the page —:
+
+| To | Your draft | Another user's draft | The site |
+| --- | --- | --- | --- |
+| clone, `fetch`, `pull` | `{%= admin.page("/site-files").uniqueResource %}@get` of **each** file and `{%= admin.page("/site-files").uniqueResource %}!git` | the same, and the draft **shared with you** (or `{%= admin.page("/site-files").uniqueResource %}!drafts`) | `{%= admin.page("/site-files").uniqueResource %}@get` of each file and `{%= admin.page("/site-files").uniqueResource %}!git` |
+| `push` | `{%= admin.page("/site-files").uniqueResource %}!git` and, of each file changed, what the editor asks (`!create`, `!edit`, `!rename`, `!move`, `!delete` — see **What a push checks**) | the same, and the draft shared with you (or `{%= admin.page("/site-files").uniqueResource %}!drafts`) | the same as the draft's, and `{%= admin.page("/site-files").uniqueResource %}!publish` |
+
+- A permission can be **of a path** and all under it: `{%= admin.page("/site-files").uniqueResource %}<static/*>:!edit`
+  changes `static/` only (step **Permissions**).
+- In the draft, the push is refused while there are changes **not
+  committed** made in the editor; in the site, the push checks what
+  **Publish** does.
+- An **access key** only restricts: it needs the permissions above **and**
+  your role too. For your draft, a key with:
+
+  ```
+  {%= admin.page("/site-files").uniqueResource %}@get
+  {%= admin.page("/site-files").uniqueResource %}!{git,create,edit,rename,move,delete,import}
+  ```
+
+  and, to push to the site too, `{%= admin.page("/site-files").uniqueResource %}!publish`.
 
 ## With an access key
 
