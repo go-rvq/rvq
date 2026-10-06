@@ -813,6 +813,21 @@ func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ct
 
 const ActiveFilterTabQueryKey = "active_filter_tab"
 
+// activeFilterTab is the tab the request is in: the one active_filter_tab
+// names; else the Default one, when the query carries no filter of any tab
+// either. nil otherwise.
+func activeFilterTab(ctx *web.EventContext, tabs []*FilterTab) *FilterTab {
+	if id := ctx.R.URL.Query().Get(ActiveFilterTabQueryKey); id != "" {
+		for _, tab := range tabs {
+			if tab.ID == id {
+				return tab
+			}
+		}
+		return nil
+	}
+	return defaultFilterTab(ctx, tabs)
+}
+
 // defaultFilterTab is the tab a request that picks none is in: the Default
 // one, when the query carries neither a tab (active_filter_tab) nor a filter
 // of any tab. nil otherwise.
@@ -835,11 +850,12 @@ func defaultFilterTab(ctx *web.EventContext, tabs []*FilterTab) *FilterTab {
 	return def
 }
 
-// filterQuery is the query the listing's filters read: the request's, plus —
-// when it picked no tab — the default tab's filters, so the listing opens as
-// that tab shows it.
+// filterQuery is the query the listing's filters read: the request's, plus
+// the filters of the tab it is in (activeFilterTab) — a tab with an ID goes
+// in the URL by its name alone (active_filter_tab=<ID>), its filters applied
+// here, never written in the URL.
 func (b *ListingBuilder) filterQuery(ctx *web.EventContext) string {
-	tab := defaultFilterTab(ctx, b.allFilterTabs(ctx))
+	tab := activeFilterTab(ctx, b.allFilterTabs(ctx))
 	if tab == nil {
 		return ctx.R.URL.RawQuery
 	}
@@ -859,8 +875,6 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		return
 	}
 
-	qs := ctx.R.URL.Query()
-
 	tabs := VTabs().
 		Class("mb-2").
 		ShowArrows(true).
@@ -875,7 +889,7 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	if defaults > 1 {
 		return VAlert(h.RawHTML("Many filter tabs with <b>Default</b> flag.")).Color("error")
 	}
-	defaultTab := defaultFilterTab(ctx, tabsData)
+	activeTab := activeFilterTab(ctx, tabsData)
 	value := -1
 	// the tabs of the end (FilterTab.End), apart
 	type endTab struct {
@@ -884,12 +898,10 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 		onclick string
 	}
 	var endTabs []endTab
-	activeTabValue := qs.Get(ActiveFilterTabQueryKey)
-
 	for i, td := range tabsData {
-		// Find selected tab by active_filter_tab=xx in the url query, or the
+		// the selected tab: the one active_filter_tab=xx names, or the
 		// default one when the query picked none
-		if (activeTabValue != "" && activeTabValue == td.ID) || td == defaultTab {
+		if td == activeTab {
 			value = i
 		}
 
@@ -904,12 +916,18 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 			)
 		}
 
+		// the Default tab is the listing's own URL, no tab named; a tab with
+		// an ID, by its name alone — the filters of both applied by
+		// filterQuery —; one with none, by its filters in the URL
 		totalQuery := url.Values{}
-		if td.ID != "" {
+		switch {
+		case td.Default:
+		case td.ID != "":
 			totalQuery.Set(ActiveFilterTabQueryKey, td.ID)
-		}
-		for k, v := range td.Query {
-			totalQuery[k] = v
+		default:
+			for k, v := range td.Query {
+				totalQuery[k] = v
+			}
 		}
 
 		onclick := web.Plaid().Queries(totalQuery)

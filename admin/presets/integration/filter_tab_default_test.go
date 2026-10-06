@@ -77,6 +77,26 @@ func TestFilterTabDefault(t *testing.T) {
 		t.Error("another tab picked: its filter, not the default's")
 	}
 
+	// a tab by its name alone: its filters applied, none of them in the URL
+	// of the tabs; the default one with no tab named
+	body = get("?active_filter_tab=system")
+	if strings.Contains(body, "zz-text-note") || !strings.Contains(body, "zz-system-note") {
+		t.Error("a tab named alone: its filter")
+	}
+	if strings.Contains(body, "f_kind") {
+		t.Error("the filters of a tab with an ID went in its URL")
+	}
+	// (the page is in a JSON string)
+	page := strings.NewReplacer(`\"`, `"`, `\u003c`, "<", `\u003e`, ">").Replace(body)
+	if !strings.Contains(page, `.queries({"active_filter_tab":["system"]})`) ||
+		!strings.Contains(page, `.queries({}).pushState(true).go()&#39;>Texts<`) ||
+		strings.Contains(page, `"active_filter_tab":["texts"]`) {
+		t.Error("the tabs: by their names, the default one by none")
+	}
+	if !strings.Contains(body, `:model-value=&#39;2&#39; class=&#39;mb-2&#39;`) {
+		t.Error("a tab named alone: the selected one")
+	}
+
 	body = get("?active_filter_tab=all")
 	if !strings.Contains(body, "zz-text-note") || !strings.Contains(body, "zz-system-note") {
 		t.Error("the tab with no filter picked: everything")
