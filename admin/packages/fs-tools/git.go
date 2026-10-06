@@ -140,15 +140,16 @@ func (b *Builder) GitPath(name string) string {
 
 // GitHandler serves the repositories added (AddGitRepo), each at its path
 // (GitPath) — a mux of its own for the paths <admin>/<name>.git/…, each
-// request by the user of its login (HTTP Basic, as the WebDAV). nil when
-// there is none.
+// request by the user of its login (HTTP Basic, as the WebDAV) — or the
+// secure key as its password: the administrator
+// (login.SecureKeyBasicAuthMiddleware). nil when there is none.
 func (b *Builder) GitHandler() http.Handler {
 	if b.git == nil {
 		return nil
 	}
-	h := b.gitHandler()
+	h := b.recordAccess(b.gitHandler(), AccessGit)
 	if b.lb != nil {
-		h = b.lb.BasichAuthMiddleware(h)
+		h = b.lb.SecureKeyBasicAuthMiddleware(h)
 	}
 	return h
 }

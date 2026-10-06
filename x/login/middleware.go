@@ -2,6 +2,7 @@ package login
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -96,6 +97,8 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 
 			user       any
 			secureSalt string
+			// how the request was told: its session, or its password
+			auth = AuthSession
 
 			setMessage = func(msg string) {
 				w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm=%q`, msg))
@@ -121,27 +124,33 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 		if err != nil {
 			if err.Error() == "no token string" {
 				if b.userPassEnabled {
-					if user, pass, ok := r.BasicAuth(); ok {
-						if user, err := b.authUserPass(user, pass); err != nil {
+					if account, pass, ok := r.BasicAuth(); ok {
+						if passer, err := b.authUserPass(account, pass); err != nil {
+							if errors.Is(err, ErrUserGetLocked) && passer != nil && b.basicAuthLockedHook != nil {
+								b.basicAuthLockedHook(r, passer)
+							}
 							errorMessage(err)
 							return
 						} else {
-							u := user.(UserPasser)
-							userID := objectID(user)
+							u := passer.(UserPasser)
+							userID := objectID(passer)
 							claims = &UserClaims{
 								UserID:           userID,
 								PassUpdatedAt:    u.GetPasswordUpdatedAt(),
 								RegisteredClaims: b.genBaseSessionClaim(userID, u.GetAccountName() == b.initialUserAccount),
 							}
 
-							if user, err = b.findUserByID(claims.UserID); err != nil {
+							found, err := b.findUserByID(claims.UserID)
+							if err != nil {
 								errorMessage(err)
 								return
-							} else if err = b.setSecureCookiesByClaims(w, user, *claims); err != nil {
+							} else if err = b.setSecureCookiesByClaims(w, found, *claims); err != nil {
 								errorMessage(err)
 								return
 							}
 
+							user = found
+							auth = AuthPassword
 							goto ok
 						}
 					}
@@ -200,7 +209,7 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		r = r.WithContext(context.WithValue(r.Context(), UserKey, user))
+		r = r.WithContext(context.WithValue(WithAuth(r.Context(), auth), UserKey, user))
 
 		next.ServeHTTP(w, r)
 	})

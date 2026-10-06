@@ -35,6 +35,33 @@ type Builder struct {
 	mounts []*Mount
 	// git serves the repositories added (AddGitRepo)
 	git *gitServer
+	// onAccess is told each request of the WebDAV and the git, its user
+	// told (OnAccess)
+	onAccess func(r *http.Request, kind string)
+}
+
+// The kinds of access OnAccess is told.
+const (
+	AccessWebDAV = "webdav"
+	AccessGit    = "git"
+)
+
+// OnAccess is told each request of the WebDAV (AccessWebDAV) and of the git
+// (AccessGit), once its user is told (login.AuthOf: how): the log of its
+// sessions.
+func (b *Builder) OnAccess(f func(r *http.Request, kind string)) *Builder {
+	b.onAccess = f
+	return b
+}
+
+// recordAccess is h telling OnAccess its requests.
+func (b *Builder) recordAccess(h http.Handler, kind string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if b.onAccess != nil {
+			b.onAccess(r, kind)
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, err error) {
@@ -112,7 +139,7 @@ func (b *Builder) init() {
 }
 
 func (b *Builder) WebDavHandler() (h http.Handler) {
-	return b.lb.BasichAuthMiddleware(b.davHandler())
+	return b.lb.BasichAuthMiddleware(b.recordAccess(b.davHandler(), AccessWebDAV))
 }
 
 // davHandler is the WebDAV of the user of the request (authenticated by

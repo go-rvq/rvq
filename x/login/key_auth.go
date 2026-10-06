@@ -71,7 +71,7 @@ func (b *Builder) serveKey(w http.ResponseWriter, r *http.Request, code string, 
 		http.Error(w, "ERROR: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	r = r.WithContext(context.WithValue(context.WithValue(ctx, keyAuthenticatedKey{}, true), UserKey, user))
+	r = r.WithContext(context.WithValue(context.WithValue(WithAuth(ctx, AuthAccessKey), keyAuthenticatedKey{}, true), UserKey, user))
 	sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 	next.ServeHTTP(sw, r)
 	b.keyAuth.KeyServed(r, sw.status)
@@ -105,4 +105,38 @@ type keyAuthenticatedKey struct{}
 func IsKeyAuthenticated(ctx context.Context) bool {
 	v, _ := ctx.Value(keyAuthenticatedKey{}).(bool)
 	return v
+}
+
+// The ways a request is told whose it is (AuthOf).
+const (
+	// AuthSession is a login's session (its cookie).
+	AuthSession = "session"
+	// AuthPassword is the account and the password of HTTP Basic.
+	AuthPassword = "password"
+	// AuthAccessKey is the code of an access key (KeyAuth).
+	AuthAccessKey = "access_key"
+	// AuthSecureKey is the secure key (SecureKeyBasicAuthMiddleware).
+	AuthSecureKey = "secure_key"
+)
+
+type authKey struct{}
+
+// WithAuth is ctx with the way its request was told whose it is (AuthOf).
+func WithAuth(ctx context.Context, auth string) context.Context {
+	return context.WithValue(ctx, authKey{}, auth)
+}
+
+// AuthOf is the way the request of ctx was told whose it is — AuthSession,
+// AuthPassword, AuthAccessKey, AuthSecureKey —, "" when it was not told.
+func AuthOf(ctx context.Context) string {
+	v, _ := ctx.Value(authKey{}).(string)
+	return v
+}
+
+// BasicAuthLocked is told the user whose account a wrong password of HTTP
+// Basic (BasichAuthMiddleware: the WebDAV, the git) locked, and its request:
+// the place it came from, to record.
+func (b *Builder) BasicAuthLocked(f func(r *http.Request, user any)) *Builder {
+	b.basicAuthLockedHook = f
+	return b
 }

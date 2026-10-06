@@ -87,9 +87,16 @@ type Builder struct {
 	challengeStoreOnce sync.Once
 	// the way past the form protection for whoever operates the server
 	// (see secure_key.go)
-	secureKeyFile        string
-	secureKeyCron        *rcron.Cron
-	warnSecureKeyMode    sync.Once
+	secureKeyFile     string
+	secureKeyCron     *rcron.Cron
+	secureKeyCronMu   sync.Mutex
+	warnSecureKeyMode sync.Once
+	// basicAuthLockedHook is told an account locked by HTTP Basic
+	// (BasicAuthLocked).
+	basicAuthLockedHook func(r *http.Request, user any)
+	// secureKeyBasicAuth turns the secure key as a login on
+	// (SecureKeyBasicAuth).
+	secureKeyBasicAuth   func() bool
 	autoExtendSession    bool
 	maxRetryCount        int
 	noForgetPasswordLink bool
