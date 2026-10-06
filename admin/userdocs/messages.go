@@ -22,6 +22,7 @@ type Messages struct {
 	SeeAlso               string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
 	EditDocuments         string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
 	RenderError           string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
+	NoDocument            string `i18n:"hint='Shown for a document there is not, or of a part the user does not see.'"`
 	ResetDocuments        string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
 	Actions               string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
 	Pages                 string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
@@ -103,6 +104,7 @@ var Messages_en_US = &Messages{
 	SeeAlso:               "In this part",
 	EditDocuments:         "Edit the documents",
 	RenderError:           "This document could not be shown: %s",
+	NoDocument:            "There is no such document.",
 	ResetDocuments:        "Reset to the initial documents",
 	Actions:               "Actions",
 	Pages:                 "Pages",
@@ -184,6 +186,7 @@ var Messages_pt_BR = &Messages{
 	SeeAlso:               "Nesta parte",
 	EditDocuments:         "Editar os documentos",
 	RenderError:           "Este documento não pôde ser mostrado: %s",
+	NoDocument:            "Não há este documento.",
 	ResetDocuments:        "Restaurar os documentos iniciais",
 	Actions:               "Ações",
 	Pages:                 "Páginas",

@@ -17,3 +17,10 @@ O caminho, passo a passo:
 7. **Opções dos layouts** — os campos dos formulários delas, e um select de
    valores com `options`.
 8. **Pelo git** — clone e faça push do rascunho, ou do site, do seu computador.
+
+**Na primeira vez**, sem repositório em `public/`, a aplicação o cria quando
+sobe: um `public/` que não existe recebe os arquivos iniciais de um site
+(layouts, componentes, configuração); um que existe, os seus. Os arquivos
+ocultos ficam de fora (`.gitignore` com `.*`), e tudo entra num primeiro
+commit, `first commit`. Quem decide é o administrador do servidor
+(`PUBLIC_GIT_INIT`, no `.env`).

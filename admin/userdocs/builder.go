@@ -282,6 +282,11 @@ const docStyle = `
 // where nothing was written.
 func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.HTMLComponent {
 	msgs := GetMessages(ctx.Context())
+	// a document of a part the request does not see (its tree has not it):
+	// as one there is not — its address is no way around the menu
+	if node != "" && findNode(tree, node) == nil {
+		return v.VAlert(h.Text(msgs.NoDocument)).Type("info").Variant(v.VariantTonal)
+	}
 	locale := b.locale(ctx)
 	r := &renderer{b: b, ctx: ctx, tree: tree, node: node}
 	file, src, content, err := b.find(locale, node)

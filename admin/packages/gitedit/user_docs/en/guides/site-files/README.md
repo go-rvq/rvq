@@ -17,3 +17,10 @@ Step by step:
 7. **Options of the layouts** — the fields of their forms, and a select of
    values with `options`.
 8. **By git** — clone and push the draft, or the site, from your computer.
+
+**The first time**, with no repository in `public/`, the application makes
+one as it starts: a `public/` that is not there gets the first files of a
+site (layouts, components, configuration); one that is, its own. The hidden
+files are left out (`.gitignore` with `.*`), and everything goes in a first
+commit, `first commit`. The administrator of the server decides it
+(`PUBLIC_GIT_INIT`, in the `.env`).
