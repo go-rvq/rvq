@@ -189,15 +189,13 @@ func (b *Builder) showRecord(schema *Schema, c *Context, data any) h.HTMLCompone
 	if c.Compact {
 		return b.showRecordCompact(schema, c, data)
 	}
-	var comps []h.HTMLComponent
-	for _, f := range schema.Fields {
+	return h.Div(drawRows(schema.Fields, func(f *Field) h.HTMLComponent {
 		fc := b.fieldContext(c, f, recordValue(data, f.Name))
-		comps = append(comps, h.Div(
+		return h.Div(
 			h.Div(h.Text(displayLabel(fc))).Class("text-caption text-medium-emphasis"),
 			h.Div(b.showField(fc)).Class("pt-1"),
-		).Class("mb-3"))
-	}
-	return h.Div(comps...)
+		).Class("mb-3")
+	})...)
 }
 
 // showRecordCompact is a record in a listing cell: "label: value" of each

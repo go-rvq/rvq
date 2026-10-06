@@ -620,9 +620,7 @@ func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 // record renders the fields of one record, each bound under value and each
 // reachable at its own path.
 func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLComponent {
-	var comps []h.HTMLComponent
-
-	for _, f := range schema.Fields {
+	field := func(f *Field) h.HTMLComponent {
 		fc := &Context{
 			Field: f,
 			Value: value + "." + f.Name,
@@ -634,17 +632,15 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 
 		draw, ok := b.fieldFunc(fc)
 		if !ok {
-			comps = append(comps, errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types())))
-			continue
+			return errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types()))
 		}
 		comp := withHelp(fc, draw(fc))
 		if cond := whenCondition(f, value); cond != "" {
 			comp = h.Div(comp).Attr("v-if", cond)
 		}
-		comps = append(comps, comp)
+		return comp
 	}
-
-	return h.Div(comps...)
+	return h.Div(drawRows(schema.Fields, field)...)
 }
 
 // choice draws a choice of one class (Schema.Choice): a select of the classes,

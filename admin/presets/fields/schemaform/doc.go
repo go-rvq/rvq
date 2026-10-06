@@ -90,6 +90,34 @@
 // one interface is the form. An interface without a name BESIDE the form is
 // refused: nothing could refer to it.
 //
+// # Groups: fields side by side
+//
+// A group — `{ … }` written where a field goes, gad's sugar for the field
+// `$N` of an anonymous class (interface) — is no field of the form: its
+// fields are, in its place, the COLUMNS of one row, and a new group is a new
+// row. What they hold is the record's own: the group adds no name to the
+// value, nor to a field's path.
+//
+//	{
+//	    { [width=2] name str; phone str; email? str }   // one row: 40% 30% 30%
+//	    message text                                    // a row of its own
+//	}
+//
+// A field's `[width=N]` is its share of the row in fifths (WidthUnits): 1 is
+// 20%, and the fields with none share what is left, equally. The row is
+// whole — the widths given are whole numbers from 1 to 5, add up to 5 when
+// every field says one, and leave a share for the ones that do not —, or the
+// schema is refused where it is read. Field.Row is the row a field is a
+// column of, Field.Percent its share; Rows gives the fields by their rows.
+// On a narrow screen the columns stack. A group inside a group is refused: a
+// row has columns, not rows (gad nests them; a form does not). A group's `?`
+// says nothing here: each field says whether it is required.
+//
+// A group's metadata says what else it may be (Field.Group): `[tabs] { … }`
+// a tab each field — its label the tab's, its `[icon=…]` beside it —;
+// `[steps] { … }` a step each, with back and next, `[steps, vertical]` down
+// the page. Their fields take the whole width: no `width` is read.
+//
 // # Metadata: how the form is drawn
 //
 // The `[k=v, …]` block before the interface says how the form is DRAWN, never

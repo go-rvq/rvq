@@ -158,6 +158,16 @@ type Field struct {
 	// extending others: the parent's name for a field it took from one
 	// (`*ContactForm`), "" for its own.
 	Owner string
+	// Row is the group the field is a column of — `{ … }` in the body, the
+	// field `$N`, whose fields are the record's own —, 1… in its record; 0
+	// for a field alone in its row.
+	Row int
+	// Percent is the field's share of its group's row: its `[width=N]`, N
+	// of WidthUnits, or its part of what the others left.
+	Percent float64
+	// Group is the group the field is of — its kind: a row, tabs, steps —;
+	// nil for a field of no group.
+	Group *Group
 }
 
 // Clone is a copy of the schema that may be changed — a schema Parse returns

@@ -235,7 +235,7 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		for _, f := range ps.Fields {
 			f.Owner = owner
 		}
-		s.Fields = append(s.Fields, ps.Fields...)
+		appendRows(s, ps.Fields)
 	}
 	for _, cf := range c.RawFields() {
 		types := make(gad.Array, len(cf.Types))
@@ -252,7 +252,9 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		if cf.Value != nil && cf.Value != gad.Nil {
 			f.Default = metaValue(cf.Value)
 		}
-		s.Fields = append(s.Fields, f)
+		if err := r.appendField(s, f); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
 }
@@ -440,7 +442,9 @@ func (r *reader) schema(iface *gad.Interface) (*Schema, error) {
 				return nil, err
 			}
 			if f != nil {
-				s.Fields = append(s.Fields, f)
+				if err := r.appendField(s, f); err != nil {
+					return nil, err
+				}
 			}
 		}
 		fields, err := r.array(iface, "fields")
@@ -452,7 +456,9 @@ func (r *reader) schema(iface *gad.Interface) (*Schema, error) {
 			if err != nil {
 				return nil, err
 			}
-			s.Fields = append(s.Fields, f)
+			if err := r.appendField(s, f); err != nil {
+				return nil, err
+			}
 		}
 	}
 
