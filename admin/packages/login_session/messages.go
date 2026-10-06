@@ -32,6 +32,17 @@ type Messages struct {
 	IPAddress                  string `i18n:"label='IP address', hint='Column with the address a session came from.'"`
 	HideIPTips                 string `i18n:"label='Hidden IP: hint', hint='Shown in place of the address of a session when it is hidden.'"`
 	Status                     string `i18n:"hint='Column with whether a session is active or expired.'"`
+	Access                     string `i18n:"hint='Column with the way of a session: a login, the WebDAV, the git — and how it was told who.'"`
+	Place                      string `i18n:"hint='Column with where the address of a session is (city, country).'"`
+	KindLogin                  string `i18n:"label='Kind: login', hint='A login in the admin, its session.'"`
+	KindWebDAV                 string `i18n:"label='Kind: WebDAV', hint='The files by WebDAV.'"`
+	KindGit                    string `i18n:"label='Kind: git', hint='The git of the site files.'"`
+	AuthPassword               string `i18n:"label='Auth: password', hint='Told who by the password.'"`
+	AuthAccessKey              string `i18n:"label='Auth: access key', hint='Told who by an access key.'"`
+	AuthSecureKey              string `i18n:"label='Auth: secure key', hint='Told who by the secure key of the server (the administrator).'"`
+	AuthSession                string `i18n:"label='Auth: session', hint='Told who by a session already open.'"`
+	AuthLocked                 string `i18n:"label='Auth: locked', hint='A wrong password that locked the account.'"`
+	Requests                   string `i18n:"hint='Count of the requests of an access: %d is the number.'"`
 }
 
 var (
@@ -50,6 +61,17 @@ var (
 		IPAddress:                  "IP Address",
 		HideIPTips:                 "Hide IPTips",
 		Status:                     "Status",
+		Access:                     "Access",
+		Place:                      "Place",
+		KindLogin:                  "Login",
+		KindWebDAV:                 "WebDAV",
+		KindGit:                    "Git",
+		AuthPassword:               "password",
+		AuthAccessKey:              "access key",
+		AuthSecureKey:              "secure key",
+		AuthSession:                "session",
+		AuthLocked:                 "account locked",
+		Requests:                   "%d requests",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -67,5 +89,16 @@ var (
 		HideIPTips:                 "Invisível devido a questões de segurança",
 		SignOutAllSuccessfullyTips: "Todas as outras sessões foram desconectadas com sucesso.",
 		Status:                     "Situação",
+		Access:                     "Acesso",
+		Place:                      "Local",
+		KindLogin:                  "Login",
+		KindWebDAV:                 "WebDAV",
+		KindGit:                    "Git",
+		AuthPassword:               "senha",
+		AuthAccessKey:              "chave de acesso",
+		AuthSecureKey:              "secure key",
+		AuthSession:                "sessão",
+		AuthLocked:                 "conta bloqueada",
+		Requests:                   "%d requisições",
 	}
 )
