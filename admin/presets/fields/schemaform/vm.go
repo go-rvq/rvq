@@ -6,6 +6,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -226,6 +227,8 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", p.Type.Name(), err)
 		}
+		// (their validations, before its own)
+		s.Validations = append(s.Validations, ps.Validations...)
 		owner := p.Type.Name()
 		if r.className != nil {
 			if n := r.className(p.Type); n != "" {
@@ -237,6 +240,11 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		}
 		appendRows(s, ps.Fields)
 	}
+	own, err := classValidations(c)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", c.Name(), err)
+	}
+	s.Validations = append(s.Validations, own...)
 	for _, cf := range c.RawFields() {
 		types := make(gad.Array, len(cf.Types))
 		for i, t := range cf.Types {
@@ -516,11 +524,241 @@ func (r *reader) field(o gad.Object) (*Field, error) {
 // own label. The value is what the record holds, as text.
 const MetaOptions = "options"
 
+// MetaOpen is the bound of a range (Range[T]) that may be left blank:
+// `[open="to"]` — from a date on, with no end —, `[open="from"]`.
+const MetaOpen = "open"
+
+// The limits of a value (Field.Min…): `[min=0, max=10, step=0.5]` of a
+// number; `[min="2026-01-01", max="2026-12-31"]` of a date or a time, as
+// text; `[minlength=3, maxlength=200]` of a text.
+const (
+	MetaMin       = "min"
+	MetaMax       = "max"
+	MetaStep      = "step"
+	MetaMinLength = "minlength"
+	MetaMaxLength = "maxlength"
+	MetaPattern   = "pattern"
+)
+
+// NumberTypes and DateTypes are the types that take [min, max, step];
+// TextTypes, [minlength, maxlength].
+var (
+	NumberTypes = map[string]bool{"int": true, "uint": true, "float": true, "decimal": true}
+	DateTypes   = map[string]bool{"date": true, "time": true, "calendarDate": true, "calendarTime": true}
+	TextTypes   = map[string]bool{DefaultType: true, "text": true}
+)
+
+// limits reads a field's [min, max, step, minlength, maxlength] — a range's
+// into its bounds.
+func limits(f *Field, key string, v gad.Object) error {
+	target := f
+	if f.Type == RangeType && f.Range != nil {
+		target = f.Range
+	}
+	if target.Enum != nil || target.Schema != nil {
+		return fmt.Errorf("%s: only a number, a date, a time or a text has it", key)
+	}
+	t := target.Type
+	switch key {
+	case MetaPattern:
+		if t != DefaultType {
+			return fmt.Errorf("%s: only a line of text (str) has it, not %s", key, t)
+		}
+		str, ok := v.(gad.Str)
+		if !ok || str == "" {
+			return fmt.Errorf("%s: want a regular expression, as text", key)
+		}
+		if _, err := PatternRegexp(string(str)); err != nil {
+			return fmt.Errorf("%s: %w", key, err)
+		}
+		target.Pattern = string(str)
+		return nil
+	case MetaPlaceholder:
+		if !TextTypes[t] && !NumberTypes[t] {
+			return fmt.Errorf("%s: only a text or a number has it, not %s", key, t)
+		}
+		return nil
+	case MetaMinLength, MetaMaxLength:
+		if !TextTypes[t] {
+			return fmt.Errorf("%s: only a text (str, text) has it, not %s", key, t)
+		}
+		n, ok := v.(gad.Int)
+		if !ok || n < 0 {
+			return fmt.Errorf("%s: want a whole number, 0 or more, got %s", key, v.ToString())
+		}
+		if key == MetaMinLength {
+			target.MinLength = int(n)
+		} else {
+			target.MaxLength = int(n)
+		}
+		if target.MaxLength > 0 && target.MinLength > target.MaxLength {
+			return fmt.Errorf("%s=%d is more than %s=%d", MetaMinLength, target.MinLength, MetaMaxLength, target.MaxLength)
+		}
+		return nil
+	}
+	var s string
+	switch {
+	case NumberTypes[t] || key == MetaStep && DateTypes[t]:
+		n, ok := number(v)
+		if !ok {
+			return fmt.Errorf("%s: want a number, got %s", key, v.ToString())
+		}
+		if key == MetaStep && n <= 0 {
+			return fmt.Errorf("%s: want a number more than 0, got %s", key, v.ToString())
+		}
+		if (t == "int" || t == "uint") && n != float64(int64(n)) {
+			return fmt.Errorf("%s=%s: %s is a whole number", key, v.ToString(), t)
+		}
+		s = strconv.FormatFloat(n, 'f', -1, 64)
+	case DateTypes[t]:
+		str, ok := v.(gad.Str)
+		if !ok {
+			return fmt.Errorf("%s: a date or a time is given as text (%s=\"2026-01-30\"), got %s", key, key, v.ToString())
+		}
+		s = string(str)
+	default:
+		return fmt.Errorf("%s: only a number, a date or a time has it, not %s", key, t)
+	}
+	switch key {
+	case MetaMin:
+		target.Min = s
+	case MetaMax:
+		target.Max = s
+	default:
+		target.Step = s
+	}
+	if target.Min != "" && target.Max != "" && LimitAfter(t, target.Min, target.Max) {
+		return fmt.Errorf("%s=%s is after %s=%s", MetaMin, target.Min, MetaMax, target.Max)
+	}
+	return nil
+}
+
+// PatternRegexp is the regular expression of a [pattern=…]: matching the
+// whole value, as HTML5 does. What Go and the browser read differently is
+// refused: a group of flags or a named one (`(?…`, but `(?:…)`), lookaround, a
+// backreference, `\A`, `\z`, `\Q…\E`.
+func PatternRegexp(p string) (*regexp.Regexp, error) {
+	if strings.Contains(strings.ReplaceAll(p, "(?:", ""), "(?") {
+		return nil, fmt.Errorf("%q: no (?…) but (?:…) — flags, named groups, lookaround —: the browser reads them differently", p)
+	}
+	for _, esc := range []string{`\A`, `\z`, `\Q`, `\E`} {
+		if strings.Contains(p, esc) {
+			return nil, fmt.Errorf("%q: no %s, the browser has none (the pattern matches the whole value already)", p, esc)
+		}
+	}
+	re, err := regexp.Compile("^(?:" + p + ")$")
+	if err != nil {
+		return nil, fmt.Errorf("%q is no regular expression: %w", p, err)
+	}
+	return re, nil
+}
+
+// LimitAfter reports whether the limit a comes after b, of the type t: numbers
+// by value, dates and times (ISO texts) by their text.
+func LimitAfter(t, a, b string) bool {
+	if NumberTypes[t] {
+		x, _ := strconv.ParseFloat(a, 64)
+		y, _ := strconv.ParseFloat(b, 64)
+		return x > y
+	}
+	return a > b
+}
+
+func number(v gad.Object) (float64, bool) {
+	switch n := v.(type) {
+	case gad.Int:
+		return float64(n), true
+	case gad.Uint:
+		return float64(n), true
+	case gad.Float:
+		return float64(n), true
+	case gad.Decimal:
+		f, err := strconv.ParseFloat(n.ToString(), 64)
+		return f, err == nil
+	}
+	return 0, false
+}
+
+// MetaValidation is the metadata of a field, or of a class, that checks its
+// value: a function, or an array of them —
+//
+//	[validation=cep] zip str
+//	[validation=[notWeekend, notHoliday]] day date
+//	[validation=func(r) { … }] class Address { … }
+//
+// — accumulated: a class's after its parents', a field of a class's before
+// its class's. What calls them, and with what, is the application's.
+const MetaValidation = "validation"
+
+// validations reads a `[validation=…]`: a function, or an array of them.
+func validations(v gad.Object) ([]gad.Object, error) {
+	var out []gad.Object
+	add := func(o gad.Object) error {
+		if _, ok := o.(gad.CallerObject); !ok {
+			return fmt.Errorf("%s: want a function, or an array of them, got %s", MetaValidation, o.Type().Name())
+		}
+		out = append(out, o)
+		return nil
+	}
+	if arr, ok := v.(gad.Array); ok {
+		for _, o := range arr {
+			if err := add(o); err != nil {
+				return nil, err
+			}
+		}
+		return out, nil
+	}
+	return out, add(v)
+}
+
+// classValidations are the `[validation=…]` of the class c's metadata.
+func classValidations(c *gad.Class) ([]gad.Object, error) {
+	for _, kv := range c.Meta {
+		if kv.K.ToString() == MetaValidation {
+			return validations(kv.V)
+		}
+	}
+	return nil, nil
+}
+
+// The bounds of a range: its value's keys.
+const (
+	RangeFrom = "from"
+	RangeTo   = "to"
+)
+
 // options reads the field's `[options=…]` into the enum of the values it may
 // hold — the item's, for a list of plain values (each item a select).
 func options(f *Field, rawMeta gad.Object) error {
 	kva, _ := rawMeta.(gad.KeyValueArray)
 	for _, kv := range kva {
+		if kv.K.ToString() == MetaOpen {
+			// a bound of a range that may be left blank
+			if f.Type != RangeType {
+				return fmt.Errorf("%s: only a range (Range[T]) has a bound left open", MetaOpen)
+			}
+			switch open := kv.V.ToString(); open {
+			case RangeFrom, RangeTo:
+				f.RangeOpen = open
+			default:
+				return fmt.Errorf("%s=%q: the bound left open is %q or %q", MetaOpen, open, RangeFrom, RangeTo)
+			}
+			continue
+		}
+		switch k := kv.K.ToString(); k {
+		case MetaValidation:
+			fns, err := validations(kv.V)
+			if err != nil {
+				return err
+			}
+			f.Validations = append(f.Validations, fns...)
+			continue
+		case MetaMin, MetaMax, MetaStep, MetaMinLength, MetaMaxLength, MetaPattern, MetaPlaceholder:
+			if err := limits(f, k, kv.V); err != nil {
+				return err
+			}
+			continue
+		}
 		if kv.K.ToString() != MetaOptions {
 			continue
 		}
@@ -531,10 +769,19 @@ func options(f *Field, rawMeta gad.Object) error {
 		target := f
 		if f.Schema != nil && f.Schema.Slice && f.Schema.Item != nil && f.Schema.Item.Schema == nil {
 			target = f.Schema.Item
+		} else if f.Type == RangeType && f.Range != nil {
+			// a range of choices: its bounds are of them
+			target = f.Range
 		} else if f.Schema != nil {
 			return fmt.Errorf("%s: a record has no options; only a value has", MetaOptions)
 		}
 		target.Enum = e
+	}
+	// (choices, whatever the order of the meta: no limits)
+	for _, l := range []*Field{f, f.Range} {
+		if l != nil && l.Enum != nil && (l.Min != "" || l.Max != "" || l.Step != "" || l.MinLength > 0 || l.MaxLength > 0 || l.Pattern != "") {
+			return fmt.Errorf("%s: only a number, a date, a time or a text has limits, not a choice", f.Name)
+		}
 	}
 	return nil
 }
@@ -691,6 +938,19 @@ func (r *reader) typeInto(f *Field, types gad.Array) error {
 			return err
 		}
 		f.Type, f.Enum = e.Name, e
+	case *gad.RangeOfType:
+		// Range[T]: from and to, of T — a union of numbers, a number
+		bound := &Field{}
+		if u, ok := t.Elem.(*gad.TypeUnion); ok {
+			if numericUnion(u) {
+				bound.Type = "float"
+			} else if err := r.typeInto(bound, u.Types); err != nil {
+				return err
+			}
+		} else if err := r.typeInto(bound, []gad.Object{t.Elem}); err != nil {
+			return err
+		}
+		f.Type, f.Range = RangeType, bound
 	default:
 		f.Type = typeName(t)
 	}
@@ -734,11 +994,30 @@ func (r *reader) enum(e *gad.Enum) (*Enum, error) {
 		return nil, err
 	}
 	out := &Enum{Name: e.EnumName}
+	if m := e.Module; m != nil && m.Name != "" && m.InitCompiledFunc == nil && !m.IsMain() {
+		// an enum of a module of gad's own, declared in Go (time.Months) — not
+		// one of the code's, which runs (InitCompiledFunc) —: its words, the
+		// module's
+		out.Module = e.Module.Name
+	}
 	for _, n := range names {
 		out.Names = append(out.Names, n.ToString())
 	}
 	r.enums[out.Name] = out
 	return out, nil
+}
+
+// numericUnion reports whether every type of u is a number's: a range of
+// them is drawn as numbers.
+func numericUnion(u *gad.TypeUnion) bool {
+	for _, t := range u.Types {
+		switch typeName(t) {
+		case "int", "uint", "float", "decimal":
+		default:
+			return false
+		}
+	}
+	return len(u.Types) > 0
 }
 
 // typeName is the name a type is drawn by. `any` is what gad makes of a field

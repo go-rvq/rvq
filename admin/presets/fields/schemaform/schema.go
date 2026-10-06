@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"fmt"
+	"github.com/gad-lang/gad"
 	"strings"
 )
 
@@ -12,6 +13,9 @@ const (
 	// inside the form, or a list of them. It is also the type an application
 	// gives a value it wants edited this way.
 	FormType = "form"
+	// RangeType is a field of Range[T]: two values of T, from and to — the
+	// type of them, Field.Range.
+	RangeType = "range"
 )
 
 // Schema is one form: the fields it edits, and whether the value it edits is a
@@ -19,6 +23,10 @@ const (
 type Schema struct {
 	Slice  bool
 	Fields []*Field
+	// Validations are the `[validation=…]` of the class the record is — and
+	// of the classes it extends, theirs first —: gad functions of the
+	// record, the application's to call (see MetaValidation).
+	Validations []gad.Object
 	// Item is what a list of PLAIN VALUES holds — `[]str`, a list of lines,
 	// against `[]{…}`, a list of records. It is set (and Slice with it) only
 	// for that shape, and then there are no Fields: the item IS the value.
@@ -129,6 +137,20 @@ type Enum struct {
 	// Options says the enum is the field's own `[options=…]`, not a type: it
 	// is drawn as a select whatever the field's type is.
 	Options bool
+	// Module is the gad module that declares it — "time" for time.Months,
+	// time.Weekdays —, "" for an enum of the schema's own code.
+	Module string
+}
+
+// ModuleKey is the key of the words of the member name of an enum of a gad
+// module, the same for every schema: `gad.<module>.<enum>.<Member>`, the
+// enum's name in lower case — gad.time.months.January,
+// gad.time.weekdays.Sunday. "" for an enum of the schema's own code.
+func (e *Enum) ModuleKey(name string) string {
+	if e.Module == "" {
+		return ""
+	}
+	return "gad." + e.Module + "." + strings.ToLower(e.Name) + "." + name
 }
 
 // Field is one entry of a form.
@@ -142,6 +164,27 @@ type Field struct {
 	Nullable bool
 	// Schema is the field's own form, set when Type is FormType.
 	Schema *Schema
+	// Range is the type of the bounds of a range (Type RangeType): a field
+	// of its own, its Type the bounds'. RangeOpen is the bound that may be
+	// left blank (`[open="to"]`): RangeFrom, RangeTo, or none.
+	Range     *Field
+	RangeOpen string
+	// Min, Max and Step are the `[min=…, max=…, step=…]` of a number, a date
+	// or a time — of a range, its bounds' —: the bounds of its value and its
+	// step, as an input of HTML5 says them ("10", "0.5", "2026-01-30",
+	// "08:00"); "" when not given. MinLength and MaxLength are the
+	// `[minlength=N, maxlength=N]` of a text: its length; 0 when not given.
+	Min, Max, Step       string
+	MinLength, MaxLength int
+	// Pattern is the `[pattern="…"]` of a str: the regular expression its
+	// whole value matches — of the syntax both Go and the browser's HTML5
+	// read alike (no flags, no named groups, no lookaround).
+	Pattern string
+	// Validations are the field's `[validation=…]`: gad functions of its
+	// value — of a field of a class, of its record (its Schema's
+	// Validations after them) —, the application's to call (see
+	// MetaValidation).
+	Validations []gad.Object
 	// Enum is the set of values the field may hold, set when its type is an
 	// enum.
 	Enum *Enum

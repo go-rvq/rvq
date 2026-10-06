@@ -414,6 +414,11 @@ func displayText(data any) string {
 
 // TextDisplayFunc shows a value as text — DefaultType, the numbers, the date
 // and time types, and whatever type has no display of its own.
+// RangeDisplayFunc is a Range[T] read: "from – to".
+func RangeDisplayFunc(c *Context) h.HTMLComponent {
+	return h.Span("").Attr("v-text", fmt.Sprintf("(%s ? [%s.from, %s.to].filter(x => x != null && x !== '').join(' – ') : '')", c.Value, c.Value, c.Value))
+}
+
 func TextDisplayFunc(c *Context) h.HTMLComponent {
 	if isEmpty(c.Data) {
 		return emptyDisplay(c)
@@ -502,17 +507,20 @@ func EnumDisplayFunc(c *Context) h.HTMLComponent {
 
 func defaultDisplays() map[string]ComponentFunc {
 	return map[string]ComponentFunc{
-		DefaultType: TextDisplayFunc,
-		"int":       TextDisplayFunc,
-		"uint":      TextDisplayFunc,
-		"float":     TextDisplayFunc,
-		"decimal":   TextDisplayFunc,
-		"duration":  TextDisplayFunc,
-		"time":      TextDisplayFunc,
-		"date":      TextDisplayFunc,
-		"text":      LongTextDisplayFunc,
-		"html":      HTMLDisplayFunc,
-		"bool":      BoolDisplayFunc,
-		"color":     ColorDisplayFunc,
+		DefaultType:    TextDisplayFunc,
+		"int":          TextDisplayFunc,
+		"uint":         TextDisplayFunc,
+		"float":        TextDisplayFunc,
+		"decimal":      TextDisplayFunc,
+		"duration":     TextDisplayFunc,
+		"time":         TextDisplayFunc,
+		"date":         TextDisplayFunc,
+		"calendarDate": TextDisplayFunc,
+		"calendarTime": TextDisplayFunc,
+		RangeType:      RangeDisplayFunc,
+		"text":         LongTextDisplayFunc,
+		"html":         HTMLDisplayFunc,
+		"bool":         BoolDisplayFunc,
+		"color":        ColorDisplayFunc,
 	}
 }

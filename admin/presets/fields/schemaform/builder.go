@@ -32,6 +32,8 @@ type FieldInfo struct {
 	Hint string
 	// Help is the long explanation, opened from a `?` beside the field.
 	Help h.HTMLComponent
+	// Placeholder is the example inside the input while it is empty.
+	Placeholder string
 }
 
 // FieldInfoFunc answers for the field at PATH — the names from the root down:
@@ -151,6 +153,9 @@ func (c *Context) Info() FieldInfo {
 			if hint, ok := c.Field.Meta[MetaHint].(string); ok && i.Hint == "" {
 				i.Hint = hint
 			}
+			if p, ok := c.Field.Meta[MetaPlaceholder].(string); ok && i.Placeholder == "" {
+				i.Placeholder = p
+			}
 			if help, ok := c.Field.Meta[MetaHelp].(string); ok && i.Help == nil && help != "" {
 				i.Help = h.Div(h.Text(help)).Style("white-space:pre-wrap")
 			}
@@ -161,11 +166,13 @@ func (c *Context) Info() FieldInfo {
 }
 
 // The field metadata that names a field where the application gives it no
-// words (FieldInfoFunc): `[label="Título", hint="…", help="…"]`.
+// words (FieldInfoFunc): `[label="Título", hint="…", help="…",
+// placeholder="…"]`.
 const (
-	MetaLabel = "label"
-	MetaHint  = "hint"
-	MetaHelp  = "help"
+	MetaLabel       = "label"
+	MetaHint        = "hint"
+	MetaHelp        = "help"
+	MetaPlaceholder = "placeholder"
 )
 
 // Label is what to put on the input: what the FieldInfoFunc says, else the
@@ -188,6 +195,33 @@ func (c *Context) Hint() string {
 		return ""
 	}
 	return c.Info().Hint
+}
+
+// Placeholder is the example inside the input while it is empty, or "".
+func (c *Context) Placeholder() string { return c.Info().Placeholder }
+
+// LimitAttrs are the attributes of HTML5 that limit the value — min, max,
+// step, minlength, maxlength, pattern, placeholder —, those the field has.
+func (c *Context) LimitAttrs() []any {
+	f := c.Field
+	var attrs []any
+	add := func(k, v string) {
+		if v != "" {
+			attrs = append(attrs, k, v)
+		}
+	}
+	add("min", f.Min)
+	add("max", f.Max)
+	add("step", f.Step)
+	if f.MinLength > 0 {
+		add("minlength", strconv.Itoa(f.MinLength))
+	}
+	if f.MaxLength > 0 {
+		add("maxlength", strconv.Itoa(f.MaxLength))
+	}
+	add("pattern", f.Pattern)
+	add("placeholder", c.Placeholder())
+	return attrs
 }
 
 // CompactAttrs are the attributes that keep an input to one line in a table
@@ -372,7 +406,12 @@ func New() *Builder {
 			"html":      HTMLComponentFunc,
 			"time":      TimeComponentFunc,
 			"date":      DateComponentFunc,
-			"duration":  DurationComponentFunc,
+			// the time namespace's calendar types: a date; a date and a time
+			// of day, with no zone
+			"calendarDate": DateComponentFunc,
+			"calendarTime": TimeComponentFunc,
+			RangeType:      RangeComponentFunc,
+			"duration":     DurationComponentFunc,
 		},
 		displays: defaultDisplays(),
 	}
@@ -1019,6 +1058,7 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
 		Attr("required", c.Field.Required()).
+		Attr(c.LimitAttrs()...).
 		Attr("v-model", c.Value)
 }
 
@@ -1031,7 +1071,11 @@ func IntComponentFunc(c *Context) h.HTMLComponent {
 
 // UintComponentFunc is "uint": the same, floored at zero.
 func UintComponentFunc(c *Context) h.HTMLComponent {
-	return numberField(c).Attr("min", "0")
+	f := numberField(c)
+	if c.Field.Min == "" {
+		f.Attr("min", "0")
+	}
+	return f
 }
 
 func numberField(c *Context) *v.VTextFieldBuilder {
@@ -1042,6 +1086,7 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 		Attr(c.CompactAttrs()...).
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
+		Attr(c.LimitAttrs()...).
 		Attr("v-model.number", c.Value)
 }
 
@@ -1050,13 +1095,17 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 // `v-model.number` — a decimal that goes through a JS number comes back a
 // float, and the precision it exists for is gone.
 func DecimalComponentFunc(c *Context) h.HTMLComponent {
-	return v.VTextField().
+	f := v.VTextField().
 		Type("number").
-		Attr("step", "any").
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
+		Attr(c.LimitAttrs()...).
 		Attr("v-model", c.Value)
+	if c.Field.Step == "" {
+		f.Attr("step", "any")
+	}
+	return f
 }
 
 // LongTextComponentFunc is "text": a textarea, for prose that is not markup.
@@ -1066,6 +1115,7 @@ func LongTextComponentFunc(c *Context) h.HTMLComponent {
 		Variant(v.FieldVariantUnderlined).
 		AutoGrow(true).
 		Rows(3).
+		Attr(c.LimitAttrs()...).
 		Attr("v-model", c.Value)
 }
 
@@ -1091,6 +1141,49 @@ func DateComponentFunc(c *Context) h.HTMLComponent {
 	return vx.VXDatePicker().
 		Label(c.Label()).
 		Attr("v-model", c.Value)
+}
+
+// RangeComponentFunc is a Range[T]: its label, and two inputs of T — from
+// and to — side by side, binding the value's `from` and `to` (the value made
+// an object first).
+func RangeComponentFunc(c *Context) h.HTMLComponent {
+	bound := c.Field.Range
+	if bound == nil {
+		bound = &Field{Type: DefaultType}
+	}
+	msgs := c.Messages()
+	draw := func(name, label string) h.HTMLComponent {
+		f, ok := c.Builder.TypeFunc(bound.Type)
+		if !ok {
+			f = TextComponentFunc
+		}
+		sub := *c
+		// a bound is optional when the range is, or it is the one left open
+		// (its limits, [min, max, step], the bounds')
+		b := *bound
+		b.Name, b.Meta = name, Meta{"label": label}
+		b.Nullable = c.Field.Nullable || c.Field.RangeOpen == name
+		sub.Field = &b
+		sub.Value = c.Value + "." + name
+		sub.Path = c.Path + "." + name
+		return f(&sub)
+	}
+	inputs := h.Div(
+		v.VRow(
+			v.VCol(draw(RangeFrom, msgs.RangeFrom)).Cols(6),
+			v.VCol(draw(RangeTo, msgs.RangeTo)).Cols(6),
+		).Dense(true),
+	).Attr("v-if", fmt.Sprintf("%s && typeof %s === 'object'", c.Value, c.Value))
+	out := h.Div(h.Div(h.Text(c.Label())).Class("text-caption text-medium-emphasis mb-1"), inputs).
+		Attr("data-range", c.Path)
+	// the value an object, to bind its bounds: made one as it mounts — on the
+	// object it is a key of (`<parent>.<key>`) —, the inputs drawn then
+	if i := strings.LastIndex(c.Value, "."); i > 0 && !strings.ContainsAny(c.Value[i:], "[]") {
+		parent, key := c.Value[:i], c.Value[i+1:]
+		out.Attr("v-assign", fmt.Sprintf("[%s, {%s: (%s && typeof %s === 'object') ? %s : {from: null, to: null}}]",
+			parent, key, c.Value, c.Value, c.Value))
+	}
+	return out
 }
 
 // DurationComponentFunc is "duration", the gad time namespace's span. It is

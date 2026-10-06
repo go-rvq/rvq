@@ -67,9 +67,51 @@
 // own, which is why a dynamic list of values may take it over (see below).
 //
 // A new Builder knows: str (and untyped), text (textarea), html (rich text),
-// int, uint, float, decimal, bool (switch), color, date, time, duration, and
-// FormType — the form itself, one level down, which is what makes the schema
-// recursive.
+// int, uint, float, decimal, bool (switch), color, date, time, duration,
+// gad's time.CalendarDate (a date) and time.CalendarTime (a date and a time
+// of day, with no zone), RangeType and FormType — the form itself, one level
+// down, which is what makes the schema recursive.
+//
+// # Ranges
+//
+// A field of `Range[T]` (gad) is a range (RangeType): two values of T, its
+// value `{from, to}`, drawn side by side; Field.Range is the type of the
+// bounds. A union of numbers (`Range[int|float]`) is a range of numbers.
+// `[options=[…]]` makes each bound a select of them. `[open="to"]` (or
+// "from") is a bound that may be left blank — from a date on, with no end
+// (Field.RangeOpen):
+//
+//	interface Form {
+//	    [open="to"] stay Range[time.CalendarDate]
+//	    budget? Range[int|float]
+//	    [options=[1, 2, 3, 4]] rooms Range[int]
+//	}
+//
+// # Limits
+//
+// The limits of HTML5 are a field's metadata, put on its input: `[min=…,
+// max=…, step=…]` of a number, a date, a time — of a range, its bounds' —
+// (Field.Min, Max, Step; a date or a time as text, "2026-01-30", "08:00");
+// `[minlength=N, maxlength=N]` of a text, `[pattern="…"]` of a str (the
+// regular expression its whole value matches, of what Go and the browser
+// read alike: PatternRegexp); `[placeholder="…"]`, the example in the input
+// while it is empty. A limit where it means nothing — a minlength of a
+// number, a min of a choice —, or min after max, is refused:
+//
+//	interface Form {
+//	    [min=1, max=10] rooms int
+//	    [min=0, step=0.5] ratio? float
+//	    [min="2026-01-01", max="2026-12-31"] day date
+//	    [minlength=3, maxlength=80, placeholder="Your name"] name str
+//	    [pattern="[0-9]{5}(-[0-9]{4})?"] zip str
+//	}
+//
+// # Validations
+//
+// `[validation=…]` (MetaValidation), of a field or of a class, is a gad
+// function — or an array of them — that checks the value: kept in
+// Field.Validations, Schema.Validations (a class's after its parents'),
+// for the application to call.
 //
 // # A schema written in parts
 //

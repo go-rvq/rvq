@@ -17,6 +17,9 @@ const MessagesKey i18n.ModuleKey = "admin/presets/fields/schemaform"
 // for what cannot be drawn — why a field is not there.
 type Messages struct {
 	ModuleDescription string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	// RangeFrom and RangeTo: the bounds of a range (Range[T]).
+	RangeFrom string `i18n:"label='Range: from', hint='Label of the first bound of a range.'"`
+	RangeTo   string `i18n:"label='Range: to', hint='Label of the last bound of a range.'"`
 	// NoSchema: a field drawn without a schema.
 	NoSchema string `i18n:"hint='Error when a schema form field has no schema.'"`
 	// FormWithoutSchema: a form field with no schema; %q is the field.
@@ -57,6 +60,8 @@ type Messages struct {
 var Messages_en_US = &Messages{
 	ModuleDescription:      "The forms made from a schema, and their errors.",
 	NoSchema:               "schemaform: the field has no schema",
+	RangeFrom:              "From",
+	RangeTo:                "To",
 	FormWithoutSchema:      "schemaform: the field %q is a form with no schema",
 	ItemsUnavailable:       "the values of %q could not be fetched: %v",
 	NoItems:                "the field %q has no values to choose from",
@@ -75,6 +80,8 @@ var Messages_en_US = &Messages{
 var Messages_pt_BR = &Messages{
 	ModuleDescription:      "Os formulários gerados a partir de um schema, e seus erros.",
 	NoSchema:               "schemaform: o campo não tem schema",
+	RangeFrom:              "De",
+	RangeTo:                "Até",
 	FormWithoutSchema:      "schemaform: o campo %q é um form sem schema",
 	ItemsUnavailable:       "os valores de %q não puderam ser obtidos: %v",
 	NoItems:                "o campo %q não tem valores para escolher",
