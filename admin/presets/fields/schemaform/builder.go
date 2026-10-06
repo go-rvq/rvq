@@ -412,6 +412,8 @@ func New() *Builder {
 			"calendarTime": TimeComponentFunc,
 			RangeType:      RangeComponentFunc,
 			"duration":     DurationComponentFunc,
+			FileType:       FileComponentFunc,
+			ImageType:      FileComponentFunc,
 		},
 		displays: defaultDisplays(),
 	}
@@ -1184,6 +1186,19 @@ func RangeComponentFunc(c *Context) h.HTMLComponent {
 			parent, key, c.Value, c.Value, c.Value))
 	}
 	return out
+}
+
+// FileComponentFunc is "file" and "image": a file input of what it takes
+// ([accept=…]). The value of a file is the application's to keep — what is
+// sent with the form —: the admin draws it to show the form (a preview).
+func FileComponentFunc(c *Context) h.HTMLComponent {
+	return v.VFileInput().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
+		Attr("accept", c.Field.AcceptOf()).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "")
 }
 
 // DurationComponentFunc is "duration", the gad time namespace's span. It is

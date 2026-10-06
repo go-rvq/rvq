@@ -142,6 +142,15 @@ type Enum struct {
 	Module string
 }
 
+// AcceptOf is what the field takes as a file: its [accept=…]; an image's,
+// "image/*" when it says none.
+func (f *Field) AcceptOf() string {
+	if f.Accept == "" && f.Type == ImageType {
+		return "image/*"
+	}
+	return f.Accept
+}
+
 // ModuleKey is the key of the words of the member name of an enum of a gad
 // module, the same for every schema: `gad.<module>.<enum>.<Member>`, the
 // enum's name in lower case — gad.time.months.January,
@@ -176,6 +185,17 @@ type Field struct {
 	// `[minlength=N, maxlength=N]` of a text: its length; 0 when not given.
 	Min, Max, Step       string
 	MinLength, MaxLength int
+	// MinItems and MaxItems are the `[min=N, max=N]` of a list: how many
+	// items it holds; 0 when not given.
+	MinItems, MaxItems int
+	// Accept is the `[accept="…"]` of a file or an image (FileType,
+	// ImageType): the types it takes, as the accept of an input of HTML5 —
+	// media types ("application/pdf", "image/*") and extensions (".docx"),
+	// by commas; an image's is "image/*" when not given. MaxSize is its
+	// `[maxSize=…]`, in bytes ("5MB", "500KB", or a number of bytes); 0,
+	// the application's.
+	Accept  string
+	MaxSize int64
 	// Pattern is the `[pattern="…"]` of a str: the regular expression its
 	// whole value matches — of the syntax both Go and the browser's HTML5
 	// read alike (no flags, no named groups, no lookaround).

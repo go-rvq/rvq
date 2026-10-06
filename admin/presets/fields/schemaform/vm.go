@@ -555,6 +555,25 @@ func limits(f *Field, key string, v gad.Object) error {
 	if f.Type == RangeType && f.Range != nil {
 		target = f.Range
 	}
+	if f.Schema != nil && f.Schema.Slice {
+		// a list: [min, max] are how many items it holds
+		if key != MetaMin && key != MetaMax {
+			return fmt.Errorf("%s: a list has [min, max], how many items it holds; not %s", key, key)
+		}
+		n, ok := v.(gad.Int)
+		if !ok || n < 0 {
+			return fmt.Errorf("%s: of a list, want a whole number of items, 0 or more, got %s", key, v.ToString())
+		}
+		if key == MetaMin {
+			f.MinItems = int(n)
+		} else {
+			f.MaxItems = int(n)
+		}
+		if f.MaxItems > 0 && f.MinItems > f.MaxItems {
+			return fmt.Errorf("%s=%d is more than %s=%d", MetaMin, f.MinItems, MetaMax, f.MaxItems)
+		}
+		return nil
+	}
 	if target.Enum != nil || target.Schema != nil {
 		return fmt.Errorf("%s: only a number, a date, a time or a text has it", key)
 	}
@@ -721,6 +740,85 @@ func classValidations(c *gad.Class) ([]gad.Object, error) {
 	return nil, nil
 }
 
+// The types of a file and of an image: their value, a file sent.
+const (
+	FileType  = "file"
+	ImageType = "image"
+)
+
+// MetaAccept and MetaMaxSize are the types a file or an image takes and its
+// largest size (Field.Accept, Field.MaxSize).
+const (
+	MetaAccept  = "accept"
+	MetaMaxSize = "maxSize"
+)
+
+// fileMeta reads a file's or an image's [accept=…] and [maxSize=…] — a
+// list's, its items'.
+func fileMeta(f *Field, key string, v gad.Object) error {
+	target := f
+	if f.Schema != nil && f.Schema.Slice && f.Schema.Item != nil {
+		target = f.Schema.Item
+	}
+	if target.Type != FileType && target.Type != ImageType {
+		return fmt.Errorf("%s: only a file or an image (or a list of them) has it, not %s", key, target.Type)
+	}
+	if key == MetaAccept {
+		str, ok := v.(gad.Str)
+		if !ok || strings.TrimSpace(string(str)) == "" {
+			return fmt.Errorf("%s: want the types it takes, as text: \"application/pdf,.docx\"", key)
+		}
+		for _, a := range strings.Split(string(str), ",") {
+			a = strings.TrimSpace(a)
+			if a == "" || !strings.HasPrefix(a, ".") && !strings.Contains(a, "/") {
+				return fmt.Errorf("%s: %q is neither a media type (\"image/png\", \"image/*\") nor an extension (\".pdf\")", key, a)
+			}
+			if target.Type == ImageType && !strings.HasPrefix(a, ".") && !strings.HasPrefix(a, "image/") {
+				return fmt.Errorf("%s: an image takes images only, not %q", key, a)
+			}
+		}
+		target.Accept = string(str)
+		return nil
+	}
+	n, err := ParseSize(v)
+	if err != nil {
+		return fmt.Errorf("%s: %w", key, err)
+	}
+	target.MaxSize = n
+	return nil
+}
+
+// ParseSize reads a size: a number of bytes, or a text of one with its
+// unit — "500KB", "5MB", "1GB" (of 1024).
+func ParseSize(v gad.Object) (int64, error) {
+	switch n := v.(type) {
+	case gad.Int:
+		if n > 0 {
+			return int64(n), nil
+		}
+	case gad.Uint:
+		if n > 0 {
+			return int64(n), nil
+		}
+	case gad.Str:
+		s := strings.ToUpper(strings.TrimSpace(string(n)))
+		mult := int64(1)
+		for _, u := range []struct {
+			suffix string
+			mult   int64
+		}{{"GB", 1 << 30}, {"MB", 1 << 20}, {"KB", 1 << 10}, {"B", 1}} {
+			if strings.HasSuffix(s, u.suffix) {
+				s, mult = strings.TrimSpace(strings.TrimSuffix(s, u.suffix)), u.mult
+				break
+			}
+		}
+		if f, err := strconv.ParseFloat(s, 64); err == nil && f > 0 {
+			return int64(f * float64(mult)), nil
+		}
+	}
+	return 0, fmt.Errorf("want a size: a number of bytes, or \"500KB\", \"5MB\"; got %s", v.ToString())
+}
+
 // The bounds of a range: its value's keys.
 const (
 	RangeFrom = "from"
@@ -746,6 +844,11 @@ func options(f *Field, rawMeta gad.Object) error {
 			continue
 		}
 		switch k := kv.K.ToString(); k {
+		case MetaAccept, MetaMaxSize:
+			if err := fileMeta(f, kv.K.ToString(), kv.V); err != nil {
+				return err
+			}
+			continue
 		case MetaValidation:
 			fns, err := validations(kv.V)
 			if err != nil {

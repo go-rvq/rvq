@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -463,6 +464,37 @@ func BoolDisplayFunc(c *Context) h.HTMLComponent {
 	return v.VIcon("mdi-minus").Color("grey").Size(v.SizeSmall)
 }
 
+// FileDisplayFunc is "file" and "image": the name of the file sent — a
+// record {name, size, type, file} —, and its size.
+func FileDisplayFunc(c *Context) h.HTMLComponent {
+	if isEmpty(c.Data) {
+		return emptyDisplay(c)
+	}
+	m, _ := c.Data.(map[string]any)
+	if m == nil {
+		return h.Text(displayText(c.Data))
+	}
+	name := displayText(m["name"])
+	if size, ok := m["size"].(float64); ok && size > 0 {
+		name += " (" + FormatSize(int64(size)) + ")"
+	}
+	return h.Span(name)
+}
+
+// FormatSize is a size in bytes as a person reads it: "820 B", "1.4 KB",
+// "3.2 MB".
+func FormatSize(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return strconv.FormatFloat(float64(n)/(1<<30), 'f', 1, 64) + " GB"
+	case n >= 1<<20:
+		return strconv.FormatFloat(float64(n)/(1<<20), 'f', 1, 64) + " MB"
+	case n >= 1<<10:
+		return strconv.FormatFloat(float64(n)/(1<<10), 'f', 1, 64) + " KB"
+	}
+	return strconv.FormatInt(n, 10) + " B"
+}
+
 // ColorDisplayFunc is "color": a swatch of it, and its value.
 func ColorDisplayFunc(c *Context) h.HTMLComponent {
 	if isEmpty(c.Data) {
@@ -522,5 +554,7 @@ func defaultDisplays() map[string]ComponentFunc {
 		"html":         HTMLDisplayFunc,
 		"bool":         BoolDisplayFunc,
 		"color":        ColorDisplayFunc,
+		FileType:       FileDisplayFunc,
+		ImageType:      FileDisplayFunc,
 	}
 }
