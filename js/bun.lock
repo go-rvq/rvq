@@ -269,7 +269,7 @@
         "@editorjs/text-variant-tune": "^1.0.3",
         "@editorjs/underline": "^1.2.1",
         "@editorjs/warning": "^1.4.1",
-        "@gad-lang/codemirror-gad": "0.1.0-rc.1",
+        "@gad-lang/codemirror-gad": "github:gad-lang/codemirror-gad#bc8ddf9",
         "@gad-lang/prism-gad": "0.1.0-rc.2",
         "@lezer/highlight": "^1",
         "@mdi/font": "7.4.47",
@@ -885,7 +885,7 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
-    "@gad-lang/codemirror-gad": ["@gad-lang/codemirror-gad@0.1.0-rc.1", "", { "peerDependencies": { "@codemirror/autocomplete": "^6.0.0", "@codemirror/language": "^6.0.0", "@codemirror/lint": "^6.0.0", "@codemirror/state": "^6.0.0", "@codemirror/view": "^6.0.0", "@lezer/highlight": "^1.0.0" } }, "sha512-PseQ7Rkta8dmRy0hHBqhyGnMI61G3a31s16H1iL6ltZdp33mTDjlaRrK64Cv6eUo0uKUsQy/YrKxIdZq3OJEEA=="],
+    "@gad-lang/codemirror-gad": ["@gad-lang/codemirror-gad@github:gad-lang/codemirror-gad#bc8ddf9", { "peerDependencies": { "@codemirror/autocomplete": "^6.0.0", "@codemirror/language": "^6.0.0", "@codemirror/lint": "^6.0.0", "@codemirror/state": "^6.0.0", "@codemirror/view": "^6.0.0", "@lezer/highlight": "^1.0.0" } }, "gad-lang-codemirror-gad-bc8ddf9", "sha512-1DEvQXbx3SR+Y1eWRqPK9SOx12FbcHBN4yT2+BdNgfpm4xsiUNo8p2mMga3F50iljZnpkm8dWXl65faXPJeAtQ=="],
 
     "@gad-lang/prism-gad": ["@gad-lang/prism-gad@0.1.0-rc.2", "", { "peerDependencies": { "prismjs": "^1.29.0" } }, "sha512-lUuA1FJ6J7Oo5p7yOZH0XRoA4MF/dem+jqyIDZr2MlOU+814b0yje86ff48ApO2YAsZIE/yO+4MnKLXNAV7VTQ=="],
 

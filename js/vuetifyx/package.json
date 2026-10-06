@@ -44,7 +44,7 @@
     "@editorjs/text-variant-tune": "^1.0.3",
     "@editorjs/underline": "^1.2.1",
     "@editorjs/warning": "^1.4.1",
-    "@gad-lang/codemirror-gad": "0.1.0-rc.1",
+    "@gad-lang/codemirror-gad": "github:gad-lang/codemirror-gad#bc8ddf9",
     "@gad-lang/prism-gad": "0.1.0-rc.2",
     "@lezer/highlight": "^1",
     "@mdi/font": "7.4.47",
