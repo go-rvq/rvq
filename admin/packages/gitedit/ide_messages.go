@@ -27,8 +27,10 @@ func ConfigureIdeMessages(b *i18n.Builder) {
 // is the IDE's messages prop.
 type IdeMessages struct {
 	ModuleDescription   string `json:"-" i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	Changes             string `json:"changes" i18n:"hint='Title of the panel of the IDE with the files changed and not committed (its tab and its button).'"`
+	Changes             string `json:"changes" i18n:"hint='Title of the panel of the IDE with the files changed and not committed (its tab and its button in the header).'"`
 	Git                 string `json:"git" i18n:"hint='Title of the panel of the IDE with the branches and their commits.'"`
+	Preview             string `json:"preview" i18n:"hint='Button of the header of the IDE that opens the panel of the preview of the file.'"`
+	Settings            string `json:"settings" i18n:"hint='Button of the header of the IDE that opens its settings.'"`
 	Refresh             string `json:"refresh" i18n:"hint='Title of the button that reads the changes, or the branches, again.'"`
 	Files               string `json:"files" i18n:"hint='Title of the tree of the files of a diff.'"`
 	Branches            string `json:"branches" i18n:"hint='Title of the list of the local branches.'"`
@@ -65,6 +67,8 @@ var IdeMessages_en_US = &IdeMessages{
 	ModuleDescription:   "The Changes and Git panels of the editor of the files (the IDE).",
 	Changes:             "Changes",
 	Git:                 "Git",
+	Preview:             "Preview",
+	Settings:            "Settings",
 	Refresh:             "Refresh",
 	Files:               "Files",
 	Branches:            "Branches",
@@ -101,6 +105,8 @@ var IdeMessages_pt_BR = &IdeMessages{
 	ModuleDescription:   "Os painéis Alterações e Git do editor dos arquivos (a IDE).",
 	Changes:             "Alterações",
 	Git:                 "Git",
+	Preview:             "Visualizar",
+	Settings:            "Configurações",
 	Refresh:             "Atualizar",
 	Files:               "Arquivos",
 	Branches:            "Branches",
