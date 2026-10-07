@@ -52,7 +52,7 @@ func TestLimits(t *testing.T) {
 		`interface Form { [pattern="(?i)abc"] s str }`:         "(?…)",
 		`interface Form { [pattern="[0-9"] s str }`:            "no regular expression",
 		`interface Form { [pattern="[0-9]+"] s text }`:         "only a line of text",
-		`interface Form { [placeholder="x"] d date }`:          "only a text or a number",
+		`interface Form { [placeholder="x"] d date }`:          "only a text, a number or an address",
 		`interface Form { [options=["a", "b"], min=1] s str }`: "only a number, a date, a time or a text",
 	} {
 		if _, err := Parse(src); err == nil || !strings.Contains(err.Error(), want) {

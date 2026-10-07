@@ -58,6 +58,13 @@ type Messages struct {
 	OrderAsc  string `i18n:"label='Order: ascending', hint='Short name of the ascending order of a sort.'"`
 	OrderDesc string `i18n:"label='Order: descending', hint='Short name of the descending order of a sort.'"`
 	OrderNone string `i18n:"label='Order: none', hint='Shown for a field that is not sorted.'"`
+
+	// AddressNoKey: an address with no Google Maps key — only typed, no map.
+	AddressNoKey string `i18n:"label='Address: no maps key', hint='Hint of an address field when no Google Maps key is set: the address is only typed.'"`
+	// AddressLoadError: Google Maps could not be loaded.
+	AddressLoadError string `i18n:"label='Address: maps not loaded', hint='Error of an address field when Google Maps could not be loaded.'"`
+	// AddressOnMap: the title of the link to the place of an address.
+	AddressOnMap string `i18n:"label='Address: on the map', hint='Title of the link that opens the place of an address on Google Maps.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -80,6 +87,9 @@ var Messages_en_US = &Messages{
 	OrderAsc:               "ASC",
 	OrderDesc:              "DESC",
 	OrderNone:              "—",
+	AddressNoKey:           "Set the Google Maps key (SEO settings) to find the address and see it on the map.",
+	AddressLoadError:       "The map could not be loaded.",
+	AddressOnMap:           "See it on the map",
 }
 
 var Messages_pt_BR = &Messages{
@@ -102,6 +112,9 @@ var Messages_pt_BR = &Messages{
 	OrderAsc:               "ASC",
 	OrderDesc:              "DESC",
 	OrderNone:              "—",
+	AddressNoKey:           "Configure a chave do Google Maps (Configurações de SEO) para encontrar o endereço e vê-lo no mapa.",
+	AddressLoadError:       "Não foi possível carregar o mapa.",
+	AddressOnMap:           "Ver no mapa",
 }
 
 // GetMessages are the schemaform's messages in the language of ctx.

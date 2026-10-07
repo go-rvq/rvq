@@ -560,5 +560,6 @@ func defaultDisplays() map[string]ComponentFunc {
 		"color":        ColorDisplayFunc,
 		FileType:       FileDisplayFunc,
 		ImageType:      FileDisplayFunc,
+		AddressType:    AddressDisplayFunc,
 	}
 }

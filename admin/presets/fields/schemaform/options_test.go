@@ -58,9 +58,18 @@ func TestOptionsDrawASelect(t *testing.T) {
 	if strings.Contains(got, "v-text-field") {
 		t.Errorf("o int com options não virou select:\n%s", got)
 	}
-	// a list of plain values: each item a select of the options
-	if got := render(t, New(), `interface { [options=(;a="A", b="B")]; tags []str }`); !strings.Contains(got, "v-select") || !strings.Contains(got, "B") {
-		t.Errorf("a lista não virou selects:\n%s", got)
+	// a list of them: one autocomplete of the options, several chosen as
+	// chips, each closable — no list of selects —; its [max=N] disables the
+	// ones not chosen when it is full
+	got = render(t, New(), `interface { [options=(;a="A", b="B"), max=1]; tags []str }`)
+	for _, want := range []string{"v-autocomplete", `"title":"B"`, `:multiple='true'`, `:chips='true'`, `:closable-chips='true'`,
+		`v-model='form["Value"].tags'`, `.length >= 1`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a lista não virou um autocomplete (%s):\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "v-select") || strings.Contains(got, "vx-array-sorter") {
+		t.Errorf("a lista ainda é uma lista de selects:\n%s", got)
 	}
 }
 

@@ -276,6 +276,8 @@ type Builder struct {
 	// choiceAsName reads a union of classes as the choice of a class's NAME
 	// (ChoiceAsName).
 	choiceAsName bool
+	// mapsKey is the Google Maps key of the addresses (MapsKey).
+	mapsKey MapsKeyFunc
 }
 
 // TypeOfFunc says what a field's type is, for a type the schema cannot name by
@@ -414,8 +416,11 @@ func New() *Builder {
 			"duration":     DurationComponentFunc,
 			FileType:       FileComponentFunc,
 			ImageType:      FileComponentFunc,
+			AddressType:    AddressComponentFunc,
 		},
 		displays: defaultDisplays(),
+		// an address is posted as its fields (`key.formatted`, `key.lat`…)
+		decoders: map[string]TypeDecoderFunc{AddressType: decodeAddress},
 	}
 }
 
@@ -566,6 +571,12 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 	if !schema.Slice {
 		return b.record(schema, c, c.Value, c.Path)
 	}
+	// a list of the values of an enum (`[]Kind`): one autocomplete of them
+	if schema.Item != nil {
+		if ic := b.itemContext(schema.Item, c); b.isEnum(ic) {
+			return withHelp(c, EnumListComponentFunc(c, ic))
+		}
+	}
 	switch schema.Layout {
 	case LayoutTable:
 		return b.table(schema, c)
@@ -641,7 +652,18 @@ func (b *Builder) draw(schema *Schema, c *Context) h.HTMLComponent {
 // `form["x"][itemIndex]` — which a primitive needs to be written back. The path
 // does not grow either: a list adds no name of its own.
 func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
-	ic := &Context{
+	ic := b.itemContext(item, c)
+	draw, ok := b.fieldFunc(ic)
+	if !ok {
+		return errorComponent(fmt.Sprintf(c.Messages().ListTypeUnknown, item.Type, b.Types()))
+	}
+	return withHelp(ic, draw(ic))
+}
+
+// itemContext is the context of the item of a list of plain values: bound
+// through the list's expression at the item's index, at the list's path.
+func (b *Builder) itemContext(item *Field, c *Context) *Context {
+	return &Context{
 		Field: item,
 		Value: fmt.Sprintf("%s[itemIndex]", c.Value),
 		Path:  c.Path,
@@ -650,12 +672,25 @@ func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 		Builder: b,
 		noLabel: true,
 	}
+}
 
-	draw, ok := b.fieldFunc(ic)
-	if !ok {
-		return errorComponent(fmt.Sprintf(c.Messages().ListTypeUnknown, item.Type, b.Types()))
+// isEnum reports whether the field of c is drawn as one of a closed list of
+// values (EnumComponentFunc), as fieldFunc decides it.
+func (b *Builder) isEnum(c *Context) bool {
+	if c.Field.ReadOnly {
+		return false
 	}
-	return withHelp(ic, draw(ic))
+	if c.Field.Enum != nil && c.Field.Enum.Options {
+		return true
+	}
+	_, registered := b.TypeFunc(c.Field.Type)
+	if registered && c.Field.Type != DefaultType {
+		return false
+	}
+	if items, err := c.EnumItems(); err == nil && len(items) > 0 {
+		return true
+	}
+	return !registered && c.Field.Enum != nil
 }
 
 // record renders the fields of one record, each bound under value and each
@@ -930,6 +965,8 @@ func emptyValueJS(f *Field) string {
 		return "false"
 	case "int", "uint", "float", "decimal":
 		return "0"
+	case AddressType:
+		return "null"
 	default:
 		return `""`
 	}
@@ -1020,6 +1057,51 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		PersistentHint(c.Hint() != "").
 		Clearable(!c.Field.Required()).
 		Attr("required", c.Field.Required()).
+		Attr("v-model", c.Value)
+}
+
+// EnumListComponentFunc draws a list of the values of an enum (`[]Kind`, the
+// list's context c, its item's ic): an autocomplete of them — Vuetify's, as
+// several are chosen —, the ones chosen chips with their ×, typed in it the
+// items that match, each with its hint under it. No more than its
+// `[max=N]`: then the ones not chosen are disabled.
+func EnumListComponentFunc(c, ic *Context) h.HTMLComponent {
+	items, err := ic.EnumItems()
+	if err != nil {
+		return errorComponent(fmt.Sprintf(c.Messages().ItemsUnavailable, c.Field.Name, err))
+	}
+	if len(items) == 0 {
+		return errorComponent(fmt.Sprintf(c.Messages().NoItems, c.Field.Name))
+	}
+	options := make([]map[string]any, len(items))
+	for i, it := range items {
+		options[i] = map[string]any{"value": itemValue(ic.Field, it.Name), "title": it.Label}
+		if it.Hint != "" {
+			options[i]["subtitle"] = it.Hint
+		}
+	}
+	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
+	// each item its own props — its subtitle —, disabled when the list is
+	// full and it is not one of them
+	itemProps := "true"
+	if max := c.Field.MaxItems; max > 0 {
+		itemProps = fmt.Sprintf("(it) => Object.assign({}, it, { disabled: (%[1]s || []).length >= %[2]d && !(%[1]s || []).includes(it.value) })", c.Value, max)
+	}
+	return v.VAutocomplete().
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Items(options).
+		ItemTitle("title").
+		ItemValue("value").
+		Attr(":item-props", itemProps).
+		Multiple(true).
+		Chips(true).
+		ClosableChips(!readOnly).
+		Readonly(readOnly).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
+		Clearable(!readOnly && !c.Field.Required()).
+		Attr("data-schemaform-enum-list", c.Path).
 		Attr("v-model", c.Value)
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 import {defineComponent, PropType} from 'vue'
+import {loadMaps} from './googleMaps'
 
 // A selected place: enough to restore its marker and its postal code.
 interface Place {
@@ -8,28 +9,6 @@ interface Place {
   lat: number
   lng: number
   zip?: string
-}
-
-// Loads the Google Maps JS API (with the Places library) once per page, keyed by
-// api key. Resolves when window.google.maps is ready.
-let mapsLoader: Promise<any> | null = null
-function loadMaps(key: string): Promise<any> {
-  const w = window as any
-  if (w.google && w.google.maps) return Promise.resolve(w.google)
-  if (mapsLoader) return mapsLoader
-  mapsLoader = new Promise((resolve, reject) => {
-    if (!key) {
-      reject(new Error('no maps key'))
-      return
-    }
-    const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places`
-    s.async = true
-    s.onload = () => resolve((window as any).google)
-    s.onerror = () => reject(new Error('maps load failed'))
-    document.head.appendChild(s)
-  })
-  return mapsLoader
 }
 
 // SeoVarZipcodes edits a "zipcodes" SEO variable: a button opens a Google map to

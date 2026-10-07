@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AddressField: typeof import('./src/lib/AddressField.vue')['default']
     AdvancedSelect: typeof import('./src/lib/AdvancedSelect.vue')['default']
     Autocomplete: typeof import('./src/lib/Autocomplete.vue')['default']
     AutoCompleteExample: typeof import('./src/demo/components/AutoCompleteExample.vue')['default']
@@ -44,6 +45,7 @@ declare module 'vue' {
     LinkageSelectExample: typeof import('./src/demo/components/LinkageSelectExample.vue')['default']
     LinkageSelectItem: typeof import('./src/lib/Filter/components/LinkageSelectItem.vue')['default']
     LinkDialog: typeof import('./src/lib/TipTap/components/LinkDialog.vue')['default']
+    MapsKeyTest: typeof import('./src/lib/MapsKeyTest.vue')['default']
     MessageListener: typeof import('./src/lib/MessageListener.vue')['default']
     MonthItem: typeof import('./src/lib/Filter/components/MonthItem.vue')['default']
     Monthpicker: typeof import('./src/lib/Monthpicker.vue')['default']

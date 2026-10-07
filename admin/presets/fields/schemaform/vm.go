@@ -593,8 +593,8 @@ func limits(f *Field, key string, v gad.Object) error {
 		target.Pattern = string(str)
 		return nil
 	case MetaPlaceholder:
-		if !TextTypes[t] && !NumberTypes[t] {
-			return fmt.Errorf("%s: only a text or a number has it, not %s", key, t)
+		if !TextTypes[t] && !NumberTypes[t] && t != AddressType {
+			return fmt.Errorf("%s: only a text, a number or an address has it, not %s", key, t)
 		}
 		return nil
 	case MetaMinLength, MetaMaxLength:
