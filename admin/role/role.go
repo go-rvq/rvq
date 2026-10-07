@@ -16,6 +16,11 @@ type Role struct {
 	// SystemKey, when set, marks a role the application needs (SystemRole):
 	// not deleted nor renamed, its permissions reset to its originals.
 	SystemKey string `gorm:"index"`
+	// SystemPolicies are the originals of a system role it was last given
+	// (policyKey, one a line): what the next version of them changes —
+	// the originals it gained added, those it lost taken — leaving what was
+	// changed by hand.
+	SystemPolicies string `gorm:"type:text" admin:"-"`
 	// Permissions are the policies whose ReferID is this role's key. The column
 	// is text — it also holds free-form references — so the relation is read
 	// but creates no foreign key (-:migration).

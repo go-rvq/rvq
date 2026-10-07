@@ -112,7 +112,7 @@ func (b *Builder) EnsureSystemRoles() error {
 			var r Role
 			err := tx.Where("system_key = ?", sr.Key).First(&r).Error
 			if err == nil {
-				return b.dropFormer(tx, &r, &sr)
+				return b.syncOriginals(tx, &r, &sr)
 			}
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
@@ -124,14 +124,14 @@ func (b *Builder) EnsureSystemRoles() error {
 				if sr.Fixed {
 					return nil
 				}
-				if err := b.dropFormer(tx, &r, &sr); err != nil {
-					return err
-				}
-				return addPolicies(tx, &r, sr.policies(&r))
+				return b.syncOriginals(tx, &r, &sr)
 			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
 			}
 			r = Role{ID: uuid.New(), Name: sr.Name, SystemKey: sr.Key}
+			if !sr.Fixed {
+				r.SystemPolicies = originalsText(sr.policies(&r))
+			}
 			if err := tx.Create(&r).Error; err != nil {
 				return err
 			}
@@ -147,57 +147,87 @@ func (b *Builder) EnsureSystemRoles() error {
 	return nil
 }
 
-// dropFormer takes from r the originals of its former versions it still has
-// (Formerly), and gives it the originals it lacks then.
-func (b *Builder) dropFormer(tx *gorm.DB, r *Role, sr *SystemRole) error {
-	if len(sr.Formerly) == 0 || sr.Fixed {
+// syncOriginals brings r to the originals of sr as they are now, by what
+// changed since it was last given them (Role.SystemPolicies): an original
+// gained is added — unless it has it —; one lost is taken, when r has it as
+// it was; what was changed by hand stays. A role given none yet (made before
+// the originals were kept) loses those of its former versions (Formerly) it
+// has as they were, and is given the originals it lacks. The originals are
+// kept as given.
+func (b *Builder) syncOriginals(tx *gorm.DB, r *Role, sr *SystemRole) error {
+	if sr.Fixed {
 		return nil
 	}
-	former := (&SystemRole{Policies: sr.Formerly}).policies(r)
+	now := sr.policies(r)
+	nowText := originalsText(now)
+	if r.SystemPolicies == nowText {
+		return nil
+	}
 	var has []perm.DefaultDBPolicy
 	if err := tx.Where("refer_id = ?", r.ID.String()).Find(&has).Error; err != nil {
 		return err
 	}
-	dropped := false
-	for i := range has {
-		for _, f := range former {
-			if policyKey(&has[i]) == policyKey(f) {
-				if err := tx.Delete(&has[i]).Error; err != nil {
-					return err
-				}
-				dropped = true
+	current := map[string]bool{}
+	for _, p := range now {
+		current[policyKey(p)] = true
+	}
+	// what it was given — else, its former versions
+	gone := map[string]bool{}
+	if r.SystemPolicies != "" {
+		for _, k := range strings.Split(r.SystemPolicies, "\n") {
+			if k != "" && !current[k] {
+				gone[k] = true
+			}
+		}
+	} else {
+		for _, p := range (&SystemRole{Policies: sr.Formerly}).policies(r) {
+			if k := policyKey(p); !current[k] {
+				gone[k] = true
 			}
 		}
 	}
-	if !dropped {
-		return nil
+	given := map[string]bool{}
+	for _, k := range strings.Split(r.SystemPolicies, "\n") {
+		given[k] = true
 	}
-	return addPolicies(tx, r, sr.policies(r))
+	seen := map[string]bool{}
+	for i := range has {
+		k := policyKey(&has[i])
+		if gone[k] {
+			if err := tx.Delete(&has[i]).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		seen[k] = true
+	}
+	for _, p := range now {
+		k := policyKey(p)
+		// an original it was given and has not: taken by hand — not again
+		if seen[k] || r.SystemPolicies != "" && given[k] {
+			continue
+		}
+		if err := tx.Create(p).Error; err != nil {
+			return err
+		}
+		seen[k] = true
+	}
+	r.SystemPolicies = nowText
+	return tx.Model(r).Update("system_policies", nowText).Error
+}
+
+// originalsText is the originals ps as Role.SystemPolicies keeps them.
+func originalsText(ps []*perm.DefaultDBPolicy) string {
+	keys := make([]string, 0, len(ps))
+	for _, p := range ps {
+		keys = append(keys, policyKey(p))
+	}
+	return strings.Join(keys, "\n")
 }
 
 // policyKey is what tells two policies the same: effect, actions, resources.
 func policyKey(p *perm.DefaultDBPolicy) string {
 	return p.Effect + "|" + strings.Join(p.Actions, ",") + "|" + strings.Join(p.Resources, ",")
-}
-
-// addPolicies adds to r the policies of ps it has not (the same effect,
-// actions and resources).
-func addPolicies(tx *gorm.DB, r *Role, ps []*perm.DefaultDBPolicy) error {
-	var has []perm.DefaultDBPolicy
-	if err := tx.Where("refer_id = ?", r.ID.String()).Find(&has).Error; err != nil {
-		return err
-	}
-	seen := map[string]bool{}
-	for i := range has {
-		seen[policyKey(&has[i])] = true
-	}
-	var add []*perm.DefaultDBPolicy
-	for _, p := range ps {
-		if !seen[policyKey(p)] {
-			add = append(add, p)
-		}
-	}
-	return createPolicies(tx, add)
 }
 
 func createPolicies(tx *gorm.DB, ps []*perm.DefaultDBPolicy) error {
@@ -218,6 +248,9 @@ func (b *Builder) ResetPermissions(r *Role) error {
 	}
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("refer_id = ?", r.ID.String()).Delete(&perm.DefaultDBPolicy{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(r).Update("system_policies", originalsText(sr.policies(r))).Error; err != nil {
 			return err
 		}
 		return createPolicies(tx, sr.policies(r))
