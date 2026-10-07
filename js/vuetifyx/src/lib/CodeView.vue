@@ -63,6 +63,9 @@ const props = withDefaults(defineProps<{
   // [start, end, hunk] — start/end are rune offsets within the line and hunk is
   // the change region's index (-1 when there is no hunk grouping).
   changeRanges?: Record<number, [number, number, number][]>
+  // Gaps (marks mode): blank rows before a 1-based line — the line count + 1
+  // for after the last —, so the two sides of a compare stay aligned
+  gaps?: Record<number, number>
   // code is a diff (git's), its lines highlighted in language
   diff?: boolean
   lineNumbers?: boolean
@@ -81,7 +84,9 @@ const props = withDefaults(defineProps<{
 })
 
 // marked is the history's mode: a row per line, with its marks
-const marked = computed(() => props.markKind != null || props.markLines != null || props.changeRanges != null)
+const marked = computed(
+  () => props.markKind != null || props.markLines != null || props.changeRanges != null || props.gaps != null,
+)
 
 // LABELS are the names a language is shown by, where Prism's own would not do
 const LABELS: Record<string, string> = {
@@ -220,6 +225,23 @@ const lines = computed(() => {
   })
 })
 
+// rows are the lines and, before them, their gaps (blank rows: the other
+// side's lines this one has not)
+type Row = { gap: true; key: string } | { gap: false; key: string; ln: { no: number; segments: Seg[] } }
+const rows = computed<Row[]>(() => {
+  const gaps = props.gaps || {}
+  const out: Row[] = []
+  const blank = (before: number) => {
+    for (let k = 0; k < (gaps[before] || 0); k++) out.push({ gap: true, key: 'g' + before + '.' + k })
+  }
+  for (const ln of lines.value) {
+    blank(ln.no)
+    out.push({ gap: false, key: 'l' + ln.no, ln })
+  }
+  blank(lines.value.length + 1)
+  return out
+})
+
 const chgClass = computed(() => (props.markKind === 'del' ? 'vx-code-chg-del' : 'vx-code-chg-add'))
 
 const markSet = computed(() => new Set(props.markLines ?? []))
@@ -228,18 +250,19 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
 
 <template>
   <div v-if="!marked" ref="host" class="vx-code-host"></div>
-  <pre v-else class="vx-code"><code><span
-    v-for="ln in lines"
-    :key="ln.no"
+  <pre v-else class="vx-code"><code><template v-for="row in rows" :key="row.key"><span
+    v-if="row.gap" class="vx-code-line vx-code-gap"
+  ><span class="vx-code-ln"></span><span class="vx-code-src">&nbsp;</span></span><span
+    v-else
     class="vx-code-line"
-    :class="markSet.has(ln.no) ? markClass : ''"
-  ><span class="vx-code-ln">{{ ln.no }}</span><span class="vx-code-src"><template
-      v-for="(seg, si) in ln.segments" :key="si"
+    :class="markSet.has(row.ln.no) ? markClass : ''"
+  ><span class="vx-code-ln">{{ row.ln.no }}</span><span class="vx-code-src"><template
+      v-for="(seg, si) in row.ln.segments" :key="si"
     ><span v-if="seg.t === 'h'" v-html="seg.html"></span><slot
         v-else name="changed"
-        :text="seg.text" :line="ln.no" :start="seg.start" :end="seg.end" :hunk="seg.hunk"
+        :text="seg.text" :line="row.ln.no" :start="seg.start" :end="seg.end" :hunk="seg.hunk"
         :kind="markKind" :added="markKind !== 'del'"
-      ><mark :class="chgClass">{{ seg.text }}</mark></slot></template></span></span></code></pre>
+      ><mark :class="chgClass">{{ seg.text }}</mark></slot></template></span></span></template></code></pre>
 </template>
 
 <style scoped>
@@ -272,11 +295,19 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
   white-space: pre;
 }
 /* alternated, a marked line keeping its tint */
-.vx-code-line:nth-child(even):not(.vx-code-add):not(.vx-code-del) {
+.vx-code-line:nth-child(even):not(.vx-code-add):not(.vx-code-del):not(.vx-code-gap) {
   background: rgba(var(--v-theme-on-surface), 0.035);
 }
 .vx-code-add {
   background: rgba(var(--v-theme-success), 0.16);
+}
+/* a gap: the other side's lines this one has not, hatched (IntelliJ's) */
+.vx-code-gap {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 4px,
+    rgba(var(--v-theme-on-surface), 0.07) 4px 5px
+  );
 }
 .vx-code-del {
   background: rgba(var(--v-theme-error), 0.16);

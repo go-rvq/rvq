@@ -158,3 +158,122 @@ func TestOpenRepo(t *testing.T) {
 		t.Error("a repository of no worktree")
 	}
 }
+
+// The two versions of each change, as the diff browser compares them: the
+// last commit's and the draft's — "" for the side a file has not (added,
+// untracked; deleted) —, a renamed file's old one at its old path.
+func TestDraftVersions(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := site(t)
+	d, err := repo.Draft(ctx, "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(args ...string) {
+		t.Helper()
+		if _, err := git(ctx, d.Dir, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	os.WriteFile(filepath.Join(d.Dir, "keep.gadx"), []byte("keep\n"), 0o644)
+	os.WriteFile(filepath.Join(d.Dir, "gone.gadx"), []byte("gone\n"), 0o644)
+	os.WriteFile(filepath.Join(d.Dir, "moved.gadx"), []byte("moved\n"), 0o644)
+	run("add", ".")
+	run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "more")
+
+	os.WriteFile(filepath.Join(d.Dir, "index.gadx"), []byte("new\n"), 0o644)
+	os.MkdirAll(filepath.Join(d.Dir, "dir"), 0o755)
+	os.WriteFile(filepath.Join(d.Dir, "dir", "fresh.gadx"), []byte("fresh\n"), 0o644)
+	os.Remove(filepath.Join(d.Dir, "gone.gadx"))
+	run("mv", "moved.gadx", "dir/moved.gadx")
+
+	changes, err := d.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][2]string{}
+	for _, ch := range changes {
+		old, cur, err := d.Versions(ctx, ch)
+		if err != nil {
+			t.Fatalf("%+v: %v", ch, err)
+		}
+		got[ch.Path] = [2]string{old, cur}
+	}
+	for path, want := range map[string][2]string{
+		"index.gadx":     {"old\n", "new\n"},
+		"dir/fresh.gadx": {"", "fresh\n"},
+		"gone.gadx":      {"gone\n", ""},
+		"dir/moved.gadx": {"moved\n", "moved\n"},
+	} {
+		if got[path] != want {
+			t.Errorf("%s: %q, want %q (changes %+v)", path, got[path], want, changes)
+		}
+	}
+	if _, _, err := d.Versions(ctx, Change{Status: "M", Path: ".git/config"}); err == nil {
+		t.Error("the versions of .git")
+	}
+}
+
+// A file the IDE renames or moves is, for git, one deleted and one new:
+// Changes takes them for one renamed (R, From its old path) when their
+// contents are the same or alike; two that are not stay what they are.
+func TestDraftChangesFindRenames(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := site(t)
+	d, err := repo.Draft(ctx, "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(args ...string) {
+		t.Helper()
+		if _, err := git(ctx, d.Dir, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	body := "line one\nline two\nline three\nline four\n"
+	os.WriteFile(filepath.Join(d.Dir, "same.gadx"), []byte(body), 0o644)
+	edited := "first\nsecond\nthird\nfourth\n"
+	os.WriteFile(filepath.Join(d.Dir, "edited.gadx"), []byte(edited), 0o644)
+	os.WriteFile(filepath.Join(d.Dir, "other.gadx"), []byte("a\nb\nc\nd\n"), 0o644)
+	run("add", ".")
+	run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "files")
+
+	// as the IDE does: on the disk, not by git
+	os.Rename(filepath.Join(d.Dir, "same.gadx"), filepath.Join(d.Dir, "renamed.gadx"))
+	os.MkdirAll(filepath.Join(d.Dir, "dir"), 0o755)
+	os.Remove(filepath.Join(d.Dir, "edited.gadx"))
+	os.WriteFile(filepath.Join(d.Dir, "dir", "moved.gadx"), []byte("first\nsecond, edited\nthird\nfourth\n"), 0o644)
+	os.Remove(filepath.Join(d.Dir, "other.gadx"))
+	os.WriteFile(filepath.Join(d.Dir, "unrelated.gadx"), []byte("x\ny\nz\nw\n"), 0o644)
+
+	changes, err := d.Changes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Change{}
+	for _, ch := range changes {
+		got[ch.Path] = ch
+	}
+	if ch := got["renamed.gadx"]; ch.Status != "R" || ch.From != "same.gadx" {
+		t.Errorf("renamed: %+v", ch)
+	}
+	if ch := got["dir/moved.gadx"]; ch.Status != "R" || ch.From != "edited.gadx" {
+		t.Errorf("moved and edited: %+v", ch)
+	}
+	if ch := got["unrelated.gadx"]; ch.From != "" || !strings.HasPrefix(ch.Status, "?") {
+		t.Errorf("a new file unlike any gone: %+v", ch)
+	}
+	if ch := got["other.gadx"]; ch.Status != "D" {
+		t.Errorf("a file gone unlike any new: %+v", ch)
+	}
+	for _, gone := range []string{"same.gadx", "edited.gadx"} {
+		if _, ok := got[gone]; ok {
+			t.Errorf("%s is still listed as deleted: %+v", gone, changes)
+		}
+	}
+	// the renamed's versions: its content before (at its old path) and now
+	old, cur, err := d.Versions(ctx, got["dir/moved.gadx"])
+	if err != nil || old != edited || !strings.Contains(cur, "second, edited") {
+		t.Errorf("versions of the moved: %q %q %v", old, cur, err)
+	}
+}

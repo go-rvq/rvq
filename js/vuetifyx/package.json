@@ -85,6 +85,8 @@
     "codemirror": "^6.0.2",
     "date-fns": "^3.6.0",
     "deviceorientation-js": "^1.0.0",
+    "dockview-core": "^7.0.4",
+    "dockview-vue": "^7.0.4",
     "editorjs-button": "^3.0.3",
     "editorjs-change-case": "^0.0.3",
     "editorjs-undo": "^2.0.28",

@@ -14,14 +14,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Repo is the repository edited: GitDir its git directory, WorkTree the
@@ -196,10 +202,12 @@ func (d *Draft) Editors() (keys []string) {
 func (d *Draft) clearEditors() { _ = os.Remove(filepath.Join(d.Dir, ".git", editorsFile)) }
 
 // Change is a file changed in the draft, not committed: its status (git
-// porcelain: "M", "A", "D", "R", "??") and path.
+// porcelain: "M", "A", "D", "R", "??") and path; a renamed one's path before
+// (From).
 type Change struct {
 	Status string `json:"status"`
 	Path   string `json:"path"`
+	From   string `json:"from,omitempty"`
 }
 
 // Status are the changes of the draft not committed.
@@ -218,12 +226,144 @@ func (d *Draft) Status(ctx context.Context) (changes []Change, err error) {
 		if st == "" {
 			st = "M"
 		}
-		if st[0] == 'R' {
+		ch := Change{Status: st, Path: e[3:]}
+		if st[0] == 'R' && i+1 < len(entries) {
 			i++ // the origin of a rename follows
+			ch.From = entries[i]
 		}
-		changes = append(changes, Change{Status: st, Path: e[3:]})
+		changes = append(changes, ch)
 	}
 	return
+}
+
+// renameSimilarity is how alike a file deleted and one added must be to be
+// taken for one renamed (moved): git's default for -M, 50%.
+const renameSimilarity = 0.5
+
+// Changes are the changes of the draft (Status) with its renames found: a
+// file the IDE renames or moves is, for git, one deleted and one new (it
+// only says R of a rename staged) — they are one renamed, From its path
+// before, when their contents are the same or alike (renameSimilarity). The
+// most alike pair first.
+func (d *Draft) Changes(ctx context.Context) ([]Change, error) {
+	changes, err := d.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	type side struct {
+		i       int
+		content string
+	}
+	var gone, added []side
+	for i, ch := range changes {
+		switch {
+		case strings.HasPrefix(ch.Status, "D"):
+			old, _, err := d.Versions(ctx, ch)
+			if err != nil {
+				return nil, err
+			}
+			gone = append(gone, side{i, old})
+		case strings.HasPrefix(ch.Status, "A"), strings.HasPrefix(ch.Status, "?"):
+			_, cur, err := d.Versions(ctx, ch)
+			if err != nil {
+				return nil, err
+			}
+			added = append(added, side{i, cur})
+		}
+	}
+	if len(gone) == 0 || len(added) == 0 {
+		return changes, nil
+	}
+	type pair struct {
+		g, a  int
+		score float64
+	}
+	var pairs []pair
+	for gi, g := range gone {
+		for ai, a := range added {
+			if s := similarity(g.content, a.content); s >= renameSimilarity {
+				pairs = append(pairs, pair{gi, ai, s})
+			}
+		}
+	}
+	// the most alike first; alike the same, the closest by name and folder
+	near := func(p pair) float64 {
+		from, to := changes[gone[p.g].i].Path, changes[added[p.a].i].Path
+		n := similarity(path.Base(from), path.Base(to))
+		if path.Dir(from) == path.Dir(to) {
+			n++
+		}
+		return n
+	}
+	sort.SliceStable(pairs, func(i, j int) bool {
+		if pairs[i].score != pairs[j].score {
+			return pairs[i].score > pairs[j].score
+		}
+		return near(pairs[i]) > near(pairs[j])
+	})
+	usedG, usedA := map[int]bool{}, map[int]bool{}
+	drop := map[int]bool{}
+	for _, p := range pairs {
+		if usedG[p.g] || usedA[p.a] {
+			continue
+		}
+		usedG[p.g], usedA[p.a] = true, true
+		g, a := changes[gone[p.g].i], &changes[added[p.a].i]
+		a.Status, a.From = "R", g.Path
+		drop[gone[p.g].i] = true
+	}
+	out := changes[:0]
+	for i, ch := range changes {
+		if !drop[i] {
+			out = append(out, ch)
+		}
+	}
+	return out, nil
+}
+
+// similarity is how alike two contents are, from 0 to 1: 1 less the
+// characters of their lines changed over the longer's. Two empty are alike.
+func similarity(a, b string) float64 {
+	if a == b {
+		return 1
+	}
+	longer := max(len([]rune(a)), len([]rune(b)))
+	if longer == 0 {
+		return 1
+	}
+	// the characters of the lines changed, over the longer's
+	return 1 - float64(diffmatchpatch.New().DiffLevenshtein(vx.LineDiff(a, b)))/float64(longer)
+}
+
+// Versions are the file of ch as the last commit has it (old; "" for a file
+// it has not: added, untracked) and as the draft has it (new; "" for a file
+// deleted).
+func (d *Draft) Versions(ctx context.Context, ch Change) (old, new string, err error) {
+	if err := d.check(ch.Path); err != nil {
+		return "", "", err
+	}
+	from := ch.Path
+	if ch.From != "" {
+		if err := d.check(ch.From); err != nil {
+			return "", "", err
+		}
+		from = ch.From
+	}
+	if st := ch.Status; !strings.HasPrefix(st, "A") && !strings.HasPrefix(st, "?") {
+		if old, err = git(ctx, d.Dir, "show", "HEAD:"+from); err != nil {
+			return "", "", err
+		}
+	}
+	data, err := os.ReadFile(filepath.Join(d.Dir, filepath.FromSlash(ch.Path)))
+	switch {
+	case err == nil:
+		new = string(data)
+	case errors.Is(err, fs.ErrNotExist):
+		err = nil // deleted
+	default:
+		return "", "", err
+	}
+	return old, new, nil
 }
 
 // Diff is what changed in the file path of the draft, not committed.

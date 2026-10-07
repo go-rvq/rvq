@@ -6,7 +6,6 @@ import (
 	"html"
 	"reflect"
 	"strings"
-	"unicode/utf8"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
@@ -164,9 +163,7 @@ func lineDiffSides(oldStr, newStr string) (removed, added []int) {
 	if newStr != "" && !strings.HasSuffix(newStr, "\n") {
 		newStr += "\n"
 	}
-	dmp := diffmatchpatch.New()
-	a, b, lineArray := dmp.DiffLinesToChars(oldStr, newStr)
-	diffs := dmp.DiffCharsToLines(dmp.DiffMain(a, b, false), lineArray)
+	diffs := vx.LineDiff(oldStr, newStr)
 	oldLine, newLine := 0, 0
 	for _, d := range diffs {
 		n := countLines(d.Text)
@@ -189,97 +186,10 @@ func lineDiffSides(oldStr, newStr string) (removed, added []int) {
 	return
 }
 
-// lineChangeRanges is lineDiffSides plus the intra-line change ranges: for a line
-// that was changed (a delete paired with the following insert), the exact changed
-// character spans on the OLD side (delRanges, keyed by 1-based old line) and NEW
-// side (insRanges, keyed by 1-based new line). Offsets are in runes, to line up
-// with the browser's per-character wrapping.
+// lineChangeRanges is lineDiffSides plus the intra-line change ranges: the
+// comparison of vuetifyx.LineChanges, which <vx-code>'s marks take.
 func lineChangeRanges(oldStr, newStr string) (removed, added []int, delRanges, insRanges map[int][][3]int) {
-	delRanges = map[int][][3]int{}
-	insRanges = map[int][][3]int{}
-	if oldStr != "" && !strings.HasSuffix(oldStr, "\n") {
-		oldStr += "\n"
-	}
-	if newStr != "" && !strings.HasSuffix(newStr, "\n") {
-		newStr += "\n"
-	}
-	splitLines := func(s string) []string {
-		s = strings.TrimSuffix(s, "\n")
-		if s == "" {
-			return nil
-		}
-		return strings.Split(s, "\n")
-	}
-	dmp := diffmatchpatch.New()
-	a, b, lineArray := dmp.DiffLinesToChars(oldStr, newStr)
-	diffs := dmp.DiffCharsToLines(dmp.DiffMain(a, b, false), lineArray)
-	oldLine, newLine := 0, 0
-	for i := 0; i < len(diffs); i++ {
-		d := diffs[i]
-		switch d.Type {
-		case diffmatchpatch.DiffEqual:
-			n := countLines(d.Text)
-			oldLine += n
-			newLine += n
-		case diffmatchpatch.DiffDelete:
-			dels := splitLines(d.Text)
-			var ins []string
-			if i+1 < len(diffs) && diffs[i+1].Type == diffmatchpatch.DiffInsert {
-				ins = splitLines(diffs[i+1].Text)
-				i++ // consume the paired insert
-			}
-			for k, ln := range dels {
-				oldLine++
-				removed = append(removed, oldLine)
-				if k < len(ins) {
-					if dr, _ := charRanges(ln, ins[k]); len(dr) > 0 {
-						delRanges[oldLine] = dr
-					}
-				}
-			}
-			for k, ln := range ins {
-				newLine++
-				added = append(added, newLine)
-				if k < len(dels) {
-					if _, ir := charRanges(dels[k], ln); len(ir) > 0 {
-						insRanges[newLine] = ir
-					}
-				}
-			}
-		case diffmatchpatch.DiffInsert:
-			for range splitLines(d.Text) {
-				newLine++
-				added = append(added, newLine)
-			}
-		}
-	}
-	return
-}
-
-// charRanges char-diffs two changed lines and returns the deleted spans (in the
-// old line's rune offsets) and inserted spans (in the new line's rune offsets).
-// Each span is [start, end, hunk]; hunk is -1 here (a plain compare has no
-// hunk grouping — the partial-revert panel assigns real indexes itself).
-func charRanges(oldLn, newLn string) (del, ins [][3]int) {
-	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(oldLn, newLn, false)
-	dmp.DiffCleanupSemantic(diffs)
-	oldOff, newOff := 0, 0
-	for _, d := range diffs {
-		n := utf8.RuneCountInString(d.Text)
-		switch d.Type {
-		case diffmatchpatch.DiffEqual:
-			oldOff += n
-			newOff += n
-		case diffmatchpatch.DiffDelete:
-			del = append(del, [3]int{oldOff, oldOff + n, -1})
-			oldOff += n
-		case diffmatchpatch.DiffInsert:
-			ins = append(ins, [3]int{newOff, newOff + n, -1})
-			newOff += n
-		}
-	}
-	return
+	return vx.LineChanges(oldStr, newStr)
 }
 
 // countLines counts the lines in a line-diff text chunk (each token is a line,

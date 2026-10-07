@@ -310,6 +310,8 @@
         "codemirror": "^6.0.2",
         "date-fns": "^3.6.0",
         "deviceorientation-js": "^1.0.0",
+        "dockview-core": "^7.0.4",
+        "dockview-vue": "^7.0.4",
         "editorjs-button": "^3.0.3",
         "editorjs-change-case": "^0.0.3",
         "editorjs-undo": "^2.0.28",
@@ -1536,6 +1538,12 @@
     "diff-sequences": ["diff-sequences@29.6.3", "", {}, "sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q=="],
 
     "dir-glob": ["dir-glob@3.0.1", "", { "dependencies": { "path-type": "^4.0.0" } }, "sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA=="],
+
+    "dockview": ["dockview@7.0.4", "", { "dependencies": { "dockview-core": "^7.0.4" } }, "sha512-n6n9WpYZgp/WY8SgvP4hr9qh01ZXhSGIRmlhoJXxRU3f34bwxCbFyOhBArV4W8quolX8OQe1yPfAUwUUjdnZPA=="],
+
+    "dockview-core": ["dockview-core@7.0.4", "", {}, "sha512-AiIzD6ov153L/VuhqVBg5KD5oSAgJGH7L1xvzV/X+ghIEOTFfEQYEBGNd/ys+ZjQfdGRogHSeQ0v9JF/L6JrPg=="],
+
+    "dockview-vue": ["dockview-vue@7.0.4", "", { "dependencies": { "dockview": "^7.0.4" }, "peerDependencies": { "vue": "^3.4.0" } }, "sha512-KbO0ojwst/cfPAHE1ioD5vGfC0h+GF/ubixQ/9fb5OAUMLddK15mtKwMPethhokuh7CXWJ6LnTo5cpwHKWM2Ig=="],
 
     "doctrine": ["doctrine@3.0.0", "", { "dependencies": { "esutils": "^2.0.2" } }, "sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w=="],
 

@@ -290,6 +290,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 
 	b.setupActions(p, b.page)
 	b.setupActions(p, b.userPage)
+	b.page.EventFunc(eventDraft, b.draftEvent)
+	b.userPage.EventFunc(eventDraft, b.draftEvent)
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.ownerKey(r); return key }
@@ -709,114 +711,21 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		return
 	}
 	owner, own := b.ownerKey(ctx.R)
-	c := ctx.Context()
-	changes, err := d.Status(c)
-	if err != nil {
-		return
-	}
-	sync, err := d.Sync(c)
-	if err != nil {
-		return
-	}
-	log, err := d.Log(c, 10)
-	if err != nil {
-		return
-	}
 	const portal = "gitEditAction"
 	allowed := func(action string) bool {
 		ver := b.page.Page().ActionVerifier(ctx.R, presets.ActionPerm(action))
 		return ver == nil || ver.Allowed()
 	}
-	btn := func(action, text, icon string, enabled bool, query ...string) h.HTMLComponent {
-		if !allowed(action) {
-			return nil
-		}
-		return v.VBtn(text).PrependIcon(icon).Variant(v.VariantTonal).Size(v.SizeSmall).Class("me-2 mb-2").
-			Disabled(!enabled).Attr("@click", b.actionOnClick(ctx, action, portal, query...))
+	// the draft's card, drawn again whenever its tab is shown (draftEvent)
+	card, err := b.draftView(ctx, d, m, owner, own)
+	if err != nil {
+		return
 	}
-
-	state := m.UpToDate
-	if sync.Ahead > 0 || sync.Behind > 0 {
-		var parts []string
-		if sync.Ahead > 0 {
-			parts = append(parts, fmt.Sprintf(m.Ahead, sync.Ahead))
-		}
-		if sync.Behind > 0 {
-			parts = append(parts, fmt.Sprintf(m.Behind, sync.Behind))
-		}
-		state = strings.Join(parts, " · ")
-	}
-
-	var changeItems []h.HTMLComponent
-	for _, ch := range changes {
-		diff, _ := d.Diff(c, ch.Path)
-		var discard h.HTMLComponent
-		if allowed(ActionDiscard) {
-			discard = v.VBtn("").Icon("mdi-undo").Variant(v.VariantText).Size(v.SizeSmall).
-				Attr("title", m.DiscardAction).
-				Attr("@click.stop", b.actionOnClick(ctx, ActionDiscard, portal, "path", ch.Path))
-		}
-		changeItems = append(changeItems, v.VExpansionPanel(
-			v.VExpansionPanelTitle(
-				v.VChip(h.Text(ch.Status)).Size(v.SizeXSmall).Class("me-2"),
-				h.Code(ch.Path), v.VSpacer(), discard,
-			),
-			// the diff in the code viewer: its lines highlighted in the file's language
-			v.VExpansionPanelText(vx.VXCode(diff).Language(CodeLanguage(ch.Path)).Diff(true).
-				CopyLabels(m.CopyDiff, m.DiffCopied, m.CopyDiffError)),
-		))
-	}
-	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
-	if len(changeItems) > 0 {
-		changesComp = v.VExpansionPanels(changeItems...).Variant("accordion")
-	}
-
-	var logItems []h.HTMLComponent
-	for _, cm := range log {
-		logItems = append(logItems, v.VListItem(
-			v.VListItemTitle(h.Text(cm.Subject)),
-			v.VListItemSubtitle(h.Text(cm.Short+" · "+cm.Author+" · "+cm.Date.Format("2006-01-02 15:04"))),
-		).Density(v.DensityCompact))
-	}
-
-	var help h.HTMLComponent
-	if b.HelpURL != "" {
-		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
-			Class("me-2 mb-2").Href(b.HelpURL).Attr("target", "_blank")
-	}
-	var preview h.HTMLComponent
-	if u := b.previewURL(ctx.R); u != "" {
-		preview = v.VBtn(m.Preview).PrependIcon("mdi-eye-outline").Variant(v.VariantTonal).Size(v.SizeSmall).
-			Class("me-2 mb-2").Href(u).Attr("target", "_blank").Attr("data-preview", true)
-	}
-	publicPreview := b.publicPreviewView(ctx, m, portal, owner, own)
-	var reset h.HTMLComponent
-	if b.isOwnerOrAdmin(ctx.R) {
-		reset = btn(ActionReset, m.ResetAction, "mdi-restore", true)
-	}
-
-	// the own draft's words, or another's
-	draftTab, draftHint := m.Draft, m.DraftHint
+	draft := web.Portal(card).Name(draftPortal)
+	draftTab := m.Draft
 	if !own {
-		draftTab, draftHint = m.DraftOther, m.DraftHintOther
+		draftTab = m.DraftOther
 	}
-	draft := v.VCard(
-		v.VCardSubtitle(h.Text(draftHint)).Class("pt-4"),
-		v.VCardText(
-			h.P(h.Text(state)).Class("mb-3"),
-			btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
-			btn(ActionUpdate, m.UpdateAction, "mdi-source-pull", sync.Behind > 0),
-			btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
-			preview,
-			reset,
-			help,
-			publicPreview,
-			h.H4(m.Changes).Class("mt-4 mb-2"),
-			changesComp,
-			h.H4(m.History).Class("mt-4 mb-2"),
-			v.VList(logItems...).Density(v.DensityCompact),
-		),
-	).Variant(v.VariantOutlined)
 
 	// the draft and the IDE in tabs; at their right, a tab that opens the IDE
 	// in a tab of the browser of its own, the whole window — a link: it is
@@ -852,7 +761,8 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 	// out)
 	tabs := web.Scope(
 		v.VTabs(tabItems...).Attr(":model-value", "locals.tab").
-			Attr("@update:model-value", "(t) => { if (t !== 'open') locals.tab = t }").
+			Attr("@update:model-value", "(t) => { if (t !== 'open') locals.tab = t; if (t === 'draft') "+
+				web.Plaid().EventFunc(eventDraft).Go()+" }").
 			Color("primary").Class("mb-4"),
 		v.VTabsWindow(windows...).Attr("v-model", "locals.tab"),
 	).Slot("{ locals }").LocalsInit(`{tab: "draft"}`)
@@ -863,6 +773,155 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		tabs,
 	).Class("pa-4")
 	return
+}
+
+// draftPortal is the portal of the draft's card: drawn again (eventDraft)
+// whenever its tab is shown — its changes are those of now, the files saved
+// in the IDE meanwhile among them — and by its refresh button.
+const draftPortal = "gitEditDraft"
+
+// eventDraft draws the draft's card again (draftPortal).
+const eventDraft = "gitEditDraftReload"
+
+// draftEvent is eventDraft's handler: the card of the request's draft.
+func (b *Builder) draftEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
+		return r, perm.PermissionDenied
+	}
+	d, _, err := b.Draft(ctx.R)
+	if errors.Is(err, ErrNoAccess) {
+		return r, perm.PermissionDenied
+	}
+	if err != nil {
+		return
+	}
+	owner, own := b.ownerKey(ctx.R)
+	card, err := b.draftView(ctx, d, GetMessages(ctx.Context()), owner, own)
+	if err != nil {
+		return
+	}
+	r.UpdatePortal(draftPortal, card)
+	return
+}
+
+// draftView is the draft's card: its state, its actions, its changes (each
+// file's, browsed — vx-diff-browser) and its history.
+func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner string, own bool) (h.HTMLComponent, error) {
+	c := ctx.Context()
+	changes, err := d.Changes(c)
+	if err != nil {
+		return nil, err
+	}
+	sync, err := d.Sync(c)
+	if err != nil {
+		return nil, err
+	}
+	log, err := d.Log(c, 10)
+	if err != nil {
+		return nil, err
+	}
+	const portal = "gitEditAction"
+	allowed := func(action string) bool {
+		ver := b.page.Page().ActionVerifier(ctx.R, presets.ActionPerm(action))
+		return ver == nil || ver.Allowed()
+	}
+	btn := func(action, text, icon string, enabled bool, query ...string) h.HTMLComponent {
+		if !allowed(action) {
+			return nil
+		}
+		return v.VBtn(text).PrependIcon(icon).Variant(v.VariantTonal).Size(v.SizeSmall).Class("me-2 mb-2").
+			Disabled(!enabled).Attr("@click", b.actionOnClick(ctx, action, portal, query...))
+	}
+
+	state := m.UpToDate
+	if sync.Ahead > 0 || sync.Behind > 0 {
+		var parts []string
+		if sync.Ahead > 0 {
+			parts = append(parts, fmt.Sprintf(m.Ahead, sync.Ahead))
+		}
+		if sync.Behind > 0 {
+			parts = append(parts, fmt.Sprintf(m.Behind, sync.Behind))
+		}
+		state = strings.Join(parts, " · ")
+	}
+
+	// the changes, browsed: the tree of the files, each opened in a tab, the
+	// last commit's and the draft's side by side
+	files := make([]vx.DiffFile, 0, len(changes))
+	for _, ch := range changes {
+		old, cur, err := d.Versions(c, ch)
+		if err != nil {
+			return nil, err
+		}
+		f := vx.NewDiffFile(ch.Path, ch.Status, CodeLanguage(ch.Path), old, cur)
+		f.From = ch.From
+		files = append(files, f)
+	}
+	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
+	if len(files) > 0 {
+		browser := vx.VXDiffBrowser(files...).Height("70vh").
+			Labels(m.DiffFiles, m.DiffOld, m.DiffNew, m.DiffBinary, m.NoChanges).
+			RenameLabels(m.DiffRenamedTo, m.DiffContentUnchanged)
+		if allowed(ActionDiscard) {
+			browser.ActionsSlot(v.VBtn("").Icon("mdi-undo").Variant(v.VariantText).Size(v.SizeXSmall).
+				Attr("title", m.DiscardAction).Attr("data-discard", true).
+				Attr("@click.stop", web.GET().URL(ctx.R.URL.Path).EventFunc(actions.Action).
+					Query(presets.ParamAction, ActionDiscard).Query(presets.ParamTargetPortal, portal).
+					Query("path", web.Var("file.path")).Go()))
+		}
+		changesComp = browser
+	}
+	// the changes of now: the files saved in the IDE meanwhile among them
+	refresh := v.VBtn("").Icon("mdi-refresh").Variant(v.VariantText).Size(v.SizeSmall).
+		Attr("title", m.RefreshChanges).Attr("data-refresh-changes", true).
+		Attr("@click", web.Plaid().EventFunc(eventDraft).Go())
+
+	var logItems []h.HTMLComponent
+	for _, cm := range log {
+		logItems = append(logItems, v.VListItem(
+			v.VListItemTitle(h.Text(cm.Subject)),
+			v.VListItemSubtitle(h.Text(cm.Short+" · "+cm.Author+" · "+cm.Date.Format("2006-01-02 15:04"))),
+		).Density(v.DensityCompact))
+	}
+
+	var help h.HTMLComponent
+	if b.HelpURL != "" {
+		help = v.VBtn(m.Help).PrependIcon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
+			Class("me-2 mb-2").Href(b.HelpURL).Attr("target", "_blank")
+	}
+	var preview h.HTMLComponent
+	if u := b.previewURL(ctx.R); u != "" {
+		preview = v.VBtn(m.Preview).PrependIcon("mdi-eye-outline").Variant(v.VariantTonal).Size(v.SizeSmall).
+			Class("me-2 mb-2").Href(u).Attr("target", "_blank").Attr("data-preview", true)
+	}
+	publicPreview := b.publicPreviewView(ctx, m, portal, owner, own)
+	var reset h.HTMLComponent
+	if b.isOwnerOrAdmin(ctx.R) {
+		reset = btn(ActionReset, m.ResetAction, "mdi-restore", true)
+	}
+
+	// the own draft's words, or another's
+	draftHint := m.DraftHint
+	if !own {
+		draftHint = m.DraftHintOther
+	}
+	return v.VCard(
+		v.VCardSubtitle(h.Text(draftHint)).Class("pt-4"),
+		v.VCardText(
+			h.P(h.Text(state)).Class("mb-3"),
+			btn(ActionCommit, m.CommitAction, "mdi-source-commit", len(changes) > 0),
+			btn(ActionUpdate, m.UpdateAction, "mdi-source-pull", sync.Behind > 0),
+			btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
+			preview,
+			reset,
+			help,
+			publicPreview,
+			h.Tag("h4").Children(h.Text(m.Changes), refresh).Class("mt-4 mb-2 d-flex align-center ga-1"),
+			changesComp,
+			h.H4(m.History).Class("mt-4 mb-2"),
+			v.VList(logItems...).Density(v.DensityCompact),
+		),
+	).Variant(v.VariantOutlined), nil
 }
 
 // CodeLanguage is the language of the file path — its extension's, its name's
