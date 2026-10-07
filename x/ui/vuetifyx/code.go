@@ -8,7 +8,12 @@ import (
 )
 
 // VXCodeBuilder renders the <vx-code> component: a readonly code viewer with
-// Prism syntax highlighting, numbered lines and optional per-line diff marks.
+// Prism syntax highlighting — the admin's one, for a document's code, a diff,
+// a record's data. By default it is highlighted with Prism's plugins: line
+// numbers, matching braces, a toolbar with the language and a copy button, and
+// (Diff) a git diff whose lines are highlighted in the file's language. With
+// diff marks (MarkKind, MarkLines, ChangeRanges) it is a row per line instead,
+// its marked lines tinted.
 type VXCodeBuilder struct {
 	tag *h.HTMLTagBuilder
 }
@@ -61,6 +66,39 @@ func (b *VXCodeBuilder) ChangeRanges(ranges map[int][][3]int) *VXCodeBuilder {
 // say, a clickable partial-revert toggle bound to the hunk index.
 func (b *VXCodeBuilder) ChangedSlot(children ...h.HTMLComponent) *VXCodeBuilder {
 	b.tag.Children(web.Slot(children...).Name("changed").Scope("{ text, line, start, end, hunk, kind, added }"))
+	return b
+}
+
+// Diff says the code is a diff (git's), its lines highlighted in the Language
+// (Prism's diff-highlight): diff-gadx, diff-yaml; a plain diff when the
+// language is none or unknown.
+func (b *VXCodeBuilder) Diff(v bool) *VXCodeBuilder {
+	b.tag.Attr(":diff", v)
+	return b
+}
+
+// LineNumbers numbers the lines (default on).
+func (b *VXCodeBuilder) LineNumbers(v bool) *VXCodeBuilder {
+	b.tag.Attr(":line-numbers", v)
+	return b
+}
+
+// MatchBraces highlights a brace and its pair (default on).
+func (b *VXCodeBuilder) MatchBraces(v bool) *VXCodeBuilder {
+	b.tag.Attr(":match-braces", v)
+	return b
+}
+
+// Label is what the toolbar says of the code: by default its language's name.
+func (b *VXCodeBuilder) Label(v string) *VXCodeBuilder {
+	b.tag.Attr("label", v)
+	return b
+}
+
+// CopyLabels are the words of the copy button: its own, once it copied, and
+// when it could not.
+func (b *VXCodeBuilder) CopyLabels(copy, copied, failed string) *VXCodeBuilder {
+	b.tag.Attr("copy-text", copy, "copied-text", copied, "copy-error-text", failed)
 	return b
 }
 

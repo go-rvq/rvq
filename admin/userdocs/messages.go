@@ -20,6 +20,9 @@ type Messages struct {
 	ModuleDescription     string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	NothingWritten        string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
 	SeeAlso               string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
+	CopyCode              string `i18n:"hint='Button of a block of code of a document that copies it.'"`
+	CodeCopied            string `i18n:"hint='Said by the button of a block of code once it copied it.'"`
+	CopyCodeError         string `i18n:"hint='Said by the button of a block of code when it could not copy it: how to copy it by hand.'"`
 	EditDocuments         string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
 	RenderError           string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
 	NoDocument            string `i18n:"hint='Shown for a document there is not, or of a part the user does not see.'"`
@@ -102,6 +105,9 @@ var Messages_en_US = &Messages{
 	ModuleDescription:     "The documentation of the admin: the page that explains each part of it.",
 	NothingWritten:        "Nothing was written about this yet.",
 	SeeAlso:               "In this part",
+	CopyCode:              "Copy",
+	CodeCopied:            "Copied!",
+	CopyCodeError:         "Press Ctrl+C to copy",
 	EditDocuments:         "Edit the documents",
 	RenderError:           "This document could not be shown: %s",
 	NoDocument:            "There is no such document.",
@@ -184,6 +190,9 @@ var Messages_pt_BR = &Messages{
 	ModuleDescription:     "A documentação do admin: a página que explica cada parte dele.",
 	NothingWritten:        "Ainda não há nada escrito sobre isto.",
 	SeeAlso:               "Nesta parte",
+	CopyCode:              "Copiar",
+	CodeCopied:            "Copiado!",
+	CopyCodeError:         "Use Ctrl+C para copiar",
 	EditDocuments:         "Editar os documentos",
 	RenderError:           "Este documento não pôde ser mostrado: %s",
 	NoDocument:            "Não há este documento.",

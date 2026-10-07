@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gad-lang/gad/web/prism"
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -93,9 +92,6 @@ func New(p *presets.Builder, db *gorm.DB) *Builder {
 	}
 	// its own documents: the forms of every model
 	b.Register(coreSource())
-	// the code of a document — a ``` fence: gad, gadx, go, json, bash, … —
-	// highlighted by Prism, as the page draws it (docStyle has its colors)
-	p.ExtraAsset("/rvq-prism.js", "text/javascript", web.ComponentsPack(prism.JS()))
 	return b
 }
 
@@ -269,32 +265,16 @@ func (b *Builder) openScript() string {
 }
 
 // docStyle is the look of a document: its pictures within the column,
-// framed; its tables, code and headings spaced; the colors of its code,
-// highlighted by Prism (rvq-prism.js), in the light theme and the dark.
+// framed; its tables, inline code and headings spaced. A block of code is the
+// admin's code viewer (<vx-code>), with its look.
 const docStyle = `
 .user-doc img { max-width: 100%; height: auto; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; margin: 8px 0; }
 .user-doc h1 { font-size: 1.6rem; margin: 0 0 8px; }
 .user-doc h2 { font-size: 1.25rem; margin: 20px 0 8px; }
 .user-doc p, .user-doc ul, .user-doc ol { margin-bottom: 10px; }
 .user-doc ul, .user-doc ol { padding-left: 24px; }
-.user-doc code { background: rgba(var(--v-theme-on-surface), 0.06); padding: 1px 4px; border-radius: 4px; }
-.user-doc pre { background: rgba(var(--v-theme-on-surface), 0.04); border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; padding: 10px 12px; margin: 8px 0 12px; overflow-x: auto; line-height: 1.45; }
-.user-doc pre code { background: none; padding: 0; border-radius: 0; font-size: 0.875em; tab-size: 4; }
-.user-doc .token.comment, .user-doc .token.prolog, .user-doc .token.doctype, .user-doc .token.cdata { color: #6e7781; font-style: italic; }
-.user-doc .token.punctuation { color: #656d76; }
-.user-doc .token.keyword, .user-doc .token.boolean, .user-doc .token.atrule, .user-doc .token.important { color: #cf222e; }
-.user-doc .token.string, .user-doc .token.char, .user-doc .token.attr-value, .user-doc .token.regex, .user-doc .token.inserted { color: #0a7d33; }
-.user-doc .token.number, .user-doc .token.constant, .user-doc .token.symbol { color: #0550ae; }
-.user-doc .token.function, .user-doc .token.class-name { color: #8250df; }
-.user-doc .token.builtin, .user-doc .token.type, .user-doc .token.tag, .user-doc .token.attr-name, .user-doc .token.selector, .user-doc .token.property { color: #953800; }
-.user-doc .token.deleted { color: #cf222e; }
-.v-theme--dark .user-doc .token.comment, .v-theme--dark .user-doc .token.prolog, .v-theme--dark .user-doc .token.doctype, .v-theme--dark .user-doc .token.cdata { color: #8b949e; }
-.v-theme--dark .user-doc .token.punctuation { color: #9aa0a6; }
-.v-theme--dark .user-doc .token.keyword, .v-theme--dark .user-doc .token.boolean, .v-theme--dark .user-doc .token.atrule, .v-theme--dark .user-doc .token.important, .v-theme--dark .user-doc .token.deleted { color: #ff7b72; }
-.v-theme--dark .user-doc .token.string, .v-theme--dark .user-doc .token.char, .v-theme--dark .user-doc .token.attr-value, .v-theme--dark .user-doc .token.regex, .v-theme--dark .user-doc .token.inserted { color: #7ee787; }
-.v-theme--dark .user-doc .token.number, .v-theme--dark .user-doc .token.constant, .v-theme--dark .user-doc .token.symbol { color: #79c0ff; }
-.v-theme--dark .user-doc .token.function, .v-theme--dark .user-doc .token.class-name { color: #d2a8ff; }
-.v-theme--dark .user-doc .token.builtin, .v-theme--dark .user-doc .token.type, .v-theme--dark .user-doc .token.tag, .v-theme--dark .user-doc .token.attr-name, .v-theme--dark .user-doc .token.selector, .v-theme--dark .user-doc .token.property { color: #ffa657; }
+/* inline code; a block is the code viewer's (<vx-code>), its look its own */
+.user-doc :not(pre) > code { background: rgba(var(--v-theme-on-surface), 0.06); padding: 1px 4px; border-radius: 4px; }
 .user-doc table { border-collapse: collapse; margin: 10px 0; }
 .user-doc th, .user-doc td { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); padding: 4px 8px; }
 `

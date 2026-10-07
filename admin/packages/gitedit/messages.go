@@ -44,6 +44,9 @@ type Messages struct {
 	UpdateAction      string `i18n:"label='Update', hint='Action that brings into the draft what others published.'"`
 	PublishAction     string `i18n:"label='Publish', hint='Action that puts the commits of the draft on the site.'"`
 	DiscardAction     string `i18n:"label='Discard', hint='Action that drops the changes of a file not committed.'"`
+	CopyDiff          string `i18n:"label='Copy', hint='Button of the diff of a file that copies it.'"`
+	DiffCopied        string `i18n:"label='Copied!', hint='Said by the button of a diff once it copied it.'"`
+	CopyDiffError     string `i18n:"label='Press Ctrl+C to copy', hint='Said by the button of a diff when it could not copy it: how to copy it by hand.'"`
 	ResetAction       string `i18n:"label='Start over', hint='Action that drops the draft: a new one is made from the site.'"`
 	CommitFormMessage string `i18n:"label='Message', hint='Label of the message of a commit.'"`
 
@@ -175,6 +178,9 @@ var Messages_en_US = &Messages{
 	UpdateAction:       "Update",
 	PublishAction:      "Publish",
 	DiscardAction:      "Discard",
+	CopyDiff:           "Copy",
+	DiffCopied:         "Copied!",
+	CopyDiffError:      "Press Ctrl+C to copy",
 	ResetAction:        "Start over",
 	CommitFormMessage:  "Message",
 	CommitAction_Desc:  "Records the changes of the draft, with a message.",
@@ -302,6 +308,9 @@ var Messages_pt_BR = &Messages{
 	UpdateAction:       "Atualizar",
 	PublishAction:      "Publicar",
 	DiscardAction:      "Descartar",
+	CopyDiff:           "Copiar",
+	DiffCopied:         "Copiado!",
+	CopyDiffError:      "Use Ctrl+C para copiar",
 	ResetAction:        "Recomeçar",
 	CommitFormMessage:  "Mensagem",
 	CommitAction_Desc:  "Registra as alterações do rascunho, com uma mensagem.",

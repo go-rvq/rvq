@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html"
 	"net/url"
 	"path"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	gparser "github.com/yuin/goldmark/parser"
+	grenderer "github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -24,11 +26,51 @@ import (
 // newMarkdown is the renderer of a document, its links and images resolved by
 // rewrite: Gad's markdown (gadx.NewMarkdown — every bundled extension: GFM,
 // typographer, definition lists, footnotes; auto heading ids; HTML kept, the
-// documents being the code's and the administrators').
-func newMarkdown(rewrite func(dest string) string) goldmark.Markdown {
+// documents being the code's and the administrators'). Its fences are the
+// admin's code viewer (<vx-code>), its copy button saying labels.
+func newMarkdown(rewrite func(dest string) string, labels codeLabels) goldmark.Markdown {
 	md := gadx.NewMarkdown()
 	md.Parser().AddOptions(gparser.WithASTTransformers(util.Prioritized(linkRewriter(rewrite), 100)))
+	md.Renderer().AddOptions(grenderer.WithNodeRenderers(util.Prioritized(fenceRenderer{labels}, 100)))
 	return md
+}
+
+// codeLabels are the words of a code block's copy button.
+type codeLabels struct{ Copy, Copied, Failed string }
+
+// fenceRenderer renders a fenced block of code — ```gad, ```json, … — as the
+// admin's code viewer, <vx-code>: highlighted by Prism in its language, with
+// its line numbers, its braces matched, its language and a copy button. The
+// code is an attribute, so nothing in it is read as markup, nor by Vue.
+type fenceRenderer struct{ labels codeLabels }
+
+func (r fenceRenderer) RegisterFuncs(reg grenderer.NodeRendererFuncRegisterer) {
+	reg.Register(ast.KindFencedCodeBlock, r.render)
+}
+
+func (r fenceRenderer) render(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkSkipChildren, nil
+	}
+	n := node.(*ast.FencedCodeBlock)
+	var code strings.Builder
+	for i := 0; i < n.Lines().Len(); i++ {
+		seg := n.Lines().At(i)
+		code.Write(seg.Value(source))
+	}
+	attr := func(name, value string) {
+		_, _ = w.WriteString(" " + name + `="` + html.EscapeString(value) + `"`)
+	}
+	_, _ = w.WriteString("<vx-code")
+	attr("code", strings.TrimSuffix(code.String(), "\n"))
+	if lang := string(n.Language(source)); lang != "" {
+		attr("language", lang)
+	}
+	attr("copy-text", r.labels.Copy)
+	attr("copied-text", r.labels.Copied)
+	attr("copy-error-text", r.labels.Failed)
+	_, _ = w.WriteString("></vx-code>\n")
+	return ast.WalkSkipChildren, nil
 }
 
 // linkRewriter rewrites the destination of every link and image of a
@@ -325,8 +367,9 @@ func (r *renderer) Render(src *Source, file, content string) (string, error) {
 		}
 		return r.b.AssetHref(src, rel, r.b.locale(r.ctx))
 	}
+	msgs := GetMessages(r.ctx.Context())
 	var out bytes.Buffer
-	if err := newMarkdown(rewrite).Convert([]byte(md), &out); err != nil {
+	if err := newMarkdown(rewrite, codeLabels{msgs.CopyCode, msgs.CodeCopied, msgs.CopyCodeError}).Convert([]byte(md), &out); err != nil {
 		return "", fmt.Errorf("%s: %w", file, err)
 	}
 	return out.String(), nil

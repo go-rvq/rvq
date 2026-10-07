@@ -17,6 +17,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/ory/ladon"
 	"gorm.io/gorm"
 )
@@ -760,7 +761,9 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 				v.VChip(h.Text(ch.Status)).Size(v.SizeXSmall).Class("me-2"),
 				h.Code(ch.Path), v.VSpacer(), discard,
 			),
-			v.VExpansionPanelText(h.Pre(diff).Class("text-caption").Style("white-space: pre-wrap")),
+			// the diff in the code viewer: its lines highlighted in the file's language
+			v.VExpansionPanelText(vx.VXCode(diff).Language(CodeLanguage(ch.Path)).Diff(true).
+				CopyLabels(m.CopyDiff, m.DiffCopied, m.CopyDiffError)),
 		))
 	}
 	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
@@ -860,4 +863,40 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		tabs,
 	).Class("pa-4")
 	return
+}
+
+// CodeLanguage is the language of the file path — its extension's, its name's
+// (Dockerfile, Makefile) — as the code viewer (Prism) names it; "" when there
+// is none it knows.
+func CodeLanguage(path string) string {
+	base := strings.ToLower(path[strings.LastIndex(path, "/")+1:])
+	switch base {
+	case "dockerfile":
+		return "docker"
+	case "makefile", "gnumakefile":
+		return "makefile"
+	}
+	ext := ""
+	if i := strings.LastIndex(base, "."); i >= 0 {
+		ext = base[i+1:]
+	}
+	switch ext {
+	case "gad", "gadx", "gadt", "go", "json", "yaml", "css", "sql", "toml", "ini", "diff", "tsx", "jsx":
+		return ext
+	case "yml":
+		return "yaml"
+	case "md", "markdown":
+		return "markdown"
+	case "html", "htm", "xml", "svg":
+		return "markup"
+	case "js", "mjs", "cjs":
+		return "javascript"
+	case "ts":
+		return "typescript"
+	case "py":
+		return "python"
+	case "sh", "bash":
+		return "bash"
+	}
+	return ""
 }

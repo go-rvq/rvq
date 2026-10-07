@@ -538,3 +538,18 @@ func TestPageGit(t *testing.T) {
 		t.Error("with no !git: the tab shown")
 	}
 }
+
+// The language of a file, as the code viewer highlights its diff in it.
+func TestCodeLanguage(t *testing.T) {
+	for path, want := range map[string]string{
+		"templates/comps.gadx": "gadx", "config/layout_config.gad": "gad", "a/b.gadt": "gadt",
+		"config/locale_messages.yaml": "yaml", "x.yml": "yaml", "README.md": "markdown",
+		"static/a.css": "css", "static/js/app.js": "javascript", "index.html": "markup",
+		"Dockerfile": "docker", "Makefile": "makefile", "data.json": "json", "LICENSE": "",
+		"img/logo.png": "",
+	} {
+		if got := CodeLanguage(path); got != want {
+			t.Errorf("CodeLanguage(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
