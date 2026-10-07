@@ -9,7 +9,6 @@ admin — no restart.
 class Banner {
     [label="Title", hint="Shown over the image"]
     title str
-
     [label="Height"]
     height int = 400
 }
@@ -53,13 +52,12 @@ A field that holds **one of a closed list** of values is a select. Give it
 the values, and what the form shows for each, with `options`:
 
 ```gad
+[ordered]
 class Banner {
     [label="Alignment", options=(;left="On the left", center="Centered", right="On the right")]
     align str
-
     [label="Columns", options=[[2, "Two"], [3, "Three"], [4, "Four"]]]
     columns int = 3
-
     [label="Style", options=["light", "dark"]]
     style? str
 }
@@ -85,7 +83,11 @@ An `enum` declared in the file is also a select — its members are the values,
 each shown by its name:
 
 ```gad
-enum Align { left, center, right }
+enum Align {
+    left
+    center
+    right
+}
 
 class Banner {
     align Align

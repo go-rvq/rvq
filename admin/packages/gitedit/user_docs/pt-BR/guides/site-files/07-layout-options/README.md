@@ -9,7 +9,6 @@ formulários do admin — sem reiniciar nada.
 class Banner {
     [label="Título", hint="Aparece sobre a imagem"]
     title str
-
     [label="Altura"]
     height int = 400
 }
@@ -55,13 +54,12 @@ Um campo que guarda **um de uma lista fechada** de valores é um select. Dê a
 ele os valores, e o que o formulário mostra para cada um, com `options`:
 
 ```gad
+[ordered]
 class Banner {
     [label="Alinhamento", options=(;left="À esquerda", center="Centralizado", right="À direita")]
     align str
-
     [label="Colunas", options=[[2, "Duas"], [3, "Três"], [4, "Quatro"]]]
     columns int = 3
-
     [label="Estilo", options=["light", "dark"]]
     style? str
 }
@@ -88,7 +86,11 @@ Um `enum` declarado no arquivo também é um select — seus membros são os
 valores, cada um mostrado pelo próprio nome:
 
 ```gad
-enum Align { left, center, right }
+enum Align {
+    left
+    center
+    right
+}
 
 class Banner {
     align Align

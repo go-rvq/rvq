@@ -18,11 +18,14 @@ the small subset used by validators; see the GAD project for the full language.
 convert with the numeric char literals:
 
 ```gad
-c := value[i]                 // a character
-if c >= '0' && c <= '9' {     // is it a digit?
-    d := int(c) - int('0')    // 0..9
+c := value[i] // a character
+
+if c >= '0' && c <= '9' {
+    // is it a digit?
+    d := int(c) - int('0') // 0..9
 }
-len(value)                    // length
+
+len(value) // length
 ```
 
 ## Control flow
@@ -30,23 +33,36 @@ len(value)                    // length
 C-style `for`, plus `for _, x in array`; `if/else`; `break`/`continue`:
 
 ```gad
-for i := 0; i < len(value); i++ { … }
+for i := 0; i < len(value); i++ {
+    // …
+}
 
-for _, n in [9, 10] { … }     // iterate values
+// iterate values
+for _, n in [9, 10] {
+    // …
+}
 
 allEqual := true
+
 for i := 1; i < 11; i++ {
-    if digits[i] != digits[0] { allEqual = false; break }
+    if digits[i] != digits[0] {
+        allEqual = false
+
+        break
+    }
 }
 ```
 
 ## Arrays
 
 ```gad
-digits := []                  // empty array
-digits = append(digits, x)    // append
-weights := [6, 5, 4, 3, 2]    // literal
-weights[i]                    // index
+digits := [] // empty array
+
+digits = append(digits, x) // append
+
+weights := [6, 5, 4, 3, 2] // literal
+
+weights[i] // index
 len(weights)
 ```
 
@@ -60,7 +76,7 @@ integer division.
 
 ```gad
 if len(digits) != 11 {
-    throw "cpf"               // Messages["<lang>"]["cpf"] → user message
+    throw "cpf" // Messages["<lang>"]["cpf"] → user message
 }
 ```
 

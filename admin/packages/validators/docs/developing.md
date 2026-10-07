@@ -15,28 +15,35 @@ param value
 
 // keep only the digits
 digits := []
+
 for i := 0; i < len(value); i++ {
     c := value[i]
+
     if c >= '0' && c <= '9' {
         digits = append(digits, int(c) - int('0'))
     }
 }
+
 if len(digits) != 11 {
     throw "pis"
 }
 
-weights := [3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-sum := 0
+var (sum = 0, weights = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2])
+
 for i := 0; i < 10; i++ {
     sum += digits[i] * weights[i]
 }
+
 dv := 11 - (sum % 11)
+
 if dv >= 10 {
     dv = 0
 }
+
 if dv != digits[10] {
     throw "pis"
 }
+
 return true
 ```
 

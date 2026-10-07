@@ -46,15 +46,19 @@ param value
 
 // keep only the digits
 digits := []
+
 for i := 0; i < len(value); i++ {
     c := value[i]
+
     if c >= '0' && c <= '9' {
         digits = append(digits, int(c) - int('0'))
     }
 }
+
 if len(digits) != 11 {
-    throw "cpf"          // translated via Messages["<lang>"]["cpf"]
+    throw "cpf" // translated via Messages["<lang>"]["cpf"]
 }
+
 // … check digits …
 return true
 ```
