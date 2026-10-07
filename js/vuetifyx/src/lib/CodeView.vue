@@ -271,6 +271,10 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
   flex: 1 1 auto;
   white-space: pre;
 }
+/* alternated, a marked line keeping its tint */
+.vx-code-line:nth-child(even):not(.vx-code-add):not(.vx-code-del) {
+  background: rgba(var(--v-theme-on-surface), 0.035);
+}
 .vx-code-add {
   background: rgba(var(--v-theme-success), 0.16);
 }
@@ -391,6 +395,15 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
   white-space: inherit;
   text-shadow: none;
 }
+/* the lines, lightly alternated: a band every other line (the line height is
+   1.5em, so two lines are 3em), as wide as the longest line */
+.vx-code-host pre[class*='language-'] > code[class*='language-'] {
+  min-width: 100%;
+  width: max-content;
+  background-image: linear-gradient(transparent 50%, rgba(var(--v-theme-on-surface), 0.035) 50%);
+  background-size: 100% 3em;
+  background-origin: content-box;
+}
 .vx-code-host .line-numbers .line-numbers-rows {
   border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
@@ -399,8 +412,11 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
 }
 /* the toolbar: the language and the copy button, at the top right */
 .vx-code-host div.code-toolbar > .toolbar {
-  top: 4px;
-  right: 6px;
+  top: 6px;
+  right: 8px;
+}
+.vx-code-host div.code-toolbar > .toolbar > .toolbar-item + .toolbar-item {
+  margin-left: 4px;
 }
 .vx-code-host div.code-toolbar > .toolbar > .toolbar-item > button,
 .vx-code-host div.code-toolbar > .toolbar > .toolbar-item > span,
@@ -410,8 +426,9 @@ const markClass = computed(() => (props.markKind === 'del' ? 'vx-code-del' : 'vx
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   box-shadow: none;
   border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 0.7rem;
+  padding: 3px 9px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   cursor: default;
 }
 .vx-code-host div.code-toolbar > .toolbar > .toolbar-item > button {
