@@ -457,6 +457,10 @@ func HTMLDisplayFunc(c *Context) h.HTMLComponent {
 // BoolDisplayFunc is "bool": a check when on, a dash when off — in the colour a
 // switch has when it is on, like the editor's.
 func BoolDisplayFunc(c *Context) h.HTMLComponent {
+	if c.Data == nil && c.Field != nil && c.Field.Nullable {
+		// optional, not said
+		return emptyDisplay(c)
+	}
 	on, _ := c.Data.(bool)
 	if on {
 		return v.VIcon("mdi-check").Color("primary").Size(v.SizeSmall)

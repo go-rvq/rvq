@@ -37,6 +37,9 @@ type Messages struct {
 	// %q the type, %v the ones there are.
 	FieldTypeUnknown string `i18n:"hint='Error when a field asks for a type with no component and no enum.', fields=(;'%[1]q'='the field', '%[2]q'='the type', '%[3]v'='the types there are')"`
 
+	// Yes and No: the choices of an optional bool (`x? bool`), a select.
+	Yes string `i18n:"label='Bool: yes', hint='The choice yes of an optional yes-or-no field.'"`
+	No  string `i18n:"label='Bool: no', hint='The choice no of an optional yes-or-no field.'"`
 	// ChooseValue: a required choice was left empty.
 	ChooseValue string `i18n:"hint='Placeholder of a field whose value is chosen from a list.'"`
 	// NotAmongItems: a value the list does not offer; %q the value, %s the
@@ -67,6 +70,8 @@ var Messages_en_US = &Messages{
 	NoItems:                "the field %q has no values to choose from",
 	ListTypeUnknown:        "schemaform: the list asks for the type %q, which has no component and is no enum (there are: %v)",
 	FieldTypeUnknown:       "schemaform: the field %q asks for the type %q, which has no component and is no enum (there are: %v)",
+	Yes:                    "Yes",
+	No:                     "No",
 	ChooseValue:            "choose a value",
 	NotAmongItems:          "%q is not one of the values it may hold (%s)",
 	ItemsUnavailableOnSave: "the values it may hold could not be fetched",
@@ -87,6 +92,8 @@ var Messages_pt_BR = &Messages{
 	NoItems:                "o campo %q não tem valores para escolher",
 	ListTypeUnknown:        "schemaform: a lista pede o type %q, que não tem componente registrado nem é enum (há: %v)",
 	FieldTypeUnknown:       "schemaform: o campo %q pede o type %q, que não tem componente registrado nem é enum (há: %v)",
+	Yes:                    "Sim",
+	No:                     "Não",
 	ChooseValue:            "escolha um valor",
 	NotAmongItems:          "%q não está entre os valores possíveis (%s)",
 	ItemsUnavailableOnSave: "os valores possíveis não puderam ser obtidos",

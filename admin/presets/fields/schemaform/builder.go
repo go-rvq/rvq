@@ -924,6 +924,9 @@ func emptyItemJS(schema *Schema) string {
 func emptyValueJS(f *Field) string {
 	switch f.Type {
 	case "bool":
+		if f.Nullable {
+			return "null"
+		}
 		return "false"
 	case "int", "uint", "float", "decimal":
 		return "0"
@@ -1213,10 +1216,29 @@ func DurationComponentFunc(c *Context) h.HTMLComponent {
 		Attr("v-model", c.Value)
 }
 
-// BoolComponentFunc is "bool": a switch. Coloured when it is on — a switch
+// BoolComponentFunc is "bool": a switch, coloured when on — an optional one
+// (`x? bool`), a select of yes and no that may be left empty (null); with
+// [required], one of them chosen. Coloured when it is on — a switch
 // with no colour stays grey either way, which is exactly what a switch must not
 // be: whether it is on is the whole of what it says.
 func BoolComponentFunc(c *Context) h.HTMLComponent {
+	if c.Field.Nullable {
+		// optional: yes, no, or not said — a select, cleared to null —;
+		// [required]: yes or no, chosen
+		msgs := c.Messages()
+		_, must := c.Field.Meta["required"]
+		return v.VSelect().
+			Label(c.Label()).
+			Variant(v.FieldVariantUnderlined).
+			Attr(c.CompactAttrs()...).
+			Items([]map[string]any{{"title": msgs.Yes, "value": true}, {"title": msgs.No, "value": false}}).
+			ItemTitle("title").ItemValue("value").
+			Clearable(!must).
+			Attr("required", must).
+			Hint(c.Hint()).
+			PersistentHint(c.Hint() != "").
+			Attr("v-model", c.Value)
+	}
 	return v.VSwitch().
 		Label(c.Label()).
 		Color("primary").

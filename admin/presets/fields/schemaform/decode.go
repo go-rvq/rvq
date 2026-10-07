@@ -297,6 +297,19 @@ func (d *decoder) value(f *Field, key, path string) any {
 
 	switch f.Type {
 	case "bool":
+		if f.Nullable {
+			// a select: yes, no, or not said
+			switch strings.TrimSpace(s) {
+			case "true", "1", "on":
+				return true
+			case "false", "0", "off":
+				return false
+			}
+			if _, must := f.Meta["required"]; must {
+				d.errs = append(d.errs, fmt.Errorf("%s: %s", where(f, path), d.messages().ChooseValue))
+			}
+			return nil
+		}
 		// A switch that is off may not post at all.
 		return present && (s == "true" || s == "1" || s == "on")
 	case "int":
