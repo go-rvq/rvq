@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, onMounted } from 'vue'
 import CodeView from './CodeView.vue'
 import { diffBrowserKey, statusColor, unchangedContent } from './diffBrowserContext'
 
@@ -10,7 +10,17 @@ import { diffBrowserKey, statusColor, unchangedContent } from './diffBrowserCont
 
 const props = defineProps<{ params: { params: { path: string } } }>()
 const ctx = inject(diffBrowserKey)!
-const file = computed(() => ctx.files.value.find((f) => f.path === props.params.params.path))
+// the file's summary, and its content once had (ctx.request)
+const entry = computed(() => ctx.files.value.find((f) => f.path === props.params.params.path))
+const content = computed(() => ctx.content(props.params.params.path))
+// the diff, once the server set it: over the summary
+const file = computed(() => {
+  const c = content.value
+  return c?.value ? { ...c.file, ...c.value } : undefined
+})
+onMounted(() => {
+  if (entry.value) ctx.request(entry.value)
+})
 
 // gaps align the two sides, as IntelliJ does: where a block of lines was
 // changed, the side with fewer lines gets blank rows after its own, so what
@@ -62,17 +72,28 @@ function syncScroll(e: Event) {
 </script>
 
 <template>
-  <div v-if="file" class="vx-diff-file" :data-diff-file="file.path">
+  <div v-if="entry" class="vx-diff-file" :data-diff-file="entry.path">
     <div class="vx-diff-file-head">
-      <v-chip size="x-small" variant="tonal" :color="statusColor(file.status)" class="me-2">{{
-        (file.status || '').trim()
+      <v-chip size="x-small" variant="tonal" :color="statusColor(entry.status)" class="me-2">{{
+        (entry.status || '').trim()
       }}</v-chip>
-      <template v-if="file.from"
-        ><code>{{ file.from }}</code><span class="mx-2">→</span><code>{{ file.path }}</code></template
+      <template v-if="entry.from"
+        ><code>{{ entry.from }}</code><span class="mx-2">→</span><code>{{ entry.path }}</code></template
       >
-      <code v-else>{{ file.path }}</code>
+      <code v-else>{{ entry.path }}</code>
     </div>
-    <div v-if="unchangedContent(file)" class="pa-4 vx-diff-renamed" data-renamed-only>
+    <div v-if="content?.error" class="pa-4 text-error" data-diff-error>
+      {{ content.error }}
+      <v-btn size="small" variant="text" icon="mdi-refresh" class="ms-1" @click="ctx.request(entry)" />
+    </div>
+    <div v-else-if="!file" class="vx-diff-loading" data-diff-loading>
+      <v-progress-linear indeterminate color="primary" />
+      <div class="pa-4 text-medium-emphasis d-flex align-center ga-2">
+        <v-progress-circular indeterminate size="18" width="2" color="primary" />
+        <span>{{ ctx.labels.value.loading }}</span>
+      </div>
+    </div>
+    <div v-else-if="unchangedContent(file)" class="pa-4 vx-diff-renamed" data-renamed-only>
       {{ ctx.labels.value.renamed }} <code>{{ file.path }}</code>. {{ ctx.labels.value.unchanged }}
     </div>
     <div v-else-if="file.binary" class="pa-4 text-medium-emphasis">{{ ctx.labels.value.binary }}</div>

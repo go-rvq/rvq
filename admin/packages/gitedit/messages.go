@@ -51,6 +51,9 @@ type Messages struct {
 	RefreshChanges       string `i18n:"hint='Button that shows the changes of now (the files saved in the editor meanwhile).'"`
 	DiffRenamedTo        string `i18n:"hint='Precedes the new path of a file renamed or moved.'"`
 	DiffContentUnchanged string `i18n:"hint='Said of a file renamed or moved whose content did not change.'"`
+	DiffLoading          string `i18n:"hint='Shown in the tab of a file while its diff is loaded.'"`
+	DiffLoadError        string `i18n:"hint='Shown in the tab of a file whose diff could not be loaded.'"`
+	DiffGone             string `i18n:"hint='Shown in the tab of a file no longer changed (committed or discarded meanwhile).'"`
 	ResetAction          string `i18n:"label='Start over', hint='Action that drops the draft: a new one is made from the site.'"`
 	CommitFormMessage    string `i18n:"label='Message', hint='Label of the message of a commit.'"`
 
@@ -189,6 +192,9 @@ var Messages_en_US = &Messages{
 	RefreshChanges:       "Refresh the changes",
 	DiffRenamedTo:        "Renamed to",
 	DiffContentUnchanged: "Its content did not change.",
+	DiffLoading:          "Loading…",
+	DiffLoadError:        "The diff could not be loaded.",
+	DiffGone:             "This file is no longer changed: committed or discarded meanwhile.",
 	ResetAction:          "Start over",
 	CommitFormMessage:    "Message",
 	CommitAction_Desc:    "Records the changes of the draft, with a message.",
@@ -323,6 +329,9 @@ var Messages_pt_BR = &Messages{
 	RefreshChanges:       "Atualizar as alterações",
 	DiffRenamedTo:        "Renomeado para",
 	DiffContentUnchanged: "O conteúdo não mudou.",
+	DiffLoading:          "Carregando…",
+	DiffLoadError:        "Não foi possível carregar o diff.",
+	DiffGone:             "Este arquivo não está mais alterado: foi commitado ou descartado enquanto isso.",
 	ResetAction:          "Recomeçar",
 	CommitFormMessage:    "Mensagem",
 	CommitAction_Desc:    "Registra as alterações do rascunho, com uma mensagem.",

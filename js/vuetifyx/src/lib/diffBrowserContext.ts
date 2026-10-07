@@ -17,11 +17,27 @@ export interface DiffFile {
   insRanges?: Record<number, [number, number, number][]>
 }
 
+// Content is what a tab has of its file: given to load, a reactive object
+// whose value the server sets — the event's response runs
+// `content.value = {…}` (the file's diff: contents and how they differ), or
+// `content.error = "…"`. file is the file's summary.
+export interface Content {
+  file: DiffFile
+  value?: DiffFile
+  error?: string
+}
+
 export interface DiffBrowserContext {
+  // the summary: the files' paths, status, origins, languages — their
+  // contents too when no load is given
   files: ComputedRef<DiffFile[]>
+  // the content of an opened file: asked for (load) the first time its tab
+  // shows it, forgotten when the tab closes
+  content: (path: string) => Content | undefined
+  request: (file: DiffFile) => void
   active: { path: string }
   open: (file: DiffFile) => void
-  labels: ComputedRef<{ old: string; new: string; binary: string; renamed: string; unchanged: string }>
+  labels: ComputedRef<{ old: string; new: string; binary: string; renamed: string; unchanged: string; loading: string }>
   // the browser's `actions` slot, rendered by each file of the tree
   actions: () => Slot | undefined
 }

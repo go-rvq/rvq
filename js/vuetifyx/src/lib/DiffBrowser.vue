@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, markRaw, provide, reactive, shallowRef, useSlots, watch } from 'vue'
+import { computed, markRaw, provide, reactive, shallowReactive, shallowRef, useSlots, watch } from 'vue'
+
 import { useTheme } from 'vuetify'
 import { DockviewVue } from 'dockview-vue'
 import type { DockviewApi, DockviewReadyEvent } from 'dockview-vue'
@@ -7,7 +8,7 @@ import { themeDark, themeLight } from 'dockview-core'
 import 'dockview-vue/dist/styles/dockview.css'
 import DiffBrowserFiles from './DiffBrowserFiles.vue'
 import DiffBrowserFile from './DiffBrowserFile.vue'
-import { diffBrowserKey, renamedTo, type DiffFile } from './diffBrowserContext'
+import { diffBrowserKey, renamedTo, type Content, type DiffFile } from './diffBrowserContext'
 
 // <vx-diff-browser>: the changes of a set of files, browsed. On the left the
 // tree of the files changed — each in its folders, its path kept —; clicking
@@ -18,9 +19,12 @@ import { diffBrowserKey, renamedTo, type DiffFile } from './diffBrowserContext'
 //
 // The comparison is the server's (vuetifyx.NewDiffFile): this only shows it.
 // The `actions` slot ({ file }) is drawn by each file of the tree (a discard).
+// The summary (the files of the tree) is its v-model, or files.
 
 const props = withDefaults(defineProps<{
-  files: DiffFile[]
+  // the summary, by v-model — or by files
+  modelValue?: DiffFile[]
+  files?: DiffFile[]
   height?: string
   filesTitle?: string
   oldLabel?: string
@@ -29,6 +33,13 @@ const props = withDefaults(defineProps<{
   emptyText?: string
   renamedText?: string
   unchangedText?: string
+  // load asks for the diff of a file opened, given the reactive object of its
+  // tab (content: { file, value, error }): a plaid() call whose response
+  // sets content.value — `(content) => plaid().scope({content})….go()`. With
+  // none, the files have their contents already.
+  load?: (content: Content) => unknown
+  loadErrorText?: string
+  loadingText?: string
 }>(), {
   height: '70vh',
   filesTitle: 'Files',
@@ -38,9 +49,13 @@ const props = withDefaults(defineProps<{
   emptyText: 'No changes.',
   renamedText: 'Renamed to',
   unchangedText: 'Its content did not change.',
+  loadErrorText: 'The diff could not be loaded.',
+  loadingText: 'Loading…',
 })
 
 const slots = useSlots()
+// the summary: v-model's, else files
+const summary = computed<DiffFile[]>(() => props.modelValue ?? props.files ?? [])
 const theme = useTheme()
 // dockview's theme follows Vuetify's, as the IDE's does
 const dockTheme = computed(() => (theme.current.value.dark ? themeDark : themeLight))
@@ -76,8 +91,36 @@ function open(file: DiffFile) {
   if (!other) dv.getPanel('files')?.api.setSize({ width: 280 })
 }
 
+// the contents of the files opened, by path: only those, and only while
+// their tabs are open — the browser keeps no more than it shows
+const contents = shallowReactive(new Map<string, Content>())
+
+function request(file: DiffFile) {
+  if (!props.load) {
+    contents.set(file.path, reactive({ file, value: file }))
+    return
+  }
+  const had = contents.get(file.path)
+  if (had && !had.error) return
+  const content = reactive<Content>({ file: { ...file }, value: undefined, error: undefined })
+  contents.set(file.path, content)
+  try {
+    // a promise it returns that fails is its error too
+    const p = props.load(content) as any
+    if (p && typeof p.catch === 'function') {
+      p.catch((e: any) => {
+        if (!content.value) content.error = String(e?.message || e || props.loadErrorText)
+      })
+    }
+  } catch (e: any) {
+    content.error = String(e?.message || e || props.loadErrorText)
+  }
+}
+
 provide(diffBrowserKey, {
-  files: computed(() => props.files),
+  files: summary,
+  content: (path: string) => contents.get(path),
+  request,
   active,
   open,
   labels: computed(() => ({
@@ -86,6 +129,7 @@ provide(diffBrowserKey, {
     binary: props.binaryText,
     renamed: props.renamedText,
     unchanged: props.unchangedText,
+    loading: props.loadingText,
   })),
   actions: () => slots.actions,
 })
@@ -93,16 +137,20 @@ provide(diffBrowserKey, {
 function onReady(event: DockviewReadyEvent) {
   api.value = event.api
   event.api.addPanel({ id: 'files', component: 'files', title: props.filesTitle })
+  // a tab closed forgets its file's content
+  event.api.onDidRemovePanel((p) => {
+    if (p.id.startsWith('file:')) contents.delete(p.id.slice(5))
+  })
   event.api.onDidActivePanelChange((e) => {
     const id = e.panel?.id
     if (id && id.startsWith('file:')) active.path = id.slice(5)
   })
-  if (props.files.length) open(props.files[0])
+  if (summary.value.length) open(summary.value[0])
 }
 
 // a file that is gone (discarded) closes its tab
 watch(
-  () => props.files.map((f) => f.path),
+  () => summary.value.map((f) => f.path),
   (paths) => {
     const dv = api.value
     if (!dv) return
@@ -112,12 +160,23 @@ watch(
   },
 )
 
+// the summary changed (refreshed): the contents opened are asked for again
+watch(
+  summary,
+  () => {
+    for (const f of summary.value) if (contents.has(f.path)) {
+      contents.delete(f.path)
+      request(f)
+    }
+  },
+)
+
 defineExpose({ open })
 </script>
 
 <template>
   <div class="vx-diff-browser" :style="{ height }">
-    <div v-if="!files.length" class="pa-4 text-medium-emphasis">{{ emptyText }}</div>
+    <div v-if="!summary.length" class="pa-4 text-medium-emphasis">{{ emptyText }}</div>
     <DockviewVue v-else :theme="dockTheme" style="height: 100%" :components="panels" @ready="onReady" />
   </div>
 </template>

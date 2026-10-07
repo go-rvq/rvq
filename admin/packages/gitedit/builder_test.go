@@ -2,7 +2,9 @@ package gitedit
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -551,5 +553,63 @@ func TestCodeLanguage(t *testing.T) {
 		if got := CodeLanguage(path); got != want {
 			t.Errorf("CodeLanguage(%q) = %q, want %q", path, got, want)
 		}
+	}
+}
+
+// The changes, browsed: the page sends the tree's summary only — no
+// content —, and how to ask for a file's diff (:load); the event answers a
+// tab with the diff of a change (content.value), or with why it has none
+// (content.error); the card is drawn again by its event (a file saved in the
+// IDE meanwhile is there).
+func TestDiffBrowserEvents(t *testing.T) {
+	var invalid error
+	h, repo, _ := app(t, &invalid)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
+	if w.Code != 200 {
+		t.Fatalf("the page: %d", w.Code)
+	}
+	draft := filepath.Join(repo.DraftsDir, "u1")
+	if err := os.WriteFile(filepath.Join(draft, "index.gadx"), []byte("brand new body\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	event := func(name string, query ...[2]string) map[string]any {
+		t.Helper()
+		b := multipartestutils.NewMultipartBuilder().PageURL("/admin/site-files").EventFunc(name)
+		for _, q := range query {
+			b = b.Query(q[0], q[1])
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, b.BuildEventFuncRequest())
+		var r map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &r); err != nil {
+			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())
+		}
+		return r
+	}
+
+	// the card, drawn again: the file saved meanwhile in its summary
+	r := event(eventDraft)
+	card := fmt.Sprint(r["updatePortals"])
+	if !strings.Contains(card, "vx-diff-browser") || !strings.Contains(card, "index.gadx") ||
+		!strings.Contains(card, ":load") || !strings.Contains(card, eventDiff) {
+		t.Fatalf("the card: %.600s", card)
+	}
+	if strings.Contains(card, "brand new body") {
+		t.Error("the summary has the file's content")
+	}
+
+	// a tab asks for its file's diff
+	r = event(eventDiff, [2]string{"path", "index.gadx"}, [2]string{"status", "M"})
+	script, _ := r["runScript"].(string)
+	if !strings.HasPrefix(script, "content.value = ") || !strings.Contains(script, "brand new body") ||
+		!strings.Contains(script, `"old":"old\n"`) || !strings.Contains(script, `"added":[1]`) {
+		t.Errorf("the diff: %s", script)
+	}
+	// a file not changed (committed or discarded meanwhile): why there is none
+	r = event(eventDiff, [2]string{"path", "nothing.gadx"})
+	if script, _ := r["runScript"].(string); !strings.HasPrefix(script, "content.error = ") {
+		t.Errorf("a file not changed: %s", script)
 	}
 }

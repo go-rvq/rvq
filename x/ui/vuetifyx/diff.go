@@ -1,6 +1,7 @@
 package vuetifyx
 
 import (
+	"encoding/json"
 	"strings"
 	"unicode/utf8"
 
@@ -165,8 +166,8 @@ type DiffFile struct {
 	From      string           `json:"from,omitempty"`
 	Status    string           `json:"status,omitempty"`
 	Language  string           `json:"language,omitempty"`
-	Old       string           `json:"old"`
-	New       string           `json:"new"`
+	Old       string           `json:"old,omitempty"`
+	New       string           `json:"new,omitempty"`
 	Binary    bool             `json:"binary,omitempty"`
 	Removed   []int            `json:"removed,omitempty"`
 	Added     []int            `json:"added,omitempty"`
@@ -188,6 +189,30 @@ func NewDiffFile(path, status, language, old, new string) DiffFile {
 	return f
 }
 
+// DiffSummary is a file of a <vx-diff-browser> as its tree has it — its path,
+// status, path before (a renamed one's) and language —, its contents asked
+// for when its tab opens (VXDiffBrowserBuilder.Load).
+func DiffSummary(path, status, from, language string) DiffFile {
+	return DiffFile{Path: path, Status: status, From: from, Language: language}
+}
+
+// DiffContentScript is the script an event of Load answers with: the file's
+// diff (NewDiffFile) set on the tab's content.
+func DiffContentScript(f DiffFile) string {
+	b, err := json.Marshal(f)
+	if err != nil {
+		return DiffContentErrorScript(err.Error())
+	}
+	return "content.value = " + string(b)
+}
+
+// DiffContentErrorScript is the script an event of Load answers with when it
+// has no diff to give: what the tab says.
+func DiffContentErrorScript(message string) string {
+	b, _ := json.Marshal(message)
+	return "content.error = " + string(b)
+}
+
 // VXDiffBrowserBuilder renders <vx-diff-browser>: the changes of a set of
 // files, browsed — a tree of the files on the left (their folders, their
 // paths), a tab on the right for each file opened from it, the old and the
@@ -196,12 +221,43 @@ type VXDiffBrowserBuilder struct {
 	tag *h.HTMLTagBuilder
 }
 
-// VXDiffBrowser browses files (NewDiffFile).
+// VXDiffBrowser browses files: complete (NewDiffFile), or summaries
+// (DiffSummary) whose contents Load asks for.
 func VXDiffBrowser(files ...DiffFile) *VXDiffBrowserBuilder {
 	if files == nil {
 		files = []DiffFile{}
 	}
 	return &VXDiffBrowserBuilder{tag: h.Tag("vx-diff-browser").Attr(":files", files)}
+}
+
+// Load is how a file's diff is asked for, when its tab opens: the event,
+// called with the tab's content in its scope ({content}) and the file's
+// path, from (a renamed one's path before) and status in its query; it
+// answers with DiffContentScript (or DiffContentErrorScript) as its
+// RunScript, which sets content.value. The browser keeps a file's diff only
+// while its tab is open.
+func (b *VXDiffBrowserBuilder) Load(event *web.VueEventTagBuilder) *VXDiffBrowserBuilder {
+	call := event.Scope(web.Var("{content}")).
+		Query("path", web.Var("content.file.path")).
+		Query("from", web.Var("content.file.from || ''")).
+		Query("status", web.Var("content.file.status || ''")).
+		Go()
+	b.tag.Attr(":load", "(content) => "+call)
+	return b
+}
+
+// LoadTexts are what a tab says while its diff is asked for, and when it
+// could not be.
+func (b *VXDiffBrowserBuilder) LoadTexts(loading, failed string) *VXDiffBrowserBuilder {
+	b.tag.Attr("loading-text", loading, "load-error-text", failed)
+	return b
+}
+
+// VModel binds the summary (the files of the tree) to expr, in place of
+// the files given.
+func (b *VXDiffBrowserBuilder) VModel(expr string) *VXDiffBrowserBuilder {
+	b.tag.Attr("v-model", expr)
+	return b
 }
 
 // Height is how tall it is (default "70vh"); its panels fill it.

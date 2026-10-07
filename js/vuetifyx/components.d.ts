@@ -23,6 +23,7 @@ declare module 'vue' {
     DefaultNavigatorExample: typeof import('./src/demo/components/DefaultNavigatorExample.vue')['default']
     Dialog: typeof import('./src/lib/Dialog.vue')['default']
     DiffBrowser: typeof import('./src/lib/DiffBrowser.vue')['default']
+    DiffBrowserExample: typeof import('./src/demo/components/DiffBrowserExample.vue')['default']
     DiffBrowserFile: typeof import('./src/lib/DiffBrowserFile.vue')['default']
     DiffBrowserFiles: typeof import('./src/lib/DiffBrowserFiles.vue')['default']
     DiffHunks: typeof import('./src/lib/DiffHunks.vue')['default']

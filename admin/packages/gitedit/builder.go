@@ -292,6 +292,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 	b.setupActions(p, b.userPage)
 	b.page.EventFunc(eventDraft, b.draftEvent)
 	b.userPage.EventFunc(eventDraft, b.draftEvent)
+	b.page.EventFunc(eventDiff, b.diffEvent)
+	b.userPage.EventFunc(eventDiff, b.diffEvent)
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.ownerKey(r); return key }
@@ -804,6 +806,49 @@ func (b *Builder) draftEvent(ctx *web.EventContext) (r web.EventResponse, err er
 	return
 }
 
+// eventDiff answers a tab of the diff browser with its file's diff.
+const eventDiff = "gitEditDiff"
+
+// diffEvent is eventDiff's handler: the diff of the change of the draft the
+// query names (path) — one of its changes now, or none —, set on the tab's
+// content (vuetifyx.DiffContentScript).
+func (b *Builder) diffEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
+		return r, perm.PermissionDenied
+	}
+	d, _, err := b.Draft(ctx.R)
+	if errors.Is(err, ErrNoAccess) {
+		return r, perm.PermissionDenied
+	}
+	if err != nil {
+		return
+	}
+	m := GetMessages(ctx.Context())
+	path := ctx.R.FormValue("path")
+	changes, err := d.Changes(ctx.Context())
+	if err != nil {
+		r.RunScript = vx.DiffContentErrorScript(err.Error())
+		return r, nil
+	}
+	for _, ch := range changes {
+		if ch.Path != path {
+			continue
+		}
+		old, cur, err := d.Versions(ctx.Context(), ch)
+		if err != nil {
+			r.RunScript = vx.DiffContentErrorScript(err.Error())
+			return r, nil
+		}
+		f := vx.NewDiffFile(ch.Path, ch.Status, CodeLanguage(ch.Path), old, cur)
+		f.From = ch.From
+		r.RunScript = vx.DiffContentScript(f)
+		return r, nil
+	}
+	// committed or discarded meanwhile
+	r.RunScript = vx.DiffContentErrorScript(m.DiffGone)
+	return r, nil
+}
+
 // draftView is the draft's card: its state, its actions, its changes (each
 // file's, browsed — vx-diff-browser) and its history.
 func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner string, own bool) (h.HTMLComponent, error) {
@@ -847,21 +892,18 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 
 	// the changes, browsed: the tree of the files, each opened in a tab, the
 	// last commit's and the draft's side by side
+	// (the summary: a file's contents are asked for when its tab opens —
+	// eventDiff —, kept by the browser only while it is open)
 	files := make([]vx.DiffFile, 0, len(changes))
 	for _, ch := range changes {
-		old, cur, err := d.Versions(c, ch)
-		if err != nil {
-			return nil, err
-		}
-		f := vx.NewDiffFile(ch.Path, ch.Status, CodeLanguage(ch.Path), old, cur)
-		f.From = ch.From
-		files = append(files, f)
+		files = append(files, vx.DiffSummary(ch.Path, ch.Status, ch.From, CodeLanguage(ch.Path)))
 	}
 	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
 	if len(files) > 0 {
 		browser := vx.VXDiffBrowser(files...).Height("70vh").
 			Labels(m.DiffFiles, m.DiffOld, m.DiffNew, m.DiffBinary, m.NoChanges).
-			RenameLabels(m.DiffRenamedTo, m.DiffContentUnchanged)
+			RenameLabels(m.DiffRenamedTo, m.DiffContentUnchanged).
+			Load(web.Plaid().EventFunc(eventDiff)).LoadTexts(m.DiffLoading, m.DiffLoadError)
 		if allowed(ActionDiscard) {
 			browser.ActionsSlot(v.VBtn("").Icon("mdi-undo").Variant(v.VariantText).Size(v.SizeXSmall).
 				Attr("title", m.DiscardAction).Attr("data-discard", true).

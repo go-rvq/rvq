@@ -1,0 +1,210 @@
+[
+  {
+    "path": "templates/comps.gadx",
+    "status": "M",
+    "language": "gadx",
+    "old": "@export comp card(; title=\"\")\n    div.card[class={active: on}]\n        h2 {= title }\n    p.text-sm Lorem ipsum\n\n@export comp badge(text)\n    span.badge {= text }\n",
+    "new": "@export comp card(; title=\"\", sub=\"\")\n    div.card.shadow[class={active: on}]\n        h2 {= title }\n        h3 {= sub }\n    p.text-sm Lorem ipsum\n\n@export comp badge(text)\n    span.badge {= text }\n",
+    "removed": [
+      1,
+      2
+    ],
+    "added": [
+      1,
+      2,
+      4
+    ],
+    "insRanges": {
+      "1": [
+        [
+          28,
+          36,
+          -1
+        ]
+      ],
+      "2": [
+        [
+          12,
+          19,
+          -1
+        ]
+      ]
+    }
+  },
+  {
+    "path": "templates/layouts/index.gadx",
+    "status": "M",
+    "language": "gadx",
+    "old": "@main\n    p one\n    p two\n    p three\n    p four\n    p gone\n    p keep\n    p tail\n",
+    "new": "@main\n    p one\n    p 2-3-4 together\n    p keep\n    p inserted\n    p tail\n",
+    "removed": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "added": [
+      3,
+      5
+    ],
+    "delRanges": {
+      "3": [
+        [
+          6,
+          9,
+          -1
+        ]
+      ]
+    },
+    "insRanges": {
+      "3": [
+        [
+          6,
+          20,
+          -1
+        ]
+      ]
+    }
+  },
+  {
+    "path": "config/locale_messages.yaml",
+    "status": "M",
+    "language": "yaml",
+    "old": "en:\n  title: Hello\n  subtitle: World\npt-BR:\n  title: Olá\n",
+    "new": "en:\n  title: Hello\n  subtitle: Everyone\n  footer: Bye\npt-BR:\n  title: Olá\n  footer: Tchau\n",
+    "removed": [
+      3
+    ],
+    "added": [
+      3,
+      4,
+      7
+    ],
+    "delRanges": {
+      "3": [
+        [
+          12,
+          17,
+          -1
+        ]
+      ]
+    },
+    "insRanges": {
+      "3": [
+        [
+          12,
+          20,
+          -1
+        ]
+      ]
+    }
+  },
+  {
+    "path": "config/layout_config.gad",
+    "status": "M",
+    "language": "gad",
+    "old": "[ordered]\nexport class Default {\n    [label=\"No cover\"]\n    coverDisabled? bool\n}\n",
+    "new": "/// The default layout.\n[ordered]\nexport class Default {\n    [label=\"No cover\"]\n    coverDisabled? bool\n    [label=\"Description\"]\n    description? text\n}\n",
+    "added": [
+      1,
+      6,
+      7
+    ]
+  },
+  {
+    "path": "templates/card_box.gadx",
+    "from": "templates/card.gadx",
+    "status": "R",
+    "language": "gadx",
+    "old": "@main\n    p same\n",
+    "new": "@main\n    p same\n"
+  },
+  {
+    "path": "templates/layouts/list.gadx",
+    "from": "templates/old/list.gadx",
+    "status": "R",
+    "language": "gadx",
+    "old": "@main\n    p a\n    p b\n",
+    "new": "@main\n    p a\n    p c\n",
+    "removed": [
+      3
+    ],
+    "added": [
+      3
+    ],
+    "delRanges": {
+      "3": [
+        [
+          6,
+          7,
+          -1
+        ]
+      ]
+    },
+    "insRanges": {
+      "3": [
+        [
+          6,
+          7,
+          -1
+        ]
+      ]
+    }
+  },
+  {
+    "path": "README.md",
+    "status": "??",
+    "language": "markdown",
+    "new": "# Site\n\nThe site's files.\n",
+    "added": [
+      1,
+      2,
+      3
+    ]
+  },
+  {
+    "path": "static/old.css",
+    "status": "D",
+    "language": "css",
+    "old": ".card { color: red; }\n",
+    "removed": [
+      1
+    ]
+  },
+  {
+    "path": "static/logo.png",
+    "status": "M",
+    "binary": true
+  },
+  {
+    "path": "templates/broken.gadx",
+    "status": "M",
+    "language": "gadx",
+    "old": "@main\n    p x\n",
+    "new": "@main\n    p y\n",
+    "removed": [
+      2
+    ],
+    "added": [
+      2
+    ],
+    "delRanges": {
+      "2": [
+        [
+          6,
+          7,
+          -1
+        ]
+      ]
+    },
+    "insRanges": {
+      "2": [
+        [
+          6,
+          7,
+          -1
+        ]
+      ]
+    }
+  }
+]
