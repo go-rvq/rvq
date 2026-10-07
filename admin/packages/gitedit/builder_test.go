@@ -613,3 +613,49 @@ func TestDiffBrowserEvents(t *testing.T) {
 		t.Errorf("a file not changed: %s", script)
 	}
 }
+
+// A file edited in the diff browser is saved by its event as the IDE saves
+// it: written in the draft (content.saved); a path of .git, or out of it,
+// refused (content.error).
+func TestDiffBrowserSave(t *testing.T) {
+	var invalid error
+	h, repo, _ := app(t, &invalid)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
+	draft := filepath.Join(repo.DraftsDir, "u1")
+
+	save := func(path, content string) string {
+		t.Helper()
+		b := multipartestutils.NewMultipartBuilder().PageURL("/admin/site-files").EventFunc(eventSave).
+			Query("path", path).AddField("content", content)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, b.BuildEventFuncRequest())
+		var r map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &r); err != nil {
+			t.Fatalf("%d %s", w.Code, w.Body.String())
+		}
+		s, _ := r["runScript"].(string)
+		return s
+	}
+	if s := save("index.gadx", "edited in the diff\n"); s != "content.saved = true" {
+		t.Fatalf("saving: %s", s)
+	}
+	if b, _ := os.ReadFile(filepath.Join(draft, "index.gadx")); string(b) != "edited in the diff\n" {
+		t.Errorf("the draft has %q", b)
+	}
+	// a form ends its lines by CRLF: a file with \n keeps \n
+	if s := save("index.gadx", "one\r\ntwo\r\n"); s != "content.saved = true" {
+		t.Fatalf("saving: %s", s)
+	}
+	if b, _ := os.ReadFile(filepath.Join(draft, "index.gadx")); string(b) != "one\ntwo\n" {
+		t.Errorf("the line endings: %q", b)
+	}
+	for _, bad := range []string{".git/config", "../outside.gadx", ""} {
+		if s := save(bad, "x"); !strings.HasPrefix(s, "content.error = ") {
+			t.Errorf("%q: %s", bad, s)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(draft), "outside.gadx")); err == nil {
+		t.Error("a file written out of the draft")
+	}
+}

@@ -27,6 +27,7 @@ declare module 'vue' {
     DiffBrowserFile: typeof import('./src/lib/DiffBrowserFile.vue')['default']
     DiffBrowserFiles: typeof import('./src/lib/DiffBrowserFiles.vue')['default']
     DiffHunks: typeof import('./src/lib/DiffHunks.vue')['default']
+    DiffMergeView: typeof import('./src/lib/DiffMergeView.vue')['default']
     DragListener: typeof import('./src/lib/DragListener.vue')['default']
     DragListenerExample: typeof import('./src/demo/components/DragListenerExample.vue')['default']
     Editor: typeof import('./src/lib/ImageTools/Editor.vue')['default']

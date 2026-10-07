@@ -54,6 +54,16 @@ type Messages struct {
 	DiffLoading          string `i18n:"hint='Shown in the tab of a file while its diff is loaded.'"`
 	DiffLoadError        string `i18n:"hint='Shown in the tab of a file whose diff could not be loaded.'"`
 	DiffGone             string `i18n:"hint='Shown in the tab of a file no longer changed (committed or discarded meanwhile).'"`
+	DiffUndo             string `i18n:"hint='Button of the diff of a file: undoes the last edit of its current side.'"`
+	DiffRedo             string `i18n:"hint='Button of the diff of a file: redoes the edit undone.'"`
+	DiffSave             string `i18n:"hint='Button of the diff of a file: saves its current side as edited.'"`
+	DiffSaving           string `i18n:"hint='Said while the file edited in the diff is saved.'"`
+	DiffSaved            string `i18n:"hint='Said once the file edited in the diff was saved.'"`
+	DiffUnsaved          string `i18n:"hint='Said of a file edited in the diff and not saved.'"`
+	DiffRevert           string `i18n:"hint='Title of the button of a change: takes the old part into the current.'"`
+	DiffSaveDenied       string `i18n:"hint='Said when the file edited in the diff may not be saved by the user.'"`
+	DiffPrev             string `i18n:"hint='Title of the button that goes to the previous change of the diff (Shift+F7).'"`
+	DiffNext             string `i18n:"hint='Title of the button that goes to the next change of the diff (F7).'"`
 	ResetAction          string `i18n:"label='Start over', hint='Action that drops the draft: a new one is made from the site.'"`
 	CommitFormMessage    string `i18n:"label='Message', hint='Label of the message of a commit.'"`
 
@@ -195,6 +205,16 @@ var Messages_en_US = &Messages{
 	DiffLoading:          "Loading…",
 	DiffLoadError:        "The diff could not be loaded.",
 	DiffGone:             "This file is no longer changed: committed or discarded meanwhile.",
+	DiffUndo:             "Undo",
+	DiffRedo:             "Redo",
+	DiffSave:             "Save",
+	DiffSaving:           "Saving…",
+	DiffSaved:            "Saved",
+	DiffUnsaved:          "Not saved",
+	DiffRevert:           "Revert: the old part into the current",
+	DiffSaveDenied:       "You may not save this file.",
+	DiffPrev:             "Previous change (Shift+F7)",
+	DiffNext:             "Next change (F7)",
 	ResetAction:          "Start over",
 	CommitFormMessage:    "Message",
 	CommitAction_Desc:    "Records the changes of the draft, with a message.",
@@ -332,6 +352,16 @@ var Messages_pt_BR = &Messages{
 	DiffLoading:          "Carregando…",
 	DiffLoadError:        "Não foi possível carregar o diff.",
 	DiffGone:             "Este arquivo não está mais alterado: foi commitado ou descartado enquanto isso.",
+	DiffUndo:             "Desfazer",
+	DiffRedo:             "Refazer",
+	DiffSave:             "Salvar",
+	DiffSaving:           "Salvando…",
+	DiffSaved:            "Salvo",
+	DiffUnsaved:          "Não salvo",
+	DiffRevert:           "Desfazer: a parte antiga no atual",
+	DiffSaveDenied:       "Você não pode salvar este arquivo.",
+	DiffPrev:             "Alteração anterior (Shift+F7)",
+	DiffNext:             "Próxima alteração (F7)",
 	ResetAction:          "Recomeçar",
 	CommitFormMessage:    "Mensagem",
 	CommitAction_Desc:    "Registra as alterações do rascunho, com uma mensagem.",

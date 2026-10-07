@@ -17,7 +17,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path"
+	pathpkg "path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -289,8 +289,8 @@ func (d *Draft) Changes(ctx context.Context) ([]Change, error) {
 	// the most alike first; alike the same, the closest by name and folder
 	near := func(p pair) float64 {
 		from, to := changes[gone[p.g].i].Path, changes[added[p.a].i].Path
-		n := similarity(path.Base(from), path.Base(to))
-		if path.Dir(from) == path.Dir(to) {
+		n := similarity(pathpkg.Base(from), pathpkg.Base(to))
+		if pathpkg.Dir(from) == pathpkg.Dir(to) {
 			n++
 		}
 		return n
@@ -333,6 +333,19 @@ func similarity(a, b string) float64 {
 	}
 	// the characters of the lines changed, over the longer's
 	return 1 - float64(diffmatchpatch.New().DiffLevenshtein(vx.LineDiff(a, b)))/float64(longer)
+}
+
+// WriteFile writes the file path of the draft with content: made, with its
+// folders, when it is not there.
+func (d *Draft) WriteFile(path, content string) error {
+	if err := d.check(path); err != nil {
+		return err
+	}
+	full := filepath.Join(d.Dir, filepath.FromSlash(strings.TrimPrefix(pathpkg.Clean("/"+path), "/")))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(full, []byte(content), 0o644)
 }
 
 // Versions are the file of ch as the last commit has it (old; "" for a file

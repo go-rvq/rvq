@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -294,6 +296,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 	b.userPage.EventFunc(eventDraft, b.draftEvent)
 	b.page.EventFunc(eventDiff, b.diffEvent)
 	b.userPage.EventFunc(eventDiff, b.diffEvent)
+	b.page.EventFunc(eventSave, b.saveEvent)
+	b.userPage.EventFunc(eventSave, b.saveEvent)
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.ownerKey(r); return key }
@@ -849,6 +853,59 @@ func (b *Builder) diffEvent(ctx *web.EventContext) (r web.EventResponse, err err
 	return r, nil
 }
 
+// eventSave saves a file edited in the diff browser.
+const eventSave = "gitEditSave"
+
+// writeOp is what writing the file path of d asks: IdeEdit for one that is
+// there, IdeCreate for one that is not.
+func writeOp(d *Draft, path string) IdeOp {
+	if _, err := os.Stat(filepath.Join(d.Dir, filepath.FromSlash(path))); err == nil {
+		return IdeEdit
+	}
+	return IdeCreate
+}
+
+// saveEvent is eventSave's handler: the file (path) of the request's draft
+// written with what its current side was edited to (content), as the IDE
+// writes it — by the permission of the path, its user a co-author of the
+// next commit —; the save's state told (vuetifyx.DiffSavedScript).
+func (b *Builder) saveEvent(ctx *web.EventContext) (r web.EventResponse, err error) {
+	if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
+		return r, perm.PermissionDenied
+	}
+	d, _, err := b.Draft(ctx.R)
+	if errors.Is(err, ErrNoAccess) {
+		return r, perm.PermissionDenied
+	}
+	if err != nil {
+		return
+	}
+	m := GetMessages(ctx.Context())
+	// a path as the summary gives it: clean, in the draft (no "..")
+	path := ctx.R.FormValue("path")
+	if path == "" || relPath(path) != path || d.check(path) != nil || inGit(path) {
+		r.RunScript = vx.DiffContentErrorScript(m.DiffSaveDenied)
+		return r, nil
+	}
+	if !b.AllowedOp(ctx.R, writeOp(d, path), path) {
+		r.RunScript = vx.DiffContentErrorScript(m.DiffSaveDenied)
+		return r, nil
+	}
+	// a form sends its lines ended by CRLF: the file keeps its own endings —
+	// \n, unless it has \r\n
+	text := ctx.R.FormValue("content")
+	if was, err := os.ReadFile(filepath.Join(d.Dir, filepath.FromSlash(path))); err != nil || !strings.Contains(string(was), "\r\n") {
+		text = strings.ReplaceAll(text, "\r\n", "\n")
+	}
+	if err := d.WriteFile(path, text); err != nil {
+		r.RunScript = vx.DiffContentErrorScript(err.Error())
+		return r, nil
+	}
+	b.noteEditor(ctx.R)
+	r.RunScript = vx.DiffSavedScript()
+	return r, nil
+}
+
 // draftView is the draft's card: its state, its actions, its changes (each
 // file's, browsed — vx-diff-browser) and its history.
 func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner string, own bool) (h.HTMLComponent, error) {
@@ -896,14 +953,20 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 	// eventDiff —, kept by the browser only while it is open)
 	files := make([]vx.DiffFile, 0, len(changes))
 	for _, ch := range changes {
-		files = append(files, vx.DiffSummary(ch.Path, ch.Status, ch.From, CodeLanguage(ch.Path)))
+		f := vx.DiffSummary(ch.Path, ch.Status, ch.From, CodeLanguage(ch.Path))
+		// edited here as the IDE edits it: by the permission of the path
+		f.ReadOnly = !b.AllowedOp(ctx.R, writeOp(d, ch.Path), ch.Path)
+		files = append(files, f)
 	}
 	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
 	if len(files) > 0 {
 		browser := vx.VXDiffBrowser(files...).Height("70vh").
 			Labels(m.DiffFiles, m.DiffOld, m.DiffNew, m.DiffBinary, m.NoChanges).
 			RenameLabels(m.DiffRenamedTo, m.DiffContentUnchanged).
-			Load(web.Plaid().EventFunc(eventDiff)).LoadTexts(m.DiffLoading, m.DiffLoadError)
+			Load(web.Plaid().EventFunc(eventDiff)).LoadTexts(m.DiffLoading, m.DiffLoadError).
+			Save(web.Plaid().EventFunc(eventSave)).
+			EditTexts(m.DiffUndo, m.DiffRedo, m.DiffSave, m.DiffSaving, m.DiffSaved, m.DiffUnsaved, m.DiffRevert).
+			NavTexts(m.DiffPrev, m.DiffNext)
 		if allowed(ActionDiscard) {
 			browser.ActionsSlot(v.VBtn("").Icon("mdi-undo").Variant(v.VariantText).Size(v.SizeXSmall).
 				Attr("title", m.DiscardAction).Attr("data-discard", true).

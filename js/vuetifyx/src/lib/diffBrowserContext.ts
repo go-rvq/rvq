@@ -11,6 +11,7 @@ export interface DiffFile {
   old?: string
   new?: string
   binary?: boolean
+  readOnly?: boolean // not to be edited here, though save is given
   removed?: number[] // 1-based lines of old
   added?: number[] // of new
   delRanges?: Record<number, [number, number, number][]>
@@ -27,6 +28,32 @@ export interface Content {
   error?: string
 }
 
+// SaveState is what save is given with a file's path: a reactive object,
+// value the text to save; the server sets saved = true, or error.
+export interface SaveState {
+  value: string
+  saved?: boolean
+  error?: string
+}
+
+export interface Labels {
+  old: string
+  new: string
+  binary: string
+  renamed: string
+  unchanged: string
+  loading: string
+  undo: string
+  redo: string
+  save: string
+  saving: string
+  saved: string
+  unsaved: string
+  revert: string
+  prev: string
+  next: string
+}
+
 export interface DiffBrowserContext {
   // the summary: the files' paths, status, origins, languages — their
   // contents too when no load is given
@@ -37,7 +64,15 @@ export interface DiffBrowserContext {
   request: (file: DiffFile) => void
   active: { path: string }
   open: (file: DiffFile) => void
-  labels: ComputedRef<{ old: string; new: string; binary: string; renamed: string; unchanged: string; loading: string }>
+  labels: ComputedRef<Labels>
+  // the theme's darkness, for the editors
+  dark: ComputedRef<boolean>
+  // whether a file is edited here: save given, the file not read only
+  editable: (file: DiffFile) => boolean
+  // asks the server to save the file at path: save(path, state)
+  save: (path: string, state: SaveState) => void
+  // marks a file's tab as having changes not saved
+  markDirty: (path: string, dirty: boolean) => void
   // the browser's `actions` slot, rendered by each file of the tree
   actions: () => Slot | undefined
 }

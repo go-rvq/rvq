@@ -163,12 +163,14 @@ type DiffFile struct {
 	Path string `json:"path"`
 	// From is a renamed (moved) file's path before: Old is its content
 	// there, New here.
-	From      string           `json:"from,omitempty"`
-	Status    string           `json:"status,omitempty"`
-	Language  string           `json:"language,omitempty"`
-	Old       string           `json:"old,omitempty"`
-	New       string           `json:"new,omitempty"`
-	Binary    bool             `json:"binary,omitempty"`
+	From     string `json:"from,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Language string `json:"language,omitempty"`
+	Old      string `json:"old,omitempty"`
+	New      string `json:"new,omitempty"`
+	Binary   bool   `json:"binary,omitempty"`
+	// ReadOnly: not to be edited in the browser, though it saves (Save)
+	ReadOnly  bool             `json:"readOnly,omitempty"`
 	Removed   []int            `json:"removed,omitempty"`
 	Added     []int            `json:"added,omitempty"`
 	DelRanges map[int][][3]int `json:"delRanges,omitempty"`
@@ -205,6 +207,10 @@ func DiffContentScript(f DiffFile) string {
 	}
 	return "content.value = " + string(b)
 }
+
+// DiffSavedScript is the script an event of Save answers with when it saved
+// the file.
+func DiffSavedScript() string { return "content.saved = true" }
 
 // DiffContentErrorScript is the script an event of Load answers with when it
 // has no diff to give: what the tab says.
@@ -243,6 +249,37 @@ func (b *VXDiffBrowserBuilder) Load(event *web.VueEventTagBuilder) *VXDiffBrowse
 		Query("status", web.Var("content.file.status || ''")).
 		Go()
 	b.tag.Attr(":load", "(content) => "+call)
+	return b
+}
+
+// Save makes the current sides editable — the difference computed again as
+// it is edited, a change of the old taken back by its button, undo and redo,
+// a save button (and Ctrl+S) —, and is how a file is saved: the event, called
+// with the save's state in its scope ({content}: content.value the text), the
+// file's path in its query (path) and the text in its form (content); it
+// answers with DiffSavedScript, or DiffContentErrorScript, as its RunScript.
+// A file ReadOnly is not edited.
+func (b *VXDiffBrowserBuilder) Save(event *web.VueEventTagBuilder) *VXDiffBrowserBuilder {
+	call := event.Scope(web.Var("{content}")).
+		Query("path", web.Var("path")).
+		FieldValue("content", web.Var("content.value")).
+		Go()
+	b.tag.Attr(":save", "(path, content) => "+call)
+	return b
+}
+
+// EditTexts are the words of the editing: undo, redo, save, saving, saved,
+// not saved, and the title of a revert button.
+func (b *VXDiffBrowserBuilder) EditTexts(undo, redo, save, saving, saved, unsaved, revert string) *VXDiffBrowserBuilder {
+	b.tag.Attr("undo-text", undo, "redo-text", redo, "save-text", save, "saving-text", saving,
+		"saved-text", saved, "unsaved-text", unsaved, "revert-text", revert)
+	return b
+}
+
+// NavTexts are the titles of the buttons that go to the previous and the
+// next change.
+func (b *VXDiffBrowserBuilder) NavTexts(prev, next string) *VXDiffBrowserBuilder {
+	b.tag.Attr("prev-text", prev, "next-text", next)
 	return b
 }
 

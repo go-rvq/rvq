@@ -8,7 +8,7 @@ import { themeDark, themeLight } from 'dockview-core'
 import 'dockview-vue/dist/styles/dockview.css'
 import DiffBrowserFiles from './DiffBrowserFiles.vue'
 import DiffBrowserFile from './DiffBrowserFile.vue'
-import { diffBrowserKey, renamedTo, type Content, type DiffFile } from './diffBrowserContext'
+import { diffBrowserKey, renamedTo, type Content, type DiffFile, type SaveState } from './diffBrowserContext'
 
 // <vx-diff-browser>: the changes of a set of files, browsed. On the left the
 // tree of the files changed — each in its folders, its path kept —; clicking
@@ -40,6 +40,20 @@ const props = withDefaults(defineProps<{
   load?: (content: Content) => unknown
   loadErrorText?: string
   loadingText?: string
+  // save writes the file at path with what its current side has been edited
+  // to: save(path, state) — state reactive, its value the text; the server's
+  // answer sets state.saved = true, or state.error. With it, the current
+  // sides are editable (a file readOnly aside).
+  save?: (path: string, state: SaveState) => unknown
+  undoText?: string
+  redoText?: string
+  saveText?: string
+  savingText?: string
+  savedText?: string
+  unsavedText?: string
+  revertText?: string
+  prevText?: string
+  nextText?: string
 }>(), {
   height: '70vh',
   filesTitle: 'Files',
@@ -51,6 +65,15 @@ const props = withDefaults(defineProps<{
   unchangedText: 'Its content did not change.',
   loadErrorText: 'The diff could not be loaded.',
   loadingText: 'Loading…',
+  undoText: 'Undo',
+  redoText: 'Redo',
+  saveText: 'Save',
+  savingText: 'Saving…',
+  savedText: 'Saved',
+  unsavedText: 'Not saved',
+  revertText: 'Revert: the old part into the current',
+  prevText: 'Previous change (Shift+F7)',
+  nextText: 'Next change (F7)',
 })
 
 const slots = useSlots()
@@ -82,13 +105,25 @@ function open(file: DiffFile) {
     id,
     component: 'diff',
     // a renamed file's tab says both names
-    title: file.from
-      ? (file.from.split('/').pop() || file.from) + ' → ' + renamedTo(file)
-      : file.path.split('/').pop() || file.path,
+    title: tabTitle(file),
     params: { path: file.path },
     position: other ? { referencePanel: other.id, direction: 'within' } : { referencePanel: 'files', direction: 'right' },
   })
   if (!other) dv.getPanel('files')?.api.setSize({ width: 280 })
+}
+
+// tabTitle is a file's tab's title: its name (a renamed one's both), ● when
+// it has changes not saved
+function tabTitle(file: DiffFile, dirty = false) {
+  const name = file.from
+    ? (file.from.split('/').pop() || file.from) + ' → ' + renamedTo(file)
+    : file.path.split('/').pop() || file.path
+  return (dirty ? '● ' : '') + name
+}
+
+function markDirty(path: string, dirty: boolean) {
+  const f = summary.value.find((x) => x.path === path)
+  if (f) api.value?.getPanel('file:' + path)?.api.setTitle(tabTitle(f, dirty))
 }
 
 // the contents of the files opened, by path: only those, and only while
@@ -130,7 +165,27 @@ provide(diffBrowserKey, {
     renamed: props.renamedText,
     unchanged: props.unchangedText,
     loading: props.loadingText,
+    undo: props.undoText,
+    redo: props.redoText,
+    save: props.saveText,
+    saving: props.savingText,
+    saved: props.savedText,
+    unsaved: props.unsavedText,
+    revert: props.revertText,
+    prev: props.prevText,
+    next: props.nextText,
   })),
+  dark: computed(() => theme.current.value.dark),
+  editable: (file: DiffFile) => !!props.save && !file.readOnly && !file.binary,
+  save: (path: string, state: SaveState) => {
+    try {
+      const p = props.save?.(path, state) as any
+      if (p && typeof p.catch === 'function') p.catch((e: any) => (state.error = String(e?.message || e)))
+    } catch (e: any) {
+      state.error = String(e?.message || e)
+    }
+  },
+  markDirty,
   actions: () => slots.actions,
 })
 
@@ -148,28 +203,33 @@ function onReady(event: DockviewReadyEvent) {
   if (summary.value.length) open(summary.value[0])
 }
 
-// a file that is gone (discarded) closes its tab
-watch(
-  () => summary.value.map((f) => f.path),
-  (paths) => {
-    const dv = api.value
-    if (!dv) return
-    for (const p of [...dv.panels]) {
-      if (p.id.startsWith('file:') && !paths.includes(p.id.slice(5))) p.api.close()
-    }
-  },
-)
+// fileKey is what a file of the summary is: its path, status and origin.
+// The summary may be given anew on each render of the page (a literal of its
+// template — the admin's renders on every request) and say the same: only a
+// change of what it says counts. Watching the array itself, each answer of a
+// load re-rendered the page, which gave a new array, which asked again: a
+// loop of requests.
+const fileKey = (f: DiffFile) => [f.path, f.status || '', f.from || ''].join('\u0001')
+const summaryKey = computed(() => summary.value.map(fileKey).join('\u0002'))
 
-// the summary changed (refreshed): the contents opened are asked for again
-watch(
-  summary,
-  () => {
-    for (const f of summary.value) if (contents.has(f.path)) {
-      contents.delete(f.path)
+watch(summaryKey, () => {
+  const dv = api.value
+  const byPath = new Map(summary.value.map((f) => [f.path, f]))
+  // a file that is gone (discarded) closes its tab
+  if (dv) {
+    for (const p of [...dv.panels]) {
+      if (p.id.startsWith('file:') && !byPath.has(p.id.slice(5))) p.api.close()
+    }
+  }
+  // a file opened that changed (its status, its origin) is asked for again
+  for (const [path, content] of [...contents]) {
+    const f = byPath.get(path)
+    if (f && fileKey(f) !== fileKey(content.file)) {
+      contents.delete(path)
       request(f)
     }
-  },
-)
+  }
+})
 
 defineExpose({ open })
 </script>
@@ -236,6 +296,29 @@ defineExpose({ open })
   padding: 6px 10px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   font-size: 0.8125rem;
+}
+.vx-diff-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.vx-diff-sides-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.vx-diff-sides-labels > .vx-diff-side-label {
+  border-bottom: 0;
+}
+.vx-diff-sides-labels > .vx-diff-side-label + .vx-diff-side-label {
+  border-left: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.vx-diff-merge {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .vx-diff-sides {
   display: grid;

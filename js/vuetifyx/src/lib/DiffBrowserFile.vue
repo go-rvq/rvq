@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from 'vue'
-import CodeView from './CodeView.vue'
-import { diffBrowserKey, statusColor, unchangedContent } from './diffBrowserContext'
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
+import DiffMergeView from './DiffMergeView.vue'
+import { diffBrowserKey, statusColor, unchangedContent, type SaveState } from './diffBrowserContext'
 
-// A tab of <vx-diff-browser>: a file, the old and the current side by side,
-// the changed lines and content marked, the two sides scrolling together. A
-// renamed (moved) one says so — from where to where —, its content before
-// compared with its content now; with its content the same, that is all.
+// A tab of <vx-diff-browser>: a file, the old and the current side by side
+// as IntelliJ compares them (DiffMergeView). A renamed (moved) one says so —
+// from where to where —, its content before compared with its content now;
+// with its content the same, that is all. With save given, the current is
+// edited here: the difference computed again, a change of the old taken
+// back by its button, the edits undone and redone, saved (Ctrl+S too).
 
 const props = defineProps<{ params: { params: { path: string } } }>()
 const ctx = inject(diffBrowserKey)!
+const path = computed(() => props.params.params.path)
+
 // the file's summary, and its content once had (ctx.request)
-const entry = computed(() => ctx.files.value.find((f) => f.path === props.params.params.path))
-const content = computed(() => ctx.content(props.params.params.path))
+const entry = computed(() => ctx.files.value.find((f) => f.path === path.value))
+const content = computed(() => ctx.content(path.value))
 // the diff, once the server set it: over the summary
 const file = computed(() => {
   const c = content.value
@@ -22,52 +26,59 @@ onMounted(() => {
   if (entry.value) ctx.request(entry.value)
 })
 
-// gaps align the two sides, as IntelliJ does: where a block of lines was
-// changed, the side with fewer lines gets blank rows after its own, so what
-// follows starts on the same row on both — and the two scroll as one.
-const gaps = computed(() => {
-  const f = file.value
-  const oldGaps: Record<number, number> = {}
-  const newGaps: Record<number, number> = {}
-  if (!f) return { old: oldGaps, new: newGaps }
-  const oldN = (f.old ?? '').split('\n').length
-  const newN = (f.new ?? '').split('\n').length
-  const removed = new Set(f.removed || [])
-  const added = new Set(f.added || [])
-  let i = 1
-  let j = 1
-  while (i <= oldN || j <= newN) {
-    const r0 = i <= oldN && removed.has(i)
-    const a0 = j <= newN && added.has(j)
-    if (!r0 && !a0) {
-      i++
-      j++
-      continue
-    }
-    let r = 0
-    while (i + r <= oldN && removed.has(i + r)) r++
-    let a = 0
-    while (j + a <= newN && added.has(j + a)) a++
-    if (r < a) oldGaps[i + r] = (oldGaps[i + r] || 0) + a - r
-    else if (a < r) newGaps[j + a] = (newGaps[j + a] || 0) + r - a
-    i += r
-    j += a
-  }
-  return { old: oldGaps, new: newGaps }
-})
+const editable = computed(() => !!file.value && ctx.editable(file.value))
+const merge = ref<InstanceType<typeof DiffMergeView>>()
 
-// the two sides scroll together
-function syncScroll(e: Event) {
-  const src = e.target as HTMLElement
-  src
-    .closest('.vx-diff-sides')
-    ?.querySelectorAll<HTMLElement>('.vx-diff-side-body')
-    .forEach((el) => {
-      if (el !== src && (el.scrollTop !== src.scrollTop || el.scrollLeft !== src.scrollLeft)) {
-        el.scrollTop = src.scrollTop
-        el.scrollLeft = src.scrollLeft
+// the current as edited, and as last saved (or loaded)
+const text = ref('')
+const savedText = ref('')
+watch(
+  () => file.value?.new,
+  (v) => {
+    if (v === undefined) return
+    if (text.value === savedText.value) text.value = v ?? ''
+    savedText.value = v ?? ''
+  },
+  { immediate: true },
+)
+const dirty = computed(() => !!file.value && text.value !== savedText.value)
+watch(dirty, (d) => ctx.markDirty(path.value, d))
+
+const hist = reactive({ canUndo: false, canRedo: false })
+const saving = ref(false)
+const saveError = ref('')
+const justSaved = ref(false)
+
+function onChange(t: string) {
+  text.value = t
+  justSaved.value = false
+}
+
+// save asks the server to write the current as edited (ctx.save): its
+// answer sets the state's saved, or error
+function save() {
+  if (!editable.value || saving.value || !dirty.value) return
+  const state = reactive<SaveState>({ value: text.value, saved: false, error: undefined })
+  saving.value = true
+  saveError.value = ''
+  const stop = watch(
+    () => [state.saved, state.error],
+    () => {
+      if (state.error) {
+        saving.value = false
+        saveError.value = state.error
+        stop()
+      } else if (state.saved) {
+        saving.value = false
+        savedText.value = state.value
+        justSaved.value = true
+        // the file as it is now: what a tab opened again shows
+        if (content.value?.value) content.value.value.new = state.value
+        stop()
       }
-    })
+    },
+  )
+  ctx.save(path.value, state)
 }
 </script>
 
@@ -93,37 +104,49 @@ function syncScroll(e: Event) {
         <span>{{ ctx.labels.value.loading }}</span>
       </div>
     </div>
-    <div v-else-if="unchangedContent(file)" class="pa-4 vx-diff-renamed" data-renamed-only>
+    <div v-else-if="unchangedContent(file) && !editable" class="pa-4 vx-diff-renamed" data-renamed-only>
       {{ ctx.labels.value.renamed }} <code>{{ file.path }}</code>. {{ ctx.labels.value.unchanged }}
     </div>
     <div v-else-if="file.binary" class="pa-4 text-medium-emphasis">{{ ctx.labels.value.binary }}</div>
-    <div v-else class="vx-diff-sides">
-      <div class="vx-diff-side">
+    <template v-else>
+      <div class="vx-diff-toolbar" data-diff-toolbar>
+        <!-- the changes, one by one (F7, Shift+F7) -->
+        <v-btn size="small" variant="text" icon="mdi-arrow-up" density="comfortable" :title="ctx.labels.value.prev"
+          data-diff-prev @click="merge?.prev()" />
+        <v-btn size="small" variant="text" icon="mdi-arrow-down" density="comfortable" :title="ctx.labels.value.next"
+          data-diff-next @click="merge?.next()" />
+        <v-divider v-if="editable" vertical class="mx-2" />
+        <template v-if="editable">
+        <v-btn size="small" variant="text" prepend-icon="mdi-undo" :disabled="!hist.canUndo" data-diff-undo
+          @click="merge?.undo()">{{ ctx.labels.value.undo }}</v-btn>
+        <v-btn size="small" variant="text" prepend-icon="mdi-redo" :disabled="!hist.canRedo" data-diff-redo
+          @click="merge?.redo()">{{ ctx.labels.value.redo }}</v-btn>
+        <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-content-save" class="ms-2"
+          :loading="saving" :disabled="!dirty" data-diff-save @click="save">{{ ctx.labels.value.save }}</v-btn>
+        <span v-if="saveError" class="ms-3 text-error text-body-2" data-diff-save-error>{{ saveError }}</span>
+        <span v-else-if="saving" class="ms-3 text-medium-emphasis text-body-2">{{ ctx.labels.value.saving }}</span>
+        <span v-else-if="dirty" class="ms-3 text-warning text-body-2" data-diff-dirty>● {{ ctx.labels.value.unsaved }}</span>
+        <span v-else-if="justSaved" class="ms-3 text-success text-body-2" data-diff-saved>
+          <v-icon size="16" icon="mdi-check" /> {{ ctx.labels.value.saved }}</span>
+        </template>
+      </div>
+      <div class="vx-diff-sides-labels">
         <div class="vx-diff-side-label">{{ ctx.labels.value.old }}</div>
-        <div class="vx-diff-side-body" @scroll="syncScroll">
-          <CodeView
-            :code="file.old || ''"
-            :language="file.language"
-            mark-kind="del"
-            :mark-lines="file.removed || []"
-            :change-ranges="file.delRanges || {}"
-            :gaps="gaps.old"
-          />
-        </div>
-      </div>
-      <div class="vx-diff-side">
         <div class="vx-diff-side-label">{{ ctx.labels.value.new }}</div>
-        <div class="vx-diff-side-body" @scroll="syncScroll">
-          <CodeView
-            :code="file.new || ''"
-            :language="file.language"
-            mark-kind="add"
-            :mark-lines="file.added || []"
-            :change-ranges="file.insRanges || {}"
-            :gaps="gaps.new"
-          />
-        </div>
       </div>
-    </div>
+      <DiffMergeView
+        ref="merge"
+        class="vx-diff-merge"
+        :old="file.old || ''"
+        :current="file.new || ''"
+        :language="file.language"
+        :editable="editable"
+        :dark="ctx.dark.value"
+        :revert-title="ctx.labels.value.revert"
+        @change="onChange"
+        @history="(h) => Object.assign(hist, h)"
+        @save="save"
+      />
+    </template>
   </div>
 </template>
