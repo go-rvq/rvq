@@ -97,6 +97,11 @@ func TestBuilder(t *testing.T) {
 		!strings.Contains(body, "href=&#39;/admin/site-files/editor&#39;") || !strings.Contains(body, "Open the editor") {
 		t.Fatalf("the page: %d %.300s", w.Code, body)
 	}
+	// the texts of the IDE's Changes and Git panels (IdeMessages)
+	if body := w.Body.String(); !strings.Contains(body, ":messages=") || !strings.Contains(body, "chooseCommit") ||
+		!strings.Contains(body, "Choose a commit.") {
+		t.Errorf("the IDE's messages: %.300s", body[strings.Index(body, "vx-gad-ide"):])
+	}
 	// the site of the draft, under the admin
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-preview/en-us/about", nil))
@@ -657,5 +662,75 @@ func TestDiffBrowserSave(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(filepath.Dir(draft), "outside.gadx")); err == nil {
 		t.Error("a file written out of the draft")
+	}
+}
+
+// The IDE's Changes and Git panels: the workspace says it is in git; the
+// summary, a file's diff and its save, by the IDE's API (api/ide/git/…), as
+// the IDE's own operations ask; the branches and commits, gad's (read only).
+func TestIDEChanges(t *testing.T) {
+	var invalid error
+	h, repo, _ := app(t, &invalid)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
+	draft := filepath.Join(repo.DraftsDir, "u1")
+	if err := os.WriteFile(filepath.Join(draft, "index.gadx"), []byte("changed in the IDE\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	call := func(method, path, body string) (int, map[string]any) {
+		t.Helper()
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(method, "/admin/site-files/ide/api/ide/"+path, strings.NewReader(body)))
+		var r map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &r)
+		return w.Code, r
+	}
+	if _, r := call("GET", "workspace", ""); r["git"] != true {
+		t.Errorf("the workspace: %v", r)
+	}
+	code, r := call("GET", "git/changes", "")
+	if files, _ := r["files"].([]any); code != 200 || len(files) != 1 || files[0].(map[string]any)["path"] != "index.gadx" {
+		t.Fatalf("the summary: %d %v", code, r)
+	}
+	code, r = call("GET", "git/diff?path=index.gadx", "")
+	if code != 200 || r["old"] != "old\n" || r["new"] != "changed in the IDE\n" {
+		t.Errorf("the diff: %d %v", code, r)
+	}
+	if code, _ := call("GET", "git/diff?path=nothing.gadx", ""); code != 404 {
+		t.Errorf("a file not changed: %d", code)
+	}
+	code, r = call("POST", "git/save", `{"path":"index.gadx","content":"saved\r\nhere\r\n"}`)
+	if code != 200 || r["saved"] != true {
+		t.Fatalf("saving: %d %v", code, r)
+	}
+	if b, _ := os.ReadFile(filepath.Join(draft, "index.gadx")); string(b) != "saved\nhere\n" {
+		t.Errorf("the draft has %q", b)
+	}
+	if code, _ := call("POST", "git/save", `{"path":".git/config","content":"x"}`); code != 403 {
+		t.Errorf("saving .git: %d", code)
+	}
+
+	// the Git panel: gad's IDE on the draft
+	code, r = call("GET", "git/branches", "")
+	if bs, _ := r["branches"].([]any); code != 200 || len(bs) == 0 {
+		t.Fatalf("the branches: %d %v", code, r)
+	}
+	code, r = call("GET", "git/log?ref=HEAD", "")
+	cs, _ := r["commits"].([]any)
+	if code != 200 || len(cs) == 0 {
+		t.Fatalf("the log: %d %v", code, r)
+	}
+	hash, _ := cs[0].(map[string]any)["hash"].(string)
+	if code, r = call("GET", "git/commit?hash="+hash, ""); code != 200 || r["hash"] != hash {
+		t.Errorf("the commit: %d %v", code, r)
+	}
+	if code, _ := call("GET", "git/file?hash="+hash+"&path=.git/config", ""); code != 403 {
+		t.Errorf("a file of .git: %d", code)
+	}
+	if code, _ := call("POST", "git/log", ""); code != 405 {
+		t.Errorf("a log posted: %d", code)
+	}
+	if code, _ := call("GET", "git/nothing", ""); code != 404 {
+		t.Errorf("an unknown route: %d", code)
 	}
 }

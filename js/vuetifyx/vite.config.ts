@@ -12,6 +12,14 @@ import svgLoader from 'vite-svg-loader';
 // Utilities
 import {defineConfig, loadEnv} from 'vite'
 import {fileURLToPath, URL} from 'node:url'
+import {existsSync} from 'node:fs'
+
+// The diff browser (<vx-diff-browser>) is the gad IDE's (web/ide-vuetify,
+// src/diff): from the source of a gad checkout — GAD_DIR, or the one beside
+// this workspace —, as js/gadide has the IDE.
+const gadDir = resolve(process.env.GAD_DIR || resolve(__dirname, '../../../../../../../gade/src/github.com/gad-lang/gad'))
+const gadDiff = resolve(gadDir, 'web/ide-vuetify/src/diff/index.ts')
+if (!existsSync(gadDiff)) throw new Error(`vuetifyx: no ${gadDiff} (set GAD_DIR to a gad checkout with its submodules)`)
 
 // https://vitejs.dev/config/
 export default ({mode}) => {
@@ -84,8 +92,16 @@ export default ({mode}) => {
     },
     resolve: {
       alias: {
+        '@gad-lang/ide-vuetify/diff': gadDiff,
         '@': fileURLToPath(new URL('./src', import.meta.url))
       },
+      // one of each — the gad source's imports resolved here, not in its
+      // node_modules: CodeMirror's state fields need it, Vuetify's provides
+      dedupe: ['vue', 'vuetify', '@codemirror/state', '@codemirror/view', '@codemirror/language',
+        '@codemirror/autocomplete', '@codemirror/lint', '@codemirror/commands', '@codemirror/merge',
+        '@codemirror/theme-one-dark', '@codemirror/lang-css', '@codemirror/lang-go', '@codemirror/lang-html',
+        '@codemirror/lang-javascript', '@codemirror/lang-json',
+        'dockview-vue', 'dockview-core', '@gad-lang/codemirror-gad'],
       extensions: [
         '.js',
         '.json',

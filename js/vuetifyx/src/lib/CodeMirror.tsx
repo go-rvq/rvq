@@ -1,4 +1,4 @@
-import {LANGUAGES} from '@/lib/codemirrorLanguages'
+import {LANGUAGES} from '@gad-lang/ide-vuetify/diff'
 import {defineComponent, ExtractPublicPropTypes, h, shallowRef} from 'vue'
 import {Codemirror} from 'vue-codemirror'
 import {EditorView} from '@codemirror/view'

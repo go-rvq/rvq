@@ -208,6 +208,12 @@ func asks(op string, b *ideBody, root string) []ideNeed {
 // ServeHTTP serves /api/ide/<op> (its prefix stripped).
 func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	op, ok := strings.CutPrefix(r.URL.Path, "/api/ide/")
+	// the draft's repository: its changes (the IDE's Changes panel, ours:
+	// changes.go), its branches and commits (its Git panel, gad's) — git/…
+	if ok && strings.HasPrefix(op, "git/") {
+		h.serveGit(w, r, op)
+		return
+	}
 	spec, known := ideOps[op]
 	if !ok || !known {
 		ideError(w, http.StatusNotFound, "not available")
@@ -276,8 +282,9 @@ func (h *IDE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			actions[name] = allowed(o, "")
 		}
 		w.Header().Set("Content-Type", "application/json")
+		// git: the IDE shows the draft's changes and its branches (api/ide/git/…)
 		_ = json.NewEncoder(w).Encode(map[string]any{"root": "/", "name": h.Name, "openFile": "", "compute": "server",
-			"actions": actions})
+			"actions": actions, "git": true})
 		return
 	}
 	s.Handler().ServeHTTP(w, r)

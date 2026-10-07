@@ -16,6 +16,9 @@
     "paths": {
       "@/*": [
        "src/*"
+      ],
+      "@gad-lang/ide-vuetify/diff": [
+       "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/diff/index.ts"
       ]
      }
   },

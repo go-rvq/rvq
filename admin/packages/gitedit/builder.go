@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -231,6 +229,7 @@ func (b *Builder) Draft(r *http.Request) (*Draft, Author, error) {
 
 func (b *Builder) Install(p *presets.Builder) error {
 	ConfigureMessages(p.I18n())
+	ConfigureIdeMessages(p.I18n())
 	if b.Path == "" {
 		b.Path = "/site-files"
 	}
@@ -417,11 +416,12 @@ func (b *Builder) ideBase(r *http.Request) string { return b.scopeURL(r) + "/ide
 // under a header.
 func (b *Builder) EditorURL(r *http.Request) string { return b.scopeURL(r) + "/editor" }
 
-// ideComponent is the IDE (<vx-gad-ide>), height tall.
+// ideComponent is the IDE (<vx-gad-ide>), height tall; the texts of its
+// Changes and Git panels in the user's language (IdeMessages).
 func (b *Builder) ideComponent(r *http.Request, height string) h.HTMLComponent {
 	base := b.ideBase(r)
 	return h.Tag("vx-gad-ide").Attr("src", base+"gadide.js?"+web.ExeMTime).Attr("css", base+"gadide.css?"+web.ExeMTime).
-		Attr("base", base).Attr("height", height)
+		Attr("base", base).Attr("height", height).Attr(":messages", GetIdeMessages(r.Context()))
 }
 
 // editorFunc is the page of the editor: a header — the admin's brand, the
@@ -828,42 +828,21 @@ func (b *Builder) diffEvent(ctx *web.EventContext) (r web.EventResponse, err err
 		return
 	}
 	m := GetMessages(ctx.Context())
-	path := ctx.R.FormValue("path")
-	changes, err := d.Changes(ctx.Context())
-	if err != nil {
+	f, err := diffOf(ctx.Context(), d, ctx.R.FormValue("path"))
+	switch {
+	case err != nil:
 		r.RunScript = vx.DiffContentErrorScript(err.Error())
-		return r, nil
+	case f == nil:
+		// committed or discarded meanwhile
+		r.RunScript = vx.DiffContentErrorScript(m.DiffGone)
+	default:
+		r.RunScript = vx.DiffContentScript(*f)
 	}
-	for _, ch := range changes {
-		if ch.Path != path {
-			continue
-		}
-		old, cur, err := d.Versions(ctx.Context(), ch)
-		if err != nil {
-			r.RunScript = vx.DiffContentErrorScript(err.Error())
-			return r, nil
-		}
-		f := vx.NewDiffFile(ch.Path, ch.Status, CodeLanguage(ch.Path), old, cur)
-		f.From = ch.From
-		r.RunScript = vx.DiffContentScript(f)
-		return r, nil
-	}
-	// committed or discarded meanwhile
-	r.RunScript = vx.DiffContentErrorScript(m.DiffGone)
 	return r, nil
 }
 
 // eventSave saves a file edited in the diff browser.
 const eventSave = "gitEditSave"
-
-// writeOp is what writing the file path of d asks: IdeEdit for one that is
-// there, IdeCreate for one that is not.
-func writeOp(d *Draft, path string) IdeOp {
-	if _, err := os.Stat(filepath.Join(d.Dir, filepath.FromSlash(path))); err == nil {
-		return IdeEdit
-	}
-	return IdeCreate
-}
 
 // saveEvent is eventSave's handler: the file (path) of the request's draft
 // written with what its current side was edited to (content), as the IDE
@@ -881,24 +860,13 @@ func (b *Builder) saveEvent(ctx *web.EventContext) (r web.EventResponse, err err
 		return
 	}
 	m := GetMessages(ctx.Context())
-	// a path as the summary gives it: clean, in the draft (no "..")
-	path := ctx.R.FormValue("path")
-	if path == "" || relPath(path) != path || d.check(path) != nil || inGit(path) {
-		r.RunScript = vx.DiffContentErrorScript(m.DiffSaveDenied)
-		return r, nil
-	}
-	if !b.AllowedOp(ctx.R, writeOp(d, path), path) {
-		r.RunScript = vx.DiffContentErrorScript(m.DiffSaveDenied)
-		return r, nil
-	}
-	// a form sends its lines ended by CRLF: the file keeps its own endings —
-	// \n, unless it has \r\n
-	text := ctx.R.FormValue("content")
-	if was, err := os.ReadFile(filepath.Join(d.Dir, filepath.FromSlash(path))); err != nil || !strings.Contains(string(was), "\r\n") {
-		text = strings.ReplaceAll(text, "\r\n", "\n")
-	}
-	if err := d.WriteFile(path, text); err != nil {
-		r.RunScript = vx.DiffContentErrorScript(err.Error())
+	allowed := func(op IdeOp, p string) bool { return b.AllowedOp(ctx.R, op, p) }
+	if err := saveChange(d, ctx.R.FormValue("path"), ctx.R.FormValue("content"), allowed); err != nil {
+		msg := err.Error()
+		if errors.Is(err, errSaveDenied) {
+			msg = m.DiffSaveDenied
+		}
+		r.RunScript = vx.DiffContentErrorScript(msg)
 		return r, nil
 	}
 	b.noteEditor(ctx.R)
@@ -951,12 +919,9 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 	// last commit's and the draft's side by side
 	// (the summary: a file's contents are asked for when its tab opens —
 	// eventDiff —, kept by the browser only while it is open)
-	files := make([]vx.DiffFile, 0, len(changes))
-	for _, ch := range changes {
-		f := vx.DiffSummary(ch.Path, ch.Status, ch.From, CodeLanguage(ch.Path))
-		// edited here as the IDE edits it: by the permission of the path
-		f.ReadOnly = !b.AllowedOp(ctx.R, writeOp(d, ch.Path), ch.Path)
-		files = append(files, f)
+	files, err := diffSummary(c, d, func(op IdeOp, p string) bool { return b.AllowedOp(ctx.R, op, p) })
+	if err != nil {
+		return nil, err
 	}
 	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
 	if len(files) > 0 {
