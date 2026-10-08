@@ -14,6 +14,7 @@ import (
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/fields/schemaform"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -97,15 +98,27 @@ func (b *Builder) configureConfigModel(pb *presets.Builder) {
 		URIName("seo_config").
 		Label("SEOConfig")
 
-	// The detail shows the whole config as YAML (prismjs highlighting). The
-	// history revision detail renders through this same Detailing, so a revision
-	// is shown as the YAML of its stored Data.
+	// The detail shows the config as a schema form, read only: each setting it
+	// knows by its label (configSchema); what the Data holds besides, as YAML.
+	// The history revision detail renders through this same Detailing, so a
+	// revision is shown the same way, from its stored Data.
 	b.ConfigModel.Detailing("Data")
 	b.ConfigModel.Detailing().Field("Data").
-		Label("YAML").
+		Label("SEOConfig").
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			c := field.Obj.(*SEOConfig)
-			return vx.VXCode(configDataYAML(c)).Language("yaml")
+			msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSeoKey, Messages_en_US).(*Messages)
+			schema, err := configSchema(msgr)
+			if err != nil {
+				return vx.VXCode(configDataYAML(c)).Language("yaml")
+			}
+			comps := h.HTMLComponents{schemaform.New().DetailComponent(ctx, schema, map[string]any(c.Data))}
+			// what the schema does not know, kept in sight
+			if rest := configDataOthers(c, schema); rest != "" {
+				comps = append(comps, h.Div(h.Div(h.Text(msgr.SEOConfigYAML)).Class("text-caption text-medium-emphasis mb-1"),
+					vx.VXCode(rest).Language("yaml")).Class("mt-4"))
+			}
+			return comps
 		})
 
 }
