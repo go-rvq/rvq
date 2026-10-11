@@ -2,13 +2,7 @@ package schemaform
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-
-	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/presets"
-	"github.com/go-rvq/rvq/web"
-	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
 // WidthUnits are the units a row of a group is divided in: a field's
@@ -114,89 +108,6 @@ func Rows(fields []*Field) (rows [][]*Field) {
 		rows = append(rows, []*Field{f})
 	}
 	return
-}
-
-// drawRows draws fields by their rows: a group's a row of columns, each at
-// its share (Field.Percent); on a narrow screen they stack.
-func drawRows(fields []*Field, draw func(f *Field) h.HTMLComponent) (comps []h.HTMLComponent) {
-	for _, row := range Rows(fields) {
-		if row[0].Row == 0 {
-			comps = append(comps, draw(row[0]))
-			continue
-		}
-		if g := row[0].Group; g != nil && (g.Kind == GroupTabs || g.Kind == GroupSteps) {
-			comps = append(comps, drawTabs(row, g, draw))
-			continue
-		}
-		cols := make([]h.HTMLComponent, len(row))
-		for i, f := range row {
-			cols[i] = v.VCol(draw(f)).Attr("style", columnStyle(f.Percent)).
-				Class("py-0 sf-col").Attr("data-schemaform-column", f.Name)
-		}
-		comps = append(comps, h.Style(columnCSS), v.VRow(cols...).Dense(true).Class("mb-1").
-			Attr("data-schemaform-row", true))
-	}
-	return
-}
-
-// fieldTitle is a field as a tab names it: its label, else its name.
-func fieldTitle(f *Field) string {
-	if l := f.Meta.String("label"); l != "" {
-		return l
-	}
-	return presets.HumanizeString(f.Name)
-}
-
-// drawTabs draws the fields of a group of tabs — or of steps, numbered, with
-// back and next — one panel each, the one chosen shown: in the admin every
-// field is edited, so a step does not wait for the one before.
-func drawTabs(row []*Field, g *Group, draw func(f *Field) h.HTMLComponent) h.HTMLComponent {
-	steps := g.Kind == GroupSteps
-	tabs := make([]h.HTMLComponent, len(row))
-	panels := make([]h.HTMLComponent, len(row))
-	for i, f := range row {
-		title := fieldTitle(f)
-		if steps {
-			title = strconv.Itoa(i+1) + ". " + title
-		}
-		tab := v.VTab(h.Text(title)).Value(i).Attr("data-schemaform-tab", f.Name)
-		if icon := f.Meta.String("icon"); strings.HasPrefix(icon, "mdi-") {
-			tab.PrependIcon(icon)
-		}
-		tabs[i] = tab
-		var nav h.HTMLComponent
-		if steps {
-			var back, next h.HTMLComponent
-			if i > 0 {
-				back = v.VBtn("").PrependIcon("mdi-chevron-left").Text("‹").Variant(v.VariantText).
-					Attr("@click", "locals.tab--")
-			}
-			if i < len(row)-1 {
-				next = v.VBtn("").AppendIcon("mdi-chevron-right").Text("›").Variant(v.VariantTonal).
-					Attr("@click", "locals.tab++")
-			}
-			nav = h.Div(back, v.VSpacer(), next).Class("d-flex mt-2")
-		}
-		panels[i] = h.Div(draw(f), nav).Attr("v-show", "locals.tab === "+strconv.Itoa(i)).
-			Attr("data-schemaform-panel", f.Name)
-	}
-	return web.Scope(
-		h.Div(
-			v.VTabs(tabs...).Attr("v-model", "locals.tab").Density(v.DensityCompact).Class("mb-3"),
-			h.Div(panels...),
-		).Class("mb-3").Attr("data-schemaform-"+g.Kind, g.Name),
-	).LocalsInit("{ tab: 0 }")
-}
-
-// columnCSS lays out the columns of a group: the whole row on a small
-// screen, their share of it (--sf-col) from a medium one up.
-const columnCSS = `.sf-col{flex:0 0 100%;max-width:100%}` +
-	`@media (min-width:960px){.sf-col{flex:0 0 var(--sf-col);max-width:var(--sf-col)}}`
-
-// columnStyle is the width of a column at percent of its row, from a medium
-// screen up (a small one stacks it: `cols=12`).
-func columnStyle(percent float64) string {
-	return fmt.Sprintf("--sf-col: %s%%", strconv.FormatFloat(percent, 'f', -1, 64))
 }
 
 // appendRows adds fields — a parent's, read on their own — to s, their rows

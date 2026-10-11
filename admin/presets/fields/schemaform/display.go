@@ -1,3 +1,5 @@
+//go:build !formscore
+
 package schemaform
 
 import (

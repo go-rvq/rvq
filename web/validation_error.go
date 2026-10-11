@@ -47,6 +47,37 @@ func (b *ValidationErrors) GetRemoveFieldErrors(fieldName string) (r []string) {
 	return
 }
 
+// FieldErrorsHolder is an error that says what is wrong field by field — by
+// the keys of the form, as it posts them —: a field's setter answering one
+// (presets) has each said under its own field.
+type FieldErrorsHolder interface {
+	error
+	FieldErrors() map[string][]string
+}
+
+// GetFieldErrorsUnder are the errors of the fields under key — the keys
+// that go on from it: `key.a`, `key[0].b`, `key__x` —: what a field that
+// draws fields of its own (a form in a field) says under each. They stay:
+// a field of its own under it (a nested editor's) takes its own.
+func (b *ValidationErrors) GetFieldErrorsUnder(key string) (r map[string][]string) {
+	if b == nil || b.fieldErrors == nil || key == "" {
+		return
+	}
+	for k, msgs := range b.fieldErrors {
+		if len(k) <= len(key) || k[:len(key)] != key {
+			continue
+		}
+		if c := k[len(key)]; c != '.' && c != '[' && c != '_' {
+			continue
+		}
+		if r == nil {
+			r = map[string][]string{}
+		}
+		r[k] = msgs
+	}
+	return
+}
+
 func (b *ValidationErrors) GetGlobalError() (r string) {
 	if len(b.globalErrors) == 0 {
 		return

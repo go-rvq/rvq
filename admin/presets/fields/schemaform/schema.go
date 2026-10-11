@@ -21,6 +21,12 @@ const (
 // Schema is one form: the fields it edits, and whether the value it edits is a
 // LIST of them rather than one.
 type Schema struct {
+	// vm is the VM the schema was read in (Builder.Class): what its
+	// `[validation=…]` functions are called with.
+	vm *gad.VM
+	// class is the class it was read of (Builder.Class): what its steps
+	// (Flow) are of.
+	class  *gad.Class
 	Slice  bool
 	Fields []*Field
 	// Validations are the `[validation=…]` of the class the record is — and
@@ -200,6 +206,11 @@ type Field struct {
 	// whole value matches — of the syntax both Go and the browser's HTML5
 	// read alike (no flags, no named groups, no lookaround).
 	Pattern string
+	// Mask is the `[mask="(###) ###-####"]` of a value of a standard shape —
+	// a phone, a zip code —: `#` a digit, `A` a letter, `*` either, anything
+	// else itself. The input writes it as it is typed; the value holds it
+	// whole (MaskRegexp).
+	Mask string
 	// Validations are the field's `[validation=…]`: gad functions of its
 	// value — of a field of a class, of its record (its Schema's
 	// Validations after them) —, the application's to call (see

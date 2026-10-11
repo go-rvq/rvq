@@ -87,6 +87,12 @@
 //	    [options=[1, 2, 3, 4]] rooms Range[int]
 //	}
 //
+// Read back (DecodeForm), a range is a Record of its from and its to — each
+// checked by the bounds' type and limits; begun, both asked but the one
+// left open —, its from not after its to (After: numbers of either kind,
+// texts as written, an enum's members by their order); an optional range
+// left blank is nil.
+//
 // # Limits
 //
 // The limits of HTML5 are a field's metadata, put on its input: `[min=…,
@@ -94,9 +100,13 @@
 // (Field.Min, Max, Step; a date or a time as text, "2026-01-30", "08:00");
 // `[minlength=N, maxlength=N]` of a text, `[pattern="…"]` of a str (the
 // regular expression its whole value matches, of what Go and the browser
-// read alike: PatternRegexp); `[placeholder="…"]`, the example in the input
-// while it is empty. A limit where it means nothing — a minlength of a
-// number, a min of a choice —, or min after max, is refused:
+// read alike: PatternRegexp); `[mask="(###) ###-####"]` of a text of a
+// standard shape (Field.Mask: `#` a digit, `A` a letter, `*` either, the
+// rest itself — written as it is typed by the input's v-mask, its regular
+// expression MaskRegexp, its example MaskPlaceholder); `[placeholder="…"]`,
+// the example in the input while it is empty. A limit where it means
+// nothing — a minlength of a number, a min of a choice —, or min after max,
+// is refused:
 //
 //	interface Form {
 //	    [min=1, max=10] rooms int
@@ -104,14 +114,28 @@
 //	    [min="2026-01-01", max="2026-12-31"] day date
 //	    [minlength=3, maxlength=80, placeholder="Your name"] name str
 //	    [pattern="[0-9]{5}(-[0-9]{4})?"] zip str
+//	    [mask="#####-###"] cep? str
 //	}
 //
 // # Validations
 //
 // `[validation=…]` (MetaValidation), of a field or of a class, is a gad
-// function — or an array of them — that checks the value: kept in
-// Field.Validations, Schema.Validations (a class's after its parents'),
-// for the application to call.
+// function, a regular expression (`/…/`: the whole value matches it) — or
+// an array of them — that checks the value: kept in Field.Validations,
+// Schema.Validations (a class's after its parents').
+//
+// # Checking: here and on save
+//
+// The input checks its value as it is left — Vuetify's rules of what the
+// schema says of it: required, its length, its pattern and mask, its min
+// and max (Context.RuleAttrs) —, and a step of `[steps]` checks its fields
+// before next goes on (a VForm of the step). On save, DecodeForm checks it
+// all again — those, a range's order and the `[validation=…]` (a function
+// called in the VM the class was read in: Builder.Class) — and answers what
+// is wrong by the keys the form posts (FieldErrors): presets says each under
+// its field (FieldContext.SubErrors → Context.CheckAttrs, error-messages),
+// a group of tabs or steps opened at the first with something wrong. An
+// optional card left blank asks nothing.
 //
 // # A schema written in parts
 //

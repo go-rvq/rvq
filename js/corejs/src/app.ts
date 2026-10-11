@@ -11,6 +11,7 @@ import {
 } from 'vue'
 import {GlobalEvents} from 'vue-global-events'
 import GoPlaidFormGuard from '@/form-guard'
+import { maskDirective } from '@/mask'
 import GoPlaidScope from '@/go-plaid-scope.vue'
 import GoPlaidPortal from '@/go-plaid-portal.vue'
 import GoPlaidRunScript from '@/go-plaid-run-script.vue'
@@ -133,6 +134,7 @@ export const plaidPlugin = {
     app.component('GoPlaidFormGuard', GoPlaidFormGuard)
     app.directive('keep-scroll', keepScroll)
     app.directive('assign', assignOnMounted)
+    app.directive('mask', maskDirective)
     app.component('GlobalEvents', GlobalEvents)
   }
 }

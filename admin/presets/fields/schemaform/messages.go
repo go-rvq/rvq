@@ -1,3 +1,5 @@
+//go:build !formscore
+
 package schemaform
 
 import (
@@ -49,6 +51,25 @@ type Messages struct {
 	// posted (why follows it).
 	ItemsUnavailableOnSave string `i18n:"label='Items unavailable on save', hint='Error on save when the values a field may hold could not be fetched.'"`
 
+	// The errors of a value, by its limits, under its field: Required, left
+	// empty; Invalid, not of its type; Min, Max (the limit), Step (the step);
+	// TooShort, TooLong (the length); Pattern, off its format; Mask, off its
+	// mask (the mask); RangeOrder, a range whose from is after its to.
+	Required   string `i18n:"label='Error: required', hint='Under a field that must be filled.'"`
+	Invalid    string `i18n:"label='Error: invalid', hint='Under a field whose value is not of its type.'"`
+	Min        string `i18n:"label='Error: min', hint='Under a value under its min.', fields=(;'%s'='the min')"`
+	Max        string `i18n:"label='Error: max', hint='Under a value over its max.', fields=(;'%s'='the max')"`
+	Step       string `i18n:"label='Error: step', hint='Under a value off its step.', fields=(;'%s'='the step')"`
+	TooShort   string `i18n:"label='Error: too short', hint='Under a text under its minlength.', fields=(;'%d'='the length')"`
+	TooLong    string `i18n:"label='Error: too long', hint='Under a text over its maxlength.', fields=(;'%d'='the length')"`
+	Pattern    string `i18n:"label='Error: pattern', hint='Under a text off its format.'"`
+	Mask       string `i18n:"label='Error: mask', hint='Under a text off its mask.', fields=(;'%s'='the mask')"`
+	RangeOrder string `i18n:"label='Error: range order', hint='Under a range whose from is after its to.'"`
+	// ItemsMin, ItemsMax: a list of fewer, of more items than it takes (how
+	// many).
+	ItemsMin string `i18n:"label='Error: items min', hint='Under a list of fewer items than it takes.', fields=(;'%d'='how many')"`
+	ItemsMax string `i18n:"label='Error: items max', hint='Under a list of more items than it takes.', fields=(;'%d'='how many')"`
+
 	// Add is the button that adds an item to a list.
 	Add string `i18n:"hint='Button that adds an item to a list of a form.'"`
 	// ShowWhole is the hint of a listing cell cut with "…".
@@ -80,6 +101,18 @@ var Messages_en_US = &Messages{
 	Yes:                    "Yes",
 	No:                     "No",
 	ChooseValue:            "choose a value",
+	Required:               "fill this field",
+	Invalid:                "this value is not valid",
+	Min:                    "the smallest value is %s",
+	Max:                    "the largest value is %s",
+	Step:                   "use steps of %s",
+	TooShort:               "at least %d characters",
+	TooLong:                "at most %d characters",
+	Pattern:                "this does not follow the format asked",
+	Mask:                   "use the format %s",
+	RangeOrder:             "the start cannot be after the end",
+	ItemsMin:               "at least %d",
+	ItemsMax:               "at most %d",
 	NotAmongItems:          "%q is not one of the values it may hold (%s)",
 	ItemsUnavailableOnSave: "the values it may hold could not be fetched",
 	Add:                    "Add",
@@ -105,6 +138,18 @@ var Messages_pt_BR = &Messages{
 	Yes:                    "Sim",
 	No:                     "Não",
 	ChooseValue:            "escolha um valor",
+	Required:               "preencha este campo",
+	Invalid:                "este valor não é válido",
+	Min:                    "o menor valor é %s",
+	Max:                    "o maior valor é %s",
+	Step:                   "use passos de %s",
+	TooShort:               "no mínimo %d caracteres",
+	TooLong:                "no máximo %d caracteres",
+	Pattern:                "não segue o formato pedido",
+	Mask:                   "use o formato %s",
+	RangeOrder:             "o início não pode ser depois do fim",
+	ItemsMin:               "no mínimo %d",
+	ItemsMax:               "no máximo %d",
 	NotAmongItems:          "%q não está entre os valores possíveis (%s)",
 	ItemsUnavailableOnSave: "os valores possíveis não puderam ser obtidos",
 	Add:                    "Adicionar",

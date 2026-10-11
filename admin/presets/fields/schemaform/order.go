@@ -1,9 +1,9 @@
+//go:build !formscore
+
 package schemaform
 
 import (
 	"fmt"
-	"net/url"
-	"strconv"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -32,7 +32,7 @@ type OrderOptionsFunc func(c *Context) []OrderOption
 func (b *Builder) Order(name string, options OrderOptionsFunc) *Builder {
 	return b.Type(name, OrderComponentFunc(options)).
 		Display(name, OrderDisplayFunc(options)).
-		TypeDecoder(name, DecodeOrder)
+		TypeReader(name, ReadOrder)
 }
 
 // OrderComponentFunc draws an order: see Builder.Order.
@@ -118,24 +118,6 @@ func OrderDisplayFunc(options OrderOptionsFunc) ComponentFunc {
 		// the value alone: the record labels its fields (showRecord)
 		return h.Span(text)
 	}
-}
-
-// DecodeOrder reads an order the form posted under key — `key[0].field`,
-// `key[0].dir`, … —: the ordering items, ASC or DESC, in their order.
-func DecodeOrder(values url.Values, key string) any {
-	out := []any{}
-	for i := 0; ; i++ {
-		at := key + "[" + strconv.Itoa(i) + "]"
-		if !hasKeyUnder(values, at) {
-			break
-		}
-		field, dir := values.Get(at+".field"), strings.ToUpper(values.Get(at+".dir"))
-		if field == "" || (dir != "ASC" && dir != "DESC") {
-			continue
-		}
-		out = append(out, map[string]any{"field": field, "dir": dir})
-	}
-	return out
 }
 
 // orderItems is an order as it was decoded or saved: its items of a field and

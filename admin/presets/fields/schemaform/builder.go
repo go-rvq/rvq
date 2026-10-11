@@ -1,14 +1,16 @@
+//go:build !formscore
+
 package schemaform
 
 import (
+	"encoding/json"
 	"fmt"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"unicode/utf8"
 
-	"github.com/gad-lang/gad"
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -43,18 +45,6 @@ type FieldInfo struct {
 // It is optional, and so is each answer: an empty Label leaves the humanized
 // name, an empty Hint leaves no hint, a nil Help leaves no `?`.
 type FieldInfoFunc func(ctx *web.EventContext, path string) FieldInfo
-
-// EnumItem is one value of an enum as the form offers it: the value that goes
-// into the record, and what the reader sees.
-type EnumItem struct {
-	// Name is what goes INTO the record — the enum member's name, never the
-	// number behind it.
-	Name string
-	// Label is what the reader sees; empty shows the Name.
-	Label string
-	// Hint is the line under the item in the list, when it needs one.
-	Hint string
-}
 
 // EnumInfoFunc answers for the enum of the field at PATH — the same path
 // FieldInfoFunc answers for — with ONE ENTRY PER ITEM, in the order they should
@@ -109,6 +99,13 @@ type Context struct {
 	// Data is the value itself, in a read view (Display): decoded, as
 	// DecodeValue reads it. An editing component binds Value instead.
 	Data any
+
+	// Key is the JS expression of the key the value is posted under —
+	// `"Value.links[" + itemIndex + "].href"` —: what the server says is
+	// wrong with it is under it (ErrorAttrs). errVar is the variable of
+	// the form's scope (vars) the errors are in, by key.
+	Key    string
+	errVar string
 
 	// Portal is the name of a portal embedded at the root of the component —
 	// the form, the detail —, shared by all its fields: where one opens what it
@@ -165,16 +162,6 @@ func (c *Context) Info() FieldInfo {
 	return *c.info
 }
 
-// The field metadata that names a field where the application gives it no
-// words (FieldInfoFunc): `[label="Título", hint="…", help="…",
-// placeholder="…"]`.
-const (
-	MetaLabel       = "label"
-	MetaHint        = "hint"
-	MetaHelp        = "help"
-	MetaPlaceholder = "placeholder"
-)
-
 // Label is what to put on the input: what the FieldInfoFunc says, else the
 // label of its metadata, else the field's name humanized — for the option of a
 // choice, the class's name.
@@ -220,7 +207,17 @@ func (c *Context) LimitAttrs() []any {
 		add("maxlength", strconv.Itoa(f.MaxLength))
 	}
 	add("pattern", f.Pattern)
-	add("placeholder", c.Placeholder())
+	placeholder := c.Placeholder()
+	if f.Mask != "" {
+		// the mask: as long as it, its example when there is none
+		if f.MaxLength == 0 {
+			add("maxlength", strconv.Itoa(utf8.RuneCountInString(f.Mask)))
+		}
+		if placeholder == "" {
+			placeholder = MaskPlaceholder(f.Mask)
+		}
+	}
+	add("placeholder", placeholder)
 	return attrs
 }
 
@@ -234,6 +231,105 @@ func (c *Context) CompactAttrs() []any {
 	// `:density`, bound, is the key the builders' own Density() writes — the
 	// same key replaces it instead of adding a second density beside it.
 	return []any{"hide-details", true, ":density", `"` + v.DensityCompact + `"`}
+}
+
+// CheckAttrs are the attributes that check the input's value here and say
+// what is wrong under it: the rules of what the schema says of it (Vuetify's
+// `rules`: required, its length, its pattern and mask, its min and max —
+// checked as it is left, and all at once by a VForm's validate, a step's
+// next), its mask written as it is typed (v-mask), and what the server found
+// wrong on save (DecodeForm, by its key: `error-messages`, gone once it
+// changes). A component spreads them on its input —
+// `.Attr(c.CheckAttrs()...)`.
+func (c *Context) CheckAttrs() []any {
+	attrs := c.RuleAttrs()
+	if c.Field.Mask != "" {
+		attrs = append(attrs, "v-mask", strconv.Quote(c.Field.Mask))
+	}
+	if c.errVar == "" || c.Key == "" {
+		return attrs
+	}
+	errs := "vars." + c.errVar
+	return append(attrs,
+		":error-messages", fmt.Sprintf("(%s || {})[%s]", errs, c.Key),
+		"@update:model-value", fmt.Sprintf("%s && delete %s[%s]", errs, errs, c.Key),
+	)
+}
+
+// RuleAttrs are the rules of the input (Vuetify's `:rules`, checked as it is
+// left — validate-on blur —), from what the schema says of the field; the
+// server checks the same on save (DecodeForm).
+func (c *Context) RuleAttrs() []any {
+	f := c.Field
+	if f.ReadOnly || c.Compact {
+		return nil
+	}
+	m := c.Messages()
+	js := func(s string) string { b, _ := json.Marshal(s); return string(b) }
+	const empty = "(v === null || v === undefined || String(v).trim() === '')"
+	var rules []string
+	add := func(cond, msg string) {
+		rules = append(rules, fmt.Sprintf("v => %s || (%s) || %s", empty, cond, js(msg)))
+	}
+	if !f.Nullable && f.Type != "bool" && f.Type != RangeType && f.Schema == nil {
+		rules = append(rules, fmt.Sprintf("v => !%s || %s", empty, js(m.Required)))
+	}
+	if f.MinLength > 0 {
+		add(fmt.Sprintf("String(v).length >= %d", f.MinLength), fmt.Sprintf(m.TooShort, f.MinLength))
+	}
+	if f.MaxLength > 0 {
+		add(fmt.Sprintf("String(v).length <= %d", f.MaxLength), fmt.Sprintf(m.TooLong, f.MaxLength))
+	}
+	if f.Pattern != "" {
+		add(fmt.Sprintf("new RegExp(%s).test(String(v))", js("^(?:"+f.Pattern+")$")), m.Pattern)
+	}
+	if f.Mask != "" {
+		// Go's \pL is JS's \p{L} (with the u flag)
+		re := strings.ReplaceAll(MaskRegexp(f.Mask).String(), `\pL`, `\p{L}`)
+		add(fmt.Sprintf("new RegExp(%s, 'u').test(String(v))", js(re)), fmt.Sprintf(m.Mask, f.Mask))
+	}
+	number := NumberTypes[f.Type]
+	bound := func(limit, op, msg string) {
+		if limit == "" {
+			return
+		}
+		if number {
+			add(fmt.Sprintf("Number(v) %s %s", op, limit), fmt.Sprintf(msg, limit))
+		} else if DateTypes[f.Type] {
+			add(fmt.Sprintf("String(v) %s %s", op, js(limit)), fmt.Sprintf(msg, limit))
+		}
+	}
+	bound(f.Min, ">=", m.Min)
+	bound(f.Max, "<=", m.Max)
+	if number && (f.Type == "int" || f.Type == "uint") {
+		add("/^-?\\d+$/.test(String(v).trim())", m.Invalid)
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+	return []any{":rules", "[" + strings.Join(rules, ", ") + "]", "validate-on", "blur"}
+}
+
+// sub is the context of the field f of the record c binds (value its
+// expression: c.Value, or ItemVar of an item of a list — its key indexed).
+func (c *Context) sub(f *Field, value, path string) *Context {
+	key := c.Key
+	if key != "" && value == ItemVar {
+		key += ` + "[" + itemIndex + "]"`
+	}
+	if key != "" {
+		key += fmt.Sprintf(" + %q", "."+f.Name)
+	}
+	return &Context{
+		Field: f,
+		Value: value + "." + f.Name,
+		Path:  join(path, f.Name),
+		Form:  c.Form,
+		Event: c.Event, Portal: c.Portal,
+		Builder: c.Builder,
+		Key:     key,
+		errVar:  c.errVar,
+	}
 }
 
 // Help is the long explanation, or nil.
@@ -250,70 +346,6 @@ func (c *Context) EnumItems() ([]EnumItem, error) {
 		c.items, c.itemsErr = c.Builder.itemsOf(c.Event, c.Path, c.Field)
 	}
 	return c.items, c.itemsErr
-}
-
-// Builder maps a TYPE to the component that edits it, and draws a schema with
-// them.
-//
-// A new Builder knows one type, DefaultType ("str"): a text field, which is
-// also what an untyped field is. An application adds its own — and may replace
-// that one:
-//
-//	schemaform.New().
-//	    Type("int", myNumberField).
-//	    Type("color", myColorPicker)
-type Builder struct {
-	types     map[string]ComponentFunc
-	displays  map[string]ComponentFunc
-	decoders  map[string]TypeDecoderFunc
-	info      FieldInfoFunc
-	enumInfo  EnumInfoFunc
-	enumItems EnumItemsFunc
-	encode    EncodeFunc
-	decode    DecodeFunc
-	typeOf    TypeOfFunc
-	className ClassNameFunc
-	// choiceAsName reads a union of classes as the choice of a class's NAME
-	// (ChoiceAsName).
-	choiceAsName bool
-	// mapsKey is the Google Maps key of the addresses (MapsKey).
-	mapsKey MapsKeyFunc
-}
-
-// TypeOfFunc says what a field's type is, for a type the schema cannot name by
-// itself: an application's own — a model, say — given as the gad object the
-// field is typed with. It answers the name of the component the field is
-// drawn with, or "" to leave the type to the schema.
-type TypeOfFunc func(t gad.Object) string
-
-// TypeOf sets the function that names the types only the application knows
-// (TypeOfFunc). It is asked first, for every field of a single type.
-// ClassNameFunc names a class a form extends (`*Parent`) — Field.Owner of
-// the fields it gives —: "" leaves its own name.
-type ClassNameFunc func(c *gad.Class) string
-
-// ClassName names the classes a form extends, for an application whose
-// classes are not told apart by their names: forms of its own, each a class
-// Form, extended by others (`*forms.quote`: "forms.quote").
-func (b *Builder) ClassName(f ClassNameFunc) *Builder {
-	b.className = f
-	return b
-}
-
-func (b *Builder) TypeOf(f TypeOfFunc) *Builder {
-	b.typeOf = f
-	return b
-}
-
-// ChoiceAsName reads a union of classes (`layout? ServiceOptions |
-// PortfolioOptions`) as the choice of one class BY ITS NAME — a select of the
-// classes, each by its label and hint (the class's metadata; its name
-// humanized when it has no label), the value saved its name: "ServiceOptions".
-// Without it, the union is a choice of one class WITH ITS FIELDS, saved as
-// `{"ServiceOptions": {…}}` (Schema.Choice).
-func (b *Builder) ChoiceAsName(v bool) *Builder {
-	b.choiceAsName = v
-	return b
 }
 
 // EnumInfo sets the function that says which values an enum field offers, and
@@ -376,16 +408,6 @@ func (b *Builder) itemsOf(ctx *web.EventContext, path string, f *Field) ([]EnumI
 	return items, nil
 }
 
-// withLabels shows an item's own name when nothing else was given for it.
-func withLabels(items []EnumItem) []EnumItem {
-	for i := range items {
-		if items[i].Label == "" {
-			items[i].Label = items[i].Name
-		}
-	}
-	return items
-}
-
 // FieldInfo sets the function that says the words around a field — its label,
 // its hint and its help — by PATH. It is optional; without it a field is
 // labelled by its name, humanized.
@@ -419,30 +441,7 @@ func New() *Builder {
 			AddressType:    AddressComponentFunc,
 		},
 		displays: defaultDisplays(),
-		// an address is posted as its fields (`key.formatted`, `key.lat`…)
-		decoders: map[string]TypeDecoderFunc{AddressType: decodeAddress},
 	}
-}
-
-// Type registers (or replaces) the component that draws a field of this type.
-// TypeDecoderFunc reads the value of a type the application registers from the
-// form it posted under key — a value the form flattens, as a list
-// (`key[0].field`), which the reader of a plain input would not read.
-type TypeDecoderFunc func(values url.Values, key string) any
-
-// TypeDecoder registers how the value of the type name is read back from the
-// posted form (see TypeDecoderFunc); a type without one is read as one input.
-func (b *Builder) TypeDecoder(name string, f TypeDecoderFunc) *Builder {
-	if b.decoders == nil {
-		b.decoders = map[string]TypeDecoderFunc{}
-	}
-	b.decoders[name] = f
-	return b
-}
-
-func (b *Builder) Type(name string, f ComponentFunc) *Builder {
-	b.types[name] = f
-	return b
 }
 
 // TypeFunc is the component registered for a type, and whether there is one.
@@ -497,15 +496,6 @@ func (b *Builder) fieldFunc(c *Context) (ComponentFunc, bool) {
 	return nil, false
 }
 
-// Types are the registered type names, FormType included.
-func (b *Builder) Types() (names []string) {
-	names = append(names, FormType)
-	for name := range b.types {
-		names = append(names, name)
-	}
-	return
-}
-
 // ComponentFunc draws the whole schema as the component of a presets field.
 //
 // The value the form edits hangs from the field's own form key: a record binds
@@ -517,8 +507,16 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 			return errorComponent(messagesOf(ctx).NoSchema)
 		}
 		portal := NewPortalName()
+		// what the server found wrong on save, by the keys under the field
+		// (presets: FieldContext.SubErrors), in the scope: each input says its
+		// own (Context.ErrorAttrs)
+		errVar := errVarOf(field.FormKey)
+		errs, _ := json.Marshal(field.SubErrors)
+		if field.SubErrors == nil {
+			errs = []byte("{}")
+		}
 		return h.Components(
-			b.draw(schema, &Context{
+			web.Scope(b.draw(schema, &Context{
 				Field:   &Field{Name: field.Name, Type: FormType, Schema: schema},
 				Value:   fmt.Sprintf("form[%q]", field.FormKey),
 				Path:    "",
@@ -526,10 +524,22 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 				Event:   ctx,
 				Builder: b,
 				Portal:  portal,
-			}),
+				Key:     strconv.Quote(field.FormKey),
+				errVar:  errVar,
+			})).Setup(fmt.Sprintf("vars.%s = %s", errVar, errs)),
 			web.Portal().Name(portal),
 		)
 	}
+}
+
+// errVarOf is the variable of the errors of the field formKey in the scope.
+func errVarOf(formKey string) string {
+	return "sfErr_" + strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			return r
+		}
+		return '_'
+	}, formKey)
 }
 
 var portalSeq atomic.Uint64
@@ -663,6 +673,10 @@ func (b *Builder) value(item *Field, c *Context) h.HTMLComponent {
 // itemContext is the context of the item of a list of plain values: bound
 // through the list's expression at the item's index, at the list's path.
 func (b *Builder) itemContext(item *Field, c *Context) *Context {
+	key := c.Key
+	if key != "" {
+		key += ` + "[" + itemIndex + "]"`
+	}
 	return &Context{
 		Field: item,
 		Value: fmt.Sprintf("%s[itemIndex]", c.Value),
@@ -671,6 +685,8 @@ func (b *Builder) itemContext(item *Field, c *Context) *Context {
 		Event: c.Event, Portal: c.Portal,
 		Builder: b,
 		noLabel: true,
+		Key:     key,
+		errVar:  c.errVar,
 	}
 }
 
@@ -697,14 +713,7 @@ func (b *Builder) isEnum(c *Context) bool {
 // reachable at its own path.
 func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLComponent {
 	field := func(f *Field) h.HTMLComponent {
-		fc := &Context{
-			Field: f,
-			Value: value + "." + f.Name,
-			Path:  join(path, f.Name),
-			Form:  c.Form,
-			Event: c.Event, Portal: c.Portal,
-			Builder: b,
-		}
+		fc := c.sub(f, value, path)
 
 		draw, ok := b.fieldFunc(fc)
 		if !ok {
@@ -716,7 +725,20 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 		}
 		return comp
 	}
-	return h.Div(drawRows(schema.Fields, field)...)
+	// a group of tabs or steps opens at the first whose fields the server
+	// found something wrong with (a save refused: as back, at the step)
+	tabAt := func(row []*Field) string {
+		if c.errVar == "" {
+			return "0"
+		}
+		keys := make([]string, len(row))
+		for i, f := range row {
+			keys[i] = c.sub(f, value, path).Key
+		}
+		return fmt.Sprintf("Math.max(0, [%s].findIndex(k => Object.keys(vars.%s || {}).some(e => e === k || e.startsWith(k + '.') || e.startsWith(k + '['))))",
+			strings.Join(keys, ", "), c.errVar)
+	}
+	return h.Div(drawRows(schema.Fields, field, tabAt)...)
 }
 
 // choice draws a choice of one class (Schema.Choice): a select of the classes,
@@ -740,6 +762,10 @@ func (b *Builder) choice(schema *Schema, c *Context) h.HTMLComponent {
 			Form:  c.Form,
 			Event: c.Event, Portal: c.Portal,
 			Builder: b,
+			errVar:  c.errVar,
+		}
+		if c.Key != "" {
+			fc.Key = c.Key + fmt.Sprintf(" + %q", "."+f.Name)
 		}
 		options[i] = map[string]string{"value": f.Name, "title": fc.Label()}
 		if hint := fc.Hint(); hint != "" {
@@ -829,6 +855,8 @@ func (b *Builder) table(schema *Schema, c *Context) h.HTMLComponent {
 			Form:  c.Form,
 			Event: c.Event, Portal: c.Portal,
 			Builder: b,
+			errVar:  c.errVar,
+			Key:     cellKey(c, f),
 			Compact: true,
 		}
 		var cell h.HTMLComponent
@@ -933,6 +961,15 @@ func addItemButton(schema *Schema, c *Context, readOnly bool) h.HTMLComponent {
 		Attr("@click", fmt.Sprintf("%s.push(%s)", c.Value, emptyItemJS(schema)))
 }
 
+// cellKey is the key of the field f of an item of the list c draws as a
+// table.
+func cellKey(c *Context, f *Field) string {
+	if c.Key == "" {
+		return ""
+	}
+	return c.Key + ` + "[" + itemIndex + "]"` + fmt.Sprintf(" + %q", "."+f.Name)
+}
+
 // emptyItemJS is a new item of the list, written as the JS the button pushes:
 // a record with each of its fields empty, or the empty value of the type a list
 // of plain values holds — so a new row opens with the shape the rest has.
@@ -992,14 +1029,6 @@ func firstTextField(schema *Schema) string {
 	return ""
 }
 
-// join is the path of a field under prefix.
-func join(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + "." + name
-}
-
 // withHelp puts the field's help behind a `?` at its right, when there is one.
 func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
 	help := c.Help()
@@ -1057,7 +1086,8 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		PersistentHint(c.Hint() != "").
 		Clearable(!c.Field.Required()).
 		Attr("required", c.Field.Required()).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // EnumListComponentFunc draws a list of the values of an enum (`[]Kind`, the
@@ -1102,7 +1132,8 @@ func EnumListComponentFunc(c, ic *Context) h.HTMLComponent {
 		PersistentHint(c.Hint() != "").
 		Clearable(!readOnly && !c.Field.Required()).
 		Attr("data-schemaform-enum-list", c.Path).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // itemValue is the value an item puts in the record, typed as the field is: a
@@ -1146,7 +1177,8 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 		PersistentHint(c.Hint() != "").
 		Attr("required", c.Field.Required()).
 		Attr(c.LimitAttrs()...).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // IntComponentFunc is "int": a number field. It binds with `v-model.number`, so
@@ -1174,7 +1206,8 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
 		Attr(c.LimitAttrs()...).
-		Attr("v-model.number", c.Value)
+		Attr("v-model.number", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // DecimalComponentFunc is "float" and "decimal", which are the same thing here:
@@ -1188,7 +1221,8 @@ func DecimalComponentFunc(c *Context) h.HTMLComponent {
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
 		Attr(c.LimitAttrs()...).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 	if c.Field.Step == "" {
 		f.Attr("step", "any")
 	}
@@ -1203,7 +1237,8 @@ func LongTextComponentFunc(c *Context) h.HTMLComponent {
 		AutoGrow(true).
 		Rows(3).
 		Attr(c.LimitAttrs()...).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // HTMLComponentFunc is "html": the rich text editor, which is WYSIWYG and so is
@@ -1220,14 +1255,16 @@ func HTMLComponentFunc(c *Context) h.HTMLComponent {
 func TimeComponentFunc(c *Context) h.HTMLComponent {
 	return vx.VXDateTimePicker().
 		Label(c.Label()).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // DateComponentFunc is "date": an instant with no time of day.
 func DateComponentFunc(c *Context) h.HTMLComponent {
 	return vx.VXDatePicker().
 		Label(c.Label()).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // RangeComponentFunc is a Range[T]: its label, and two inputs of T — from
@@ -1253,6 +1290,9 @@ func RangeComponentFunc(c *Context) h.HTMLComponent {
 		sub.Field = &b
 		sub.Value = c.Value + "." + name
 		sub.Path = c.Path + "." + name
+		if c.Key != "" {
+			sub.Key = c.Key + fmt.Sprintf(" + %q", "."+name)
+		}
 		return f(&sub)
 	}
 	inputs := h.Div(
@@ -1261,7 +1301,14 @@ func RangeComponentFunc(c *Context) h.HTMLComponent {
 			v.VCol(draw(RangeTo, msgs.RangeTo)).Cols(6),
 		).Dense(true),
 	).Attr("v-if", fmt.Sprintf("%s && typeof %s === 'object'", c.Value, c.Value))
-	out := h.Div(h.Div(h.Text(c.Label())).Class("text-caption text-medium-emphasis mb-1"), inputs).
+	// what is wrong with the range whole (its from after its to)
+	var rangeErr h.HTMLComponent
+	if c.errVar != "" && c.Key != "" {
+		errs := fmt.Sprintf("(vars.%s || {})[%s]", c.errVar, c.Key)
+		rangeErr = h.Div().Class("text-error text-caption").Attr("v-if", errs).
+			Attr("v-text", errs+".join(' ')").Attr("data-range-error", c.Path)
+	}
+	out := h.Div(h.Div(h.Text(c.Label())).Class("text-caption text-medium-emphasis mb-1"), inputs, rangeErr).
 		Attr("data-range", c.Path)
 	// the value an object, to bind its bounds: made one as it mounts — on the
 	// object it is a key of (`<parent>.<key>`) —, the inputs drawn then
@@ -1295,7 +1342,8 @@ func DurationComponentFunc(c *Context) h.HTMLComponent {
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
 		Placeholder("1h30m").
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // BoolComponentFunc is "bool": a switch, coloured when on — an optional one
@@ -1319,14 +1367,16 @@ func BoolComponentFunc(c *Context) h.HTMLComponent {
 			Attr("required", must).
 			Hint(c.Hint()).
 			PersistentHint(c.Hint() != "").
-			Attr("v-model", c.Value)
+			Attr("v-model", c.Value).
+			Attr(c.CheckAttrs()...)
 	}
 	return v.VSwitch().
 		Label(c.Label()).
 		Color("primary").
 		Density(v.DensityCompact).
 		Attr(c.CompactAttrs()...).
-		Attr("v-model", c.Value)
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
 }
 
 // ColorComponentFunc is "color": the color picker, showing the value it holds.

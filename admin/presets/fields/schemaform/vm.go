@@ -3,7 +3,7 @@ package schemaform
 import (
 	"errors"
 	"fmt"
-	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/web/str_utils"
 	"regexp"
 	"sort"
 	"strconv"
@@ -39,6 +39,9 @@ func Parse(src string) (*Schema, error) { return New().Parse(src) }
 // it is in scope while the schema runs, so `color` or `html` resolve even though
 // gad has no such types.
 func (b *Builder) Parse(src string) (*Schema, error) {
+	if formClass.MatchString(src) {
+		return b.parseClass(src)
+	}
 	program, err := formProgram(src)
 	if err != nil {
 		return nil, err
@@ -64,6 +67,47 @@ func (b *Builder) Parse(src string) (*Schema, error) {
 	}
 	s.shareEnums(r.enums)
 
+	parsed.Store(key, s)
+	return s, nil
+}
+
+// MetaList is the metadata of a class Form whose value is a list of its
+// records: `[list] class Form { … }` — an interface's `[]{ … }`.
+const MetaList = "list"
+
+// formClass is the class named Form, where a declaration starts.
+var formClass = regexp.MustCompile(`(?m)(^|[;}\]])[ \t]*(export[ \t]+)?class[ \t]+` + FormName + `\b`)
+
+// parseClass is Parse of a schema whose form is the class Form: its fields
+// read as Class reads them — their defaults, its `[validation=…]`, its
+// steps —, its metadata the form's (`[layout=…]`; `[list]`, a list of its
+// records).
+func (b *Builder) parseClass(src string) (*Schema, error) {
+	program := strings.Replace(src, "export class "+FormName, "class "+FormName, 1) + "\nreturn " + FormName + "\n"
+	key := b.typesKey() + "\x00" + program
+	if s, ok := parsed.Load(key); ok {
+		return s.(*Schema), nil
+	}
+	vm, ret, err := b.runProgram(program)
+	if err != nil {
+		return nil, err
+	}
+	c, ok := ret.(*gad.Class)
+	if !ok {
+		return nil, fmt.Errorf("schemaform: %q is not a class, it is %s", FormName, ret.Type().Name())
+	}
+	s, err := b.Class(vm, c)
+	if err != nil {
+		return nil, err
+	}
+	s.Meta = metaOf(c.Meta)
+	if _, ok := s.Meta[MetaList]; ok {
+		delete(s.Meta, MetaList)
+		s.Slice = true
+	}
+	if err := s.readLayout(); err != nil {
+		return nil, err
+	}
 	parsed.Store(key, s)
 	return s, nil
 }
@@ -204,6 +248,7 @@ func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
 		return nil, err
 	}
 	s.shareEnums(r.enums)
+	s.vm, s.class = vm, c
 	return s, nil
 }
 
@@ -218,6 +263,10 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 	}
 	r.visitingClass[c] = true
 	defer delete(r.visitingClass, c)
+	// a form is posted flat: the keys of a group's fields where its own are
+	// (`a`, not `$1.a`) — gad's [autoGroupKeys], the record built of them
+	// either way (`data ::: Form`)
+	c.SetAutoGroupKeys(true)
 
 	s := &Schema{}
 	// the fields of its parents (`*Parent`) first, in their order: a class
@@ -299,7 +348,7 @@ func classNames(types gad.Array) *Enum {
 		if !ok {
 			return nil
 		}
-		it := EnumItem{Name: c.Name(), Label: presets.HumanizeString(c.Name())}
+		it := EnumItem{Name: c.Name(), Label: str_utils.HumanizeString(c.Name())}
 		meta := metaOf(c.Meta)
 		if l, _ := meta["label"].(string); l != "" {
 			it.Label = l
@@ -538,6 +587,7 @@ const (
 	MetaMinLength = "minlength"
 	MetaMaxLength = "maxlength"
 	MetaPattern   = "pattern"
+	MetaMask      = "mask"
 )
 
 // NumberTypes and DateTypes are the types that take [min, max, step];
@@ -591,6 +641,16 @@ func limits(f *Field, key string, v gad.Object) error {
 			return fmt.Errorf("%s: %w", key, err)
 		}
 		target.Pattern = string(str)
+		return nil
+	case MetaMask:
+		if NumberTypes[t] || DateTypes[t] || t == "bool" || t == FileType || t == ImageType || t == AddressType || t == RangeType {
+			return fmt.Errorf("%s: only a line of text — a phone, a zip code — has it, not %s", key, t)
+		}
+		str, ok := v.(gad.Str)
+		if !ok || !strings.ContainsAny(string(str), "#A*") {
+			return fmt.Errorf("%s: want a mask, as text: # a digit, A a letter, * either (\"(###) ###-####\")", key)
+		}
+		target.Mask = string(str)
 		return nil
 	case MetaPlaceholder:
 		if !TextTypes[t] && !NumberTypes[t] && t != AddressType {
@@ -652,6 +712,39 @@ func limits(f *Field, key string, v gad.Object) error {
 	return nil
 }
 
+// MaskRegexp is the regular expression of a [mask=…]: the whole value
+// written by it — `#` a digit, `A` a letter, `*` either, anything else
+// itself.
+func MaskRegexp(mask string) *regexp.Regexp {
+	var b strings.Builder
+	b.WriteString("^")
+	for _, r := range mask {
+		switch r {
+		case '#':
+			b.WriteString(`\d`)
+		case 'A':
+			b.WriteString(`\pL`)
+		case '*':
+			b.WriteString(`[\pL\d]`)
+		default:
+			b.WriteString(regexp.QuoteMeta(string(r)))
+		}
+	}
+	b.WriteString("$")
+	return regexp.MustCompile(b.String())
+}
+
+// MaskPlaceholder is the example a [mask=…] shows while the input is empty:
+// the mask, a blank (_) where each character goes.
+func MaskPlaceholder(mask string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '#' || r == 'A' || r == '*' {
+			return '_'
+		}
+		return r
+	}, mask)
+}
+
 // PatternRegexp is the regular expression of a [pattern=…]: matching the
 // whole value, as HTML5 does. What Go and the browser read differently is
 // refused: a group of flags or a named one (`(?…`, but `(?:…)`), lookaround, a
@@ -699,11 +792,14 @@ func number(v gad.Object) (float64, bool) {
 }
 
 // MetaValidation is the metadata of a field, or of a class, that checks its
-// value: a function, or an array of them —
+// value: a function, a regular expression — `/…/`: the whole value matches it
+// (a *gad.Regexp, anchored) —, or an array of them —
 //
 //	[validation=cep] zip str
 //	[validation=[notWeekend, notHoliday]] day date
 //	[validation=func(r) { … }] class Address { … }
+//	[validation=/\d{5}/] zip str
+//	[validation=[/[A-Z]{2}\d+/, checkDigit]] code str
 //
 // — accumulated: a class's after its parents', a field of a class's before
 // its class's. What calls them, and with what, is the application's.
@@ -713,8 +809,19 @@ const MetaValidation = "validation"
 func validations(v gad.Object) ([]gad.Object, error) {
 	var out []gad.Object
 	add := func(o gad.Object) error {
+		// a regular expression — `/…/`: the whole value matches it (a
+		// *gad.Regexp, anchored). Not a text: a function's name as text
+		// would pass for one.
+		if x, ok := o.(*gad.Regexp); ok {
+			re, err := regexp.Compile("^(?:" + (*regexp.Regexp)(x).String() + ")$")
+			if err != nil {
+				return fmt.Errorf("%s: %w", MetaValidation, err)
+			}
+			out = append(out, (*gad.Regexp)(re))
+			return nil
+		}
 		if _, ok := o.(gad.CallerObject); !ok {
-			return fmt.Errorf("%s: want a function, or an array of them, got %s", MetaValidation, o.Type().Name())
+			return fmt.Errorf("%s: want a function, a regular expression, or an array of them, got %s", MetaValidation, o.Type().Name())
 		}
 		out = append(out, o)
 		return nil
@@ -856,7 +963,7 @@ func options(f *Field, rawMeta gad.Object) error {
 			}
 			f.Validations = append(f.Validations, fns...)
 			continue
-		case MetaMin, MetaMax, MetaStep, MetaMinLength, MetaMaxLength, MetaPattern, MetaPlaceholder:
+		case MetaMin, MetaMax, MetaStep, MetaMinLength, MetaMaxLength, MetaPattern, MetaPlaceholder, MetaMask:
 			if err := limits(f, k, kv.V); err != nil {
 				return err
 			}

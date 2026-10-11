@@ -63,12 +63,16 @@ type FieldContext struct {
 	Hint         string
 	Errors       []string
 	SliceErrors  map[int][]string
-	ModelInfo    *ModelInfo
-	Nested       Nested
-	Context      context.Context
-	ReadOnly     bool
-	Required     bool
-	Disabled     bool
+	// SubErrors are the errors of the fields under the field's key (a form
+	// in a field: `FormKey.a`, `FormKey[0].b`), by their keys — what it
+	// draws says them under each.
+	SubErrors map[string][]string
+	ModelInfo *ModelInfo
+	Nested    Nested
+	Context   context.Context
+	ReadOnly  bool
+	Required  bool
+	Disabled  bool
 	// MustInput asks the field component to render only the bare input, with no
 	// label, hint or surrounding container — suitable for placing inside a table
 	// cell (the column header carries the label). The default component funcs

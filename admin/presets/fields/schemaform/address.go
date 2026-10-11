@@ -1,3 +1,5 @@
+//go:build !formscore
+
 package schemaform
 
 import (
@@ -9,19 +11,6 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 )
-
-// AddressType is the type of an address (`where address`): typed and found by
-// Google Places — its suggestions as it is typed —, the place on a map below
-// it (vuetifyx's <vx-address-field>). Its value is a record of AddressFields:
-// schema.org's PostalAddress, with the coordinates of the place and its id at
-// Google.
-const AddressType = "address"
-
-// AddressFields are the fields of an address, in their order: the address in
-// words (formatted) and its parts, the coordinates (lat, lng: numbers) and the
-// place's id at Google (placeId). Typed with no place found, only formatted.
-var AddressFields = []string{"formatted", "street", "number", "complement", "neighborhood", "city", "region",
-	"postalCode", "country", "countryCode", "lat", "lng", "placeId"}
 
 // MapsKeyFunc is the Google Maps key (Maps JavaScript + Places) an address is
 // found and shown with, for the request; "" leaves the address only typed.
@@ -108,27 +97,4 @@ func coordinate(v any) (float64, bool) {
 		return f, err == nil
 	}
 	return 0, false
-}
-
-// decodeAddress reads an address the form posted under key (`key.formatted`,
-// `key.lat`…): a record of AddressFields — the coordinates numbers —; nil
-// when nothing of it was posted, or its words are empty.
-func decodeAddress(values url.Values, key string) any {
-	get := func(name string) string { return strings.TrimSpace(values.Get(key + "." + name)) }
-	if get("formatted") == "" {
-		return nil
-	}
-	rec := make(Record, 0, len(AddressFields))
-	for _, name := range AddressFields {
-		var v any = get(name)
-		if name == "lat" || name == "lng" {
-			if f, err := strconv.ParseFloat(v.(string), 64); err == nil {
-				v = f
-			} else {
-				v = nil
-			}
-		}
-		rec = append(rec, RecordField{Name: name, Value: v})
-	}
-	return rec
 }

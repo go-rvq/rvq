@@ -35,7 +35,8 @@ func TestAddress(t *testing.T) {
 	}
 	v := url.Values{"Value.where.formatted": {"Rua A, 10 - Viçosa, MG"}, "Value.where.city": {"Viçosa"},
 		"Value.where.lat": {"-20.75"}, "Value.where.lng": {"-42.88"}, "Value.where.placeId": {"p1"}}
-	out, _ := json.Marshal(New().decoders[AddressType](v, "Value.where"))
+	rec, _ := s.Decode(v, "Value").(Record)
+	out, _ := json.Marshal(rec[0].Value)
 	if want := `{"formatted":"Rua A, 10 - Viçosa, MG","street":"","number":"","complement":"","neighborhood":"","city":"Viçosa","region":"","postalCode":"","country":"","countryCode":"","lat":-20.75,"lng":-42.88,"placeId":"p1"}`; string(out) != want {
 		t.Errorf("decoded:\n%s\nwant\n%s", out, want)
 	}

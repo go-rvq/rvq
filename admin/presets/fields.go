@@ -701,7 +701,14 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 		f.Setup.Setup(fctx)
 
 		err1 = f.setterFunc(toObj, fctx, ctx)
-		if err1 != nil {
+		if fe, ok := err1.(web.FieldErrorsHolder); ok && len(fe.FieldErrors()) > 0 {
+			// what is wrong field by field: under each
+			for k, msgs := range fe.FieldErrors() {
+				for _, m := range msgs {
+					vErr.FieldError(k, m)
+				}
+			}
+		} else if err1 != nil {
 			vErr.FieldError(fctx.FormKey, err1.Error())
 		}
 	}
@@ -1343,6 +1350,7 @@ func (b *FieldsBuilder) fieldToComponentWithFormValueKey(opts *ToComponentOption
 	fctx.Mode = mode
 	fctx.probing = opts != nil && opts.probing
 	fctx.Errors = vErr.GetRemoveFieldErrors(fctx.FormKey)
+	fctx.SubErrors = vErr.GetFieldErrorsUnder(fctx.FormKey)
 
 	if !opts.SkipsPermVerify() && info != nil {
 		var (
