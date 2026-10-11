@@ -162,16 +162,6 @@ const color = (s: State) => ({ idle: 'grey', waiting: 'info', ok: 'success', fai
             <template #prepend>
               <v-icon :icon="icon(checks[name].state)" :color="color(checks[name].state)" />
             </template>
-
-<style>
-/* the reason of a failure whole, not cut */
-[data-maps-key-test-dialog] .v-list-item-subtitle {
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-</style>
             <template #append>
               <v-chip
                 v-if="checks[name].state === 'ok' || checks[name].state === 'failed'"
@@ -181,32 +171,12 @@ const color = (s: State) => ({ idle: 'grey', waiting: 'info', ok: 'success', fai
                 >{{ checks[name].state === 'ok' ? t.ok : t.failed }}</v-chip
               >
             </template>
-
-<style>
-/* the reason of a failure whole, not cut */
-[data-maps-key-test-dialog] .v-list-item-subtitle {
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-</style>
           </v-list-item>
         </v-list>
         <template v-if="loaded">
           <p class="text-body-2 text-medium-emphasis mb-1">{{ t.tryIt }}</p>
           <AddressField v-model="address" :api-key="apiKey" map-height="260px" />
         </template>
-
-<style>
-/* the reason of a failure whole, not cut */
-[data-maps-key-test-dialog] .v-list-item-subtitle {
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-</style>
       </v-card-text>
       <v-card-actions>
         <v-spacer />

@@ -16,6 +16,9 @@ import { installCloserUrlSync } from './closer-url'
 
 export type CloserCallback = (closer: any) => void
 
+/** A close guard: true holds the close the user asked for. */
+export type CloserGuard = (closer: any) => boolean
+
 /** A closer's URL: either the address itself or a function of the closer. */
 export type CloserUrl = string | ((closer: any) => string)
 
@@ -28,6 +31,18 @@ export interface Closer {
   onClose(fn: CloserCallback): () => void
   /** Optional clean page URL this overlay stands for, see closer-url.ts. */
   url?: CloserUrl
+  /** Guards of a close asked by the user: one answering true holds it (a form
+   * with changes not saved). Registered with onCloseGuard. */
+  closeGuards: CloserGuard[]
+  /** Registers a close guard and returns the function that removes it. */
+  onCloseGuard(fn: CloserGuard): () => void
+  /** A close the user asked for — ESC, a click outside, the close button —:
+   * held, with confirmClose on, when a guard says so; done otherwise. Returns
+   * whether it closed. A close by the app (`show = false`: saved) is not
+   * guarded. */
+  requestClose(): boolean
+  /** On while the confirmation of a held close is shown (vx-form-guard). */
+  confirmClose: boolean
   $parent?: any
 
   [k: string]: any
@@ -93,6 +108,8 @@ export function asCloser(target: any): any {
         return
       }
       this._show = next
+      // a confirmation pending is over, either way
+      this.confirmClose = false
       fire(next ? this.openCallbacks : this.closeCallbacks, this)
     }
   })
@@ -106,6 +123,43 @@ export function asCloser(target: any): any {
       }
     }
   }
+
+  if (!Array.isArray(target.closeGuards)) {
+    target.closeGuards = []
+  }
+  if (target.confirmClose === undefined) {
+    target.confirmClose = false
+  }
+
+  Object.defineProperty(target, 'onCloseGuard', {
+    enumerable: false,
+    configurable: true,
+    value: register('closeGuards')
+  })
+  Object.defineProperty(target, 'requestClose', {
+    enumerable: false,
+    configurable: true,
+    value: function (this: any) {
+      // `this` is the reactive proxy when called on it: the flag it sets is
+      // seen; on the raw object, the target
+      const self = this || target
+      for (const g of [...self.closeGuards]) {
+        let hold = false
+        try {
+          hold = !!g(self)
+        } catch (e) {
+          console.error('closer guard failed:', e)
+        }
+        if (hold) {
+          self.confirmClose = true
+          return false
+        }
+      }
+      self.confirmClose = false
+      self.show = false
+      return true
+    }
+  })
 
   Object.defineProperty(target, 'onOpen', {
     enumerable: false,

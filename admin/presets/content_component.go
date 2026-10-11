@@ -50,7 +50,8 @@ func CloseBtn() h.HTMLComponent {
 	return VBtn("").Icon(true).
 		Children(VIcon("mdi-close")).
 		Size(SizeLarge).
-		Attr("@click.stop", "closer.show = false")
+		// a close the user asks for: a form with changes holds it (FormGuard)
+		Attr("@click.stop", CloserRequestClose)
 }
 
 type ContentComponentBuilderOverlay struct {

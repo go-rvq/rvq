@@ -212,6 +212,11 @@ func (f *Form) Component() (comp h.HTMLComponent) {
 	}
 
 	if overlay.Overlayed() {
+		// a form whose changes are not saved as they are made asks before it is
+		// closed (FormGuard); one saved as it changes (autosave) has none
+		if f.MB.Editing().onChangeAction == nil {
+			cb.PreBody = append(cb.PreBody, FormGuard(f.b.ctx))
+		}
 		// The `form` scope is established by the EditForm/NewForm wrapper; only the
 		// locals/vars scopes are created here (a go-plaid-scope without :form keeps
 		// the injected form).

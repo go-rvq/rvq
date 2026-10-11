@@ -10,6 +10,7 @@ import {
     shallowRef
 } from 'vue'
 import {GlobalEvents} from 'vue-global-events'
+import GoPlaidFormGuard from '@/form-guard'
 import GoPlaidScope from '@/go-plaid-scope.vue'
 import GoPlaidPortal from '@/go-plaid-portal.vue'
 import GoPlaidRunScript from '@/go-plaid-run-script.vue'
@@ -129,6 +130,7 @@ export const plaidPlugin = {
     app.component('GoPlaidPortal', GoPlaidPortal)
     app.component('GoPlaidRunScript', GoPlaidRunScript)
     app.component('UserComponent', UserComponent)
+    app.component('GoPlaidFormGuard', GoPlaidFormGuard)
     app.directive('keep-scroll', keepScroll)
     app.directive('assign', assignOnMounted)
     app.component('GlobalEvents', GlobalEvents)

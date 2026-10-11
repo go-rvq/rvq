@@ -14,6 +14,9 @@ type (
 		SetWidth(v string)
 		SetVModel(s string)
 		SetModelValue(s string)
+		// SetCloserModel binds the card's model to value, its updates to
+		// onUpdate — a close asked for, which an owner may hold
+		SetCloserModel(value, onUpdate string)
 	}
 )
 
@@ -39,4 +42,9 @@ func (b *VXAdvancedCloseCardTagBuilder[T]) SetVModel(s string) {
 
 func (b *VXAdvancedCloseCardTagBuilder[T]) SetModelValue(s string) {
 	b.Attr("model-value", s)
+}
+
+func (b *VXAdvancedCloseCardTagBuilder[T]) SetCloserModel(value, onUpdate string) {
+	b.Attr(":model-value", value)
+	b.Attr("@update:model-value", onUpdate)
 }

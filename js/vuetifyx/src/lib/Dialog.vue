@@ -90,15 +90,11 @@ export default defineComponent({
       get() {
         return this.isOpen as boolean
       },
+      // asks the owner (v-model): its answer — isOpen, the model — opens or
+      // closes it (watch isOpen). An owner may refuse a close (a form with
+      // changes not saved: closer.requestClose), and the dialog stays open.
       set(v: boolean) {
-        state.closeChanging = true
         this.isOpen = v
-        this.$emit(v ? 'open' : 'close')
-        if (v) {
-          this.openCb()
-        } else {
-          this.closeCb()
-        }
       }
     }
   },
@@ -162,19 +158,17 @@ export default defineComponent({
   },
 
   watch: {
-    modelValue(val) {
+    // opened or closed — as the model says, not as asked —: its callbacks
+    isOpen(val) {
       if (val && this.isExpanded) {
         this.isExpanded = false
       }
-      if (!state.closeChanging) {
-        this.$emit(val ? 'open' : 'close')
-        if (val) {
-          this.openCb()
-        } else {
-          this.closeCb()
-        }
+      this.$emit(val ? 'open' : 'close')
+      if (val) {
+        this.openCb()
+      } else {
+        this.closeCb()
       }
-      state.closeChanging = false
     }
   },
 

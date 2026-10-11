@@ -165,14 +165,16 @@ func (p *Drawer) RootWrap(wrap func(comp h.HTMLComponent) h.HTMLComponent) *Draw
 
 func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
-		ac.SetVModel("closer.show")
+		ac.SetCloserModel("closer.show", CloserModelUpdate)
 	} else {
 		drawer := v.VNavigationDrawer(
 			// web.GlobalEvents().Attr("@keyup.esc", varName+" = false"),
 			comp,
 		).
 			// Attr("@input", "plaidForm.dirty && vars.presetsRightDrawer == false && !confirm('You have unsaved changes on this form. If you close it, you will lose all unsaved changes. Are you sure you want to close it?') ? vars.presetsRightDrawer = true: vars.presetsRightDrawer = $event"). // remove because drawer plaidForm has to be reset when UpdateOverlayContent
-			Attr("v-model", "closer.show").
+			// a click outside asks to close: a form with changes holds it
+			Attr(":model-value", "closer.show").
+			Attr("@update:model-value", CloserModelUpdate).
 			Location(p.location).
 			Temporary(true).
 			// Fixed(true).

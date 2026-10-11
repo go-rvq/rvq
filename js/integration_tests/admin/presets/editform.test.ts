@@ -65,7 +65,11 @@ describe("EditForm wrapper", () => {
     // the edit form is a dialog bound to the shared closer (no own form scope
     // recreated for the whole dialog)
     expect(body).toContain("<vx-dialog");
-    expect(body).toContain("v-model='closer.show'");
+    // shown by the closer; closed by the user, through its requestClose (the
+    // form guard may hold it)
+    expect(body).toContain(":model-value='closer.show'");
+    expect(body).toContain("closer.requestClose()");
+    expect(body).toContain("<go-plaid-form-guard :form='form'>");
     // it renders its fields (Name + the list editor items)
     expect(body).toContain('form["Name"]');
     expect(body).toContain('form["Items[0].Label"]');

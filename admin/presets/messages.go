@@ -68,19 +68,24 @@ type Messages struct {
 	TheFemaleTitle             string `i18n:"label='The (feminine)', hint='A title with its article, for a feminine noun.', fields=(;'%s'='the title')"`
 	TheMaleTitle               string `i18n:"label='The (masculine)', hint='A title with its article, for a masculine noun.', fields=(;'%s'='the title')"`
 
-	YouAreHere                                 string                 `i18n:"hint='Label of the breadcrumb (where the user is).'"`
-	New                                        string                 `i18n:"hint='Button that creates a record.'"`
-	Update                                     string                 `i18n:"hint='Button that saves a record.'"`
-	Execute                                    string                 `i18n:"hint='Button that runs an action.'"`
-	Delete                                     string                 `i18n:"hint='Button that deletes a record.'"`
-	DeleteRelated                              string                 `i18n:"hint='Option that deletes the related records too.'"`
-	DeleteRelatedHint                          string                 `i18n:"label='Delete related: hint', hint='Hint of the option that deletes the related records too.'"`
-	ShowRelatedItemsTitle                      string                 `i18n:"hint='Button that shows the records related to the one being deleted.'"`
-	RelatedItemsForDeletionActionTitle         string                 `i18n:"label='Related items for deletion', hint='Title of the records deleted along with a record.'"`
-	Edit                                       string                 `i18n:"hint='Button that opens the form of a record.'"`
-	FormTitle                                  string                 `i18n:"hint='Title of a form with no other.'"`
-	OK                                         string                 `i18n:"hint='Button that confirms.'"`
-	Cancel                                     string                 `i18n:"hint='Button that closes without doing anything.'"`
+	YouAreHere                         string `i18n:"hint='Label of the breadcrumb (where the user is).'"`
+	New                                string `i18n:"hint='Button that creates a record.'"`
+	Update                             string `i18n:"hint='Button that saves a record.'"`
+	Execute                            string `i18n:"hint='Button that runs an action.'"`
+	Delete                             string `i18n:"hint='Button that deletes a record.'"`
+	DeleteRelated                      string `i18n:"hint='Option that deletes the related records too.'"`
+	DeleteRelatedHint                  string `i18n:"label='Delete related: hint', hint='Hint of the option that deletes the related records too.'"`
+	ShowRelatedItemsTitle              string `i18n:"hint='Button that shows the records related to the one being deleted.'"`
+	RelatedItemsForDeletionActionTitle string `i18n:"label='Related items for deletion', hint='Title of the records deleted along with a record.'"`
+	Edit                               string `i18n:"hint='Button that opens the form of a record.'"`
+	FormTitle                          string `i18n:"hint='Title of a form with no other.'"`
+	OK                                 string `i18n:"hint='Button that confirms.'"`
+	Cancel                             string `i18n:"hint='Button that closes without doing anything.'"`
+	// the confirmation of closing a form with changes not saved
+	DiscardChangesTitle                        string                 `i18n:"label='Discard changes: title', hint='Title of the confirmation of closing a form whose values changed and were not saved.'"`
+	DiscardChangesText                         string                 `i18n:"label='Discard changes: text', hint='Text of the confirmation of closing a form with changes not saved.'"`
+	DiscardChanges                             string                 `i18n:"label='Discard changes: discard', hint='Button that closes the form, its changes lost.'"`
+	KeepEditing                                string                 `i18n:"label='Discard changes: keep editing', hint='Button that goes back to the form, its changes kept.'"`
 	Clear                                      string                 `i18n:"hint='Button that empties a field.'"`
 	Create                                     string                 `i18n:"hint='Button that saves a new record.'"`
 	DeleteConfirmationTextTemplate             string                 `i18n:"label='Delete confirmation', hint='Asks to confirm a deletion.', fields=(;'{the_model}'='the model, with its article', '{title}'='the record\\'s title')"`
@@ -266,6 +271,10 @@ var Messages_en_US = &Messages{
 	FormTitle:                          "Form",
 	OK:                                 "OK",
 	Cancel:                             "Cancel",
+	DiscardChangesTitle:                "Discard the changes?",
+	DiscardChangesText:                 "The form has changes not saved. Closing it, they are lost.",
+	DiscardChanges:                     "Discard",
+	KeepEditing:                        "Keep editing",
 	Clear:                              "Clear",
 	Create:                             "Create",
 	DeleteConfirmationTextTemplate:     "Are you sure you want to delete {the_model}: {title}?",
@@ -368,6 +377,10 @@ var Messages_pt_BR = &Messages{
 	FormTitle:                          "Formulário",
 	OK:                                 "OK",
 	Cancel:                             "Cancelar",
+	DiscardChangesTitle:                "Descartar as alterações?",
+	DiscardChangesText:                 "O formulário tem alterações não salvas. Fechando-o, elas se perdem.",
+	DiscardChanges:                     "Descartar",
+	KeepEditing:                        "Continuar editando",
 	Clear:                              "Limpar",
 
 	Create:                                     "Cadastrar",

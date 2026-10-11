@@ -155,8 +155,10 @@ func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 		}
 	}
 
+	// ESC and a click outside ask to close: a form with changes holds it
 	d := v.VDialog(comp).
-		Attr("v-model", "closer.show").
+		Attr(":model-value", "closer.show").
+		Attr("@update:model-value", CloserModelUpdate).
 		Fullscreen("closer.fullscreen")
 
 	if p.width != "" {
@@ -200,7 +202,7 @@ func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, com
 	}
 
 	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
-		ac.SetVModel("closer.show")
+		ac.SetCloserModel("closer.show", CloserModelUpdate)
 		if acd, ok := ac.(vx.VXAdvancedExpandCloseCardTagger); ok {
 			acd.SetDialogOrDrawer(true)
 			if p.width != "" {
