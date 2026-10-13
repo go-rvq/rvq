@@ -7,6 +7,7 @@ import (
 	"math"
 	"path"
 	"sort"
+	"strings"
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
@@ -31,8 +32,12 @@ const (
 )
 
 func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
-	err := db.AutoMigrate(&media_library.MediaLibrary{})
+	err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{})
 	if err != nil {
+		panic(err)
+	}
+	// where each file is used, kept as the records are written
+	if err = TrackUses(db); err != nil {
 		panic(err)
 	}
 
@@ -302,9 +307,11 @@ func mediaBoxThumb(msgr *Messages, cfg *media_library.MediaBoxConfig,
 	return card
 }
 
+// fileThumb is the icon of the file's type (its extension: none, the
+// generic one).
 func fileThumb(filename string) h.HTMLComponent {
 	return h.Div(
-		fileicons.Icon(path.Ext(filename)[1:]).Attr("height", "150").Class("pt-4"),
+		fileicons.Icon(strings.TrimPrefix(path.Ext(filename), ".")).Attr("height", "150").Class("pt-4"),
 	).Class("d-flex align-center justify-center")
 }
 
@@ -374,6 +381,12 @@ func doDelete(mb *Builder) web.EventFunc {
 		}
 		if err = mb.deleteIsAllowed(ctx.R, &obj); err != nil {
 			return
+		}
+		// a file in use is not deleted: where it is used, said
+		if uses, uerr := UsesOf(db, obj.ID); uerr == nil && len(uses) > 0 {
+			web.AppendRunScripts(&r, "vars.mediaLibrary_deleteConfirmation = false")
+			presets.ShowMessage(&r, fileInUseMessage(GetMessages(ctx.Context()), uses), "error")
+			return r, nil
 		}
 
 		err = db.Delete(&media_library.MediaLibrary{}, "id = ?", id).Error

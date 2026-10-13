@@ -21,6 +21,7 @@ type Messages struct {
 	Download                    string `i18n:"hint='Button that downloads a file.'"`
 	ChooseAFile                 string `i18n:"label='Choose a file', hint='Title of the dialog that chooses a file of the media library.'"`
 	ChosenFileIsGone            string `i18n:"hint='Shown when the chosen file was removed from the media library meanwhile.'"`
+	FileInUse                   string `i18n:"hint='Shown when a file asked to be deleted is in use: where it is used follows.', fields=(;'%d'='how many uses')"`
 	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image.', fields=(;'%[1]d'='its width, in pixels', '%[2]d'='its height, in pixels', '%[3]s'='its proportion (16:9)')"`
 	Search                      string `i18n:"hint='Placeholder of the search of the media library.'"`
 	UploadFiles                 string `i18n:"hint='Button that uploads files to the media library.'"`
@@ -54,6 +55,7 @@ var Messages_en_US = &Messages{
 	Delete:                      "Delete",
 	ChooseAFile:                 "Choose a File",
 	ChosenFileIsGone:            "That file is no longer in the media library. Close this dialog and open it again.",
+	FileInUse:                   "This file is in use (%d) and was not deleted. Take it out of:",
 	RecommendedOriginalSize:     "Recommended original: at least %d×%d px, %s.",
 	CopyLink:                    "Copy Link",
 	LinkCopied:                  "Link Copied!",
@@ -88,6 +90,7 @@ var Messages_zh_CN = &Messages{
 	Delete:                      "删除",
 	ChooseAFile:                 "选择一个文件",
 	ChosenFileIsGone:            "该文件已不在媒体库中。请关闭此对话框后重新打开。",
+	FileInUse:                   "该文件正在使用中（%d 处），未删除。请先从以下位置移除：",
 	RecommendedOriginalSize:     "建议原图：至少 %d×%d 像素，比例 %s。",
 	Search:                      "搜索",
 	UploadFiles:                 "上传多个文件",
@@ -111,6 +114,7 @@ var Messages_ja_JP = &Messages{
 	Delete:                      "削除",
 	ChooseAFile:                 "ファイルを選択",
 	ChosenFileIsGone:            "そのファイルはメディアライブラリにありません。ダイアログを閉じて開き直してください。",
+	FileInUse:                   "このファイルは使用中（%d 件）のため削除されませんでした。次の場所から外してください：",
 	RecommendedOriginalSize:     "推奨する元画像: %d×%d px 以上、比率 %s。",
 	Search:                      "検索",
 	UploadFiles:                 "ファイルをアップロード",
@@ -134,6 +138,7 @@ var Messages_pt_BR = &Messages{
 	Delete:                      "Excluir",
 	ChooseAFile:                 "Escolha um arquivo",
 	ChosenFileIsGone:            "Este arquivo não está mais na biblioteca de mídia. Feche esta janela e abra de novo.",
+	FileInUse:                   "Este arquivo está em uso (%d) e não foi excluído. Tire-o de:",
 	RecommendedOriginalSize:     "Original recomendada: pelo menos %d×%d px, proporção %s.",
 	CopyLink:                    "Copiar link",
 	LinkCopied:                  "Link copiado!",

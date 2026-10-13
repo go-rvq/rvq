@@ -34,6 +34,17 @@ func (b *Builder) MediaLibraryPerPage(v int) *Builder {
 	return b
 }
 
+// BackfillUses makes the uses of the files again (media.BackfillUses) from
+// the records of the models of pb with media boxes — after they were all
+// registered. It answers how many uses it wrote.
+func (b *Builder) BackfillUses(pb *presets.Builder) (int, error) {
+	var models []any
+	for _, m := range pb.Models() {
+		models = append(models, m.NewModel())
+	}
+	return BackfillUses(b.db, models...)
+}
+
 func (b *Builder) Install(pb *presets.Builder) error {
 	configure(pb, b, b.db)
 	return nil
