@@ -68,9 +68,12 @@ func (defaultModelSetup) Init() {}
 func (defaultModelSetup) InitFields(mode FieldMode, fieldBuilders *FieldBuilders) {
 }
 
+// The fields of the record's times and of its deletion (softdelete.Deletion:
+// who deleted it, from where) are the system's: shown in the detail, never
+// edited — a form with them would let a user write who deleted a record.
 func (defaultModelSetup) InitField(mode FieldMode, f *FieldBuilder) {
 	switch f.name {
-	case "CreatedAt", "UpdatedAt", "DeletedAt":
+	case "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedByID", "DeletedOrigin":
 		f.SetMode(DETAIL)
 		f.SetAudited(true)
 	}
@@ -78,7 +81,7 @@ func (defaultModelSetup) InitField(mode FieldMode, f *FieldBuilder) {
 
 func (defaultModelSetup) ConfigureField(mode FieldMode, f *FieldBuilder) {
 	switch f.name {
-	case "CreatedAt", "UpdatedAt", "DeletedAt":
+	case "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedByID", "DeletedOrigin":
 		f.DisableZeroRender()
 	}
 }

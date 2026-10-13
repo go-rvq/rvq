@@ -29,8 +29,8 @@ type usesPost struct {
 	Thumb *media_library.MediaBox `gorm:"type:text"`
 }
 
-// usesDB is a database of the test's own — shared by its connections, its
-// foreign keys on —, the uses tracked, with two files.
+// usesDB is a database of the test's own — of one connection, its foreign
+// keys on —, the uses tracked, with two files.
 func usesTestDB(t *testing.T) (*gorm.DB, media_library.MediaLibrary, media_library.MediaLibrary) {
 	t.Helper()
 	dsn := "file:" + strings.ReplaceAll(t.Name(), "/", "_") + "?mode=memory&cache=shared&_foreign_keys=on"
@@ -38,6 +38,13 @@ func usesTestDB(t *testing.T) (*gorm.DB, media_library.MediaLibrary, media_libra
 	if err != nil {
 		t.Fatal(err)
 	}
+	// one connection: the crops made in the background (Recrop) and the
+	// test's reads wait for each other, not "table is locked" (shared cache)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
 	uuidkey.MustRegister(db)
 	if err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{}, &usesPost{}); err != nil {
 		t.Fatal(err)
