@@ -264,6 +264,10 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				SlotTop(toolbar).
 				SlotBottom(profile).
 				Width("320").
+				// its right edge drags its width, kept in the browser
+				Resizable("rvq.presets.navDrawer.width").
+				MinWidth(220).
+				MaxWidth(600).
 				Attr("v-model", "vars.navDrawer").
 				VariantMenu().
 				// on a narrow screen (vars.navMobile) the menu goes over the page —

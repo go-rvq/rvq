@@ -37,3 +37,24 @@ func (b *VXNavigationDrawerBuilder) Variant(v string) *VXNavigationDrawerBuilder
 func (b *VXNavigationDrawerBuilder) VariantMenu() *VXNavigationDrawerBuilder {
 	return b.Variant("menu")
 }
+
+// Resizable lets the inner edge of the drawer drag its width — between
+// MinWidth and MaxWidth —, kept in the browser's localStorage under
+// storageKey ("": not kept); a double click on the edge is the width given
+// again.
+func (b *VXNavigationDrawerBuilder) Resizable(storageKey string) *VXNavigationDrawerBuilder {
+	if storageKey == "" {
+		return b.Attr("resizable", true)
+	}
+	return b.Attr("resizable", storageKey)
+}
+
+// MinWidth is the narrowest a resizable drawer is dragged to (px).
+func (b *VXNavigationDrawerBuilder) MinWidth(px int) *VXNavigationDrawerBuilder {
+	return b.Attr(":min-width", px)
+}
+
+// MaxWidth is the widest a resizable drawer is dragged to (px).
+func (b *VXNavigationDrawerBuilder) MaxWidth(px int) *VXNavigationDrawerBuilder {
+	return b.Attr(":max-width", px)
+}
