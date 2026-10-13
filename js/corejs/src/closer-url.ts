@@ -10,7 +10,12 @@
 // inside the one being closed — they go away with it).
 //
 // Going Back is the same gesture as closing the top overlay, so a popstate
-// closes it (with the history writes suppressed: the browser already moved).
+// back to the address an overlay was opened from closes it — and what was
+// opened above it: a jump of several steps back (with the history writes
+// suppressed: the browser already moved) —, as the user's close: a form with
+// changes not saved holds it, asks, and keeps its address. Forward to the address of an
+// overlay Back closed shows nothing there — that overlay is gone —, so the
+// browser is sent back to where it was: forward is a no-op, never a close.
 
 import type { CloserUrl } from './closer'
 
@@ -25,6 +30,10 @@ const stack: Entry[] = []
 // set while the browser (not us) is driving the change
 let suppressed = false
 let popstateInstalled = false
+// the addresses of the overlays Back closed: what Forward would go to
+const forwardUrls: string[] = []
+// set while we send the browser back from such a Forward (its popstate ours)
+let bouncing = false
 
 function resolveUrl(closer: any): string {
   const url: CloserUrl | undefined = closer?.url
@@ -49,17 +58,51 @@ function ensurePopstate() {
   }
   popstateInstalled = true
   window.addEventListener('popstate', () => {
-    // Back with overlays open closes the top one. Its close callback runs while
-    // suppressed, so it unwinds the stack without writing history again.
-    const top = stack[stack.length - 1]
-    if (!top) {
+    if (bouncing) {
+      bouncing = false
       return
     }
-    suppressed = true
-    try {
-      top.closer.show = false
-    } finally {
-      suppressed = false
+    const here = currentHref()
+    // Back to where an overlay was opened from: it closes, and what is above
+    // it — from the top down, each as a close the user asked for (requestClose):
+    // one holding (a form with changes not saved) stays, its confirmation
+    // shown, and its address comes back (the browser moved already). The
+    // close callbacks run while suppressed, so they unwind the stack without
+    // writing history again.
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (stack[i].prev !== here) {
+        continue
+      }
+      for (let j = stack.length - 1; j >= i; j--) {
+        const e = stack[j]
+        if (!e) {
+          continue // gone with one below it
+        }
+        let closed = true
+        suppressed = true
+        try {
+          if (typeof e.closer.requestClose === 'function') {
+            closed = e.closer.requestClose() !== false
+          } else {
+            e.closer.show = false
+          }
+        } finally {
+          suppressed = false
+        }
+        if (!closed) {
+          window.history.pushState(null, '', e.url)
+          return
+        }
+        if (!forwardUrls.includes(e.url)) {
+          forwardUrls.push(e.url)
+        }
+      }
+      return
+    }
+    // Forward to an overlay Back closed: back to where the browser was
+    if (forwardUrls.includes(here)) {
+      bouncing = true
+      window.history.back()
     }
   })
 }
@@ -77,6 +120,8 @@ export function closerUrlOpen(closer: any) {
   ensurePopstate()
   stack.push({ closer, url, prev: currentHref() })
   if (!suppressed) {
+    // a new entry drops what was ahead: nothing to go forward to
+    forwardUrls.splice(0)
     // state stays null on purpose: plaid's popstate handler only reacts to a
     // state it pushed itself, so navigating here must not reload the page.
     window.history.pushState(null, '', url)
@@ -105,4 +150,6 @@ export function installCloserUrlSync(closer: any) {
 /** Test helper: forgets every stacked address. */
 export function resetCloserUrlStack() {
   stack.splice(0)
+  forwardUrls.splice(0)
+  bouncing = false
 }

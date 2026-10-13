@@ -10,6 +10,13 @@ import { asCloser, createCloser, isCloser } from "../../../corejs/src/closer";
 // @ts-expect-error corejs @ alias resolved by corejs tsconfig
 import { closerUrlStack, resetCloserUrlStack } from "../../../corejs/src/closer-url";
 
+// back is what the browser does on Back (or Forward): its address first, then
+// the popstate.
+function back(path: string) {
+  window.history.replaceState(null, "", path);
+  window.dispatchEvent(new Event("popstate"));
+}
+
 beforeEach(() => {
   resetCloserUrlStack();
   window.history.replaceState(null, "", "/admin/articles");
@@ -162,14 +169,99 @@ describe("address bar, LIFO", () => {
     detail.show = true;
     edit.show = true;
 
-    // the browser moved on its own: our handler closes what that address showed
-    window.dispatchEvent(new Event("popstate"));
+    // the browser moved on its own (its address first, then the event): our
+    // handler closes what that address showed
+    back("/admin/articles/1");
     expect(edit.show).toBe(false);
     expect(detail.show).toBe(true);
     expect(closerUrlStack().map((e: any) => e.url)).toEqual(["/admin/articles/1"]);
 
-    window.dispatchEvent(new Event("popstate"));
+    back("/admin/articles");
     expect(detail.show).toBe(false);
     expect(closerUrlStack().length).toBe(0);
+  });
+
+  it("Back of several steps at once closes all it went past", () => {
+    const detail = createCloser({ url: "/admin/articles/1" });
+    const edit = createCloser({ url: "/admin/articles/1/edit" });
+    detail.show = true;
+    edit.show = true;
+
+    back("/admin/articles");
+    expect(detail.show).toBe(false);
+    expect(closerUrlStack().length).toBe(0);
+  });
+
+  it("Forward to an overlay Back closed closes nothing: the browser goes back", () => {
+    const detail = createCloser({ url: "/admin/articles/1" });
+    const edit = createCloser({ url: "/admin/articles/1/edit" });
+    detail.show = true;
+    edit.show = true;
+    back("/admin/articles/1");
+
+    const was = window.history.back;
+    let backs = 0;
+    window.history.back = () => {
+      backs++;
+    };
+    try {
+      // Forward: to the edit's address, gone
+      back("/admin/articles/1/edit");
+      expect(backs).toBe(1);
+      expect(detail.show).toBe(true);
+      // the browser back where it was: its popstate, ours, ignored
+      back("/admin/articles/1");
+      expect(detail.show).toBe(true);
+      expect(closerUrlStack().map((e: any) => e.url)).toEqual(["/admin/articles/1"]);
+    } finally {
+      window.history.back = was;
+    }
+    detail.show = false;
+  });
+
+  it("an overlay opened after a Back leaves nothing to go forward to", () => {
+    const detail = createCloser({ url: "/admin/articles/1" });
+    const edit = createCloser({ url: "/admin/articles/1/edit" });
+    detail.show = true;
+    edit.show = true;
+    back("/admin/articles/1");
+    edit.show = true; // opened again: a new entry, the forward one gone
+    edit.show = false;
+
+    // a move to its address is no Forward of ours: nothing done
+    const was = window.history.back;
+    let backs = 0;
+    window.history.back = () => {
+      backs++;
+    };
+    try {
+      back("/admin/articles/1/edit");
+      expect(backs).toBe(0);
+    } finally {
+      window.history.back = was;
+    }
+    detail.show = false;
+  });
+
+  it("Back of a form with changes not saved holds it: it asks, its address back", () => {
+    const detail = createCloser({ url: "/admin/articles/1" });
+    const edit = createCloser({ url: "/admin/articles/1/edit" });
+    detail.show = true;
+    edit.show = true;
+    let dirty = true;
+    edit.onCloseGuard(() => dirty);
+
+    back("/admin/articles/1");
+    expect(edit.show).toBe(true);
+    expect(edit.confirmClose).toBe(true);
+    expect(window.location.pathname).toBe("/admin/articles/1/edit");
+    expect(closerUrlStack().map((e: any) => e.url)).toEqual(["/admin/articles/1", "/admin/articles/1/edit"]);
+
+    // its changes let go: Back closes it
+    dirty = false;
+    back("/admin/articles/1");
+    expect(edit.show).toBe(false);
+    expect(detail.show).toBe(true);
+    detail.show = false;
   });
 });
