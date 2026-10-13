@@ -2,6 +2,7 @@ package role
 
 import (
 	"net/http"
+	"reflect"
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
@@ -186,6 +187,13 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 
 	ed.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 		r := obj.(*Role)
+		// the permissions the form removed — the list editor posts each with its
+		// ID and __deleted — are not saved again: deleted with the others below,
+		// a save of them by their ID would bring them back
+		if part := presets.PartitionListEditorItems(presets.ListEditorFormValues(ctx), "Permissions",
+			reflect.ValueOf(r.Permissions)); part != nil {
+			r.Permissions = part.KeptSlice(reflect.TypeOf(r.Permissions)).Interface().([]*perm.DefaultDBPolicy)
+		}
 		if r.ID != uuid.Nil {
 			if err = b.db.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", r.ID).Error; err != nil {
 				return
