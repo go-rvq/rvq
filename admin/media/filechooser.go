@@ -25,7 +25,7 @@ func fileChooser(p *presets.Builder, mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
 		field := ctx.R.FormValue("field")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := mb.cfgOf(ctx.R.FormValue("cfg"))
 
 		portalName := mainPortalName(field)
 
@@ -477,7 +477,7 @@ type uploadFiles struct {
 func uploadFile(b *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := b.cfgOf(ctx.R.FormValue("cfg"))
 
 		if err = b.uploadIsAllowed(ctx.R); err != nil {
 			return
@@ -512,11 +512,14 @@ func uploadFile(b *Builder) web.EventFunc {
 	}
 }
 
+// mergeNewSizes are the sizes the file m is cropped in for the field (cfg):
+// the field's — a size the file has in other measures (the field's sizes
+// changed) made again —, and whether there is any to make.
 func mergeNewSizes(m *media_library.MediaLibrary, cfg *media_library.MediaBoxConfig) (sizes map[string]*base.Size, r bool) {
 	sizes = make(map[string]*base.Size)
 	for k, size := range cfg.Sizes {
-		if m.File.Sizes[k] != nil {
-			sizes[k] = m.File.Sizes[k]
+		if old := m.File.Sizes[k]; old != nil && old.Width == size.Width && old.Height == size.Height {
+			sizes[k] = old
 			continue
 		}
 		sizes[k] = size
@@ -536,7 +539,7 @@ func chooseFile(b *Builder) web.EventFunc {
 		// there already carries an id — of the record being edited, not of the
 		// file being picked.
 		id := ctx.R.FormValue("id")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := b.cfgOf(ctx.R.FormValue("cfg"))
 
 		var m media_library.MediaLibrary
 		// First, not Find: Find leaves the record zeroed and reports no error
@@ -595,7 +598,7 @@ func chooseFile(b *Builder) web.EventFunc {
 func searchFile(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := mb.cfgOf(ctx.R.FormValue("cfg"))
 
 		ctx.R.Form[currentPageName(field)] = []string{"1"}
 
@@ -607,7 +610,7 @@ func searchFile(mb *Builder) web.EventFunc {
 func jumpPage(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := mb.cfgOf(ctx.R.FormValue("cfg"))
 		renderFileChooserDialogContent(ctx, &r, field, mb, cfg)
 		return
 	}

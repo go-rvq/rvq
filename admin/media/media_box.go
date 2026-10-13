@@ -32,7 +32,7 @@ const (
 )
 
 func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
-	err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{})
+	err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{}, &MediaBoxUsage{})
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +46,7 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 
 	b.FieldDefaults(presets.WRITE).
 		FieldType(media_library.MediaBox{}).
-		ComponentFunc(MediaBoxComponentFunc(db, false)).
+		ComponentFunc(mediaBoxComponentFunc(db, mb, false)).
 		SetterFunc(MediaBoxSetterFunc(db))
 
 	b.FieldDefaults(presets.LIST).
@@ -55,7 +55,7 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 
 	b.FieldDefaults(presets.DETAIL).
 		FieldType(media_library.MediaBox{}).
-		ComponentFunc(MediaBoxComponentFunc(db, true))
+		ComponentFunc(mediaBoxComponentFunc(db, mb, true))
 
 	registerEventFuncs(b.GetWebBuilder(), b, mb)
 
@@ -66,13 +66,23 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 		RegisterForModule(language.BrazilianPortuguese, I18nMediaLibraryKey, Messages_pt_BR)
 
 	configList(b, mb)
+	configSizes(b, mb)
 }
 
 func MediaBoxComponentFunc(db *gorm.DB, readonly bool) presets.FieldComponentFunc {
+	return mediaBoxComponentFunc(db, nil, readonly)
+}
+
+// mediaBoxComponentFunc is MediaBoxComponentFunc with the sizes of the
+// field's use (MediaBoxUsage), when mb has them.
+func mediaBoxComponentFunc(db *gorm.DB, mb *Builder, readonly bool) presets.FieldComponentFunc {
 	return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		cfg, ok := field.ContextValue(MediaBoxConfig).(*media_library.MediaBoxConfig)
 		if !ok {
 			cfg = &media_library.MediaBoxConfig{}
+		}
+		if mb != nil {
+			cfg = mb.fieldUsage(field, cfg)
 		}
 		mediaBox := field.Value().(media_library.MediaBox)
 
@@ -372,7 +382,7 @@ func doDelete(mb *Builder) web.EventFunc {
 					&r,
 					field,
 					mb,
-					stringToCfg(cfg),
+					mb.cfgOf(cfg),
 				)
 				r.RunScript = "vars.mediaLibrary_deleteConfirmation = false"
 				return r, nil
@@ -399,7 +409,7 @@ func doDelete(mb *Builder) web.EventFunc {
 			&r,
 			field,
 			mb,
-			stringToCfg(cfg),
+			mb.cfgOf(cfg),
 		)
 		r.RunScript = "vars.mediaLibrary_deleteConfirmation = false"
 		return
@@ -522,10 +532,10 @@ func MediaBoxListFunc() presets.FieldComponentFunc {
 	}
 }
 
-func deleteFileField() web.EventFunc {
+func deleteFileField(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
-		cfg := stringToCfg(ctx.R.FormValue("cfg"))
+		cfg := mb.cfgOf(ctx.R.FormValue("cfg"))
 		r.UpdatePortal(
 			mediaBoxThumbnailsPortalName(field),
 			mediaBoxThumbnails(ctx, &media_library.MediaBox{}, field, cfg, false, false),
@@ -590,7 +600,7 @@ func updateDescription(mb *Builder) web.EventFunc {
 					&r,
 					field,
 					mb,
-					stringToCfg(cfg),
+					mb.cfgOf(cfg),
 				)
 				// TODO: prompt that the record has been deleted?
 				return r, nil

@@ -1,6 +1,8 @@
 package media
 
 import (
+	"sync"
+
 	"github.com/go-rvq/rvq/admin/media/base"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
@@ -13,6 +15,10 @@ type Builder struct {
 	// model is the media library in the admin: its permissions are the
 	// ones of what the forms do with the files (perm.go)
 	model *presets.ModelBuilder
+	// usageModels are the models of the fields of images (RegisterUsages),
+	// by their keys (*presets.ModelBuilder): what a recrop finds their
+	// records by, what the admin names them by
+	usageModels sync.Map
 
 	base.WithConfigField
 }

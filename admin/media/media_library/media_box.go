@@ -37,6 +37,10 @@ type MediaBoxConfig struct {
 	BackgroundColor string
 	// disable crop
 	DisableCrop bool
+	// Usage is the use of the field — "<table>.<Field>", a MediaBoxUsage —
+	// whose sizes (the admin's, else the code's) the server reads: the
+	// sizes the browser sends back are not the ones it trusts.
+	Usage string `json:",omitempty"`
 }
 
 func (mediaBox *MediaBox) Scan(data interface{}) (err error) {

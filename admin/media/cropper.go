@@ -16,12 +16,15 @@ import (
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-func getParams(ctx *web.EventContext) (field string, id int, thumb string, cfg *media_library.MediaBoxConfig) {
+// getParams are the event's field, file (its key: a UUID, as text — the
+// event's query, not the route's id of the record being edited), size and
+// config.
+func getParams(mb *Builder, ctx *web.EventContext) (field string, id string, thumb string, cfg *media_library.MediaBoxConfig) {
 	field = ctx.R.FormValue("field")
 
-	id = ctx.ParamAsInt("id")
+	id = ctx.R.FormValue("id")
 	thumb = ctx.R.FormValue("thumb")
-	cfg = stringToCfg(ctx.R.FormValue("cfg"))
+	cfg = mb.cfgOf(ctx.R.FormValue("cfg"))
 	return
 }
 
@@ -29,11 +32,11 @@ func loadImageCropper(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		db := mb.db
 		msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
-		field, id, thumb, cfg := getParams(ctx)
+		field, id, thumb, cfg := getParams(mb, ctx)
 
 		var m media_library.MediaLibrary
-		err = db.Find(&m, id).Error
-		if err != nil {
+		// First by the key: Find with no match leaves m empty and no error
+		if err = db.First(&m, "id = ?", id).Error; err != nil {
 			return
 		}
 
@@ -80,7 +83,7 @@ func loadImageCropper(mb *Builder) web.EventFunc {
 									BeforeScript("locals.cropping = true").
 									EventFunc(cropImageEvent).
 									Query("field", field).
-									Query("id", fmt.Sprint(id)).
+									Query("id", id).
 									Query("thumb", thumb).
 									FieldValue("cfg", h.JSONString(cfg)).
 									Go()),
@@ -103,7 +106,7 @@ func cropImage(b *Builder) web.EventFunc {
 		db := b.db
 		cropOption := ctx.R.FormValue("CropOption")
 		// log.Println(cropOption, ctx.Event.Params)
-		field, id, thumb, cfg := getParams(ctx)
+		field, id, thumb, cfg := getParams(b, ctx)
 
 		mb := &media_library.MediaBox{}
 		err = mb.Scan(ctx.R.FormValue(fmt.Sprintf("%s.Values", field)))
@@ -118,8 +121,7 @@ func cropImage(b *Builder) web.EventFunc {
 			}
 
 			var m media_library.MediaLibrary
-			err = db.Find(&m, id).Error
-			if err != nil {
+			if err = db.First(&m, "id = ?", id).Error; err != nil {
 				return
 			}
 

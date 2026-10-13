@@ -22,6 +22,24 @@ type Messages struct {
 	ChooseAFile                 string `i18n:"label='Choose a file', hint='Title of the dialog that chooses a file of the media library.'"`
 	ChosenFileIsGone            string `i18n:"hint='Shown when the chosen file was removed from the media library meanwhile.'"`
 	FileInUse                   string `i18n:"hint='Shown when a file asked to be deleted is in use: where it is used follows.', fields=(;'%d'='how many uses')"`
+	MediaBoxUsage               string `i18n:"hint='Name, in the singular, of the sizes of the images of a field.'"`
+	MediaBoxUsages              string `i18n:"hint='Name, in the plural, of the sizes of the images of the fields (menu, listing title).'"`
+	MediaBoxUsageModel          string `i18n:"hint='Label of the model of a field of images.'"`
+	MediaBoxUsageLabel          string `i18n:"hint='Label of the name of a field of images.'"`
+	MediaBoxUsageSizes          string `i18n:"hint='Label of the sizes of the crops of a field of images.'"`
+	MediaBoxUsageRecropState    string `i18n:"hint='Label of how the crops of a field are being made again.'"`
+	MediaBoxUsageRecropError    string `i18n:"hint='Label of what went wrong making the crops of a field again.'"`
+	SizesOfTheAdmin             string `i18n:"hint='Said of sizes set in the admin, not the code\\'s.'"`
+	Recrop                      string `i18n:"hint='Action that makes the crops of the images of a field again.'"`
+	RecropStarted               string `i18n:"hint='Shown once the crops of a field started being made again.'"`
+	RecropBusy                  string `i18n:"hint='Shown when the crops of a field are already being made.'"`
+	RecropRunning               string `i18n:"hint='The crops of a field being made.', fields=(;'%d'='done, of the total that follows')"`
+	RecropMade                  string `i18n:"hint='The crops of a field made.', fields=(;'%d'='how many files')"`
+	RecropFailedText            string `i18n:"hint='The crops of a field could not all be made.'"`
+	SizeNameRequired            string `i18n:"hint='Error: a size of a field with no name.'"`
+	SizeNameTwice               string `i18n:"hint='Error: two sizes of a field of the same name.', fields=(;'%s'='the name')"`
+	SizeNotPositive             string `i18n:"hint='Error: a size with no width or height.', fields=(;'%s'='its name')"`
+	SizesConflict               string `i18n:"hint='Error: a size has the name of a size of another field in other measures.', fields=(;'%s'='the other field and its size')"`
 	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image.', fields=(;'%[1]d'='its width, in pixels', '%[2]d'='its height, in pixels', '%[3]s'='its proportion (16:9)')"`
 	Search                      string `i18n:"hint='Placeholder of the search of the media library.'"`
 	UploadFiles                 string `i18n:"hint='Button that uploads files to the media library.'"`
@@ -56,6 +74,24 @@ var Messages_en_US = &Messages{
 	ChooseAFile:                 "Choose a File",
 	ChosenFileIsGone:            "That file is no longer in the media library. Close this dialog and open it again.",
 	FileInUse:                   "This file is in use (%d) and was not deleted. Take it out of:",
+	MediaBoxUsage:               "Image sizes of a field",
+	MediaBoxUsages:              "Image sizes",
+	MediaBoxUsageModel:          "Model",
+	MediaBoxUsageLabel:          "Field",
+	MediaBoxUsageSizes:          "Sizes",
+	MediaBoxUsageRecropState:    "Crops",
+	MediaBoxUsageRecropError:    "What went wrong",
+	SizesOfTheAdmin:             "the admin's",
+	Recrop:                      "Make the crops again",
+	RecropStarted:               "The crops are being made again.",
+	RecropBusy:                  "The crops of this field are being made already.",
+	RecropRunning:               "being made: %d of %d",
+	RecropMade:                  "made (%d files)",
+	RecropFailedText:            "some could not be made",
+	SizeNameRequired:            "A size has no name.",
+	SizeNameTwice:               "Two sizes are named %s.",
+	SizeNotPositive:             "The size %s has no width or no height.",
+	SizesConflict:               "Another field has a size of this name in other measures (%s): a file used in both would be cropped in one, then the other.",
 	RecommendedOriginalSize:     "Recommended original: at least %d×%d px, %s.",
 	CopyLink:                    "Copy Link",
 	LinkCopied:                  "Link Copied!",
@@ -91,6 +127,24 @@ var Messages_zh_CN = &Messages{
 	ChooseAFile:                 "选择一个文件",
 	ChosenFileIsGone:            "该文件已不在媒体库中。请关闭此对话框后重新打开。",
 	FileInUse:                   "该文件正在使用中（%d 处），未删除。请先从以下位置移除：",
+	MediaBoxUsage:               "字段的图片尺寸",
+	MediaBoxUsages:              "图片尺寸",
+	MediaBoxUsageModel:          "模型",
+	MediaBoxUsageLabel:          "字段",
+	MediaBoxUsageSizes:          "尺寸",
+	MediaBoxUsageRecropState:    "裁剪",
+	MediaBoxUsageRecropError:    "出错原因",
+	SizesOfTheAdmin:             "管理员设置",
+	Recrop:                      "重新裁剪",
+	RecropStarted:               "正在重新裁剪。",
+	RecropBusy:                  "该字段正在裁剪中。",
+	RecropRunning:               "处理中：%d / %d",
+	RecropMade:                  "已完成（%d 个文件）",
+	RecropFailedText:            "部分未能完成",
+	SizeNameRequired:            "有尺寸没有名称。",
+	SizeNameTwice:               "有两个尺寸都叫 %s。",
+	SizeNotPositive:             "尺寸 %s 没有宽度或高度。",
+	SizesConflict:               "另一个字段有同名但不同尺寸的设置（%s）：两处都使用的文件会被来回裁剪。",
 	RecommendedOriginalSize:     "建议原图：至少 %d×%d 像素，比例 %s。",
 	Search:                      "搜索",
 	UploadFiles:                 "上传多个文件",
@@ -115,6 +169,24 @@ var Messages_ja_JP = &Messages{
 	ChooseAFile:                 "ファイルを選択",
 	ChosenFileIsGone:            "そのファイルはメディアライブラリにありません。ダイアログを閉じて開き直してください。",
 	FileInUse:                   "このファイルは使用中（%d 件）のため削除されませんでした。次の場所から外してください：",
+	MediaBoxUsage:               "フィールドの画像サイズ",
+	MediaBoxUsages:              "画像サイズ",
+	MediaBoxUsageModel:          "モデル",
+	MediaBoxUsageLabel:          "フィールド",
+	MediaBoxUsageSizes:          "サイズ",
+	MediaBoxUsageRecropState:    "トリミング",
+	MediaBoxUsageRecropError:    "エラーの内容",
+	SizesOfTheAdmin:             "管理画面の設定",
+	Recrop:                      "トリミングをやり直す",
+	RecropStarted:               "トリミングをやり直しています。",
+	RecropBusy:                  "このフィールドはすでにトリミング中です。",
+	RecropRunning:               "処理中: %d / %d",
+	RecropMade:                  "完了（%d ファイル）",
+	RecropFailedText:            "一部を作成できませんでした",
+	SizeNameRequired:            "名前のないサイズがあります。",
+	SizeNameTwice:               "%s という名前のサイズが 2 つあります。",
+	SizeNotPositive:             "サイズ %s に幅または高さがありません。",
+	SizesConflict:               "別のフィールドに同じ名前で寸法の違うサイズがあります（%s）: 両方で使うファイルが交互にトリミングされます。",
 	RecommendedOriginalSize:     "推奨する元画像: %d×%d px 以上、比率 %s。",
 	Search:                      "検索",
 	UploadFiles:                 "ファイルをアップロード",
@@ -139,6 +211,24 @@ var Messages_pt_BR = &Messages{
 	ChooseAFile:                 "Escolha um arquivo",
 	ChosenFileIsGone:            "Este arquivo não está mais na biblioteca de mídia. Feche esta janela e abra de novo.",
 	FileInUse:                   "Este arquivo está em uso (%d) e não foi excluído. Tire-o de:",
+	MediaBoxUsage:               "Tamanhos das imagens de um campo",
+	MediaBoxUsages:              "Tamanhos das imagens",
+	MediaBoxUsageModel:          "Modelo",
+	MediaBoxUsageLabel:          "Campo",
+	MediaBoxUsageSizes:          "Tamanhos",
+	MediaBoxUsageRecropState:    "Recortes",
+	MediaBoxUsageRecropError:    "O que deu errado",
+	SizesOfTheAdmin:             "do admin",
+	Recrop:                      "Refazer os recortes",
+	RecropStarted:               "Os recortes estão sendo refeitos.",
+	RecropBusy:                  "Os recortes deste campo já estão sendo refeitos.",
+	RecropRunning:               "em andamento: %d de %d",
+	RecropMade:                  "prontos (%d arquivos)",
+	RecropFailedText:            "alguns não puderam ser feitos",
+	SizeNameRequired:            "Um tamanho está sem nome.",
+	SizeNameTwice:               "Dois tamanhos se chamam %s.",
+	SizeNotPositive:             "O tamanho %s está sem largura ou altura.",
+	SizesConflict:               "Outro campo tem um tamanho com este nome em outras medidas (%s): um arquivo usado nos dois seria recortado em um, depois no outro.",
 	RecommendedOriginalSize:     "Original recomendada: pelo menos %d×%d px, proporção %s.",
 	CopyLink:                    "Copiar link",
 	LinkCopied:                  "Link copiado!",

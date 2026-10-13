@@ -4,3 +4,6 @@
 - file: media_libraries/images/listing.png
   url: /admin/content/media/media-library
   wait: .v-main
+- file: media_box_usages/images/listing.png
+  url: /admin/content/media/media-sizes
+  wait: .v-main
