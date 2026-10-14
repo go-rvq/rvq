@@ -413,7 +413,8 @@ func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContex
 		r.PageTitle = msgr.CreatingObjectTitle(inflection.Singular(b.mb.label), b.mb.female)
 	} else {
 		if !b.mb.singleton {
-			if mid, err = b.mb.ParseRecordID(ctx.Queries().Get(ParamID)); err != nil {
+			// the record of the address (`/{id}/edit`), else of the query
+			if mid, err = b.mb.ParseRecordID(ctx.Param(ParamID)); err != nil {
 				return
 			}
 		}
