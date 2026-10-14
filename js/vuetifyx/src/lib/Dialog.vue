@@ -68,7 +68,12 @@ export default defineComponent({
       type: Boolean,
       default: false
     },
-    modelValue: {}
+    modelValue: {},
+    // opened expanded (fullscreen); the expand button still turns it
+    expanded: {
+      type: Boolean,
+      default: false
+    }
   },
   emits: ['update:modelValue', 'open', 'close'],
 
@@ -80,7 +85,7 @@ export default defineComponent({
 
   data: (self) => ({
     isOpen: useModel(self, 'modelValue'),
-    isExpanded: false,
+    isExpanded: !!self.expanded,
     isMainMenuOpen: false,
     isSecondaryMenuOpen: false
   }),

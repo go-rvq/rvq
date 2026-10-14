@@ -1,6 +1,8 @@
 package vuetifyx
 
 import (
+	"fmt"
+
 	h "github.com/go-rvq/htmlgo"
 )
 
@@ -16,4 +18,11 @@ type VXDialogBuilder struct {
 
 func VXDialog(children ...h.HTMLComponent) *VXDialogBuilder {
 	return VXAdvancedExpandCloseCardTag(&VXDialogBuilder{}, "vx-dialog", children...)
+}
+
+// Expanded opens the dialog expanded (fullscreen); its expand button
+// (Expandable) still turns it.
+func (b *VXDialogBuilder) Expanded(v bool) *VXDialogBuilder {
+	b.Attr(":expanded", fmt.Sprint(v))
+	return b
 }
