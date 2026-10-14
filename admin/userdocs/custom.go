@@ -24,8 +24,11 @@ type Custom struct {
 // (DocFile: ID/README.md), in any source, in the language of the request;
 // its title, the heading of the document (# Title).
 type CustomNode struct {
-	ID       string
-	Icon     string
+	ID   string
+	Icon string
+	// Image is the address of a picture drawn as its icon, instead of Icon
+	// (Builder.AssetHref: a file of a source).
+	Image    string
 	Children []*CustomNode
 }
 
@@ -47,7 +50,7 @@ func (b *Builder) withCustom(tree []*Node, ctx *web.EventContext) []*Node {
 			if icon == "" {
 				icon = "mdi-file-document-outline"
 			}
-			r = append(r, &Node{ID: c.ID, Title: b.docTitle(locale, c.ID), Icon: icon, Children: nodes(c.Children)})
+			r = append(r, &Node{ID: c.ID, Title: b.docTitle(locale, c.ID), Icon: icon, Image: c.Image, Children: nodes(c.Children)})
 		}
 		return
 	}

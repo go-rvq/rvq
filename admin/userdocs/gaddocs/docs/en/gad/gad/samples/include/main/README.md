@@ -1,0 +1,99 @@
+# main
+
+main.gad — the `include` statement.
+
+`include` compiles another source file INLINE into the current scope. Unlike
+`import` (which loads an isolated module and returns its exports), the included
+file's statements run in place and its bindings become the includer's own.
+
+Run from the repo root:  gad run samples/include/main.gad
+See doc/getting-started.md for detailed documentation.
+
+## Including a file
+
+After `include ("config.gad")`, config.gad's `appName`, `version` and
+`loadedFrom` are visible here, exactly as if they were typed at that line.
+`loadedFrom` is config.gad's own `@file` — the source name of the file that was
+running when it was read (the resolver decides its exact spelling: a bare name
+for a registered module, or a file path/URL for a file on disk).
+
+```gad
+include ("config.gad")
+[#"{appName} v{version}", import("strings").hasSuffix(loadedFrom, "config.gad")]
+// => ["Gadapp v1.0", true]
+```
+
+## Several files at once
+
+A parenthesized list includes several files, compiled in order; the group may
+span multiple lines.
+
+```gad
+include (
+    "banner.gad",
+)
+banner(appName)
+// => == Gadapp ==
+```
+
+## `@file`, `@files` and `@mod`
+
+`@file` reports the source name of the code currently running: at the top level
+of main.gad (outside any include) it is the module's own file; inside an included
+file it is that file. `@files` is the whole source stack: the module at the
+base, then each active include (innermost last). `@mod` is the current module
+object — the SAME module inside an included file, since `include` never creates
+a new module (use `import` for that).
+
+```gad
+[loadedFrom == @file, typeName(@mod)]   // config.gad's @file differs from ours
+// => [false, "Module"]
+```
+
+## Including many files with a glob
+
+A path holding a glob meta character (`*`, `?`, `[…]`) includes **every
+matching file**, inline and in path order — so a numeric prefix
+(`10_colors.gad`, `20_sizes.gad`) fixes the order, and a later part may use what
+an earlier one declared. `**` spans directories (`parts/**/*.gad`); a pattern
+matching nothing includes nothing, and the including file itself is never
+matched.
+
+Since `include` takes no params, its filters are the plain `embed` names:
+`includes` / `excludes` (globs, matched against the base name or the path
+below the pattern's static directory) and `includes_re` / `excludes_re`
+(regular expressions on that path), each a string or an array of strings. They
+apply to every glob path of the statement. As with `import`, **test files are
+skipped by default** — a `*_test` file is included only when an `includes` /
+`includes_re` naming `_test` selects it. A path without an extension resolves
+like an import's (`include ("config")` loads `config.gad`, else `.gadt`, else
+`.gadx`), and an extension-less glob (`parts/*`) matches modules by name.
+
+```gad
+// 10_colors.gad, then 20_sizes.gad — the draft is filtered out
+include ("parts/*.gad"; excludes=["*_draft.gad"])
+colorsOnly := len(palette)
+[palette, sizes, swatches, colorsOnly]
+// => [["red", "green"], {large: 3, small: 1}, 4, 2]
+```
+
+## Example — `main.gad`
+
+```gad
+include ("config.gad")
+[#"{appName} v{version}", import("strings").hasSuffix(loadedFrom, "config.gad")]
+
+include (
+    "banner.gad",
+)
+banner(appName)
+
+[loadedFrom == @file, typeName(@mod)]   // config.gad's @file differs from ours
+
+// 10_colors.gad, then 20_sizes.gad — the draft is filtered out
+include ("parts/*.gad"; excludes=["*_draft.gad"])
+colorsOnly := len(palette)
+[palette, sizes, swatches, colorsOnly]
+
+return appName
+```

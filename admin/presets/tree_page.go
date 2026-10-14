@@ -27,9 +27,11 @@ import (
 // TreePageNode is a node of a TreePage: its ID — its path under the page,
 // "guides/policies" —, its title, its icon, the nodes under it.
 type TreePageNode struct {
-	ID       string
-	Title    string
-	Icon     string
+	ID    string
+	Title string
+	Icon  string
+	// Image is the address of a picture drawn as its icon, instead of Icon.
+	Image    string
 	Children []*TreePageNode
 }
 
@@ -103,6 +105,9 @@ func (b *TreePageBuilder) menuChildren(ctx *web.EventContext) ([]*MenuNode, stri
 			props := map[string]any{"href": href}
 			if n.Icon != "" {
 				props["prependIcon"] = n.Icon
+			}
+			if n.Image != "" {
+				props["prependImage"] = n.Image
 			}
 			r = append(r, &MenuNode{Title: n.Title, Value: href, Props: props, Children: nodes(n.Children)})
 		}

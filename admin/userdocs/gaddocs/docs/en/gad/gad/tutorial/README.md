@@ -1,0 +1,1421 @@
+# Gad Tutorial
+
+Gad is another script language for Go applications to make Go more dynamic with
+scripts. Gad is inspired by script language [Tengo](https://github.com/d5/tengo)
+by Daniel Kang.
+
+Gad source code is compiled to bytecode and run in a Virtual Machine (VM).
+Compiled bytecode can be serialized/deserialized for wire to remove compilation
+step before execution for remote processes, and deserialization will solve
+version differences to a certain degree.
+
+Main script and Gad source modules in Gad are all functions which have
+`compiledFunction` type name. Parameters can be defined for main function with
+[`param`](#param) statement and main function returns a value with `return`
+statement as well. If return statement is missing, `nil` value is returned
+by default. All functions return single value but thanks to
+[destructuring](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/destructuring.md) feature Gad allows to return multiple values
+as an array and set returning array elements to multiple variables.
+
+Gad relies on Go's garbage collector and there is no allocation limit for
+objects like Tengo. To run scripts which are not safe must be run in a sandboxed
+environment which is the only way for Go applications. Note: Builtin objects can
+be disabled before compilation.
+
+Gad can handle runtime errors and Go panic with `try-catch-finally` statements
+which is similar to Ecmascript implementation with a few minor differences.
+Although Go developers are not fan of `try-catch-finally`, they are well known
+statements to work with.
+
+Gad does not use reflect package during execution and avoids unsafe function
+calls. Gad objects most of the time escape to heap inevitably because they are
+of interface types but it is minimized.
+
+Gad is developed to be an embedded script language for Go applications, and
+importing source modules from files will not be added in near future but one can
+implement a custom module to return file content to the compiler.
+
+Gad currently has a simple optimizer for constant folding and evaluating
+expressions which do not have side effects. Optimizer greedily evaluates
+expressions having only literals (int, uint, char, float, bool, string).
+Optimizer can be disabled with compiler options.
+
+## Run Scripts
+
+To run a script, it must be compiled to create a `Bytecode` object then it is
+provided to Virtual Machine (VM). Gad has a simple optimizer enabled by default
+in the compiler. Optimizer evaluates simple expressions not having side effects
+to replace expressions with constant values. Note that, optimizer can be
+disabled to speed up compilation process.
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/gad-lang/gad"
+)
+
+func main() {
+  script := `
+  param num
+
+  var fib
+  fib = func(n, a, b) {
+    if n == 0 {
+      return a
+    } else if n == 1 {
+      return b
+    }
+    return fib(n-1, b, a+b)
+    }
+  return fib(num, 0, 1)
+  `
+  builtins := gad.NewBuiltins()
+  st := gad.NewSymbolTable(builtins.NameSet)
+  cr, err := gad.Compile(st, []byte(script), gad.CompileOptions{})
+
+  if err != nil {
+    panic(err)
+  }
+
+  retValue, err := gad.NewVM(builtins.Build(), cr.Bytecode).Run(gad.Int(35))
+
+  if err != nil {
+    panic(err)
+  }
+
+  fmt.Println(retValue) // 9227465
+}
+```
+
+Script above is pretty self explanatory, which calculates the fibonacci number
+of given number.
+
+Compiler options hold all customizable options for the compiler.
+`TraceCompilerOptions` is used to trace parse-optimize-compile steps for
+debugging and testing purposes like below;
+
+```go
+opts := gad.CompileOptions{CompilerOptions: gad.TraceCompilerOptions}
+cr, err := gad.Compile(st, []byte(script), opts)
+// or change output and disable tracing parser
+// opts.Trace = os.Stderr
+// opts.TraceParser = false
+// cr, err := gad.Compile(st, []byte(script), opts)
+```
+
+VM execution can be aborted by using `Abort` method which cause `Run` method to
+return an error wrapping `ErrVMAborted` error. `Abort` must be called from a
+different goroutine and it is safe to call multiple times.
+
+Errors returned from `Run` method can be checked for specific error values with
+Go's `errors.Is` function in `errors` package.
+
+`VM` instances are reusable. `Clear` method of `VM` clears all references held
+and ensures stack and module cache is cleaned.
+
+```go
+vm := gad.NewVM(builtins.Build(), cr.Bytecode)
+retValue, err := vm.Run(gad.Int(35))
+/* ... */
+// vm.Clear()
+retValue, err = vm.Run(gad.Int(34))
+/* ... */
+```
+
+Global variables can be provided to VM which are declared with
+[`global`](#global) keyword. Globals are accessible to source modules as well.
+Map like objects should be used to get/set global variables as below.
+
+```go
+script := `
+param num
+global upperBound
+return num > upperBound ? "big" : "small"
+`
+cr, err := gad.Compile(st, []byte(script), gad.CompileOptions{})
+
+if err != nil {
+  panic(err)
+}
+
+g := gad.Dict{"upperBound": gad.Int(1984)}
+retValue, err := gad.NewVM(builtins.Build(), cr.Bytecode).RunOpts(&gad.RunOpts{
+  Globals: g,
+  Args:    gad.Args{gad.Array{gad.Int(2018)}},
+})
+// retValue == gad.Str("big")
+```
+
+There is a special type `SyncDict` in Gad to make goroutine safe map object where
+scripts/Go might need to interact with each other concurrently, e.g. one can
+collect statistics or data within maps. Underlying map of `SyncDict` is guarded
+with a `sync.RWMutex`.
+
+```go
+module := `
+global stats
+
+export inc() {
+  stats.fn2++
+  /* ... */
+}
+`
+script := `
+global stats
+
+fn1 := func() {
+  stats.fn1++
+  /* ... */
+}
+
+fn1()
+
+m := import("module")
+m.inc()
+`
+mm := gad.NewModuleMap()
+mm.AddSourceModule("module", []byte(module))
+
+opts := gad.CompileOptions{}
+opts.ModuleMap = mm
+
+cr, err := gad.Compile(st, []byte(script), opts)
+
+if err != nil {
+  panic(err)
+}
+
+g := &gad.SyncDict{
+    Value: gad.Dict{"stats": gad.Dict{"fn1": gad.Int(0), "fn2": gad.Int(0)}},
+}
+_, err = gad.NewVM(builtins.Build(), cr.Bytecode).RunOpts(&gad.RunOpts{Globals: g})
+/* ... */
+```
+
+As can be seen from examples above, VM's `Run` method takes a variadic list of
+arguments (accessed via the [`param`](#param) statement); use `RunOpts` when you
+also need to pass globals (any `IndexGetSetter` such as `gad.Dict` / `*gad.SyncDict`),
+named arguments or a custom stdout. Their signatures are:
+
+```gad
+func (vm *VM) Run(args ...Object) (Object, error)
+func (vm *VM) RunOpts(opts *RunOpts) (Object, error)
+```
+
+## Variables Declaration and Scopes
+
+Valid identifier examples:
+
+```gad
+var (_, _a, $_a, a, A, $b, $, a1, $1, $b1, $$, ŝ, $ŝ)
+```
+
+### param
+
+`param` keyword is used to declare a parameter for main function (main script).
+Parenthesis is required for multiple declarations. Last argument can also be
+variadic. Unlike `var` keyword, initializing value is illegal. Variadic
+argument initialized as an empty array `[]`, and others are initialized as
+`nil` if not provided. `param` keyword can be used only once in main
+function.
+
+```gad
+param (arg0, arg1, *vargs)
+
+// named args
+param (;x,y=1,z={}, **vnargs)
+
+// mixed
+param (arg0, arg1, *vargs; x, y=1, z={}, **vnargs)
+```
+
+```gad
+param foo
+param bar    // illegal, multiple param keyword is not allowed
+```
+
+```gad
+if condition  {
+  param arg    // illegal, not allowed in this scope
+}
+
+func(){
+    param (a, b)    // illegal, not allowed in this scope
+}
+```
+
+### global
+
+`global` keyword is to declare global variables. Note that `var` statements or
+short variable declaration `:=` always creates local variables not global.
+Parenthesis is required for multiple declarations. Unlike `var`, initializing
+value is illegal. `global` statements can appear multiple times in the scripts.
+`global` gives access to indexable `globals` argument with a variable name
+provided to Virtual Machine (VM).
+
+If `nil` is passed to VM as globals, a temporary `map` assigned to globals.
+
+Any assignment to a global variable creates or updates the globals element.
+
+Note that global variables can be accessed by imported source modules which
+enables to export objects to scripts like `extern` in C.
+
+```gad
+global foo
+global (bar, baz)
+```
+
+```gad
+// "globals" builtin function returns "globals" provided to VM.
+g := @g
+v := g["foo"]    // same as `global foo; v := foo`
+```
+
+```gad
+if condition {
+  global x     // illegal, not allowed in this scope
+}
+
+func() {
+  global y     // illegal, not allowed in this scope
+}
+```
+
+### var
+
+`var` keyword is used to declare a local variable. Parenthesis is required for
+multiple declaration. Note: Tuple assignment is not supported with var
+statements.
+
+```gad
+var foo               // foo == nil
+var (bar, baz = 1)    // bar == nil, baz == 1
+var (bar,
+     baz = 1)         // valid
+var (
+    foo = 1
+    bar
+    baz = "baz"
+)                     // valid
+```
+
+A value can be assigned to a variable using short variable declaration `:=` and
+assignment `=` operators.
+
+* `:=` operator defines a new variable in the scope and assigns a value.
+* `=` operator assigns a new value to an existing variable in the scope.
+
+```gad
+                 // function scope A
+a := "foo"       // define 'a' in local scope
+
+func() {         // function scope B
+  b := 52        // define 'b' in function scope B
+  
+  func() {       // function scope C
+    c := 19.84   // define 'c' in function scope C
+
+    a = "bee"    // ok: assign new value to 'a' from function scope A
+    b = 20       // ok: assign new value to 'b' from function scope B
+
+    b := true    // ok: define new 'b' in function scope C
+                 //     (shadowing 'b' from function scope B)
+  }
+  
+  a = "bar"      // ok: assign new value to 'a' from function scope A
+  b = 10         // ok: assign new value to 'b'
+  a := -100      // ok: define new 'a' in function scope B
+                 //     (shadowing 'a' from function scope A)
+  
+  c = -9.1       // illegal: 'c' is not defined
+  var b = [1, 2] // illegal: 'b' is already defined in the same scope
+}
+
+b = 25           // illegal: 'b' is not defined
+var a = {d: 2}   // illegal: 'a' is already defined in the same scope
+```
+
+Following is illegal because variable is not defined when function is created.
+In assignment statements right hand side is compiled before left hand side.
+
+```gad
+f := func() {
+  f()    // illegal: unresolved symbol "f"
+}
+```
+
+```gad
+var f
+f = func() {
+  f()    // ok: "f" is declared before assignment.
+}
+```
+
+Unlike Go, a variable can be assigned a value of different types.
+
+```gad
+a := 123        // assigned    'int'
+a = "123"       // reassigned 'string'
+a = [1, 2, 3]   // reassigned 'array'
+```
+
+Capturing loop variables returns the last value of the variable set after last
+post statement of the for loop, like Go.
+
+```gad
+var f
+
+for i := 0; i < 3; i++ {
+  f = func(){
+    return i
+  }  
+}
+
+println(f())  // 3
+```
+
+Like Go, to capture the variable define a new variable using same name or
+different.
+
+```gad
+var f
+
+for i := 0; i < 3; i++ {
+  i := i
+  f = func(){
+    return i
+  }  
+}
+
+println(f())  // 2
+```
+
+### const
+
+`const` keyword is used to declare a local constant variable. Parenthesis is
+required for multiple declaration. Note: Tuple assignment is not supported.
+The value of a constant can't be changed through reassignment.
+Reassignment is checked during compilation and an error is thrown.
+An initializer for a constant is required while declaring. The const declaration
+creates a read-only reference to a value. It does not mean the value it holds is
+immutable.
+
+```gad
+const (
+  a = 1
+  b = {foo: "bar"}
+)
+
+const c       // illegal, no initializer
+
+a = 2         // illegal, reassignment
+b.foo = "baz" // legal
+```
+
+`iota` is supported as well.
+
+```gad
+const (
+  x = iota
+  y
+  z
+)
+println(x, y, z) // 0 1 2
+```
+
+```gad
+const (
+  x = 1<<iota
+  y
+  z
+)
+println(x, y, z) // 1 2 4
+```
+
+```gad
+const (
+  _ = 1<<iota
+  x
+  y
+  z
+)
+println(x, y, z) // 2 4 8
+```
+
+```gad
+const (
+  x = 1+iota
+  _
+  z
+)
+println(x, z) // 1 3
+```
+
+```gad
+const (
+  x = func() { return iota }() // illegal, compile error
+)
+```
+
+```gad
+const (
+  iota = 1 // illegal, compile error
+)
+```
+
+RHS of the assignment can be any expression so `iota` can be used with them as well.
+
+```gad
+const (
+  x = [iota]
+  y
+)
+println(x) // [0]
+println(y) // [1]
+```
+
+```gad
+const (
+  _ = iota
+  x = "string" + iota
+  y
+)
+println(x) // string1
+println(y) // string2
+```
+
+**Warning:** if a variable named `iota` is created before `const` assignments,
+`iota` is not used for enumeration and it is treated as normal variable.
+
+```gad
+iota := "foo"
+
+const (
+  x = iota
+  y
+)
+println(x) // foo
+println(y) // foo
+```
+
+## Values and Value Types
+
+In Gad, everything is a value, and, all values are associated with a type.
+
+```gad
+19 + 84                 // int values
+1u + 5u                 // uint values
+"a"                     // str value "a"
+"foo" + `bar`           // str values "foobar"
+`foo`                   // rawStr value "foo"
+`foo` + "bar"           // rawStr value "foobar"
+raw "foo"               // rawStr value "foo"
+raw "foo" + "bar"       // rawStr value "foobar"
+raw 1                   // rawStr value "1"
+-9.22 + 1e10            // float values
+2d                      // decimal values
+dur 1h30m               // duration value (Go duration string)
+2026-01-31D             // calendarDate value (YYYY-MM-DD)
+2026-01-31T             // time value at 00:00:00 UTC
+2026-01-31t             // calendarTime value (zone-less, nanosecond)
+1781609136U             // time value from unix seconds
+true || false           // bool values
+yes || no               // flag values
+'ç' > '9'               // char values
+[1, false, "foo"]       // array value
+{a: 12.34, "b": "bar"}  // dict value
+(;a=1, b=2, a=2)        // keyValueArray value
+[a=1]                   // keyValue value
+func() { /*...*/ }      // function value
+() => 1                 // closure value
+```
+
+Here's a list of all available value types in Gad. See [runtime
+types](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md) for more information.
+
+| Gad Type         | Description                        | Equivalent Type in Go |
+|:-----------------|:-----------------------------------|:----------------------|
+| int              | signed 64-bit integer value        | `int64`               |
+| uint             | unsigned 64-bit integer value      | `uint64`              |
+| float            | 64-bit floating point value        | `float64`             |
+| decimal          | decimal value                      | https://github.com/shopspring/decimal 
+| bool             | boolean value                      | `bool`                |
+| char             | unicode character                  | `rune`                |
+| string           | unicode string                     | `string`              |
+| bytes            | byte array                         | `[]byte`              |
+| error            | [error](#error-values) value       | -                     |
+| array            | value array                        | `[]Object`            |
+| dict             | value dict with string keys        | `map[string]Object`   |
+| nil              | [nil](#nil-values) value           | -                     |
+| compiledFunction | [function](#function-values) value | -                     |
+| duration         | time span                          | `time.Duration`       |
+| calendarDate     | calendar date (YYYYMMDD)           | `uint`                |
+| calendarTime     | zone-less wall clock (nanoseconds) | `uint64`              |
+| time             | instant with location              | `time.Time`           |
+
+### Date and Time Values
+
+The `time` builtin module provides value types for dates and times, each with a
+literal form and a string constructor:
+
+| Literal         | Type           | Meaning                                   |
+|:----------------|:---------------|:------------------------------------------|
+| `dur 1h30m`     | `duration`     | a Go duration string                      |
+| `2026-01-31D`   | `calendarDate` | a calendar date (also `20260131D`)        |
+| `2026-01-31T`   | `time`         | that date at `00:00:00` UTC               |
+| `2026-01-31t`   | `calendarTime` | zone-less wall clock (nanosecond)         |
+| `1781609136U`   | `time`         | unix seconds (optional `.fraction`)       |
+
+A digit-suffix literal must be glued to the number (a space breaks it), so
+`2026 - 1` is still subtraction and `0xABCD` is still a hex int. Date/time
+literals carry a calendar date only; time-of-day comes from the string parsers:
+
+```gad
+time.strToTime("2026-01-31T23:59:55Z")      // RFC3339 -> time
+time.strToTime("2026-01-31 23:59:55")       // UTC (no zone)
+time.strToCalendarTime("2026-01-31 23:59:55.001")  // zone-less calendarTime
+time.strToDate("2026-01-31")                // calendarDate
+time.strToDuration("1h30m")                 // duration
+time.strToLocation("-03:00")                // Location
+
+d := 2026-01-31D
+d.year(); d.month(); d.day()                // 2026, 1, 31
+
+t := 2026-01-31t
+t.hour(); t.minute(); t.second(); t.ns()    // accessors
+```
+
+#### Arithmetic
+
+`duration` supports `+ - * / %` and unary `-`; dividing two durations yields a
+`float` ratio. A `time`, `calendarTime` or `calendarDate` plus/minus a
+`duration` shifts it, and subtracting two of the same kind yields a `duration`.
+A `calendarDate ± duration` stays a `calendarDate` when the result lands on
+midnight, otherwise it becomes a `calendarTime`:
+
+```gad
+dur 1h + dur 30m            // 1h30m0s
+dur 1h / dur 30m            // 2.0   (ratio)
+-(dur 1h)                   // -1h0m0s
+
+2026-01-31T + dur 90m       // 2026-01-31 01:30:00 UTC
+2026-02-01t - 2026-01-31t   // 24h0m0s  (a duration)
+2025-01-01D + dur 24h       // 2025-01-02   (still a calendarDate)
+2025-01-01D + dur 1s        // 2025-01-01 00:00:01  (now a calendarTime)
+```
+
+#### Truncating and rounding
+
+`.trunc(unit)` lower-truncates a value to the start of a unit and `.round(unit)`
+rounds it to the nearest boundary (a tie rounds up). The unit is a char/string:
+the calendar units `'y'`, `'M'`, `'w'` (week, Monday), `'d'`, or the Go duration
+units `'h'`, `'m'`, `'s'`, `"ms"`, `"us"`, `"ns"`:
+
+```gad
+t := time.strToTime("2026-08-17T14:37:52.123Z")
+t.trunc('M')                // 2026-08-01 00:00:00 UTC
+t.trunc('h')                // 2026-08-17 14:00:00 UTC
+t.trunc("ms")               // 2026-08-17 14:37:52.123 UTC
+t.round('h')                // 2026-08-17 15:00:00 UTC  (52m rounds up)
+t.round('d')                // 2026-08-18 00:00:00 UTC
+
+(2026-08-17D).trunc('M')    // 2026-08-01 (calendarDate)
+(dur 1h37m52s).trunc('m')   // 1h37m0s   ('y'/'M' are rejected for durations)
+(dur 1h37m52s).round('m')   // 1h38m0s
+```
+
+### Error Values
+
+In Gad, an error can be represented using "error" typed values. An error value
+is created using `error` builtin function, and, it has an underlying message.
+The underlying message of an error can be accessed using `.Message` selector.
+Error has also a name which is accessed using `.Name`. Errors created with
+`error` builtin have default name `error` but builtin errors have different
+names like `NotIterableError`, `ZeroDivisionError`.
+
+First argument passed to `error` builtin function is converted to string as
+message.
+
+```gad
+err1 := error("oops")
+err2 := error(1+2+3)         // equivalent to err2 := error("6")
+if isError(err1) {           // 'isError' is a builtin function
+  name := err1.Name          // get underlying name
+  message := err1.Message    // get underlying message
+}  
+```
+
+#### Builtin Errors
+
+Builtin errors do not have message but have name. With `.New(message)` function
+call on an error value creates a new error by wrapping the error.
+
+Note: See [error handling](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/07_error_handling.md) for more information about errors.
+
+* WrongNumArgumentsError
+* InvalidOperatorError
+* IndexOutOfBoundsError
+* NotIterableError
+* NotIndexableError
+* NotIndexAssignableError
+* NotCallableError
+* NotImplementedError
+* ZeroDivisionError
+* TypeError
+
+### Nil Values
+
+In Gad, an `nil` value can be used to represent an unexpected or
+non-existing value:
+
+* A function that does not return a value explicitly considered to return
+`nil` value.
+* Indexer or selector on composite value types may return `nil` if the
+key or index does not exist.  
+* Builtin functions may return `nil`.
+
+```gad
+a := func() { b := 4 }()    // a == nil
+c := {a: "foo"}["b"]        // c == nil
+d := sort(nil)        // d == nil
+e := delete({}, "foo")      // "delete" always returns nil
+```
+
+Builtin function `isNil` or `==` operator can be used to check value is
+nil.
+
+### Array Values
+
+In Gad, array is an ordered list of values of any types. Elements of an array
+can be accessed using indexer `[]`.
+
+```gad
+[1, 2, 3][0]       // == 1
+[1, 2, 3][2]       // == 3
+[1, 2, 3][3]       // RuntimeError: IndexOutOfBoundsError
+
+i := 2
+[1, 2, 3][i]       // == 3
+[1, 2, 3][i-1]       // == 2
+
+["foo", 'x', [1, 2, 3], {bar: 2u}, true, nil, bytes()]   // ok
+```
+
+### Dict Values
+
+In Gad, dict is a set of key-value pairs where key is string and the value is
+of any value types. Value of a map can be accessed using indexer `[]` or
+selector '.' operators. Items sep is new line or comma.
+
+```gad
+m := { a: 1, "b": false, c: "foo" }
+m["b"]                                // == false
+m.c                                   // == "foo"
+m.x                                   // == nil
+m?.x.y.z                              // == nil
+m.x?.y.z                              // == nil
+
+m.x = {y:{z: 1}}
+m.x?.y.z                              // == 1
+
+key := "x"
+m[key]?.y.z                          // == 1
+
+
+{} // new block scope, not dict
+
+({a: [1, 2, 3], b: {c: "foo", d: "bar"}}) // inset paren, ok
+
+({x})
+
+// nested dict
+({
+	x {
+        y {
+			z: 1
+        }		
+    }
+}) // is similar to: {x:{y:{z:1}}}
+
+({
+	a: 1
+	
+	// closure
+	b(): 2 // similar to c
+	c: () => 2
+	
+	// func
+	d() { i++ } // similar to e
+	e: func() { i++ }
+})
+```  
+
+### Function Values
+
+In Gad, function is a callable value with a number of function arguments and
+a return value. Just like any other values, functions can be passed into or
+returned from another function.
+
+```gad
+sum := func(arg1, arg2) {
+  return arg1 + arg2
+}
+
+var mul = func(arg1, arg2) {
+  return arg1 * arg2
+}
+
+adder := func(base) {
+  return func(x) { return base + x }  // capturing 'base'
+}
+add5 := adder(5)
+nine := add5(4)    // == 9
+
+f1 := () => 1 // closure, similar to f2 func:
+func f2() { return 1 }
+```
+
+Unlike Go, Gad does not have function declarations. All functions are anonymous
+functions. So the following code is illegal:
+
+```gad
+func foo(arg1, arg2) {  // illegal
+  return arg1 + arg2
+}
+```
+
+Gad also supports variadic functions:
+
+```gad
+variadic := func (a, b, *c) {
+  return [a, b, c]
+}
+variadic(1, 2, 3, 4) // [1, 2, [3, 4]]
+
+variadicClosure := func(a) {
+  return func(b, *c) {
+    return [a, b, c]
+  }
+}
+variadicClosure(1)(2, 3, 4) // [1, 2, [3, 4]]
+```
+
+Only the last parameter can be variadic. The following code is illegal:
+
+```gad
+// illegal, because "a" is variadic and is not the last parameter
+illegal := func(*a, b) {}
+```
+
+When calling a function, the number of passing arguments must match that of
+function definition.
+
+```gad
+f := func(a, b) {}
+f(1, 2, 3)    // RuntimeError: WrongNumArgumentsError
+```
+
+You can use `*` to pass value of array type as its last
+parameter:
+
+```gad
+f1 := func(a, b, c) { return a + b + c }
+f1(*[1, 2, 3])    // => 6
+f1(1, *[2, 3])    // => 6
+f1(1, 2, *[3])    // => 6
+f1(*[1, 2])       // RuntimeError: WrongNumArgumentsError
+
+f2 := func(a, *b) {}
+f2(1)               // valid; a == 1, b == []
+f2(1, 2)            // valid; a == 1, b == [2]
+f2(1, 2, 3)         // valid; a == 1, b == [2, 3]
+f2(*[1, 2, 3])    // valid; a == 1, b == [2, 3]
+```
+
+Return value note:
+
+```gad
+f1 := func(x) {
+	return = x // only for var
+	1+2
+	return 2 // this result ignore
+}
+f1(1)    // => 1
+f1(10)    // => 10
+
+
+f2 := func(x) {
+  return = x // only for var
+  x++
+}
+f2(1)    // => 2
+f2(10)    // => 11
+```
+
+
+## Type Conversions
+
+Although the type is not directly specified in Gad, one can use type conversion
+[builtin functions](../builtins/README.md) to convert between value types and see
+[conversion/coersion table](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md) for more information.
+
+```gad
+s1 := string(1984)    // "1984"
+i2 := int("-999")     // -999
+f3 := float(-51)      // -51.0
+b4 := bool(1)         // true
+c5 := char("X")       // 'X'
+d6 := decimal(1)      // 1d
+f3 := flag("a")       // yes
+f4 := flag("")        // no
+```
+
+See [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/14_user_operators.md) for more details on type conversions/coercions as
+well.
+
+## Order of evaluation
+
+Expressions are evaluated from left to right but in assignments, right hand side
+of the assignment is evaluated before left hand side.
+
+```gad
+a := 1
+f := func() {
+  a*=10
+  return a
+}
+g := func() {
+  a++
+  return a
+}
+h := func() {
+  a+=2
+  return a
+}
+d := {}
+d[f()] = [g(), h()]
+return d    // d == {"40": [2, 4]}
+```
+
+## Operators
+
+### Unary Operators
+
+| Operator | Operation               | Types(Results)                                            |
+|:--------:|:-----------------------:|:---------------------------------------------------------:|
+| `+`      | `0 + x`                 | int(int), uint(uint), char(char), float(float), bool(int) |
+| `-`      | `0 - x`                 | int(int), uint(uint), char(int), float(float), bool(int)  |
+| `^`      | bitwise complement `^x` | int(int), uint(uint), char(char), bool(int)               |
+| `!`      | logical NOT             | all types*                                                |
+
+_* In Gad, all values can be either
+[truthy or falsy](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md#objectisfalsy)._
+
+### Binary Operators
+
+| Operator |          Usage           |
+|:--------:|:------------------------:|
+|   `==`   |          equal           |
+|   `!=`   |        not equal         |
+|   `&&`   |       logical AND        |
+|  `\|\|`  |        logical OR        |
+|   `+`    |        add/concat        |
+|   `-`    |         subtract         |
+|   `*`    |         multiply         |
+|   `**`   |           pow            |
+|   `/`    |          divide          |
+|   `&`    |       bitwise AND        |
+|   `\|`   |        bitwise OR        |
+|   `^`    |       bitwise XOR        |
+|   `&^`   |    bitclear (AND NOT)    |
+|   `<<`   |        shift left        |
+|   `>>`   |       shift right        |
+|   `<`    |        less than         |
+|   `<=`   |  less than or equal to   |
+|   `>`    |       greater than       |
+|   `>=`   | greater than or equal to |
+
+_See [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/14_user_operators.md) for more details._
+
+### Ternary Operators
+
+Gad has a ternary conditional operator
+`(condition expression) ? (true expression) : (false expression)`.
+
+```gad
+a := true ? 1 : -1    // a == 1
+
+min := func(a, b) {
+  return a < b ? a : b
+}
+b := min(5, 10)      // b == 5
+```
+
+### Assignment and Increment Operators
+
+| Operator |          Usage           |
+|:--------:|:------------------------:|
+|   `+=`   | `(lhs) = (lhs) + (rhs)`  |
+|   `-=`   | `(lhs) = (lhs) - (rhs)`  |
+|   `*=`   | `(lhs) = (lhs) * (rhs)`  |
+|  `**=`   | `(lhs) = (lhs) ** (rhs)` |
+|   `/=`   | `(lhs) = (lhs) / (rhs)`  |
+|   `%=`   | `(lhs) = (lhs) % (rhs)`  |
+|   `&=`   | `(lhs) = (lhs) & (rhs)`  |
+|  `\|=`   | `(lhs) = (lhs) \| (rhs)` |
+|  `&^=`   | `(lhs) = (lhs) &^ (rhs)` |
+|   `^=`   | `(lhs) = (lhs) ^ (rhs)`  |
+|  `<<=`   | `(lhs) = (lhs) << (rhs)` |
+|  `>>=`   | `(lhs) = (lhs) >> (rhs)` |
+|   `++`   |   `(lhs) = (lhs) + 1`    |
+|   `--`   |   `(lhs) = (lhs) - 1`    |
+
+### Operator Precedences
+
+Unary operators have the highest precedence, and, ternary operator has the
+lowest precedence. There are five precedence levels for binary operators.
+Multiplication operators bind strongest, followed by addition operators,
+comparison operators, `&&` (logical AND), and finally `||` (logical OR):
+
+| Precedence |                 Operator                 |
+|:----------:|:----------------------------------------:|
+| 5          | `*` `**`  `/`  `%`  `<<`  `>>`  `&`  `&^` |
+| 4          |           `+`  `-`  `\|`  `^`            |
+| 3          |     `==`  `!=`  `<`  `<=`  `>`  `>=`     |
+| 2          |                   `&&`                   |
+| 1          |                  `\|\|`                  |
+
+Like Go, `++` and `--` operators form statements, not expressions, they fall
+outside the operator hierarchy.
+
+### Selector and Indexer
+
+One can use selector (`.`) and indexer (`[]`) operators to read or write
+elements of composite types (array, map, string, bytes).
+
+```gad
+["one", "two", "three"][1]  // == "two"
+
+bytes(0, 1, 2, 3)[1]    // == 1
+
+// Like Go, indexing string returns byte value of index as int value.
+"foobarbaz"[4]    // == 97
+
+m := {
+  a: 1,
+  b: [2, 3, 4],
+  c: func() { return 10 }
+}
+m.a              // == 1
+m["b"][1]        // == 3
+m.c()            // == 10
+m.x.y.z          // == nil
+m.x.y.z = 1      // RuntimeError: NotIndexAssignableError
+m.x = 5          // add 'x' to map 'm'
+```
+
+Like Go, one can use slice operator `[:]` for sequence value types such as
+array, string, bytes. Negative indexes are illegal.
+
+```gad
+a := [1, 2, 3, 4, 5][1:3]    // == [2, 3]
+b := [1, 2, 3, 4, 5][3:]     // == [4, 5]
+c := [1, 2, 3, 4, 5][:3]     // == [1, 2, 3]
+d := "hello world"[2:10]     // == "llo worl"
+e := [1, 2, 3, 4, 5][:]      // == [1, 2, 3, 4, 5]
+f := [1, 2, 3, 4, 5][-1:]    // RuntimeError: InvalidIndexError
+g := [1, 2, 3, 4, 5][10:]    // RuntimeError: IndexOutOfBoundsError
+```
+
+**Note: Keywords cannot be used as selectors.**
+
+```gad
+a := {}
+a.func = ""     // Parse Error: expected selector, found 'func'
+```
+
+Use double quotes and indexer to use keywords with maps.
+
+```gad
+a := {}
+a["func"] = ""
+```
+
+## Statements
+
+### If Statement
+
+"If" statement is very similar to Go.
+
+```gad
+if a < 0 {
+  // execute if 'a' is negative
+} else if a == 0 {
+  // execute if 'a' is zero
+} else {
+  // execute if 'a' is positive
+}
+```
+
+Like Go, the condition expression may be preceded by a simple statement,
+which executes before the expression is evaluated.
+
+```gad
+if a := foo(); a < 0 {
+  // execute if 'a' is negative
+}
+```
+
+### For Statement
+
+"For" statement is very similar to Go.
+
+```gad
+// for (init); (condition); (post) {}
+for a:=0; a<10; a++ {
+  // ...
+}
+
+// for (condition) {}
+for a < 10 {
+  // ...
+}
+
+// for {}
+for {
+  // ...
+}
+```
+
+### For-In Statement
+
+It's similar to Go's `for range` statement.
+"For-In" statement can iterate any iterable value types (array, map, bytes,
+string).  
+
+```gad
+for v in [1, 2, 3] {          // array: element
+  // 'v' is array element value
+}
+for i, v in [1, 2, 3] {       // array: index and element
+  // 'i' is index
+  // 'v' is array element value
+}
+for k, v in {k1: 1, k2: 2} {  // map: key and value
+  // 'k' is key
+  // 'v' is map element value
+}
+for i, v in "foo" {           // array: index and element
+  // 'i' is index
+  // 'v' is char
+}
+```
+
+## Modules
+
+Module is the basic compilation unit in Gad. A module can import another module
+using `import` expression. There 3 types of modules. Source modules, builtin
+modules and custom modules. Source module is in the form Gad code. Builtin
+module type is `map[string]Object`. Lastly, any value implementing Go
+`Importable` interface can be a module. `Import` method must return a valid Gad
+Object or `[]byte`. Source module is called like a compiled function and
+returned dict is stored for future use. Other module values are copied while
+importing in VM if `Copier` interface is implemented.
+
+```gad
+type Importable interface {
+  Import(moduleName string) (any, error)
+}
+```
+
+```gad
+type Copier interface {
+  Copy() Object
+}
+```
+
+Main module:
+
+```gad
+math := import("math")    // load a module
+println(math.sum(10))     // module function
+```
+
+Source module as `math`:
+
+```gad
+base := 5
+
+exports.sum = func(x) {
+  return x + base
+}
+```
+
+exporting multiple values:
+
+```gad
+base := 5
+
+exports = { // dict expression
+	a: 1
+	
+	sum(x) {
+        return x + base
+    }
+	
+	dec() {
+		// ...
+    }
+}
+```
+
+In Gad, modules are very similar to functions.
+
+* `import` expression loads the module code and execute it like a function.
+* Module should return expose dict.
+  * Module can return a value of any types: int, map, function, etc.
+* importing same module multiple times at different places or in different
+  modules returns the same object so it preserves the state of imported object.
+* Arguments cannot be provided to source modules while importing although it is
+  allowed to use `param` statement in module.
+* Modules can use `global` statements to access globally shared object.
+
+### Modules with params:
+
+The parameters are only interpreted on the first import. They have no effect on other imports.
+
+```gad
+// file: translations.gad
+
+param (;lang="en")
+
+const byLang = {
+    en {
+        hello: "Hello!"		
+    }
+    
+    br {
+        hello: "Seja bem vindo!"
+    }
+}
+
+const messages = byLang[lang]
+
+exports.all = byLang
+exports.messages = messages
+exports.t = (key;default) = messages[key] ?? (default ?? ("<"+key+">"))
+```
+
+#### Default
+
+Main program:
+
+```gad
+const t = import("translations")
+print(t.messages.hello) // Hello!
+print(t.t("hello")) // Hello!
+print(t.t("xy")) // <xy>
+print(t.t("xy";default="XY!")) // XY!
+
+// After the first import, the module is loaded from memory, therefore the parameters 
+// do not generate changes, since they are interpreted in the first import.
+const t2 = import("translations")
+print(t2.messages.hello) // Hello! 
+```
+
+#### Custom
+
+Main program:
+
+```gad
+const t1 = import("translations") 
+print(t1.messages.hello; lang="br") // Seja bem vindo!
+
+// loaded from memory 
+const t2 = import("translations")
+print(t2.messages.hello) // Seja bem vindo!
+
+// loaded from memory 
+const t3 = import("translations"; lang="en")
+print(t3.messages.hello) // Seja bem vindo!
+```
+
+## Comments
+
+Like Go, Gad supports line comments (`//...`) and block comments
+(`/* ... */`).
+
+```gad
+/*
+  multi-line block comments
+*/
+
+a := 5    // line comments
+```
+
+## Differences from Go
+
+Unlike Go, Gad does not have the following:
+
+* Imaginary values
+* Structs
+* Pointers
+* Channels
+* Goroutines
+* Tuple assignment (Gad supports [destructuring](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/destructuring.md) array)
+* Switch statement
+* Goto statement
+* Defer statement
+* Panic and recover
+* Type assertion
+
+## Interfaces
+
+Gad types implement `Object` interface. Any Go type implementing `Object`
+interface can be provided to Gad VM.
+
+### Object interface
+
+```go
+
+// Object represents an object in the VM.
+type Object interface {
+  // TypeName should return the name of the type.
+  TypeName() string
+
+  // String should return a string of the type's value.
+  String() string
+
+  // Binary operators are NOT part of Object: a type opts into each operator it
+  // supports by implementing the matching per-operator interface from the
+  // generated op_api.go, e.g.
+  //   type ObjectWithAddBinOperator interface { BinOpAdd(vm *VM, right Object) (Object, error) }
+  //   type ObjectWithLessBinOperator interface { BinOpLess(vm *VM, right Object) (Object, error) }
+  // (membership `a in b` is ObjectWithInBinOperator.BinOpIn on the right
+  // operand). A returned error stops VM execution unless handled. Use
+  // gad.BinaryOp(vm, tok, left, right) to run an operator generically.
+
+  // IsFalsy returns true if value is falsy otherwise false.
+  IsFalsy() bool
+
+  // Equal checks equality of objects.
+  Equal(right Object) bool
+
+  // Iterate should return an Iterator for the type.
+  Iterate() Iterator
+
+  // CanIterate should return whether the Object can be Iterated.
+  CanIterate() bool
+
+  // IndexGet should take an index Object and return a result Object or an
+  // error for indexable objects. Indexable is an object that can take an
+  // index and return an object. Returned error stops VM execution if not
+  // handled with an error handler and VM.Run returns the same error as
+  // wrapped. If Object is not indexable, ErrNotIndexable should be returned
+  // as error.
+  IndexGet(index Object) (value Object, err error)
+
+  // IndexSet should take an index Object and a value Object for index
+  // assignable objects. Index assignable is an object that can take an index
+  // and a value on the left-hand side of the assignment statement. If Object
+  // is not index assignable, ErrNotIndexAssignable should be returned as
+  // error. Returned error stops VM execution if not handled with an error
+  // handler and VM.Run returns the same error as wrapped.
+  IndexSet(index, value Object) error
+}
+```
+
+### Iterator interface
+
+If an object's `CanIterate` method returns `true`, its `Iterate` method must
+return a value implementing `Iterator` interface to use in `for-in` loops.
+
+```gad
+// Iterator wraps the methods required to iterate Objects in VM.
+type Iterator interface {
+  // Next returns true if there are more elements to iterate.
+  Next() bool
+
+  // Key returns the key or index value of the current element.
+  Key() Object
+
+  // Value returns the value of the current element.
+  Value() Object
+}
+```
+
+### Copier interface
+
+Assignments to Gad values copy the values except array, map or bytes like Go.
+`copy` builtin function returns the copy of a value if Copier interface is
+implemented by object. If not implemented, same object is returned which copies
+the value under the hood by Go.
+
+```gad
+// Copier wraps the Copy method to create a copy of an object.
+type Copier interface {
+  Copy() Object
+}
+```
+
+```gad
+// DeepCopier wraps the Copy method to create a deep copy of an object.
+type DeepCopier interface {
+  DeepCopy() Object
+}
+```
+
+### IndexDeleter interface
+
+`delete` builtin checks if the given object implements `IndexDeleter` interface
+to delete an element from the object. `map` and `syncMap` implement this
+interface.
+
+```gad
+// IndexDeleter wraps the IndexDelete method to delete an index of an object.
+type IndexDeleter interface {
+    IndexDelete(Object) error
+}
+```
+
+### LengthGetter interface
+
+`len` builtin checks if the given object implements `IndexDeleter` interface
+to get the length of an object. `array`, `bytes`, `string`, `map` and `syncMap`
+implement this interface.
+
+```gad
+// LengthGetter wraps the Len method to get the number of elements of an object.
+type LengthGetter interface {
+    Len() int
+}
+```
+
+### Object Interface Extensions
+
+Note that `ExCallerObject` will replace the existing Object interface in the
+future.
+
+```gad
+// ExCallerObject is an interface for objects that can be called with CallEx
+// method. It is an extended version of the Call method that can be used to
+// call an object with a Call struct. Objects implementing this interface is
+// called with CallEx method instead of Call method.
+// Note that CanCall() should return true for objects implementing this
+// interface.
+type ExCallerObject interface {
+    Object
+    CallEx(c Call) (Object, error)
+}
+
+// NameCallerObject is an interface for objects that can be called with CallName
+// method to call a method of an object. Objects implementing this interface can
+// reduce allocations by not creating a callable object for each method call.
+type NameCallerObject interface {
+    Object
+    CallName(name string, c Call) (Object, error)
+}
+```

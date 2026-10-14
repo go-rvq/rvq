@@ -1,0 +1,445 @@
+
+# The `class` keyword
+
+The `class` keyword is a readable block syntax that lowers to the
+[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/classes.gad). A `class` block reads top to bottom:
+optional parent spreads (`*Parent`), bare fields, then `props {}`, `new` and
+`methods {}` groups (items separated by newlines or commas).
+
+The first parameter is inserted automatically — you do not write it: `this` for
+methods and property accessors, and `new` (the class initiator) for
+constructors. A method takes a typed `this cls` (so overloads dispatch on
+argument types). A getter-only entry in `props`/`methods` has a shorthand: both
+`name = expr` and `name => expr` are the same zero-argument accessor `() => expr`.
+The statement form `class Name { … }`
+defines a const; there are also anonymous expression and `export class` forms.
+Everything else — field defaults, typed fields, inheritance, overloaded
+methods/constructors — works exactly as in the `Class(...)` builtin.
+
+A typed field is enforced on construction (a value of the wrong type is
+rejected); a `?` after the field name (`x? int`, `x? int|str`) makes it
+**nullable**, so it also accepts `nil`. See
+[typed & nullable fields](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/field_types.gad).
+
+`gad fmt` keeps a class body's fields, parents, `use` and spreads in the
+order declared — a class is ordered —, then writes `props`, `new`,
+`methods`, with a member's `[k=v]` metadata on the line above it: see
+[Class bodies](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/doc/conventions.md#class-bodies).
+
+Doc comments attach to the class and its members (`///`, `/** … **/`,
+`/*** … ***/`).
+
+## A first class
+
+The statement form `class Name { … }` defines a constant. `this` is
+auto-inserted as the first parameter of methods, property accessors and
+constructors (`new`).
+
+```gad
+/**
+A 2D point. Shows the statement form `class Name { … }`, which defines a
+constant. `this` is auto-inserted as the first parameter of methods, property
+accessors and constructors.
+**/
+class Point {
+    /**
+    horizontal coordinate
+    **/
+    x = 0
+    /**
+    vertical coordinate
+    **/
+    y = 0
+
+    new {
+        (; **f)  => new(; x=0, y=0, **f)   // named fields (defaults + extra)
+        (x, y)   => new(; x=x, y=y)         // positional
+    }
+
+    props {
+        /**
+        distance from the origin
+        **/
+        mag() => (this.x ** 2 + this.y ** 2) ** 0.5
+    }
+
+    methods {
+        /**
+        dot product with another point
+        **/
+        dot(o) => this.x * o.x + this.y * o.y
+    }
+}
+
+p := Point(3, 4)
+[p.mag, Point().x, p.dot(p)]
+// => [5, 0, 25]
+```
+
+## Typed fields, computed defaults and overloads
+
+A typed field (`name str = "?"`), a computed default `(= … )` evaluated per
+instance, and a method overloaded by argument type (a method takes a typed
+`this`, so overloads dispatch).
+
+```gad
+/**
+Tagger shows a typed field, a computed default and a method overloaded by
+argument type (a method takes a typed `this`, so overloads dispatch).
+**/
+class Tagger {
+    /**
+    the tag prefix
+    **/
+    name str = "?"
+    /**
+    a fresh value per instance (here always 0)
+    **/
+    seq = (= 0)
+
+    methods {
+        /**
+        tag an int
+        **/
+        tag(n int) => this.name + ":int:" + str(n)
+        /**
+        tag a string
+        **/
+        tag(s str) => this.name + ":str:" + s
+    }
+}
+t := Tagger(; name="t")
+[t.tag(7), t.tag("x"), t.seq]
+// => ["t:int:7", "t:str:x", 0]
+```
+
+## Properties
+
+A property with a getter and typed setters, plus the getter shortcuts
+`name = expr` and `name => expr`.
+
+```gad
+/**
+Box shows a property with a getter and typed setters, plus the `name = expr`
+getter shortcut.
+**/
+class Box {
+    /**
+    the stored value
+    **/
+    v
+    props {
+        /**
+        the value, coerced on set by argument type
+        **/
+        val {
+            ()        => this.v
+            (x)       { this.v = "any:" + str(x) }
+            (x int)   { this.v = "int:" + str(x) }
+        }
+        /**
+        whether no value has been set (getter shortcut `name = expr`)
+        **/
+        empty = this.v == nil
+        /**
+        the value's type name (the `name => expr` getter shortcut)
+        **/
+        kind => typeName(this.v)
+    }
+}
+b := Box()
+before := [b.empty, b.kind]
+b.val = "hi"                         // the untyped setter
+anyVal := b.val
+b.val = 7                            // the (x int) setter
+[before, anyVal, b.val]
+// => [[true, "nil"], "any:hi", "int:7"]
+```
+
+## Inheritance
+
+A `*Parent` spread embeds the parent: its members are promoted and a same-named
+child method overrides.
+
+```gad
+/**
+Animal is a base class with two methods.
+**/
+class Animal {
+    /**
+    the animal's name
+    **/
+    name str = "?"
+    methods {
+        /**
+        the sound the animal makes
+        **/
+        speak()    => this.name + " makes a sound"
+        /**
+        a human-readable description
+        **/
+        describe() => "I am " + this.name
+    }
+}
+
+/**
+Dog inherits Animal and overrides speak().
+**/
+class Dog {
+    *Animal
+    methods {
+        /**
+        dogs bark
+        **/
+        speak() => this.name + " barks"
+    }
+}
+d := Dog(; name="Rex")
+[d.speak(), d.describe()]               // overridden, inherited
+// => ["Rex barks", "I am Rex"]
+```
+
+## Anonymous classes
+
+The expression form `X := class { … }` yields an anonymous, first-class class
+value.
+
+```gad
+Counter := class {
+    /**
+    current count
+    **/
+    n = 0
+    methods {
+        /**
+        advance and return the new value
+        **/
+        next() { this.n++; return this.n }
+    }
+}
+c := Counter()
+c.next(); c.next()
+c.next()
+// => 3
+```
+
+## Parents: lists and aliases
+
+A `*` parent spread takes any expression yielding a **parent spec**:
+
+| spec | meaning |
+|:-----|:--------|
+| `*A` | the class `A` (reached in `inst.@parents` as `A`) |
+| `*A: base` | `A` under the alias `base` — compiles to `*[base=A]` |
+| `*[base=A]` | a key-value pair: the key is the alias, the value the class |
+| `*[A, B]` | a **list** of parents, flattened (nesting allowed) |
+| `*[A, [b=B]]` | a list mixing plain and aliased parents |
+| `*parents` | a variable holding any of the above (`parents := [A, B]`) |
+
+The alias is the key of the embedded parent instance in `inst.@parents`; a
+parent without one is keyed by its class name. An array item that is not a
+class or an `[alias=class]` pair is an error (the old `[A, "alias"]` pair is not
+a spec — write `[alias=A]`).
+
+```gad
+class Wheels { wheels = 4 }
+class Engine { hp = 100 }
+
+// a literal list of parents
+class Car { *[Wheels, Engine] }
+
+// a list held in a variable, one parent aliased (`[motor=Engine]`)
+vehicleParts := [Wheels, [motor=Engine]]
+class Truck { *vehicleParts }
+
+// `*Engine: motor` is the same as `*[motor=Engine]`
+class Boat { *Engine: motor }
+
+truck := Truck(; hp = 400)
+[
+    Car().wheels, Car().hp,              // promoted from both parents
+    truck.hp, truck.@parents.motor.hp,           // the aliased parent instance
+    sort(collect(keys(truck.@parents))),     // parent keys: class name or alias
+    collect(keys(Boat().@parents)),
+]
+// => [4, 100, 400, 400, ["Wheels", "motor"], ["motor"]]
+```
+
+## Example — `syntax.gad`
+
+```gad
+/**
+A 2D point. Shows the statement form `class Name { … }`, which defines a
+constant. `this` is auto-inserted as the first parameter of methods, property
+accessors and constructors.
+**/
+class Point {
+    /**
+    horizontal coordinate
+    **/
+    x = 0
+    /**
+    vertical coordinate
+    **/
+    y = 0
+
+    new {
+        (; **f)  => new(; x=0, y=0, **f)   // named fields (defaults + extra)
+        (x, y)   => new(; x=x, y=y)         // positional
+    }
+
+    props {
+        /**
+        distance from the origin
+        **/
+        mag() => (this.x ** 2 + this.y ** 2) ** 0.5
+    }
+
+    methods {
+        /**
+        dot product with another point
+        **/
+        dot(o) => this.x * o.x + this.y * o.y
+    }
+}
+
+p := Point(3, 4)
+[p.mag, Point().x, p.dot(p)]
+
+/**
+Tagger shows a typed field, a computed default and a method overloaded by
+argument type (a method takes a typed `this`, so overloads dispatch).
+**/
+class Tagger {
+    /**
+    the tag prefix
+    **/
+    name str = "?"
+    /**
+    a fresh value per instance (here always 0)
+    **/
+    seq = (= 0)
+
+    methods {
+        /**
+        tag an int
+        **/
+        tag(n int) => this.name + ":int:" + str(n)
+        /**
+        tag a string
+        **/
+        tag(s str) => this.name + ":str:" + s
+    }
+}
+t := Tagger(; name="t")
+[t.tag(7), t.tag("x"), t.seq]
+
+/**
+Box shows a property with a getter and typed setters, plus the `name = expr`
+getter shortcut.
+**/
+class Box {
+    /**
+    the stored value
+    **/
+    v
+    props {
+        /**
+        the value, coerced on set by argument type
+        **/
+        val {
+            ()        => this.v
+            (x)       { this.v = "any:" + str(x) }
+            (x int)   { this.v = "int:" + str(x) }
+        }
+        /**
+        whether no value has been set (getter shortcut `name = expr`)
+        **/
+        empty = this.v == nil
+        /**
+        the value's type name (the `name => expr` getter shortcut)
+        **/
+        kind => typeName(this.v)
+    }
+}
+b := Box()
+before := [b.empty, b.kind]
+b.val = "hi"                         // the untyped setter
+anyVal := b.val
+b.val = 7                            // the (x int) setter
+[before, anyVal, b.val]
+
+/**
+Animal is a base class with two methods.
+**/
+class Animal {
+    /**
+    the animal's name
+    **/
+    name str = "?"
+    methods {
+        /**
+        the sound the animal makes
+        **/
+        speak()    => this.name + " makes a sound"
+        /**
+        a human-readable description
+        **/
+        describe() => "I am " + this.name
+    }
+}
+
+/**
+Dog inherits Animal and overrides speak().
+**/
+class Dog {
+    *Animal
+    methods {
+        /**
+        dogs bark
+        **/
+        speak() => this.name + " barks"
+    }
+}
+d := Dog(; name="Rex")
+[d.speak(), d.describe()]               // overridden, inherited
+
+Counter := class {
+    /**
+    current count
+    **/
+    n = 0
+    methods {
+        /**
+        advance and return the new value
+        **/
+        next() { this.n++; return this.n }
+    }
+}
+c := Counter()
+c.next(); c.next()
+c.next()
+
+class Wheels { wheels = 4 }
+class Engine { hp = 100 }
+
+// a literal list of parents
+class Car { *[Wheels, Engine] }
+
+// a list held in a variable, one parent aliased (`[motor=Engine]`)
+vehicleParts := [Wheels, [motor=Engine]]
+class Truck { *vehicleParts }
+
+// `*Engine: motor` is the same as `*[motor=Engine]`
+class Boat { *Engine: motor }
+
+truck := Truck(; hp = 400)
+[
+    Car().wheels, Car().hp,              // promoted from both parents
+    truck.hp, truck.@parents.motor.hp,           // the aliased parent instance
+    sort(collect(keys(truck.@parents))),     // parent keys: class name or alias
+    collect(keys(Boat().@parents)),
+]
+
+return p.mag
+```

@@ -228,7 +228,7 @@ func (b *Builder) page(ctx *web.EventContext) h.HTMLComponent {
 // treePageNodes are the nodes of the documentation as the tree page's.
 func treePageNodes(tree []*Node) (out []*presets.TreePageNode) {
 	for _, n := range tree {
-		out = append(out, &presets.TreePageNode{ID: n.ID, Title: n.Title, Icon: n.Icon, Children: treePageNodes(n.Children)})
+		out = append(out, &presets.TreePageNode{ID: n.ID, Title: n.Title, Icon: n.Icon, Image: n.Image, Children: treePageNodes(n.Children)})
 	}
 	return
 }

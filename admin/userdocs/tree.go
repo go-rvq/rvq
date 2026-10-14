@@ -15,6 +15,7 @@ type Node struct {
 	ID       string  `json:"value"`
 	Title    string  `json:"title"`
 	Icon     string  `json:"prependIcon,omitempty"`
+	Image    string  `json:"prependImage,omitempty"`
 	Children []*Node `json:"children,omitempty"`
 }
 

@@ -1,0 +1,368 @@
+
+# Functions
+
+Functions are first-class values. A function literal is `func(params) { … }`,
+usually bound to a variable; a named `func name(params){…}` is a declaration that
+binds a `const`, with the shorthands `name(params){…}` / `name(params) => expr`.
+(Functions with several typed overloads live in
+[functions_with_methods.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functions_with_methods.gad); the `<…>` header
+and `meti` in [method_interfaces.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/method_interfaces.gad).)
+
+## Arrow closures & closures
+
+`(params) => expr` is a shorthand closure whose body is a single expression.
+Inner functions capture variables from their enclosing scope.
+
+```gad
+sum := func(a, b) {
+    return a + b
+}
+double := (x) => x * 2       // arrow closure
+adder := func(base) => (x) => base + x // closure capturing `base`
+add5 := adder(5)
+[sum(2, 3), double(21), add5(4)]
+// => [5, 42, 9]
+```
+
+## The value of a closure block
+
+A closure may also have a block body, `(params) => { … }`. Like in Julia, a
+block is **worth its last evaluated expression**, so without a `return` the
+closure yields:
+
+- the value of its last statement when that is an expression — arithmetic, a
+  call, a ternary, a `match`;
+- for an **assignment** to plain variables, the value assigned (`a := 5` is
+  worth `5`; `a, b := 1, 2` is worth `[1, 2]`);
+- for a statement that **ends in a block**, the value of the block that ran: the
+  taken branch of an `if` / `else if` / `else`, a nested `{ … }`, and the `try`
+  body — or the `catch` body when it caught an error (a `finally` runs but never
+  supplies the value);
+- `nil` (Julia's `nothing`) otherwise: a loop, an `if` whose false branch is
+  missing, or an assignment to a selector/index (`o.k = 1`).
+
+A `func` block has no implicit value at all (only `return` sets one), while
+`func() => expr` is the expression form again.
+
+```gad
+[
+    (() => { 5 + 10 })(),                       // the last expression
+    (() => { a := 5; a + 1 })(),                // statements, then an expression
+    (() => { a := 5 })(),                       // an assignment: the value
+    (() => { a, b := 1, 2 })(),                 // several targets: an array
+    (() => { if true { 2 } })(),                // the taken branch
+    (() => { if false { 1 } else { { 7 } } })(), // …down nested blocks
+    (() => { if false { 1 } })(),               // no branch taken: nil
+    (() => { try { throw "x"; 8 } catch { 9 } })(), // the catch that ran
+    (() => { for x in [1, 2] { x } })(),        // a loop: nil
+    (() => { return 4; 5 })(),                  // return wins
+    func() { 5 + 10 }(),                        // a func block: only return sets a value
+    (func() => 5 + 10)(),                       // …its => form is an expression
+]
+// => [15, 6, 5, [1, 2], 2, 7, nil, 9, nil, 4, nil, 15]
+```
+
+So choosing a value by condition needs no `return`: each branch is worth its
+last expression.
+
+```gad
+sign := (n) => {
+    abs := n < 0 ? -n : n
+    if n > 0 {
+        "positive " + str(abs)
+    } else if n < 0 {
+        "negative " + str(abs)
+    } else {
+        "zero"
+    }
+}
+[sign(3), sign(-2), sign(0)]
+// => ["positive 3", "negative 2", "zero"]
+```
+
+## Returning several values
+
+`return a, b` returns the comma-separated values as one **array** (the same rule
+as an assignment's right-hand side), ready to be destructured by the caller.
+
+```gad
+minMax := func(xs) {
+    lo, hi := xs[0], xs[0]
+    for x in xs {
+        lo = x < lo ? x : lo
+        hi = x > hi ? x : hi
+    }
+    return lo, hi                               // == return [lo, hi]
+}
+lo, hi := minMax([3, 9, 1, 4])
+[minMax([2, 5]), lo, hi]
+// => [[2, 5], 1, 9]
+```
+
+## Partial application
+
+`wrap(fn, args…; named…)` returns a new function that calls `fn` with those
+arguments **prepended** — a partial application. The wrapper's own positional
+arguments are appended after them and its named arguments merged in.
+
+```gad
+add := func(a, b; scale=1) => (a + b) * scale
+add10 := wrap(add, 10)
+tagged := wrap(func(*xs; **opts) => [xs, dict(opts)], "first"; source="wrap")
+[add10(5), add10(5; scale=2), tagged("second"; extra=1)]
+// => [15, 30, [["first", "second"], {extra: 1, source: "wrap"}]]
+```
+
+## Variadic parameters
+
+The last positional parameter may be variadic (`*name`); it collects the
+remaining positional arguments into an array. Only the last positional parameter
+may be variadic.
+
+```gad
+total := func(*nums) {
+    acc := 0
+    for _, n in nums {
+        acc += n
+    }
+    return acc
+}
+total(1, 2, 3, 4)
+// => 10
+```
+
+## Spreading arguments
+
+At a **call**, `*` spreads an array as positional arguments and `**` spreads a
+dict as named arguments. Unlike a parameter list, a call may use several spreads,
+interleaved with plain arguments in any position; positionals concatenate and
+named keys merge left to right (a later source overrides an earlier key).
+
+```gad
+collect := func(*args; **kw) => [args, dict(kw)]
+collect(1, *[2, 3], 4, *[5, 6]; b = 1, **{x: 10}, c = 2)
+// => [[1, 2, 3, 4, 5, 6], {b: 1, c: 2, x: 10}]
+```
+
+## Named arguments
+
+Parameters after a `;` are **named**; they may have defaults, and a trailing
+`**name` collects extra named arguments. Callers pass them after a `;` as
+`name=value` and may spread a dict with `**`.
+
+```gad
+greet := func(name; greeting = "Hello", **rest) => greeting + ", " + name
+[greet("Gad"), greet("Gad"; greeting = "Hi"), greet("Gad"; **{greeting: "Hey"})]
+// => ["Hello, Gad", "Hi, Gad", "Hey, Gad"]
+```
+
+A call must supply the right number of positional arguments (variadics aside), or
+it raises `WrongNumArgumentsError`.
+
+## Computed values
+
+`(= expr)` — or `(= stmt; …; result)` for several statements — creates a
+**computed value**: a lazy callable that re-runs its body and yields the result
+on every call. They shine as class field defaults, where each instance gets its
+own freshly-evaluated value.
+
+```gad
+v := 10
+c := (= v * 2) // a lazy callable; body re-evaluated on each call
+before := c()  // 20
+v = 100
+[typeName(c), before, c()]
+// => ["ComputedValue", 20, 200]
+```
+
+## return = (assign the result)
+
+`return = expr` sets the function's result slot without leaving the function;
+execution continues, and mutating the bound value updates the result. It pairs
+with deferred handlers, which read/rewrite the result via `$ret`.
+
+```gad
+f := func(x) {
+    return = x // bind the result slot to x
+    x++        // keep running; mutating x updates the result
+}
+f(10)
+// => 11
+```
+
+## Deferred handlers
+
+`defer` registers a handler that runs when the enclosing **function** returns, in
+LIFO order. Inside a handler `$ret` is the mutable return value and `$err` the
+error being propagated. Variants: `defer` (always), `defer_ok` (normal return),
+`defer_err` (error). A handler may be a block or a single braceless statement
+(`defer cleanup($ret, $err)`, `defer $ret += 1`). A `defer_err` can **recover**
+by clearing `$err`.
+
+```gad
+deferOrder := func() {
+    defer { $ret += "A" } // runs last (LIFO)
+    defer { $ret += "B" } // runs first
+    return ["body-"]
+}
+safeCall := func(fail) {
+    defer_err { $ret = "recovered: " + str($err); $err = nil } // swallow
+    if fail {
+        throw "boom"
+    }
+    return "ok"
+}
+[deferOrder(), safeCall(false), safeCall(true)]
+// => [["body-", "B", "A"], "ok", "recovered: error: boom"]
+```
+
+`deferb` (and `deferb_ok` / `deferb_err`) run when the enclosing **block** exits
+rather than the whole function — LIFO, with no `$ret`.
+
+```gad
+blockCleanup := func() {
+    out := ""
+    {
+        deferb out += "b1 " // shortcut form; runs last
+        deferb out += "b2 " // runs first
+        out += "body "
+    }
+    return out + "after"
+}
+blockCleanup()
+// => body b2 b1 after
+```
+
+## Reflection
+
+A function answers `@`-prefixed reflection index keys (see also
+[metadata](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/metadata.gad)): `fn.@name`, `fn.@args` (positional parameter names),
+`fn.@nargs` (named parameter names), `fn.@ret` (the return-type signature) and
+`fn.@meta` (the `[k=v, …]` metadata, empty when none). A method-bearing function
+also exposes `fn.@methods` — its overload callers, each itself indexable.
+
+```gad
+[route="/hello"]
+func hello(name str; loud=false) <str> {
+    return "hi " + name
+}
+
+[hello.@name, hello.@args, hello.@nargs, hello.@ret, str(hello.@meta)]
+// => ["hello", ["name"], ["loud"], "<str>", "(;route=\"/hello\")"]
+```
+
+## Example — `functions.gad`
+
+```gad
+sum := func(a, b) {
+    return a + b
+}
+double := (x) => x * 2       // arrow closure
+adder := func(base) => (x) => base + x // closure capturing `base`
+add5 := adder(5)
+[sum(2, 3), double(21), add5(4)]
+
+[
+    (() => { 5 + 10 })(),                       // the last expression
+    (() => { a := 5; a + 1 })(),                // statements, then an expression
+    (() => { a := 5 })(),                       // an assignment: the value
+    (() => { a, b := 1, 2 })(),                 // several targets: an array
+    (() => { if true { 2 } })(),                // the taken branch
+    (() => { if false { 1 } else { { 7 } } })(), // …down nested blocks
+    (() => { if false { 1 } })(),               // no branch taken: nil
+    (() => { try { throw "x"; 8 } catch { 9 } })(), // the catch that ran
+    (() => { for x in [1, 2] { x } })(),        // a loop: nil
+    (() => { return 4; 5 })(),                  // return wins
+    func() { 5 + 10 }(),                        // a func block: only return sets a value
+    (func() => 5 + 10)(),                       // …its => form is an expression
+]
+
+sign := (n) => {
+    abs := n < 0 ? -n : n
+    if n > 0 {
+        "positive " + str(abs)
+    } else if n < 0 {
+        "negative " + str(abs)
+    } else {
+        "zero"
+    }
+}
+[sign(3), sign(-2), sign(0)]
+
+minMax := func(xs) {
+    lo, hi := xs[0], xs[0]
+    for x in xs {
+        lo = x < lo ? x : lo
+        hi = x > hi ? x : hi
+    }
+    return lo, hi                               // == return [lo, hi]
+}
+lo, hi := minMax([3, 9, 1, 4])
+[minMax([2, 5]), lo, hi]
+
+total := func(*nums) {
+    acc := 0
+    for _, n in nums {
+        acc += n
+    }
+    return acc
+}
+total(1, 2, 3, 4)
+
+collect := func(*args; **kw) => [args, dict(kw)]
+collect(1, *[2, 3], 4, *[5, 6]; b = 1, **{x: 10}, c = 2)
+
+greet := func(name; greeting = "Hello", **rest) => greeting + ", " + name
+[greet("Gad"), greet("Gad"; greeting = "Hi"), greet("Gad"; **{greeting: "Hey"})]
+
+v := 10
+c := (= v * 2) // a lazy callable; body re-evaluated on each call
+before := c()  // 20
+v = 100
+[typeName(c), before, c()]
+
+f := func(x) {
+    return = x // bind the result slot to x
+    x++        // keep running; mutating x updates the result
+}
+f(10)
+
+deferOrder := func() {
+    defer { $ret += "A" } // runs last (LIFO)
+    defer { $ret += "B" } // runs first
+    return ["body-"]
+}
+safeCall := func(fail) {
+    defer_err { $ret = "recovered: " + str($err); $err = nil } // swallow
+    if fail {
+        throw "boom"
+    }
+    return "ok"
+}
+[deferOrder(), safeCall(false), safeCall(true)]
+
+blockCleanup := func() {
+    out := ""
+    {
+        deferb out += "b1 " // shortcut form; runs last
+        deferb out += "b2 " // runs first
+        out += "body "
+    }
+    return out + "after"
+}
+blockCleanup()
+
+return total(1, 2, 3, 4)
+
+[route="/hello"]
+func hello(name str; loud=false) <str> {
+    return "hi " + name
+}
+
+[hello.@name, hello.@args, hello.@nargs, hello.@ret, str(hello.@meta)]
+
+add := func(a, b; scale=1) => (a + b) * scale
+add10 := wrap(add, 10)
+tagged := wrap(func(*xs; **opts) => [xs, dict(opts)], "first"; source="wrap")
+[add10(5), add10(5; scale=2), tagged("second"; extra=1)]
+```

@@ -822,8 +822,12 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 	// draws each item's icon (item-props does not carry it to the row).
 	tree := VTreeview(
 		h.Template(
+			// a picture, when the item has one (prependImage), else its icon
+			h.Img("").Attr(":src", "item.props.prependImage").
+				Attr("v-if", "item.props && item.props.prependImage").
+				Attr("alt", "").Style("width:20px;height:20px;object-fit:contain"),
 			VIcon("").Attr(":icon", "item.props.prependIcon").
-				Attr("v-if", "item.props && item.props.prependIcon").
+				Attr("v-else-if", "item.props && item.props.prependIcon").
 				Size(SizeSmall),
 		).Attr("v-slot:prepend", "{ item }"),
 	).

@@ -75,13 +75,17 @@ type Source struct {
 	// module of its own, they give the labels and hints of its form.
 	MessagesKey i18n.ModuleKey
 	Messages    map[language.Tag]i18n.Messages
+	// Raw documents are as written: not a template (their `{% %}` text), not
+	// translated — a language they are not written in reads them in their
+	// source's (a reference in one language: a language's documentation).
+	Raw bool
 }
 
 // File is a document: its path under the language's directory, and its
 // content.
 type File struct {
-	Path    string `yaml:"path"`
-	Content string `yaml:"content"`
+	Path    string `yaml:"path" json:"path"`
+	Content string `yaml:"content" json:"content"`
 }
 
 // Langs are the languages of the source: its directories whose name is a

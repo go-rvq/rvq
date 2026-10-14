@@ -1,0 +1,397 @@
+
+# Metadata (`[k=v, …]`)
+
+A doc-commentable declaration — and each of its members — may carry a **metadata
+block**: a key-value array written `[ … ]` (no leading `;`), declared between the
+doc comment and the element. It **accompanies the element in memory** and is read
+back with the `@meta` member.
+
+Metadata is a real key-value array, so a value is any constant expression:
+strings, numbers, flags (a bare `key` is `key=true`), nested `[ … ]` / `(; … )`,
+arrays and dicts. A **symbol** is one too — `#label` is the string `"label"`, the
+constant it compiles to anywhere else — which is how a block names members
+without quoting them: `[columns=[#label, #href]]`.
+
+```gad
+/// a user record
+[table="users"]
+interface User {
+    /// the primary key
+    [db=(;primary_key, auto)]
+    id uint
+}
+User.@meta      // (;table="users")
+User.id.@meta   // (;db=(;primary_key, auto))
+```
+
+Supported on **interfaces** — array interfaces included — (and their fields,
+accessors and methods), **enums** (and their items), **functions** — of one
+body or of several methods —, **declared unions** (`type T <A|B>`), **classes** /
+marker `type`s / **mixins** and [typed array types](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/typed_arrays.gad) (and their
+fields, properties and methods). `X.@meta` is an empty key-value array when the
+element has none, so it never errors.
+
+## Function reflection
+
+A function also answers reflection index keys, all `@`-prefixed so they never
+clash with a member name:
+
+- `fn.@name` — the name (str)
+- `fn.@args` — positional parameter names; `fn.@nargs` — named parameter names
+- `fn.@ret` — the return-type signature (str)
+- `fn.@meta` — the metadata; `fn.@methods` — the overload callers, each itself
+  indexable (`m.@meta`, `m.@args`, …) for a multi-overload function
+
+```gad
+/// a user record
+[table="users", version=2]
+interface User {
+    /// the primary key
+    [db=(;primary_key, auto)]
+    id uint
+
+    /// the display name
+    [db=(;column="full_name"), max_len=120]
+    title str
+
+    /// computed, not stored
+    [db=(;ignore)]
+    get label str
+}
+
+// The interface's own metadata, and each member's.
+[
+    str(User.@meta),
+    str(User.id.@meta),
+    str(User.title.@meta),
+    str(User.label.@meta),
+]
+// => ["(;table=\"users\", version=2)", "(;db=(;primary_key, auto))", "(;db=(;column=\"full_name\"), max_len=120)", "(;db=(;ignore))"]
+```
+
+```gad
+/// permission bits
+[category="acl"]
+enum Perm {
+    /// may read
+    [bit_pos=0]
+    Read
+    /// may write
+    [bit_pos=1]
+    Write
+}
+
+[str(Perm.@meta), str(Perm.Read.@meta), str(Perm.Write.@meta)]
+// => ["(;category=\"acl\")", "(;bit_pos=0)", "(;bit_pos=1)"]
+```
+
+```gad
+/// persist a record
+[route="/save", method="POST", auth]
+func save(id uint, name str; dry_run=false) <bool> {
+    return true
+}
+
+[
+    str(save.@meta),   // the metadata block
+    save.@name,        // "save"
+    save.@args,        // positional param names
+    save.@nargs,       // named param names
+    save.@ret,         // return signature
+]
+// => ["(;route=\"/save\", method=\"POST\", auth)", "save", ["id", "name"], ["dry_run"], "<bool>"]
+```
+
+```gad
+/// a persisted user
+[table="users", version=2]
+class Account {
+    /// primary key
+    [db=(;primary_key)]
+    id = 0
+
+    /// stored under a different column
+    [db=(;column="full_name")]
+    label = "anon"
+
+    props {
+        /// derived, not stored
+        [computed]
+        display => this.label
+    }
+
+    methods {
+        /// the persist endpoint
+        [route="/save", method="POST"]
+        save() { return this.id }
+    }
+}
+
+u := Account()
+[
+    str(Account.@meta),       // the class metadata
+    str(Account.id.@meta),    // a field's
+    str(Account.display.@meta), // a property's
+    str(Account.save.@meta),  // a method's
+    u.id, u.label,            // field defaults are preserved alongside metadata
+]
+// => ["(;table=\"users\", version=2)", "(;db=(;primary_key))", "(;computed)", "(;route=\"/save\", method=\"POST\")", 0, "anon"]
+```
+
+## A function of several methods
+
+A function written with several signatures — `func f { (x) …; (x, y) … }` —
+carries the block as a function of one body does: it is the function's, read
+with `@meta`; each of its methods answers its own reflection (`@methods`).
+
+```gad
+/// the sum of two numbers, or two texts joined
+[kind="sum", pure]
+func add {
+	(a int, b int) => a + b
+	(a str, b str) => a + b
+}
+
+[
+	str(add.@meta), // the function's block
+	add(1, 2),      // a method by the types of its arguments
+	add("a", "b"),
+]
+// => ["(;kind=\"sum\", pure)", 3, "ab"]
+```
+
+## A declared union
+
+`type Name <T1|T2|…>` declares a union of types (the constant of a
+`type <T1|T2>` value). Its block is the union's, read with `@meta`; its member
+types are `@types`. A union with a block is built by one instruction of the
+VM (`MAKETYPEUNIONMETA`), as one without is (`MAKETYPEUNION`).
+
+```gad
+/// a size, as a letter or as a number
+[label="Size", options=["S", "M", "L"]]
+type Size <str|int>
+
+[
+	str(Size.@meta), // the union's block
+	len(Size.@types), // its member types: str, int
+	"M" :: Size,      // a value of one of them
+]
+// => ["(;label=\"Size\", options=[\"S\", \"M\", \"L\"])", 2, "M"]
+```
+
+## A function as a value
+
+A value of a block may be any expression — a function too, which is how an
+application gives a field something to run (a check, a formatter): the
+function is in the block, called by whoever reads it. Write it `key=func(…)
+=> …` (or `key=func(…) { … }`).
+
+```gad
+class Contact {
+	/// a check: nil when fine, else why not
+	[validation=func(v) => len(v) >= 3 ? nil : "too short"]
+	name str
+}
+
+// the block as a dict, to take a value by its key
+check := dict(Contact.name.@meta).validation
+[check("Ana"), check("Al")]
+// => [nil, "too short"]
+```
+
+## Formatting: `gad fmt`
+
+`gad fmt` writes each block **on its own line**, just before its element — a
+declaration, a field, a member, an item:
+
+```gad
+[label="Contact"]
+class ContactForm {
+	[label="Full Name"]
+	name str
+}
+```
+
+A block before `export` stays before it (`[m]` then `export class C …`). A
+class keeps the order of its fields as declared — the formatter never
+reorders them —; the formatter puts the fields of an interface in its
+canonical order (grouped, then by name), unless the order means something:
+the interface is `[ordered]`, or its body has groups (`{ … }`). `[ordered]`
+on a class says it to the reader — a form, its fields in the order they are
+filled in:
+
+```gad
+/// the fields in the order they are filled in: gad fmt keeps it
+[ordered]
+class Quote {
+	name str
+	phone str
+	details str
+}
+
+// a flag of the class's block, as any other: gad fmt reads it
+str(Quote.@meta)
+// => (;ordered)
+```
+
+`gad fmt` also formats the fenced code blocks of Gad in Markdown files —
+` ```gad `, ` ```gadt `, ` ```gadx ` —, leaving the text, and a block that does
+not read (a fragment), as they are.
+
+## Metadata written outside the code: `parser.ParseMetadata`
+
+The same entries can be written where there is no `[ ]` to put them in — a Go
+struct tag, an attribute, a configuration value — and parsed from Go with
+`parser.ParseMetadata`: the text of a block **without its brackets**, its
+entries as they would be inside them. Single quotes delimit strings as double
+quotes do, so a block in a Go struct tag needs no escaping:
+
+```go
+type Messages struct {
+    Title string `i18n:"type=html, label='Page title', hint='The title. %s is the page name.'"`
+}
+
+kva, err := parser.ParseMetadata(field.Tag.Get("i18n"), 0)
+// kva.Elements: one *node.KeyValuePairLit per entry —
+//   Key the name, Value the expression (nil for a flag: `readonly`)
+```
+
+Positions are kept: a node's position is its offset in the text, from `base` —
+the position of the text's first byte in whatever holds it (`0` is the text on
+its own, its first byte at position 1) —, and an error points there too
+(`at metadata:1:8`). Pass the position of the text in its file to report an
+error, or to place a node, in that file. See also
+[Embedding](../../embedding/README.md#parsing-metadata-from-go).
+
+## Example — `metadata.gad`
+
+```gad
+/// a user record
+[table="users", version=2]
+interface User {
+    /// the primary key
+    [db=(;primary_key, auto)]
+    id uint
+
+    /// the display name
+    [db=(;column="full_name"), max_len=120]
+    title str
+
+    /// computed, not stored
+    [db=(;ignore)]
+    get label str
+}
+
+// The interface's own metadata, and each member's.
+[
+    str(User.@meta),
+    str(User.id.@meta),
+    str(User.title.@meta),
+    str(User.label.@meta),
+]
+
+/// permission bits
+[category="acl"]
+enum Perm {
+    /// may read
+    [bit_pos=0]
+    Read
+    /// may write
+    [bit_pos=1]
+    Write
+}
+
+[str(Perm.@meta), str(Perm.Read.@meta), str(Perm.Write.@meta)]
+
+/// persist a record
+[route="/save", method="POST", auth]
+func save(id uint, name str; dry_run=false) <bool> {
+    return true
+}
+
+[
+    str(save.@meta),   // the metadata block
+    save.@name,        // "save"
+    save.@args,        // positional param names
+    save.@nargs,       // named param names
+    save.@ret,         // return signature
+]
+
+/// a persisted user
+[table="users", version=2]
+class Account {
+    /// primary key
+    [db=(;primary_key)]
+    id = 0
+
+    /// stored under a different column
+    [db=(;column="full_name")]
+    label = "anon"
+
+    props {
+        /// derived, not stored
+        [computed]
+        display => this.label
+    }
+
+    methods {
+        /// the persist endpoint
+        [route="/save", method="POST"]
+        save() { return this.id }
+    }
+}
+
+u := Account()
+[
+    str(Account.@meta),       // the class metadata
+    str(Account.id.@meta),    // a field's
+    str(Account.display.@meta), // a property's
+    str(Account.save.@meta),  // a method's
+    u.id, u.label,            // field defaults are preserved alongside metadata
+]
+
+/// the sum of two numbers, or two texts joined
+[kind="sum", pure]
+func add {
+	(a int, b int) => a + b
+	(a str, b str) => a + b
+}
+
+[
+	str(add.@meta), // the function's block
+	add(1, 2),      // a method by the types of its arguments
+	add("a", "b"),
+]
+
+/// a size, as a letter or as a number
+[label="Size", options=["S", "M", "L"]]
+type Size <str|int>
+
+[
+	str(Size.@meta), // the union's block
+	len(Size.@types), // its member types: str, int
+	"M" :: Size,      // a value of one of them
+]
+
+class Contact {
+	/// a check: nil when fine, else why not
+	[validation=func(v) => len(v) >= 3 ? nil : "too short"]
+	name str
+}
+
+// the block as a dict, to take a value by its key
+check := dict(Contact.name.@meta).validation
+[check("Ana"), check("Al")]
+
+/// the fields in the order they are filled in: gad fmt keeps it
+[ordered]
+class Quote {
+	name str
+	phone str
+	details str
+}
+
+// a flag of the class's block, as any other: gad fmt reads it
+str(Quote.@meta)
+```

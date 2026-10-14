@@ -1,0 +1,499 @@
+# Conventions
+
+[← Back to Get Started](../getting-started/README.md)
+
+This document covers two things: how identifiers are **named** in Gad's builtins
+and standard library, and the **code layout** the formatter (`gad fmt` / the
+`node.Code` writer) applies. See [Formatting](../formatting/README.md) for the `gad fmt`
+command, its flags and the `.gad/gad.yaml` config.
+
+## Naming
+
+These conventions describe how identifiers are named in Gad's builtins and
+standard library, so that the API reads consistently. "Specific names" that are
+established acronyms (e.g. `URL`, `ID`, `HTTP`) keep their conventional upper
+casing, following the Go convention.
+
+| Kind | Case | Examples |
+|------|------|----------|
+| **Primitive type names** | lowerCamelCase (never PascalCase) | `int`, `uint`, `float`, `str`, `rawStr`, `bytes`, `char`, `bool`, `time`, `date`, `duration` |
+| **Other (non-primitive) type names** | PascalCase (or an upper acronym) | `Location` |
+| **Constant names** | PascalCase (or an upper acronym) | `time.Hour`, `time.January`, `time.RFC3339`, `time.Type` |
+| **Module names** | snake_case | `time`, `strings`, `fmt`, `encoding/base64` |
+| **Function / method / property names** | lowerCamelCase (or an upper acronym) | `time.now`, `time.durationString`, `t.year()`, `t.unixNano()` |
+
+### Notes
+
+* A **primitive type** is a built-in value type (`int`, `str`, `time`, `date`,
+  `duration`, …); its name is always lowercase. A non-primitive wrapper type
+  such as `Location` is PascalCase.
+* **Constants** are PascalCase even inside a module whose functions are
+  lowerCamelCase — e.g. the `time` module exposes `time.now()` (function) and
+  `time.Hour` / `time.RFC3339` (constants).
+* **Acronyms** keep their conventional casing as a unit: `URL`, not `Url`;
+  `RFC3339`, not `Rfc3339`.
+
+## Idioms
+
+Style recommendations for writing idiomatic Gad (beyond what the formatter
+enforces).
+
+* **Access a property through its `.v` field, not an explicit call.** For a
+  [property](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md) `x`, prefer `x.v` / `x.v = n` over `x()` / `x(n)`.
+  It reads as a value rather than a call and costs the same — `.v` invokes the
+  same accessor with no extra call overhead (reads are even marginally cheaper;
+  see the benchmark in [Properties](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md)). Reserve
+  the call form for props with typed/overloaded setters that you dispatch by
+  argument type.
+
+  ```go
+  prop x { () => v; (n) { v = n } }
+
+  x.v = 10   // preferred
+  x.v        // preferred
+  // x(10) / x()  — equivalent, but call-style; avoid for plain value access
+  ```
+
+## Code Layout
+
+These rules describe the source layout the formatter produces.
+
+### Declarations
+
+Declaration statements (`var`, `const`, `global`, `param`) share one layout.
+
+#### Single declaration: no parentheses
+
+A declaration of a single spec is written **without** parentheses:
+
+```gad
+var x
+const Pi = 3.14159
+global state
+```
+
+Never `var (x)` — the formatter rewrites it to `var x`. This applies to every
+declaration keyword.
+
+#### Group declaration: parentheses
+
+Two or more specs are grouped in parentheses. Short groups stay on one line:
+
+```gad
+var (x, y)
+var (x = 1, y = 2)
+const (Min = 0, Max = 10)
+```
+
+#### Grouping order
+
+When a group mixes specs with and without an initial value, put the
+value-less declarations **first**:
+
+```gad
+var (
+    // group declarations without value as first
+    a, b, c
+    d, e
+    f = 1
+    g = 2
+    r = 1, s = 2
+    t, u = 3, 4
+    v, w, x, y = expr      // destructuring
+    (a1, a2; a3, **r) = expr
+)
+```
+
+Avoid mixing alignment and irregular spacing:
+
+```gad
+// bad
+var ( a, b, c
+    d, e
+    f = 1,  g = 2
+)
+```
+
+### Class bodies
+
+A class is **ordered**: `gad fmt` keeps its fields, parents (`*Parent`,
+`*Parent: Alias`), mixins (`use A, B`) and spreads (`**Expr`) in the order
+they are declared — several of each, in any order —, and the class's
+`@flat` lists its fields in that order. After them, in this order:
+
+1. `this { … }` — a mixin's interface;
+2. `props { … }`, by name;
+3. `new { … }`;
+4. `methods { … }`, by name.
+
+A member's `[k=v, …]` metadata is written on the line **above** it, and the
+member on its own line; so is a class's, above the class:
+
+```gad
+[label="Grid"]
+class Grid {
+    *Base
+    name
+    [label="Columns", hint="1 to 6"]
+    columns int
+    [label="Gap"]
+    gap = 8
+    rows int = 2
+    **extra
+    props {
+        area() => this.columns * this.rows
+}
+    methods {
+        resize(this, n) => this(; columns=n)
+}
+}
+```
+
+A field typed by an anonymous class (`a class { … }`) is written the same way,
+its own body in the same order, one level in.
+
+A spread is written `**Expr`, with no space between the `**` and the
+expression — `**extra`, `**{fields: …}`; `** Expr` is accepted, and the
+formatter writes it without the space.
+
+### Interface bodies
+
+The same rule orders an interface body — an interface's fields have no
+defaults, so their groups are two:
+
+1. the parents (`*Parent`), as declared;
+2. the **fields**, each group in alphabetical order of the name:
+   1. untyped — `color`;
+   2. typed — `name? str`, `sides int`;
+3. `**Expr` — members given at run time, as declared;
+4. the accessors — `get name`, `set name`, `prop name` —, by name;
+5. the methods, by name;
+6. `**<rest>` — the rest capture (the keys the interface does not name);
+7. `funcs { … }` — the context functions.
+
+```gad
+interface Shape {
+    *Base
+    color
+    name? str
+    [label="Sides"]
+    sides int
+    **extra
+    get label str
+    area() <float>
+    **<rest>
+    funcs {
+        draw <(x int, _ @self)>
+}
+}
+```
+
+### The order of the fields
+
+The order of the fields is the order the class has them in — `RawFields`, an
+instance's keys, a form drawn from the class —: once formatted, it is the
+canonical one. Declare a class with that in mind: a field that must come first
+is the first of its group by name, or of an earlier group.
+
+### Splitting to new lines
+
+List-like constructs — declaration specs, call arguments, array items, dict
+items, key-value arrays and named parameters — are either kept inline or split
+one-per-line. The formatter chooses between two modes:
+
+- **Force all to new lines** — when the corresponding
+  `CodeWriteContextFlagFormat*InNewLine` flag is set (this is what `gad fmt`
+  uses via `CodeWriteContextFlagFormat`), every item goes on its own line:
+
+  ```gad
+  var (
+      x
+      y
+  )
+  ```
+
+- **Column-aware (`NEW_LINE_CALC`)** — items are wrapped only when the rendered
+  line would exceed `ctx.MaxColumns`; otherwise they stay inline (`var (x, y)`,
+  `[1, 2, 3]`). Short constructs are left compact.
+
+When items are split one per line, the newline **is** the separator: no comma is
+written between items (and none trails the last). Inline lists keep the `, `
+separator.
+
+```gad
+// inline: comma-separated
+x := [1, 2, 3]
+d := {a: 1, b: 2}
+
+// wrapped: newline-separated, no commas
+x := [
+    1
+    2
+    3
+]
+d := {
+    a: 1
+    b: 2
+}
+```
+
+### Greedy overflow wrapping
+
+Some constructs use the **overflow rule** instead of one-item-per-line under
+`NEW_LINE_CALC`: the items are **packed greedily** onto each line and continue on
+a new line only when the *next* item would overflow `ctx.MaxColumns`. A
+newline-separable item carries **no comma** at the break (commas still separate
+items that share a line). The constructs and whether their continuation lines get
+an extra indent level:
+
+| Construct                              | Separator | Extra indent on continuation |
+|:---------------------------------------|:----------|:-----------------------------|
+| array items                            | `, `      | no                           |
+| key-value array items                  | `, `      | no                           |
+| value-less declaration groups          | `, `      | no                           |
+| function header / call params          | `, `      | no                           |
+| named params / args                    | `, `      | no                           |
+| type unions (params, returns)          | ` \| `    | yes                          |
+| match arm conditions                   | `, `      | yes                          |
+
+```gad
+// array / key-value array / value-less declaration: no extra indent
+x := [
+    1, 2, 3, 4
+    5, 6, 7, 8
+]
+var (
+    a, b, c, d, e
+    f, g, h
+)
+
+// function/call params pack greedily; `;` introduces the named section inline
+f(
+    aa, bb; xx=1
+    yy=2, zz=3, ww=4
+)
+```
+
+A type union keeps its `|` connector at the break (the newline cannot separate
+union members), so a wrapped union line ends with a trailing ` |`. The named
+parameter section is introduced by `; `, which is preserved when it falls at a
+line break.
+
+### Function and call parameters
+
+Function declaration parameters and call arguments wrap with the
+[greedy overflow rule](#greedy-overflow-wrapping) (a comma is optional; the
+newline separates them), the named section introduced by `; `. Two extra rules
+apply:
+
+- A **typed parameter keeps its ident and type on the same line** (`a int`).
+  `a` and `int` on separate lines are two parameters, not a typed one.
+- A **type union is spaced around each `|`** when it stays on one line:
+  `a int | bool | string`. A single space always precedes the `|`; a trailing
+  space follows it **only when the next type is on the same line**.
+- When a parameter's **type union is too wide** for the line, the types wrap
+  **greedily** (see [Greedy overflow wrapping](#greedy-overflow-wrapping)): they
+  are packed onto the line and continue on the next line only when the next type
+  would overflow. A wrapped line ends with a trailing `|` (no space after it) and
+  the continuation is indented one extra level:
+
+  ```gad
+  func(
+      verylongname int | boolean |
+          string | number
+      b int
+  )
+  ```
+
+### Function return types
+
+A function's return-type list is written in angle brackets after the
+parameters: ` <T1, T2, ...>`. Each return type follows the same **union spacing**
+rule as parameters — a space around each `|` when it stays on one line:
+
+```gad
+func() <x int | bool, y str> {
+    return 1
+}
+```
+
+### Match arms
+
+A `match` stays inline while it fits the line budget. When it overflows
+(column-aware `NEW_LINE_CALC`), or when the force flag is set, it switches to the
+multi-line layout:
+
+- **One arm per line**, separated by the newline — **no comma between arms**.
+- Within an arm, the **conditions wrap greedily**: they are packed onto the line
+  and continue on a new line only when the next condition would overflow
+  `ctx.MaxColumns`. A continuation line is indented **one extra level** (`\t`)
+  and is **not** preceded by a comma; conditions sharing a line keep the `, `
+  separator. The arm's `: result` / `{ body }` follows the last condition.
+
+```gad
+match i {
+    1, 2, 3
+        4, 5, 6
+        7, 8 {}
+}
+```
+
+When **every** non-else arm's conditions are primitive literals of one comparable
+kind (all numeric, or all string), the formatter **sorts** them ascending — the
+conditions within each arm and the arms themselves — keeping the `else` arm last:
+
+```gad
+// match n { 3: "c", 1: "a", 2: "b", else: "z" }  formats as:
+match n { 1: "a", 2: "b", 3: "c", else: "z" }
+```
+
+Arms with non-primitive conditions (identifiers, expressions) keep their source
+order.
+
+### Assign-to-type operator (`::`)
+
+Write `::` **tightly**, with no spaces around it, and **without** redundant
+grouping parentheses — it is left-associative, so a chain reads `v::A::B`, not
+`(v::A)::B`:
+
+```gad
+x := v::int              // not `v :: int`
+y := v::A::B             // not `(v::A)::B`
+```
+
+Keep parentheses only where they change meaning: around a lower-precedence left
+operand (`(a + b)::int`, since `::` binds tighter than `+`) and around a `::`
+expression used as the base of a `.`/`[]`/`()`/slice, which bind tighter still
+(`(v::T).method()`, not `v::T.method()`). The formatter applies these rules
+automatically.
+
+## Doc comments
+
+Doc comments document an identifier, declaration, or `func`/`met`/`meti`/`prop`
+statement. Their contents are **Markdown** (safe HTML allowed). They differ from
+regular `//` and `/* */` comments: a doc comment is *attached* to an AST node's
+`Doc` field, while ordinary comments are only preserved for formatting.
+
+### Forms
+
+| Form         | Syntax                       | Example                                  |
+|--------------|------------------------------|------------------------------------------|
+| `SINGLE`     | `/// text` on its own line    | `/// the pi value`<br>`pi = 3.14`         |
+| `INLINE`     | `IDENT /// text` (no value)   | `var pi /// the pi value`                 |
+| `INLINE_VALUE` | `IDENT = EXPR /// text`     | `const pi = 3.14 /// the pi value`        |
+| `BLOCK`      | `/**` … `**/` fenced block    | `/**`<br>`the pi value`<br>`**/`          |
+| `ROOT_BLOCK` | `/***` … `***/` fenced block  | `/***`<br>`module overview`<br>`***/`     |
+
+### Attachment rules
+
+- A `SINGLE`/`BLOCK`/`ROOT_BLOCK` doc on the line **directly above** a target is its
+  *lead* doc and links to that target. Inside a `const (...)`/`var (...)` group it
+  links to the following **spec/ident** (`ValueSpec.Doc`); at statement level it
+  links to the `GenDecl`/`FuncExpr`.
+- A **blank line** between the doc and the next statement **detaches** it (a
+  standalone `ROOT_BLOCK` documents the module/section, not the next statement).
+- `INLINE`/`INLINE_VALUE` docs trail the target on the **same line** and link to its
+  ident; they apply only when there is no lead doc.
+- A doc trailing a multi-ident value-less spec (`f, g /// ...`) is invalid and is a
+  parser error.
+
+### Format rules (applied by `WriteCode`)
+
+- A `SINGLE` doc that is **long** (per `NEW_LINE_CALC`) is rewritten as a `BLOCK`.
+- A `BLOCK` doc that is **short** (per `NEW_LINE_CALC`) is rewritten as `SINGLE`.
+- Contents are auto-formatted with the Markdown formatter.
+- When `SINGLE` or `BLOCK`, a newline is inserted **after** the target when needed
+  to separate it from following code.
+
+## Verified snippets (`//snippet`)
+
+Documentation pulls real, **verified** code out of the source instead of copying
+it by hand. A region between line comments is a snippet:
+
+````gad ignore
+/**
+# Greeting
+
+@snippet greet
+**/
+
+//snippet greet
+greet := func(name) => "hi " + name
+greet("Gad")
+/**= "hi Gad" **/
+//endsnippet
+````
+
+`@snippet NAME` in a doc comment (the module header or a symbol's doc) is
+replaced by a fenced block holding the region's code; the marker lines never
+appear. `gad doc` runs every snippet check while generating (skip with
+`--no-doctest`), and `make verify` regenerates `doc/samples`, so a documented
+result can never drift from what the code does. Check one file with
+`gad doc --no-save FILE` — it exits non-zero on a mismatch.
+
+### Result markers
+
+| Marker            | Checks                                   | Rendered as                  |
+|-------------------|------------------------------------------|------------------------------|
+| `/**= EXPR **/`   | the value of the code before it `==` EXPR | a `// => value` line         |
+| `/**< TEXT **/`   | the STDOUT of the code before it == TEXT | an `Output:` text block      |
+| `//= EXPR`        | terse one-line form of `/**= … **/`      | as above                     |
+| `//< TEXT`        | terse one-line form of `/**< … **/`      | as above                     |
+
+Use `/**=` when the value is the point of the example (collect several results
+in one array: `[a, b, c]`), and `/**<` when the printed output is (loops,
+`println` tours, resources that log). A snippet may hold several markers; each
+verifies the code **from the start of the snippet** up to it — so an output
+check sees everything printed so far, not just the lines since the previous
+marker.
+
+### Rules that are easy to miss
+
+- **Each snippet runs standalone**, in a fresh VM. It sees nothing from the rest
+  of the file unless it declares a context: `//snippet usage uses define other`
+  prepends those snippets' code (transitively, each once). The context's code is
+  not rendered and its own markers are ignored — but it **runs**, so its output
+  is part of a `/**<` capture: prefer `/**=` in a snippet that `uses` a noisy
+  context.
+- **The whole file also runs** top to bottom (as a script, and as the page's
+  Example). Snippets therefore share one scope there: a name declared with `:=`
+  in two snippets is a redeclaration error. Give every snippet its own names.
+- **The expected value is evaluated on its own** — with the `uses` context, but
+  *without* the snippet's code — so it cannot name the snippet's locals. Write
+  literals (`/**= [1, "a"] **/`), or compute a comparison in the snippet itself
+  (`[x == Perm.Read]` … `/**= [true] **/`).
+- **Some equal-looking values are not equal.** A raw string is not a `str`
+  (`` `a` `` ≠ `"a"`; wrap it in `str(…)`) and an enum value is not the int it
+  prints as — even though the mismatch message shows the same text on both
+  sides. (Numbers compare by value: `6.0` equals `6`.)
+- **A multi-line `/**<` keeps its lines verbatim** — leading indentation
+  included, only blank edge lines and trailing spaces are dropped — so output that
+  starts indented matches. Put the text on the lines *below* `/**<`; the one-line
+  form `/**< text **/` is trimmed.
+- **Relative paths resolve against the documented file's directory**:
+  `import("./sibling.gad")` and `embed("data/x.txt")` work as they do when the
+  file runs.
+- **Avoid output that depends on how the code runs**: module names and paths
+  (`str(SomeInterface)`, a function's repr, `@name`, `@file`) differ between a
+  snippet run and a file run. Check a property of it instead (`typeName(…)`,
+  `hasSuffix(…)`, a member's `name`).
+- **Output must be deterministic.** A dict's iteration order is unspecified, so
+  a check that prints dict entries passes or fails at random — iterate with
+  `iterator(d; sorted)`, or check the dict as a value (`/**= {a: 1} **/`
+  compares regardless of order).
+- **A `[ … ]` right above a declaration is its metadata.** An array expression
+  on the line directly before `class`/`interface`/`func`/… reads as that
+  declaration's `[k=v]` block; separate them with a blank line.
+- **The optimizer folds constants when the whole file runs**, before a
+  user-defined operator (`met gad.binOpIn(…)`) exists — `1 in 6` may then fail
+  to compile even though the snippet alone passes. Bind an operand to a variable
+  (`mask := 6; 1 in mask`).
+
+### Which samples use them
+
+Every hand-written `samples/*.gad` page documents its examples with snippets.
+The exceptions are the generated API stubs (`samples/builtins.gad`,
+`samples/types.gad`, `samples/stdlib/*.gad`, rebuilt by `go generate` from Go
+doc comments — edit those comments, not the stub), the `*_test.gad` files
+(already assertions, run by `gad test`), and pages that cannot run standalone
+(command-line argv, template mode, imported modules/partials).

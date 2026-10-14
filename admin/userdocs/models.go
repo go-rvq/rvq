@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -117,12 +118,22 @@ func ParseFiles(value string) ([]File, error) {
 	return files, nil
 }
 
-// FormatFiles writes documents as YAML (UserDocPackage.Value).
+// FormatFiles writes documents as YAML (UserDocPackage.Value) — as JSON (a
+// YAML too, ParseFiles reads it) when the YAML would not read back as they
+// are: yaml.v3 writes some texts (a tab, spaces at the end of a line of a
+// block) in a form it does not parse.
 func FormatFiles(files []File) (string, error) {
 	if len(files) == 0 {
 		return "", nil
 	}
 	b, err := yaml.Marshal(files)
+	if err != nil {
+		return "", err
+	}
+	if back, err := ParseFiles(string(b)); err == nil && slices.Equal(back, files) {
+		return string(b), nil
+	}
+	b, err = json.MarshalIndent(files, "", "  ")
 	return string(b), err
 }
 

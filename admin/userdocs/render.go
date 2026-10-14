@@ -346,9 +346,12 @@ func actionTitle(mb *presets.ModelBuilder, name string, ctx *web.EventContext) (
 // links pointing at the documentation (a .md) or at its package's files (an
 // image).
 func (r *renderer) Render(src *Source, file, content string) (string, error) {
-	md, err := RenderTemplate(content, r.globals())
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", file, err)
+	md := content
+	if !src.Raw {
+		var err error
+		if md, err = RenderTemplate(content, r.globals()); err != nil {
+			return "", fmt.Errorf("%s: %w", file, err)
+		}
 	}
 	dir := path.Dir(file)
 	rewrite := func(target string) string {

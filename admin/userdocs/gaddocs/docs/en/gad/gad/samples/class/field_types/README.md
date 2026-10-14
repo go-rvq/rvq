@@ -1,0 +1,178 @@
+
+# Typed class fields
+
+A class field may declare the type(s) it accepts — `x int`, `v int|str`, a class
+(`a Point`) or an [interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) it must satisfy. The type is
+enforced when an instance is constructed, using the **same value-based
+assignability as function parameters** (the [`::` operator](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad)):
+
+- A value of a **matching type** is stored as-is.
+- A **`dict` passed for a class-typed field** is constructed into an instance of
+  that class, so nested classes initialise from plain literals — recursively, at
+  any depth (github.com/gad-lang/gad issue #4).
+- A value of a **different type is rejected** with a `TypeError`.
+- An **untyped field** accepts anything.
+- A field marked **nullable** with a `?` after the name (`x? int`, `x? int|str`)
+  also accepts `nil`; a plain typed field rejects it.
+
+Fields declared with `class Name { … }` and with the
+[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/classes.gad) behave identically. The same `name? T`
+marker works on an [interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) field, where `nil` (or an
+absent member) satisfies it.
+
+## Class-typed fields
+
+A dict passed for a class-typed field is constructed into a real instance of
+that class. Nesting composes to any depth (`Scene.rect` is a `Rect`, whose
+`a`/`b` are `Point`s — all built from one nested dict literal). An already-built
+instance is stored unchanged (not re-wrapped); a field that is not provided
+defaults to nil.
+
+```gad
+class Point { x int; y int }
+class Rect { a Point; b Point }        // class-typed fields
+class Scene { name str; rect Rect }    // nested to any depth
+
+r := Rect(; a = {x: 0, y: 0}, b = {x: 3, y: 4})
+s := Scene(; name = "s1", rect = {a: {x: 1, y: 2}, b: {x: 3, y: 4}})
+p := Point(; x = 9, y = 9)
+[
+    typeName(r.a), r.b.y,
+    [typeName(s.rect), typeName(s.rect.a), s.rect.a.y],
+    Rect(; a = p, b = {x: 1, y: 1}).a.x,    // an instance is kept as-is
+    Rect(; a = {x: 1, y: 2}).b,             // not provided: nil
+]
+// => ["Point", 4, ["Rect", "Point", 2], 9, nil]
+```
+
+## Anonymous classes and members given at run time
+
+A field may also be typed by a class declared right there — `a class { … }`,
+see [anonymous classes](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/inline_classes.gad) —, and a class may take members
+known only when it is declared — `**Expr`, see
+[members given at run time](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/spread_members.gad).
+
+## Type enforcement
+
+A typed field rejects a value of a different type; the raised `TypeError` names
+the field and the expected type(s): `field "x" expects int, got str`. A union
+type (`int|str`) accepts any listed type and rejects the rest, and an untyped
+field accepts any value.
+
+```gad
+rejects := func(f) { try { f(); return false } catch { return true } }
+class Box { v int|str }
+class Bag { any }
+[
+    rejects(() => Point(; x = "hello", y = 1)),  // field "x" expects int, got str
+    Box(; v = 7).v, Box(; v = "hi").v,
+    rejects(() => Box(; v = true)),              // field "v" expects int|str, got bool
+    [typeName(Bag(; any = 1).any), typeName(Bag(; any = "x").any)],  // untyped
+]
+// => [true, 7, "hi", true, ["int", "str"]]
+```
+
+## Interface-typed fields
+
+A field may be typed by an interface: the value must structurally satisfy it
+(the same check the `::` operator and interface parameters use). Both class
+instances and dicts qualify.
+
+```gad
+interface Greeter { name str; greet() <str> }
+class Person { name = ""; methods { greet() => "hi " + this.name } }
+class Registry { main Greeter }        // accepts anything that is a Greeter
+
+badGreeter := func() { try { Registry(; main = 42); return false } catch { return true } }
+[
+    Registry(; main = Person(; name = "Ada")).main.greet(),
+    Registry(; main = {name: "Bo", greet: func() => "hi Bo"}).main.greet(),
+    badGreeter(),                      // 42 is not a Greeter
+]
+// => ["hi Ada", "hi Bo", true]
+```
+
+## Nullable fields (`name? T`)
+
+A field marked with a `?` after its name is **nullable**: it accepts `nil` in
+addition to its declared type(s). Use it for optional data — a value that may
+be absent — instead of widening the type or dropping it entirely. Without the
+`?`, a typed field rejects `nil` just like a non-nullable parameter, so the
+marker documents intent and is enforced.
+
+The `name? T` marker works the same way on an **interface** field: a value whose
+member is `nil` (or absent) still satisfies the interface.
+
+```gad
+class Config {
+    port int        // required — a non-nil int
+    host? str       // optional — a str or nil
+    tag? int|str    // optional union — int, str or nil
+}
+interface HasTag { tag? int|str }
+
+c := Config(; port = 8080, host = nil, tag = "beta")
+nilPort := func() { try { Config(; port = nil); return false } catch { return true } }
+[
+    [c.port, c.host, c.tag],
+    nilPort(),                         // field "port" expects int, got nil
+    ({} :: HasTag) != nil,             // an absent tag is fine
+    ({tag: 3} :: HasTag).tag,
+]
+// => [[8080, nil, "beta"], true, true, 3]
+```
+
+## Example — `field_types.gad`
+
+```gad
+class Point { x int; y int }
+class Rect { a Point; b Point }        // class-typed fields
+class Scene { name str; rect Rect }    // nested to any depth
+
+r := Rect(; a = {x: 0, y: 0}, b = {x: 3, y: 4})
+s := Scene(; name = "s1", rect = {a: {x: 1, y: 2}, b: {x: 3, y: 4}})
+p := Point(; x = 9, y = 9)
+[
+    typeName(r.a), r.b.y,
+    [typeName(s.rect), typeName(s.rect.a), s.rect.a.y],
+    Rect(; a = p, b = {x: 1, y: 1}).a.x,    // an instance is kept as-is
+    Rect(; a = {x: 1, y: 2}).b,             // not provided: nil
+]
+
+rejects := func(f) { try { f(); return false } catch { return true } }
+class Box { v int|str }
+class Bag { any }
+[
+    rejects(() => Point(; x = "hello", y = 1)),  // field "x" expects int, got str
+    Box(; v = 7).v, Box(; v = "hi").v,
+    rejects(() => Box(; v = true)),              // field "v" expects int|str, got bool
+    [typeName(Bag(; any = 1).any), typeName(Bag(; any = "x").any)],  // untyped
+]
+
+interface Greeter { name str; greet() <str> }
+class Person { name = ""; methods { greet() => "hi " + this.name } }
+class Registry { main Greeter }        // accepts anything that is a Greeter
+
+badGreeter := func() { try { Registry(; main = 42); return false } catch { return true } }
+[
+    Registry(; main = Person(; name = "Ada")).main.greet(),
+    Registry(; main = {name: "Bo", greet: func() => "hi Bo"}).main.greet(),
+    badGreeter(),                      // 42 is not a Greeter
+]
+
+class Config {
+    port int        // required — a non-nil int
+    host? str       // optional — a str or nil
+    tag? int|str    // optional union — int, str or nil
+}
+interface HasTag { tag? int|str }
+
+c := Config(; port = 8080, host = nil, tag = "beta")
+nilPort := func() { try { Config(; port = nil); return false } catch { return true } }
+[
+    [c.port, c.host, c.tag],
+    nilPort(),                         // field "port" expects int, got nil
+    ({} :: HasTag) != nil,             // an absent tag is fine
+    ({tag: 3} :: HasTag).tag,
+]
+```

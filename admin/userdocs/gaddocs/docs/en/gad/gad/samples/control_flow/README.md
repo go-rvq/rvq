@@ -1,0 +1,407 @@
+
+# Control Flow
+
+`if`, `for`, `for … in` and the `match` expression. (Error handling —
+`try`/`catch`/`finally`, `throw` — lives in [Error Handling](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/07_error_handling.md);
+the `with` resource guard in [With](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/with.gad).)
+
+## If
+
+`if` works like Go's, including an optional init statement before the condition
+(`if v := compute(); v > 10 { … }`). The body braces may also be written as
+`begin … end` (`if a > 0 begin println("yes") end`).
+
+```gad
+/**
+Classic if / else if / else.
+**/
+grade := func(score) {
+    if score >= 90 {
+        return "A"
+    } else if score >= 80 {
+        return "B"
+    } else {
+        return "C"
+    }
+}
+println("grade(95) =", grade(95)) // A
+println("grade(83) =", grade(83)) // B
+```
+
+Output:
+
+```text
+grade(95) = A
+grade(83) = B
+```
+
+## For
+
+The three-clause (`for i := 0; i < 3; i++`), condition-only (`for x < 10`) and
+infinite (`for { … }`) forms all exist; `break` and `continue` behave as in Go.
+Postfix `i++`/`i--` are statements; prefix `++x`/`--x` mutate and yield the new
+value, so they work in expressions.
+
+```gad
+/**
+Three-clause for; postfix `i++` is a statement.
+**/
+fact := 1
+for i := 1; i <= 5; i++ {
+    fact *= i
+}
+println("5! =", fact) // 120
+
+/**
+prefix `++x` / `--x` yield the new value (usable in expressions).
+**/
+n := 0
+println("prefix:", ++n, ++n, --n) // 1 2 1
+```
+
+Output:
+
+```text
+5! = 120
+prefix: 1 2 1
+```
+
+## For-In
+
+`for … in` iterates any iterable — arrays, dicts, strings, bytes and lazy
+iterators (e.g. the result of `map`/`filter`). Bind one variable for the value,
+or two for the key/index and value. A dict's iteration order is unspecified;
+`iterator(d; sorted)` iterates it ordered by key.
+
+```gad
+for i, v in [10, 20, 30] {
+    println(i, v) // 0 10, 1 20, 2 30
+}
+// a dict's order is unspecified; iterator(…; sorted) orders it by key
+for k, v in iterator({a: 1, b: 2}; sorted) {
+    println(k, v) // a 1, b 2
+}
+for i, c in "ab" {
+    println(i, c) // 0 'a', 1 'b'
+}
+```
+
+Output:
+
+```text
+0 10
+1 20
+2 30
+a 1
+b 2
+0 a
+1 b
+```
+
+## Custom iterables (the iterator protocol)
+
+Any type becomes iterable by providing two overloads of the `iterator` method,
+added with `met`:
+
+- **start** — `met iterator(self)` returns the first `[state, entry]` pair, or a
+  non-two-element value (e.g. `nil`) when the value is empty.
+- **next** — `met iterator(self, state)` takes the previous `state` and returns
+  the next `[state, entry]`, or `nil` to stop.
+
+`entry` is the value yielded to a single loop variable. To yield a **key** and a
+**value**, make `entry` a one-element key-value array `[(key)=value]`; then
+`for k, v in …` binds both. Once a type has these methods, everything that
+iterates works on it: `for … in`, `iterate`, `values`, `keys`, `collect`,
+`map`/`filter`, and it satisfies the `iterable` type (`isIterable(x)` is `yes`,
+and it is accepted by a `func(x iterable)` parameter) — even after the value is
+passed through a function.
+
+```gad
+// A `Range` counts Start..End. The two `iterator` overloads make it iterable.
+Range := class {
+    Start = 0
+    End = 0
+}
+
+/**
+start: yield the first [state, entry], or nil when empty.
+**/
+met iterator(r Range) => r.Start >= r.End ? nil : [r.Start, r.Start]
+
+/**
+next: given the previous state, yield the next [state, entry], or nil to stop.
+**/
+met iterator(r Range, state) => state+1 >= r.End ? nil : [state+1, state+1]
+
+// for-in yields each entry; the same works through a function typed `iterable`.
+sum := func(xs iterable) {
+    total := 0
+    for v in xs { total += v }
+    return total
+}
+r := Range(; Start=0, End=4)
+println("isIterable:", isIterable(r))        // yes
+println("collect:", str(collect(values(r)))) // [0, 1, 2, 3]
+println("sum via param:", sum(r))            // 6
+
+// Yield key/value pairs by making the entry a key-value array `[(k)=v]`.
+Letters := class { n = 0 }
+met iterator(l Letters) => l.n <= 0 ? nil : [0, [(0)=str('a' + 0)]]
+met iterator(l Letters, i) => i+1 >= l.n ? nil : [i+1, [(i+1)=str('a' + i+1)]]
+
+for k, v in Letters(; n=3) {
+    println("letter", k, "=", v) // letter 0 = a, 1 = b, 2 = c
+}
+```
+
+Output:
+
+```text
+isIterable: true
+collect: [0, 1, 2, 3]
+sum via param: 6
+letter 0 = a
+letter 1 = b
+letter 2 = c
+```
+
+## Match
+
+`match` (PHP 8-style) compares a subject against arms and yields the first
+matching result — an **expression**, so its value can be assigned, returned or
+used inline. The subject needs no parentheses.
+
+**Separators.** Within an arm, several **conditions** are separated by `,` (the
+arm matches when the subject equals *any* of them — an OR). **Arms** are separated
+by `;` or a new line. So `,` groups conditions, `;`/newline ends an arm.
+
+**Arm forms**, freely mixable in one match:
+
+- `conds: value` — yields `value`.
+- `conds { … }` — a block; inside an **expression** match a `return <expr>`
+  yields the match's value (a plain jump, not a function return), and a block that
+  falls through yields `nil`. In a bare **statement** match a block's `return`
+  returns from the enclosing function instead.
+
+An optional `else` arm is the default; an empty match — or one with no matching
+arm and no `else` — yields `nil`.
+
+**Subject-less `match { … }`** is sugar for `match true { … }`: each arm's
+conditions are matched against `true`, so the first truthy arm wins — a clean
+multi-branch conditional (Gad's `if/else if/else` as an expression). A `{` right
+after `match` always opens the arm block; to match a dict-literal subject,
+parenthesize it (`match ({…}) { … }`).
+
+```gad
+// Subject-less `match { … }` (= `match true`): the first truthy arm wins; an arm
+// may list several `,`-separated OR-conditions; arms are separated by newlines.
+classify := func(n) {
+    return match {
+        n < 0:          "negative"
+        n == 0:         "zero"
+        n == 1, n == 2: "one or two"   // two conditions (OR)
+        n < 10:         "small"
+        else:           "large"
+    }
+}
+for _, n in [-3, 0, 1, 4, 42] {
+    println(#"{n} is {classify(n)}")
+}
+
+// Subject form + MIXED arms: a `: value` arm and a `{ block }` arm in one
+// expression match. In a block arm, `return` yields the match's value.
+sign := func(n) {
+    return match {
+        n == 0: "zero"                 // value arm
+        n > 0 {                        // block arm — return yields the match
+            if n > 100 { return "huge" }
+            return "positive"
+        }
+        else: "negative"
+    }
+}
+for _, n in [0, 5, 500, -2] {
+    println(#"{n} -> {sign(n)}")
+}
+
+// Inline arms use `;` between arms and `,` within one; short matches stay on one
+// line.
+letterGrade := func(s) => match { s >= 90: "A"; s >= 80: "B"; else: "C" }
+println("letterGrade(83) =", letterGrade(83)) // B
+
+// A subject compares by value (`==`); several values share one arm with `,`.
+kind := func(day) => match day {
+    "sat", "sun": "weekend"
+    else:         "weekday"
+}
+println("sat is a", kind("sat"))
+
+// Statement context: a bare `match` used for effect. A block arm's `return`
+// returns from the ENCLOSING function (not the match).
+first := func(xs) {
+    match {
+        len(xs) == 0 { return "empty" }
+        else         { return "has " + str(len(xs)) }
+    }
+}
+println("first([]) =", first([]))
+println("first([1,2]) =", first([1, 2]))
+```
+
+Output:
+
+```text
+-3 is negative
+0 is zero
+1 is one or two
+4 is small
+42 is large
+0 -> zero
+5 -> positive
+500 -> huge
+-2 -> negative
+letterGrade(83) = B
+sat is a weekend
+first([]) = empty
+first([1,2]) = has 2
+```
+
+The formatter keeps a match inline while it fits and switches to one arm per line
+only when it overflows; see [Conventions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/conventions.md).
+
+## Example — `control_flow.gad`
+
+```gad
+// Subject-less `match { … }` (= `match true`): the first truthy arm wins; an arm
+// may list several `,`-separated OR-conditions; arms are separated by newlines.
+classify := func(n) {
+    return match {
+        n < 0:          "negative"
+        n == 0:         "zero"
+        n == 1, n == 2: "one or two"   // two conditions (OR)
+        n < 10:         "small"
+        else:           "large"
+    }
+}
+for _, n in [-3, 0, 1, 4, 42] {
+    println(#"{n} is {classify(n)}")
+}
+
+// Subject form + MIXED arms: a `: value` arm and a `{ block }` arm in one
+// expression match. In a block arm, `return` yields the match's value.
+sign := func(n) {
+    return match {
+        n == 0: "zero"                 // value arm
+        n > 0 {                        // block arm — return yields the match
+            if n > 100 { return "huge" }
+            return "positive"
+        }
+        else: "negative"
+    }
+}
+for _, n in [0, 5, 500, -2] {
+    println(#"{n} -> {sign(n)}")
+}
+
+// Inline arms use `;` between arms and `,` within one; short matches stay on one
+// line.
+letterGrade := func(s) => match { s >= 90: "A"; s >= 80: "B"; else: "C" }
+println("letterGrade(83) =", letterGrade(83)) // B
+
+// A subject compares by value (`==`); several values share one arm with `,`.
+kind := func(day) => match day {
+    "sat", "sun": "weekend"
+    else:         "weekday"
+}
+println("sat is a", kind("sat"))
+
+// Statement context: a bare `match` used for effect. A block arm's `return`
+// returns from the ENCLOSING function (not the match).
+first := func(xs) {
+    match {
+        len(xs) == 0 { return "empty" }
+        else         { return "has " + str(len(xs)) }
+    }
+}
+println("first([]) =", first([]))
+println("first([1,2]) =", first([1, 2]))
+
+/**
+Classic if / else if / else.
+**/
+grade := func(score) {
+    if score >= 90 {
+        return "A"
+    } else if score >= 80 {
+        return "B"
+    } else {
+        return "C"
+    }
+}
+println("grade(95) =", grade(95)) // A
+println("grade(83) =", grade(83)) // B
+
+/**
+Three-clause for; postfix `i++` is a statement.
+**/
+fact := 1
+for i := 1; i <= 5; i++ {
+    fact *= i
+}
+println("5! =", fact) // 120
+
+/**
+prefix `++x` / `--x` yield the new value (usable in expressions).
+**/
+n := 0
+println("prefix:", ++n, ++n, --n) // 1 2 1
+
+for i, v in [10, 20, 30] {
+    println(i, v) // 0 10, 1 20, 2 30
+}
+// a dict's order is unspecified; iterator(…; sorted) orders it by key
+for k, v in iterator({a: 1, b: 2}; sorted) {
+    println(k, v) // a 1, b 2
+}
+for i, c in "ab" {
+    println(i, c) // 0 'a', 1 'b'
+}
+
+// A `Range` counts Start..End. The two `iterator` overloads make it iterable.
+Range := class {
+    Start = 0
+    End = 0
+}
+
+/**
+start: yield the first [state, entry], or nil when empty.
+**/
+met iterator(r Range) => r.Start >= r.End ? nil : [r.Start, r.Start]
+
+/**
+next: given the previous state, yield the next [state, entry], or nil to stop.
+**/
+met iterator(r Range, state) => state+1 >= r.End ? nil : [state+1, state+1]
+
+// for-in yields each entry; the same works through a function typed `iterable`.
+sum := func(xs iterable) {
+    total := 0
+    for v in xs { total += v }
+    return total
+}
+r := Range(; Start=0, End=4)
+println("isIterable:", isIterable(r))        // yes
+println("collect:", str(collect(values(r)))) // [0, 1, 2, 3]
+println("sum via param:", sum(r))            // 6
+
+// Yield key/value pairs by making the entry a key-value array `[(k)=v]`.
+Letters := class { n = 0 }
+met iterator(l Letters) => l.n <= 0 ? nil : [0, [(0)=str('a' + 0)]]
+met iterator(l Letters, i) => i+1 >= l.n ? nil : [i+1, [(i+1)=str('a' + i+1)]]
+
+for k, v in Letters(; n=3) {
+    println("letter", k, "=", v) // letter 0 = a, 1 = b, 2 = c
+}
+
+return fact
+```
