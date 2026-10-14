@@ -414,13 +414,26 @@ done:
 
 	switch b.typ {
 	case ActionTypeDetailing:
-		// An update func that already chose where to go keeps its choice: an
-		// action that moves the record — to another locale, say — leaves the
-		// current URL pointing at a record that is no longer there.
-		if !IsInDialog(ctx) && ctx.Resp.PushState == nil {
-			ctx.Resp.PushState = web.Location(url.Values{})
+		switch ctx.R.FormValue(ParamToolbarAction) {
+		case "overlay":
+			// the button of the toolbar of an overlay: the detail stays open
+			// (the button shows it again), the listing behind it refreshed
+			ctx.Resp.AppendRunScript("presetsListing?.loader?.go()")
+		case "page":
+			// of a page: the page shown again — its toolbar too
+			if ctx.Resp.PushState == nil {
+				ctx.Resp.PushState = web.Location(url.Values{})
+			}
+		default:
+			// An update func that already chose where to go keeps its choice:
+			// an action that moves the record — to another locale, say —
+			// leaves the current URL pointing at a record that is no longer
+			// there.
+			if !IsInDialog(ctx) && ctx.Resp.PushState == nil {
+				ctx.Resp.PushState = web.Location(url.Values{})
+			}
+			ctx.Resp.AppendRunScript("closer.show = false; presetsListing?.loader?.go()")
 		}
-		ctx.Resp.AppendRunScript("closer.show = false; presetsListing?.loader?.go()")
 	case ActionTypePage:
 		data := ctx.Data().(*PageDoActionOptions)
 		if data.ReloadPage {

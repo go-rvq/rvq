@@ -39,6 +39,11 @@ const (
 	ParamAfterDeleteEvent = "presets_after_delete_event"
 	ParamPortalID         = "portal_id"
 	ParamTargetPortal     = "target_portal"
+	// ParamToolbarAction says an action is done by its button of the
+	// detailing's toolbar (ActionBuilder.ToolbarButton), and where the detail
+	// is: "overlay" — it stays open, the button shows it again, the listing
+	// behind it refreshed —, or "page" — the page shown again.
+	ParamToolbarAction = "presets_toolbar_action"
 	// ParamCloserProvided tells the responder that the caller already provides the
 	// overlay's `closer` (a form host owns it, see FormHost), so the response must
 	// NOT wrap its content in a new closer scope — otherwise it would create a

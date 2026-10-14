@@ -726,6 +726,13 @@ func (b *DetailingBuilder) toolbarActionButton(a *ActionBuilder, id string, obj 
 		Query(ParamID, id).
 		Query(ParamAction, a.name).
 		URL(b.mb.Info().ListingHrefCtx(ctx))
+	if actions.OverlayMode(ctx.R.FormValue(ParamOverlay)).Overlayed() {
+		// in an overlay: it stays open, the detail shown again in it
+		onclick.Query(ParamToolbarAction, "overlay").ThenScript(b.reloadOverlayScript(ctx))
+	} else {
+		// in a page: the page shown again (the response's)
+		onclick.Query(ParamToolbarAction, "page")
+	}
 	return a.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
 		return VBtn("").
 			Variant(VariantText).
@@ -737,6 +744,16 @@ func (b *DetailingBuilder) toolbarActionButton(a *ActionBuilder, id string, obj 
 			Children(VIcon(icon)).
 			Attr("@click", onclick.String())
 	}, onclick, id, obj, ctx)
+}
+
+// reloadOverlayScript shows the detail of an overlay again, in it: the
+// request of the overlay again — what an edit saved does (hostedComponent).
+func (b *DetailingBuilder) reloadOverlayScript(ctx *web.EventContext) string {
+	return web.Plaid().
+		URL(ctx.R.RequestURI).
+		EventFunc(actions.Detailing).
+		StringQuery(ctx.Queries().Encode()).
+		Go()
 }
 
 func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse, err error) {
