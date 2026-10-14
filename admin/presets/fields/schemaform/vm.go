@@ -227,7 +227,57 @@ func (b *Builder) Builtins() *gad.Builtins {
 		}
 		builtins.Set(name, &typeMarker{name: name})
 	}
+	// what a schema's metadata functions use: Request (the values of a
+	// source of the web), WithWarnings (a record's warnings)
+	builtins.Set("Request", RequestFunc)
+	if fu, err := withWarnings(); err == nil {
+		builtins.Set(WithWarningsClass, fu[0])
+		builtins.Set(WarningsType, fu[1])
+	} else {
+		panic(err)
+	}
 	return builtins
+}
+
+// WithWarningsClass is the mixin a record of a field that keeps a value with
+// a warning uses (`use WithWarnings`): its $warnings (WarningsField), of the
+// type Warnings (WarningsType) — the form's to fill, read-only.
+const (
+	WithWarningsClass = "WithWarnings"
+	WarningsType      = "Warnings"
+)
+
+// WithWarningsSource is WithWarnings and Warnings.
+const WithWarningsSource = `type Warnings []{fieldName str; message str}
+mixin WithWarnings {
+	[readonly]
+	$warnings? Warnings
+}
+return [WithWarnings, Warnings]`
+
+var (
+	withWarningsOnce sync.Once
+	withWarningsObjs gad.Array
+	withWarningsErr  error
+)
+
+// withWarnings is WithWarnings and Warnings, run once.
+func withWarnings() (gad.Array, error) {
+	withWarningsOnce.Do(func() {
+		bi := gad.NewBuiltins()
+		res, err := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte(WithWarningsSource), gad.CompileOptions{})
+		if err != nil {
+			withWarningsErr = fmt.Errorf("schemaform: WithWarnings: %w", err)
+			return
+		}
+		ret, err := gad.NewVM(bi.Build(), res.Bytecode).Run()
+		if err != nil {
+			withWarningsErr = fmt.Errorf("schemaform: WithWarnings: %w", err)
+			return
+		}
+		withWarningsObjs, _ = ret.(gad.Array)
+	})
+	return withWarningsObjs, withWarningsErr
 }
 
 // TypeMarker is the object a program sees for the type name — a type gad has
@@ -268,9 +318,26 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 	// either way (`data ::: Form`)
 	c.SetAutoGroupKeys(true)
 
-	s := &Schema{}
-	// the fields of its parents (`*Parent`) first, in their order: a class
-	// extends them
+	s := &Schema{recClass: c}
+	// its fields as the class declares them (`@flat`): each parent's
+	// (`*Parent`) where it is written, its own — its mixins', its spreads' —
+	// where they are
+	pos := map[string]int{}
+	for i, f := range c.FlatFields() {
+		pos[f.Name] = i
+	}
+	at := func(name string) int {
+		if i, ok := pos[name]; ok {
+			return i
+		}
+		return len(pos)
+	}
+	type chunk struct {
+		pos    int
+		parent []*Field // a parent's fields (appendRows)
+		own    *Field   // a field of its own (appendField)
+	}
+	var chunks []chunk
 	for _, p := range c.RawParents() {
 		ps, err := r.class(p.Type)
 		if err != nil {
@@ -287,7 +354,11 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		for _, f := range ps.Fields {
 			f.Owner = owner
 		}
-		appendRows(s, ps.Fields)
+		where := len(pos)
+		if pf := p.Type.FlatFields(); len(pf) > 0 {
+			where = at(pf[0].Name)
+		}
+		chunks = append(chunks, chunk{pos: where, parent: ps.Fields})
 	}
 	own, err := classValidations(c)
 	if err != nil {
@@ -309,11 +380,41 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 		if cf.Value != nil && cf.Value != gad.Nil {
 			f.Default = metaValue(cf.Value)
 		}
-		if err := r.appendField(s, f); err != nil {
+		chunks = append(chunks, chunk{pos: at(cf.Name), own: f})
+	}
+	sort.SliceStable(chunks, func(i, j int) bool { return chunks[i].pos < chunks[j].pos })
+	for _, ch := range chunks {
+		if ch.own == nil {
+			appendRows(s, ch.parent)
+			continue
+		}
+		if err := r.appendField(s, ch.own); err != nil {
 			return nil, err
 		}
 	}
+	if err := checkWarnings(c, s); err != nil {
+		return nil, err
+	}
 	return s, nil
+}
+
+// checkWarnings refuses a field that keeps a value with a warning
+// (`[optionsError="warn"]`) of a class with no place for it: it uses
+// WithWarnings (its $warnings).
+func checkWarnings(c *gad.Class, s *Schema) error {
+	var has bool
+	for _, f := range s.Fields {
+		if f.Name == WarningsField {
+			has = true
+		}
+	}
+	for _, f := range s.Fields {
+		if f.OptionsError == OptionsErrorWarn && !has {
+			return fmt.Errorf("%s: %s=%q: the class %s keeps no warnings: it uses %s (`use %s`)",
+				f.Name, MetaOptionsError, OptionsErrorWarn, c.Name(), WithWarningsClass, WithWarningsClass)
+		}
+	}
+	return nil
 }
 
 // choice reads a union of classes (`listLayout|gridLayout`) into a choice of
@@ -968,8 +1069,29 @@ func options(f *Field, rawMeta gad.Object) error {
 				return err
 			}
 			continue
+		case MetaChanged:
+			if !isCallable(kv.V) {
+				return fmt.Errorf("%s: a function (this, parents) => …, not %s", MetaChanged, kv.V.Type().Name())
+			}
+			f.ChangedFunc = kv.V
+			continue
+		case MetaIf, MetaShow, MetaDisabled, MetaReadonly, MetaClass, MetaOptionsError:
+			if err := condMeta(f, k, kv.V); err != nil {
+				return err
+			}
+			continue
 		}
 		if kv.K.ToString() != MetaOptions {
+			continue
+		}
+		if isCallable(kv.V) {
+			// the values by what is answered: a select of none, until the
+			// function says them
+			if f.Schema != nil {
+				return fmt.Errorf("%s: a record has no options; only a value has", MetaOptions)
+			}
+			f.OptionsFunc = kv.V
+			f.Enum = &Enum{Options: true}
 			continue
 		}
 		e, err := optionsEnum(kv.V)

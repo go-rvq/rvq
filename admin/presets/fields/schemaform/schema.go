@@ -24,6 +24,9 @@ type Schema struct {
 	// vm is the VM the schema was read in (Builder.Class): what its
 	// `[validation=…]` functions are called with.
 	vm *gad.VM
+	// recClass is the class its record is (a schema read of a class): what
+	// the `this` of a field's metadata function is an instance of.
+	recClass *gad.Class
 	// class is the class it was read of (Builder.Class): what its steps
 	// (Flow) are of.
 	class  *gad.Class
@@ -242,6 +245,18 @@ type Field struct {
 	// Group is the group the field is of — its kind: a row, tabs, steps —;
 	// nil for a field of no group.
 	Group *Group
+	// Cond are its metadata of CondMetas (if, show, disabled, readonly,
+	// class): a value, or a function (this, parents) of what is answered.
+	Cond map[string]gad.Object
+	// OptionsFunc is its `[options=(this, parents) => …]`: the values it may
+	// hold by what is answered — nil, a list, a Request —, its Enum one of
+	// none; OptionsError, its `[optionsError=…]` (MetaOptionsError).
+	OptionsFunc  gad.Object
+	OptionsError string
+	// ChangedFunc is its `[changed=(this, parents) => …]`: what is done as
+	// its value changes, in the page — this's fields set, of its record
+	// (MetaChanged).
+	ChangedFunc gad.Object
 }
 
 // Clone is a copy of the schema that may be changed — a schema Parse returns

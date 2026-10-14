@@ -16,7 +16,7 @@ require (
 	github.com/documize/html-diff v0.0.0-20160503140253-f61c192c7796
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
-	github.com/gad-lang/gad v0.1.0-rc.32.0.20261011221034-2d04e6fd41a1
+	github.com/gad-lang/gad v0.1.0-rc.33.0.20261014024520-cae9c6da3d2f
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1

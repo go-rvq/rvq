@@ -12,6 +12,10 @@ type Check struct {
 	Step  string              `json:"step"`
 	Data  map[string]any      `json:"data"`
 	Files map[string]FileInfo `json:"files"`
+	// Options are the values the page has of the fields of options of a
+	// function, by path: what their values are checked by (a request not
+	// fetched again; a field the page has none of, any value).
+	Options map[string][]EnumItem `json:"options"`
 }
 
 // FileInfo is a file as the browser says it: its name, its size, its type.
@@ -35,6 +39,10 @@ type CheckResult struct {
 // form whole (of a form of steps, the steps its way goes through).
 func (d *Decoder) Check(c Check) CheckResult {
 	data := Unflatten(c.Data)
+	d.PageOptions, d.NoFetch = c.Options, true
+	if d.PageOptions == nil {
+		d.PageOptions = map[string][]EnumItem{}
+	}
 	fl := d.Schema.Flow()
 	var res CheckResult
 	switch {

@@ -68,7 +68,8 @@ func (d *Dist) URL() string {
 	return d.Path + d.Version() + "/"
 }
 
-// Handler serves the wasm — gzip to who takes it — and wasm_exec.js.
+// Handler serves the wasm — gzip to who takes it — and wasm_exec.js: public
+// files, to any page (a preview in a sandboxed frame, of no origin, too).
 func (d *Dist) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ver, name, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, d.Path), "/")
@@ -77,6 +78,7 @@ func (d *Dist) Handler() http.Handler {
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		switch name {
 		case d.Name + ".wasm":
 			w.Header().Set("Content-Type", "application/wasm")

@@ -2,6 +2,7 @@ package schemaform
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -43,5 +44,32 @@ class Form {
 	one, err := Parse("export class Form { a str }")
 	if err != nil || one.Slice || len(one.Fields) != 1 {
 		t.Errorf("a record: %+v %v", one, err)
+	}
+}
+
+// A form's fields in the order its class declares them (gad's `@flat`): a
+// parent's (`*Parent`) and a mixin's (`use M`) where they are written.
+func TestParseClassFlatOrder(t *testing.T) {
+	s, err := Parse(`class Contact { name str; email str }
+mixin Notes { notes? str }
+export class Form {
+	zip str
+	*Contact
+	city str
+	use Notes
+	state str
+}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range s.Fields {
+		got = append(got, f.Name)
+	}
+	if want := "zip name email city notes state"; strings.Join(got, " ") != want {
+		t.Errorf("the order: %q, want %q", strings.Join(got, " "), want)
+	}
+	if s.Fields[1].Owner != "Contact" || s.Fields[0].Owner != "" {
+		t.Errorf("the owners: %q %q", s.Fields[0].Owner, s.Fields[1].Owner)
 	}
 }

@@ -96,8 +96,39 @@ type Decoder struct {
 	// NoValidations: the `[validation=…]` are not called (a value read only to
 	// be typed: Typed).
 	NoValidations bool
+	// PageOptions are the values of the fields of options of a function the
+	// page holds, by path (a check of the page's: Check); NoFetch, a request
+	// of options is not fetched — any value taken —: the page's check.
+	PageOptions map[string][]EnumItem
+	NoFetch     bool
 
-	issues []Issue
+	issues   []Issue
+	warnings []Warning
+	// plain: the fields read whatever is answered (no metadata functions
+	// called): what Typed reads; scope, the record being read.
+	plain  bool
+	scope  *scope
+	cancel context.CancelFunc
+}
+
+// prepare sets what a read needs: the VM, a bound of its time; done undoes
+// it.
+func (d *Decoder) prepare() {
+	d.issues, d.warnings = nil, nil
+	if d.VM == nil && d.Schema != nil {
+		d.VM = d.Schema.vm
+	}
+	if d.Ctx == nil {
+		d.Ctx, d.cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	}
+}
+
+func (d *Decoder) done() {
+	if d.cancel != nil {
+		d.cancel()
+		d.Ctx, d.cancel = nil, nil
+	}
+	d.scope = nil
 }
 
 // Decode reads data — the form's values, a record nested as JSON holds it
@@ -136,15 +167,11 @@ func (d *Decoder) DecodeFields(fields []*Field, data map[string]any) (Record, []
 }
 
 func (d *Decoder) decode(fields []*Field, validations []gad.Object, data map[string]any) (Record, []Issue) {
-	d.issues = nil
-	if d.VM == nil && d.Schema != nil {
-		d.VM = d.Schema.vm
-	}
-	if d.Ctx == nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		d.Ctx = ctx
-		defer func() { d.Ctx = nil }()
+	d.prepare()
+	defer d.done()
+	// the fields drawn by what is answered: by the record typed
+	if !d.plain && d.Schema.dynamic() {
+		d.scope = d.rootScope(data)
 	}
 	rec := d.record(fields, data, "")
 	d.recordValidations(validations, "", rec)
@@ -155,7 +182,8 @@ func (d *Decoder) decode(fields []*Field, validations []gad.Object, data map[str
 // is wrong not said.
 func (d *Decoder) Typed(data map[string]any) Record {
 	quiet := *d
-	quiet.NoValidations = true
+	quiet.NoValidations, quiet.plain = true, true
+	quiet.Ctx, quiet.cancel, quiet.scope = nil, nil, nil
 	rec, _ := quiet.Decode(data)
 	return rec
 }
@@ -181,9 +209,35 @@ func (d *Decoder) failed(path string, under bool) bool {
 
 func (d *Decoder) record(fields []*Field, data map[string]any, path string) Record {
 	rec := make(Record, 0, len(fields))
+	warnings := -1
 	for _, f := range fields {
 		p := join(path, f.Name)
-		rec = append(rec, RecordField{Name: f.Name, Value: d.field(f, data[f.Name], p)})
+		if f.Name == WarningsField {
+			// the form's own (WithWarnings): set once the record is read
+			warnings = len(rec)
+			rec = append(rec, RecordField{Name: f.Name})
+			continue
+		}
+		read := f
+		if !d.plain && d.scope != nil && len(f.Cond) > 0 {
+			st := d.state(f)
+			if !st.Asked() {
+				// not there, hidden or disabled: not asked
+				rec = append(rec, RecordField{Name: f.Name})
+				continue
+			}
+			if st.Readonly {
+				c := *f
+				c.Nullable = true
+				read = &c
+			}
+		}
+		rec = append(rec, RecordField{Name: f.Name, Value: d.field(read, data[f.Name], p)})
+	}
+	if warnings >= 0 {
+		if w := d.warningsOf(path); len(w) > 0 {
+			rec[warnings].Value = w
+		}
 	}
 	if !d.NoValidations {
 		for i, f := range fields {
@@ -217,7 +271,12 @@ func (d *Decoder) field(f *Field, raw any, path string) any {
 		if f.Nullable && Blank(sub) {
 			return nil
 		}
+		outer := d.scope
+		if outer != nil {
+			d.scope = outer.child(f.Name, f.Schema.recClass, f.Schema.Fields, outer.typed[f.Name])
+		}
 		sr := d.record(f.Schema.Fields, sub, path)
+		d.scope = outer
 		d.recordValidations(append(append([]gad.Object{}, f.Validations...), f.Schema.Validations...), path, sr)
 		return sr
 	}
@@ -282,7 +341,9 @@ func (d *Decoder) list(f *Field, raw any, path string) any {
 		for i, x := range items {
 			sub, _ := x.(map[string]any)
 			p := path + "[" + strconv.Itoa(i) + "]"
+			restore := d.itemScope(f, f.Schema.recClass, f.Schema.Fields, i)
 			sr := d.record(f.Schema.Fields, sub, p)
+			restore()
 			d.recordValidations(f.Schema.Validations, p, sr)
 			out = append(out, sr)
 		}
@@ -291,7 +352,9 @@ func (d *Decoder) list(f *Field, raw any, path string) any {
 		for i, x := range items {
 			sub, _ := x.(map[string]any)
 			p := path + "[" + strconv.Itoa(i) + "]"
+			restore := d.itemScope(f, item.Schema.recClass, item.Schema.Fields, i)
 			sr := d.record(item.Schema.Fields, sub, p)
+			restore()
 			d.recordValidations(item.Schema.Validations, p, sr)
 			out = append(out, sr)
 		}
@@ -510,6 +573,12 @@ var colorRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 // items are the values f may hold: the application's (Items), else its
 // enum's; nil when it holds any.
 func (d *Decoder) items(path string, f *Field) ([]EnumItem, error) {
+	if f.OptionsFunc != nil {
+		if d.plain || d.scope == nil {
+			return nil, nil
+		}
+		return d.dynamicItems(path, f)
+	}
 	if d.Items != nil {
 		items, err := d.Items(SchemaPath(path), f)
 		if err != nil || items != nil {
