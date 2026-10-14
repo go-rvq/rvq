@@ -43,10 +43,17 @@ import {
   TextAlign,
   Underline,
   Video,
+  useContext,
   VuetifyTiptap
 } from 'vuetify-pro-tiptap'
 
 import './VXTipTapEditor.scss'
+
+// The editor has no theme of its own: "std", a theme it has not — its
+// colors and marks off —, so the content looks as it is read, the admin's
+// standard content (web.StdContentCSS). The theme is the plugin's (its
+// prop is read only when it changes).
+useContext().state.defaultMarkdownTheme = 'std'
 
 import preview from './extensions/preview'
 import help from './extensions/help'

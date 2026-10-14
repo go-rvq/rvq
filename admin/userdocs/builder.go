@@ -264,20 +264,11 @@ func (b *Builder) openScript() string {
 }`
 }
 
-// docStyle is the look of a document: its pictures within the column,
-// framed; its tables, inline code and headings spaced. A block of code is the
-// admin's code viewer (<vx-code>), with its look.
-const docStyle = `
-.user-doc img { max-width: 100%; height: auto; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; margin: 8px 0; }
-.user-doc h1 { font-size: 1.6rem; margin: 0 0 8px; }
-.user-doc h2 { font-size: 1.25rem; margin: 20px 0 8px; }
-.user-doc p, .user-doc ul, .user-doc ol { margin-bottom: 10px; }
-.user-doc ul, .user-doc ol { padding-left: 24px; }
-/* inline code; a block is the code viewer's (<vx-code>), its look its own */
-.user-doc :not(pre) > code { background: rgba(var(--v-theme-on-surface), 0.06); padding: 1px 4px; border-radius: 4px; }
-.user-doc table { border-collapse: collapse; margin: 10px 0; }
-.user-doc th, .user-doc td { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); padding: 4px 8px; }
-`
+// docStyle is the look of a document: the standard content's
+// (web.StdContentCSS) — a body of a page or a post looks the same, read or
+// edited. A block of code is the admin's code viewer (<vx-code>), with its
+// look.
+var docStyle = web.StdContentCSS(".user-doc")
 
 // document is the document of node in the request's language: its file, as
 // the package keeps it in that language; a page made of the node's parts
