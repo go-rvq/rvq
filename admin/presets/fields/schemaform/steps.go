@@ -18,6 +18,9 @@ import (
 const (
 	MetaSteps    = "steps"
 	MetaAutosave = "autosave"
+	// MetaVertical: the steps of the class down the page (`[steps,
+	// vertical]`), as a group's.
+	MetaVertical = "vertical"
 	// MetaNext is the step after a step, by what was answered: a
 	// `[next=(r) => …]` before it, or the method `next(r)` of its class; r
 	// the answer so far, a dict. It answers the step — its class field,
@@ -51,6 +54,9 @@ type Flow struct {
 	Steps []*Step
 	// Autosave: `[autosave]` — each step saved as it is passed.
 	Autosave bool
+	// Vertical: `[steps, vertical]` — the steps down the page, each over its
+	// panel; across, else.
+	Vertical bool
 	vm       *gad.VM
 }
 
@@ -60,7 +66,7 @@ func (s *Schema) Flow() *Flow {
 	if s == nil || s.class == nil || !ClassFlag(s.class, MetaSteps) {
 		return nil
 	}
-	fl := &Flow{Autosave: ClassFlag(s.class, MetaAutosave), vm: s.vm}
+	fl := &Flow{Autosave: ClassFlag(s.class, MetaAutosave), Vertical: ClassFlag(s.class, MetaVertical), vm: s.vm}
 	for _, f := range s.Fields {
 		if f.Row != 0 && f.Group != nil {
 			if n := len(fl.Steps); n > 0 && fl.Steps[n-1].Group && fl.Steps[n-1].Key == f.Group.Name {

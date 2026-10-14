@@ -175,3 +175,20 @@ return Form`)
 		t.Errorf("the issue: %+v", is)
 	}
 }
+
+// `[steps, vertical]` on the class: its steps down the page (Flow.Vertical),
+// as a group's; across, else.
+func TestFlowVertical(t *testing.T) {
+	for src, want := range map[string]bool{
+		"[steps, vertical, autosave]\nclass Form {\n    a class { x str }\n    b class { y str }\n}\nreturn Form": true,
+		"[steps]\nclass Form {\n    a class { x str }\n    b class { y str }\n}\nreturn Form":                     false,
+	} {
+		st, err := readClass(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fl := st.Flow(); fl == nil || fl.Vertical != want {
+			t.Errorf("%q: vertical %v, want %v", src[:30], fl != nil && fl.Vertical, want)
+		}
+	}
+}
