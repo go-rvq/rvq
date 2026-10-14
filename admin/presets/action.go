@@ -60,7 +60,14 @@ type ActionBuilder struct {
 	verifier                    func(ctx *web.EventContext) *perm.Verifier
 	// trash is where it is available (TrashPolicy)
 	trash TrashPolicy
+	// toolbar: a button of the detailing's toolbar (ToolbarButton)
+	toolbar     bool
+	toolbarLook ActionToolbarLookFunc
 }
+
+// ActionToolbarLookFunc is the look of the button of an action in the
+// detailing's toolbar by the record: its icon and its title.
+type ActionToolbarLookFunc func(obj any, ctx *web.EventContext) (icon, title string)
 
 func Action(p *Builder, name string) *ActionBuilder {
 	return &ActionBuilder{p: p, NameLabel: NameLabel{name: name}}
@@ -207,6 +214,19 @@ func (b *ActionBuilder) SetEnabledObj(f ActionEnabledObjFunc) *ActionBuilder {
 func (b *ActionBuilder) WrapEnabledObj(f func(old ActionEnabledObjFunc) ActionEnabledObjFunc) *ActionBuilder {
 	return b.SetEnabledObj(f(b.enabledObjFunc))
 }
+
+// ToolbarButton shows the action — of a detailing, of no form — as a button
+// of the detailing's toolbar, beside its edit, out of its menu: a click does
+// it, with no dialog, and the detail is shown again. look, when given, is its
+// icon and title by the record (a toggle's, say); else the action's.
+func (b *ActionBuilder) ToolbarButton(look ActionToolbarLookFunc) *ActionBuilder {
+	b.toolbar, b.toolbarLook = true, look
+	return b
+}
+
+// IsToolbarButton says whether the action is a button of the detailing's
+// toolbar (ToolbarButton).
+func (b *ActionBuilder) IsToolbarButton() bool { return b.toolbar }
 
 func (b *ActionBuilder) ShowInList() *ActionBuilder {
 	b.showInList = true

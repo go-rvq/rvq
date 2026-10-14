@@ -649,7 +649,20 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 			}
 		})
 
-	actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, b.actions...)
+	// the actions of the toolbar (ActionBuilder.ToolbarButton): buttons beside
+	// the edit; the others, of the menu
+	var menuActions []*ActionBuilder
+	for _, a := range b.actions {
+		if a.toolbar {
+			if btn := b.toolbarActionButton(a, f.b.id, obj, inTrash, ctx); btn != nil {
+				f.TopRightActions = append(f.TopRightActions, btn)
+			}
+			continue
+		}
+		menuActions = append(menuActions, a)
+	}
+
+	actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, menuActions...)
 
 	if len(actionsErrors) > 0 {
 		f.Body = append(actionsErrors, f.Body)
@@ -692,6 +705,38 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 	}
 
 	return f
+}
+
+// toolbarActionButton is the button of the action a of the toolbar
+// (ActionBuilder.ToolbarButton) of the record obj: nil where it is not to be
+// done (its permission, the trash, its enabled).
+func (b *DetailingBuilder) toolbarActionButton(a *ActionBuilder, id string, obj any, inTrash bool, ctx *web.EventContext) h.HTMLComponent {
+	if b.mb.permissioner.ReqObjectActioner(ctx.R, obj, a.PermName()).Denied() || !a.trash.Available(inTrash) {
+		return nil
+	}
+	if ok, err := a.IsEnabledObj(obj, id, ctx); err != nil || !ok {
+		return nil
+	}
+	icon, title := a.icon, a.RequestTitle(b.mb, ctx.Context())
+	if a.toolbarLook != nil {
+		icon, title = a.toolbarLook(obj, ctx)
+	}
+	onclick := web.Plaid().
+		EventFunc(actions.DoAction).
+		Query(ParamID, id).
+		Query(ParamAction, a.name).
+		URL(b.mb.Info().ListingHrefCtx(ctx))
+	return a.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
+		return VBtn("").
+			Variant(VariantText).
+			Attr(":disabled", "isFetching").
+			Attr("title", title).
+			Attr("data-action", a.name).
+			Icon(true).
+			Density("comfortable").
+			Children(VIcon(icon)).
+			Attr("@click", onclick.String())
+	}, onclick, id, obj, ctx)
 }
 
 func (b *DetailingBuilder) doAction(ctx *web.EventContext) (r web.EventResponse, err error) {
