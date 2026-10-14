@@ -196,9 +196,13 @@ func (fl *Flow) instance(step *Step, data map[string]any) (*gad.ClassInstance, e
 	if !ok {
 		return nil, nil
 	}
-	if d, ok := GadValue(data[step.Key]).(gad.Dict); ok {
+	fields := step.Fields
+	if !step.Group && len(fields) == 1 && fields[0].Schema != nil {
+		fields = fields[0].Schema.Fields
+	}
+	if d, ok := TypedGadValue(fields, data[step.Key]).(gad.Dict); ok {
 		if err := inst.Init(fl.vm, d); err != nil {
-			return nil, fmt.Errorf("form: the step %s: %w", step.Key, err)
+			return nil, stepError(step, err)
 		}
 	}
 	return inst, nil
@@ -244,7 +248,7 @@ func (d *Decoder) DecodeStep(fl *Flow, key string, data map[string]any) (Record,
 func (d *Decoder) DecodeFlow(fl *Flow, data map[string]any) (Record, []Issue) {
 	path, err := fl.Path(d.Typed(data).Map())
 	if err != nil {
-		return nil, []Issue{{Code: CodeInvalid, Message: err.Error()}}
+		return nil, []Issue{issueOf(err)}
 	}
 	var fields []*Field
 	for _, key := range path {

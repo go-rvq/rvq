@@ -30,6 +30,10 @@ type Issue struct {
 	Path    string `json:"path"`
 	Code    string `json:"code"`
 	Message string `json:"message,omitempty"`
+	// Labels are the labels of the way to the value the Message is of — the
+	// step's first —, for an Issue of the form whole (LabeledError): a page
+	// shows them before it, in bold.
+	Labels []string `json:"labels,omitempty"`
 	// Field is the field of the value; Value, the value as posted; Err, the
 	// error of the application's (Items) the value could not be checked by:
 	// what a message is said with.
@@ -659,7 +663,7 @@ func (d *Decoder) fieldValidations(f *Field, path string, value any, rec Record)
 	if d.NoValidations || len(f.Validations) == 0 || value == nil || d.failed(path, false) {
 		return
 	}
-	val, r := GadValue(value), GadValue(rec)
+	val, r := typedFieldValue(f, value), GadValue(rec)
 	for _, fn := range f.Validations {
 		if re, ok := fn.(*gad.Regexp); ok {
 			if !(*regexp.Regexp)(re).MatchString(Text(value)) {

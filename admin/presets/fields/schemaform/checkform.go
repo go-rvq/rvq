@@ -53,7 +53,7 @@ func (d *Decoder) Check(c Check) CheckResult {
 		}
 		next, err := fl.Next(c.Step, d.Typed(data).Map())
 		if err != nil {
-			res.Errors = []Issue{{Code: CodeInvalid, Message: err.Error()}}
+			res.Errors = []Issue{issueOf(err)}
 			return res
 		}
 		res.Next, res.Last = next, next == ""

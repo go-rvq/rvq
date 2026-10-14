@@ -190,7 +190,7 @@ func (s *scope) This(d *Decoder) gad.Object {
 	values := gad.Dict{}
 	for k, v := range s.typed {
 		if v != nil && !strings.HasPrefix(k, "$") {
-			values[k] = GadValue(v)
+			values[k] = typedFieldValue(fieldNamed(s.fields, k), v)
 		}
 	}
 	s.this = values

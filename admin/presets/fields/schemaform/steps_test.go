@@ -123,3 +123,55 @@ return Form`)
 		t.Error("autosave without [autosave]")
 	}
 }
+
+// A decimal of a step's class: the Decoder keeps it a float64, and the
+// step's record, an instance of its class, takes it as a decimal — a float
+// the class's `decimal` field refuses. A value the class refuses is told by
+// the labels of the way to it, the step's first.
+func TestFlowDecimal(t *testing.T) {
+	st, err := readClass(`
+[steps]
+class Form {
+    [label="Contact"]
+    lead class {
+        name str
+    }
+    [label="Property Details"]
+    property class {
+        [label="Asking price"]
+        asking_price? decimal
+        [label="Owner"]
+        owner? class {
+            [label="Share"]
+            share? decimal
+        }
+    }
+}
+return Form`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl := st.Flow()
+	d := &Decoder{Schema: st}
+	raw := map[string]any{
+		"lead":     map[string]any{"name": "x"},
+		"property": map[string]any{"asking_price": "350000", "owner": map[string]any{"share": "0.5"}},
+	}
+	if _, errs := d.DecodeFlow(fl, raw); len(errs) != 0 {
+		t.Fatalf("a decimal of a step: %v", errs)
+	}
+	if _, err := fl.Next("property", d.Typed(raw).Map()); err != nil {
+		t.Fatalf("the next of the step of a decimal: %v", err)
+	}
+
+	// refused: said by the labels, apart — a page shows them in bold
+	step := fl.Steps[1]
+	_, err = fl.instance(step, map[string]any{"property": map[string]any{"owner": map[string]any{"share": "x"}}})
+	if err == nil || !strings.HasPrefix(err.Error(), "Property Details › Owner › Share: ") {
+		t.Errorf("the error: %v", err)
+	}
+	if is := issueOf(err); strings.Join(is.Labels, "|") != "Property Details|Owner|Share" ||
+		strings.Contains(is.Message, "Share") || is.Message == "" {
+		t.Errorf("the issue: %+v", is)
+	}
+}
