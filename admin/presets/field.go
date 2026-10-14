@@ -210,8 +210,11 @@ type FieldBuilder struct {
 	// compWraps are the wraps given while the field had no component
 	// (WrapComponentFunc): applied, in order, to the one it gets. Until then the
 	// field has none, and is skipped.
-	compWraps        []func(old FieldComponentFunc) FieldComponentFunc
-	setterFunc       FieldSetterFunc
+	compWraps  []func(old FieldComponentFunc) FieldComponentFunc
+	setterFunc FieldSetterFunc
+	// formKeySuffixes are the other keys the form submits the field under —
+	// its form key plus each (FormKeySuffixes)
+	formKeySuffixes  []string
 	context          context.Context
 	rt               reflect.Type
 	nested           Nested
@@ -351,6 +354,7 @@ func (b FieldBuilder) Clone() *FieldBuilder {
 	b.ValueFormatters = append(FieldValueFormatters{}, b.ValueFormatters...)
 	b.compWraps = append([]func(old FieldComponentFunc) FieldComponentFunc(nil), b.compWraps...)
 	b.Validators = append(FieldValidators{}, b.Validators...)
+	b.formKeySuffixes = append([]string(nil), b.formKeySuffixes...)
 	b.DataField = b.DataField.Clone()
 	return &b
 }
@@ -391,6 +395,15 @@ func (b *FieldBuilder) DisableZeroRender() *FieldBuilder {
 			return old(field, ctx)
 		}
 	})
+}
+
+// FormKeySuffixes says the other keys the form submits the field under: its
+// form key plus each suffix — a selector of a belongs-to submits "PageID" for
+// "Page". An update writes a field only when the form carries it (a partial
+// update keeps the others), under its key or one of these.
+func (b *FieldBuilder) FormKeySuffixes(suffixes ...string) (r *FieldBuilder) {
+	b.formKeySuffixes = suffixes
+	return b
 }
 
 func (b *FieldBuilder) SetterFunc(v FieldSetterFunc) (r *FieldBuilder) {

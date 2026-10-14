@@ -580,9 +580,16 @@ type FieldsSetterOptions struct {
 // key — as the key itself, or as a structured sub-key (key.sub, key[i]) for
 // media boxes, nested structs and slices. An empty key (nothing to look up)
 // counts as carried, so behaviour is unchanged for fields without a form key.
-func formCarriesField(ctx *web.EventContext, formKey string) bool {
+// A suffix is another key the field is submitted under: formKey+suffix
+// (FieldBuilder.FormKeySuffixes).
+func formCarriesField(ctx *web.EventContext, formKey string, suffixes ...string) bool {
 	if formKey == "" {
 		return true
+	}
+	for _, suffix := range suffixes {
+		if formCarriesField(ctx, formKey+suffix) {
+			return true
+		}
 	}
 	dot, brk := formKey+".", formKey+"["
 	match := func(vals map[string][]string) bool {
@@ -669,7 +676,7 @@ func (b *FieldsBuilder) SetObjectFields(opts *FieldsSetterOptions, fromObj inter
 		// merge, so an absent field is "unchanged", not "set to empty". Only a
 		// field actually submitted (even with an empty value) is written. This
 		// makes partial updates safe — omitting a field no longer wipes it.
-		if !formCarriesField(ctx, fctx.FormKey) {
+		if !formCarriesField(ctx, fctx.FormKey, f.formKeySuffixes...) {
 			continue
 		}
 

@@ -230,3 +230,27 @@ func TestModelSelector_OmitsAssociationOnSave(t *testing.T) {
 		t.Fatalf("stored TypeID = %d, want 2 (FK authoritative, stale association omitted)", stored.TypeID)
 	}
 }
+
+// TestModelSelector_SingleReadsColumnKey is the regression for the belongs-to
+// form key: the component submits the selection under "<Field>ID" (TypeID), and
+// the setter must read it there — not only under the association key (Type) —,
+// even when the editing lists the association alone (Only("Type"), no TypeID
+// field to bind the column).
+func TestModelSelector_SingleReadsColumnKey(t *testing.T) {
+	db := newSelDB(t, &selSimpleType{}, &selSimpleOwner{})
+	b := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	mb := b.Model(&selSimpleOwner{})
+	NewModelSelectorBuilder(mb, "Type").SetForeignModel(b.Model(&selSimpleType{})).Build()
+	mb.Editing().Only("Type")
+
+	for _, key := range []string{"TypeID", "Type"} {
+		ctx := &web.EventContext{R: postFormRequest(url.Values{key: {"2"}})}
+		owner := &selSimpleOwner{ID: 10, TypeID: 1}
+		if vErr := mb.Editing().RunSetterFunc(&presets.FieldsSetterOptions{}, ctx, false, owner); vErr.HaveErrors() {
+			t.Fatalf("%s: setter: %s", key, vErr.Error())
+		}
+		if owner.TypeID != 2 {
+			t.Errorf("submitted as %q: owner.TypeID = %d, want 2", key, owner.TypeID)
+		}
+	}
+}

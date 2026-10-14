@@ -321,7 +321,13 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 				}
 			}
 		} else {
-			if v := ctx.R.Form[field.FormKey]; len(v) > 0 {
+			// the key the component submits (comp: "<Field>ID" for a
+			// belongs-to), else the field's own
+			v := ctx.R.Form[field.FormKey+formKeySufix]
+			if len(v) == 0 {
+				v = ctx.R.Form[field.FormKey]
+			}
+			if len(v) > 0 {
 				var id presets.ID
 				if v[0] == "" {
 					f := reflect.ValueOf(obj).Elem().FieldByName(field.Name)
@@ -494,7 +500,9 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		})
 		e.Field(b.Field).
 			ComponentFunc(comp).
-			SetterFunc(setter)
+			SetterFunc(setter).
+			// the component submits the selection under "<Field>ID"
+			FormKeySuffixes(formKeySufix)
 	})
 
 	if !b.detailingDisabled {
