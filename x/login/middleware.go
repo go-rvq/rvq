@@ -232,6 +232,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 		b.oauthCallbackURL,
 		b.oauthCallbackCompleteURL,
 		b.passwordLoginURL,
+		b.secureKeyLoginURL,
 		b.forgetPasswordPageURL,
 		b.sendResetPasswordLinkURL,
 		b.resetPasswordLinkSentPageURL,

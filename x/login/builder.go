@@ -118,7 +118,9 @@ type Builder struct {
 	oauthCallbackCompleteURL string
 
 	// UserPass URLs
-	passwordLoginURL             string
+	passwordLoginURL string
+	// secureKeyLoginURL is the login by the secure key (secure_key_login.go)
+	secureKeyLoginURL            string
 	resetPasswordURL             string
 	resetPasswordPageURL         string
 	changePasswordURL            string
@@ -202,6 +204,7 @@ func New(i18nB *i18n.Builder) *Builder {
 		oauthCallbackCompleteURL: "/auth/callback-complete",
 
 		passwordLoginURL:             "/auth/userpass/login",
+		secureKeyLoginURL:            "/auth/secure-key",
 		resetPasswordURL:             "/auth/do-reset-password",
 		resetPasswordPageURL:         "/auth/reset-password",
 		changePasswordURL:            "/auth/do-change-password",
@@ -525,6 +528,7 @@ func (b *Builder) URIPrefix(v string) (r *Builder) {
 	b.oauthCallbackURL = prefix + b.oauthCallbackURL
 	b.oauthCallbackCompleteURL = prefix + b.oauthCallbackCompleteURL
 	b.passwordLoginURL = prefix + b.passwordLoginURL
+	b.secureKeyLoginURL = prefix + b.secureKeyLoginURL
 	b.resetPasswordURL = prefix + b.resetPasswordURL
 	b.resetPasswordPageURL = prefix + b.resetPasswordPageURL
 	b.changePasswordURL = prefix + b.changePasswordURL
@@ -1094,6 +1098,14 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = b.completeLogin(w, r, user)
+}
+
+// completeLogin logs user in, authenticated: its session (the cookies),
+// the after-login hook, the second factor when it is on, then home (or
+// where it was going). An error of the hook is said (a notice) and
+// returned: the caller sends the browser away.
+func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any) (err error) {
 	u := user.(UserPasser)
 	userID := objectID(user)
 	claims := UserClaims{
@@ -1146,6 +1158,7 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
+	return nil
 }
 
 func (b *Builder) genBaseSessionClaim(id string, initialUser bool) jwt.RegisteredClaims {
@@ -1892,6 +1905,7 @@ func (b *Builder) MountAPI(mux *http.ServeMux) {
 	mux.HandleFunc(b.logoutURL, b.logout)
 	if b.userPassEnabled {
 		mux.HandleFunc(b.passwordLoginURL, b.userpassLogin)
+		mux.HandleFunc(b.secureKeyLoginURL, b.secureKeyLogin)
 		mux.HandleFunc(b.resetPasswordURL, b.doResetPassword)
 		mux.HandleFunc(b.changePasswordURL, b.doFormChangePassword)
 		if !b.noForgetPasswordLink {

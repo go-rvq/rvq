@@ -69,3 +69,15 @@ func TestIsYAML(t *testing.T) {
 		}
 	}
 }
+
+// The `security:` of an app.yml: what it allows past the login; none, all
+// off.
+func TestParseAppSecurity(t *testing.T) {
+	sec, err := ParseAppSecurity([]byte("env:\n  A: 1\nsecurity:\n  secure_key_login: true\n"))
+	if err != nil || !sec.SecureKeyLogin {
+		t.Errorf("on: %+v %v", sec, err)
+	}
+	if sec, err = ParseAppSecurity([]byte("env:\n  A: 1\n")); err != nil || sec.SecureKeyLogin {
+		t.Errorf("none: %+v %v", sec, err)
+	}
+}

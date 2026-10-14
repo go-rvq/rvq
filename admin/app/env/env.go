@@ -11,6 +11,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/go-rvq/rvq/x/features"
 	"github.com/go-rvq/rvq/x/osenv"
+	"github.com/go-rvq/rvq/x/security"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
@@ -40,9 +41,10 @@ var PKG_DIR = func() string {
 
 var InitialUserPasswordFile = osenv.Get("RVQ_LOGIN_INITIAL_USER_PASSWORD_FILE", "Initial user password file", filepath.Join(PKG_DIR, ".initial_user_password"))
 
-// APP_YML is the configuration of the application: its environment (`env:`)
-// and the features it turns on (`features:`, package features). APP_YAML is
-// the same, by the other extension; with both, APP_YML is read.
+// APP_YML is the configuration of the application: its environment (`env:`),
+// the features it turns on (`features:`, package features) and what it
+// allows past its login (`security:`, package security). APP_YAML is the
+// same, by the other extension; with both, APP_YML is read.
 const (
 	APP_YML  = "app.yml"
 	APP_YAML = "app.yaml"
@@ -79,6 +81,18 @@ func ParseAppYAML(content []byte) (env map[string]string, feats map[string]any, 
 		env[k] = s
 	}
 	return env, doc.Features, nil
+}
+
+// ParseAppSecurity is the `security:` of an app.yml (package security); none,
+// everything off.
+func ParseAppSecurity(content []byte) (security.Config, error) {
+	var doc struct {
+		Security security.Config `yaml:"security"`
+	}
+	if err := yaml.Unmarshal(content, &doc); err != nil {
+		return security.Config{}, fmt.Errorf("error parsing app.yml: %w", err)
+	}
+	return doc.Security, nil
 }
 
 func envValue(v any) (string, error) {
@@ -149,6 +163,11 @@ func init() {
 				for k, v := range vars {
 					envMap[k] = v
 				}
+				sec, err := ParseAppSecurity(content)
+				if err != nil {
+					return err
+				}
+				security.Load(sec)
 				return features.Load(feats)
 			}
 

@@ -228,6 +228,9 @@ var (
 	ErrSecureKeyOff = errors.New("the access by the secure key is off")
 	// ErrSecureKeyTransport is the secure key over plain HTTP.
 	ErrSecureKeyTransport = errors.New("the secure key is taken over HTTPS only")
+	// ErrSecureKeyWrong is a key that is not the secure key (or none, or no
+	// key file).
+	ErrSecureKeyWrong = errors.New("not the secure key")
 )
 
 func (b *Builder) readSecureKey() (string, error) {
