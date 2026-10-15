@@ -35,6 +35,8 @@ export interface Locals {
 export interface CallbackArgs {
   data: Data
   locals: Locals
+  // updated: the root nodes before (locals.nodes, the ones now)
+  previous?: Node[]
 }
 
 export type Callbacks = ((args:CallbackArgs) => boolean | void)[]
@@ -43,6 +45,9 @@ export interface RenderOptions {
   data?: Record<string, any>
   setup?: Callbacks
   mounted?: Callbacks
+  // updated: its root nodes changed (an element in or out: a v-if, a
+  // v-for of the root) — locals.nodes the new ones, previous the old
+  updated?: Callbacks
   unmounted?: Callbacks
   resetScroll?: boolean
 }
@@ -79,14 +84,46 @@ export function buildComponentData(cd: ComponentDefinition) {
   return data
 }
 
+// isContentNode says a root node is of the content: an element, or a text
+// with something written — not a comment (the place of a v-if) nor a
+// fragment's anchor (an empty text).
+const isContentNode = (n: Node) =>
+  n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && (n as Text).data.trim() !== '')
+
+// rootNodes are the root nodes of the content the component instance
+// rendered: its element; of a template of several roots (a fragment), the
+// nodes between the fragment's anchors — nested fragments (v-for) too —; of
+// a component at the root, its own.
+export function rootNodes(inst: ComponentInternalInstance | null): Node[] {
+  const tree = inst?.subTree
+  if (!tree || !tree.el) {
+    return []
+  }
+  if (tree.component) {
+    return rootNodes(tree.component)
+  }
+  const nodes: Node[] = []
+  if (tree.type === Vue.Fragment) {
+    for (let n = (tree.el as Node).nextSibling; n && n !== tree.anchor; n = n.nextSibling) {
+      nodes.push(n)
+    }
+  } else {
+    nodes.push(tree.el as Node)
+  }
+  return nodes.filter(isContentNode)
+}
+
+const sameNodes = (a: Node[], b: Node[]) => a.length === b.length && a.every((n, i) => n === b[i])
+
 export function componentByTemplate(componentDefinition: ComponentDefinition): DefineComponent {
   const cd: ComponentDefinition = { ...componentDefinition }
   cd.options ??= {}
 
   const options = cd.options
 
-  let { mounted, unmounted, setup } = options
+  let { mounted, updated, unmounted, setup } = options
   mounted ||= []
+  updated ||= []
   unmounted ||= []
   setup ||= []
 
@@ -119,43 +156,21 @@ export function componentByTemplate(componentDefinition: ComponentDefinition): D
         const el = this.$el as Node
         if (el) {
           locals.element = el
-
-          const nodes:Node[] = []
-          let curEl:Node | null = el
-
-          if (curEl.nodeType == Node.TEXT_NODE) {
-            let nt = curEl as Text
-
-            while (nt && nt.data == '') {
-              curEl = nt.nextSibling
-              if (curEl?.nodeType == Node.TEXT_NODE) {
-                nt = curEl as Text
-              } else {
-                break
-              }
-            }
-
-            while (curEl) {
-              if (curEl.nodeType == Node.TEXT_NODE) {
-                nt = curEl as Text
-                if (nt.data == '') {
-                  break
-                }
-              }
-              nodes.push(curEl)
-              curEl = curEl.nextSibling as HTMLElement
-            }
-            locals.nodes = nodes
-          } else {
-            const hel = el as HTMLElement
-            if (hel.style && hel.style.height) {
-              hel.style.height = this.$el.style.height
-            }
-            locals.nodes = [el]
-          }
+          locals.nodes = rootNodes(locals.componentInstance)
         }
         callCallbacks(mounted, { data, locals })
       })
+    },
+    // its root nodes after a render of its own (a v-if, a v-for at the root):
+    // the updated callbacks when they changed
+    updated() {
+      const previous = locals.nodes
+      const nodes = rootNodes(locals.componentInstance)
+      if (sameNodes(previous, nodes)) {
+        return
+      }
+      locals.nodes = nodes
+      callCallbacks(updated, { data, locals, previous })
     },
     unmounted() {
       if (!locals.skipUnmountHandlers) {

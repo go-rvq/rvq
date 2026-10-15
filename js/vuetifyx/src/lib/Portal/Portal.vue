@@ -23,6 +23,7 @@ import {type ContentType, makeProps, Portal, PortalContent, UpdateEvent, usePort
 <script setup lang="ts">
 import {
   type DefineComponent,
+  nextTick,
   onMounted,
   ref,
   shallowRef,
@@ -42,6 +43,9 @@ const emit = defineEmits<{
   preContentUpdate: [e: UpdateEvent],
   postContentUpdate: [e: UpdateEvent],
   change: [e: UpdateEvent],
+  // the root elements of the content changed while it is shown (a v-if, a
+  // v-for at its root): portal.elements the new, added and removed
+  elements: [e: UpdateEvent],
 }>()
 
 const rootProps = {
@@ -63,6 +67,7 @@ const slotTemplate = '<slot v-bind="vx$scope"></slot>'
 
 const mergeRenderOptions = (options: RenderOptions = {}) => {
   options.mounted ||= []
+  options.updated ||= []
   options.unmounted ||= []
   options.setup ||= []
   options.data ??= {}
@@ -155,8 +160,11 @@ const internalSetContent = (content: ContentType) => {
     current.value = null
 
     event.content = c
-    emit('postContentUpdate', event)
-    emit('change', event)
+    // once the content shown is gone (its unmounted first)
+    nextTick(() => {
+      emit('postContentUpdate', event)
+      emit('change', event)
+    })
     return
   }
 
@@ -223,8 +231,26 @@ const internalSetContent = (content: ContentType) => {
   options.mounted.unshift(...mountedHandlers)
   options.mounted.push((arg) => emit('mounted', { ...event, ...arg } as UpdateEvent))
 
+  options.updated ||= []
+  options.updated.push((arg) => {
+    const previous = arg.previous || []
+    dotPortal.elements = arg.locals.nodes
+    emit('elements', {
+      ...event,
+      ...arg,
+      added: arg.locals.nodes.filter((n) => !previous.includes(n)),
+      removed: previous.filter((n) => !arg.locals.nodes.includes(n))
+    } as UpdateEvent)
+  })
+
   options.unmounted ||= []
-  options.unmounted.push((arg) => emit('unmounted', { ...event, ...arg } as UpdateEvent))
+  options.unmounted.push((arg) => {
+    emit('unmounted', { ...event, ...arg } as UpdateEvent)
+    // its elements gone — unless the next content's are already there
+    if (dotPortal.elements === arg.locals.nodes) {
+      dotPortal.elements = []
+    }
+  })
 
   options.mounted.push((arg) => {
     new Promise(resolve => {

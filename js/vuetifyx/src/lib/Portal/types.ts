@@ -30,6 +30,9 @@ export interface UpdateEvent {
   content?: PortalContent
   data?: Data
   locals?: Locals
+  // the event elements: the root nodes come in and gone out
+  added?: Node[]
+  removed?: Node[]
 }
 
 export function usePortals(): Record<string, any> | null {
@@ -48,6 +51,10 @@ export function usePortal() {
   return inject<Portal>(portalKey)
 }
 
+// The props of vx-portal (README.md): the content (v-model), loading
+// (v-model:loading: the slot "loading" while true), data (the variables of
+// the content's templates and the props of the default slot), tag (the
+// element the content is put in), name (vx$portals[name]).
 export function makeProps() {
   return {
     modelValue: {
