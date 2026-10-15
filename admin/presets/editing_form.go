@@ -69,6 +69,7 @@ func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.
 
 	if mode.IsDrawer() {
 		b.mb.p.Drawer(mode).
+			SetHelpURI(HelpURI(ctx)).
 			SetScrollable(true).
 			SetValidPortalName(targetPortal).
 			SetCloserProvided(CloserProvided(ctx)).

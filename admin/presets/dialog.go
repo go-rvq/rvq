@@ -17,6 +17,7 @@ type DialogBuilder struct {
 	contentPortalName string
 	scrollabled       bool
 	closerProvided    bool
+	helpURI           string
 	wrap              func(comp *v.VDialogBuilder)
 	rootWrap          func(comp h.HTMLComponent) h.HTMLComponent
 }
@@ -184,6 +185,7 @@ func (p *DialogBuilder) Component(comp h.HTMLComponent) h.HTMLComponent {
 	if p.wrap != nil {
 		p.wrap(d)
 	}
+	markHelpURI(d, p.helpURI)
 
 	comp = p.closerScope(d)
 
@@ -200,9 +202,12 @@ func (p *DialogBuilder) Respond(ctx *web.EventContext, r *web.EventResponse, com
 	if CloserProvided(ctx) {
 		p.closerProvided = true
 	}
+	// the help of what it shows: of the address that fills it
+	p.helpURI = HelpURI(ctx)
 
 	if ac, _ := web.Unscoped(comp).(vx.VXAdvancedCloseCardTagger); ac != nil {
 		ac.SetCloserModel("closer.show", CloserModelUpdate)
+		markHelpURI(comp, p.helpURI)
 		if acd, ok := ac.(vx.VXAdvancedExpandCloseCardTagger); ok {
 			acd.SetDialogOrDrawer(true)
 			if p.width != "" {

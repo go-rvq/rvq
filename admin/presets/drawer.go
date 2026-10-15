@@ -19,7 +19,15 @@ type Drawer struct {
 	safeClose      bool
 	scrollable     bool
 	closerProvided bool
+	helpURI        string
 	rootWrap       func(comp h.HTMLComponent) h.HTMLComponent
+}
+
+// SetHelpURI is the address that fills the drawer (HelpURI): said by it
+// (HelpURIAttr), the help of what is in it.
+func (p *Drawer) SetHelpURI(uri string) *Drawer {
+	p.helpURI = uri
+	return p
 }
 
 // SetCloserProvided marks that the caller already provides `closer` in the
@@ -195,6 +203,7 @@ func (p *Drawer) Respond(r *web.EventResponse, comp h.HTMLComponent) {
 
 		comp = drawer
 	}
+	markHelpURI(comp, p.helpURI)
 
 	comp = p.closerScope(comp)
 

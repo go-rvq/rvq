@@ -99,6 +99,18 @@ type Messages struct {
 	PermMethodPut         string `i18n:"hint='Permission of a page asked by the HTTP method PUT: replacing.'"`
 	PermMethodPatch       string `i18n:"hint='Permission of a page asked by the HTTP method PATCH: changing.'"`
 	PermMethodDelete      string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
+	HelpBar               string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
+	HelpFocusPage         string `i18n:"hint='Said by the help bar when the help shown is of the page.'"`
+	HelpFocusDrawer       string `i18n:"hint='Said by the help bar when the help shown is of the drawer open (a form, a detail).'"`
+	HelpFocusDialog       string `i18n:"hint='Said by the help bar when the help shown is of the dialog open.'"`
+	HelpOpenDocs          string `i18n:"hint='Button of the help bar: opens the document shown in the documentation page, in a new tab.'"`
+	HelpReload            string `i18n:"hint='Button of the help bar: shows its document again.'"`
+	HelpCollapse          string `i18n:"hint='Button of the help bar: makes it narrow again, only its icon.'"`
+	HelpLoadError         string `i18n:"hint='Shown by the help bar when its document could not be loaded.'"`
+	HelpFocusTab          string `i18n:"hint='Title of the first tab of the help bar: the help of what is in focus, following it.'"`
+	HelpCloseTab          string `i18n:"hint='Button of a tab of the help bar that closes it.'"`
+	HelpBack              string `i18n:"hint='Button of the help bar: the document shown before.'"`
+	HelpForward           string `i18n:"hint='Button of the help bar: the document shown after, gone back from.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -184,6 +196,18 @@ var Messages_en_US = &Messages{
 	PermMethodPut:         "Replace (PUT)",
 	PermMethodPatch:       "Change (PATCH)",
 	PermMethodDelete:      "Delete (DELETE)",
+	HelpBar:               "Help",
+	HelpFocusPage:         "Page",
+	HelpFocusDrawer:       "Drawer",
+	HelpFocusDialog:       "Dialog",
+	HelpOpenDocs:          "Open in the documentation",
+	HelpReload:            "Reload",
+	HelpCollapse:          "Collapse",
+	HelpLoadError:         "The help could not be loaded.",
+	HelpFocusTab:          "Focus",
+	HelpCloseTab:          "Close",
+	HelpBack:              "Back",
+	HelpForward:           "Forward",
 }
 
 var Messages_pt_BR = &Messages{
@@ -269,6 +293,18 @@ var Messages_pt_BR = &Messages{
 	PermMethodPut:         "Substituir (PUT)",
 	PermMethodPatch:       "Alterar (PATCH)",
 	PermMethodDelete:      "Excluir (DELETE)",
+	HelpBar:               "Ajuda",
+	HelpFocusPage:         "Página",
+	HelpFocusDrawer:       "Painel",
+	HelpFocusDialog:       "Diálogo",
+	HelpOpenDocs:          "Abrir na documentação",
+	HelpReload:            "Recarregar",
+	HelpCollapse:          "Compactar",
+	HelpLoadError:         "Não foi possível carregar a ajuda.",
+	HelpFocusTab:          "Foco",
+	HelpCloseTab:          "Fechar",
+	HelpBack:              "Voltar",
+	HelpForward:           "Avançar",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

@@ -279,6 +279,7 @@ func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 	default:
 		if f.Portal != "" && f.b.overlayMode.IsDrawer() {
 			d := f.MB.p.Drawer(f.b.overlayMode).
+				SetHelpURI(HelpURI(f.b.ctx)).
 				SetPortalName(portal).
 				SetScrollable(true).
 				SetValidWidth(f.MB.rightDrawerWidth).

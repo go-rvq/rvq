@@ -40,6 +40,7 @@ type Builder struct {
 	notFoundPageLayoutConfig              *LayoutConfig
 	brandFunc                             ComponentFunc
 	profileFunc                           ComponentFunc
+	helpBarFunc                           ComponentFunc
 	switchLanguageFunc                    ComponentFunc
 	brandProfileSwitchLanguageDisplayFunc func(brand, profile, switchLanguage h.HTMLComponent) h.HTMLComponent
 	menuTopItems                          map[string]ComponentFunc
@@ -250,6 +251,14 @@ func (b *Builder) BrandFunc(v ComponentFunc) (r *Builder) {
 
 func (b *Builder) ProfileFunc(v ComponentFunc) (r *Builder) {
 	b.profileFunc = v
+	return b
+}
+
+// HelpBarFunc is the help bar of the layout: a panel at the right edge, out
+// of the page — the page narrows beside it, not under it —, the help of what
+// is in focus (the user docs' HelpBar). nil, or a nil component: none.
+func (b *Builder) HelpBarFunc(v ComponentFunc) (r *Builder) {
+	b.helpBarFunc = v
 	return b
 }
 
@@ -1058,10 +1067,10 @@ func (b *Builder) Overlay(ctx *web.EventContext, r *web.EventResponse, comp h.HT
 		b.contentDrawer(ctx, r, comp)
 		return
 	}
-	b.rightDrawer(r, comp, width)
+	b.rightDrawer(r, comp, width, HelpURI(ctx))
 }
 
-func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width string) {
+func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width string, helpURI string) {
 	if width == "" {
 		width = b.rightDrawerWidth
 	}
@@ -1078,7 +1087,8 @@ func (b *Builder) rightDrawer(r *web.EventResponse, comp h.HTMLComponent, width 
 			Temporary(true).
 			// Fixed(true).
 			Width(width).
-			Attr(":height", `"100%"`),
+			Attr(":height", `"100%"`).
+			AttrIf(HelpURIAttr, helpURI, helpURI != ""),
 		// Temporary(true),
 		// HideOverlay(true).
 		// Floating(true).

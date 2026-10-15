@@ -107,6 +107,11 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 			profile = b.profileFunc(ctx)
 		}
 
+		var helpBar h.HTMLComponent
+		if b.helpBarFunc != nil {
+			helpBar = b.helpBarFunc(ctx)
+		}
+
 		// showNotificationCenter := cfg == nil || !cfg.NotificationCenterInvisible
 		// var notifier h.HTMLComponent
 		// if b.notificationCountFunc != nil && b.notificationContentFunc != nil {
@@ -252,6 +257,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Timeout(3000).
 				Location(LocationTop),
 
+			// the help bar: at the right edge, the first of the layout's drawers
+			// there — the drawers of the page open beside it
+			helpBar,
 			vx.VXNavigationDrawer(
 				// Configurable items before and after the model menu (the language
 				// selector is a default pre-menu item).

@@ -210,6 +210,9 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 		return treePageNodes(b.Tree(ctx))
 	})
 
+	// the help of an address, for the help bar (HelpBar)
+	mb.RegisterEventFunc(HelpEvent, b.helpEvent)
+
 	b.configurePackages(pkg)
 }
 

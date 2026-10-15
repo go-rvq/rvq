@@ -515,6 +515,7 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 			targetPortal = mode.PortalName()
 		}
 		b.mb.p.Drawer(mode).
+			SetHelpURI(HelpURI(ctx)).
 			SetValidPortalName(targetPortal).
 			SetScrollable(true).
 			SetCloserProvided(CloserProvided(ctx)).
