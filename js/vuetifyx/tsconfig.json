@@ -17,12 +17,15 @@
       "@/*": [
        "src/*"
       ],
+      "@rvq/portal": [
+       "../portal/src/index.ts"
+      ],
       "@gad-lang/ide-vuetify/diff": [
        "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/diff/index.ts"
       ]
      }
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "../portal/src/**/*.ts", "../portal/src/**/*.vue"],
   "references": [{ "path": "./tsconfig.node.json" }],
   "exclude": ["node_modules"]
 }

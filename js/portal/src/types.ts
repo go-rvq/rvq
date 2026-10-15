@@ -1,7 +1,6 @@
 import {getCurrentInstance, inject, ModelRef, PropType, provide} from 'vue'
 
-import {Data, Locals, type RenderOptions} from '@/lib/component-by-template'
-import {makeComponentProps} from 'vuetify/lib/composables/component'
+import {Data, Locals, type RenderOptions} from './component-by-template'
 
 const portalKey = Symbol("vx$portal")
 
@@ -71,6 +70,8 @@ export function makeProps() {
     },
     id: String,
     name: String,
-    ...makeComponentProps()
+    // the class and the style of the element of tag
+    class: [String, Array, Object] as PropType<any>,
+    style: [String, Array, Object] as PropType<any>
   }
 }

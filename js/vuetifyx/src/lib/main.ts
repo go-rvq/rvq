@@ -26,7 +26,7 @@ import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
 import {VuetifyViewer} from 'vuetify-pro-tiptap'
 import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
-import Portal from '@/lib/Portal/Portal.vue'
+import { Portal } from '@rvq/portal'
 import Messages from '@/lib/Messages'
 import CodeView from '@/lib/CodeView.vue'
 import {DiffBrowser} from '@gad-lang/ide-vuetify/diff'
@@ -67,7 +67,7 @@ const vuetifyx = {
     app.component('vx-tiptap-viewer', VuetifyViewer)
     app.component('vx-btn', VXBtn)
     app.component('vx-array-sorter', VXArraySorter)
-    app.component('vx-portal', Portal)
+    app.component('rvq-portal', Portal)
     app.component('vx-messages', Messages)
     app.component('vx-code', CodeView)
     app.component('vx-diff-browser', DiffBrowser)

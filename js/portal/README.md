@@ -1,12 +1,15 @@
-# vx-portal
+# rvq-portal
 
 A place in the page whose content is a Vue template given at run time. The
 template is compiled and shown there, and compiled again each time it changes.
 
-It belongs to vuetifyx (`Portal.vue`). It is not corejs's `go-plaid-portal`
-(Go `web.Portal`), which is a different component: that one is named, loaded
-and updated by the events of plaid (`r.UpdatePortal`, `reloadPortals`). In
-Go, use `vuetifyx.VXPortal` (`x/ui/vuetifyx/portal.go`).
+It is the package `js/portal` (`@rvq/portal`): `src/Portal.tsx`, its types
+(`src/types.ts`) and the compilation of a template into a component
+(`src/component-by-template.ts`). `install(app)` registers it as
+`<rvq-portal>`; the admin gets it from vuetifyx, which imports this package.
+It is not corejs's `go-plaid-portal` (Go `web.Portal`), a different component
+named, loaded and updated by plaid's events (`r.UpdatePortal`,
+`reloadPortals`). In Go: `github.com/go-rvq/rvq/js/api/portal`.
 
 ## Props
 
@@ -47,11 +50,11 @@ There are two ways to give it that scope:
    scope of the page, and its props are the portal's variables (`data`):
 
    ```html
-   <vx-portal tag="div" v-model="content" :data="{given}">
+   <rvq-portal tag="div" v-model="content" :data="{given}">
      <template #default="{given}">
        <span>{{ pageVar }} / {{ given }}</span>
      </template>
-   </vx-portal>
+   </rvq-portal>
    ```
 
    The slot is the initial content. **It also stays the default slot of any
@@ -84,7 +87,7 @@ plaid().vars(vars).locals(locals).eventFunc("my_Event").query("x", 1)
 In Go:
 
 ```go
-vx.VXPortal().
+portal.Portal().
   Tag("div").
   Model("vars.myContent").
   Data("{vars, locals}").
@@ -135,5 +138,5 @@ also the component's exposed object:
 it is also `vx$portals[name]`, so `vx$portals[name].content.value = "…"`
 changes the content.
 
-Tests: `src/lib/__tests__/Portal.spec.ts` (scope, slot) and
+Tests: `src/__tests__/Portal.spec.ts` (scope, slot) and
 `PortalEvents.spec.ts` (events and elements, with and without `tag`).

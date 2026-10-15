@@ -1,0 +1,24 @@
+{
+  "name": "@rvq/portal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "vue-tsc --noEmit -p tsconfig.json && vite build",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitejs/plugin-vue-jsx": "^3.1.0",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^24.0.0",
+    "typescript": "~5.4.5",
+    "vite": "^6.0.9",
+    "vitest": "^1.6.0",
+    "vue-tsc": "^2.2.8"
+  }
+}

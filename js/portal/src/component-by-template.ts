@@ -50,6 +50,10 @@ export interface RenderOptions {
   updated?: Callbacks
   unmounted?: Callbacks
   resetScroll?: boolean
+  // mixins: options of the Options API the component takes too (data,
+  // methods, watch, its own mounted…) — the behavior of a content written
+  // as a component (a form of a site)
+  mixins?: Record<string, any>[]
 }
 
 const callCallbacks = (callbacks: Callbacks, args:CallbackArgs) => {
@@ -146,6 +150,7 @@ export function componentByTemplate(componentDefinition: ComponentDefinition): D
   } as Locals
 
   return defineComponent({
+    mixins: options.mixins || [],
     setup() {
       locals.componentInstance = getCurrentInstance()
       callCallbacks(setup, {data, locals})

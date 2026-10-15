@@ -6,7 +6,7 @@ import {makeComponentProps} from 'vuetify/lib/composables/component'
 import Dialog from './Dialog.vue'
 import {VXBtn} from './VXBtn'
 import {useI18n} from './locale'
-import {componentByTemplate, ComponentDefinition} from './component-by-template'
+import {componentByTemplate, type ComponentDefinition} from '@rvq/portal'
 
 export type Detail = string | ComponentDefinition
 

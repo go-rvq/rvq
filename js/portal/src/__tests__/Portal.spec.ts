@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, nextTick, ref } from 'vue'
-import { createVuetify } from 'vuetify'
 
-import Portal from '../Portal/Portal.vue'
+import Portal from '../Portal'
 
 // the page of the portal: a variable of its scope (page), one passed on as
 // the portal's (data), and the content (v-model)
@@ -30,7 +29,7 @@ const settle = async () => {
 
 describe('vx-portal', () => {
   it('shows its content, its variables (data), its slot where it says <slot>', async () => {
-    const w = mount(Page, { global: { plugins: [createVuetify()] } })
+    const w = mount(Page, {})
     await settle()
     // mounted: the initial content — the slot, the model being no template
     expect(w.find('.slot').text()).toBe('of the page / passed on')

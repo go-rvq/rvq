@@ -93,6 +93,9 @@ export default ({mode}) => {
     resolve: {
       alias: {
         '@gad-lang/ide-vuetify/diff': gadDiff,
+        // <rvq-portal> and the compilation of templates: the portal package's
+        // source (js/portal)
+        '@rvq/portal': resolve(__dirname, '../portal/src/index.ts'),
         '@': fileURLToPath(new URL('./src', import.meta.url))
       },
       // one of each — the gad source's imports resolved here, not in its

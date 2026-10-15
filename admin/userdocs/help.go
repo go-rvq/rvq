@@ -8,6 +8,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/js/api/portal"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
@@ -247,7 +248,7 @@ func (b *Builder) helpOpenScript() string {
 // address that filled it (presets.HelpURIAttr; the page's, location), again
 // as it changes; the others, documents opened from it (its links, the help
 // buttons of the fields: vars.helpBar.show), each with its own back and
-// forward, closed by their X. A tab's content is a vx-portal whose content
+// forward, closed by their X. A tab's content is a rvq-portal whose content
 // (v-model) is the body of the help event, asked by plaid. None for who may
 // not read the documentation, and on its own page.
 func (b *Builder) HelpBar(ctx *web.EventContext) h.HTMLComponent {
@@ -315,7 +316,7 @@ func (b *Builder) HelpBar(ctx *web.EventContext) h.HTMLComponent {
 		// each tab its document: the body of the help event (vars.helpBar
 		// load), its templates with the page's vars (their links: nav)
 		h.Div(
-			vx.VXPortal().
+			portal.Portal().
 				Tag("div").
 				Class("pa-4").
 				Model("t.content").

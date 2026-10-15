@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, getCurrentInstance, nextTick, ref } from 'vue'
-import { createVuetify } from 'vuetify'
 
-import Portal from '../Portal/Portal.vue'
-import type { UpdateEvent } from '../Portal/types'
+import Portal from '../Portal'
+import type { UpdateEvent } from '../types'
 
 // A node told by what it is: an element by its tag and class, a text by its
 // data.
@@ -68,7 +67,7 @@ const last = (log: Logged[], name: string) => [...log].reverse().find((l) => l.n
 for (const tag of [undefined, 'div']) {
   describe(`vx-portal ${tag ? 'with a tag' : 'without a tag'}`, () => {
     const setup = async (slot = '') => {
-      const w = mount(page(tag, slot), { global: { plugins: [createVuetify()] } })
+      const w = mount(page(tag, slot))
       await settle()
       const vm = w.vm as any
       const set = async (v: any) => {
@@ -218,7 +217,7 @@ for (const tag of [undefined, 'div']) {
   describe(`vx-portal ${tag ? 'with a tag' : 'without a tag'}, its slot`, () => {
     it('null: the slot again, its several roots its elements', async () => {
       const w = mount(page(tag, '<template #default="{show}"><p class="s1">S</p><p class="s2">{{ show }}</p></template>'),
-        { global: { plugins: [createVuetify()] } })
+        {})
       await settle()
       const vm = w.vm as any
       const elements = () => (vm.portal.elements as Node[]).map(desc)
@@ -233,7 +232,7 @@ for (const tag of [undefined, 'div']) {
 
     it('v-pre: the slot as a template of the portal, its roots its elements', async () => {
       const w = mount(page(tag, '<template v-pre><p class="t1">{{ typeof show }}</p><p class="t2">T</p></template>'),
-        { global: { plugins: [createVuetify()] } })
+        {})
       await settle()
       const vm = w.vm as any
       expect((vm.portal.elements as Node[]).map(desc)).toEqual(['p.t1', 'p.t2'])

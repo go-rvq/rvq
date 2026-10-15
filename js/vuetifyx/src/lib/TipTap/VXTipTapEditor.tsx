@@ -11,7 +11,7 @@ import {useI18n} from '@/lib/locale'
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
 import {Blockquote as TiptapBlockquote} from '@tiptap/extension-blockquote'
 
-import Portal from './../Portal/Portal.vue'
+import { Portal } from '@rvq/portal'
 import {unrefElement, useResizeObserver} from '@vueuse/core'
 
 // https://github.com/go-rvq/vuetify-pro-tiptap

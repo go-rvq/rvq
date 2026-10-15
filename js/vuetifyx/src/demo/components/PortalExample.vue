@@ -1,9 +1,8 @@
 <script setup lang="ts">
 
-import {type ContentType, PortalContent} from '@/lib/Portal/types'
-import Portal from '@/lib/Portal/Portal.vue'
+import {type ContentType, type PortalContent, Portal} from '@rvq/portal'
 import {ref, shallowRef} from 'vue'
-import {componentByTemplate} from '@/lib/component-by-template'
+import {componentByTemplate} from '@rvq/portal'
 
 import 'vue-prism-editor/dist/prismeditor.min.css'
 import {languages} from 'prismjs/components'
