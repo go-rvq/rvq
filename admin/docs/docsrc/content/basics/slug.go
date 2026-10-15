@@ -1,7 +1,7 @@
 package basics
 
 import (
-	. "github.com/go-rvq/rvq/admin/docs/docgo"
+	. "github.com/go-rvq/docgo"
 )
 
 var Slug = Doc(

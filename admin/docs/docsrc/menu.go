@@ -1,7 +1,7 @@
 package docsrc
 
 import (
-	"github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/docgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/content"
 	advanced_functions "github.com/go-rvq/rvq/admin/docs/docsrc/content/advanced-functions"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/content/basics"

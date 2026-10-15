@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-rvq/rvq/admin/docs/docgo"
+	"github.com/go-rvq/docgo"
 	"github.com/go-rvq/rvq/admin/docs/docsrc"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/assets"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"

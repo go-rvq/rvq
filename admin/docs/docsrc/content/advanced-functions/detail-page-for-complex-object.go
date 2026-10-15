@@ -1,9 +1,9 @@
 package advanced_functions
 
 import (
+	. "github.com/go-rvq/docgo"
+	"github.com/go-rvq/docgo/ch"
 	. "github.com/go-rvq/htmlgo"
-	. "github.com/go-rvq/rvq/admin/docs/docgo"
-	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_presets"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"

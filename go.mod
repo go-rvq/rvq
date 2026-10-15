@@ -22,6 +22,7 @@ require (
 	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
+	github.com/go-rvq/docgo v0.0.0-20261015095934-0cab60d04b88
 	github.com/go-rvq/htmlgo v1.0.3-0.20260720020646-75ccd466dbcb
 	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
@@ -171,7 +172,7 @@ require (
 	github.com/sergi/go-diff v1.3.1
 	github.com/shirou/gopsutil/v3 v3.24.4 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629
+	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629 // indirect
 	github.com/shurcooL/highlight_diff v0.0.0-20230708024848-22f825814995 // indirect
 	github.com/shurcooL/highlight_go v0.0.0-20230708025100-33e05792540a // indirect
 	github.com/shurcooL/octicon v0.0.0-20230705024016-66bff059edb8 // indirect
@@ -221,5 +222,3 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	mvdan.cc/sh/v3 v3.3.1 // indirect
 )
-
-//replace github.com/theplant/docgo => ../../docgo/

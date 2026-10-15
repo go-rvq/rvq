@@ -3,9 +3,9 @@ package basics
 import (
 	"path"
 
+	"github.com/go-rvq/docgo"
+	"github.com/go-rvq/docgo/ch"
 	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/docs/docgo"
-	"github.com/go-rvq/rvq/admin/docs/docgo/ch"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/examples/examples_admin"
 	"github.com/go-rvq/rvq/admin/docs/docsrc/generated"
