@@ -248,11 +248,15 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 		topActions = append(topActions, b.PrimaryAction)
 	}
 
-	if len(b.Menu) > 0 {
+	// in a portal of the page (Content): no header of the layout to put the
+	// title and the actions in — a header of its own (contentHeader)
+	inContent := b.Overlay != nil && b.Overlay.Mode == actions.Content
+
+	if len(b.Menu) > 0 && !inContent {
 		WithMenuComponent(b.Context, b.Menu)
 	}
 
-	if len(topActions) > 0 {
+	if len(topActions) > 0 && !inContent {
 		WithActionsComponent(b.Context, topActions...)
 	}
 
@@ -283,7 +287,27 @@ func (b *ContentComponentBuilder) BuildPage() (comp h.HTMLComponent) {
 		).Slot("{ locals }").LocalsInit(`{tab: 'default'}`)
 	}
 
-	return VContainer(b.build(body)).Fluid(true)
+	page := VContainer(b.build(body)).Fluid(true)
+	if inContent {
+		// its title and its top actions — not the primary one (save): a form
+		// in a portal of the page is saved by who shows it (the page builder's
+		// autosave), as it always was
+		top := append(append(h.HTMLComponents{}, b.TopLeftActions...), b.TopRightActions...)
+		if b.Title != "" || len(top) > 0 {
+			return h.Div(b.contentHeader(top), page)
+		}
+	}
+	return page
+}
+
+// contentHeader is the header of a form shown in a portal of the page
+// (overlay Content): its title, and its top actions at the right.
+func (b *ContentComponentBuilder) contentHeader(topActions h.HTMLComponents) h.HTMLComponent {
+	return VToolbar(
+		h.If(b.Title != "", VToolbarTitle(b.Title)),
+		VSpacer(),
+		topActions,
+	).Density(DensityCompact).Flat(true).Color("transparent").Class("border-b rvq-content-header")
 }
 
 func (b *ContentComponentBuilder) Notice(v any) *ContentComponentBuilder {

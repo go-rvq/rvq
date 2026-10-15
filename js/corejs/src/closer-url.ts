@@ -107,6 +107,21 @@ function ensurePopstate() {
   })
 }
 
+/**
+ * Says the popstate under way is the overlays' — Back to where an overlay was
+ * opened from, Forward to one Back closed, or the browser sent back from it —,
+ * not a navigation of the page: plaid must not reload the page for it (its
+ * popstate handler runs first, before ours unwinds the stack), which would
+ * take away every overlay, not only the ones the Back closes.
+ */
+export function closerUrlOwnsPopstate(): boolean {
+  if (bouncing) {
+    return true
+  }
+  const here = currentHref()
+  return stack.some((e) => e.prev === here) || forwardUrls.includes(here)
+}
+
 /** Entries currently stacked — the address bar's LIFO. Exposed for tests. */
 export function closerUrlStack(): { url: string; prev: string }[] {
   return stack.map((e) => ({ url: e.url, prev: e.prev }))

@@ -1,3 +1,4 @@
+import { closerUrlOwnsPopstate } from './closer-url'
 import {
     type App,
     createApp,
@@ -82,7 +83,9 @@ export const Root = defineComponent({
         isFetching.value = false
       })
       window.addEventListener('popstate', (evt) => {
-        if (evt && evt.state != null) {
+        // a page plaid pushed — unless the Back (or Forward) only closes
+        // overlays: they close, the page stays (closer-url)
+        if (evt && evt.state != null && !closerUrlOwnsPopstate()) {
           _plaid().onpopstate(evt)
         }
       })

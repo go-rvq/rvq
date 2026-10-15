@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 // @ts-expect-error corejs @ alias resolved by corejs tsconfig
 import { asCloser, createCloser, isCloser } from "../../../corejs/src/closer";
 // @ts-expect-error corejs @ alias resolved by corejs tsconfig
-import { closerUrlStack, resetCloserUrlStack } from "../../../corejs/src/closer-url";
+import { closerUrlOwnsPopstate, closerUrlStack, resetCloserUrlStack } from "../../../corejs/src/closer-url";
 
 // back is what the browser does on Back (or Forward): its address first, then
 // the popstate.
@@ -179,6 +179,27 @@ describe("address bar, LIFO", () => {
     back("/admin/articles");
     expect(detail.show).toBe(false);
     expect(closerUrlStack().length).toBe(0);
+  });
+
+  it("a Back that closes overlays is theirs, not a page plaid reloads", () => {
+    // a page plaid pushed (the menu): its entry has a state, and plaid's
+    // popstate — registered first — would reload it, taking every overlay
+    // away; asked first, the Back is the overlays'
+    const list = createCloser({});
+    const detail = createCloser({ url: "/admin/articles/1/comments/7" });
+    list.show = true; // a nested listing in a dialog: no address of its own
+    detail.show = true;
+
+    window.history.replaceState(null, "", "/admin/articles");
+    expect(closerUrlOwnsPopstate()).toBe(true);
+    window.dispatchEvent(new Event("popstate"));
+    expect(detail.show).toBe(false);
+    expect(list.show).toBe(true);
+
+    // another page: not the overlays'
+    window.history.replaceState(null, "", "/admin/other");
+    expect(closerUrlOwnsPopstate()).toBe(false);
+    list.show = false;
   });
 
   it("Back of several steps at once closes all it went past", () => {
