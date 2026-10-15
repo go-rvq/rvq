@@ -61,6 +61,8 @@ GO_BUILD_PKGS := \
 	./admin/packages/... \
 	./thirdpart/... \
 	./x/... \
+	./js/api/portal \
+	./js/api/vendor \
 	./js/integration_tests/...
 
 # Suítes de integração de UI (bun). Cada uma roda no seu diretório, onde está o
@@ -74,7 +76,7 @@ check: check-fmt check-go check-ui
 
 check-fmt:
 	@echo "== gofmt =="
-	@out=$$(gofmt -s -l admin web thirdpart x 2>/dev/null); \
+	@out=$$(gofmt -s -l admin web thirdpart x js/api 2>/dev/null); \
 	if [ -n "$$out" ]; then echo "arquivos não formatados:"; echo "$$out"; exit 1; fi
 
 check-go:
@@ -92,3 +94,5 @@ check-ui:
 		echo "-- $$d"; \
 		(cd $$d && $(BUN) test) || exit 1; \
 	done
+	@echo "-- js/portal (vitest)"
+	@cd js/portal && npx vitest run
