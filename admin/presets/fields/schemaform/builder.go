@@ -5,6 +5,7 @@ package schemaform
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -99,6 +100,9 @@ type Context struct {
 	// Data is the value itself, in a read view (Display): decoded, as
 	// DecodeValue reads it. An editing component binds Value instead.
 	Data any
+	// record is the record the field is of, in a read view: its Data's
+	// parent (this of its `[roundDisplay=…]`).
+	record any
 
 	// Key is the JS expression of the key the value is posted under —
 	// `"Value.links[" + itemIndex + "].href"` —: what the server says is
@@ -187,6 +191,32 @@ func (c *Context) Hint() string {
 // Placeholder is the example inside the input while it is empty, or "".
 func (c *Context) Placeholder() string { return c.Info().Placeholder }
 
+// Prefix is what goes before the value (`[prefix="R$ "]`): inside its input,
+// and before it shown.
+func (c *Context) Prefix() string { return c.metaString(MetaPrefix) }
+
+// Suffix is what goes after the value (`[suffix=" kg"]`), as Prefix.
+func (c *Context) Suffix() string { return c.metaString(MetaSuffix) }
+
+func (c *Context) metaString(name string) string {
+	if c.Field == nil {
+		return ""
+	}
+	s, _ := c.Field.Meta[name].(string)
+	return s
+}
+
+// affixed sets the prefix and the suffix of the field on its input.
+func affixed(c *Context, f *v.VTextFieldBuilder) *v.VTextFieldBuilder {
+	if p := c.Prefix(); p != "" {
+		f.Prefix(p)
+	}
+	if s := c.Suffix(); s != "" {
+		f.Suffix(s)
+	}
+	return f
+}
+
 // LimitAttrs are the attributes of HTML5 that limit the value — min, max,
 // step, minlength, maxlength, pattern, placeholder —, those the field has.
 func (c *Context) LimitAttrs() []any {
@@ -197,9 +227,16 @@ func (c *Context) LimitAttrs() []any {
 			attrs = append(attrs, k, v)
 		}
 	}
-	add("min", f.Min)
-	add("max", f.Max)
-	add("step", f.Step)
+	if p := fixedPlaces(f); p > 0 {
+		// an int of places, its input shows it ÷ 10^places
+		add("min", scaleDown(f.Min, p))
+		add("max", scaleDown(f.Max, p))
+		add("step", strconv.FormatFloat(math.Pow10(-p), 'f', p, 64))
+	} else {
+		add("min", f.Min)
+		add("max", f.Max)
+		add("step", f.Step)
+	}
 	if f.MinLength > 0 {
 		add("minlength", strconv.Itoa(f.MinLength))
 	}
@@ -289,19 +326,35 @@ func (c *Context) RuleAttrs() []any {
 		add(fmt.Sprintf("new RegExp(%s, 'u').test(String(v))", js(re)), fmt.Sprintf(m.Mask, f.Mask))
 	}
 	number := NumberTypes[f.Type]
+	// an int of places (fixed point): the input shows it ÷ 10^places; its
+	// limits are of the integer kept
+	fixed := fixedPlaces(f)
+	shown := "Number(v)"
+	if fixed > 0 {
+		shown = fmt.Sprintf("Math.round(Number(v) * %s)", pow10(fixed))
+	}
 	bound := func(limit, op, msg string) {
 		if limit == "" {
 			return
 		}
 		if number {
-			add(fmt.Sprintf("Number(v) %s %s", op, limit), fmt.Sprintf(msg, limit))
+			said := limit
+			if fixed > 0 {
+				// as the input shows it
+				said = scaleDown(limit, fixed)
+			}
+			add(fmt.Sprintf("%s %s %s", shown, op, limit), fmt.Sprintf(msg, said))
 		} else if DateTypes[f.Type] {
 			add(fmt.Sprintf("String(v) %s %s", op, js(limit)), fmt.Sprintf(msg, limit))
 		}
 	}
 	bound(f.Min, ">=", m.Min)
 	bound(f.Max, "<=", m.Max)
-	if number && (f.Type == "int" || f.Type == "uint") {
+	switch {
+	case fixed > 0:
+		// up to its places
+		add(fmt.Sprintf("/^-?\\d+([.,]\\d{0,%d})?$/.test(String(v).trim())", fixed), m.Invalid)
+	case number && (f.Type == "int" || f.Type == "uint"):
 		add("/^-?\\d+$/.test(String(v).trim())", m.Invalid)
 	}
 	if len(rules) == 0 {
@@ -320,12 +373,23 @@ func (c *Context) sub(f *Field, value, path string) *Context {
 	if key != "" {
 		key += fmt.Sprintf(" + %q", "."+f.Name)
 	}
+	var data any
+	if value != ItemVar {
+		// a read-only form's value, its field's (Data: the value itself)
+		data = recordValue(c.Data, f.Name)
+	}
+	var record any
+	if value != ItemVar {
+		record = c.Data
+	}
 	return &Context{
-		Field: f,
-		Value: value + "." + f.Name,
-		Path:  join(path, f.Name),
-		Form:  c.Form,
-		Event: c.Event, Portal: c.Portal,
+		Field:  f,
+		Value:  value + "." + f.Name,
+		Path:   join(path, f.Name),
+		Data:   data,
+		record: record,
+		Form:   c.Form,
+		Event:  c.Event, Portal: c.Portal,
 		Builder: c.Builder,
 		Key:     key,
 		errVar:  c.errVar,
@@ -515,11 +579,18 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 		if field.SubErrors == nil {
 			errs = []byte("{}")
 		}
+		// a form not to be written shows its values (readOnlyField): the
+		// field's, read here
+		var data any
+		if showsValues(field) {
+			data = b.readOnlyData(field)
+		}
 		return h.Components(
 			web.Scope(b.draw(schema, &Context{
 				Field:   &Field{Name: field.Name, Type: FormType, Schema: schema},
 				Value:   fmt.Sprintf("form[%q]", field.FormKey),
 				Path:    "",
+				Data:    data,
 				Form:    field,
 				Event:   ctx,
 				Builder: b,
@@ -530,6 +601,47 @@ func (b *Builder) ComponentFunc(schema *Schema) presets.FieldComponentFunc {
 			web.Portal().Name(portal),
 		)
 	}
+}
+
+// showsValues says the form of the field shows its values, not to be
+// written: the field read-only, or drawn in a mode that does not write (a
+// detail) — none said (a preview) still draws the inputs.
+func showsValues(field *presets.FieldContext) bool {
+	return field != nil && (field.ReadOnly || len(field.Mode) > 0 && !field.Mode.IsWrite())
+}
+
+// readOnlyField is a field of a read-only form: its label, its value by the
+// display of its type (displayFieldFunc, as a detail shows it), its
+// warnings (fieldWarnings), its hint.
+func (b *Builder) readOnlyField(c *Context, warnings []string) h.HTMLComponent {
+	var hint h.HTMLComponent
+	if t := c.Hint(); t != "" {
+		hint = h.Div(h.Text(t)).Class("text-caption text-medium-emphasis mt-1")
+	}
+	return h.Div(
+		h.Div(h.Text(displayLabel(c))).Class("v-label theme--light text-caption"),
+		h.Div(b.showField(c)).Class("pt-1"),
+		warningsComponent(warnings),
+		hint,
+	).Class("mb-3").Attr("data-schemaform-readonly", c.Path)
+}
+
+// readOnlyData is the value a read-only form shows (Context.Data): the
+// field's — its override, else its record's —, decoded when it is text.
+func (b *Builder) readOnlyData(field *presets.FieldContext) (v any) {
+	switch {
+	case field.ValueOverride != nil:
+		v = field.ValueOverride
+	case field.Obj != nil:
+		func() {
+			defer func() { _ = recover() }()
+			v = field.RawValue()
+		}()
+	}
+	if s, ok := v.(string); ok {
+		v, _ = b.DecodeValue(s)
+	}
+	return
 }
 
 // errVarOf is the variable of the errors of the field formKey in the scope.
@@ -712,14 +824,23 @@ func (b *Builder) isEnum(c *Context) bool {
 // record renders the fields of one record, each bound under value and each
 // reachable at its own path.
 func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLComponent {
+	readOnly := showsValues(c.Form)
 	field := func(f *Field) h.HTMLComponent {
 		fc := c.sub(f, value, path)
 
-		draw, ok := b.fieldFunc(fc)
-		if !ok {
-			return errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types()))
+		var comp h.HTMLComponent
+		if readOnly && (f.Schema == nil || f.Schema.Slice) {
+			// not to be written: its value by the display of its type, as a
+			// detail shows it, in its label and its hint; a record inside it
+			// drawn as the form draws it (its cards, its steps)
+			comp = withHelp(fc, b.readOnlyField(fc, fieldWarnings(c.Data, f.Name)))
+		} else {
+			draw, ok := b.fieldFunc(fc)
+			if !ok {
+				return errorComponent(fmt.Sprintf(c.Messages().FieldTypeUnknown, f.Name, f.Type, b.Types()))
+			}
+			comp = withHelp(fc, draw(fc))
 		}
-		comp := withHelp(fc, draw(fc))
 		if cond := whenCondition(f, value); cond != "" {
 			comp = h.Div(comp).Attr("v-if", cond)
 		}
@@ -738,7 +859,9 @@ func (b *Builder) record(schema *Schema, c *Context, value, path string) h.HTMLC
 		return fmt.Sprintf("Math.max(0, [%s].findIndex(k => Object.keys(vars.%s || {}).some(e => e === k || e.startsWith(k + '.') || e.startsWith(k + '['))))",
 			strings.Join(keys, ", "), c.errVar)
 	}
-	return h.Div(drawRows(schema.Fields, field, tabAt)...)
+	// its warnings (WarningsField) are not a field to fill: what was kept
+	// unchecked, told apart by who shows the record
+	return h.Div(drawRows(shownFields(schema.Fields), field, tabAt)...)
 }
 
 // choice draws a choice of one class (Schema.Choice): a select of the classes,
@@ -1056,7 +1179,20 @@ func withHelp(c *Context, comp h.HTMLComponent) h.HTMLComponent {
 // declared or the one EnumItemsFunc answered with — Context.EnumItems is the
 // same answer the posted value is checked against.
 func EnumComponentFunc(c *Context) h.HTMLComponent {
+	readOnly := c.Form != nil && (c.Form.ReadOnly || !c.Form.Mode.IsWrite())
 	items, err := c.EnumItems()
+	if (err != nil || len(items) == 0) && readOnly {
+		// not to be chosen — a record shown —, its items the ones another
+		// field makes (they come as it is filled): the value as it is
+		return v.VTextField().
+			Label(c.Label()).
+			Variant(v.FieldVariantUnderlined).
+			Attr(c.CompactAttrs()...).
+			Readonly(true).
+			Hint(c.Hint()).
+			PersistentHint(c.Hint() != "").
+			Attr("v-model", c.Value)
+	}
 	if err != nil {
 		return errorComponent(fmt.Sprintf(c.Messages().ItemsUnavailable, c.Field.Name, err))
 	}
@@ -1084,7 +1220,8 @@ func EnumComponentFunc(c *Context) h.HTMLComponent {
 		Attr(":item-props", anyHint).
 		Hint(c.Hint()).
 		PersistentHint(c.Hint() != "").
-		Clearable(!c.Field.Required()).
+		Clearable(!readOnly && !c.Field.Required()).
+		Readonly(readOnly).
 		Attr("required", c.Field.Required()).
 		Attr("v-model", c.Value).
 		Attr(c.CheckAttrs()...)
@@ -1169,7 +1306,7 @@ func ReadOnlyComponentFunc(c *Context) h.HTMLComponent {
 // TextComponentFunc is DefaultType: a text field, which is what an untyped
 // field of the schema is.
 func TextComponentFunc(c *Context) h.HTMLComponent {
-	return v.VTextField().
+	return affixed(c, v.VTextField()).
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
@@ -1184,21 +1321,50 @@ func TextComponentFunc(c *Context) h.HTMLComponent {
 // IntComponentFunc is "int": a number field. It binds with `v-model.number`, so
 // what goes back into the value is a NUMBER — the value is written out again
 // (as YAML, for a LocaleMessage), and a quoted number would come back a string.
+//
+// With `[places=N]` it is fixed point: the integer is the value × 10^N — of
+// money, its cents: `[prefix="R$ ", places=2] price int` keeps 1050 —; its
+// input, as the form holds it, the value (10.50).
 func IntComponentFunc(c *Context) h.HTMLComponent {
+	if p := fixedPlaces(c.Field); p > 0 {
+		return fixedPointField(c, p)
+	}
 	return numberField(c)
 }
 
 // UintComponentFunc is "uint": the same, floored at zero.
 func UintComponentFunc(c *Context) h.HTMLComponent {
-	f := numberField(c)
+	var f *v.VTextFieldBuilder
+	if p := fixedPlaces(c.Field); p > 0 {
+		f = fixedPointField(c, p)
+	} else {
+		f = numberField(c)
+	}
 	if c.Field.Min == "" {
 		f.Attr("min", "0")
 	}
 	return f
 }
 
+// fixedPointField is the input of an int of places p (fixed point): what the
+// form holds of it is the value as shown — 10.50 —, its p places; the
+// integer (× 10^p) is what is read (Decoder) and kept, made the shown value
+// again as the form is filled (Schema.Filled).
+func fixedPointField(c *Context, p int) *v.VTextFieldBuilder {
+	return affixed(c, v.VTextField()).
+		Type("number").
+		Label(c.Label()).
+		Variant(v.FieldVariantUnderlined).
+		Attr(c.CompactAttrs()...).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
+		Attr(c.LimitAttrs()...).
+		Attr("v-model", c.Value).
+		Attr(c.CheckAttrs()...)
+}
+
 func numberField(c *Context) *v.VTextFieldBuilder {
-	return v.VTextField().
+	return affixed(c, v.VTextField()).
 		Type("number").
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
@@ -1215,15 +1381,22 @@ func numberField(c *Context) *v.VTextFieldBuilder {
 // `v-model.number` — a decimal that goes through a JS number comes back a
 // float, and the precision it exists for is gone.
 func DecimalComponentFunc(c *Context) h.HTMLComponent {
-	f := v.VTextField().
+	f := affixed(c, v.VTextField()).
 		Type("number").
 		Label(c.Label()).
 		Variant(v.FieldVariantUnderlined).
 		Attr(c.CompactAttrs()...).
+		Hint(c.Hint()).
+		PersistentHint(c.Hint() != "").
 		Attr(c.LimitAttrs()...).
 		Attr("v-model", c.Value).
 		Attr(c.CheckAttrs()...)
-	if c.Field.Step == "" {
+	switch n := fieldPlaces(c.Field); {
+	case c.Field.Step != "":
+	case n >= 0:
+		// its decimal places (`[places=N]`): a step of the last of them
+		f.Attr("step", strconv.FormatFloat(math.Pow10(-n), 'f', n, 64))
+	default:
 		f.Attr("step", "any")
 	}
 	return f
@@ -1308,7 +1481,7 @@ func RangeComponentFunc(c *Context) h.HTMLComponent {
 		rangeErr = h.Div().Class("text-error text-caption").Attr("v-if", errs).
 			Attr("v-text", errs+".join(' ')").Attr("data-range-error", c.Path)
 	}
-	out := h.Div(h.Div(h.Text(c.Label())).Class("text-caption text-medium-emphasis mb-1"), inputs, rangeErr).
+	out := h.Div(h.Div(h.Text(c.Label())).Class("v-label theme--light text-caption mb-1"), inputs, rangeErr).
 		Attr("data-range", c.Path)
 	// the value an object, to bind its bounds: made one as it mounts — on the
 	// object it is a key of (`<parent>.<key>`) —, the inputs drawn then

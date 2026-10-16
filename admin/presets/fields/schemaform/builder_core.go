@@ -118,12 +118,20 @@ func (b *Builder) Types() (names []string) {
 
 // The field metadata that names a field where the application gives it no
 // words (FieldInfoFunc): `[label="Título", hint="…", help="…",
-// placeholder="…"]`.
+// placeholder="…"]`; and what goes before and after the value of a text or a
+// number — `[prefix="R$ "]`, `[suffix=" kg"]`: in its input and with it shown
+// —, and the decimal places of a number (`[places=2]`): of a float or a
+// decimal, its input's step (0.01) when it has none, and shown with them; of
+// an int or a uint, fixed point — the integer is the value × 10^places (money
+// in cents), its input shows and takes the value.
 const (
 	MetaLabel       = "label"
 	MetaHint        = "hint"
 	MetaHelp        = "help"
 	MetaPlaceholder = "placeholder"
+	MetaPrefix      = "prefix"
+	MetaSuffix      = "suffix"
+	MetaPlaces      = "places"
 )
 
 // Type registers (or replaces) the component that draws a field of this type.

@@ -60,6 +60,21 @@ const (
 //	zip str
 const MetaChanged = "changed"
 
+// MetaRound is a float's or a decimal's own rounding: `[round=(this, parents,
+// value; places=0) => …]`, called with the value read — places its
+// `[places=N]`, 0 without —, what it answers kept as the value (a number, or
+// its text).
+//
+//	[places=2, round=(this, parents, value; places=0) => float(int(value * 100 + 0.5)) / 100] price decimal
+const MetaRound = "round"
+
+// MetaRoundDisplay is a float's or a decimal's rounding as it is shown —
+// the detail, a read-only form, DisplayText —, the value kept as it is:
+// `[roundDisplay=(this, parents, value; places=0) => …]`, as MetaRound.
+//
+//	[places=2, roundDisplay=up] price decimal
+const MetaRoundDisplay = "roundDisplay"
+
 // CondMetas are the metadata of a field drawn by what is answered.
 var CondMetas = []string{MetaIf, MetaShow, MetaDisabled, MetaReadonly, MetaClass}
 
@@ -118,6 +133,30 @@ func (s *Schema) dynamic() bool {
 			return true
 		}
 		if f.Schema != nil && f.Schema.Item != nil && f.Schema.Item.Schema.dynamic() {
+			return true
+		}
+	}
+	return false
+}
+
+// scoped says the reading of the schema needs the records as this and
+// parents: a field drawn by what is answered (dynamic), or one of its own
+// rounding (MetaRound).
+func (s *Schema) scoped() bool {
+	return s.dynamic() || s.rounds()
+}
+
+// rounds says some field of the schema, or of a record of it, has its own
+// rounding (MetaRound).
+func (s *Schema) rounds() bool {
+	if s == nil {
+		return false
+	}
+	for _, f := range s.Fields {
+		if f.RoundFunc != nil || (f.Schema != nil && f.Schema != s && f.Schema.rounds()) {
+			return true
+		}
+		if f.Schema != nil && f.Schema.Item != nil && f.Schema.Item.Schema.rounds() {
 			return true
 		}
 	}
@@ -472,6 +511,12 @@ func (d *Decoder) Changed(path string, data map[string]any) (map[string]any, err
 			if fmt.Sprint(v) != fmt.Sprint(before[name]) {
 				if out == nil {
 					out = map[string]any{}
+				}
+				// an int of places (fixed point): as the form holds it
+				if f := fieldNamed(sc.fields, name); f != nil && v != nil {
+					if p := fixedPlaces(f); p > 0 {
+						v = FixedShown(v, p)
+					}
 				}
 				out[name] = v
 			}

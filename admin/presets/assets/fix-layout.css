@@ -6,3 +6,38 @@
 .vx-dialog > .v-overlay__content > .v-card  > .rvq-presets-breadcrumbs-wraper {
     background-color: rgb(var(--v-theme-surface-light));
 }
+
+/* The label of a field, set apart from its hint (12px, lighter): about the
+   size of the value (14px), stronger. Vuetify's floating label is .75em at
+   60% opacity — smaller than the hint —; the labels of the presets' own
+   fields (the detail, nested structs, lists) are .text-caption. */
+.v-label.v-field-label.v-field-label--floating {
+    --v-field-label-scale: 0.9375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.8;
+}
+
+.v-field--focused .v-label.v-field-label.v-field-label--floating {
+    opacity: 1;
+}
+
+.v-label.text-caption {
+    /* a long one (a question of a form) on lines, not cut */
+    white-space: normal;
+    font-size: 0.9375rem !important;
+    font-weight: 600;
+    letter-spacing: 0.01em !important;
+    opacity: 0.8;
+}
+
+.v-input__details .v-messages {
+    opacity: 0.65;
+}
+
+/* a field's warnings shown read-only (schemaform): hidden under
+   .schemaform-hide-warnings — a switch of who shows them */
+.schemaform-hide-warnings .schemaform-warning {
+    display: none !important;
+}

@@ -612,3 +612,36 @@ func TestComponentFuncNestedRecordIsAGroup(t *testing.T) {
 		t.Errorf("the group's fields are set in:\n%s", got)
 	}
 }
+
+// A form not to be written (a detail's mode, or the field read-only): each
+// value by the display of its type, in its label and its hint; a record
+// inside drawn as the form draws it. With no mode (a preview), the inputs.
+func TestComponentFuncReadOnlyShowsValues(t *testing.T) {
+	b := New()
+	schema, err := b.Parse(`{[hint="The title"] title str; done bool; address: {city str}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draw := func(fc *presets.FieldContext) string {
+		t.Helper()
+		fc.ToComponentOptions, fc.Name, fc.FormKey = &presets.ToComponentOptions{}, "Value", "Value"
+		out, err := h.Marshal(b.ComponentFunc(schema)(fc, &web.EventContext{}), context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(out)
+	}
+	value := map[string]any{"title": "Hello", "done": true, "address": map[string]any{"city": "Boston"}}
+	for _, fc := range []*presets.FieldContext{
+		{Mode: presets.FieldModeStack{presets.DETAIL}, ValueOverride: value},
+		{Mode: presets.FieldModeStack{presets.EDIT}, ReadOnly: true, ValueOverride: "title: Hello\ndone: true\naddress:\n  city: Boston\n"},
+	} {
+		got := draw(fc)
+		mustContain(t, got, "Hello", "mdi-check", "Boston", "The title", `data-schemaform-readonly='title'`, `data-schemaform-readonly='address.city'`)
+		mustNotContain(t, got, "<v-text-field", "<v-switch", "<v-checkbox")
+	}
+	// no mode: the inputs, as ever
+	got := draw(&presets.FieldContext{})
+	mustContain(t, got, "<v-text-field")
+	mustNotContain(t, got, "data-schemaform-readonly")
+}

@@ -1,6 +1,7 @@
 package i18n_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -103,4 +104,22 @@ func TestRuntimeUpdatesRace(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+// A context of a language (LanguageContext): its messages — the nearest
+// supported —, and the language asked.
+func TestLanguageContext(t *testing.T) {
+	b := i18n.New().SupportLanguages(language.English, language.BrazilianPortuguese).
+		RegisterForModule(language.English, i18n.DefaultKey, i18n.Default_en).
+		RegisterForModule(language.BrazilianPortuguese, i18n.DefaultKey, i18n.Default_pt_BR)
+	ctx := b.LanguageContext(context.Background(), "pt-BR")
+	if i18n.GetMessages(ctx).Yes != "Sim" || i18n.DynaFromContext(ctx).GetLanguage() != "pt-BR" {
+		t.Errorf("pt-BR: %q %q", i18n.GetMessages(ctx).Yes, i18n.DynaFromContext(ctx).GetLanguage())
+	}
+	if i18n.GetMessages(b.LanguageContext(context.Background(), "en-US")).Yes != "Yes" {
+		t.Error("en-US")
+	}
+	if i18n.GetMessages(b.LanguageContext(context.Background(), "xx")).Yes != "Yes" {
+		t.Error("an unknown language: the first supported")
+	}
 }

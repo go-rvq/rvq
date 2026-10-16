@@ -299,6 +299,7 @@ func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
 	}
 	s.shareEnums(r.enums)
 	s.vm, s.class = vm, c
+	s.setRoundVM(vm)
 	return s, nil
 }
 
@@ -1067,6 +1068,19 @@ func options(f *Field, rawMeta gad.Object) error {
 		case MetaMin, MetaMax, MetaStep, MetaMinLength, MetaMaxLength, MetaPattern, MetaPlaceholder, MetaMask:
 			if err := limits(f, k, kv.V); err != nil {
 				return err
+			}
+			continue
+		case MetaRound, MetaRoundDisplay:
+			if f.Type != "float" && f.Type != "decimal" {
+				return fmt.Errorf("%s: of a float or a decimal, not %s", k, f.Type)
+			}
+			if !isCallable(kv.V) {
+				return fmt.Errorf("%s: a function (this, parents, value; places=0) => …, not %s", k, kv.V.Type().Name())
+			}
+			if k == MetaRound {
+				f.RoundFunc = kv.V
+			} else {
+				f.RoundDisplayFunc = kv.V
 			}
 			continue
 		case MetaChanged:

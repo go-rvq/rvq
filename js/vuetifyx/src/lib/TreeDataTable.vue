@@ -1,14 +1,28 @@
 <template>
-  <v-data-table-virtual :headers="currentHeaders" :items="rows" v-bind="tableProps">
+  <v-data-table-virtual
+    :headers="currentHeaders"
+    :items="rows"
+    v-bind="tableProps"
+    class="vx-tree-data-table"
+    :class="{ 'vx-tree-data-table--guides': guides }"
+  >
     <template v-slot:item.$control="{ item, value }">
-      <div class="d-inline-flex" style="height: 100%; vertical-align: middle">
+      <!-- the row's own height (a title of lines): not forced to the cell's -->
+      <div class="vx-tree-control d-flex align-center">
         <slot
           v-if="getControl(item).path.length"
           name="item.$control.prefix"
           :item="item"
           :control="getControl(item)"
         >
-          <div :style="`width:${(getControl(item).path.length - 1) * 30}px`"></div>
+          <template v-if="guides">
+            <span
+              class="vx-tree-guide-space"
+              :style="`width:${(getControl(item).lasts.length - guideFrom()) * guideStep}px`"
+            ></span>
+            <span v-for="(g, i) in guideLines(item)" :key="i" :class="g.class" :style="g.style"></span>
+          </template>
+          <div v-else :style="`width:${(getControl(item).path.length - 1) * 30}px`"></div>
         </slot>
         <slot
           v-if="expandable || getControl(item).children.length"
@@ -27,6 +41,7 @@
             ></v-btn>
           </div>
         </slot>
+        <div v-else-if="guides" class="vx-tree-guide-leaf"></div>
         <div style="display: flex; flex-direction: row; align-items: center">
           <slot name="item.$control.title" :item="item" :control="getControl(item)">
             {{ props.title(item) }}
@@ -99,7 +114,7 @@
   </v-data-table-virtual>
 </template>
 <script setup lang="ts">
-import {isReactive, nextTick, onMounted, reactive, ref} from 'vue'
+import {isReactive, nextTick, onMounted, reactive, ref, watch} from 'vue'
 
 const props = defineProps({
   settingsTitle: {
@@ -145,6 +160,44 @@ const props = defineProps({
   expandable: {
     type: Boolean,
     default: false
+  },
+  // search: the rows whose searchKeys hold it (any case), with their
+  // ancestors, opened; empty, the tree as it is
+  search: {
+    type: String,
+    default: ''
+  },
+  searchKeys: {
+    type: Array<string>,
+    default: () => ['title']
+  },
+  // openAll: every row opened (true) or closed (false) as it changes; null,
+  // each as it is
+  openAll: {
+    type: Boolean,
+    default: null
+  },
+  // controlTitle: the header of the column of the tree (the titles)
+  controlTitle: {
+    type: String,
+    default: ''
+  },
+  // settings: the column of the settings (which columns are shown)
+  settings: {
+    type: Boolean,
+    default: true
+  },
+  // guides: who is whose child marked by lines, as the command tree marks
+  // it (├── └── │), the whole height of the rows
+  guides: {
+    type: Boolean,
+    default: false
+  },
+  // rootGuides: the rows at the root marked too, as children of a root of no
+  // name (├── └── before them); off, the guides begin at their children
+  rootGuides: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -152,6 +205,11 @@ const rows = ref<any[]>([])
 
 export interface Control {
   path: number[]
+  // lasts: of each level of the path, the row there the last of its
+  // siblings shown (the guides: └── and no │ under it)
+  lasts: boolean[]
+  // shownChildren: how many of its children are shown under it
+  shownChildren: number
   expanded: boolean
   item: any
   children: any[]
@@ -166,6 +224,8 @@ const controllers = new Map<any, Control>(),
 function initItem(item: any) {
   const c: Control = {
     path: [],
+    lasts: [],
+    shownChildren: 0,
     expanded: props.expanded,
     item: item,
     children: reactive(((props.children(item) || []) as any[]).map(reactive)),
@@ -184,7 +244,7 @@ const allHeaders = ref<any[]>([{}]),
 
 const updateHeaders = (value: any[]) => {
   const h: any[] = [
-    reactive({ title: '', key: '$control', sortable: false, noSelectable: true, visible: true })
+    reactive({ title: props.controlTitle, key: '$control', sortable: false, noSelectable: true, visible: true })
   ]
   value.forEach((item: any) => {
     if (item.visible === undefined) {
@@ -196,10 +256,10 @@ const updateHeaders = (value: any[]) => {
     reactive({
       title: '',
       key: '$columns-control',
+      visible: props.settings,
       sortable: false,
       width: '0%',
       noSelectable: true,
-      visible: true,
       headerProps: {
         class: 'noprint'
       },
@@ -246,24 +306,41 @@ const init = () => {
   }
 }
 
+// matches says the item holds the search q in one of its searchKeys
+const matches = (item: any, q: string): boolean =>
+  (props.searchKeys as string[]).some((k) =>
+    String(item?.[k] ?? '')
+      .toLowerCase()
+      .includes(q)
+  )
+
 const updateRows = () => {
+  // a search shows the rows that hold it and their ancestors, opened
+  const q = (props.search || '').trim().toLowerCase(),
+    shown = (item: any): boolean =>
+      !q || matches(item, q) || getControl(item).children.some((child: any) => shown(child))
   const items: any[] = [],
-    doItem = (parent: any, item: any, path: any[]) => {
+    doItem = (parent: any, item: any, path: any[], lasts: boolean[]) => {
       const c = getControl(item)
       c.path = path
+      c.lasts = lasts
       c.parent = parent
 
-      if (c.expanded) {
-        c.children.forEach((child: any, i: any) => {
+      c.shownChildren = 0
+      if (c.expanded || q) {
+        const children = c.children.filter((child: any) => shown(child))
+        c.shownChildren = children.length
+        children.forEach((child: any, i: any) => {
           items[items.length] = child
-          doItem(item, child, [...path, i])
+          doItem(item, child, [...path, i], [...lasts, i === children.length - 1])
         })
       }
     }
 
-  initialItems.forEach((item, i) => {
+  const roots = initialItems.filter((item: any) => shown(item))
+  roots.forEach((item, i) => {
     items.push(item)
-    doItem(null, item, [i])
+    doItem(null, item, [i], [i === roots.length - 1])
   })
 
   rows.value = items
@@ -381,6 +458,47 @@ const tooggleExpansion = (item: any) => {
   updateRows()
 }
 
+// guideStep is the width of a level of the guides; guideStart, where the
+// first begins in the cell (its padding)
+const guideStep = 20,
+  guideStart = 16
+
+// guideLines are the lines before a row, as the command tree draws them, the
+// whole height of its cell: of each level above it, │ while that one has
+// siblings after it; of its own, ├── (└── the last of its siblings) — a
+// row at the root, only with rootGuides —; and, its children shown under it,
+// │ from it down to them
+// guideFrom is the first level the guides mark: the root's (rootGuides), else
+// its children's
+const guideFrom = () => (props.rootGuides ? 0 : 1)
+
+const guideLines = (item: any): { class: string; style: string }[] => {
+  const c = getControl(item),
+    lasts = c?.lasts || [],
+    from = guideFrom(),
+    out: { class: string; style: string }[] = [],
+    x = (level: number) => `left:${guideStart + (level - from) * guideStep + guideStep / 2}px`
+  for (let i = from; i < lasts.length - 1; i++) {
+    if (!lasts[i]) {
+      out.push({ class: 'vx-tree-guide-v', style: x(i) })
+    }
+  }
+  const own = lasts.length - 1
+  if (own >= from) {
+    out.push({ class: 'vx-tree-guide-v' + (lasts[own] ? ' vx-tree-guide-v--top' : ''), style: x(own) })
+    // to its button, or — a leaf — almost to its title
+    const leaf = !(props.expandable || c.children.length)
+    out.push({
+      class: 'vx-tree-guide-h',
+      style: `${x(own)};width:${leaf ? guideStep / 2 + 24 : guideStep / 2}px`
+    })
+  }
+  if (c?.shownChildren) {
+    out.push({ class: 'vx-tree-guide-v vx-tree-guide-v--bottom', style: x(own + 1) })
+  }
+  return out
+}
+
 const applySettings = () => {
   selectionHeadersChange()
   emit('applySettings')
@@ -397,4 +515,72 @@ onMounted(() => {
     init()
   })
 })
+
+watch(
+  () => props.search,
+  () => updateRows()
+)
+
+// every row opened or closed (openAll), as it changes
+watch(
+  () => props.openAll,
+  (open) => {
+    if (open === null || open === undefined) {
+      return
+    }
+    controllers.forEach((c) => {
+      c.expanded = open
+    })
+    updateRows()
+  }
+)
 </script>
+
+<style>
+.vx-tree-data-table--guides tbody td {
+  position: relative;
+}
+
+/* a cell of lines — a long title, a value — apart from the row's borders */
+.vx-tree-data-table tbody td {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+.vx-tree-guide-space {
+  flex-shrink: 0;
+}
+
+.vx-tree-guide-v,
+.vx-tree-guide-h {
+  position: absolute;
+  pointer-events: none;
+  border-color: rgba(var(--v-theme-on-surface), 0.3);
+  border-style: solid;
+  border-width: 0;
+}
+
+.vx-tree-guide-v {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
+}
+
+.vx-tree-guide-v--top {
+  bottom: 50%;
+}
+
+.vx-tree-guide-v--bottom {
+  top: 50%;
+}
+
+.vx-tree-guide-h {
+  top: 50%;
+  border-top-width: 1px;
+}
+
+.vx-tree-data-table--guides .vx-tree-guide-leaf {
+  width: 28px;
+  flex-shrink: 0;
+}
+</style>

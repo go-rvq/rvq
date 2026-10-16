@@ -3,17 +3,26 @@
 package schemaform
 
 import (
+	"context"
 	"fmt"
+	"github.com/gad-lang/gad"
+	"log"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/microcosm-cc/bluemonday"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	xnumber "golang.org/x/text/number"
 )
 
 // ListMaxItems is how many items of a list the compact view (a listing cell)
@@ -46,6 +55,56 @@ func (b *Builder) DisplayFunc(name string) (ComponentFunc, bool) {
 // the other, a table layout as a table. Nothing in it is editable.
 func (b *Builder) DetailComponent(ctx *web.EventContext, schema *Schema, value any) h.HTMLComponent {
 	return b.showRoot(ctx, schema, value, false)
+}
+
+// FieldDisplay shows the fields of value one at a time, by their paths —
+// their names joined by "." (a field of a record inside the record:
+// "address.city") —, each as the detail shows it: by the display of its
+// type (Display, read-only). show is nil of a path of no field; portal is
+// where what they open goes, to be drawn once beside them.
+func (b *Builder) FieldDisplay(ctx *web.EventContext, schema *Schema, value any) (show func(path string) h.HTMLComponent, portal h.HTMLComponent) {
+	if schema == nil {
+		return func(string) h.HTMLComponent { return nil }, nil
+	}
+	root := &Context{
+		Field:   &Field{Type: FormType, Schema: schema},
+		Data:    value,
+		Event:   ctx,
+		Builder: b,
+		Portal:  NewPortalName(),
+	}
+	show = func(path string) h.HTMLComponent {
+		c, s, data := root, schema, value
+		names := strings.Split(path, ".")
+		for i, name := range names {
+			var f *Field
+			for _, x := range s.Fields {
+				if x.Name == name {
+					f = x
+					break
+				}
+			}
+			if f == nil {
+				return nil
+			}
+			record := data
+			data = recordValue(data, name)
+			c = b.fieldContext(c, f, data)
+			if i == len(names)-1 {
+				// its warnings under it (the record's, of it)
+				if ws := warningsComponent(fieldWarnings(record, name)); ws != nil {
+					return h.Div(b.showField(c), ws)
+				}
+				return b.showField(c)
+			}
+			if f.Schema == nil || f.Schema.Slice {
+				return nil
+			}
+			s = f.Schema
+		}
+		return nil
+	}
+	return show, web.Portal().Name(root.Portal)
 }
 
 // ListComponent is the same value kept to a LISTING CELL: a record on one line,
@@ -173,10 +232,11 @@ func (b *Builder) showChoice(schema *Schema, c *Context) h.HTMLComponent {
 // fieldContext is the context a field of a record is shown with.
 func (b *Builder) fieldContext(c *Context, f *Field, data any) *Context {
 	return &Context{
-		Field: f,
-		Data:  data,
-		Path:  join(c.Path, f.Name),
-		Event: c.Event, Portal: c.Portal,
+		Field:  f,
+		Data:   data,
+		record: c.Data,
+		Path:   join(c.Path, f.Name),
+		Event:  c.Event, Portal: c.Portal,
 		Builder: b,
 		Compact: c.Compact,
 	}
@@ -192,13 +252,72 @@ func (b *Builder) showRecord(schema *Schema, c *Context, data any) h.HTMLCompone
 	if c.Compact {
 		return b.showRecordCompact(schema, c, data)
 	}
-	return h.Div(drawRows(schema.Fields, func(f *Field) h.HTMLComponent {
+	return h.Div(drawRows(shownFields(schema.Fields), func(f *Field) h.HTMLComponent {
 		fc := b.fieldContext(c, f, recordValue(data, f.Name))
 		return h.Div(
-			h.Div(h.Text(displayLabel(fc))).Class("text-caption text-medium-emphasis"),
+			// a label as the detail's (presets): .v-label
+			h.Div(h.Text(displayLabel(fc))).Class("v-label theme--light text-caption"),
 			h.Div(b.showField(fc)).Class("pt-1"),
+			warningsComponent(fieldWarnings(data, f.Name)),
 		).Class("mb-3")
 	})...)
+}
+
+// fieldWarnings are the warnings of the field name of the record data: its
+// WarningsField's — what was kept although it could not be checked —, the
+// messages of the ones of that field.
+func fieldWarnings(data any, name string) (out []string) {
+	m, _ := data.(map[string]any)
+	ws, _ := m[WarningsField].([]any)
+	for _, w := range ws {
+		wm, _ := w.(map[string]any)
+		if n, _ := wm["fieldName"].(string); n != name {
+			continue
+		}
+		if msg, _ := wm["message"].(string); msg != "" {
+			out = append(out, msg)
+		}
+	}
+	return
+}
+
+// WarningClass marks a warning of a field shown read-only (fieldWarnings):
+// under an element of HideWarningsClass, hidden (the admin's style).
+const (
+	WarningClass      = "schemaform-warning"
+	HideWarningsClass = "schemaform-hide-warnings"
+)
+
+// WarningsComponent are the warnings msgs of a field, as a read-only view
+// shows them under its value (WarningClass); nil for none.
+func WarningsComponent(msgs []string) h.HTMLComponent { return warningsComponent(msgs) }
+
+// warningsComponent are the warnings of a field, under its value; nil for
+// none.
+func warningsComponent(msgs []string) h.HTMLComponent {
+	if len(msgs) == 0 {
+		return nil
+	}
+	var out []h.HTMLComponent
+	for _, m := range msgs {
+		out = append(out, h.Div(
+			v.VIcon("mdi-alert-outline").Size(v.SizeSmall).Color("warning"),
+			h.Span(m),
+		).Class(WarningClass+" d-flex align-center ga-1 text-caption text-warning mt-1").Attr("data-schemaform-warning", true))
+	}
+	return h.Components(out...)
+}
+
+// shownFields are the fields a record shows: all but its warnings
+// (WarningsField) — what was kept unchecked, told apart by who shows it.
+func shownFields(fields []*Field) []*Field {
+	out := make([]*Field, 0, len(fields))
+	for _, f := range fields {
+		if f.Name != WarningsField {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // showRecordCompact is a record in a listing cell: "label: value" of each
@@ -210,7 +329,7 @@ func (b *Builder) showRecordCompact(schema *Schema, c *Context, data any) h.HTML
 		fc    *Context
 	}
 	var pairs []pair
-	for _, f := range schema.Fields {
+	for _, f := range shownFields(schema.Fields) {
 		fc := b.fieldContext(c, f, recordValue(data, f.Name))
 		if isEmpty(fc.Data) {
 			continue
@@ -426,7 +545,214 @@ func TextDisplayFunc(c *Context) h.HTMLComponent {
 	if isEmpty(c.Data) {
 		return emptyDisplay(c)
 	}
-	return h.Text(displayText(c.Data))
+	return h.Text(c.Prefix() + displayText(c.Data) + c.Suffix())
+}
+
+// NumberDisplayFunc shows a number — "int", "uint", "float", "decimal" —
+// as the language of the request writes it (pt-BR: 1.234,50), with its
+// decimal places (`[places=N]`, else its step's, else its own) and its
+// prefix and suffix: `[prefix="R$ ", places=2]` 10 is "R$ 10,00".
+func NumberDisplayFunc(c *Context) h.HTMLComponent {
+	if isEmpty(c.Data) {
+		return emptyDisplay(c)
+	}
+	return h.Text(displayTextOf(eventContext(c.Event), c.Field, c.Data, c.record))
+}
+
+// eventContext is the context of the request of ev; Background without one.
+func eventContext(ev *web.EventContext) context.Context {
+	if ev != nil && ev.R != nil {
+		return ev.R.Context()
+	}
+	return context.Background()
+}
+
+// DisplayText is the value v of the field f as the read views show it, as
+// text: a number (NumberDisplayFunc), a date, a time (DateTimeDisplayFunc)
+// as the language of ctx writes them, and anything else as it is — each with
+// its prefix and suffix; "" for none.
+//
+// A float or a decimal of `[roundDisplay=…]` is rounded by it first, this an
+// empty record (displayTextOf: the record when it is known).
+func DisplayText(ctx context.Context, f *Field, v any) string {
+	return displayTextOf(ctx, f, v, nil)
+}
+
+// displayTextOf is DisplayText, the field of the record record (this of its
+// `[roundDisplay=…]`).
+func displayTextOf(ctx context.Context, f *Field, v any, record any) string {
+	if isEmpty(v) {
+		return ""
+	}
+	if f != nil && f.RoundDisplayFunc != nil {
+		v = roundShown(ctx, f, v, record)
+	}
+	var prefix, suffix, typ string
+	if f != nil {
+		prefix, _ = f.Meta[MetaPrefix].(string)
+		suffix, _ = f.Meta[MetaSuffix].(string)
+		typ = f.Type
+	}
+	text := displayText(v)
+	switch typ {
+	case "int", "uint", "float", "decimal":
+		if p := fixedPlaces(f); p > 0 {
+			// fixed point: the integer kept ÷ 10^places
+			if n, err := strconv.ParseFloat(strings.TrimSpace(displayText(v)), 64); err == nil {
+				v = n / math.Pow10(p)
+			}
+		}
+		text = FormatNumber(contextLanguage(ctx), v, fieldDecimals(f))
+	case "date", "time", "calendarDate", "calendarTime":
+		if t, hasDate, hasTime, ok := parseDateTime(v); ok {
+			text = FormatDateTime(ctx, t, hasDate, hasTime)
+		}
+	}
+	return prefix + text + suffix
+}
+
+// roundShown is v rounded by the `[roundDisplay=…]` of f (MetaRoundDisplay),
+// called with record as this (its values, as given), no parents, v and
+// places — its `[places=N]`, 0 without —; v as it is when it cannot be (no
+// VM, not a number, the function failed: logged).
+func roundShown(ctx context.Context, f *Field, v any, record any) any {
+	if f.roundVM == nil {
+		return v
+	}
+	n, err := strconv.ParseFloat(strings.TrimSpace(displayText(v)), 64)
+	if err != nil {
+		return v
+	}
+	this := gad.Object(gad.Dict{})
+	if m, ok := record.(map[string]any); ok {
+		if o, err := gad.ToObject(m); err == nil {
+			this = o
+		}
+	}
+	places := fieldPlaces(f)
+	if places < 0 {
+		places = 0
+	}
+	named := gad.NewNamedArgs(gad.KeyValueArray{&gad.KeyValue{K: gad.Str("places"), V: gad.Int(places)}})
+	ret, err := gad.NewInvoker(f.roundVM, f.RoundDisplayFunc).WithContext(ctx).
+		Invoke(gad.Args{gad.Array{this, gad.Array{}, gad.Float(n)}}, named)
+	if err != nil {
+		log.Printf("ERROR: form: [%s] of %s: %v", MetaRoundDisplay, f.Name, err)
+		return v
+	}
+	if ret == nil || ret == gad.Nil {
+		return v
+	}
+	return ret.ToString()
+}
+
+// FormatDateTime writes t as the language of ctx does (the short forms of
+// i18n's formatters): its date, its time of day, or both.
+func FormatDateTime(ctx context.Context, t time.Time, hasDate, hasTime bool) string {
+	m := i18n.GetMessages(ctx)
+	f := m.DateTimeFormatter()
+	switch {
+	case hasDate && !hasTime:
+		f = m.DateFormatter()
+	case hasTime && !hasDate:
+		f = m.TimeFormatter()
+	}
+	return f.Short()(ctx)(t)
+}
+
+// DateTimeDisplayFunc shows a date, a time or both — "date", "time",
+// "calendarDate", "calendarTime" — as the language of the request writes it
+// (the short forms of i18n's DateFormatter, TimeFormatter, DateTimeFormatter:
+// pt-BR 10/03/2026, 08:05, 10/03/2026 08:05), with its prefix and suffix;
+// what is not one of them, as text.
+func DateTimeDisplayFunc(c *Context) h.HTMLComponent {
+	if isEmpty(c.Data) {
+		return emptyDisplay(c)
+	}
+	return h.Text(DisplayText(eventContext(c.Event), c.Field, c.Data))
+}
+
+// dateTimeLayouts are the forms a date, a time, or both are kept in, and
+// what each has.
+var dateTimeLayouts = []struct {
+	layout      string
+	date, clock bool
+}{
+	{time.RFC3339Nano, true, true},
+	{"2006-01-02T15:04:05", true, true},
+	{"2006-01-02 15:04:05", true, true},
+	{"2006-01-02T15:04", true, true},
+	{"2006-01-02 15:04", true, true},
+	{"2006-01-02", true, false},
+	{"15:04:05", false, true},
+	{"15:04", false, true},
+}
+
+// parseDateTime reads v — a time.Time, or its text in one of
+// dateTimeLayouts —: the time, and whether it has a date and a time of day.
+func parseDateTime(v any) (t time.Time, hasDate, hasTime, ok bool) {
+	if x, is := v.(time.Time); is {
+		return x, true, true, true
+	}
+	s := strings.TrimSpace(fmt.Sprint(v))
+	for _, l := range dateTimeLayouts {
+		if t, err := time.Parse(l.layout, s); err == nil {
+			return t, l.date, l.clock, true
+		}
+	}
+	return
+}
+
+// fieldDecimals are the decimal places a number of f is shown with: an int's
+// none — of `[places=N]`, fixed point, N —; a float's, a decimal's
+// `[places=N]`, else its step's (0.01: 2); -1 for none said (the value's
+// own).
+func fieldDecimals(f *Field) int {
+	if f == nil {
+		return -1
+	}
+	if f.Type == "int" || f.Type == "uint" {
+		// fixed point (`[places=N]`): its places; else none
+		return fixedPlaces(f)
+	}
+	if n := fieldPlaces(f); n >= 0 {
+		return n
+	}
+	if _, frac, ok := strings.Cut(strings.TrimSpace(f.Step), "."); ok {
+		return len(strings.TrimRight(frac, "0"))
+	}
+	return -1
+}
+
+// contextLanguage is the language of ctx (i18n), English when it has none.
+func contextLanguage(ctx context.Context) language.Tag {
+	if d := i18n.DynaFromContext(ctx); d != nil {
+		if t, err := language.Parse(d.GetLanguage()); err == nil {
+			return t
+		}
+	}
+	return language.English
+}
+
+// FormatNumber writes the number v — a number, or its text ("10.5") — as the
+// language lang writes it, with decimals places (-1: as many as it has);
+// what is not a number, as it is.
+func FormatNumber(lang language.Tag, v any, decimals int) string {
+	s := strings.TrimSpace(fmt.Sprint(v))
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return s
+	}
+	if decimals < 0 {
+		decimals = 0
+		if _, frac, ok := strings.Cut(strconv.FormatFloat(f, 'f', -1, 64), "."); ok {
+			decimals = len(frac)
+		}
+	}
+	// half away from zero (x/text rounds half to even: 0.5 would be 0)
+	shift := math.Pow10(decimals)
+	f = math.Round(f*shift) / shift
+	return message.NewPrinter(lang).Sprint(xnumber.Decimal(f, xnumber.Scale(decimals)))
 }
 
 // LongTextDisplayFunc is "text": prose, keeping its line breaks — on one line
@@ -546,15 +872,15 @@ func EnumDisplayFunc(c *Context) h.HTMLComponent {
 func defaultDisplays() map[string]ComponentFunc {
 	return map[string]ComponentFunc{
 		DefaultType:    TextDisplayFunc,
-		"int":          TextDisplayFunc,
-		"uint":         TextDisplayFunc,
-		"float":        TextDisplayFunc,
-		"decimal":      TextDisplayFunc,
+		"int":          NumberDisplayFunc,
+		"uint":         NumberDisplayFunc,
+		"float":        NumberDisplayFunc,
+		"decimal":      NumberDisplayFunc,
 		"duration":     TextDisplayFunc,
-		"time":         TextDisplayFunc,
-		"date":         TextDisplayFunc,
-		"calendarDate": TextDisplayFunc,
-		"calendarTime": TextDisplayFunc,
+		"time":         DateTimeDisplayFunc,
+		"date":         DateTimeDisplayFunc,
+		"calendarDate": DateTimeDisplayFunc,
+		"calendarTime": DateTimeDisplayFunc,
 		RangeType:      RangeDisplayFunc,
 		"text":         LongTextDisplayFunc,
 		"html":         HTMLDisplayFunc,

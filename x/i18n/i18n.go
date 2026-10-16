@@ -306,6 +306,36 @@ func (b *Builder) EnsureLanguage(in http.Handler) (out http.Handler) {
 	})
 }
 
+// LanguageContext is ctx with the messages of the language lang — the
+// nearest one the builder supports — and lang as its language, as a request of
+// it has them (EnsureLanguage): what writes outside of a request in a
+// language (a mail, a page of the site).
+func (b *Builder) LanguageContext(ctx context.Context, lang string) context.Context {
+	st := b.state.Load()
+	if st == nil || len(st.supportLanguages) == 0 {
+		return ctx
+	}
+	tag := st.supportLanguages[0]
+	if t, err := language.Parse(lang); err == nil {
+		_, i, _ := st.matcher.Match(t)
+		tag = st.supportLanguages[i]
+	}
+	moduleMsgs := st.effective[tag]
+	if moduleMsgs == nil {
+		moduleMsgs = st.effective[st.supportLanguages[0]]
+	}
+	if moduleMsgs == nil {
+		return ctx
+	}
+	ctx = context.WithValue(ctx, moduleMessagesKey, moduleMsgs)
+	// the language asked: its numbers' (pt-BR, not the pt the messages are
+	// of)
+	if lang == "" {
+		lang = tag.String()
+	}
+	return context.WithValue(ctx, dynaBuilderKey, DynaNew().Language(lang))
+}
+
 func (b *Builder) GetCurrentLangFromCookie(r *http.Request) (lang string) {
 	langCookie, _ := r.Cookie(b.cookieName)
 	if langCookie != nil {

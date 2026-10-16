@@ -45,7 +45,9 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fakeFetch)
   document.body.innerHTML = ''
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('the portals of a site', () => {
   it('load when in view: a progress, then the content with its data', async () => {

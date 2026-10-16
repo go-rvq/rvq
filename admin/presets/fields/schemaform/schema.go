@@ -3,6 +3,8 @@ package schemaform
 import (
 	"fmt"
 	"github.com/gad-lang/gad"
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -257,6 +259,17 @@ type Field struct {
 	// its value changes, in the page — this's fields set, of its record
 	// (MetaChanged).
 	ChangedFunc gad.Object
+	// RoundFunc is its `[round=(this, parents, value; places=0) => …]`: a
+	// float's, a decimal's own rounding of the value read — places its
+	// `[places=N]` —, what it answers kept (MetaRound).
+	RoundFunc gad.Object
+	// RoundDisplayFunc is its `[roundDisplay=(this, parents, value;
+	// places=0) => …]`: its rounding as it is shown, the value kept as it is
+	// (MetaRoundDisplay).
+	RoundDisplayFunc gad.Object
+	// roundVM is the VM the schema was read in: what RoundDisplayFunc is
+	// called by (a read view has no Decoder).
+	roundVM *gad.VM
 }
 
 // Clone is a copy of the schema that may be changed — a schema Parse returns
@@ -422,6 +435,102 @@ func (s *Schema) record(v any) map[string]any {
 				m[f.Name] = f.Default
 			}
 		}
+		// an int of places (fixed point): as its form holds it, shown
+		if p := fixedPlaces(f); p > 0 {
+			if v, ok := m[f.Name]; ok && v != nil {
+				m[f.Name] = FixedShown(v, p)
+			}
+		}
 	}
 	return m
 }
+
+// fieldPlaces are the decimal places of f (`[places=N]`); -1 for none.
+func fieldPlaces(f *Field) int {
+	if d, ok := f.Meta[MetaPlaces]; ok {
+		if n, err := strconv.Atoi(fmt.Sprint(d)); err == nil && n >= 0 {
+			return n
+		}
+	}
+	return -1
+}
+
+// setRoundVM gives the fields of s of their own rounding as shown
+// (MetaRoundDisplay) — and of its records — the VM it was read in.
+func (s *Schema) setRoundVM(vm *gad.VM) {
+	if s == nil {
+		return
+	}
+	for _, f := range s.Fields {
+		if f.RoundDisplayFunc != nil {
+			f.roundVM = vm
+		}
+		if f.Schema != nil && f.Schema != s {
+			f.Schema.setRoundVM(vm)
+		}
+		if f.Schema != nil && f.Schema.Item != nil && f.Schema.Item.Schema != s {
+			f.Schema.Item.Schema.setRoundVM(vm)
+		}
+	}
+}
+
+// fixedPlaces are the places of an int or a uint of `[places=N]` (fixed
+// point); 0 for none, and of any other type.
+func fixedPlaces(f *Field) int {
+	if f == nil || (f.Type != "int" && f.Type != "uint") {
+		return 0
+	}
+	if p := fieldPlaces(f); p > 0 {
+		return p
+	}
+	return 0
+}
+
+// pow10 is 10^p, as JS writes it.
+func pow10(p int) string { return strconv.FormatFloat(math.Pow10(p), 'f', -1, 64) }
+
+// scaleDown is the limit l (of the integer kept) ÷ 10^p — what the input
+// shows —; "" for none.
+func scaleDown(l string, p int) string {
+	if l == "" {
+		return ""
+	}
+	n, err := strconv.ParseFloat(l, 64)
+	if err != nil {
+		return l
+	}
+	return strconv.FormatFloat(n/math.Pow10(p), 'f', -1, 64)
+}
+
+// FixedShown is the integer n of a field of places p (fixed point) as its
+// form holds it: n ÷ 10^p with its p places ("10.50"); what is no integer, as
+// it is.
+func FixedShown(n any, p int) any {
+	i, err := strconv.ParseInt(strings.TrimSpace(fmt.Sprint(n)), 10, 64)
+	if err != nil {
+		return n
+	}
+	return strconv.FormatFloat(float64(i)/math.Pow10(p), 'f', p, 64)
+}
+
+// FixedValue is the integer of the value s — as a form holds it, "10.50" or
+// "10,50" — of a field of places p (fixed point): s × 10^p; ok false for no
+// number, or one of more places.
+func FixedValue(s string, p int) (n int64, ok bool) {
+	s = strings.ReplaceAll(strings.TrimSpace(s), ",", ".")
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0, false
+	}
+	if _, frac, has := strings.Cut(s, "."); has && len(strings.TrimRight(frac, "0")) > p {
+		return 0, false
+	}
+	return int64(math.Round(f * math.Pow10(p))), true
+}
+
+// FixedPlaces are the places of an int or a uint of `[places=N]` (fixed
+// point: the integer is the value × 10^N); 0 for none, and of any other type.
+func FixedPlaces(f *Field) int { return fixedPlaces(f) }
+
+// FieldPlaces are the decimal places of f (`[places=N]`); -1 for none.
+func FieldPlaces(f *Field) int { return fieldPlaces(f) }

@@ -173,8 +173,9 @@ func (d *Decoder) DecodeFields(fields []*Field, data map[string]any) (Record, []
 func (d *Decoder) decode(fields []*Field, validations []gad.Object, data map[string]any) (Record, []Issue) {
 	d.prepare()
 	defer d.done()
-	// the fields drawn by what is answered: by the record typed
-	if !d.plain && d.Schema.dynamic() {
+	// the fields drawn by what is answered, and of their own rounding: by
+	// the record typed
+	if !d.plain && d.Schema.scoped() {
 		d.scope = d.rootScope(data)
 	}
 	rec := d.record(fields, data, "")
@@ -517,14 +518,31 @@ func (d *Decoder) value(f *Field, raw any, path string) any {
 	}
 	var v any = s
 	switch f.Type {
-	case "int":
-		n, err := strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			return fail(CodeInvalid)
+	case "int", "uint":
+		if p := fixedPlaces(f); p > 0 {
+			// fixed point: the value as the form holds it ("10.50"), read
+			// the integer × 10^places; its limits, of the integer
+			n, ok := FixedValue(s, p)
+			if !ok || (f.Type == "uint" && n < 0) {
+				return fail(CodeInvalid)
+			}
+			s = strconv.FormatInt(n, 10)
+			if f.Type == "uint" {
+				v = uint64(n)
+			} else {
+				v = n
+			}
+			break
 		}
-		v = n
-	case "uint":
-		n, err := strconv.ParseUint(s, 10, 64)
+		if f.Type == "uint" {
+			n, err := strconv.ParseUint(s, 10, 64)
+			if err != nil {
+				return fail(CodeInvalid)
+			}
+			v = n
+			break
+		}
+		n, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
 			return fail(CodeInvalid)
 		}
@@ -533,6 +551,14 @@ func (d *Decoder) value(f *Field, raw any, path string) any {
 		n, err := strconv.ParseFloat(s, 64)
 		if err != nil || math.IsNaN(n) || math.IsInf(n, 0) {
 			return fail(CodeInvalid)
+		}
+		if f.RoundFunc != nil {
+			// its own rounding (MetaRound)
+			if n, err = d.round(f, n); err != nil {
+				log.Printf("ERROR: form: [%s] of %s: %v", MetaRound, orRoot(path), err)
+				return fail(CodeInvalid)
+			}
+			s = strconv.FormatFloat(n, 'f', -1, 64)
 		}
 		v = n
 	case "date", "calendarDate":
@@ -697,7 +723,40 @@ func (d *Decoder) recordValidations(fns []gad.Object, path string, rec Record) {
 // call calls fn with args — as many as it takes: `func(value)` is called
 // with the value alone; of a function of several methods, the one of the
 // args (else of the value alone). Without a VM, nothing is called.
+// round is n rounded by the `[round=…]` of f (MetaRound), called with this
+// and parents of the record being read, n, and places — its `[places=N]`, 0
+// without —: what it answers, a number or its text.
+func (d *Decoder) round(f *Field, n float64) (float64, error) {
+	sc := d.scope
+	if sc == nil {
+		sc = &scope{}
+	}
+	places := fieldPlaces(f)
+	if places < 0 {
+		places = 0
+	}
+	named := gad.NewNamedArgs(gad.KeyValueArray{&gad.KeyValue{K: gad.Str("places"), V: gad.Int(places)}})
+	ret, err := d.callWith(f.RoundFunc, named, sc.This(d), sc.Parents(d), gad.Float(n))
+	if err != nil {
+		return n, err
+	}
+	if ret == nil || ret == gad.Nil {
+		// none: as it was
+		return n, nil
+	}
+	r, err := strconv.ParseFloat(strings.TrimSpace(ret.ToString()), 64)
+	if err != nil || math.IsNaN(r) || math.IsInf(r, 0) {
+		return n, fmt.Errorf("answered %s, not a number", ret.ToString())
+	}
+	return r, nil
+}
+
 func (d *Decoder) call(fn gad.Object, args ...gad.Object) (gad.Object, error) {
+	return d.callWith(fn, nil, args...)
+}
+
+// callWith is call, with the named arguments named.
+func (d *Decoder) callWith(fn gad.Object, named *gad.NamedArgs, args ...gad.Object) (gad.Object, error) {
 	if d.VM == nil {
 		return gad.Nil, nil
 	}
@@ -726,7 +785,7 @@ func (d *Decoder) call(fn gad.Object, args ...gad.Object) (gad.Object, error) {
 			a = a[:len(items)]
 		}
 	}
-	return gad.NewInvoker(d.VM, fn).WithContext(d.Ctx).Invoke(gad.Args{a}, nil)
+	return gad.NewInvoker(d.VM, fn).WithContext(d.Ctx).Invoke(gad.Args{a}, named)
 }
 
 // result reads what a validation answered: nil or true, nothing wrong;
