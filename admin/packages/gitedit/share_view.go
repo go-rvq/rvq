@@ -38,6 +38,7 @@ func (b *Builder) whoseDraft(ctx *web.EventContext, m *Messages, owner string, o
 	return v.VAlert(
 		h.Strong(fmt.Sprintf(m.DraftOf, b.user(r, owner).Label())),
 		h.Text(" — "+how),
+		b.partsNav(ctx, m, owner),
 	).Type("info").Variant(v.VariantTonal).Density(v.DensityCompact).Class("mb-4").
 		Attr("data-draft-owner", owner)
 }

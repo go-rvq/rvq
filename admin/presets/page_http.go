@@ -38,8 +38,11 @@ type HttpPageBuilder struct {
 	permActionInfo map[string]permActionInfo
 	// verified says the handler checks the verifier itself
 	// (HandlerFromPageFunc); a plain Handler is wrapped in the check on Build
-	verified    bool
-	notInMenu   bool
+	verified  bool
+	notInMenu bool
+	// menuVisible, when set, says whether the page is in the menu of the
+	// request (a sub-page's: a part the user reaches)
+	menuVisible func(r *http.Request) bool
 	menuIcon    string
 	postBuild   []func(ph *PageHandler)
 	pageHandler *PageHandler
@@ -83,8 +86,9 @@ func (b *HttpPageBuilder) GetHandler() http.Handler {
 // resolve the name against, so the name waits until registration.
 // Sub is a page under b, at b's path and sub ("/u/{user}", a pattern of
 // http.ServeMux): in b's group of the menu wherever the menu puts b — its
-// groups are in its URL —, out of the menu, with b's title when it has none
-// of its own; no permission of its own: its handler asks b's (Parent).
+// groups are in its URL —, out of the menu (InMenu(true): a child of b's
+// item, in the order the pages were registered), with b's title when it has
+// none of its own; no permission of its own: its handler asks b's (Parent).
 func (b *HttpPageBuilder) Sub(sub string) *HttpPageBuilder {
 	p := HttpPage(path.Join(b.path, sub))
 	p.parent = b
@@ -270,6 +274,13 @@ func (b *HttpPageBuilder) InMenu(v bool) (r *HttpPageBuilder) {
 
 func (b *HttpPageBuilder) IsInMenu() bool {
 	return !b.notInMenu
+}
+
+// MenuVisible says, per request, whether the page is in the menu (a
+// sub-page of a part the user reaches): always when not set.
+func (b *HttpPageBuilder) MenuVisible(f func(r *http.Request) bool) *HttpPageBuilder {
+	b.menuVisible = f
+	return b
 }
 
 func (b *HttpPageBuilder) MenuIcon(v string) (r *HttpPageBuilder) {

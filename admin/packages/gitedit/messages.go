@@ -38,6 +38,8 @@ type Messages struct {
 	BackToAdmin       string `i18n:"hint='Button of the header of the editor (opened in a tab of its own) that goes back to the admin.'"`
 	SignOut           string `i18n:"hint='Button of the header of the editor that signs the user out.'"`
 	ThemeLight        string `i18n:"hint='Title of the button that turns the editor light.'"`
+	IdeExpand         string `i18n:"hint='Title of the button of the header of the page that spreads the editor of the files over the whole window.'"`
+	IdeCollapse       string `i18n:"hint='Title of the button of the header of the editor that brings it back into the page.'"`
 	ThemeDark         string `i18n:"hint='Title of the button that turns the editor dark.'"`
 
 	CommitAction         string `i18n:"label='Commit', hint='Action that records the changes of the draft, with a message.'"`
@@ -170,6 +172,32 @@ type Messages struct {
 	GitKeyHint               string `i18n:"hint='Explains the access key for git.'"`
 	GitKeyHelp               string `i18n:"hint='Link to the documentation of git with an access key.'"`
 	GitPermsAll              string `i18n:"hint='Label of all the permissions a repository asks, as one (a policy).'"`
+
+	// the default files (Builder.Defaults) and the empty repository
+	InitDefaultsAction                string `i18n:"label='Start with the default files', hint='Action that gives the empty repository the default files, in a first commit.'"`
+	InitDefaultsAction_Desc           string `i18n:"hint='Description of the permission of starting the empty repository with the default files.'"`
+	InitDefaultsWhat                  string `i18n:"hint='Explains starting with the default files: validated, committed by the user, the site at once.'"`
+	InitDefaultsCommit                string `i18n:"hint='Message of the commit of the default files (the first one, or brought into a draft).'"`
+	InitDefaultsDone                  string `i18n:"hint='Said once the repository has the default files.', fields=(;'%s'='the commit')"`
+	ResetDefaultsAction               string `i18n:"label='Restore the default files', hint='Action that brings the default files into the draft, over its own, in a commit.'"`
+	ResetDefaultsAction_Desc          string `i18n:"hint='Description of the permission of restoring the default files.'"`
+	ResetDefaultsWhat                 string `i18n:"hint='Explains restoring the default files: over the files of the draft, a commit, the history kept, published as any other.'"`
+	ResetDefaultsFormRemoveExtras     string `i18n:"hint='Label of the choice of removing the files out of the defaults.'"`
+	ResetDefaultsFormRemoveExtrasHint string `i18n:"hint='Hint of the choice of removing the files out of the defaults: the folders it applies to follow.'"`
+	ResetDefaultsCommit               string `i18n:"hint='Message of the commit of the default files brought into a draft.'"`
+	ResetDefaultsDone                 string `i18n:"hint='Said once the default files were committed in the draft.', fields=(;'%d'='how many files changed', '%s'='the commit')"`
+	ResetDefaultsCount                string `i18n:"hint='How many files restoring the default files changes, above the tree of the changes.', fields=(;'%d'='the count')"`
+	ResetDefaultsDiffOld              string `i18n:"hint='Title of the side of a file as the draft has it, in the changes of restoring the default files.'"`
+	ResetDefaultsDiffNew              string `i18n:"hint='Title of the side of a file as the defaults have it.'"`
+	ResetDefaultsUncommitted          string `i18n:"hint='Said when the draft has changes not committed: restoring the default files waits for a commit or a discard.'"`
+	ResetDefaultsNothing              string `i18n:"hint='Said when the draft has the default files already.'"`
+	ErrNotEmpty                       string `i18n:"hint='Error: the repository has commits already (someone gave it files meanwhile).'"`
+	EmptyTitle                        string `i18n:"hint='Title of the page of the empty repository.'"`
+	EmptyHint                         string `i18n:"hint='Explains the empty repository: no files yet; push the first ones, or start with the default files.'"`
+	EmptyPushTitle                    string `i18n:"hint='Title of the section that pushes the first files by git.'"`
+	EmptyPushWhat                     string `i18n:"hint='What pushing the first files does.'"`
+	EmptyPushNew                      string `i18n:"hint='Label of the commands that make a repository of a folder of files.'"`
+	EmptyPushCommand                  string `i18n:"hint='Label of the command that pushes the first files.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -191,6 +219,8 @@ var Messages_en_US = &Messages{
 	SignOut:              "Sign out",
 	ThemeLight:           "Light theme",
 	ThemeDark:            "Dark theme",
+	IdeExpand:            "Expand over the whole window",
+	IdeCollapse:          "Back into the page",
 	CommitAction:         "Commit",
 	UpdateAction:         "Update",
 	PublishAction:        "Publish",
@@ -317,6 +347,31 @@ var Messages_en_US = &Messages{
 	GitKeyHint:               "Use an access key as the password: it needs these same permissions, and your role too.",
 	GitKeyHelp:               "How to",
 	GitPermsAll:              "All of them, one permission",
+
+	InitDefaultsAction:                "Start with the default files",
+	InitDefaultsAction_Desc:           "Gives the empty repository the default files of the site, in a first commit: the site's at once.",
+	InitDefaultsWhat:                  "The files the application brings: checked (the templates compile), committed by you, and the site's at once.",
+	InitDefaultsCommit:                "The default files of the site",
+	InitDefaultsDone:                  "The site has the default files (commit %s).",
+	ResetDefaultsAction:               "Restore the default files",
+	ResetDefaultsAction_Desc:          "Brings the default files into the draft, over its own, in a commit: the history kept, published as any other.",
+	ResetDefaultsWhat:                 "Each default file replaces the draft's; the other files stay. A commit of the draft, the history kept: see it in the preview, then publish.",
+	ResetDefaultsFormRemoveExtras:     "Remove the files the defaults do not have",
+	ResetDefaultsFormRemoveExtrasHint: "In the folders:",
+	ResetDefaultsCommit:               "Restore the default files of the site",
+	ResetDefaultsDone:                 "%d files restored to the defaults (commit %s): preview, then publish.",
+	ResetDefaultsNothing:              "The draft has the default files already.",
+	ResetDefaultsUncommitted:          "The draft has changes not committed: commit or discard them before restoring.",
+	ResetDefaultsCount:                "%d files change: open each one in the tree to compare.",
+	ResetDefaultsDiffOld:              "The draft",
+	ResetDefaultsDiffNew:              "The default",
+	ErrNotEmpty:                       "The repository has files already: reload the page.",
+	EmptyTitle:                        "Empty repository",
+	EmptyHint:                         "The site has no files yet. Push the first ones by git, or start with the default files.",
+	EmptyPushTitle:                    "The first files by git",
+	EmptyPushWhat:                     "A push of the branch publishes at once, checked as Publish does (the templates compile).",
+	EmptyPushNew:                      "In the folder of the files",
+	EmptyPushCommand:                  "Push",
 }
 
 var Messages_pt_BR = &Messages{
@@ -338,6 +393,8 @@ var Messages_pt_BR = &Messages{
 	SignOut:              "Sair",
 	ThemeLight:           "Tema claro",
 	ThemeDark:            "Tema escuro",
+	IdeExpand:            "Expandir por toda a janela",
+	IdeCollapse:          "Voltar para a página",
 	CommitAction:         "Commit",
 	UpdateAction:         "Atualizar",
 	PublishAction:        "Publicar",
@@ -464,4 +521,29 @@ var Messages_pt_BR = &Messages{
 	GitKeyHint:               "Use uma chave de acesso como senha: ela precisa destas mesmas permissões, e o seu papel também.",
 	GitKeyHelp:               "Como",
 	GitPermsAll:              "Todas, numa permissão",
+
+	InitDefaultsAction:                "Começar com os arquivos padrão",
+	InitDefaultsAction_Desc:           "Dá ao repositório vazio os arquivos padrão do site, num primeiro commit: do site na hora.",
+	InitDefaultsWhat:                  "Os arquivos que a aplicação traz: conferidos (os templates compilam), num commit seu, e do site na hora.",
+	InitDefaultsCommit:                "Os arquivos padrão do site",
+	InitDefaultsDone:                  "O site tem os arquivos padrão (commit %s).",
+	ResetDefaultsAction:               "Restaurar os arquivos padrão",
+	ResetDefaultsAction_Desc:          "Traz os arquivos padrão para o rascunho, sobre os dele, num commit: o histórico mantido, publicado como qualquer outro.",
+	ResetDefaultsWhat:                 "Cada arquivo padrão substitui o do rascunho; os outros ficam. Um commit do rascunho, o histórico mantido: veja no preview e então publique.",
+	ResetDefaultsFormRemoveExtras:     "Remover os arquivos que o padrão não tem",
+	ResetDefaultsFormRemoveExtrasHint: "Nas pastas:",
+	ResetDefaultsCommit:               "Restaura os arquivos padrão do site",
+	ResetDefaultsDone:                 "%d arquivos restaurados ao padrão (commit %s): veja no preview e publique.",
+	ResetDefaultsNothing:              "O rascunho já tem os arquivos padrão.",
+	ResetDefaultsUncommitted:          "O rascunho tem alterações sem commit: faça o commit ou descarte antes de restaurar.",
+	ResetDefaultsCount:                "%d arquivos mudam: abra cada um na árvore para comparar.",
+	ResetDefaultsDiffOld:              "O rascunho",
+	ResetDefaultsDiffNew:              "O padrão",
+	ErrNotEmpty:                       "O repositório já tem arquivos: recarregue a página.",
+	EmptyTitle:                        "Repositório vazio",
+	EmptyHint:                         "O site ainda não tem arquivos. Envie (push) os primeiros pelo git, ou comece com os arquivos padrão.",
+	EmptyPushTitle:                    "Os primeiros arquivos pelo git",
+	EmptyPushWhat:                     "Um push do branch publica na hora, conferido como em Publicar (os templates compilam).",
+	EmptyPushNew:                      "Na pasta dos arquivos",
+	EmptyPushCommand:                  "Enviar",
 }

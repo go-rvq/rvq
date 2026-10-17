@@ -18,6 +18,8 @@ Roles** (see the policies and permissions). The page is
 | Preview | `!preview` |
 | Share your draft (and revoke it) | `!share` |
 | See and reach any user's draft, revoke any sharing | `!drafts` |
+| Start the empty repository with the default files (see **The default files**) | `!init_defaults` |
+| Restore the default files in the draft | `!reset_defaults` |
 
 So publishing can stay with fewer people than editing: whoever edits commits,
 and someone else, who reviews, publishes.

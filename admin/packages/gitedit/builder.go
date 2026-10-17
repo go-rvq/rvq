@@ -99,6 +99,19 @@ type Builder struct {
 	// page to whoever may (!git).
 	GitURL func(r *http.Request, draft string) string
 
+	// Defaults, when set, are the default files of the site (the
+	// application's): the first ones of the empty repository
+	// (InitDefaults), and brought into a draft over its own (ResetDefaults).
+	Defaults fs.FS
+	// DefaultsDirs are the folders of the defaults whose files out of them
+	// ResetDefaults may remove ("templates", "config"): what is there is
+	// the defaults'.
+	DefaultsDirs []string
+	// DefaultsKeep are the paths of the defaults a draft that has them keeps
+	// (".gitignore": its own lines): ResetDefaults gives the default only to
+	// a draft without it.
+	DefaultsKeep []string
+
 	// Users are the users, as the application knows them: their logins and
 	// names, whom to share a draft with. Without, a user is their key.
 	Users Users
@@ -278,6 +291,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
 			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
 	}
+	b.installDefaults()
 	if b.DB != nil {
 		if err := b.DB.AutoMigrate(&DraftShare{}, &PublicPreview{}); err != nil {
 			return err
@@ -291,12 +305,20 @@ func (b *Builder) Install(p *presets.Builder) error {
 
 	b.setupActions(p, b.page)
 	b.setupActions(p, b.userPage)
+	// the files, the sharings, the drafts: pages under this one, in the menu
+	for _, pg := range b.installParts(p) {
+		defer pg.Build()
+	}
 	b.page.EventFunc(eventDraft, b.draftEvent)
 	b.userPage.EventFunc(eventDraft, b.draftEvent)
 	b.page.EventFunc(eventDiff, b.diffEvent)
 	b.userPage.EventFunc(eventDiff, b.diffEvent)
 	b.page.EventFunc(eventSave, b.saveEvent)
 	b.userPage.EventFunc(eventSave, b.saveEvent)
+	b.page.EventFunc(eventDefaultsPanel, b.defaultsPanelEvent)
+	b.userPage.EventFunc(eventDefaultsPanel, b.defaultsPanelEvent)
+	b.page.EventFunc(eventDefaultsDiff, b.defaultsDiffEvent)
+	b.userPage.EventFunc(eventDefaultsDiff, b.defaultsDiffEvent)
 
 	b.ide = NewIDE(b.Repo)
 	b.ide.DraftKey = func(r *http.Request) string { key, _ := b.ownerKey(r); return key }
@@ -419,9 +441,14 @@ func (b *Builder) EditorURL(r *http.Request) string { return b.scopeURL(r) + "/e
 // ideComponent is the IDE (<vx-gad-ide>), height tall; the texts of its
 // Changes and Git panels in the user's language (IdeMessages).
 func (b *Builder) ideComponent(r *http.Request, height string) h.HTMLComponent {
+	return b.ideTag(r).Attr("height", height)
+}
+
+// ideTag is the IDE of the draft r reaches, its height to be given.
+func (b *Builder) ideTag(r *http.Request) *h.HTMLTagBuilder {
 	base := b.ideBase(r)
 	return h.Tag("vx-gad-ide").Attr("src", base+"gadide.js?"+web.ExeMTime).Attr("css", base+"gadide.css?"+web.ExeMTime).
-		Attr("base", base).Attr("height", height).Attr(":messages", GetIdeMessages(r.Context()))
+		Attr("base", base).Attr(":messages", GetIdeMessages(r.Context()))
 }
 
 // editorFunc is the page of the editor: a header — the admin's brand, the
@@ -645,6 +672,7 @@ func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 	if b.PublicPreviewPath != "" {
 		b.setupPublicPreviewActions(p, pg, action, label)
 	}
+	b.setupDefaultsActions(p, pg, action, label)
 
 	// revoking: the owner's (!share), any (!drafts)
 	pg.Action(ActionRevoke).Icon("mdi-account-cancel-outline").
@@ -713,15 +741,16 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 	if errors.Is(err, ErrNoAccess) {
 		return r, perm.PermissionDenied
 	}
+	if errors.Is(err, ErrEmpty) {
+		// no commit yet: its first files, by git or the default ones
+		r.Body = b.emptyView(ctx, m)
+		return r, nil
+	}
 	if err != nil {
 		return
 	}
 	owner, own := b.ownerKey(ctx.R)
 	const portal = "gitEditAction"
-	allowed := func(action string) bool {
-		ver := b.page.Page().ActionVerifier(ctx.R, presets.ActionPerm(action))
-		return ver == nil || ver.Allowed()
-	}
 	// the draft's card, drawn again whenever its tab is shown (draftEvent)
 	card, err := b.draftView(ctx, d, m, owner, own)
 	if err != nil {
@@ -733,25 +762,15 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 		draftTab = m.DraftOther
 	}
 
-	// the draft and the IDE in tabs; at their right, a tab that opens the IDE
-	// in a tab of the browser of its own, the whole window — a link: it is
-	// never the tab shown (the update of the model leaves it out)
+	// the draft — its files, its sharings and the drafts the user reaches
+	// are the pages under this one (installParts) —; at its right, a tab that
+	// opens the IDE in a tab of the browser of its own, the whole window — a
+	// link: it is never the tab shown (the update of the model leaves it out)
 	tabItems := []h.HTMLComponent{
 		v.VTab(h.Text(draftTab)).Value("draft").PrependIcon("mdi-source-branch"),
-		v.VTab(h.Text(m.Files)).Value("ide").PrependIcon("mdi-file-code-outline"),
 	}
 	windows := []h.HTMLComponent{
 		v.VTabsWindowItem(draft).Value("draft"),
-		v.VTabsWindowItem(b.ideComponent(ctx.R, "calc(100vh - 220px)")).Value("ide"),
-	}
-	// the sharings of this draft; the drafts the user reaches
-	if b.DB != nil {
-		tabItems = append(tabItems, v.VTab(h.Text(m.SharesTab)).Value("shares").PrependIcon("mdi-account-multiple-outline"))
-		windows = append(windows, v.VTabsWindowItem(b.sharesView(ctx, m, portal, owner, own)).Value("shares"))
-	}
-	if b.DB != nil || allowed(ActionDrafts) {
-		tabItems = append(tabItems, v.VTab(h.Text(m.DraftsTab)).Value("drafts").PrependIcon("mdi-folder-account-outline"))
-		windows = append(windows, v.VTabsWindowItem(b.draftsView(ctx, m, allowed(ActionDrafts))).Value("drafts"))
 	}
 	// the repositories by git: the draft's and the site's
 	if b.hasGit(ctx) {
@@ -761,10 +780,6 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 	tabItems = append(tabItems, v.VTab(h.Text(m.OpenIDE)).Value("open").PrependIcon("mdi-open-in-new").
 		Attr("href", b.EditorURL(ctx.R)).Attr("target", "_blank").Attr("data-open-ide", true))
 
-	// the draft and the IDE in tabs, and the sharings; at their right, a tab
-	// that opens the IDE in a tab of the browser of its own, the whole window
-	// — a link: it is never the tab shown (the update of the model leaves it
-	// out)
 	tabs := web.Scope(
 		v.VTabs(tabItems...).Attr(":model-value", "locals.tab").
 			Attr("@update:model-value", "(t) => { if (t !== 'open') locals.tab = t; if (t === 'draft') "+
@@ -797,6 +812,10 @@ func (b *Builder) draftEvent(ctx *web.EventContext) (r web.EventResponse, err er
 	d, _, err := b.Draft(ctx.R)
 	if errors.Is(err, ErrNoAccess) {
 		return r, perm.PermissionDenied
+	}
+	if errors.Is(err, ErrEmpty) {
+		r.Reload = true // the page of the empty repository
+		return r, nil
 	}
 	if err != nil {
 		return
@@ -969,6 +988,10 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 	if b.isOwnerOrAdmin(ctx.R) {
 		reset = btn(ActionReset, m.ResetAction, "mdi-restore", true)
 	}
+	var defaults h.HTMLComponent
+	if b.Defaults != nil {
+		defaults = btn(ActionResetDefaults, m.ResetDefaultsAction, "mdi-file-restore-outline", len(changes) == 0)
+	}
 
 	// the own draft's words, or another's
 	draftHint := m.DraftHint
@@ -984,6 +1007,7 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 			btn(ActionPublish, m.PublishAction, "mdi-publish", sync.Ahead > 0 && len(changes) == 0),
 			preview,
 			reset,
+			defaults,
 			help,
 			publicPreview,
 			h.Tag("h4").Children(h.Text(m.Changes), refresh).Class("mt-4 mb-2 d-flex align-center ga-1"),

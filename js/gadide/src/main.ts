@@ -6,7 +6,7 @@
 // language's operations only.
 import { computed, defineComponent, h, onMounted, ref, watch, type PropType } from "vue";
 import { useTheme } from "vuetify";
-import { createHttpIdeApi, GadIde, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
+import { createHttpIdeApi, GadIde, type HeaderAction, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
 
 import "dockview-core/dist/styles/dockview.css";
 import "./styles.css";
@@ -45,6 +45,8 @@ const GadIdeHost = defineComponent({
     panels: { type: Array as PropType<string[]>, default: () => ["explorer", "editor", "docs"] },
     // the texts of the Changes and Git panels, translated (the admin's)
     messages: { type: Object as PropType<Partial<IdeMessages>>, default: undefined },
+    // buttons of the page in the IDE's header, at its right (HeaderAction)
+    headerActions: { type: Array as PropType<HeaderAction[]>, default: () => [] },
   },
   setup(props) {
     const api = createHttpIdeApi(props.base);
@@ -76,6 +78,7 @@ const GadIdeHost = defineComponent({
               runMode: "none",
               panels: props.panels,
               messages: props.messages,
+              headerActions: props.headerActions,
               layoutConfig: layout.value,
               "onUpdate:layoutConfig": (v: SerializedDockview) => (layout.value = v),
               config: config.value,

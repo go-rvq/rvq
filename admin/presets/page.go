@@ -53,6 +53,12 @@ func (b *PageBuilder) InMenu(v bool) *PageBuilder {
 	return b
 }
 
+// MenuVisible is HttpPageBuilder.MenuVisible.
+func (b *PageBuilder) MenuVisible(f func(r *http.Request) bool) *PageBuilder {
+	b.page.MenuVisible(f)
+	return b
+}
+
 func (b *PageBuilder) MenuIcon(v string) *PageBuilder {
 	b.page.menuIcon = v
 	return b
@@ -97,6 +103,8 @@ func (b *PageBuilder) Layout(pf web.PageFunc, layout ...*LayoutConfig) *PageBuil
 	b.pf = pf
 	b.handler = func(f web.PageFunc) http.Handler {
 		return b.r.Wrap(b.r.layoutFunc(lc, func(ctx *web.EventContext) (r web.PageResponse, err error) {
+			// where the page is: its groups and the pages it is under
+			b.page.trail(ctx, GetOrInitBreadcrumbs(ctx.R))
 			if r, err = f(ctx); err == nil {
 				if r.PageTitle == "" {
 					r.PageTitle = b.page.TTitle(ctx.Context())

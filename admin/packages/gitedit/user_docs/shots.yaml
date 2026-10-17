@@ -9,10 +9,10 @@
   width: 1440
   height: 900
 - file: pages/site-files/images/files.png
-  url: /admin/site/site-files
-  wait: .v-tabs
-  # the tab Files: the IDE in the frame, its tree of the files
-  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][1]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } const d = document.querySelector('.v-window-item--active .gadide-host'); return !!d && d.innerText.includes('templates') })()"
+  url: /admin/site/site-files/files
+  wait: .gadide-host
+  # the page Files: the IDE, its tree of the files
+  expect: "(() => { const d = document.querySelector('.gadide-host'); return !!d && d.innerText.includes('templates') })()"
   width: 1440
   height: 900
 - file: guides/site-files/01-edit/images/changes.png
@@ -70,22 +70,22 @@
 # the past ones —, sharing it, the tab Drafts, and another's draft (the
 # sharings of the seed: tools/userdocs-shots seedSharing)
 - file: guides/site-files/09-sharing/images/shares.png
-  url: /admin/site/site-files
-  wait: .v-tabs
-  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][2]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-window-item--active [data-share]') && !!document.querySelector('.v-window-item--active [data-revoke]') })()"
+  url: /admin/site/site-files/shares
+  wait: "[data-share]"
+  expect: "!!document.querySelector('[data-share]') && !!document.querySelector('[data-revoke]')"
   width: 1440
   height: 900
 - file: guides/site-files/09-sharing/images/share.png
-  url: /admin/site/site-files
-  wait: .v-tabs
+  url: /admin/site/site-files/shares
+  wait: "[data-share-action]"
   # the dialog of Share: the user, until when
-  expect: "(() => { const w = window; if (!w.zzTab) { const t = [...document.querySelectorAll('.v-tab')][2]; if (t) { w.zzTab = 1; t.click() } return false } const b = document.querySelector('.v-window-item--active [data-share-action]'); if (b && !w.zzOpen) { w.zzOpen = 1; b.click() } return !!document.querySelector('.v-overlay--active [data-share-user]') })()"
+  expect: "(() => { const b = document.querySelector('[data-share-action]'); if (b && !window.zzOpen) { window.zzOpen = 1; b.click() } return !!document.querySelector('.v-overlay--active [data-share-user]') })()"
   width: 1440
   height: 900
 - file: guides/site-files/09-sharing/images/drafts.png
-  url: /admin/site/site-files
-  wait: .v-tabs
-  expect: "(() => { const t = [...document.querySelectorAll('.v-tab')][3]; if (t && !window.zzOpen) { window.zzOpen = 1; t.click() } return !!document.querySelector('.v-window-item--active [data-shared-draft]') && document.querySelectorAll('.v-window-item--active [data-draft]').length >= 2 })()"
+  url: /admin/site/site-files/drafts
+  wait: "[data-shared-draft]"
+  expect: "!!document.querySelector('[data-shared-draft]') && document.querySelectorAll('[data-draft]').length >= 2"
   width: 1440
   height: 900
 - file: guides/site-files/09-sharing/images/shared-draft.png

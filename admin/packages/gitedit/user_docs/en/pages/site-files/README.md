@@ -8,17 +8,20 @@ edited here, in a **draft** of your own: the site changes only when you
 
 Step by step, with the local development: the guide {%= admin.doc("guides/site-files").link %} — also the page's **Help** button.
 
-The page has three tabs:
+In the menu, under **Site files**, are its pages:
 
-- **Your draft** — the first — says where it stands: commits to publish,
-  commits others published that it does not have; and holds the actions
-  below, the changes and the history.
 - **Files** is the editor: the tree of the files, and each file open in a
   tab. Saving changes your draft only.
 - **Sharing**: whom your draft is shared with, and **Share**/**Revoke** (see
   {%= admin.doc("guides/site-files/09-sharing").link %}).
 - **Drafts**: the drafts of others shared with you — and, to whoever may,
   every user's.
+
+The page itself has the tabs:
+
+- **Your draft** — the first — says where it stands: commits to publish,
+  commits others published that it does not have; and holds the actions
+  below, the changes and the history.
 - **Git**: your draft and the site by git — each with its address, the
   clone, the permissions it asks (✓ the ones you have, ✗ the ones you do
   not) and the hook that signs the commits (see
@@ -29,7 +32,7 @@ The page has three tabs:
   **Admin panel** (back to the admin), **Sign out** and the button of the
   light or dark theme — the choice is kept in the browser.
 
-![The tab Files: the editor](images/files.png)
+![The page Files: the editor](images/files.png)
 
 In **Your draft**:
 

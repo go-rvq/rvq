@@ -6,8 +6,8 @@ rascunho — o site e os rascunhos dos outros ficam como estão.
 
 ![Um arquivo alterado no rascunho, com o diff aberto](images/changes.png)
 
-- A aba **Arquivos** é o editor: a árvore dos arquivos à esquerda dele,
-  cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
+- A página **Arquivos** — no menu, sob **Arquivos do site** — é o editor: a
+  árvore dos arquivos à esquerda dele, cada arquivo aberto numa aba. Salve com o botão da aba ou com Ctrl+S.
 - Pelos botões acima da árvore: criar arquivos e pastas; fazer **upload** de
   arquivos do computador (ou soltá-los na árvore) e **importar de uma URL** —
   imagens e fontes também, como são —; **renomear**, **mover** para outra

@@ -119,6 +119,15 @@ func (a *shareApp) reaches(t *testing.T, user, owner string) map[string]bool {
 	if code, body := a.get(user, "/admin/site-files/u/"+owner); code == 200 {
 		got["page"] = strings.Contains(body, "data-draft-owner")
 	}
+	// its files and its sharings: pages under its page, whose links it has
+	if code, body := a.get(user, "/admin/site-files/u/"+owner+"/files"); code == 200 {
+		got["files"] = strings.Contains(body, "data-draft-owner") && strings.Contains(body, "vx-gad-ide src=") &&
+			strings.Contains(body, "/admin/site-files/u/"+owner+"/ide/")
+	}
+	if code, body := a.get(user, "/admin/site-files/u/"+owner+"/shares"); code == 200 {
+		got["shares"] = strings.Contains(body, "data-draft-owner") &&
+			strings.Contains(body, "data-part-link=&#39;/admin/site-files/u/"+owner+"/files&#39;")
+	}
 	code, body := a.get(user, "/admin/site-files/u/"+owner+"/ide/api/ide/tree")
 	got["ide"] = code == 200 && strings.Contains(body, "index.gadx")
 	code, body = a.get(user, "/admin/site-files/u/"+owner+"/editor")
@@ -134,7 +143,7 @@ func allTrue(m map[string]bool) bool {
 			return false
 		}
 	}
-	return len(m) == 4
+	return len(m) == 6
 }
 
 func noneTrue(m map[string]bool) bool {
@@ -180,16 +189,18 @@ func TestShareDraft(t *testing.T) {
 	}
 
 	// the pages: ana's lists bia; bia's lists ana's draft; root's every draft
-	if _, body := a.get("ana", "/admin/site-files"); !strings.Contains(body, "data-share=") || !strings.Contains(body, "Bia Souza (bia)") {
+	// the pages: ana's sharings list bia; bia's drafts list ana's; root's
+	// every draft
+	if _, body := a.get("ana", "/admin/site-files/shares"); !strings.Contains(body, "data-share=") || !strings.Contains(body, "Bia Souza (bia)") {
 		t.Error("ana's page does not list the sharing")
 	}
-	if _, body := a.get("bia", "/admin/site-files"); !strings.Contains(body, "data-shared-draft=&#39;ana&#39;") {
+	if _, body := a.get("bia", "/admin/site-files/drafts"); !strings.Contains(body, "data-shared-draft=&#39;ana&#39;") {
 		t.Error("bia's page does not list ana's draft")
 	}
-	if _, body := a.get("root", "/admin/site-files"); !strings.Contains(body, "data-draft=&#39;ana&#39;") {
+	if _, body := a.get("root", "/admin/site-files/drafts"); !strings.Contains(body, "data-draft=&#39;ana&#39;") {
 		t.Error("root's page does not list every draft")
 	}
-	if _, body := a.get("bia", "/admin/site-files"); strings.Contains(body, "data-draft=&#39;ana&#39;") {
+	if _, body := a.get("bia", "/admin/site-files/drafts"); strings.Contains(body, "data-draft=&#39;ana&#39;") {
 		t.Error("bia sees every draft")
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -38,6 +39,13 @@ func app(t *testing.T, invalid *error, policies ...*perm.PolicyBuilder) (http.Ha
 func appWith(t *testing.T, invalid *error, pb *perm.Builder, group ...string) (http.Handler, *Repo, string, *Builder) {
 	t.Helper()
 	repo, served := site(t)
+	h, b := appOn(t, repo, invalid, pb, nil, group...)
+	return h, repo, served, b
+}
+
+// appOn is appWith on repo, the default files defaults (nil: none).
+func appOn(t *testing.T, repo *Repo, invalid *error, pb *perm.Builder, defaults fs.FS, group ...string) (http.Handler, *Builder) {
+	t.Helper()
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
 	if err != nil {
@@ -53,7 +61,8 @@ func appWith(t *testing.T, invalid *error, pb *perm.Builder, group ...string) (h
 		Preview: func(w http.ResponseWriter, r *http.Request, d *Draft, prefix string) {
 			b, _ := os.ReadFile(filepath.Join(d.Dir, "index.gadx"))
 			w.Write([]byte(prefix + " " + r.URL.Path + " " + string(b)))
-		}}
+		},
+		Defaults: defaults, DefaultsDirs: []string{"templates"}, DefaultsKeep: []string{".gitignore"}}
 	if err := b.Install(p); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +71,7 @@ func appWith(t *testing.T, invalid *error, pb *perm.Builder, group ...string) (h
 	}
 	mux := http.NewServeMux()
 	p.Build(mux)
-	return mux, repo, served, b
+	return mux, b
 }
 
 func doAction(h http.Handler, action string, query [][2]string, form [][2]string) *httptest.ResponseRecorder {
@@ -89,13 +98,32 @@ func TestBuilder(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files", nil))
-	// the IDE in its tab, by the component; the editor's page in a tab of
-	// the browser
+	// the page: the draft, the editor's page in a tab of the browser; its
+	// parts — the files, the sharings, the drafts — pages under it, in the
+	// menu as its children
+	if body := w.Body.String(); w.Code != 200 || strings.Contains(body, "vx-gad-ide src=") ||
+		!strings.Contains(body, "href=&#39;/admin/site-files/editor&#39;") {
+		t.Fatalf("the page: %d %.300s", w.Code, body)
+	}
+	// (no DB: no sharings)
+	for _, part := range []string{"/admin/site-files/files", "/admin/site-files/drafts"} {
+		if !strings.Contains(w.Body.String(), part) {
+			t.Errorf("%s not in the menu", part)
+		}
+	}
+	// the IDE, by the component, in the page of the files
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/site-files/files", nil))
 	if body := w.Body.String(); w.Code != 200 || !strings.Contains(body, "vx-gad-ide src=") ||
 		!strings.Contains(body, "/admin/site-files/ide/gadide.js?") ||
-		!strings.Contains(body, "base=&#39;/admin/site-files/ide/&#39;") ||
-		!strings.Contains(body, "href=&#39;/admin/site-files/editor&#39;") || !strings.Contains(body, "Open the editor") {
-		t.Fatalf("the page: %d %.300s", w.Code, body)
+		!strings.Contains(body, "base=&#39;/admin/site-files/ide/&#39;") {
+		t.Fatalf("the files: %d %.300s", w.Code, body)
+	}
+	// its floating button (the IDE over the whole window); its trail: the
+	// page it is under, linked
+	if body := w.Body.String(); !strings.Contains(body, "data-ide-full") ||
+		!strings.Contains(body, `href=&#39;/admin/site-files&#39;\u003eSite files\u003c/a\u003e`) {
+		t.Errorf("the files: the button, the trail: %s", body[strings.Index(body, "breadcrumbs"):][:600])
 	}
 	// the texts of the IDE's Changes and Git panels (IdeMessages)
 	if body := w.Body.String(); !strings.Contains(body, ":messages=") || !strings.Contains(body, "chooseCommit") ||

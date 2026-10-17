@@ -17,10 +17,13 @@ O caminho, passo a passo:
 7. **Opções dos layouts** — os campos dos formulários delas, e um select de
    valores com `options`.
 8. **Pelo git** — clone e faça push do rascunho, ou do site, do seu computador.
+9. **Trabalhar em conjunto** — compartilhe o seu rascunho.
+10. **Os arquivos padrão** — comece um repositório vazio com eles, ou
+    restaure-os.
 
-**Na primeira vez**, sem repositório em `public/`, a aplicação o cria quando
-sobe: um `public/` que não existe recebe os arquivos iniciais de um site
-(layouts, componentes, configuração); um que existe, os seus. Os arquivos
-ocultos ficam de fora (`.gitignore` com `.*`), e tudo entra num primeiro
-commit, `first commit`. Quem decide é o administrador do servidor
-(`PUBLIC_GIT_INIT`, no `.env`).
+**Na primeira vez**, sem repositório em `public/`, a aplicação cria um quando
+sobe. Se `public/` não existe ou está vazio, o repositório fica vazio, e a
+página mostra como dar a ele os primeiros arquivos: os padrão, ou um push
+pelo git (veja **Os arquivos padrão**). Se `public/` já tem arquivos, eles
+entram num primeiro commit, `first commit`, sem os ocultos (`.gitignore` com
+`.*`). Quem decide é o administrador do servidor (`PUBLIC_GIT_INIT`).

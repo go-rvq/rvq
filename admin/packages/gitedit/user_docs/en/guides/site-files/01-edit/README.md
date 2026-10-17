@@ -6,8 +6,8 @@ only — the site and the drafts of the others stay as they are.
 
 ![A file changed in the draft, its diff open](images/changes.png)
 
-- The tab **Files** is the editor: the tree of the files at its left, each
-  file open in a tab. Save with the tab's button or Ctrl+S.
+- The page **Files** — in the menu, under **Site files** — is the editor: the
+  tree of the files at its left, each file open in a tab. Save with the tab's button or Ctrl+S.
 - From the buttons above the tree: create files and folders; **upload** files
   from the computer (or drop them on the tree) and **import from a URL** —
   images and fonts too, as they are —; **rename**, **move** to another folder

@@ -5,7 +5,7 @@ it before someone publishes. Who publishes is still who may publish.
 
 ## Share
 
-In the tab **Sharing** of the page {%= admin.page("/site-files").link %}:
+In the page **Sharing** — in the menu, under {%= admin.page("/site-files").link %}:
 
 - **Share** chooses the user and, if you like, **until when** — empty is until
   you revoke it. On that date the access ends by itself.
@@ -14,7 +14,7 @@ In the tab **Sharing** of the page {%= admin.page("/site-files").link %}:
 - The sharings that ended (revoked or expired) stay listed, with when and by
   whom: who had access is recorded.
 
-![The tab Sharing: whom the draft is shared with, and the past sharings](images/shares.png)
+![The page Sharing: whom the draft is shared with, and the past sharings](images/shares.png)
 
 ![Share: the user, and until when](images/share.png)
 
@@ -23,7 +23,9 @@ Sharing asks the permission `!share`; a draft is shared by its owner only.
 ## What whoever receives it reaches
 
 The whole draft, at its address — `…/site-files/u/<the owner's key>` —, listed
-in the tab **Drafts** of whoever receives it:
+in the page **Drafts** (in the menu, under **Site files**) of whoever receives
+it. Its pages **Files** and **Sharing** are under its own, linked from the
+note that the draft is another user's:
 
 - the page, saying the draft is another user's;
 - the **editor** (the tabs Files and Open the editor);
@@ -53,8 +55,8 @@ of the page also says:
 ## Every draft
 
 Whoever has the permission `!drafts` — the **Administrator** — sees, in the
-tab **Drafts**, each user's draft: how it stands, its last commit, whom it is
+page **Drafts**, each user's draft: how it stands, its last commit, whom it is
 shared with; opens the page, the editor and the preview of each, and revokes
 any sharing.
 
-![The tab Drafts: the ones shared with you, and every draft](images/drafts.png)
+![The page Drafts: the ones shared with you, and every draft](images/drafts.png)

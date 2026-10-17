@@ -170,7 +170,10 @@ type DiffFile struct {
 	New      string `json:"new,omitempty"`
 	Binary   bool   `json:"binary,omitempty"`
 	// ReadOnly: not to be edited in the browser, though it saves (Save)
-	ReadOnly  bool             `json:"readOnly,omitempty"`
+	ReadOnly bool `json:"readOnly,omitempty"`
+	// Warning highlights its name in the tree: a file to look at (one
+	// removed on purpose).
+	Warning   bool             `json:"warning,omitempty"`
 	Removed   []int            `json:"removed,omitempty"`
 	Added     []int            `json:"added,omitempty"`
 	DelRanges map[int][][3]int `json:"delRanges,omitempty"`

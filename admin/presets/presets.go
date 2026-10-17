@@ -699,19 +699,36 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 
 	// pageNode / modelNode build a leaf node (or nil when hidden/denied), record
 	// it as placed, and flag the active one.
-	pageNode := func(p *HttpPageBuilder) *MenuNode {
-		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) {
+	var pageNode func(p *HttpPageBuilder) *MenuNode
+	pageNode = func(p *HttpPageBuilder) *MenuNode {
+		if p == nil || p.notInMenu || (p.verififer != nil && p.Verifier(ctx.R).Denied()) ||
+			(p.menuVisible != nil && !p.menuVisible(ctx.R)) {
 			return nil
 		}
 		inOrderMap[p.path] = struct{}{}
-		if p.isMenuItemActive(ctx) {
+		active := p.isMenuItemActive(ctx)
+		if active {
 			activated = []string{p.fullPath}
 		}
 		props := map[string]any{"href": p.fullPath}
 		if p.menuIcon != "" {
 			props["prependIcon"] = p.menuIcon
 		}
-		return &MenuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
+		node := &MenuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
+		// its sub-pages in the menu (Sub, InMenu): its children — the one
+		// shown active, after it (its path is under the page's)
+		for _, sub := range b.pagesRegistrator.httpPages {
+			if sub.parent != p {
+				continue
+			}
+			if child := pageNode(sub); child != nil {
+				node.Children = append(node.Children, child)
+			}
+		}
+		if active && len(node.Children) > 0 {
+			openedGroups = append(openedGroups, node.Value)
+		}
+		return node
 	}
 	modelNode := func(m *ModelBuilder) *MenuNode {
 		if m == nil || m.notInMenu || m.permissioner.ReqLister(ctx.R).Denied() {

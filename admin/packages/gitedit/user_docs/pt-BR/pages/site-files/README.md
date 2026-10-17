@@ -8,17 +8,20 @@ editados aqui, num **rascunho** só seu: o site muda só quando você
 
 Passo a passo, com o desenvolvimento local: o guia {%= admin.doc("guides/site-files").link %} — também o botão **Ajuda** da página.
 
-A página tem três abas:
+No menu, sob **Arquivos do site**, ficam as páginas dele:
 
-- **Seu rascunho** — a primeira — diz onde ele está: commits para publicar,
-  commits que outros publicaram e ele não tem; e reúne as ações abaixo, as
-  alterações e o histórico.
 - **Arquivos** é o editor: a árvore dos arquivos, e cada arquivo aberto numa
   aba. Salvar muda só o seu rascunho.
 - **Compartilhamentos**: com quem o seu rascunho está compartilhado, e
   **Compartilhar**/**Revogar** (veja {%= admin.doc("guides/site-files/09-sharing").link %}).
 - **Rascunhos**: os rascunhos de outros compartilhados com você — e, a quem
   pode, o de todos os usuários.
+
+A página em si tem as abas:
+
+- **Seu rascunho** — a primeira — diz onde ele está: commits para publicar,
+  commits que outros publicaram e ele não tem; e reúne as ações abaixo, as
+  alterações e o histórico.
 - **Git**: o seu rascunho e o site pelo git — cada um com o endereço, o
   clone, as permissões que pede (✓ as que você tem, ✗ as que não) e o hook
   que assina os commits (veja {%= admin.doc("guides/site-files/08-git").link %}).
@@ -28,7 +31,7 @@ A página tem três abas:
   **Painel admin** (volta ao admin), **Sair** e o botão do tema claro ou
   escuro — a escolha fica guardada no navegador.
 
-![A aba Arquivos: o editor](images/files.png)
+![A página Arquivos: o editor](images/files.png)
 
 Em **Seu rascunho**:
 

@@ -103,6 +103,13 @@ var ErrNotFastForward = errors.New("the branch moved since the draft was updated
 // ErrUncommitted says the draft has changes not committed.
 var ErrUncommitted = errors.New("the draft has changes not committed")
 
+// ErrEmpty says the repository has no commit yet: no draft is made of it —
+// its first files come by a push, or by the page's InitDefaults.
+var ErrEmpty = errors.New("the repository has no commit yet")
+
+// ErrNotEmpty says the repository has commits: its first files were given.
+var ErrNotEmpty = errors.New("the repository has commits already")
+
 // git runs git in dir; its error carries what git said.
 func git(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
@@ -151,6 +158,11 @@ func (r *Repo) Draft(ctx context.Context, key string) (*Draft, error) {
 	gitDir, err := filepath.Abs(r.GitDir)
 	if err != nil {
 		return nil, err
+	}
+	if empty, err := r.Empty(ctx); err != nil {
+		return nil, err
+	} else if empty {
+		return nil, ErrEmpty
 	}
 	// --shared: the objects are the repository's, nothing copied
 	if _, err := git(ctx, r.DraftsDir, "clone", "--quiet", "--shared", "--branch", r.branch(), gitDir, key); err != nil {
@@ -538,10 +550,25 @@ func (r *Repo) site(ctx context.Context, args ...string) (string, error) {
 	return git(ctx, workTree, append([]string{"--git-dir=" + gitDir, "--work-tree=" + workTree}, args...)...)
 }
 
-// Head is the commit of the branch the site serves.
+// Head is the commit of the branch the site serves; "" while the repository
+// is empty.
 func (r *Repo) Head(ctx context.Context) (string, error) {
+	if empty, err := r.Empty(ctx); err != nil || empty {
+		return "", err
+	}
 	head, err := r.site(ctx, "rev-parse", "HEAD")
 	return strings.TrimSpace(head), err
+}
+
+// Empty says whether the branch the site serves has no commit yet (a
+// repository just made: git init).
+func (r *Repo) Empty(ctx context.Context) (bool, error) {
+	_, err := r.site(ctx, "show-ref", "--verify", "--quiet", "refs/heads/"+r.branch())
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return true, nil
+	}
+	return false, err
 }
 
 // SiteClean refuses (ErrSiteChanged) when the site's files are not the ones
@@ -553,15 +580,26 @@ func (r *Repo) SiteClean(ctx context.Context) error {
 	if _, err := r.site(ctx, "diff-files", "--quiet", "--ignore-submodules", "--"); err != nil {
 		return ErrSiteChanged
 	}
-	if _, err := r.site(ctx, "diff-index", "--quiet", "--cached", "--ignore-submodules", "HEAD", "--"); err != nil {
+	head, err := r.Head(ctx)
+	if err != nil {
+		return err
+	}
+	if head == "" {
+		head = emptyTree // nothing committed: nothing added either
+	}
+	if _, err := r.site(ctx, "diff-index", "--quiet", "--cached", "--ignore-submodules", head, "--"); err != nil {
 		return ErrSiteChanged
 	}
 	return nil
 }
 
-// Advance makes the site's files those of next, from those of head: a
-// fast-forward of the worktree (the branch moved by whoever called it).
+// Advance makes the site's files those of next, from those of head (""
+// or the zero id: no commit, the first files): a fast-forward of the
+// worktree (the branch moved by whoever called it).
 func (r *Repo) Advance(ctx context.Context, head, next string) error {
+	if head == "" || strings.Trim(head, "0") == "" {
+		head = emptyTree
+	}
 	_, err := r.site(ctx, "read-tree", "-u", "-m", head, next)
 	return err
 }
@@ -590,8 +628,11 @@ func (r *Repo) checkout(ctx context.Context, dir string) error {
 		return err
 	}
 	next = strings.TrimSpace(next)
-	if _, err := r.site(ctx, "merge-base", "--is-ancestor", head, next); err != nil {
-		return ErrNotFastForward
+	// the first commit (head ""): the branch made, as it was not there
+	if head != "" {
+		if _, err := r.site(ctx, "merge-base", "--is-ancestor", head, next); err != nil {
+			return ErrNotFastForward
+		}
 	}
 	if err := r.Advance(ctx, head, next); err != nil {
 		return err

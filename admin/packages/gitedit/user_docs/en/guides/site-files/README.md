@@ -17,10 +17,13 @@ Step by step:
 7. **Options of the layouts** — the fields of their forms, and a select of
    values with `options`.
 8. **By git** — clone and push the draft, or the site, from your computer.
+9. **Work together** — share your draft.
+10. **The default files** — start an empty repository with them, or restore
+    them.
 
 **The first time**, with no repository in `public/`, the application makes
-one as it starts: a `public/` that is not there gets the first files of a
-site (layouts, components, configuration); one that is, its own. The hidden
-files are left out (`.gitignore` with `.*`), and everything goes in a first
-commit, `first commit`. The administrator of the server decides it
-(`PUBLIC_GIT_INIT`, in the `.env`).
+one as it starts. When `public/` is not there or is empty, the repository is
+empty, and the page shows how to give it its first files: the default ones,
+or a push by git (see **The default files**). When `public/` has files, they
+go in a first commit, `first commit`, without the hidden ones (`.gitignore`
+with `.*`). The administrator of the server decides it (`PUBLIC_GIT_INIT`).

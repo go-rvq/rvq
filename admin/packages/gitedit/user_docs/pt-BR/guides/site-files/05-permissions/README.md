@@ -18,6 +18,8 @@ Usuário** (veja as políticas e permissões). A página é
 | Pré-visualizar | `!preview` |
 | Compartilhar o seu rascunho (e revogar) | `!share` |
 | Ver e acessar o rascunho de qualquer usuário, revogar qualquer compartilhamento | `!drafts` |
+| Começar o repositório vazio com os arquivos padrão (veja **Os arquivos padrão**) | `!init_defaults` |
+| Restaurar os arquivos padrão no rascunho | `!reset_defaults` |
 
 Assim, publicar pode ficar com menos gente que editar: quem edita faz o
 commit, e outra pessoa, que revisa, publica.

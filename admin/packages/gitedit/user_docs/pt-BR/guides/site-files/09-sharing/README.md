@@ -6,7 +6,7 @@ quem tem a permissão de publicar.
 
 ## Compartilhar
 
-Na aba **Compartilhamentos** da página {%= admin.page("/site-files").link %}:
+Na página **Compartilhamentos** — no menu, sob {%= admin.page("/site-files").link %}:
 
 - **Compartilhar** escolhe o usuário e, se quiser, **até quando** — vazio é até
   você revogar. Na data, o acesso termina sozinho.
@@ -15,7 +15,7 @@ Na aba **Compartilhamentos** da página {%= admin.page("/site-files").link %}:
 - Os compartilhamentos que já terminaram (revogados ou expirados) continuam
   listados, com quando e por quem: quem teve acesso fica registrado.
 
-![A aba Compartilhamentos: com quem o rascunho está compartilhado, e os compartilhamentos anteriores](images/shares.png)
+![A página Compartilhamentos: com quem o rascunho está compartilhado, e os compartilhamentos anteriores](images/shares.png)
 
 ![Compartilhar: o usuário e até quando](images/share.png)
 
@@ -25,7 +25,9 @@ seu dono.
 ## O que quem recebe acessa
 
 O rascunho inteiro, no endereço dele — `…/site-files/u/<a chave do dono>` —,
-listado na aba **Rascunhos** de quem o recebe:
+listado na página **Rascunhos** (no menu, sob **Arquivos do site**) de quem o
+recebe. As páginas **Arquivos** e **Compartilhamentos** dele estão sob a dele,
+com os links no aviso de que o rascunho é de outro usuário:
 
 - a página, com o aviso de que o rascunho é de outro usuário;
 - o **editor** (as abas Arquivos e Abrir o editor);
@@ -54,9 +56,9 @@ commit pela página diz também:
 
 ## Todos os rascunhos
 
-Quem tem a permissão `!drafts` — o **Administrador** — vê, na aba
+Quem tem a permissão `!drafts` — o **Administrador** — vê, na página
 **Rascunhos**, o rascunho de cada usuário: como ele está, o último commit,
 com quem está compartilhado; e abre a página, o editor e o preview de cada um,
 e revoga qualquer compartilhamento.
 
-![A aba Rascunhos: os compartilhados com você e todos os rascunhos](images/drafts.png)
+![A página Rascunhos: os compartilhados com você e todos os rascunhos](images/drafts.png)

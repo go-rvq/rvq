@@ -37,7 +37,10 @@ export default defineComponent({
     // the height it takes ("calc(100vh - 64px)")
     height: { type: String, default: '100%' },
     // the texts of its Changes and Git panels (IdeMessages), translated
-    messages: { type: Object, default: undefined }
+    messages: { type: Object, default: undefined },
+    // buttons of the page in the IDE's header, at its right: {id, icon,
+    // title, label?, onClick}
+    headerActions: { type: Array, default: () => [] }
   },
   setup(props) {
     const comp = shallowRef<Component>()
@@ -54,7 +57,12 @@ export default defineComponent({
     return () => {
       if (error.value) return h('pre', { class: 'text-error pa-4', 'data-gad-ide-error': '' }, error.value)
       if (!comp.value) return h(resolveComponent('v-progress-linear'), { indeterminate: true, color: 'primary' })
-      return h(comp.value, { base: props.base, height: props.height, messages: props.messages })
+      return h(comp.value, {
+        base: props.base,
+        height: props.height,
+        messages: props.messages,
+        headerActions: props.headerActions
+      })
     }
   }
 })
