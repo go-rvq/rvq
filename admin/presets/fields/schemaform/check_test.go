@@ -23,7 +23,7 @@ class Link {
 	[pattern="https?://.+"] href str
 }
 [ordered]
-class Form {
+export class default {
 	name str
 	nick? str
 	[min=1, max=10] rooms int
@@ -36,8 +36,7 @@ class Form {
 	[open="to"] when? Range[date]
 	billing? Address
 	links? []Link
-}
-return Form`
+}`
 
 // What is wrong, field by field, by the keys the form posts.
 func checkErrors(t *testing.T, s *Schema, values url.Values) map[string][]string {
@@ -117,7 +116,7 @@ func TestDecodeFormChecks(t *testing.T) {
 
 // A range is read back as its from and its to (it was read as nothing).
 func TestDecodeFormRange(t *testing.T) {
-	s, err := readClass("class Form { r? Range[int]; d? Range[date] }; return Form")
+	s, err := readClass("export class default { r? Range[int]; d? Range[date] }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,12 +138,8 @@ func TestDecodeFormRange(t *testing.T) {
 // of the field's keys (presets' SubErrors) in the scope, each input binding
 // its own key — of a list's item, by its index —, gone once it changes.
 func TestErrorsUnderEachInput(t *testing.T) {
-	schema, err := New().Parse(`interface Link { href str }
-	interface Form {
-		name str
-		links []Link
-		r? Range[int]
-	}`)
+	schema, err := New().Parse(`class Link { href str }
+export class default { name str; links []Link; r? Range[int] }`)
 	if err != nil {
 		t.Fatal(err)
 	}

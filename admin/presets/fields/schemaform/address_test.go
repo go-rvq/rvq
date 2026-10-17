@@ -15,7 +15,7 @@ import (
 // empty.
 func TestAddress(t *testing.T) {
 	b := New().MapsKey(func(*web.EventContext) string { return "k-123" })
-	got := render(t, b, `interface { [label="Where"] where? address }`)
+	got := render(t, b, `export class default { [label="Where"] where? address }`)
 	for _, want := range []string{"<vx-address-field", "label='Where'", "api-key='k-123'", `v-model='form["Value"].where'`, "data-schemaform-address='where'"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %s:\n%s", want, got)
@@ -25,11 +25,11 @@ func TestAddress(t *testing.T) {
 	was := MapsKey
 	MapsKey = func(*web.EventContext) string { return "pkg-key" }
 	t.Cleanup(func() { MapsKey = was })
-	if got := render(t, New(), `interface { where? address }`); !strings.Contains(got, "api-key='pkg-key'") {
+	if got := render(t, New(), `export class default { where? address }`); !strings.Contains(got, "api-key='pkg-key'") {
 		t.Errorf("the package's key:\n%s", got)
 	}
 
-	s, err := New().Parse(`interface { where? address }`)
+	s, err := New().Parse(`export class default { where? address }`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -86,15 +86,14 @@ func TestDecoderChecks(t *testing.T) {
 // A group's fields are posted where its class's are (gad [autoGroupKeys],
 // set by the reader): flat; the record `::: Form` built of them either way.
 func TestDecoderGroups(t *testing.T) {
-	s, err := readClass(`
-	class Form {
+	s, err := readClass(`export class default {
 		name str
 		{
 			phone str
 			city? str
 		}
-	}
-	return Form`)
+	
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,13 +107,12 @@ func TestDecoderGroups(t *testing.T) {
 // request knows (Items); a list by how many; a field's validations off
 // (Typed).
 func TestDecoderExtension(t *testing.T) {
-	s, err := readClass(`
-	class Form {
+	s, err := readClass(`export class default {
 		[validation=func(v) => "never"] tel str
 		pick? str
 		[min=2] tags? []str
-	}
-	return Form`)
+	
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}

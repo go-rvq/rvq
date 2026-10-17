@@ -8,7 +8,7 @@ import (
 
 // The schema PAC carries: a list of records, one field of it untyped.
 func TestParseSliceOfRecords(t *testing.T) {
-	s, err := Parse("[]{label str; icon str; href}")
+	s, err := Parse("class Item { label str; icon str; href }\nexport type default []Item")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestParseSliceOfRecords(t *testing.T) {
 
 // A form, not a list.
 func TestParseRecord(t *testing.T) {
-	s, err := Parse("{title str; count int}")
+	s, err := Parse("export class default { title str; count int }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,16 +47,15 @@ func TestParseRecord(t *testing.T) {
 	}
 }
 
-// A field that is itself an interface is a form again — however it is spelled.
+// A field typed by a class is a form again; by a list of a class, a list of
+// its records.
 func TestParseNestedInterface(t *testing.T) {
 	cases := map[string]struct {
 		src   string
 		slice bool
 	}{
-		"long form":        {"{a str; sub interface {x str}}", false},
-		"long form slice":  {"{a str; sub interface[] {x str}}", true},
-		"short form":       {"{a str; sub: {x str}}", false},
-		"short form slice": {"{a str; sub: []{x str}}", true},
+		"record": {"class Sub { x str }\nexport class default { a str; sub Sub }", false},
+		"list":   {"class Sub { x str }\nexport class default { a str; sub []Sub }", true},
 	}
 
 	for name, c := range cases {
@@ -87,7 +86,7 @@ func TestParseNestedInterface(t *testing.T) {
 
 // The `?` after a name marks the field nullable.
 func TestParseNullable(t *testing.T) {
-	s, err := Parse("{a str; b? str}")
+	s, err := Parse("export class default { a str; b? str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,45 +98,18 @@ func TestParseNullable(t *testing.T) {
 	}
 }
 
-// Only fields are a form: an accessor describes behaviour, and there is nothing
-// to edit in it.
-//
-// A METHOD is not covered here: gad reads the return type of `e() str` as one
-// more body item, so it would arrive as a field named "str". A form schema has
-// no reason to declare methods, and this says what the walk does with what it
-// is given.
-func TestParseKeepsOnlyFields(t *testing.T) {
-	s, err := Parse("{a str; get b; set c; prop d str}")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// a getter alone is a field shown, not edited — before the fields: gad
-	// keeps the properties apart from them —; a setter and a prop are
-	// behaviour
-	var names []string
-	for _, f := range s.Fields {
-		names = append(names, f.Name)
-	}
-	if len(s.Fields) != 2 || s.Fields[0].Name != "b" || !s.Fields[0].ReadOnly ||
-		s.Fields[1].Name != "a" || s.Fields[1].ReadOnly {
-		t.Fatalf("fields %v", names)
-	}
-}
-
 func TestParseRejectsWhatIsNotASchema(t *testing.T) {
 	for name, src := range map[string]string{
 		"empty":      "",
 		"not a form": "42",
-		"broken":     "{a str",
-		// an interface beside the form must have a name: nothing can refer to
-		// an anonymous one, so it is a mistake written down
-		"two anonymous": "{a str} interface {b str}",
-		// written in parts, the form is the one named Form — and there is none
-		"no Form": "interface User { name }\ninterface Owner { user User }",
-		// a single named interface is not the form either, if it is not Form
+		"broken":     "export class default {a str",
+		// the form is exported once
+		"two defaults": "export class default { a str }\nexport class default { b str }",
+		// written in parts, the form is the default — and there is none
+		"no default": "class User { name }\nclass Owner { user User }",
+		// the short forms of before, an interface
+		"short form":   "{a str}",
 		"another name": "interface Schema { a str }",
-		// and an anonymous one beside Form cannot be referred to
-		"anonymous beside Form": "interface Form { a str }\ninterface { b str }",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := Parse(src); err == nil {
@@ -152,7 +124,7 @@ func TestParseRejectsWhatIsNotASchema(t *testing.T) {
 // An enum declared beside the interface is a closed set of values, and a field
 // typed with it carries it.
 func TestParseEnum(t *testing.T) {
-	s, err := Parse("enum Perm { Read, Write }\ninterface {perm Perm; other str}")
+	s, err := Parse("enum Perm { Read, Write }\nexport class default { perm Perm; other str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +147,7 @@ func TestParseEnum(t *testing.T) {
 
 // An enum declared once serves the forms inside the form too.
 func TestParseEnumReachesNestedForms(t *testing.T) {
-	s, err := Parse("enum Perm { Read, Write }\ninterface {sub interface {perm Perm}}")
+	s, err := Parse("enum Perm { Read, Write }\nclass Sub { perm Perm }\nexport class default { sub Sub }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +158,7 @@ func TestParseEnumReachesNestedForms(t *testing.T) {
 
 // Empty is only allowed where the schema said it is: the `?` after the name.
 func TestFieldRequired(t *testing.T) {
-	s, err := Parse("{btnColor? color; label str}")
+	s, err := Parse("export class default { btnColor? color; label str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,10 +170,10 @@ func TestFieldRequired(t *testing.T) {
 	}
 }
 
-// A list of PLAIN VALUES — `[]str`, the shape PAC's service_area uses — is a
+// A list of PLAIN VALUES — `export type default []str`, the shape PAC's service_area uses — is a
 // list whose item is one value, not a record: no fields, one Item.
 func TestParseSliceOfValues(t *testing.T) {
-	s, err := Parse("[]str")
+	s, err := Parse("export type default []str")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +192,7 @@ func TestParseSliceOfValues(t *testing.T) {
 
 	// any registered type, not only str
 	for _, typ := range []string{"int", "color", "date"} {
-		s, err := Parse("[]" + typ)
+		s, err := Parse("export type default []" + typ)
 		if err != nil {
 			t.Fatalf("[]%s: %v", typ, err)
 		}
@@ -230,9 +202,9 @@ func TestParseSliceOfValues(t *testing.T) {
 	}
 }
 
-// `[][]str` is a list of lists: one schema per `[]`, down to the value.
+// `export type default [][]str` is a list of lists: one schema per `[]`, down to the value.
 func TestParseSliceOfSlices(t *testing.T) {
-	s, err := Parse("[][]str")
+	s, err := Parse("export type default [][]str")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +219,7 @@ func TestParseSliceOfSlices(t *testing.T) {
 
 // A field of the form may be a list of values too.
 func TestParseFieldSliceOfValues(t *testing.T) {
-	s, err := Parse("{title str; tags []str}")
+	s, err := Parse("export class default { title str; tags []str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +234,7 @@ func TestParseFieldSliceOfValues(t *testing.T) {
 
 // A list holds ONE type: several enveloped types describe no single input.
 func TestParseSliceOfSeveralTypesRejected(t *testing.T) {
-	if _, err := Parse("[]<int|str>"); err == nil {
+	if _, err := Parse("export type default []<int|str>"); err == nil {
 		t.Fatal("uma lista de vários types não descreve um input")
 	} else if !strings.Contains(err.Error(), "ONE type") {
 		t.Errorf("err = %v", err)
@@ -271,7 +243,7 @@ func TestParseSliceOfSeveralTypesRejected(t *testing.T) {
 
 // FieldAt walks the same path the form asks its words by.
 func TestFieldAt(t *testing.T) {
-	s, err := Parse("{title str; sub: {x int}; links: []{href str}; tags []str}")
+	s, err := Parse("class Sub { x int }\nclass Links { href str }\nexport class default { title str; sub Sub; links []Links; tags []str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +274,7 @@ func TestFieldAt(t *testing.T) {
 // A schema may be written in parts: a named interface is a declaration another
 // may use by ITS NAME, and the one named Form is the form.
 func TestParseNamedInterfaces(t *testing.T) {
-	s, err := Parse("interface User { name, id }; interface Form { owner User; creator User }")
+	s, err := Parse("class User { name; id }\nexport class default { owner User; creator User }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,22 +302,20 @@ func TestParseNamedInterfaces(t *testing.T) {
 	}
 }
 
-// A declared interface serves a list and a nested field the same way.
+// A declared class serves a list — a list of its records — and a nested
+// field the same way.
 func TestParseNamedInterfaceInAList(t *testing.T) {
-	s, err := Parse("interface Link { label str; href }\ninterface Form { links []Link; main Link }")
+	s, err := Parse("class Link { label str; href }\nexport class default { links []Link; main Link }")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	links := s.Fields[0]
-	if links.Schema == nil || !links.Schema.Slice || links.Schema.Item == nil {
+	if links.Schema == nil || !links.Schema.Slice || links.Schema.Item != nil {
 		t.Fatalf("links = %+v", links)
 	}
-	if links.Schema.Item.Type != FormType || links.Schema.Item.Schema == nil {
-		t.Fatalf("o item da lista não virou form: %+v", links.Schema.Item)
-	}
-	if got := links.Schema.Item.Schema.Fields[0].Name; got != "label" {
-		t.Errorf("item.fields[0] = %q", got)
+	if got := links.Schema.Fields[0].Name; got != "label" {
+		t.Errorf("fields[0] = %q", got)
 	}
 	if s.Fields[1].Type != FormType {
 		t.Errorf("main = %q, want um form", s.Fields[1].Type)
@@ -354,7 +324,7 @@ func TestParseNamedInterfaceInAList(t *testing.T) {
 
 // Enums declared beside the schema reach the interfaces it names.
 func TestParseNamedInterfaceWithEnum(t *testing.T) {
-	s, err := Parse("enum Perm { Read, Write }\ninterface User { perm Perm }\ninterface Form { owner User }")
+	s, err := Parse("enum Perm { Read, Write }\nclass User { perm Perm }\nexport class default { owner User }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,9 +340,9 @@ func TestParseNamedInterfaceWithEnum(t *testing.T) {
 // initialization cycle).
 func TestParseNamedInterfaceCycle(t *testing.T) {
 	for name, c := range map[string]struct{ src, want string }{
-		"direto":   {"interface Node { child Node }\ninterface Form { root Node }", `the interface "Node" contains itself`},
-		"indireto": {"interface A { b B }\ninterface B { a A }\ninterface Form { a A }", "initialization cycle"},
-		"na raiz":  {"interface Form { self Form }", `the interface "Form" contains itself`},
+		"direto":   {"class Node { child Node }\nexport class default { root Node }", `the class "Node" contains itself`},
+		"indireto": {"class A { b B }\nclass B { a A }\nexport class default { a A }", `contains itself`},
+		"na raiz":  {"export class default { self default }", `contains itself`},
 	} {
 		_, err := Parse(c.src)
 		if err == nil {
@@ -389,7 +359,7 @@ func TestParseNamedInterfaceCycle(t *testing.T) {
 // the gad compiler refuses it naming the reference — where the schema is read,
 // not later, in the form.
 func TestParseUnknownTypeNameIsRefused(t *testing.T) {
-	_, err := Parse("{owner User}")
+	_, err := Parse("export class default { owner User }")
 	if err == nil {
 		t.Fatal("um type que ninguém declarou passou")
 	}
@@ -402,10 +372,10 @@ func TestParseUnknownTypeNameIsRefused(t *testing.T) {
 // which may come in any order, as anywhere in gad.
 func TestParseFormNameWinsOverOrder(t *testing.T) {
 	for name, src := range map[string]string{
-		"o form primeiro":   "interface Form { owner User }\ninterface User { name, id }",
-		"o form por último": "interface User { name, id }\ninterface Form { owner User }",
-		"entre outras":      "interface User { name, id }\ninterface Form { owner User }\ninterface Other { x str }",
-		"na mesma linha":    "interface User { name, id }; interface Form { owner User }",
+		"o form primeiro":   "export class default { owner User }\nclass User { name; id }",
+		"o form por último": "class User { name; id }\nexport class default { owner User }",
+		"entre outras":      "class User { name; id }\nexport class default { owner User }\nclass Other { x str }",
+		"na mesma linha":    "class User { name; id }\nexport class default { owner User }",
 	} {
 		s, err := Parse(src)
 		if err != nil {
@@ -425,7 +395,7 @@ func TestParseFormNameWinsOverOrder(t *testing.T) {
 // A schema written in ONE piece needs no name for anything, and goes on being
 // written without one.
 func TestParseAnonymousStillIsTheForm(t *testing.T) {
-	for _, src := range []string{"{a str}", "[]{a str}", "[]str", "interface { a str }"} {
+	for _, src := range []string{"export class default { a str }", "class Item { a str }\nexport type default []Item", "export type default []str", "export class default { a str }"} {
 		if _, err := Parse(src); err != nil {
 			t.Errorf("%q: %v", src, err)
 		}
@@ -434,7 +404,9 @@ func TestParseAnonymousStillIsTheForm(t *testing.T) {
 
 // A clone may be changed without touching the schema Parse cached.
 func TestSchemaClone(t *testing.T) {
-	src := `[layout={name: "table", columns: [#a, #b]}] interface Form []{ a str; b str }`
+	src := `class Item { a str; b str }
+[layout={name: "table", columns: [#a, #b]}]
+export type default []Item`
 	s, err := Parse(src)
 	if err != nil {
 		t.Fatal(err)
@@ -453,10 +425,10 @@ func TestSchemaClone(t *testing.T) {
 // The value a form starts from has every record and list the schema has, so
 // what the form binds through is there.
 func TestFilled(t *testing.T) {
-	s, err := Parse(`interface Words { label? str }
-interface Fields { icon? Words; link? Words }
-interface Layout { name? str; tags? []str }
-interface Form { layout? Layout; fields? Fields }`)
+	s, err := Parse(`class Words { label? str }
+class Fields { icon? Words; link? Words }
+class Layout { name? str; tags? []str }
+export class default { layout? Layout; fields? Fields }`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,11 +17,11 @@ func TestMask(t *testing.T) {
 	if p := MaskPlaceholder("(###) ###-####"); p != "(___) ___-____" {
 		t.Errorf("placeholder: %q", p)
 	}
-	s, err := Parse(`interface Form { [mask="#####-###"] zip str }`)
+	s, err := Parse(`export class default { [mask="#####-###"] zip str }`)
 	if err != nil || s.Fields[0].Mask != "#####-###" {
 		t.Fatalf("read: %v %+v", err, s)
 	}
-	for _, src := range []string{`interface Form { [mask="#"] n int }`, `interface Form { [mask="xyz"] s str }`} {
+	for _, src := range []string{`export class default { [mask="#"] n int }`, `export class default { [mask="xyz"] s str }`} {
 		if _, err := Parse(src); err == nil {
 			t.Errorf("%s: no error", src)
 		}

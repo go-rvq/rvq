@@ -10,7 +10,7 @@ import (
 	"github.com/go-rvq/rvq/web/str_utils"
 )
 
-// The metadata of a form of steps, before its class: `[steps] class Form
+// The metadata of a form of steps, before its class: `[steps] export class default
 // { … }` — each field of the class a step: a field alone (a value, a class of
 // fields under its name: `a.name`), or a group `{ … }` (its fields the
 // record's own, no name added) —; `[steps, autosave]`, each step saved as it

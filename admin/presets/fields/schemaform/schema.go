@@ -229,7 +229,7 @@ type Field struct {
 	// Default is the value a class field declares (`columns int = 4`), read
 	// into Go as metadata is; nil when it has none.
 	Default any
-	// ReadOnly is a field declared `get name Type` — a getter: shown, never
+	// ReadOnly is a field declared `[readonly] name Type`: shown, never
 	// edited. The form draws it read-only, and Schema.KeepReadOnly puts back
 	// the value stored over whatever a post said of it.
 	ReadOnly bool

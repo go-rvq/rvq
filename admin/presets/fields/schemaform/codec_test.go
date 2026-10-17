@@ -10,7 +10,7 @@ import (
 // the application says otherwise, and the record keeps the schema's order in
 // either.
 func TestCodec(t *testing.T) {
-	s, err := Parse("[]{label str; href}")
+	s, err := Parse("class Item { label str; href }\nexport type default []Item")
 	if err != nil {
 		t.Fatal(err)
 	}

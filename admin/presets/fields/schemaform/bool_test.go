@@ -13,7 +13,7 @@ import (
 // An optional bool (`x? bool`) is a select of yes and no that may be left
 // empty — nil, not false —; a required one, a switch.
 func TestOptionalBool(t *testing.T) {
-	s, err := Parse(`interface Form { on? bool; must bool; [required] chosen? bool }`)
+	s, err := Parse(`export class default { on? bool; must bool; [required] chosen? bool }`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -29,7 +29,7 @@ func rowsOf(s *Schema) string {
 // its fields are, in its place, the columns of one row, each at its share
 // (`[width=N]` of 5; the ones with none share what is left).
 func TestGroupsAreRows(t *testing.T) {
-	s, err := Parse(`{ a str; { [width=2] b str; c str; d? int }; e str; { f str; g str } }`)
+	s, err := Parse(`export class default { a str; { [width=2] b str; c str; d? int }; e str; { f str; g str } }`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,8 +39,7 @@ func TestGroupsAreRows(t *testing.T) {
 	// a class's too, a parent's rows after its own numbering
 	cls := runClass(t, New(), `
 class P { { x str; y str } }
-class Form { *P; { a str; [width=4] b str }; c str }
-return Form`, nil)
+export class default { *P; { a str; [width=4] b str }; c str }`, nil)
 	if got := rowsOf(cls); got != "x@50+y@50|a@20+b@80|c" {
 		t.Errorf("class rows: %s", got)
 	}
@@ -53,12 +52,12 @@ return Form`, nil)
 // saying which group and fields.
 func TestGroupWidthsRefused(t *testing.T) {
 	for src, want := range map[string]string{
-		`{ { [width=0] a str; b str } }`:           "from 1 to 5",
-		`{ { [width=6] a str } }`:                  "from 1 to 5",
-		`{ { [width=3] a str; [width=3] b str } }`: "more than 5",
-		`{ { [width=2] a str; [width=2] b str } }`: "not 5",
-		`{ { [width=5] a str; b str } }`:           "none left",
-		`{ { a str; { b str } } }`:                 "a group inside",
+		`export class default { { [width=0] a str; b str } }`:           "from 1 to 5",
+		`export class default { { [width=6] a str } }`:                  "from 1 to 5",
+		`export class default { { [width=3] a str; [width=3] b str } }`: "more than 5",
+		`export class default { { [width=2] a str; [width=2] b str } }`: "not 5",
+		`export class default { { [width=5] a str; b str } }`:           "none left",
+		`export class default { { a str; { b str } } }`:                 "a group inside",
 	} {
 		if _, err := Parse(src); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: %v, want %q", src, err, want)
@@ -69,7 +68,7 @@ func TestGroupWidthsRefused(t *testing.T) {
 // What a group holds is its record's: posted and read back by the record's
 // keys, with no name of the group.
 func TestGroupValuesAreTheRecords(t *testing.T) {
-	s, err := Parse(`{ a str; { b str; c? int } }`)
+	s, err := Parse(`export class default { a str; { b str; c? int } }`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +82,7 @@ func TestGroupValuesAreTheRecords(t *testing.T) {
 // A group is drawn as a row of columns, each field bound to the record's
 // key; the detail too.
 func TestGroupDrawn(t *testing.T) {
-	got := render(t, New(), `{ a str; { [width=2] b str; c str } }`)
+	got := render(t, New(), `export class default { a str; { [width=2] b str; c str } }`)
 	for _, want := range []string{
 		`data-schemaform-row`,
 		`data-schemaform-column='b'`, `--sf-col: 40%`,
@@ -102,8 +101,9 @@ func TestGroupDrawn(t *testing.T) {
 // `[tabs] { … }` is a group of tabs, `[steps] { … }` of steps (`[steps,
 // vertical]` down the page): each field a tab, a step; no widths to share.
 func TestGroupTabsAndSteps(t *testing.T) {
-	s, err := Parse(`{
-	[tabs] { [label="Person", icon="mdi-account"] person: { name str }; [width=9] other? str }
+	s, err := Parse(`class Person { name str }
+export class default {
+	[tabs] { [label="Person", icon="mdi-account"] person Person; [width=9] other? str }
 	[steps, vertical] { a str; b str }
 	[steps] { c str }
 	d str
@@ -125,7 +125,11 @@ func TestGroupTabsAndSteps(t *testing.T) {
 		t.Errorf("d is of no group: %+v", f[5])
 	}
 
-	got := render(t, New(), `{ [tabs] { [label="Person", icon="mdi-account"] person: { name str }; other? str }; [steps] { a str; b str } }`)
+	got := render(t, New(), `class Person { name str }
+export class default {
+	[tabs] { [label="Person", icon="mdi-account"] person Person; other? str }
+	[steps] { a str; b str }
+}`)
 	for _, want := range []string{
 		`data-schemaform-tabs='$1'`, `data-schemaform-tab='person'`, `Person`, `mdi-account`,
 		`v-show='locals.tab === 1'`, `data-schemaform-steps='$2'`, `2. B`, `locals.tab++`,

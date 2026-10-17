@@ -9,13 +9,13 @@ import (
 // largest size ([maxSize=…]); a list of them, its items' — and [min, max],
 // how many items a list holds. Refused where they mean nothing.
 func TestFileFields(t *testing.T) {
-	s, err := Parse(`interface Form {
-		[accept="application/pdf,.docx", maxSize="5MB"] doc file
-		photo? image
-		[accept="image/png,image/jpeg", maxSize=200000, min=1, max=3] photos []image
-		[min=2] files? []file
-		[options=["a", "b", "c"], max=2] picks? []str
-	}`)
+	s, err := Parse(`export class default {
+	[accept="application/pdf,.docx", maxSize="5MB"] doc file
+	photo? image
+	[accept="image/png,image/jpeg", maxSize=200000, min=1, max=3] photos []image
+	[min=2] files? []file
+	[options=["a", "b", "c"], max=2] picks? []str
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,13 +39,13 @@ func TestFileFields(t *testing.T) {
 		}
 	}
 	for src, want := range map[string]string{
-		`interface Form { [accept=".pdf"] a str }`:              "only a file or an image",
-		`interface Form { [accept="pdf"] a file }`:              "neither a media type",
-		`interface Form { [accept="application/pdf"] a image }`: "takes images only",
-		`interface Form { [maxSize="big"] a file }`:             "want a size",
-		`interface Form { [min=3, max=1] a []file }`:            "is more than",
-		`interface Form { [min=1.5] a []file }`:                 "whole number of items",
-		`interface Form { [minlength=1] a []file }`:             "a list has [min, max]",
+		`export class default { [accept=".pdf"] a str }`:              "only a file or an image",
+		`export class default { [accept="pdf"] a file }`:              "neither a media type",
+		`export class default { [accept="application/pdf"] a image }`: "takes images only",
+		`export class default { [maxSize="big"] a file }`:             "want a size",
+		`export class default { [min=3, max=1] a []file }`:            "is more than",
+		`export class default { [min=1.5] a []file }`:                 "whole number of items",
+		`export class default { [minlength=1] a []file }`:             "a list has [min, max]",
 	} {
 		if _, err := Parse(src); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: %v (want %q)", src, err, want)

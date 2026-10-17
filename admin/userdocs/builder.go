@@ -26,7 +26,12 @@ import (
 
 // Schema is the schema of the form of a package's documents: the path of
 // each, shown, and its content.
-const Schema = `[]{get path str; content text}`
+const Schema = `class Doc {
+	[readonly] path str
+	content text
+}
+
+export type default []Doc`
 
 // formSuffix is the key of the form of the documents beside the Value
 // column's: the column is a string, the form a list.

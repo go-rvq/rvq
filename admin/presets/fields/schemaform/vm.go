@@ -1,6 +1,7 @@
 package schemaform
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"github.com/go-rvq/rvq/web/str_utils"
@@ -14,10 +15,12 @@ import (
 	"github.com/gad-lang/gad"
 )
 
-// FormName is the name of the interface that IS the form. A schema written in
-// parts declares others — the interfaces and enums it uses — and names this
-// one; a schema written in one piece needs no name, and is given this one.
-const FormName = "Form"
+// DefaultName is the name the form is declared by: the schema exports it —
+// `export class default { … }`, a record; `export type default []Item`, a
+// list of the records of the class Item (or of plain values,
+// `export type default []str`). The classes, enums and types it uses are
+// declared beside it.
+const DefaultName = "default"
 
 // RunTimeout bounds how long a schema may run. A schema is a declaration and
 // runs in microseconds; one that does not return by then is not a schema.
@@ -26,64 +29,35 @@ var RunTimeout = time.Second
 // Parse reads a schema with the types of a new Builder. See Builder.Parse.
 func Parse(src string) (*Schema, error) { return New().Parse(src) }
 
-// Parse RUNS the schema and reads the form off what it returns.
+// defaultDecl is the declaration of the form, where a declaration starts:
+// `export class default`, `export type default` (after its metadata block).
+var defaultDecl = regexp.MustCompile(`(?m)(^|[;}\]])([ \t]*)export[ \t]+(class|type)[ \t]+` + DefaultName + `\b`)
+
+// Parse RUNS the schema and reads the form off what it exports as default.
 //
 // The schema is gad: it is compiled and run in a VM of its own, and the
-// interface named Form is what the run returns. Everything the form needs is
-// then read from that interface through gad's own reflection (IndexGetter) —
-// its fields and their resolved types, its array depth, its `[k=v, …]`
-// metadata — so a schema can use whatever gad can declare: interfaces by name,
-// enums, typed arrays, metadata on the interface and on its fields.
+// default it exports — a class, or a type of a list — is what the run
+// returns. Everything the form needs is then read from it through gad's own
+// reflection: the fields of the class and their resolved types, their
+// defaults and `[k=v, …]` metadata, the class's (or the list type's)
+// metadata — `[layout=…]`, `[validation=…]`, its steps.
 //
 // The type names a field may use are the builder's: every type registered on
 // it is in scope while the schema runs, so `color` or `html` resolve even though
 // gad has no such types.
 func (b *Builder) Parse(src string) (*Schema, error) {
-	if formClass.MatchString(src) {
-		return b.parseClass(src)
+	if strings.TrimSpace(src) == "" {
+		return nil, errors.New("schemaform: the schema is empty")
 	}
-	program, err := formProgram(src)
-	if err != nil {
-		return nil, err
+	if n := len(defaultDecl.FindAllStringIndex(src, -1)); n != 1 {
+		if n == 0 {
+			return nil, fmt.Errorf("schemaform: the form is what the schema exports as %[1]s — "+
+				"`export class %[1]s { … }`, or `export type %[1]s []Item` for a list of the class Item", DefaultName)
+		}
+		return nil, fmt.Errorf("schemaform: the schema exports %s %d times", DefaultName, n)
 	}
+	program := defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) + "\nreturn " + DefaultName + "\n"
 
-	key := b.typesKey() + "\x00" + program
-	if s, ok := parsed.Load(key); ok {
-		return s.(*Schema), nil
-	}
-
-	vm, form, err := b.run(program)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}}
-	s, err := r.schema(form)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.readLayout(); err != nil {
-		return nil, err
-	}
-	s.shareEnums(r.enums)
-
-	parsed.Store(key, s)
-	return s, nil
-}
-
-// MetaList is the metadata of a class Form whose value is a list of its
-// records: `[list] class Form { … }` — an interface's `[]{ … }`.
-const MetaList = "list"
-
-// formClass is the class named Form, where a declaration starts.
-var formClass = regexp.MustCompile(`(?m)(^|[;}\]])[ \t]*(export[ \t]+)?class[ \t]+` + FormName + `\b`)
-
-// parseClass is Parse of a schema whose form is the class Form: its fields
-// read as Class reads them — their defaults, its `[validation=…]`, its
-// steps —, its metadata the form's (`[layout=…]`; `[list]`, a list of its
-// records).
-func (b *Builder) parseClass(src string) (*Schema, error) {
-	program := strings.Replace(src, "export class "+FormName, "class "+FormName, 1) + "\nreturn " + FormName + "\n"
 	key := b.typesKey() + "\x00" + program
 	if s, ok := parsed.Load(key); ok {
 		return s.(*Schema), nil
@@ -92,23 +66,58 @@ func (b *Builder) parseClass(src string) (*Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, ok := ret.(*gad.Class)
-	if !ok {
-		return nil, fmt.Errorf("schemaform: %q is not a class, it is %s", FormName, ret.Type().Name())
-	}
-	s, err := b.Class(vm, c)
-	if err != nil {
-		return nil, err
-	}
-	s.Meta = metaOf(c.Meta)
-	if _, ok := s.Meta[MetaList]; ok {
-		delete(s.Meta, MetaList)
-		s.Slice = true
+
+	var s *Schema
+	switch t := ret.(type) {
+	case *gad.Class:
+		if s, err = b.Class(vm, t); err != nil {
+			return nil, err
+		}
+		s.Meta = metaOf(t.Meta)
+	case *gad.TypedArrayType:
+		if s, err = b.list(vm, t); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("schemaform: %s is a class or a type of a list, not %s", DefaultName, ret.Type().Name())
 	}
 	if err := s.readLayout(); err != nil {
 		return nil, err
 	}
 	parsed.Store(key, s)
+	return s, nil
+}
+
+// list reads `type default []Item` — a list of the records of the class
+// Item, or of plain values (`[]str`), one schema per `[]` — with the type's
+// metadata.
+func (b *Builder) list(vm *gad.VM, t *gad.TypedArrayType) (*Schema, error) {
+	var s *Schema
+	if c, ok := t.Elem.(*gad.Class); ok {
+		rec, err := b.Class(vm, c)
+		if err != nil {
+			return nil, err
+		}
+		rec.Slice = true
+		s = rec
+	} else if _, ok := t.Elem.(*gad.TypeUnion); ok {
+		return nil, fmt.Errorf("schemaform: a list of values holds ONE type, and %s declares several", t.TypeName)
+	} else {
+		r := &reader{vm: vm, enums: map[string]*Enum{}, typeOf: b.typeOf,
+			choiceAsName: b.choiceAsName, className: b.className}
+		item := &Field{}
+		if err := r.typeInto(item, gad.Array{t.Elem}); err != nil {
+			return nil, err
+		}
+		s = &Schema{Slice: true, Item: item}
+		s.shareEnums(r.enums)
+		s.vm = vm
+		s.setRoundVM(vm)
+	}
+	for i := 1; i < t.Depth; i++ {
+		s = &Schema{Slice: true, Item: &Field{Type: FormType, Schema: s}}
+	}
+	s.Meta = metaOf(t.Meta)
 	return s, nil
 }
 
@@ -125,69 +134,6 @@ func (b *Builder) typesKey() string {
 	}
 	sort.Strings(names)
 	return strings.Join(names, ",")
-}
-
-var (
-	// anonIface is an interface written without a name where a declaration
-	// starts — at the start of a line, after a `;` or a `}`, or after the `]`
-	// that closes its metadata block: `interface { … }`, `interface[] { … }`,
-	// `[layout="table"] interface []{ … }`.
-	anonIface = regexp.MustCompile(`(?m)(^|[;}\]])([ \t]*)interface([ \t]*)([\[{])`)
-	// formIface is the interface named Form, where a declaration starts.
-	formIface = regexp.MustCompile(`(?m)(^|[;}\]])[ \t]*interface[ \t]+` + FormName + `\b`)
-)
-
-// formProgram is the schema written as a program that returns its form.
-//
-// A schema in one piece may leave out the keyword and the name — `{…}`,
-// `[]{…}`, `[]str` — or leave out only the name (`interface []{…}`, and an
-// enum declared before it); either way it is the form, and is named so. A
-// schema in parts names its form itself.
-func formProgram(src string) (string, error) {
-	trimmed := strings.TrimSpace(src)
-	if trimmed == "" {
-		return "", errors.New("schemaform: the schema is empty")
-	}
-
-	switch {
-	case strings.HasPrefix(trimmed, "{"), strings.HasPrefix(trimmed, "[]"):
-		trimmed = "interface " + FormName + " " + trimmed
-	case formIface.MatchString(trimmed):
-	default:
-		switch n := len(anonIface.FindAllStringIndex(trimmed, -1)); n {
-		case 1:
-			trimmed = anonIface.ReplaceAllString(trimmed, "${1}${2}interface "+FormName+" ${4}")
-		case 0:
-			return "", fmt.Errorf("schemaform: the form is the interface %q, and there is none", FormName)
-		default:
-			return "", fmt.Errorf(
-				"schemaform: a schema written in parts names its form %q; there are %d interfaces without a name",
-				FormName, n)
-		}
-	}
-
-	// Whatever named the form, an interface left without a name beside it is
-	// one nothing can refer to: a mistake written down.
-	if anonIface.MatchString(trimmed) {
-		return "", fmt.Errorf(
-			"schemaform: the form is the interface %q; an interface beside it must have a name too", FormName)
-	}
-
-	return trimmed + "\nreturn " + FormName + "\n", nil
-}
-
-// run compiles and runs the program, with the builder's types in scope, and
-// returns the VM — the field types are symbols only it resolves — and the form.
-func (b *Builder) run(program string) (*gad.VM, *gad.Interface, error) {
-	vm, ret, err := b.runProgram(program)
-	if err != nil {
-		return nil, nil, err
-	}
-	form, ok := ret.(*gad.Interface)
-	if !ok {
-		return nil, nil, fmt.Errorf("schemaform: %q is not an interface, it is %s", FormName, ret.Type().Name())
-	}
-	return vm, form, nil
 }
 
 // runProgram compiles and runs the program, with the builder's types in scope,
@@ -248,7 +194,8 @@ const (
 )
 
 // WithWarningsSource is WithWarnings and Warnings.
-const WithWarningsSource = `type Warnings []{fieldName str; message str}
+const WithWarningsSource = `class Warning { fieldName str; message str }
+type Warnings []Warning
 mixin WithWarnings {
 	[readonly]
 	$warnings? Warnings
@@ -291,7 +238,7 @@ func TypeMarker(name string) gad.Object { return &typeMarker{name: name} }
 // of the form; a type only the application knows is named by TypeOf. vm is
 // the VM that ran the code the class comes from.
 func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
-	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}, typeOf: b.typeOf,
+	r := &reader{vm: vm, enums: map[string]*Enum{}, typeOf: b.typeOf,
 		choiceAsName: b.choiceAsName, className: b.className}
 	s, err := r.class(c)
 	if err != nil {
@@ -372,6 +319,13 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 			types[i] = t
 		}
 		f := &Field{Name: cf.Name, Meta: metaOf(cf.Meta), Nullable: cf.Nullable}
+		// `[readonly] path str`: shown, never edited — what was stored is
+		// put back over what a post says (KeepReadOnly); a function of
+		// readonly is the form's to call (CondMetas), the record's warnings
+		// (WithWarnings) theirs to keep
+		if ro, ok := f.Meta[MetaReadonly].(bool); ok && ro && f.Name != WarningsField {
+			f.ReadOnly = true
+		}
 		if err := r.typeInto(f, types); err != nil {
 			return nil, fmt.Errorf("%s: %w", f.Name, err)
 		}
@@ -493,9 +447,8 @@ type reader struct {
 	vm *gad.VM
 	// enums are the enums the fields hold, by name.
 	enums map[string]*Enum
-	// visiting are the interfaces being read, down from the form: one met again
-	// on the way down contains itself. visitingClass, the classes.
-	visiting      map[*gad.Interface]bool
+	// visitingClass are the classes being read, down from the form: one met
+	// again on the way down contains itself.
 	visitingClass map[*gad.Class]bool
 	// typeOf names the application's own types (Builder.TypeOf).
 	typeOf TypeOfFunc
@@ -542,125 +495,6 @@ func (r *reader) depth(obj gad.Object) (int, error) {
 		return 0, fmt.Errorf("schemaform: @depth is a %s", v.Type().Name())
 	}
 	return int(n), nil
-}
-
-// meta is obj's `[k=v, …]` block.
-func (r *reader) meta(obj gad.Object) (Meta, error) {
-	v, err := r.index(obj, "@meta")
-	if err != nil {
-		return nil, err
-	}
-	return metaOf(v), nil
-}
-
-// schema reads one interface: a record, a list of records (`[]{…}`), or a list
-// of plain values (`[]str`, an interface whose element is a type) — one schema
-// per `[]`, so a list of lists nests.
-func (r *reader) schema(iface *gad.Interface) (*Schema, error) {
-	if r.visiting[iface] {
-		return nil, fmt.Errorf("schemaform: the interface %q contains itself", iface.IName)
-	}
-	r.visiting[iface] = true
-	defer delete(r.visiting, iface)
-
-	depth, err := r.depth(iface)
-	if err != nil {
-		return nil, err
-	}
-	meta, err := r.meta(iface)
-	if err != nil {
-		return nil, err
-	}
-	elem, err := r.array(iface, "@elem")
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Schema
-	if len(elem) > 1 {
-		return nil, fmt.Errorf("schemaform: a list of values holds ONE type, and %q declares %d", iface.IName, len(elem))
-	}
-	if len(elem) == 1 {
-		// `interface Form []str` — the element is a type, and the item IS the
-		// value.
-		item := &Field{}
-		if err := r.typeInto(item, elem); err != nil {
-			return nil, err
-		}
-		s = &Schema{Slice: true, Item: item}
-	} else {
-		s = &Schema{Slice: depth > 0}
-		// the getters (`get path str`) first: fields shown, never edited
-		props, err := r.array(iface, "props")
-		if err != nil {
-			return nil, err
-		}
-		for _, o := range props {
-			f, err := r.getter(o)
-			if err != nil {
-				return nil, err
-			}
-			if f != nil {
-				if err := r.appendField(s, f); err != nil {
-					return nil, err
-				}
-			}
-		}
-		fields, err := r.array(iface, "fields")
-		if err != nil {
-			return nil, err
-		}
-		for _, o := range fields {
-			f, err := r.field(o)
-			if err != nil {
-				return nil, err
-			}
-			if err := r.appendField(s, f); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	for i := 1; i < depth; i++ {
-		s = &Schema{Slice: true, Item: &Field{Type: FormType, Schema: s}}
-	}
-	s.Meta = meta
-	return s, nil
-}
-
-// field reads one field of an interface. Only fields are a form: a method, a
-// getter, a setter or a prop describes behaviour, and there is nothing to edit
-// in it.
-func (r *reader) field(o gad.Object) (*Field, error) {
-	name, err := r.index(o, "name")
-	if err != nil {
-		return nil, err
-	}
-	types, err := r.array(o, "types")
-	if err != nil {
-		return nil, err
-	}
-	meta, err := r.meta(o)
-	if err != nil {
-		return nil, err
-	}
-
-	f := &Field{Name: name.ToString(), Meta: meta}
-	// `?` after the name has no reflection key of its own; it is the field's.
-	if gf, ok := o.(*gad.InterfaceField); ok {
-		f.Nullable = gf.Nullable
-	}
-	if err := r.typeInto(f, types); err != nil {
-		return nil, fmt.Errorf("%s: %w", f.Name, err)
-	}
-	rawMeta, err := r.index(o, "@meta")
-	if err != nil {
-		return nil, err
-	}
-	if err := options(f, rawMeta); err != nil {
-		return nil, fmt.Errorf("%s: %w", f.Name, err)
-	}
-	return f, nil
 }
 
 // MetaOptions is the metadata of a field that gives the values it may hold,
@@ -1186,32 +1020,6 @@ func optionsEnum(v gad.Object) (*Enum, error) {
 	return e, nil
 }
 
-// getter reads a property of an interface that is a getter alone — `get name
-// Type` — as a read-only field of the type it returns; nil for a property with
-// a setter, which describes behaviour.
-func (r *reader) getter(o gad.Object) (*Field, error) {
-	p, ok := o.(*gad.InterfaceProp)
-	if !ok || p.Getter == nil || len(p.Setters) > 0 {
-		return nil, nil
-	}
-	meta, err := r.meta(o)
-	if err != nil {
-		return nil, err
-	}
-	f := &Field{Name: p.Name, Meta: meta, ReadOnly: true}
-	// the getter returns one value, a typedIdent: its types, resolved
-	var types gad.Array
-	if len(p.Getter.Return) > 0 {
-		if types, err = r.array(p.Getter.Return[0], "types"); err != nil {
-			return nil, fmt.Errorf("%s: %w", f.Name, err)
-		}
-	}
-	if err := r.typeInto(f, types); err != nil {
-		return nil, fmt.Errorf("%s: %w", f.Name, err)
-	}
-	return f, nil
-}
-
 // typeInto reads what a field's types are into it: the component it is drawn
 // with, and — for an interface, an array or an enum — the rest of what it
 // holds.
@@ -1263,11 +1071,9 @@ func (r *reader) typeInto(f *Field, types gad.Array) error {
 		}
 		f.Type, f.Schema = FormType, sub
 	case *gad.Interface:
-		sub, err := r.schema(t)
-		if err != nil {
-			return err
-		}
-		f.Type, f.Schema = FormType, sub
+		// a record is a class: `sub {x str}` is written `sub Sub`, the class
+		// Sub declared beside it
+		return fmt.Errorf("schemaform: a record is a class: declare one (`class %s { … }`), not an interface", cmp.Or(t.IName, "Name"))
 	case *gad.ArrayType:
 		sub, err := r.arrayType(t)
 		if err != nil {
@@ -1318,11 +1124,23 @@ func (r *reader) arrayType(t *gad.ArrayType) (*Schema, error) {
 		return nil, nil
 	}
 
-	item := &Field{}
-	if err := r.typeInto(item, elem); err != nil {
-		return nil, err
+	var s *Schema
+	if c, ok := elem[0].(*gad.Class); ok {
+		// a list of the records of a class (`links []Link`): drawn as a list
+		// of records is, what the root's `export type default []Link` is
+		rec, err := r.class(c)
+		if err != nil {
+			return nil, err
+		}
+		rec.Slice = true
+		s = rec
+	} else {
+		item := &Field{}
+		if err := r.typeInto(item, elem); err != nil {
+			return nil, err
+		}
+		s = &Schema{Slice: true, Item: item}
 	}
-	s := &Schema{Slice: true, Item: item}
 	for i := 1; i < depth; i++ {
 		s = &Schema{Slice: true, Item: &Field{Type: FormType, Schema: s}}
 	}

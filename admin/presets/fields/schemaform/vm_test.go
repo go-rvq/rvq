@@ -11,13 +11,14 @@ import (
 // The schema is a gad program: it runs, and the form is read off the interface
 // named Form through gad's reflection — metadata included, symbols as names.
 func TestParseReadsMetadata(t *testing.T) {
-	s, err := Parse(`[layout={name: "table", columns: [#label, #icon]}, extra=2]
-interface Form []{
+	s, err := Parse(`class Item {
 	label str
 	[width=120]
 	icon str
 	color? str
-}`)
+}
+[layout={name: "table", columns: [#label, #icon]}, extra=2]
+export type default []Item`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +43,7 @@ interface Form []{
 
 // With no layout, a list is drawn as forms, as it always was.
 func TestParseDefaultLayout(t *testing.T) {
-	s, err := Parse("[]{a str}")
+	s, err := Parse("class Item { a str }\nexport type default []Item")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,19 +55,42 @@ func TestParseDefaultLayout(t *testing.T) {
 // What cannot be drawn is refused where the schema is read.
 func TestParseRefusesWhatCannotBeDrawn(t *testing.T) {
 	for name, tc := range map[string]struct{ src, want string }{
-		"layout que não existe": {`[layout="cards"] interface Form []{a str}`, `"cards" does not exist`},
-		"grade de um registro":  {`[layout="grid"] interface Form {a str}`, "is not one"},
-		"config fora do layout": {`[layout="table", columns=[#a]] interface Form []{a str}`, `layout={name:`},
-		"config que não há":     {`[layout={name: "table", width: 2}] interface Form []{a str}`, `has no "width"`},
-		"config do form":        {`[layout={name: "form", columns: 2}] interface Form []{a str}`, "takes no config"},
-		"grade de 0 colunas":    {`[layout={name: "grid", columns: 0}] interface Form []{a str}`, "1 to 12"},
-		"grade de 13 colunas":   {`[layout={name: "grid", columns: 13}] interface Form []{a str}`, "1 to 12"},
-		"colunas da grade":      {`[layout={name: "grid", columns: "4"}] interface Form []{a str}`, "want a whole number"},
-		"layout não é nome":     {`[layout=3] interface Form []{a str}`, "is a name or"},
-		"tabela de um registro": {`[layout="table"] interface Form {a str}`, "is not one"},
-		"tabela de valores":     {`[layout="table"] interface Form []str`, "is not one"},
-		"coluna sem field":      {`[layout={name: "table", columns: [#a, #nope]}] interface Form []{a str}`, `"nope" names no field`},
-		"columns não é lista":   {`[layout={name: "table", columns: #a}] interface Form []{a str}`, "want a list"},
+		"layout que não existe": {`class Item { a str }
+[layout="cards"]
+export type default []Item`, `"cards" does not exist`},
+		"grade de um registro": {`[layout="grid"]
+export class default { a str }`, "is not one"},
+		"config fora do layout": {`class Item { a str }
+[layout="table", columns=[#a]]
+export type default []Item`, `layout={name:`},
+		"config que não há": {`class Item { a str }
+[layout={name: "table", width: 2}]
+export type default []Item`, `has no "width"`},
+		"config do form": {`class Item { a str }
+[layout={name: "form", columns: 2}]
+export type default []Item`, "takes no config"},
+		"grade de 0 colunas": {`class Item { a str }
+[layout={name: "grid", columns: 0}]
+export type default []Item`, "1 to 12"},
+		"grade de 13 colunas": {`class Item { a str }
+[layout={name: "grid", columns: 13}]
+export type default []Item`, "1 to 12"},
+		"colunas da grade": {`class Item { a str }
+[layout={name: "grid", columns: "4"}]
+export type default []Item`, "want a whole number"},
+		"layout não é nome": {`class Item { a str }
+[layout=3]
+export type default []Item`, "is a name or"},
+		"tabela de um registro": {`[layout="table"]
+export class default { a str }`, "is not one"},
+		"tabela de valores": {`[layout="table"]
+export type default []str`, "is not one"},
+		"coluna sem field": {`class Item { a str }
+[layout={name: "table", columns: [#a, #nope]}]
+export type default []Item`, `"nope" names no field`},
+		"columns não é lista": {`class Item { a str }
+[layout={name: "table", columns: #a}]
+export type default []Item`, "want a list"},
 	} {
 		_, err := Parse(tc.src)
 		if err == nil {
@@ -84,7 +108,7 @@ func TestParseRefusesWhatCannotBeDrawn(t *testing.T) {
 // which is gad's time NAMESPACE, is the builder's time type here.
 func TestParseUsesTheBuilderTypes(t *testing.T) {
 	b := New().Type("slug", TextComponentFunc)
-	s, err := b.Parse("{a color; b slug; c time; d html; e int}")
+	s, err := b.Parse("export class default {\n\ta color\n\tb slug\n\tc time\n\td html\n\te int\n}")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +119,7 @@ func TestParseUsesTheBuilderTypes(t *testing.T) {
 	}
 
 	// a type only another builder registered is not in scope here
-	if _, err := New().Parse("{b slug}"); err == nil {
+	if _, err := New().Parse("export class default { b slug }"); err == nil {
 		t.Error("um type que este builder não registrou passou")
 	}
 }
@@ -123,11 +147,11 @@ func TestParseRunIsBounded(t *testing.T) {
 
 // A schema is read on every draw and every save; reading it again is the cache.
 func TestParseIsCached(t *testing.T) {
-	a, err := Parse("{cached str}")
+	a, err := Parse("export class default { cached str }")
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := Parse("{cached str}")
+	b, err := Parse("export class default { cached str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,8 +168,9 @@ func TestTableLayout(t *testing.T) {
 		return FieldInfo{Label: map[string]string{"label": "Texto", "icon": "Ícone"}[path],
 			Hint: map[string]string{"icon": "classe Font Awesome"}[path]}
 	})
-	got := render(t, b, `[layout={name: "table", columns: [#icon, #label]}]
-interface Form []{label str; icon str; hidden str}`)
+	got := render(t, b, `class Item { label str; icon str; hidden str }
+[layout={name: "table", columns: [#icon, #label]}]
+export type default []Item`)
 
 	for _, want := range []string{
 		`<v-table`,
@@ -178,7 +203,9 @@ interface Form []{label str; icon str; hidden str}`)
 
 // Without columns, a table shows every field, in the schema's order.
 func TestTableLayoutAllColumns(t *testing.T) {
-	got := render(t, New(), `[layout="table"] interface Form []{a str; b int}`)
+	got := render(t, New(), `class Item { a str; b int }
+[layout="table"]
+export type default []Item`)
 	if !strings.Contains(got, "<v-table") {
 		t.Fatalf("não é uma tabela:\n%s", got)
 	}
@@ -191,10 +218,18 @@ func TestTableLayoutAllColumns(t *testing.T) {
 // when unsaid.
 func TestParseGrid(t *testing.T) {
 	for src, want := range map[string]int{
-		`[layout="grid"] interface Form []{a str}`:                      DefaultGridColumns,
-		`[layout={name: "grid"}] interface Form []{a str}`:              DefaultGridColumns,
-		`[layout={name: "grid", columns: 2}] interface Form []{a str}`:  2,
-		`[layout={name: "grid", columns: 12}] interface Form []{a str}`: 12,
+		`class Item { a str }
+[layout="grid"]
+export type default []Item`: DefaultGridColumns,
+		`class Item { a str }
+[layout={name: "grid"}]
+export type default []Item`: DefaultGridColumns,
+		`class Item { a str }
+[layout={name: "grid", columns: 2}]
+export type default []Item`: 2,
+		`class Item { a str }
+[layout={name: "grid", columns: 12}]
+export type default []Item`: 12,
 	} {
 		s, err := Parse(src)
 		if err != nil {
@@ -208,7 +243,9 @@ func TestParseGrid(t *testing.T) {
 
 // A table with no columns said shows every field (empty_as_all).
 func TestParseTableEmptyIsAll(t *testing.T) {
-	s, err := Parse(`[layout={name: "table", columns: []}] interface Form []{a str; b str}`)
+	s, err := Parse(`class Item { a str; b str }
+[layout={name: "table", columns: []}]
+export type default []Item`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,8 +15,14 @@ import (
 func TestOptions(t *testing.T) {
 	want := []EnumItem{{Name: "opt1", Label: "option 1"}, {Name: "opt2", Label: "option 2"}}
 	for _, src := range []string{
-		`interface { [options=(;opt1="option 1", opt2="option 2")]; value str }`,
-		`interface { [options=[["opt1", "option 1"], ["opt2", "option 2"]]]; value str }`,
+		`export class default {
+	[options=(;opt1="option 1", opt2="option 2")]
+	value str
+}`,
+		`export class default {
+	[options=[["opt1", "option 1"], ["opt2", "option 2"]]]
+	value str
+}`,
 	} {
 		s, err := Parse(src)
 		if err != nil {
@@ -33,7 +39,7 @@ func TestOptions(t *testing.T) {
 	}
 
 	// values alone are their own labels; a value of another type, as text
-	s, err := Parse(`interface { [options=["a", "b"]]; v str; [options=[[1, "one"], [2, "two"]]]; n int }`)
+	s, err := Parse(`export class default { [options=["a", "b"]]; v str; [options=[[1, "one"], [2, "two"]]]; n int }`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +55,12 @@ func TestOptions(t *testing.T) {
 // The field is a select of its options — whatever its type, a registered one
 // included —, each value shown by its label.
 func TestOptionsDrawASelect(t *testing.T) {
-	got := render(t, New(), `interface { [options=(;opt1="option 1", opt2="option 2")]; value str; [options=[[1, "one"]]]; n int }`)
+	got := render(t, New(), `export class default {
+	[options=(;opt1="option 1", opt2="option 2")]
+	value str
+	[options=[[1, "one"]]]
+	n int
+}`)
 	for _, want := range []string{`v-select`, `option 1`, `option 2`, `opt1`, `v-model='form["Value"].value'`, `one`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("o select não traz %s:\n%s", want, got)
@@ -61,7 +72,7 @@ func TestOptionsDrawASelect(t *testing.T) {
 	// a list of them: one autocomplete of the options, several chosen as
 	// chips, each closable — no list of selects —; its [max=N] disables the
 	// ones not chosen when it is full
-	got = render(t, New(), `interface { [options=(;a="A", b="B"), max=1]; tags []str }`)
+	got = render(t, New(), `export class default { [options=(;a="A", b="B"), max=1]; tags []str }`)
 	for _, want := range []string{"v-autocomplete", `"title":"B"`, `:multiple='true'`, `:chips='true'`, `:closable-chips='true'`,
 		`v-model='form["Value"].tags'`, `.length >= 1`} {
 		if !strings.Contains(got, want) {
@@ -75,7 +86,12 @@ func TestOptionsDrawASelect(t *testing.T) {
 
 // Saving: only an option is accepted; an int keeps being an int.
 func TestOptionsDecodeForm(t *testing.T) {
-	s, err := Parse(`interface { [options=(;opt1="option 1", opt2="option 2")]; value str; [options=[[1, "one"], [2, "two"]]]; n? int }`)
+	s, err := Parse(`export class default {
+	[options=(;opt1="option 1", opt2="option 2")]
+	value str
+	[options=[[1, "one"], [2, "two"]]]
+	n? int
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,11 +112,12 @@ func TestOptionsDecodeForm(t *testing.T) {
 // What cannot be options is said, with the field.
 func TestOptionsErrors(t *testing.T) {
 	for src, want := range map[string]string{
-		`interface { [options=3]; v str }`:                        "want a key-value array",
-		`interface { [options=[["a"]]]; v str }`:                  "a pair is [value, label]",
-		`interface { [options=["a", "a"]]; v str }`:               `the value "a" twice`,
-		`interface { [options=[]]; v str }`:                       "no option",
-		`interface { [options=(;a="A")]; v interface { x str } }`: "a record has no options",
+		`export class default { [options=3]; v str }`:          "want a key-value array",
+		`export class default { [options=[["a"]]]; v str }`:    "a pair is [value, label]",
+		`export class default { [options=["a", "a"]]; v str }`: `the value "a" twice`,
+		`export class default { [options=[]]; v str }`:         "no option",
+		`class V { x str }
+export class default { [options=(;a="A")]; v V }`: "a record has no options",
 	} {
 		_, err := Parse(src)
 		if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "v:") {
@@ -146,7 +163,7 @@ return Banner
 		t.Errorf("a str's item: %#v", v)
 	}
 
-	got := render(t, b, `interface { [options=[[2, "Two"], [3, "Three"]]]; columns int }`)
+	got := render(t, b, `export class default { [options=[[2, "Two"], [3, "Three"]]]; columns int }`)
 	if !strings.Contains(got, `"value":3`) {
 		t.Errorf("the int's items are not numbers:\n%s", got)
 	}

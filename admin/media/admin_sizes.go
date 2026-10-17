@@ -22,12 +22,14 @@ const eventRecrop = "mediaSizes_recrop"
 
 // sizesSchema is the form of the sizes of a field: a table of a name, a
 // width and a height.
-const sizesSchema = `[list, layout={name: "table", columns: [#name, #width, #height]}]
-class Form {
+const sizesSchema = `class Size {
 	name str
 	[min=1] width int
 	[min=1] height int
-}`
+}
+
+[layout={name: "table", columns: [#name, #width, #height]}]
+export type default []Size`
 
 // configSizes is the admin of the sizes of the fields of images
 // (MediaBoxUsage): their list — the code's or the admin's, how their crops

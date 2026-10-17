@@ -1,53 +1,53 @@
-// Package schemaform builds an edit form out of a gad interface.
+// Package schemaform builds an edit form out of a gad class.
 //
-// A value edited as a form is described by a SCHEMA — the gad interface its
-// content satisfies, written without the keyword:
+// A value edited as a form is described by a SCHEMA — gad code that exports
+// the form as default: a class, a record —
 //
-//	[]{label str; icon str; href}
+//	export class default { title str; count int }
 //
-// which is `interface []{label str; icon str; href}`: a list of records of
-// three fields. The form the schema describes is what a person edits; the value
-// itself is stored the way it always was — YAML, for a LocaleMessage — and only
-// the editor changes.
+// — or a type of a list, the records of a class (or plain values):
+//
+//	class Link { label str; icon str; href str }
+//	export type default []Link
+//
+// The form the schema describes is what a person edits; the value itself is
+// stored the way it always was — YAML, for a LocaleMessage — and only the
+// editor changes. The short forms of before (`{…}`, `[]{…}`, `[]str`,
+// `interface …`) are refused, saying how to write them.
 //
 // # The shapes a schema takes
 //
-//	{title str; count int}           a record: one form
-//	[]{label str; href}              a list of records: the array sorter
-//	[]str                            a list of PLAIN VALUES: one input per item
-//	[][]str                          a list of those
-//	{sub: {x str}}                   a field that is a form of its own
-//	{sub: []{x str}}                 a field that is a list of forms
-//	{tags []str}                     a field that is a list of plain values
-//	{name?: {x str}}                 the nested field may be nil or absent
+//	export class default { … }         a record: one form
+//	export type default []Link         a list of records: the array sorter
+//	export type default []str          a list of PLAIN VALUES: one input per item
+//	export type default [][]str        a list of those
+//	sub Sub                            a field that is a form of its own (class Sub)
+//	subs []Sub                         a field that is a list of forms
+//	tags []str                         a field that is a list of plain values
+//	sub? Sub                           the nested field may be nil or absent
 //
-// A field declared `get name Type` — a getter — is SHOWN, never edited:
+// A record is always a declared class: a field typed by an interface
+// (`sub interface {…}`) is refused.
 //
-//	[]{get path str; content text}
+// A field declared `[readonly] name Type` is SHOWN, never edited: the form
+// draws it read-only, and Schema.KeepReadOnly puts back the stored value over
+// whatever a post said of it.
 //
-// is a list of records whose path is read-only and whose content is a
-// textarea. The getters come before the other fields (gad keeps an
-// interface's properties apart from its fields). The form draws a getter
-// read-only, and Schema.KeepReadOnly puts back the stored value over whatever
-// a post said of it. A property with a setter, a `prop`, describes behaviour,
-// and is not in the form.
-//
-// `[]str` is the short form of `[]<str>`; `sub: {…}` the short form of
-// `sub interface {…}`. A list of plain values has no Fields and one Item: the
-// item IS the value, so it binds by index and carries no label of its own — the
-// list already has one.
+// A list of plain values has no Fields and one Item: the item IS the value,
+// so it binds by index and carries no label of its own — the list already has
+// one.
 //
 // # The schema is a gad program
 //
 // A schema is not parsed into a form: it RUNS. It is compiled and run in a gad
-// VM of its own (Builder.Parse), and the interface named `Form` is what the run
-// returns; the form is then read off that interface through gad's own
-// reflection — its fields and their resolved types, its array depth
-// (`@depth`), the element of a list of values (`@elem`), the `[k=v, …]`
-// metadata of the interface and of each field (`@meta`). So a schema may use
-// whatever gad can declare, and is checked by gad the way any gad code is: a
-// type name nothing declared is an `unresolved reference`, reported where the
-// schema is read — not later, in the form.
+// VM of its own (Builder.Parse), and what it exports as default (DefaultName)
+// is what the run returns; the form is then read off that class (or the
+// class of the list type) through gad's own reflection — its fields and their
+// resolved types, the `[k=v, …]` metadata of the class, of the type and of
+// each field. So a schema may use whatever gad can declare, and is checked by
+// gad the way any gad code is: a type name nothing declared is an
+// `unresolved reference`, reported where the schema is read — not later, in
+// the form.
 //
 // The types a field may use are the builder's: every type registered on it is
 // in scope while the schema runs, so `color` or `html` resolve although gad has
@@ -81,7 +81,7 @@
 // "from") is a bound that may be left blank — from a date on, with no end
 // (Field.RangeOpen):
 //
-//	interface Form {
+//	export class default {
 //	    [open="to"] stay Range[time.CalendarDate]
 //	    budget? Range[int|float]
 //	    [options=[1, 2, 3, 4]] rooms Range[int]
@@ -108,7 +108,7 @@
 // nothing — a minlength of a number, a min of a choice —, or min after max,
 // is refused:
 //
-//	interface Form {
+//	export class default {
 //	    [min=1, max=10] rooms int
 //	    [min=0, step=0.5] ratio? float
 //	    [min="2026-01-01", max="2026-12-31"] day date
@@ -139,32 +139,24 @@
 //
 // # A schema written in parts
 //
-// A named interface is a declaration another may use BY ITS NAME, and the one
-// named `Form` (FormName) is the form:
+// A class declared beside the form is used BY ITS NAME, after it is declared:
 //
-//	interface User { name, id }
-//	interface Form { owner User; creator User }
+//	class User { name str; id str }
+//	export class default { owner User; creator User }
 //
-// As anywhere in gad, the declarations may come in any order: the form may use
-// an interface declared after it. An interface that contains itself — itself,
-// or through others — describes a form without end, and is refused where the
-// schema is read. Each occurrence is read on its own, so the words of `owner`
-// are not the words of `creator`.
-//
-// Written in one piece the schema needs no name for anything, and needs none —
-// `{…}`, `[]{…}`, `[]str`, or `interface []{…}` after the enums it uses: that
-// one interface is the form. An interface without a name BESIDE the form is
-// refused: nothing could refer to it.
+// A class that contains itself — itself, or through others — describes a form
+// without end, and is refused where the schema is read. Each occurrence is
+// read on its own, so the words of `owner` are not the words of `creator`.
 //
 // # Groups: fields side by side
 //
 // A group — `{ … }` written where a field goes, gad's sugar for the field
-// `$N` of an anonymous class (interface) — is no field of the form: its
+// `$N` of an anonymous class — is no field of the form: its
 // fields are, in its place, the COLUMNS of one row, and a new group is a new
 // row. What they hold is the record's own: the group adds no name to the
 // value, nor to a field's path.
 //
-//	{
+//	export class default {
 //	    { [width=2] name str; phone str; email? str }   // one row: 40% 30% 30%
 //	    message text                                    // a row of its own
 //	}
@@ -186,11 +178,13 @@
 //
 // # Metadata: how the form is drawn
 //
-// The `[k=v, …]` block before the interface says how the form is DRAWN, never
-// what the value is (Schema.Meta; a field's own block is Field.Meta):
+// The `[k=v, …]` block before the `export` — of the class, or of the type of
+// the list — says how the form is DRAWN, never what the value is
+// (Schema.Meta; a field's own block is Field.Meta):
 //
+//	class Certification { label str; icon str; color str; link? str; disabled? bool }
 //	[layout={name: "table", columns: [#label, #icon, #color, #disabled]}]
-//	interface Form []{label str; icon str; color str; link? str; disabled? bool}
+//	export type default []Certification
 //
 // `layout` is a layout's name, or `{name: …}` with what the layout is told.
 // A layout is registered (RegisterLayout) with its Config — a gad class,
@@ -234,7 +228,7 @@
 //     whatever the field's type — it wins over a registered component —, and
 //     on a list of plain values (`tags []str`) each item is one.
 //   - an `enum` the schema declares, beside it or inline —
-//     `enum Perm { Read, Write }` / `{perm enum { Read, Write }}`. What goes
+//     `enum Perm { Read, Write }` / `perm enum { Read, Write }`. What goes
 //     into the record is the member's NAME (`Read`), never the number behind
 //     it, because the value is written out and read back by name.
 //   - `Builder.EnumItems`, for a list that is not fixed and so cannot be
@@ -349,7 +343,7 @@
 //
 // # A whole use, end to end
 //
-//	schema, err := schemaform.Parse(`[]{label str; icon str; href}`)
+//	schema, err := schemaform.Parse("class Link { label str; icon str; href str }\nexport type default []Link")
 //	if err != nil {
 //	    return err
 //	}

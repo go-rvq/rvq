@@ -33,7 +33,7 @@ func dynamicSchema(t *testing.T, url, onError string) *Schema {
 	t.Helper()
 	requestCache.Range(func(k, _ any) bool { requestCache.Delete(k); return true })
 	src := `const states = (;MA="Massachusetts", ME="Maine", XX="Nowhere")
-export class Form {
+export class default {
 	kind str
 	lead class {
 		use WithWarnings
@@ -138,11 +138,11 @@ func TestDynamicOptionsError(t *testing.T) {
 
 // A record of a field that keeps a value with a warning uses WithWarnings.
 func TestDynamicWarnNeedsWithWarnings(t *testing.T) {
-	_, err := Parse(`export class Form { lead class { [optionsError="warn", options=(this) => nil] city str } }`)
+	_, err := Parse(`export class default { lead class { [optionsError="warn", options=(this) => nil] city str } }`)
 	if err == nil || !strings.Contains(err.Error(), WithWarningsClass) {
 		t.Errorf("no WithWarnings: %v", err)
 	}
-	if _, err := Parse(`export class Form { lead class { [optionsError="maybe"] city str } }`); err == nil {
+	if _, err := Parse(`export class default { lead class { [optionsError="maybe"] city str } }`); err == nil {
 		t.Error("an optionsError of no meaning taken")
 	}
 }
@@ -202,7 +202,7 @@ func TestDynamicCheckByPageOptions(t *testing.T) {
 func TestRequest(t *testing.T) {
 	srv, _ := citiesServer(t)
 	requestCache.Range(func(k, _ any) bool { requestCache.Delete(k); return true })
-	s, err := Parse(`export class Form {
+	s, err := Parse(`export class default {
 	[options=(this) => Request("` + srv.URL + `"; query={state: "Maine"}).then((r) => r.data).then((l) => [[l[0], "City of " + l[0]]])]
 	city str
 }`)
@@ -213,7 +213,7 @@ func TestRequest(t *testing.T) {
 	if err != nil || len(items) != 1 || items[0].Name != "Portland" || items[0].Label != "City of Portland" {
 		t.Errorf("then: %+v %v", items, err)
 	}
-	bad, _ := Parse(`export class Form {
+	bad, _ := Parse(`export class default {
 	[options=(this) => Request("file:///etc/passwd")]
 	city str
 }`)
@@ -226,7 +226,7 @@ func TestRequest(t *testing.T) {
 // values set: this.state —; parents, one item a record above: the field of
 // the parent it is (fieldName) and the parent's instance (self).
 func TestDynamicThisAndParents(t *testing.T) {
-	s, err := Parse(`export class Form {
+	s, err := Parse(`export class default {
 	kind str
 	lead class {
 		state str
@@ -248,11 +248,11 @@ func TestDynamicThisAndParents(t *testing.T) {
 	for _, it := range items {
 		got = append(got, it.Name)
 	}
-	if strings.Join(got, "|") != "Form.lead|Maine|1|lead|Form|house" {
+	if strings.Join(got, "|") != "default.lead|Maine|1|lead|default|house" {
 		t.Errorf("this and parents: %v", got)
 	}
 	// nothing answered yet: still the instances
-	s2, err := Parse(`export class Form {
+	s2, err := Parse(`export class default {
 	lead class {
 		state str
 		[options=(this, parents) => [typeName(this), typeName(parents[0].self)]]
@@ -263,7 +263,7 @@ func TestDynamicThisAndParents(t *testing.T) {
 		t.Fatal(err)
 	}
 	items, err = (&Decoder{Schema: s2}).Options("lead.city", map[string]any{})
-	if err != nil || len(items) != 2 || items[0].Name != "Form.lead" || items[1].Name != "Form" {
+	if err != nil || len(items) != 2 || items[0].Name != "default.lead" || items[1].Name != "default" {
 		t.Errorf("nothing answered: %+v %v", items, err)
 	}
 }
@@ -281,7 +281,7 @@ func TestDynamicChanged(t *testing.T) {
 	}))
 	defer srv.Close()
 	requestCache.Range(func(k, _ any) bool { requestCache.Delete(k); return true })
-	s, err := Parse(`export class Form {
+	s, err := Parse(`export class default {
 	lead class {
 		[changed=(this, parents) => len(this.zip) >= 5 ? Request("` + srv.URL + `/us/" + this.zip[:5]).then(func(r) {
 			this.state = r.places[0].state
@@ -306,7 +306,7 @@ func TestDynamicChanged(t *testing.T) {
 	if _, err = (&Decoder{Schema: s}).Changed("lead.zip", map[string]any{"lead": map[string]any{"zip": "99999"}}); err == nil {
 		t.Error("a zip not found: no error")
 	}
-	if _, err := Parse(`export class Form { [changed="x"] zip str }`); err == nil {
+	if _, err := Parse(`export class default { [changed="x"] zip str }`); err == nil {
 		t.Error("a changed not a function taken")
 	}
 }

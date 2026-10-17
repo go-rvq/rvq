@@ -9,13 +9,14 @@ import (
 )
 
 // runClass runs src — the builder's types in scope (Builtins), and extra
-// names — and reads the class it returns as a form.
+// names — and reads the class it exports as default as a form.
 func runClass(t *testing.T, b *Builder, src string, extra map[string]gad.Object) *Schema {
 	t.Helper()
 	bi := b.Builtins()
 	for name, o := range extra {
 		bi.Set(name, o)
 	}
+	src = defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) + "\nreturn " + DefaultName + "\n"
 	res, err := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte(src), gad.CompileOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -39,8 +40,7 @@ func runClass(t *testing.T, b *Builder, src string, extra map[string]gad.Object)
 func TestClassExtendsAndBuilderTypes(t *testing.T) {
 	s := runClass(t, New(), `
 class P { pz str; [label="A"] pa? str }
-class Form { *P; z str; a str; m text; d? date; b? int }
-return Form`, nil)
+export class default { *P; z str; a str; m text; d? date; b? int }`, nil)
 	want := []struct{ name, typ, owner string }{
 		{"pz", "str", "P"}, {"pa", "str", "P"}, {"z", "str", ""}, {"a", "str", ""},
 		{"m", "text", ""}, {"d", "date", ""}, {"b", "int", ""},
@@ -63,7 +63,7 @@ return Form`, nil)
 // `contact_form.email` — types a field as the builder's types do.
 func TestClassTypeMarker(t *testing.T) {
 	b := New().Type("contact_form.email", TextComponentFunc)
-	s := runClass(t, b, `class Form { email contact_form.email }; return Form`, map[string]gad.Object{
+	s := runClass(t, b, `export class default { email contact_form.email }`, map[string]gad.Object{
 		"contact_form": gad.Dict{"email": TypeMarker("contact_form.email")},
 	})
 	if f := s.Fields[0]; f.Name != "email" || f.Type != "contact_form.email" {
@@ -83,14 +83,14 @@ func TestClassName(t *testing.T) {
 		return ""
 	})
 	bi := b.Builtins()
-	res, _ := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte(`class Form { a str }; return Form`), gad.CompileOptions{})
+	res, _ := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte("class Base { a str }\nreturn Base"), gad.CompileOptions{})
 	vm := gad.NewVM(bi.Build(), res.Bytecode)
 	ret, err := vm.Run()
 	if err != nil {
 		t.Fatal(err)
 	}
 	parent = ret.(*gad.Class)
-	s := runClass(t, b, `class Form { *P; b str }; return Form`, map[string]gad.Object{"P": parent})
+	s := runClass(t, b, `export class default { *P; b str }`, map[string]gad.Object{"P": parent})
 	if s.Fields[0].Name != "a" || s.Fields[0].Owner != "forms.base" || s.Fields[1].Owner != "" {
 		t.Errorf("fields: %s %q, %s %q", s.Fields[0].Name, s.Fields[0].Owner, s.Fields[1].Name, s.Fields[1].Owner)
 	}
@@ -107,7 +107,8 @@ func TestEnumTypeAndGrid(t *testing.T) {
 			}
 			return nil, nil
 		})
-	const src = `[][]{ fieldName form_field; maxWidth? int }`
+	const src = `class Item { fieldName form_field; maxWidth? int }
+export type default [][]Item`
 	s, err := b.Parse(src)
 	if err != nil {
 		t.Fatal(err)

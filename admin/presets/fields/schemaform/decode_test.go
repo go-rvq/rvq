@@ -11,7 +11,7 @@ import (
 // the same YAML the value was written in, fields in the order the schema
 // declares them.
 func TestDecodeListOfRecords(t *testing.T) {
-	s, err := Parse("[]{label str; icon str; href}")
+	s, err := Parse("class Item { label str; icon str; href }\nexport type default []Item")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestDecodeListOfRecords(t *testing.T) {
 
 // A list of plain values: the item IS the value, so the form posts `V[0]`.
 func TestDecodeListOfValues(t *testing.T) {
-	s, err := Parse("[]str")
+	s, err := Parse("export type default []str")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestDecodeListOfValues(t *testing.T) {
 
 // An empty list is an empty list, not nil — the form simply has no index.
 func TestDecodeEmptyList(t *testing.T) {
-	s, _ := Parse("[]str")
+	s, _ := Parse("export type default []str")
 	got, err := yaml.Marshal(s.Decode(url.Values{}, "V"))
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestDecodeEmptyList(t *testing.T) {
 
 // Each type comes back as what it IS, so the YAML is typed and not all strings.
 func TestDecodeTypes(t *testing.T) {
-	s, err := Parse("{num int; u uint; f float; active bool; hidden bool; s str}")
+	s, err := Parse("export class default {\n\tnum int\n\tu uint\n\tf float\n\tactive bool\n\thidden bool\n\ts str\n}")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ s: texto
 // A field that accepts nil and was left empty is nil; a required one keeps the
 // empty value of its type, so the shape of the record never changes.
 func TestDecodeEmptyFields(t *testing.T) {
-	s, err := Parse("{a? str; b str; c? int}")
+	s, err := Parse("export class default { a? str; b str; c? int }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestDecodeEmptyFields(t *testing.T) {
 
 // A form inside the form, and a list inside a record, come back nested.
 func TestDecodeNested(t *testing.T) {
-	s, err := Parse("{title str; sub: {x str}; tags []str}")
+	s, err := Parse("class Sub { x str }\nexport class default { title str; sub Sub; tags []str }")
 	if err != nil {
 		t.Fatal(err)
 	}

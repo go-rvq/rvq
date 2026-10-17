@@ -37,7 +37,7 @@ func render(t *testing.T, b *Builder, src string) string {
 
 // A record: each field binds under the form key of the presets field.
 func TestComponentFuncBindsEachFieldUnderTheFormKey(t *testing.T) {
-	got := render(t, New(), "{label str; href}")
+	got := render(t, New(), "export class default { label str; href }")
 
 	for _, want := range []string{
 		`v-model='form["Value"].label'`,
@@ -52,7 +52,7 @@ func TestComponentFuncBindsEachFieldUnderTheFormKey(t *testing.T) {
 // A list: the sorter iterates over the value, and each item binds its own
 // fields under the slot's item.
 func TestComponentFuncDrawsAListWithTheSorter(t *testing.T) {
-	got := render(t, New(), "[]{label str; icon str; href}")
+	got := render(t, New(), "class Item { label str; icon str; href }\nexport type default []Item")
 
 	for _, want := range []string{
 		`vx-array-sorter`,
@@ -75,7 +75,7 @@ func TestComponentFuncDrawsAListWithTheSorter(t *testing.T) {
 // A field that is itself an interface draws the form again, one level down —
 // and a list of them draws a sorter inside the form.
 func TestComponentFuncRecursesIntoANestedForm(t *testing.T) {
-	got := render(t, New(), "{title str; sub interface {x str}}")
+	got := render(t, New(), "class Sub { x str }\nexport class default { title str; sub Sub }")
 	for _, want := range []string{
 		`v-model='form["Value"].title'`,
 		`v-model='form["Value"].sub.x'`,
@@ -85,7 +85,7 @@ func TestComponentFuncRecursesIntoANestedForm(t *testing.T) {
 		}
 	}
 
-	got = render(t, New(), "{title str; subs interface[] {x str}}")
+	got = render(t, New(), "class Item { x str }\nexport class default { title str; subs []Item }")
 	for _, want := range []string{
 		`v-model='form["Value"].subs'`, // the nested sorter, over the field
 		`v-model='item.x'`,
@@ -102,7 +102,7 @@ func TestTypeRegistry(t *testing.T) {
 		return v.VTextField().Attr("data-color", "1").Attr("v-model", c.Value)
 	})
 
-	got := render(t, b, "{a str; b color}")
+	got := render(t, b, "export class default { a str; b color }")
 	if !strings.Contains(got, `data-color='1'`) {
 		t.Errorf("o componente do type não foi usado:\n%s", got)
 	}
@@ -114,7 +114,7 @@ func TestTypeRegistry(t *testing.T) {
 	b2 := New().Type(DefaultType, func(c *Context) h.HTMLComponent {
 		return h.Div().Attr("data-mine", "1")
 	})
-	if !strings.Contains(render(t, b2, "{a str}"), `data-mine='1'`) {
+	if !strings.Contains(render(t, b2, "export class default { a str }"), `data-mine='1'`) {
 		t.Error("o type padrão não foi substituído")
 	}
 }
@@ -122,7 +122,7 @@ func TestTypeRegistry(t *testing.T) {
 // A type gad knows but the builder has no component for is not silently drawn
 // as text: the form says which field asked for what, and what there is.
 func TestUnknownTypeIsReported(t *testing.T) {
-	got := render(t, New(), "{a str; b bytes}")
+	got := render(t, New(), "export class default { a str; b bytes }")
 
 	for _, want := range []string{"b", "bytes", "has no component"} {
 		if !strings.Contains(got, want) {
@@ -158,7 +158,7 @@ func TestTypesListsWhatIsRegistered(t *testing.T) {
 // suits it — and a number bound as a NUMBER, since the value is written out
 // again and a quoted one would come back a string.
 func TestDefaultTypes(t *testing.T) {
-	got := render(t, New(), "{a str; n int; u uint; on bool; c color; f float; d decimal; t text; markup html; at time; day date; span duration}")
+	got := render(t, New(), "export class default {\n\ta str\n\tn int\n\tu uint\n\ton bool\n\tc color\n\tf float\n\td decimal\n\tt text\n\tmarkup html\n\tat time\n\tday date\n\tspan duration\n}")
 
 	for what, want := range map[string]string{
 		"str":   `<v-text-field`,
@@ -199,7 +199,7 @@ func TestDefaultTypes(t *testing.T) {
 
 // A field typed with an enum is a select over the enum's values.
 func TestEnumFieldIsASelect(t *testing.T) {
-	got := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+	got := render(t, New(), "enum Perm { Read, Write }\nexport class default { perm Perm }")
 
 	for _, want := range []string{
 		`<v-select`,
@@ -217,7 +217,7 @@ func TestEnumFieldIsASelect(t *testing.T) {
 // A required input carries `required`; an optional one does not, and may be
 // cleared.
 func TestOnlyAnOptionalFieldMayBeEmpty(t *testing.T) {
-	optional := render(t, New(), "enum Perm { Read, Write }\ninterface {perm? Perm}")
+	optional := render(t, New(), "enum Perm { Read, Write }\nexport class default { perm? Perm }")
 	if strings.Contains(optional, "required") {
 		t.Errorf("o field opcional foi marcado como obrigatório:\n%s", optional)
 	}
@@ -225,7 +225,7 @@ func TestOnlyAnOptionalFieldMayBeEmpty(t *testing.T) {
 		t.Errorf("o field opcional não pode ser limpo:\n%s", optional)
 	}
 
-	required := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+	required := render(t, New(), "enum Perm { Read, Write }\nexport class default { perm Perm }")
 	if !strings.Contains(required, "required") {
 		t.Errorf("o field obrigatório não foi marcado:\n%s", required)
 	}
@@ -234,10 +234,10 @@ func TestOnlyAnOptionalFieldMayBeEmpty(t *testing.T) {
 	}
 
 	// and the same for a plain text field
-	if strings.Contains(render(t, New(), "{a? str}"), "required") {
+	if strings.Contains(render(t, New(), "export class default { a? str }"), "required") {
 		t.Error("texto opcional marcado como obrigatório")
 	}
-	if !strings.Contains(render(t, New(), "{a str}"), "required") {
+	if !strings.Contains(render(t, New(), "export class default { a str }"), "required") {
 		t.Error("texto obrigatório não marcado")
 	}
 }
@@ -247,7 +247,7 @@ func TestEnumTypeCanBeOverridden(t *testing.T) {
 	b := New().Type("Perm", func(c *Context) h.HTMLComponent {
 		return h.Div().Attr("data-perm", "1")
 	})
-	if !strings.Contains(render(t, b, "enum Perm { Read }\ninterface {perm Perm}"), `data-perm='1'`) {
+	if !strings.Contains(render(t, b, "enum Perm { Read }\nexport class default { perm Perm }"), `data-perm='1'`) {
 		t.Error("o componente registrado para o enum não foi usado")
 	}
 }
@@ -269,7 +269,7 @@ func TestFieldInfoByPath(t *testing.T) {
 		return FieldInfo{}
 	})
 
-	got := render(t, b, "{title str; sub interface {note str}; links interface[] {href str}}")
+	got := render(t, b, "class Sub { note str }\nclass Link { href str }\nexport class default { title str; sub Sub; links []Link }")
 
 	// every field is asked for, by its own path
 	for _, want := range []string{"title", "sub", "sub.note", "links", "links.href"} {
@@ -309,7 +309,7 @@ func TestFieldInfoByPath(t *testing.T) {
 // Without the function nothing changes: the label is the name humanized, and
 // there is no `?`.
 func TestFieldInfoIsOptional(t *testing.T) {
-	got := render(t, New(), "{title str}")
+	got := render(t, New(), "export class default { title str }")
 
 	if !strings.Contains(got, `label='Title'`) {
 		t.Errorf("label = ?:\n%s", got)
@@ -336,7 +336,7 @@ func TestEnumInfoByPath(t *testing.T) {
 		return nil
 	})
 
-	got := render(t, b, "enum Perm { Read, Write }\nenum Cor { Azul }\ninterface {perm Perm; cor Cor}")
+	got := render(t, b, "enum Perm { Read, Write }\nenum Cor { Azul }\nexport class default { perm Perm; cor Cor }")
 
 	// asked for each enum field, by its path
 	for _, want := range []string{"perm", "cor"} {
@@ -380,7 +380,7 @@ func TestEnumInfoByPath(t *testing.T) {
 // Without the function the field offers what the enum declared, each showing
 // its own name.
 func TestEnumInfoIsOptional(t *testing.T) {
-	got := render(t, New(), "enum Perm { Read, Write }\ninterface {perm Perm}")
+	got := render(t, New(), "enum Perm { Read, Write }\nexport class default { perm Perm }")
 
 	for _, want := range []string{
 		`{"title":"Read","value":"Read"}`,
@@ -396,7 +396,7 @@ func TestEnumInfoIsOptional(t *testing.T) {
 // the value is written out as YAML and read back by name, so an enum that
 // renumbers its members must not rewrite every record.
 func TestEnumStoresTheMemberName(t *testing.T) {
-	got := render(t, New(), "enum Perm { Read = 4, Write = 8 }\ninterface {perm Perm}")
+	got := render(t, New(), "enum Perm { Read = 4, Write = 8 }\nexport class default { perm Perm }")
 
 	for _, want := range []string{
 		`{"title":"Read","value":"Read"}`,
@@ -417,7 +417,7 @@ func TestEnumStoresTheMemberName(t *testing.T) {
 // the value, so it binds at the item's index — a primitive cannot be written
 // back through the slot's `item` variable.
 func TestComponentFuncDrawsAListOfValues(t *testing.T) {
-	got := render(t, New(), "[]str")
+	got := render(t, New(), "export type default []str")
 
 	for _, want := range []string{
 		`vx-array-sorter`,
@@ -438,7 +438,7 @@ func TestComponentFuncDrawsAListOfValues(t *testing.T) {
 
 // A field that is a list of values is that same list, one level down.
 func TestComponentFuncDrawsAFieldListOfValues(t *testing.T) {
-	got := render(t, New(), "{title str; tags []str}")
+	got := render(t, New(), "export class default { title str; tags []str }")
 
 	for _, want := range []string{
 		`v-model='form["Value"].title'`,
@@ -455,7 +455,7 @@ func TestComponentFuncDrawsAFieldListOfValues(t *testing.T) {
 // carries a button per row to remove it and one at the end to add another —
 // shaped like the ones already there.
 func TestComponentFuncListAddsAndRemoves(t *testing.T) {
-	got := render(t, New(), "[]{label str; count int; on bool}")
+	got := render(t, New(), "class Item { label str; count int; on bool }\nexport type default []Item")
 
 	for _, want := range []string{
 		`@click='form["Value"].splice(itemIndex, 1)'`,
@@ -468,17 +468,17 @@ func TestComponentFuncListAddsAndRemoves(t *testing.T) {
 	}
 
 	// a list of plain values pushes the empty value of its type
-	if got := render(t, New(), "[]str"); !strings.Contains(got, `push("")`) {
+	if got := render(t, New(), "export type default []str"); !strings.Contains(got, `push("")`) {
 		t.Errorf("a lista de valores não acrescenta um item vazio:\n%s", got)
 	}
-	if got := render(t, New(), "[]int"); !strings.Contains(got, `push(0)`) {
+	if got := render(t, New(), "export type default []int"); !strings.Contains(got, `push(0)`) {
 		t.Errorf("a lista de int não acrescenta um zero:\n%s", got)
 	}
 }
 
 // A list the user may not write shows neither button.
 func TestComponentFuncReadOnlyListHasNoButtons(t *testing.T) {
-	schema, err := Parse("[]{label str}")
+	schema, err := Parse("class Item { label str }\nexport type default []Item")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,11 +504,11 @@ func TestComponentFuncReadOnlyListHasNoButtons(t *testing.T) {
 // reader would name the row by.
 func TestListItemTitleField(t *testing.T) {
 	for src, want := range map[string]string{
-		"[]{icon str; label str}": "label", // a name beats the first field
-		"[]{icon str; title str}": "title",
-		"[]{icon str; href str}":  "icon", // no name: the first text field
-		"[]{n int; label str}":    "label",
-		"[]{n int; u uint}":       "", // nothing to show
+		"class Item { icon str; label str }\nexport type default []Item": "label", // a name beats the first field
+		"class Item { icon str; title str }\nexport type default []Item": "title",
+		"class Item { icon str; href str }\nexport type default []Item":  "icon", // no name: the first text field
+		"class Item { n int; label str }\nexport type default []Item":    "label",
+		"class Item { n int; u uint }\nexport type default []Item":       "", // nothing to show
 	} {
 		got := render(t, New(), src)
 		if want == "" {
@@ -526,7 +526,7 @@ func TestListItemTitleField(t *testing.T) {
 // One item does not run into the next: a record is a card, a value a row with
 // a line between it and the next — between, so the first has none above it.
 func TestComponentFuncListSeparatesItems(t *testing.T) {
-	got := render(t, New(), "[]{label str; href str}")
+	got := render(t, New(), "class Item { label str; href str }\nexport type default []Item")
 
 	// the default list of records: each record a card, with its remove button
 	if n := strings.Count(got, "<v-card "); n != 1 {
@@ -543,7 +543,7 @@ func TestComponentFuncListSeparatesItems(t *testing.T) {
 	}
 
 	// a list of plain values stays rows, a line between them
-	got = render(t, New(), "[]str")
+	got = render(t, New(), "export type default []str")
 	if !strings.Contains(got, `<v-divider v-if='itemIndex > 0'`) || strings.Contains(got, "<v-card ") {
 		t.Errorf("valores: linhas, não cards:\n%s", got)
 	}
@@ -555,7 +555,7 @@ func TestComponentFuncListSeparatesItems(t *testing.T) {
 // A switch says what it says by being on: it must be coloured when it is, or a
 // true reads exactly like a false.
 func TestBoolFieldSwitchIsColoured(t *testing.T) {
-	got := render(t, New(), "{on bool}")
+	got := render(t, New(), "export class default { on bool }")
 	if !strings.Contains(got, "v-switch") {
 		t.Fatalf("o bool não é um switch:\n%s", got)
 	}
@@ -567,7 +567,9 @@ func TestBoolFieldSwitchIsColoured(t *testing.T) {
 // A grid: each record a card with its fields and a button to remove it, the
 // cards columns per row from a medium screen on (12/4 = 3 of the 12).
 func TestComponentFuncGrid(t *testing.T) {
-	got := render(t, New(), `[layout={name: "grid", columns: 4}] interface Form []{label str; href}`)
+	got := render(t, New(), `class Item { label str; href }
+[layout={name: "grid", columns: 4}]
+export type default []Item`)
 	for _, want := range []string{
 		"<v-row", "<v-col", `:md='3'`, `v-for='(item, itemIndex) in form["Value"]'`,
 		"<v-card", `v-model='item.label'`, `v-model='item.href'`,
@@ -584,11 +586,7 @@ func TestComponentFuncGrid(t *testing.T) {
 
 // `when` draws a field only while the record holds what it says.
 func TestComponentFuncWhen(t *testing.T) {
-	got := render(t, New(), `interface Form {
-	name str
-	[when={name: "grid"}]
-	columns? int
-}`)
+	got := render(t, New(), `export class default { name str; [when={name: "grid"}]; columns? int }`)
 	want := `v-if='(form["Value"] || {})["name"] === "grid"'`
 	if !strings.Contains(got, want) {
 		t.Errorf("missing %q in\n%s", want, got)
@@ -603,7 +601,7 @@ func TestComponentFuncNestedRecordIsAGroup(t *testing.T) {
 	b := New().FieldInfo(func(_ *web.EventContext, path string) FieldInfo {
 		return FieldInfo{Label: map[string]string{"address": "Endereço"}[path]}
 	})
-	got := render(t, b, "interface Address { street str }\ninterface Form { name str; address Address }")
+	got := render(t, b, "class Address { street str }\nexport class default { name str; address Address }")
 	i, j := strings.Index(got, "Endereço"), strings.Index(got, `form["Value"].address.street`)
 	if i < 0 || j < 0 || i > j {
 		t.Errorf("the group's label comes before its fields:\n%s", got)
@@ -618,7 +616,8 @@ func TestComponentFuncNestedRecordIsAGroup(t *testing.T) {
 // inside drawn as the form draws it. With no mode (a preview), the inputs.
 func TestComponentFuncReadOnlyShowsValues(t *testing.T) {
 	b := New()
-	schema, err := b.Parse(`{[hint="The title"] title str; done bool; address: {city str}}`)
+	schema, err := b.Parse(`class Address { city str }
+export class default { [hint="The title"] title str; done bool; address Address }`)
 	if err != nil {
 		t.Fatal(err)
 	}

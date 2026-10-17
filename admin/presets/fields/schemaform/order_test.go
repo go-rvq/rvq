@@ -16,7 +16,9 @@ func orderBuilder(t *testing.T) (*Builder, *Schema) {
 	b := New().Order("order", func(*Context) []OrderOption {
 		return []OrderOption{{Value: "CreatedAt", Label: "Criado em"}, {Value: "Title", Label: "Título"}}
 	})
-	s, err := b.Parse(`{[label="Ordem", hint="a prioridade"] sort? order}`)
+	s, err := b.Parse(`export class default {
+	[label="Ordem", hint="a prioridade"] sort? order
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}

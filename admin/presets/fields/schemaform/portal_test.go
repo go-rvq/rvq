@@ -20,7 +20,7 @@ func TestPortal(t *testing.T) {
 	b := New()
 	b.Type("opener", func(c *Context) h.HTMLComponent { return h.Span("edit:" + c.PortalName()) })
 	b.Display("opener", func(c *Context) h.HTMLComponent { return h.Span("show:" + c.PortalName()) })
-	schema, err := b.Parse(`{x? opener}`)
+	schema, err := b.Parse(`export class default { x? opener }`)
 	if err != nil {
 		t.Fatal(err)
 	}

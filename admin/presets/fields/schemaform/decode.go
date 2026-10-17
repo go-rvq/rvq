@@ -170,7 +170,7 @@ func (e *FieldErrors) FieldErrors() map[string][]string { return e.Fields }
 func (e *FieldErrors) Unwrap() error { return e.Others }
 
 // KeepReadOnly is value — what a form posted, decoded — with the fields
-// declared `get name Type` (Field.ReadOnly) set back to what stored — the
+// declared `[readonly] name Type` (Field.ReadOnly) set back to what stored — the
 // value as it was — holds: a post does not change what is only shown. The
 // records of a list are matched by their index. stored may be what the
 // decoder gave, or what YAML or JSON read (maps and slices).

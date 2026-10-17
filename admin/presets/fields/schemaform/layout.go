@@ -111,7 +111,7 @@ func ParseConfig(src string) (*Schema, error) {
 	if !ok {
 		return nil, fmt.Errorf("schemaform: Config is not a class, it is %s", ret.Type().Name())
 	}
-	r := &reader{vm: vm, enums: map[string]*Enum{}, visiting: map[*gad.Interface]bool{}}
+	r := &reader{vm: vm, enums: map[string]*Enum{}}
 	return r.class(c)
 }
 

@@ -14,10 +14,10 @@ class Start {
     }
 }
 [steps, autosave]
-class Form {
+export class default {
     [label="Início"]
     a Start
-    [label="Antes de 10", next=(r) => r.a.count > 5 ? Form.done : nil]
+    [label="Antes de 10", next=(r) => r.a.count > 5 ? default.done : nil]
     {
         valInB int
         other? str
@@ -26,8 +26,7 @@ class Form {
     done class {
         valInDone bool
     }
-}
-return Form`
+}`
 
 // A form of steps: each field of its class a step — a group `{ … }` one, its
 // fields the record's own —, labeled; the next by the step's [next=…], else
@@ -98,7 +97,7 @@ func TestFlow(t *testing.T) {
 	}
 
 	// a form not of steps: none
-	plain, _ := readClass("class Form { a str }; return Form")
+	plain, _ := readClass("export class default { a str }")
 	if plain.Flow() != nil {
 		t.Error("a flow of a form not of steps")
 	}
@@ -107,12 +106,11 @@ func TestFlow(t *testing.T) {
 // A next that answers what is no step is the form's error.
 func TestFlowNextNoStep(t *testing.T) {
 	st, err := readClass(`[steps]
-class Form {
+export class default {
     [next=(r) => "zz"]
     a str
     b str
-}
-return Form`)
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,9 +127,8 @@ return Form`)
 // the class's `decimal` field refuses. A value the class refuses is told by
 // the labels of the way to it, the step's first.
 func TestFlowDecimal(t *testing.T) {
-	st, err := readClass(`
-[steps]
-class Form {
+	st, err := readClass(`[steps]
+export class default {
     [label="Contact"]
     lead class {
         name str
@@ -146,8 +143,7 @@ class Form {
             share? decimal
         }
     }
-}
-return Form`)
+}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,8 +176,8 @@ return Form`)
 // as a group's; across, else.
 func TestFlowVertical(t *testing.T) {
 	for src, want := range map[string]bool{
-		"[steps, vertical, autosave]\nclass Form {\n    a class { x str }\n    b class { y str }\n}\nreturn Form": true,
-		"[steps]\nclass Form {\n    a class { x str }\n    b class { y str }\n}\nreturn Form":                     false,
+		"[steps, vertical, autosave]\nexport class default {\n    a class { x str }\n    b class { y str }\n}": true,
+		"[steps]\nexport class default {\n    a class { x str }\n    b class { y str }\n}":                     false,
 	} {
 		st, err := readClass(src)
 		if err != nil {

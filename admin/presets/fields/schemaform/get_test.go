@@ -9,7 +9,8 @@ import (
 // A field declared `get name Type` is read-only: drawn so, and a post does not
 // change it — KeepReadOnly puts the stored value back.
 func TestGetterIsReadOnly(t *testing.T) {
-	s, err := Parse(`[]{get path str; content text}`)
+	s, err := Parse(`class Item { [readonly] path str; content text }
+export type default []Item`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func TestGetterIsReadOnly(t *testing.T) {
 
 // A getter is drawn read-only, the other fields editable.
 func TestGetterComponent(t *testing.T) {
-	got := render(t, New(), `{get path str; content text}`)
+	got := render(t, New(), `export class default { [readonly] path str; content text }`)
 	i := strings.Index(got, `form[&#34;Value&#34;].path`)
 	if i < 0 {
 		i = strings.Index(got, ".path")

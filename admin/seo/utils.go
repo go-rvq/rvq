@@ -23,7 +23,7 @@ func configDataYAML(c *SEOConfig) string {
 // configSchema is the schema of the settings of the SEOConfig (its Data), each
 // labelled in msgr's words: what its detail shows, read only.
 func configSchema(msgr *Messages) (*schemaform.Schema, error) {
-	return schemaform.Parse(fmt.Sprintf("interface {\n\t[label=%s, hint=%s]\n\t%s? str\n}",
+	return schemaform.Parse(fmt.Sprintf("export class default {\n\t[label=%s, hint=%s]\n\t%s? str\n}",
 		strconv.Quote(msgr.MapsKey), strconv.Quote(msgr.MapsKeyHint), SEOConfigGoogleMapsKey))
 }
 

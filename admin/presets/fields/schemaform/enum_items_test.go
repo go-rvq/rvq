@@ -22,7 +22,7 @@ func countries(_ *web.EventContext, path string, _ *Field) ([]EnumItem, error) {
 // for it, and the select offers exactly that list.
 func TestEnumItemsDrawsASelect(t *testing.T) {
 	b := New().EnumItems(countries)
-	got := render(t, b, "{country; name str}")
+	got := render(t, b, "export class default { country; name str }")
 
 	for _, want := range []string{
 		`v-select`,
@@ -43,7 +43,7 @@ func TestEnumItemsDrawsASelect(t *testing.T) {
 // Inside a list, the path is the one the form asks by — a list adds no level.
 func TestEnumItemsInsideAList(t *testing.T) {
 	b := New().EnumItems(countries)
-	got := render(t, b, "{addresses: []{country; street str}}")
+	got := render(t, b, "class Addresses { country; street str }\nexport class default { addresses []Addresses }")
 
 	if !strings.Contains(got, `v-model='item.country'`) || !strings.Contains(got, "Brasil") {
 		t.Errorf("o select dentro da lista não foi montado:\n%s", got)
@@ -56,7 +56,7 @@ func TestEnumItemsDoNotStealARegisteredType(t *testing.T) {
 	b := New().EnumItems(func(_ *web.EventContext, _ string, _ *Field) ([]EnumItem, error) {
 		return []EnumItem{{Name: "x"}}, nil
 	})
-	if got := render(t, b, "{n int}"); !strings.Contains(got, "v-text-field") {
+	if got := render(t, b, "export class default { n int }"); !strings.Contains(got, "v-text-field") {
 		t.Errorf("o int deixou de ser int:\n%s", got)
 	}
 }
@@ -65,7 +65,7 @@ func TestEnumItemsDoNotStealARegisteredType(t *testing.T) {
 // back whole so the form can be shown again.
 func TestDecodeFormChecksTheList(t *testing.T) {
 	b := New().EnumItems(countries)
-	s, err := Parse("{country; name str}")
+	s, err := Parse("export class default { country; name str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestDecodeFormChecksTheList(t *testing.T) {
 // An enum the schema DID declare is checked the same way, with no function at
 // all.
 func TestDecodeFormChecksADeclaredEnum(t *testing.T) {
-	s, err := Parse("enum Perm { Read, Write }\ninterface { perm Perm; opt? Perm }")
+	s, err := Parse("enum Perm { Read, Write }\nexport class default { perm Perm; opt? Perm }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestDecodeFormChecksADeclaredEnum(t *testing.T) {
 // Schema.Decode reads and does not check — checking is the builder's, which is
 // the one that knows what the select offered.
 func TestSchemaDecodeDoesNotCheck(t *testing.T) {
-	s, _ := Parse("enum Perm { Read }\ninterface { perm Perm }")
+	s, _ := Parse("enum Perm { Read }\nexport class default { perm Perm }")
 	if rec, ok := s.Decode(url.Values{"V.perm": {"Delete"}}, "V").(Record); !ok || rec[0].Value != "Delete" {
 		t.Errorf("value = %#v", s.Decode(url.Values{"V.perm": {"Delete"}}, "V"))
 	}
@@ -147,7 +147,7 @@ func TestEnumItemsError(t *testing.T) {
 		return nil, nil
 	})
 
-	got := render(t, b, "{country; name str}")
+	got := render(t, b, "export class default { country; name str }")
 	if !strings.Contains(got, "o banco não respondeu") {
 		t.Errorf("o form não disse o que faltou:\n%s", got)
 	}
@@ -155,7 +155,7 @@ func TestEnumItemsError(t *testing.T) {
 		t.Errorf("o resto do form sumiu junto:\n%s", got)
 	}
 
-	s, err := Parse("{country; name str}")
+	s, err := Parse("export class default { country; name str }")
 	if err != nil {
 		t.Fatal(err)
 	}

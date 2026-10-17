@@ -12,10 +12,11 @@ import (
 	"github.com/go-rvq/rvq/web"
 )
 
-// readClass is the schema of the class src returns.
+// readClass is the schema of the class src exports as default.
 func readClass(src string) (*Schema, error) {
 	b := New()
 	bi := b.Builtins()
+	src = defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) + "\nreturn " + DefaultName + "\n"
 	res, err := gad.Compile(gad.NewSymbolTable(bi.NameSet), []byte(src), gad.CompileOptions{})
 	if err != nil {
 		return nil, err
@@ -36,13 +37,12 @@ func TestValidationMeta(t *testing.T) {
 		a := func(v) => nil
 		b := func(v) => nil
 		[validation=a] class Base { x int }
-		[validation=[a, b]] class Form {
+		[validation=[a, b]] export class default {
 			*Base
 			[validation=a] one str
 			[validation=[a, b]] two str
 			[validation=b] group class { y int }
-		}
-		return Form`)
+		}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,8 +57,9 @@ func TestValidationMeta(t *testing.T) {
 		t.Errorf("the fields': %v", n)
 	}
 	for src, want := range map[string]string{
-		`[validation=1] class Form { a str }; return Form`:     "want a function",
-		`class Form { [validation=["x"]] a str }; return Form`: "want a function",
+		`[validation=1]
+export class default { a str }`: "want a function",
+		`export class default { [validation=["x"]] a str }`: "want a function",
 	} {
 		if _, err := readClass(src); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: %v", src, err)
@@ -69,7 +70,7 @@ func TestValidationMeta(t *testing.T) {
 // A regular expression is a validation too — a literal, `/…/` —: anchored,
 // the whole value matches it.
 func TestValidationRegexp(t *testing.T) {
-	s, err := readClass("class Form { [validation=[/\\d{5}/, /[A-Z]+/]] zip str }; return Form")
+	s, err := readClass("export class default { [validation=[/\\d{5}/, /[A-Z]+/]] zip str }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,14 +103,13 @@ func TestRoundMeta(t *testing.T) {
 			for i := 0; i < places; i++ { m *= 10 }
 			return float(int(value * m + 0.999999)) / m
 		}
-		class Form {
+		export class default {
 			[places=2, round=up] price decimal
 			[round=up] whole float
 			[round=func(this, parents, value; places=0) => value + this.extra] sum float
 			extra float
 			plain float
-		}
-		return Form`)
+		}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,8 +128,8 @@ func TestRoundMeta(t *testing.T) {
 		}
 	}
 	for src, want := range map[string]string{
-		`class Form { [round=1] a float }; return Form`:                                 "a function",
-		`class Form { [round=func(this, parents, value) => value] a int }; return Form`: "of a float or a decimal",
+		`export class default { [round=1] a float }`:                                 "a function",
+		`export class default { [round=func(this, parents, value) => value] a int }`: "of a float or a decimal",
 	} {
 		if _, err := readClass(src); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: %v", src, err)
@@ -149,11 +149,11 @@ func TestRoundDisplayMeta(t *testing.T) {
 			for i := 0; i < places; i++ { m *= 10 }
 			return float(int(value * m + 0.999999)) / m + this.bonus
 		}
-		class Form {
+		class Price {
 			[places=2, roundDisplay=up] price decimal
 			bonus float
 		}
-		return Form`), gad.CompileOptions{})
+		return Price`), gad.CompileOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestRoundDisplayMeta(t *testing.T) {
 	if got := DisplayText(context.Background(), s.Fields[0], 10.011); got != "10.01" {
 		t.Errorf("DisplayText: %q", got)
 	}
-	if _, err := readClass(`class Form { [roundDisplay=1] a float }; return Form`); err == nil {
+	if _, err := readClass(`export class default { [roundDisplay=1] a float }`); err == nil {
 		t.Error("a roundDisplay of no function")
 	}
 }
