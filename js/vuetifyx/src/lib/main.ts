@@ -38,6 +38,7 @@ import SeoVarZipcodes from '@/lib/SeoVarZipcodes.vue'
 import AddressField from '@/lib/AddressField.vue'
 import MapsKeyTest from '@/lib/MapsKeyTest.vue'
 import GadIde from '@/lib/GadIde'
+import GadCode from '@/lib/GadCode'
 import ThemeToggle from '@/lib/ThemeToggle'
 
 const vuetifyx = {
@@ -78,6 +79,7 @@ const vuetifyx = {
     app.component('vx-seo-vars', SeoVars)
     app.component('vx-seo-var-zipcodes', SeoVarZipcodes)
     app.component('vx-gad-ide', GadIde)
+    app.component('vx-gad-code', GadCode)
     app.component('vx-theme-toggle', ThemeToggle)
   }
 }

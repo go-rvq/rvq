@@ -55,6 +55,7 @@ var ideOps = map[string]struct{ read, write bool }{
 	"config":    {read: true, write: true}, // GET / PUT
 	"modules":   {read: true},
 	"format":    {read: true},
+	"symbols":   {read: true}, // the Structure panel
 	"diagnose":  {read: true},
 	"transpile": {read: true},
 	"doc":       {read: true},

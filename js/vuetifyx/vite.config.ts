@@ -19,6 +19,8 @@ import {existsSync} from 'node:fs'
 // this workspace —, as js/gadide has the IDE.
 const gadDir = resolve(process.env.GAD_DIR || resolve(__dirname, '../../../../../../../gade/src/github.com/gad-lang/gad'))
 const gadDiff = resolve(gadDir, 'web/ide-vuetify/src/diff/index.ts')
+// the structure of a gad source as a tree (<vx-gad-code>): the IDE's too
+const gadStructure = resolve(gadDir, 'web/ide-vuetify/src/structure/index.ts')
 if (!existsSync(gadDiff)) throw new Error(`vuetifyx: no ${gadDiff} (set GAD_DIR to a gad checkout with its submodules)`)
 
 // https://vitejs.dev/config/
@@ -93,6 +95,7 @@ export default ({mode}) => {
     resolve: {
       alias: {
         '@gad-lang/ide-vuetify/diff': gadDiff,
+        '@gad-lang/ide-vuetify/structure': gadStructure,
         // <rvq-portal> and the compilation of templates: the portal package's
         // source (js/portal)
         '@rvq/portal': resolve(__dirname, '../portal/src/index.ts'),

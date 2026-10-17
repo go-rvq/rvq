@@ -22,6 +22,9 @@
       ],
       "@gad-lang/ide-vuetify/diff": [
        "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/diff/index.ts"
+      ],
+      "@gad-lang/ide-vuetify/structure": [
+       "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/structure/index.ts"
       ]
      }
   },

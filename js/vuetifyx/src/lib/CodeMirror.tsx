@@ -86,7 +86,29 @@ export default defineComponent({
       }
     }
 
-    return {resolvedLang, loadLang}
+    // the editor's view (vue-codemirror's ready): what goto moves
+    const view = shallowRef<EditorView | null>(null)
+
+    return {resolvedLang, loadLang, view}
+  },
+
+  methods: {
+    // goto moves the cursor to line (1-based) and column (1-based), and
+    // scrolls it into view: a declaration the structure of the code names.
+    goto(line: number, column = 1) {
+      const view = this.view
+      if (!view) return
+      const doc = view.state.doc
+      const l = doc.line(Math.min(Math.max(line, 1), doc.lines))
+      const pos = Math.min(l.from + Math.max(column, 1) - 1, l.to)
+      view.dispatch({selection: {anchor: pos}, scrollIntoView: true})
+      view.focus()
+    },
+    // measure has the editor measure its lines again: after its width
+    // changed (a panel beside it opened, the page it was expanded over)
+    measure() {
+      this.view?.requestMeasure()
+    },
   },
 
   async mounted() {
@@ -143,6 +165,7 @@ export default defineComponent({
         disabled={this.readonly}
         extensions={this.extensions}
         indent-with-tab={true}
+        onReady={(p: {view: EditorView}) => (this.view = p.view)}
         tab-size={this.tabSize}
         style={{
           minHeight: this.minHeight,
