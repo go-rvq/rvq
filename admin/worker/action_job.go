@@ -136,7 +136,7 @@ func (b *Builder) eventActionJobCreate(ctx *web.EventContext) (r web.EventRespon
 		URL(b.mb.Info().ListingHref(presets.ParentsModelID(ctx.R)...)).
 		EventFunc(ActionJobResponse).
 		Query(presets.ParamID, fmt.Sprint(job.ID)).
-		Query("jobID", fmt.Sprintf("%d", job.ID)).
+		Query("jobID", job.ID.String()).
 		Query("jobName", job.Job).
 		Go()
 	return
@@ -251,7 +251,7 @@ func (b *Builder) eventActionJobClose(ctx *web.EventContext) (er web.EventRespon
 	jb := b.mustGetJobBuilder(jobName)
 	inst, err := jb.getJobInstance(jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 
 	switch inst.Status {

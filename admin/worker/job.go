@@ -204,6 +204,18 @@ func (jb *JobBuilder) parseArgs(in string) (args interface{}, err error) {
 	return args, nil
 }
 
+// ErrNoJobInstance: a job with no run (job_instances) — shown to the user as
+// Messages.NoticeJobRunNotFound (userError).
+var ErrNoJobInstance = errors.New("worker: the job has no run")
+
+// userError is err as the user reads it: ErrNoJobInstance in ctx's language.
+func userError(ctx *web.EventContext, err error) error {
+	if errors.Is(err, ErrNoJobInstance) {
+		return errors.New(i18n.MustGetModuleMessages(ctx.Context(), MessagesKey, Messages_en_US).(*Messages).NoticeJobRunNotFound)
+	}
+	return err
+}
+
 func getModelJobInstance(db *gorm.DB, jobID uuid.UUID) (*JobInstance, error) {
 	var insts []*JobInstance
 	err := db.Where("job_id = ?", jobID).
@@ -215,7 +227,7 @@ func getModelJobInstance(db *gorm.DB, jobID uuid.UUID) (*JobInstance, error) {
 		return nil, err
 	}
 	if len(insts) == 0 {
-		return nil, errors.New("no qor job instance")
+		return nil, ErrNoJobInstance
 	}
 
 	return insts[0], nil

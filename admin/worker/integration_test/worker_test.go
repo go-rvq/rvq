@@ -79,6 +79,27 @@ func TestJobLog(t *testing.T) {
 	}
 }
 
+// The detail of a job finds its instance: its id (a UUID) goes to its events
+// as text, never as numbers ("%d" of a UUID: [1 160 …]).
+func TestJobDetail(t *testing.T) {
+	cleanData()
+	mustCreateJob(map[string]string{
+		"Job": "noArgJob",
+	})
+	integration.ConsumeQueItem()
+	j := mustGetFirstJob()
+	r := httptest.NewRequest(http.MethodGet, fmt.Sprintf(`/workers/%s`, j.ID), nil)
+	w := httptest.NewRecorder()
+	pb.ServeHTTP(w, r)
+	body := w.Body.String()
+	if strings.Contains(body, "the job has no run") || strings.Contains(body, worker.Messages_en_US.NoticeJobRunNotFound) || strings.Contains(body, fmt.Sprintf("%d", j.ID)) {
+		t.Fatalf("the detail did not find its instance\n%.800s", body)
+	}
+	if !strings.Contains(body, "worker_updateJobProgressing") {
+		t.Fatalf("no progress of the job\n%.800s", body)
+	}
+}
+
 func TestJobActions(t *testing.T) {
 	// abort
 	{

@@ -375,7 +375,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		job := field.Obj.(*Job)
 		inst, err := getModelJobInstance(b.db, job.ID)
 		if err != nil {
-			return Text(err.Error())
+			return VAlert().Density(DensityCompact).Type("warning").Children(Text(userError(ctx, err).Error()))
 		}
 
 		var scheduledJobDetailing []HTMLComponent
@@ -398,14 +398,14 @@ func (b *Builder) Install(pb *presets.Builder) error {
 								Attr("@click", web.Plaid().
 									URL(eURL).
 									EventFunc(EventAbortJob).
-									Query("jobID", fmt.Sprintf("%d", job.ID)).
+									Query("jobID", job.ID.String()).
 									Query("job", job.Job).
 									Go()),
 							VBtn(msgr.ActionUpdateJob).Color("primary").
 								Attr("@click", web.Plaid().
 									URL(eURL).
 									EventFunc(EventUpdateJob).
-									Query("jobID", fmt.Sprintf("%d", job.ID)).
+									Query("jobID", job.ID.String()).
 									Query("job", job.Job).
 									Go()),
 						),
@@ -430,7 +430,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 					web.Portal().
 						Loader(web.Plaid().EventFunc(EventUpdateJobProgressing).
 							URL(eURL).
-							Query("jobID", fmt.Sprintf("%d", job.ID)).
+							Query("jobID", job.ID.String()).
 							Query("job", job.Job),
 						).
 						AutoReloadInterval("locals.worker_updateJobProgressingInterval"),
@@ -656,7 +656,7 @@ func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, er
 	jb := b.mustGetJobBuilder(jobName)
 	inst, err := jb.getJobInstance(jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 	isScheduled := inst.Status == JobStatusScheduled
 
@@ -722,7 +722,7 @@ func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, er
 	jb := b.mustGetJobBuilder(jobName)
 	old, err := jb.getJobInstance(jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 
 	if old.Once {
@@ -787,7 +787,7 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 
 	old, err := jb.getJobInstance(jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 	oldArgs, _ := jb.parseArgs(old.Args)
 	err = b.doAbortJob(ctx.R.Context(), old)
@@ -843,7 +843,7 @@ func (b *Builder) eventUpdateJobProgressing(ctx *web.EventContext) (er web.Event
 
 	inst, err := getModelJobInstance(b.db, jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 
 	canEdit := editIsAllowed(ctx.R, jobName) == nil
@@ -891,7 +891,7 @@ func (b *Builder) eventLoadHiddenLogs(ctx *web.EventContext) (er web.EventRespon
 
 	inst, err := getModelJobInstance(b.db, jobID)
 	if err != nil {
-		return er, err
+		return er, userError(ctx, err)
 	}
 
 	var logs []*JobLog
@@ -990,7 +990,7 @@ func (b *Builder) jobProgressing(
 						Attr("@click", web.Plaid().
 							URL(eURL).
 							EventFunc(EventAbortJob).
-							Query("jobID", fmt.Sprintf("%d", id)).
+							Query("jobID", id.String()).
 							Query("job", job).
 							Go()),
 				),
@@ -999,7 +999,7 @@ func (b *Builder) jobProgressing(
 						Attr("@click", web.Plaid().
 							URL(eURL).
 							EventFunc("worker_rerunJob").
-							Query("jobID", fmt.Sprintf("%d", id)).
+							Query("jobID", id.String()).
 							Query("job", job).
 							Go()),
 				),

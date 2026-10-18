@@ -43,6 +43,7 @@ type Messages struct {
 	DetailTitleLog           string           `i18n:"label='Detail: log title', hint='Title of the log section of a job\\'s detail.'"`
 	NoticeJobCannotBeAborted string           `i18n:"hint='Shown when a job changed status and can no longer be aborted, cancelled or updated.'"`
 	NoticeJobWontBeExecuted  string           `i18n:"hint='Shown when the code of a job was removed or changed, so the job will not run.'"`
+	NoticeJobRunNotFound     string           `i18n:"hint='Shown when the run of a job (its execution record) was not found.'"`
 	ScheduleTime             string           `i18n:"hint='Label of the field with the date and time a job is scheduled to run.'"`
 	DateTimePickerClearText  string           `i18n:"label='Date picker: clear', hint='Button of the date and time picker that clears the value.'"`
 	DateTimePickerOkText     string           `i18n:"label='Date picker: OK', hint='Button of the date and time picker that confirms the value.'"`
@@ -79,6 +80,7 @@ var Messages_en_US = &Messages{
 	DetailTitleLog:           "Log",
 	NoticeJobCannotBeAborted: "This job cannot be aborted/canceled/updated due to its status change",
 	NoticeJobWontBeExecuted:  "This job won't be executed due to code being deleted/modified",
+	NoticeJobRunNotFound:     "The run of this job was not found.",
 	ScheduleTime:             "Schedule Time",
 	DateTimePickerClearText:  "Clear",
 	DateTimePickerOkText:     "OK",
@@ -115,6 +117,7 @@ var Messages_zh_CN = &Messages{
 	DetailTitleLog:           "日志",
 	NoticeJobCannotBeAborted: "Job状态已经改变，不能被中止/取消/更新",
 	NoticeJobWontBeExecuted:  "Job代码被删除/修改, 这个Job不会被执行",
+	NoticeJobRunNotFound:     "未找到该Job的执行记录。",
 	ScheduleTime:             "执行时间",
 	DateTimePickerClearText:  "清空",
 	DateTimePickerOkText:     "确定",
@@ -124,13 +127,13 @@ var Messages_zh_CN = &Messages{
 
 var Messages_pt_BR = &Messages{
 	ModuleDescription:        "Os trabalhos executados em segundo plano, e seu andamento.",
-	StatusNew:                "Novas",
+	StatusNew:                "Nova",
 	StatusScheduled:          "Agendada",
 	StatusRunning:            "Executando",
 	StatusCancelled:          "Cancelada",
 	StatusDone:               "Concluída",
-	StatusException:          "Exception",
-	StatusKilled:             "Morta",
+	StatusException:          "Com erro",
+	StatusKilled:             "Interrompida",
 	FilterTabAll:             "Todas",
 	FilterTabRunning:         "Executando",
 	FilterTabScheduled:       "Agendadas",
@@ -144,6 +147,7 @@ var Messages_pt_BR = &Messages{
 	DetailTitleLog:           "Registro",
 	NoticeJobCannotBeAborted: "Esta tarefa não pode ser abortada/cancelada/atualizada devido à mudança de status",
 	NoticeJobWontBeExecuted:  "Esta tarefa não será executada porque o código foi excluído/modificado",
+	NoticeJobRunNotFound:     "A execução desta tarefa não foi encontrada.",
 	ScheduleTime:             "Horário de Agendamento",
 	DateTimePickerClearText:  "Limpar",
 	DateTimePickerOkText:     "OK",
