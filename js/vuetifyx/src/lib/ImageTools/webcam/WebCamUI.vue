@@ -45,6 +45,10 @@
       "
       class="webcam"
     >
+      <!-- what failed: the permission denied, no camera, an error -->
+      <v-alert v-if="problem" type="warning" variant="tonal" density="compact" class="ma-4" data-webcam-problem>
+        {{ problem }}
+      </v-alert>
       <WebCam
         ref="webcam"
         @init="webcamInit"
@@ -95,7 +99,7 @@
 </template>
 
 <script lang="ts" setup>
-import {useVxMessages} from '@/lib/locale'
+import {fmt, useVxMessages} from '@/lib/locale'
 import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef} from 'vue'
 import {Translator} from './translator'
 import IconButton from '../IconButton.vue'
@@ -166,6 +170,7 @@ const props = defineProps({
     return webcam.value?.loadCameras() as Promise<any[]>
   },
   webcamInit = (devId:string) => {
+    problem.value = ''
     deviceId.value = devId
     $emit('init', devId)
   },
@@ -202,6 +207,7 @@ const props = defineProps({
     $emit('stop')
   },
   start = () => {
+    problem.value = ''
     $emit('start')
   },
   pause = () => {
@@ -211,9 +217,11 @@ const props = defineProps({
     $emit('resume')
   },
   error = (err:any) => {
+    problem.value = problemOf(err)
     $emit('error', err)
   },
   unsupported = (err:any) => {
+    problem.value = problemOf(err)
     $emit('unsupported', err)
   },
   photoTakenEvent = (arg:any) => {
@@ -229,18 +237,22 @@ const props = defineProps({
   }
 
 onMounted(() => {
-  if (cameras.value.length === 0) {
-    // if no camera found, we will try to refresh cameras list each second until there is some camera
-    reloadCamInterval.value = setTimeout(() => {
-      loadCameras().then((value) => {
-        if (value.length > 0) {
-          clearInterval(reloadCamInterval.value as number)
-          // most likely due to permission, so we init afterwards
-          webcam.value?.init()
-        }
-      })
-    }, 10000) as unknown
-  }
+  // no camera yet (most likely the permission, still asked): the list again
+  // each second until there is one — then it starts
+  reloadCamInterval.value = setInterval(() => {
+    if (cameras.value.length > 0) {
+      clearInterval(reloadCamInterval.value as number)
+      reloadCamInterval.value = 0
+      return
+    }
+    loadCameras()?.then((value) => {
+      if (value.length > 0) {
+        clearInterval(reloadCamInterval.value as number)
+        reloadCamInterval.value = 0
+        webcam.value?.init()
+      }
+    })
+  }, 1000) as unknown
 })
 onBeforeUnmount(() => {
   if (reloadCamInterval.value) {
@@ -251,6 +263,15 @@ onBeforeUnmount(() => {
 
 // the words: the translate given, over the page's vue-i18n's (vx)
 const vx = useVxMessages()
+
+// problem is what went wrong with the camera, said in the card
+const problem = ref('')
+function problemOf(err: any): string {
+  const name = String(err?.name ?? '')
+  if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError') return vx.value.cameraDenied
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') return vx.value.cameraNotFound
+  return fmt(vx.value.cameraError, { error: String(err?.message || name || err) })
+}
 const tr = computed<Translator>(() => {
   const w = vx.value
   return {

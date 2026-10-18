@@ -19,6 +19,15 @@ export const drawRotated = (video: CanvasImageSource, canvas: HTMLCanvasElement,
   }
   context.rotate(degrees * Math.PI / 180);
 
-  const vw = (video as any).width as number
-  context.drawImage(video, -vw / 2, -vw / 2, width, height);
+  // the frame whole, from the corner the rotation moved it to
+  context.drawImage(video, 0, 0, width, height);
+}
+
+/** screenRotation is how much the screen is rotated (0, 90, 180, 270): a
+ * picture taken is turned back by it. 0 where the browser does not say. */
+export const screenRotation = (): number => {
+  const angle = (typeof screen !== 'undefined' && screen.orientation?.angle) ??
+    ((typeof window !== 'undefined' && (window as any).orientation) || 0)
+  const a = ((Number(angle) % 360) + 360) % 360
+  return [0, 90, 180, 270].includes(a) ? a : 0
 }

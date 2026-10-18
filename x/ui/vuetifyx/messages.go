@@ -103,6 +103,9 @@ type Messages struct {
 	TakePicture              string `json:"takePicture" i18n:"hint='Button of the camera.'"`
 	FlipCamera               string `json:"flipCamera" i18n:"hint='Button of the camera.'"`
 	LoadCameras              string `json:"loadCameras" i18n:"hint='Button of the camera.'"`
+	CameraDenied             string `json:"cameraDenied" i18n:"hint='Said when the browser denied the camera.'"`
+	CameraNotFound           string `json:"cameraNotFound" i18n:"hint='Said when there is no camera.'"`
+	CameraError              string `json:"cameraError" i18n:"hint='Said when the camera failed ({error}: why).'"`
 	MapLoadError             string `json:"mapLoadError" i18n:"hint='Said when the map could not be loaded.'"`
 	MapsLoadError            string `json:"mapsLoadError" i18n:"hint='Said when Google Maps could not be loaded.'"`
 	MapsNoKey                string `json:"mapsNoKey" i18n:"hint='Said when there is no key of Google Maps.'"`
@@ -130,7 +133,7 @@ type Messages struct {
 	MapsErrRefererNotAllowed string `json:"mapsErrRefererNotAllowed" i18n:"hint='An error of Google Maps.'"`
 	MapsErrApiNotActivated   string `json:"mapsErrApiNotActivated" i18n:"hint='An error of Google Maps.'"`
 	MapsErrInvalidKey        string `json:"mapsErrInvalidKey" i18n:"hint='An error of Google Maps.'"`
-	MapsErrBillingNotEnabled string `json:\"mapsErrBillingNotEnabled\" i18n:\"hint='An error of Google Maps.'\"`
+	MapsErrBillingNotEnabled string `json:"mapsErrBillingNotEnabled" i18n:"hint='An error of Google Maps.'"`
 	MapsErrExpiredKey        string `json:"mapsErrExpiredKey" i18n:"hint='An error of Google Maps.'"`
 	MapsErrZeroResults       string `json:"mapsErrZeroResults" i18n:"hint='An error of Google Maps.'"`
 	MapsErrRequestDenied     string `json:"mapsErrRequestDenied" i18n:"hint='An error of Google Maps.'"`
@@ -237,6 +240,9 @@ var Messages_en_US = &Messages{
 	TakePicture:              "Take picture",
 	FlipCamera:               "Flip camera",
 	LoadCameras:              "Load cameras",
+	CameraDenied:             "Permission to use the camera was denied: allow it in the browser.",
+	CameraNotFound:           "No camera found.",
+	CameraError:              "The camera could not be opened: {error}",
 	MapLoadError:             "The map could not be loaded.",
 	MapsLoadError:            "Could not load Google Maps.",
 	MapsNoKey:                "Set the Google Maps API Key in SEOConfig.",
@@ -371,6 +377,9 @@ var Messages_pt_BR = &Messages{
 	TakePicture:              "Tirar foto",
 	FlipCamera:               "Virar a câmera",
 	LoadCameras:              "Carregar câmeras",
+	CameraDenied:             "A permissão para usar a câmera foi negada: libere-a no navegador.",
+	CameraNotFound:           "Nenhuma câmera encontrada.",
+	CameraError:              "A câmera não pôde ser aberta: {error}",
 	MapLoadError:             "O mapa não pôde ser carregado.",
 	MapsLoadError:            "Não foi possível carregar o Google Maps.",
 	MapsNoKey:                "Configure a Google Maps API Key em SEOConfig.",

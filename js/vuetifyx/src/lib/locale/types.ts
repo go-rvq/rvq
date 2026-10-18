@@ -149,6 +149,12 @@ export interface VxMessages {
   flipCamera: string
   /** Button of the camera. */
   loadCameras: string
+  /** Said when the browser denied the camera. */
+  cameraDenied: string
+  /** Said when there is no camera. */
+  cameraNotFound: string
+  /** Said when the camera failed ({error}: why). */
+  cameraError: string
   /** Said when the map could not be loaded. */
   mapLoadError: string
   /** Said when Google Maps could not be loaded. */

@@ -45,8 +45,7 @@
 </style>
 
 <script setup lang="ts">
-const deviceorientation = require('deviceorientation-js')
-import {drawRotated} from './utils'
+import {drawRotated, screenRotation} from './utils'
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
 
 
@@ -76,10 +75,9 @@ const props = defineProps({
   // constraints that will be passed to getUserMedia, you can specify preferred resolution, facing direction etc.
   constraints: {
     type: Object,
-    default: {
-      video: { width: { ideal: 2560 }, height: { ideal: 1440 } },
-      facingMode: 'environment'
-    }
+    default: () => ({
+      video: { width: { ideal: 2560 }, height: { ideal: 1440 }, facingMode: 'environment' }
+    })
   },
   // if device has gyroscope and the device is rotated (for example in landscape mode), this will try to rotate the image
   tryToRotateImage: {
@@ -146,7 +144,12 @@ function start() {
     loadCamera(deviceId.value)
   } else {
     // check if there is any remembered device and if so, use them
-    const rememberedDevice = window.localStorage.getItem(props.rememberDeviceTokenName)
+    let rememberedDevice: string | null = null
+    try {
+      rememberedDevice = window.localStorage.getItem(props.rememberDeviceTokenName)
+    } catch {
+      /* no storage (a private window) */
+    }
     if (
       rememberedDevice &&
       props.rememberDevice &&
@@ -171,6 +174,7 @@ function start() {
 }
 
 function loadCameras(): Promise<InputDeviceInfo[]> {
+  // resolved even when the devices cannot be listed (unsupported emitted)
   return new Promise((resolve) => {
     navigator.mediaDevices
       .enumerateDevices()
@@ -197,7 +201,10 @@ function loadCameras(): Promise<InputDeviceInfo[]> {
         }
         resolve(cameras.value)
       })
-      .catch((error:any) => $emit('unsupported', error))
+      .catch((error:any) => {
+        $emit('unsupported', error)
+        resolve(cameras.value)
+      })
   })
 }
 
@@ -219,21 +226,27 @@ function loadCamera(deviceId: string) {
       (video.value as any).srcObject = stream
 
       if (props.rememberDevice) {
-        window.localStorage.setItem(props.rememberDeviceTokenName, deviceId)
+        try {
+          window.localStorage.setItem(props.rememberDeviceTokenName, deviceId)
+        } catch {
+          /* no storage (a private window) */
+        }
       }
     })
     .catch((err: any) => $emit('error', err))
 }
 
 function buildConstraints(deviceId: string=''): MediaStreamConstraints {
-  const constraints:any = { video: null, audio: false }
-  const c = { ...constraints, ...props.constraints }
+  // a copy: the device chosen is never written into the props' constraints
+  // (a later call would ask that device, gone or not)
+  const c: any = { audio: false, ...props.constraints }
+  const video = typeof c.video === 'object' && c.video !== null ? { ...c.video } : {}
   if (deviceId) {
-    if (typeof c.video !== 'object' || c.video === null) {
-      c.video = {}
-    }
-    c.video.deviceId = { exact: deviceId }
+    video.deviceId = { exact: deviceId }
+    // a device chosen: its facing is its own
+    delete video.facingMode
   }
+  c.video = Object.keys(video).length ? video : true
   return c as MediaStreamConstraints
 }
 
@@ -278,16 +291,15 @@ function setupMedia() {
 }
 
 function clear() {
-  (video.value as any).srcObject.getTracks().forEach((track: any) => {
-    track.stop()
-    // source = null
-  })
-  (video.value as any).srcObject = undefined
+  const v = video.value as HTMLVideoElement | null
+  const stream = v?.srcObject as MediaStream | null | undefined
+  stream?.getTracks().forEach((track) => track.stop())
+  if (v) v.srcObject = null
   $emit('clear')
 }
 
 function stop() {
-  if ((video.value as any).srcObject) {
+  if (video.value?.srcObject) {
     clear()
   }
   $emit('stop')
@@ -317,7 +329,7 @@ async function  takePhoto() {
     v,
     cv,
     ctx,
-    props.tryToRotateImage ? deviceorientation.getDeviceOrientation() : 0
+    props.tryToRotateImage ? screenRotation() : 0
   )
 
   let image_data_url = cv.toDataURL(props.imageType)
@@ -341,7 +353,6 @@ onBeforeUnmount(()=> {
 
 onMounted(()=>{
   setupMedia()
-  deviceorientation.init()
 })
 
 watch(deviceId, (deviceId)=> {

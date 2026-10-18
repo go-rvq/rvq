@@ -29,26 +29,64 @@ func fileChooser(p *presets.Builder, mb *Builder) web.EventFunc {
 
 		portalName := mainPortalName(field)
 
+		// the search and the filters of the dialog: posted by its own event
+		// (the page is not navigated), all of them each time
+		search := web.Plaid().
+			EventFunc(imageSearchEvent).
+			Query("field", field).
+			FieldValue("cfg", h.JSONString(cfg)).
+			FieldValue(searchKeywordName(field), web.Var("fc.keyword || ''")).
+			FieldValue("type", web.Var("fc.type")).
+			FieldValue("order_by", web.Var("fc.order")).
+			FieldValue("hidden", web.Var("fc.hidden")).
+			Go()
+		filterSelect := func(label, model string, items []map[string]string) h.HTMLComponent {
+			return VCol(
+				VSelect().Items(items).ItemTitle("text").ItemValue("value").
+					Label(label).
+					Attr("v-model", model).
+					Attr("@update:model-value", search).
+					Density(DensityCompact).Variant(FieldVariantOutlined).HideDetails(true),
+			).Cols(12).Sm(6)
+		}
+		// the type: only for a field of any file (one of a type has it fixed)
+		var typeFilter h.HTMLComponent
+		if cfg.AllowType == "" && len(cfg.Sizes) == 0 {
+			typeFilter = filterSelect(msgr.FileType, "fc.type", []map[string]string{
+				{"text": msgr.All, "value": "all"},
+				{"text": msgr.Images, "value": "image"},
+				{"text": msgr.Videos, "value": "video"},
+				{"text": msgr.Files, "value": "file"},
+			})
+		}
+
 		body := VCard(
-			VResponsive(
+			web.Scope(
 				VRow(
 					VCol(
-						VTextField().Class("ml-4").
-							PrependIcon("mdi-magnify").
+						VTextField().
+							PrependInnerIcon("mdi-magnify").
 							Label(msgr.Search).
-							Flat(true).
 							Clearable(true).
 							HideDetails(true).
-							ModelValue("").
-							Attr("@keyup.enter", web.Plaid().
-								EventFunc(imageSearchEvent).
-								Query("field", field).
-								FieldValue("cfg", h.JSONString(cfg)).
-								FieldValue(searchKeywordName(field), web.Var("$event")).
-								Go()),
-					),
-				),
-			),
+							Density(DensityCompact).
+							Variant(FieldVariantOutlined).
+							Attr("v-model", "fc.keyword").
+							Attr("@keyup.enter", search).
+							Attr("@click:clear", "fc.keyword = ''; "+search),
+					).Cols(12),
+					typeFilter,
+					filterSelect(msgr.OrderBy, "fc.order", []map[string]string{
+						{"text": msgr.UploadedAtDESC, "value": "created_at_desc"},
+						{"text": msgr.UploadedAt, "value": "created_at"},
+					}),
+					filterSelect(msgr.MediaLibraryHidden, "fc.hidden", []map[string]string{
+						{"text": msgr.NotHidden, "value": ""},
+						{"text": msgr.OnlyHidden, "value": "only"},
+						{"text": msgr.IncludeHidden, "value": "all"},
+					}),
+				).Dense(true).Class("px-4 pt-4"),
+			).LocalsInit(`{keyword: "", type: "all", order: "created_at_desc", hidden: ""}`).Slot("{ locals: fc }"),
 			web.Portal().Name(deleteConfirmPortalName(field)),
 			web.Portal(
 				fileChooserDialogContent(mb, field, ctx, cfg),
@@ -97,9 +135,11 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		typeVideo = "video"
 		typeFile  = "file"
 	)
-	orderByVal := ctx.R.URL.Query().Get(orderByKey)
-	typeVal := ctx.R.URL.Query().Get(typeKey)
-	hiddenVal := ctx.R.URL.Query().Get(hiddenKey)
+	// the filters: the dialog's events post them, the library's page has them
+	// in its address
+	orderByVal := ctx.R.FormValue(orderByKey)
+	typeVal := ctx.R.FormValue(typeKey)
+	hiddenVal := ctx.R.FormValue(hiddenKey)
 
 	var files []*media_library.MediaLibrary
 	wh := db.Model(&media_library.MediaLibrary{})
@@ -170,13 +210,15 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 		fileAccept = "image/*"
 	}
 
+	// the cards in a grid by the room there is (a dialog is narrower than the
+	// window the breakpoints measure): no text cut
 	row := VRow(
 		h.If(mb.uploadIsAllowed(ctx.R) == nil,
 			VCol(
 				h.Label("").Children(
 					VCard(
-						VCardTitle(h.Text(msgr.UploadFiles)),
 						VIcon("mdi-cloud-upload").Size(SizeLarge),
+						VCardTitle(h.Text(msgr.UploadFiles)).Class("text-wrap text-center"),
 						h.Input("").
 							Attr("accept", fileAccept).
 							Type("file").
@@ -192,12 +234,52 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 										Go()),
 					).
 						Height(200).
-						Class("d-flex align-center justify-center pa-6").
+						Class("d-flex flex-column align-center justify-center pa-4").
 						Attr("role", "button").
 						Attr("v-ripple", true),
 				),
 			).
-				Cols(6).Sm(4).Md(3),
+				Class("pa-0"),
+
+			// a photo of the camera (vx-webcam), uploaded as the files are:
+			// for a field of images, or of any file
+			h.If(cfg.AllowType == "" || cfg.AllowType == media_library.ALLOW_TYPE_IMAGE,
+				VCol(
+					VCard(
+						VIcon("mdi-camera").Size(SizeLarge),
+						VCardTitle(h.Text(msgr.TakePhoto)).Class("text-wrap text-center"),
+					).
+						Height(200).
+						Class("d-flex flex-column align-center justify-center pa-4").
+						Attr("role", "button").
+						Attr("v-ripple", true).
+						Attr("data-media-camera", true).
+						Attr("@click", "locals.fileChooserCamera = true"),
+					VDialog(
+						VCard(
+							// only while open: closed, it is unmounted and its
+							// camera stopped
+							h.Tag("vx-webcam").
+								Attr("v-if", "locals.fileChooserCamera").
+								Attr("closable", true).
+								Attr("@close", "locals.fileChooserCamera = false").
+								Attr("@photo-taken",
+									"form.NewFiles = [new File([$event.data], 'photo-' + Date.now() + '.jpg', {type: $event.data.type || 'image/jpeg'})];"+
+										"locals.fileChooserCamera = false;"+
+										web.Plaid().
+											BeforeScript("locals.fileChooserUploadingFiles = form.NewFiles").
+											EventFunc(uploadFileEvent).
+											Query("field", field).
+											FieldValue("cfg", h.JSONString(cfg)).
+											Go()),
+						).Style("height: min(80vh, 720px)"),
+					).
+						Attr("v-model", "locals.fileChooserCamera").
+						MaxWidth("960px").
+						Attr(":fullscreen", "$vuetify.display.smAndDown"),
+				).
+					Class("pa-0"),
+			),
 
 			VCol(
 				VCard(
@@ -209,12 +291,13 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 					Height(200),
 			).
 				Attr("v-for", "f in locals.fileChooserUploadingFiles").
-				Cols(6).Sm(4).Md(3),
+				Class("pa-0"),
 		),
 	)
 
 	initCroppingVars := []string{fileCroppingVarName(uuid.Nil) + ": false"}
 
+	row.Style("display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 0")
 	for i, f := range files {
 		_, needCrop := mergeNewSizes(f, cfg)
 		croppingVar := fileCroppingVarName(f.ID)
@@ -320,6 +403,8 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 						AttrIf("@click", imgClickVars, field == mediaLibraryListField),
 					VCardText(
 						h.A().Text(f.File.FileName).
+							Title(f.File.FileName).
+							Class("d-block text-break").
 							Attr("@click", imgClickVars),
 						h.Input("").
 							Style("width: 100%;").
@@ -354,7 +439,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 						),
 					),
 				),
-			).Cols(6).Sm(4).Md(3),
+			).Class("pa-0"),
 		)
 	}
 
@@ -422,6 +507,11 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 								ModelValue(int(currentPageInt)).
 								Attr("@update:modelValue", web.Plaid().
 									FieldValue(currentPageName(field), web.Var("$event")).
+									// the filters: kept from page to page
+									FieldValue(searchKeywordName(field), keyword).
+									FieldValue(typeKey, typeVal).
+									FieldValue(orderByKey, orderByVal).
+									FieldValue(hiddenKey, hiddenVal).
 									EventFunc(imageJumpPageEvent).
 									Query("field", field).
 									FieldValue("cfg", h.JSONString(cfg)).
@@ -450,13 +540,14 @@ func fileChips(f *media_library.MediaLibrary) h.HTMLComponent {
 	g := VChipGroup().Column(true)
 	text := "original"
 	if f.File.Width != 0 && f.File.Height != 0 {
-		text = fmt.Sprintf("%s(%dx%d)", "original", f.File.Width, f.File.Height)
+		text = fmt.Sprintf("%s (%dx%d)", "original", f.File.Width, f.File.Height)
 	}
 	if f.File.FileSizes["original"] != 0 {
 		text = fmt.Sprintf("%s %s", text, base.ByteCountSI(f.File.FileSizes["original"]))
 	}
 	g.AppendChild(
-		VChip(h.Text(text)).Size(SizeSmall),
+		// its text wraps: never cut in a narrow card
+		VChip(h.Text(text)).Size(SizeSmall).Class("h-auto text-wrap py-1"),
 	)
 	// if len(f.File.Sizes) == 0 {
 	//	return g

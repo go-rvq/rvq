@@ -43,10 +43,12 @@ type Messages struct {
 	RecommendedOriginalSize     string `i18n:"hint='The best size for the original of an image.', fields=(;'%[1]d'='its width, in pixels', '%[2]d'='its height, in pixels', '%[3]s'='its proportion (16:9)')"`
 	Search                      string `i18n:"hint='Placeholder of the search of the media library.'"`
 	UploadFiles                 string `i18n:"hint='Button that uploads files to the media library.'"`
+	TakePhoto                   string `i18n:"hint='Button that takes a photo with the camera into the media library.'"`
 	Cropping                    string `i18n:"hint='Shown while an image is being cropped.'"`
 	DescriptionUpdated          string `i18n:"hint='Shown once the description of a file was saved.'"`
 	DescriptionForAccessibility string `i18n:"hint='Placeholder of a file\\'s description, read by screen readers.'"`
 	OrderBy                     string `i18n:"hint='Label of the order of the media library.'"`
+	FileType                    string `i18n:"hint='Label of the filter of the type of the files: images, videos, files.'"`
 	UploadedAt                  string `i18n:"label='Date uploaded', hint='Order of the media library by upload date, oldest first.'"`
 	UploadedAtDESC              string `i18n:"label='Date uploaded (newest first)', hint='Order of the media library by upload date, newest first.'"`
 	All                         string `i18n:"hint='Filter of the media library that shows every file.'"`
@@ -98,10 +100,12 @@ var Messages_en_US = &Messages{
 	Download:                    "Download",
 	Search:                      "Search",
 	UploadFiles:                 "Upload files",
+	TakePhoto:                   "Take a photo",
 	Cropping:                    "Cropping",
 	DescriptionUpdated:          "Description Updated",
 	DescriptionForAccessibility: "description for accessibility",
 	OrderBy:                     "Order By",
+	FileType:                    "Type",
 	UploadedAt:                  "Date Uploaded",
 	UploadedAtDESC:              "Date Uploaded (DESC)",
 	All:                         "All",
@@ -148,10 +152,12 @@ var Messages_zh_CN = &Messages{
 	RecommendedOriginalSize:     "建议原图：至少 %d×%d 像素，比例 %s。",
 	Search:                      "搜索",
 	UploadFiles:                 "上传多个文件",
+	TakePhoto:                   "拍照",
 	Cropping:                    "正在剪裁...",
 	DescriptionUpdated:          "描述更新成功",
 	DescriptionForAccessibility: "图片描述",
 	OrderBy:                     "排序",
+	FileType:                    "类型",
 	UploadedAt:                  "上传时间",
 	UploadedAtDESC:              "上传时间 (降序)",
 	All:                         "全部",
@@ -190,10 +196,12 @@ var Messages_ja_JP = &Messages{
 	RecommendedOriginalSize:     "推奨する元画像: %d×%d px 以上、比率 %s。",
 	Search:                      "検索",
 	UploadFiles:                 "ファイルをアップロード",
+	TakePhoto:                   "写真を撮る",
 	Cropping:                    "トリミング中",
 	DescriptionUpdated:          "説明を更新しました",
 	DescriptionForAccessibility: "画像の説明",
 	OrderBy:                     "並び替え",
+	FileType:                    "種類",
 	UploadedAt:                  "アップロード日時",
 	UploadedAtDESC:              "アップロード日時 (降順)",
 	All:                         "すべて",
@@ -235,10 +243,12 @@ var Messages_pt_BR = &Messages{
 	Download:                    "Baixar",
 	Search:                      "Pesquisar",
 	UploadFiles:                 "Enviar arquivos",
+	TakePhoto:                   "Tirar foto",
 	Cropping:                    "Recortando",
 	DescriptionUpdated:          "Descrição atualizada",
 	DescriptionForAccessibility: "descrição para acessibilidade",
 	OrderBy:                     "Ordenar por",
+	FileType:                    "Tipo",
 	UploadedAt:                  "Data de envio",
 	UploadedAtDESC:              "Data de envio (decrescente)",
 	All:                         "Todos",
