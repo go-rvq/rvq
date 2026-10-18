@@ -71,6 +71,9 @@ func revisionDiff(table string, hash []byte, ctx *web.EventContext) h.HTMLCompon
 // Install satisfies presets.Plugin: it publishes the shared recorder and starts
 // its background flusher.
 func (b *Builder) Install(pb *presets.Builder) error {
+	if err := b.db.AutoMigrate(&AccessHour{}); err != nil {
+		return err
+	}
 	defaultRecorder = b.recorder
 	b.recorder.Start()
 	return nil

@@ -43,6 +43,7 @@ type Builder struct {
 	configuePesistenceAction *presets.ActionBuilder
 	wb                       *worker.Builder
 	backupCronSpec           string
+	page                     *presets.PageBuilder
 }
 
 type MessageForm struct {
@@ -208,6 +209,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Layout(b.pageFunc)
 
 	defer page.Build()
+	b.page = page
 
 	page.
 		PrivateEventFunc(eventRemoveBackupConfirm, func(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -310,6 +312,12 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 
 	return
 }
+
+// BackupController is the controller of the backups (nil: none).
+func (b *Builder) BackupController() db_tools.BackupController { return b.backupController }
+
+// Page is the page of the database (its backups); nil before Install.
+func (b *Builder) Page() *presets.PageBuilder { return b.page }
 
 func (b *Builder) SetBackupController(v db_tools.BackupController) *Builder {
 	b.backupController = v

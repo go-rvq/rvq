@@ -240,6 +240,20 @@ func (b *Builder) Draft(r *http.Request) (*Draft, Author, error) {
 	return d, author, err
 }
 
+// OwnDraft is the request's user's draft when it has one (nil: none yet —
+// it is not cloned here, as Draft does).
+func (b *Builder) OwnDraft(r *http.Request) *Draft {
+	actor, _ := b.Identity(r)
+	if b.Repo == nil || !b.Repo.HasDraft(actor) {
+		return nil
+	}
+	d, err := b.Repo.Draft(r.Context(), actor)
+	if err != nil {
+		return nil
+	}
+	return d
+}
+
 func (b *Builder) Install(p *presets.Builder) error {
 	ConfigureMessages(p.I18n())
 	ConfigureIdeMessages(p.I18n())

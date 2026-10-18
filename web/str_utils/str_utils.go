@@ -10,9 +10,10 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// titleCaser upper-cases the first letter of each word and leaves the rest as
-// it is, as strings.Title did.
-var titleCaser = cases.Title(language.Und, cases.NoLower)
+// titleCaser is a caser that upper-cases the first letter of each word and
+// leaves the rest as it is, as strings.Title did. A Caser keeps state while it
+// works — one is not safe for concurrent use —, so each call makes its own.
+func titleCaser() cases.Caser { return cases.Title(language.Und, cases.NoLower) }
 
 // HumanizeString humanize separates string based on capitalizd letters
 // e.g. "OrderItem" -> "Order Item, CNNName to CNN Name"
@@ -27,7 +28,7 @@ func HumanizeString(str string) string {
 		}
 		human = append(human, l)
 	}
-	return titleCaser.String(string(human))
+	return titleCaser().String(string(human))
 }
 
 // NamifyString Joins string parts based on special separeted chars

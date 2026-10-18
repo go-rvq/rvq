@@ -26,6 +26,21 @@ type hitKey struct {
 	recordKey string
 }
 
+// AccessHour is how many accesses the revisions of a record had in an hour
+// (the series of the accesses: the revisions keep only their totals).
+type AccessHour struct {
+	TableName_ string    `gorm:"column:table_name;primaryKey;size:128"`
+	RecordKey  string    `gorm:"primaryKey;size:255"`
+	Hour       time.Time `gorm:"primaryKey;index"`
+	N          int64     `gorm:"not null;default:0"`
+}
+
+// TableName is the table of the accesses by hour.
+func (AccessHour) TableName() string { return AccessHoursTable }
+
+// AccessHoursTable is the table of the accesses by hour.
+const AccessHoursTable = "history_access_hours"
+
 // defaultRecorder is the process-wide recorder set by Configure; the per-model
 // Build wires public hits to it.
 var defaultRecorder *Recorder
@@ -71,7 +86,8 @@ func (r *Recorder) Start() {
 func (r *Recorder) Stop() { close(r.stop) }
 
 // Flush writes the pending counts onto the current published revision of each
-// touched record (the latest row with published = true for that record_key).
+// touched record (the latest row with published = true for that record_key),
+// and adds them to the record's hour (AccessHour).
 func (r *Recorder) Flush() {
 	r.mu.Lock()
 	batch := r.pending
@@ -99,5 +115,9 @@ func (r *Recorder) Flush() {
 				"access_count": gorm.Expr("access_count + ?", n),
 				"last_access":  now,
 			})
+		r.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "table_name"}, {Name: "record_key"}, {Name: "hour"}},
+			DoUpdates: clause.Assignments(map[string]any{"n": gorm.Expr(AccessHoursTable + ".n + EXCLUDED.n")}),
+		}).Create(&AccessHour{TableName_: k.table, RecordKey: k.recordKey, Hour: now.Truncate(time.Hour), N: n})
 	}
 }

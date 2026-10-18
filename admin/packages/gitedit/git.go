@@ -454,6 +454,11 @@ func (d *Draft) Log(ctx context.Context, n int) (commits []Commit, err error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseLog(out), nil
+}
+
+// parseLog are the commits of a log of the format of Log.
+func parseLog(out string) (commits []Commit) {
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
 		f := strings.Split(line, "\x1f")
 		if len(f) < 6 {
@@ -651,4 +656,27 @@ func (d *Draft) check(path string) error {
 		return fmt.Errorf("gitedit: invalid path %q", path)
 	}
 	return nil
+}
+
+// HasDraft says whether key has a draft (cloned: Draft clones it the first
+// time).
+func (r *Repo) HasDraft(key string) bool {
+	if key == "" || strings.ContainsAny(key, `/\.`) {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(r.DraftsDir, key, ".git"))
+	return err == nil
+}
+
+// Log are the last n commits of the branch the site serves (what was
+// published); none while the repository is empty.
+func (r *Repo) Log(ctx context.Context, n int) (commits []Commit, err error) {
+	if empty, err := r.Empty(ctx); err != nil || empty {
+		return nil, err
+	}
+	out, err := r.site(ctx, "log", "-n", strconv.Itoa(n), "--format=%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%s", r.branch())
+	if err != nil {
+		return nil, err
+	}
+	return parseLog(out), nil
 }
