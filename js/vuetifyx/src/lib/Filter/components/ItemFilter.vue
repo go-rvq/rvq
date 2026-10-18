@@ -2,6 +2,7 @@
 import {FilterItem} from '@/lib/Filter/Model'
 import FilterButton from '@/lib/Filter/components/FilterButton.vue'
 import {ref} from 'vue'
+import {fmt} from '@/lib/locale'
 
 interface WithBeforeDoneHandler {
   beforeDoneHandler: (cb:(empty:boolean)=>void)=>void
@@ -81,7 +82,7 @@ const clear = (e: any) => {
       />
     </template>
     <v-card class="pa-3 bg-white">
-      <div>{{ modelValue.translations?.filterBy }}</div>
+      <div>{{ modelValue.translations?.filterBy || fmt(translations.filterBy, { filter: modelValue.label ?? '' }) }}</div>
       <component ref="itemEl"
         v-model="value"
         :is="itemComp"

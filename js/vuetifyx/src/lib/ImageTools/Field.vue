@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import {useVxMessages} from '@/lib/locale'
 import {computed, onMounted, ref, useAttrs, useSlots, useTemplateRef, watch} from 'vue'
 import {fileToURL} from './utils'
 import {type Controller, Timer} from './types'
@@ -20,7 +21,7 @@ const props = defineProps({
       type: Object, default: () => {
       }
     },
-    translate: { type: FieldTranslator, default: () => new FieldTranslator() },
+    translate: { type: FieldTranslator, default: undefined },
     readonly: { type: Boolean, default: false },
     loading: { type: Boolean, default: false },
     initialValue: { type: String, default: '' },
@@ -250,6 +251,18 @@ onMounted(() => {
   }
 })
 
+// the words: the translate given, over the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const tr = computed<FieldTranslator>(() => {
+  const w = vx.value
+  return {
+    loadImageError: w.imageLoadError, releaseFileHere: w.imageReleaseHere, unsupportedFileTypeError: w.imageUnsupported,
+    addFromLink: w.imageAddFromLink, takePictureFromCamera: w.imageTakePicture, save: w.save, cancel: w.cancel,
+    edit: w.imageEdit, addFromLocalFile: w.imageAddFromFile, fullView: w.imageFullView, close: w.close, paste: w.paste,
+    ...(props.translate ?? {})
+  }
+})
+
 </script>
 <style scoped>
 .dragging > .v-card {
@@ -285,7 +298,7 @@ onMounted(() => {
     tooltip-content="Hello"
   />
   <VBtn style="display: none" ref="saveEl" icon="mdi-check" density="comfortable" @click="save" />
-  <VSnackbar color="error" v-model="isBadFile">{{ translate.unsupportedFileTypeError }}</VSnackbar>
+  <VSnackbar color="error" v-model="isBadFile">{{ tr.unsupportedFileTypeError }}</VSnackbar>
   <div
     :class="['tui-image-editor-field', isDragging ? 'dragging' : '', $attrs.class || '']"
     @dragover="dragover"
@@ -308,7 +321,7 @@ onMounted(() => {
       <VCardText style="padding: 0">
         <v-overlay class="align-center justify-center" contained persistent v-model="isDragging">
           <div class="text-white font-weight-bold pa-2" style="text-shadow: 0 0 8px #000">
-            {{ translate.releaseFileHere }}
+            {{ tr.releaseFileHere }}
           </div>
         </v-overlay>
         <div v-if="isLoading" :style="dotStyle">
@@ -324,7 +337,7 @@ onMounted(() => {
         <div v-else :style="`padding: 10px 10px ${hasActions ? '0' : '10px'} 10px`">
           <VCard variant="flat" :style="dotStyle">
             <template #append v-if="imageUrl">
-              <v-tooltip :text="translate.fullView">
+              <v-tooltip :text="tr.fullView">
                 <template v-slot:activator="{ props }">
                   <VBtn icon="mdi-arrow-expand" density="comfortable" v-bind="props">
                     <v-icon>mdi-arrow-expand</v-icon>
@@ -374,7 +387,7 @@ onMounted(() => {
             </template>
             <VCardText style="padding: 0">
               <VAlert type="warning" density="compact" v-if="loadImageError" style="padding: 5px">
-                {{ translate.loadImageError }}
+                {{ tr.loadImageError }}
               </VAlert>
               <slot v-else name="text" />
             </VCardText>
@@ -408,7 +421,7 @@ onMounted(() => {
             color="primary"
             density="comfortable"
             @click="edit"
-            :title="translate.edit"
+            :title="tr.edit"
           />
           <IconButton
             v-if="camera"
@@ -416,7 +429,7 @@ onMounted(() => {
             color="primary"
             density="comfortable"
             @click="openCamera"
-            :title="translate.takePictureFromCamera"
+            :title="tr.takePictureFromCamera"
           />
           <IconButton
             v-if="link"
@@ -424,7 +437,7 @@ onMounted(() => {
             color="primary"
             density="comfortable"
             @click="addFromLink"
-            :title="translate.addFromLink"
+            :title="tr.addFromLink"
           />
           <IconButton
             v-if="upload"
@@ -432,7 +445,7 @@ onMounted(() => {
             color="primary"
             density="comfortable"
             @click="add"
-            :title="translate.addFromLocalFile"
+            :title="tr.addFromLocalFile"
           />
           <IconButton
             v-if="props.paste"
@@ -440,7 +453,7 @@ onMounted(() => {
             color="primary"
             density="comfortable"
             @click="paste"
-            :title="translate.paste"
+            :title="tr.paste"
           />
         </template>
         <slot name="append-edit" :readonly="readonly" v-if="$slots['append-edit']" />
@@ -454,10 +467,10 @@ onMounted(() => {
     <v-card>
       <VToolbar density="compact">
         <v-toolbar-title>
-          {{ translate.addFromLink }}
+          {{ tr.addFromLink }}
         </v-toolbar-title>
         <template v-slot:append>
-          <IconButton :title="translate.close" icon="mdi-close" @click="isAddFromLink = false" />
+          <IconButton :title="tr.close" icon="mdi-close" @click="isAddFromLink = false" />
         </template>
       </VToolbar>
       <VCardActions>
@@ -465,7 +478,7 @@ onMounted(() => {
           <template #prepend>
             <v-icon icon="mdi-check-bold" />
           </template>
-          {{ translate.save }}
+          {{ tr.save }}
         </VBtn>
       </VCardActions>
     </v-card>
@@ -480,7 +493,7 @@ onMounted(() => {
     <VCard ref="block">
       <VToolbar v-if="capturingCamera" density="compact">
         <template v-slot:append>
-          <IconButton :title="translate.close" icon="mdi-close" @click="capturingCamera = false" />
+          <IconButton :title="tr.close" icon="mdi-close" @click="capturingCamera = false" />
         </template>
       </VToolbar>
       <template v-if="capturingCamera">

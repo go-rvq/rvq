@@ -1213,36 +1213,9 @@ func (b *ListingBuilder) filterBar(
 		return nil
 	}
 
-	ft := vx.FilterTranslations{}
-	ft.ClearAll = msgr.FiltersClear
-	ft.Clear = msgr.Clear
-	ft.Add = msgr.FiltersAdd
-	ft.Apply = msgr.FilterApply
-
-	for _, d := range fd {
-		d.Translations = vx.FilterIndependentTranslations{
-			FilterBy: msgr.FilterBy(d.Label),
-		}
-	}
-
-	ft.To = msgr.FiltersTo
-	ft.Month.Year = msgr.Year
-	ft.Month.Month = msgr.Month
-	ft.Month.MonthNames = msgr.MonthNames
-
-	ft.Number.And = msgr.FiltersNumberAnd
-	ft.Number.Equals = msgr.FiltersNumberEquals
-	ft.Number.Between = msgr.FiltersNumberBetween
-	ft.Number.GreaterThan = msgr.FiltersNumberGreaterThan
-	ft.Number.LessThan = msgr.FiltersNumberLessThan
-
-	ft.String.Equals = msgr.FiltersStringEquals
-	ft.String.Contains = msgr.FiltersStringContains
-
-	ft.MultipleSelect.In = msgr.FiltersMultipleSelectIn
-	ft.MultipleSelect.NotIn = msgr.FiltersMultipleSelectNotIn
-
-	filter := vx.VXFilter(fd).Translations(ft).Attr("v-model:visibility", "filterBarVisible.value")
+	// the filter's words are the page's vue-i18n's (vx: the layout merges
+	// them once a page), not given at each render
+	filter := vx.VXFilter(fd).Attr("v-model:visibility", "filterBarVisible.value")
 	if inDialog {
 		filter.UpdateModelValue(web.Plaid().
 			URL(ctx.R.RequestURI).

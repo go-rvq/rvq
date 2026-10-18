@@ -1,5 +1,6 @@
 <script lang="ts">
 import {defineComponent, PropType} from 'vue'
+import {useVxMessages} from '@/lib/locale'
 import {loadMaps} from './googleMaps'
 
 // A selected place: enough to restore its marker and its postal code.
@@ -16,6 +17,10 @@ interface Place {
 // selected places are kept in `data` so re-editing shows them back on the map.
 export default defineComponent({
   name: 'VXSeoVarZipcodes',
+  // the words: the page's vue-i18n's (vx)
+  setup() {
+    return { vx: useVxMessages() }
+  },
 
   props: {
     value: {type: String, default: ''},
@@ -87,7 +92,7 @@ export default defineComponent({
         await loadMaps(this.mapsKey)
         this.$nextTick(() => this.initMap())
       } catch (e: any) {
-        this.error = this.mapsKey ? 'Não foi possível carregar o Google Maps.' : 'Configure a Google Maps API Key em SEOConfig.'
+        this.error = this.mapsKey ? this.vx.mapsLoadError : this.vx.mapsNoKey
       } finally {
         this.loading = false
       }
@@ -168,14 +173,14 @@ export default defineComponent({
   <div class="vx-seo-var-zipcodes">
     <div class="d-flex align-center ga-2">
       <v-text-field :model-value="value" density="compact" variant="underlined" hide-details readonly
-                    placeholder="Selecione lugares no mapa" />
-      <v-btn prepend-icon="mdi-map-marker" variant="outlined" size="small" @click="open">Mapa</v-btn>
+                    :placeholder="vx.seoPickPlaces" />
+      <v-btn prepend-icon="mdi-map-marker" variant="outlined" size="small" @click="open">{{ vx.seoMap }}</v-btn>
     </div>
 
     <v-dialog v-model="dialog" max-width="900">
       <v-card>
         <v-toolbar density="compact" color="primary">
-          <v-toolbar-title>Selecionar CEPs no mapa</v-toolbar-title>
+          <v-toolbar-title>{{ vx.seoZipcodesTitle }}</v-toolbar-title>
           <v-spacer />
           <v-btn icon="mdi-close" @click="dialog = false" />
         </v-toolbar>
@@ -195,8 +200,8 @@ export default defineComponent({
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" @click="confirm">Aplicar</v-btn>
+          <v-btn variant="text" @click="dialog = false">{{ vx.cancel }}</v-btn>
+          <v-btn color="primary" variant="flat" @click="confirm">{{ vx.apply }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

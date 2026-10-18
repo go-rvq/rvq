@@ -1,5 +1,6 @@
 import {LANGUAGES} from '@gad-lang/git-vuetify/diff'
 import {defineComponent, ExtractPublicPropTypes, h, shallowRef} from 'vue'
+import {useVxMessages} from '@/lib/locale'
 import {Codemirror} from 'vue-codemirror'
 import {EditorView} from '@codemirror/view'
 import {EditorState, Extension} from '@codemirror/state'
@@ -52,11 +53,11 @@ const propsOptions = {
   },
   helpTitle: {
     type: String,
-    default: 'Ajuda',
+    default: undefined,
   },
   helpTooltip: {
     type: String,
-    default: 'Ajuda',
+    default: undefined,
   },
 } as const
 
@@ -95,7 +96,9 @@ export default defineComponent({
     // the width of the help beside it: dragged by its edge, kept across visits
     const helpW = useStoredSize('vx-codemirror.help', 400, 160, 2400)
 
-    return {resolvedLang, loadLang, view, helpW}
+    // the help's words: the props given, else the page's vue-i18n's (vx)
+    const vx = useVxMessages()
+    return {resolvedLang, loadLang, view, helpW, vx}
   },
 
   methods: {
@@ -215,7 +218,7 @@ export default defineComponent({
       >
         <v-icon>mdi-help-circle-outline</v-icon>
         <v-tooltip activator="parent" location="left">
-          {this.helpTooltip}
+          {this.helpTooltip ?? this.vx.help}
         </v-tooltip>
       </v-btn>
     )
@@ -242,7 +245,7 @@ export default defineComponent({
             [this.helpMode === 'left' ? 'paddingRight' : 'paddingLeft']: '8px',
           }}
         >
-          {this.helpTitle && <div class="text-subtitle-2 mb-2">{this.helpTitle}</div>}
+          {(this.helpTitle ?? this.vx.help) && <div class="text-subtitle-2 mb-2">{this.helpTitle ?? this.vx.help}</div>}
           {this.$slots.help?.()}
         </div>
       )
@@ -269,7 +272,7 @@ export default defineComponent({
           {
             modelValue: this.helpOpen,
             'onUpdate:modelValue': (v: boolean) => (this.helpOpen = v),
-            title: this.helpTitle,
+            title: this.helpTitle ?? this.vx.help,
             width: '40%',
           },
           {default: () => this.$slots.help?.()},

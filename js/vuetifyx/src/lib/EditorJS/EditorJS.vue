@@ -33,6 +33,7 @@
 }
 </style>
 <script setup>
+import {useVxMessages} from '@/lib/locale'
 import EditorJS from '@editorjs/editorjs'
 import EmbedTool from '@editorjs/embed'
 import ListTool from '@editorjs/list'
@@ -115,6 +116,9 @@ function viewToModel(api, event) {
     })
 }
 
+// the header's placeholder: the page's vue-i18n's (vx)
+const vx = useVxMessages()
+
 onMounted(() => {
   editor = new EditorJS({
     holder: htmlelement.value,
@@ -128,7 +132,7 @@ onMounted(() => {
       header: {
         class: HeaderTool,
         config: {
-          placeholder: 'Enter a header',
+          placeholder: vx.value.headerPlaceholder,
           levels: [1, 2, 3, 4, 5, 6],
           defaultLevel: 2
         }

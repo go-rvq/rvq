@@ -95,10 +95,6 @@ type Messages struct {
 	EditingObjectTitleTemplate                 string                 `i18n:"label='Editing record title', hint='Title of the form of a record.', fields=(;'{modelName}'='the model', '{id}'='the record')"`
 	ListingObjectTitleTemplate                 string                 `i18n:"label='Listing title', hint='Title of a listing.', fields=(;'{modelName}'='the model')"`
 	DetailingObjectTitleTemplate               string                 `i18n:"label='Detail title', hint='Title of the detail of a record.', fields=(;'{modelName}'='the model', '{id}'='the record')"`
-	FiltersClear                               string                 `i18n:"hint='Button that removes every filter.'"`
-	FiltersAdd                                 string                 `i18n:"hint='Button that opens the filters.'"`
-	FilterApply                                string                 `i18n:"hint='Button that applies a filter.'"`
-	FilterByTemplate                           string                 `i18n:"label='Filter by', hint='Title of a filter.', fields=(;'{filter}'='its name')"`
 	FiltersDateInTheLast                       string                 `i18n:"label='Date: in the last', hint='Date filter operator: within the last days or months.'"`
 	FiltersDateEquals                          string                 `i18n:"label='Date: equals', hint='Date filter operator: on the day.'"`
 	FiltersDateBetween                         string                 `i18n:"label='Date: between', hint='Date filter operator: between two days.'"`
@@ -109,19 +105,6 @@ type Messages struct {
 	FiltersDateDays                            string                 `i18n:"label='Date: days', hint='Unit of the date filter: days.'"`
 	FiltersDateMonths                          string                 `i18n:"label='Date: months', hint='Unit of the date filter: months.'"`
 	FiltersDateAnd                             string                 `i18n:"label='Date: and', hint='Word between the two days of a range.'"`
-	FiltersTo                                  string                 `i18n:"label='To', hint='Word between the two ends of a range.'"`
-	FiltersNumberEquals                        string                 `i18n:"label='Number: equals', hint='Number filter operator: equal to.'"`
-	FiltersNumberBetween                       string                 `i18n:"label='Number: between', hint='Number filter operator: between two numbers.'"`
-	FiltersNumberGreaterThan                   string                 `i18n:"label='Number: greater than', hint='Number filter operator: greater than.'"`
-	FiltersNumberLessThan                      string                 `i18n:"label='Number: less than', hint='Number filter operator: less than.'"`
-	FiltersNumberAnd                           string                 `i18n:"label='Number: and', hint='Word between the two numbers of a range.'"`
-	FiltersStringEquals                        string                 `i18n:"label='Text: equals', hint='Text filter operator: equal to.'"`
-	FiltersStringContains                      string                 `i18n:"label='Text: contains', hint='Text filter operator: contains.'"`
-	FiltersMultipleSelectIn                    string                 `i18n:"label='Choice: in', hint='Choice filter operator: one of those selected.'"`
-	FiltersMultipleSelectNotIn                 string                 `i18n:"label='Choice: not in', hint='Choice filter operator: none of those selected.'"`
-	Month                                      string                 `i18n:"hint='Label of a month.'"`
-	MonthNames                                 [13]string             `i18n:"hint='The names of the months, January first (the item 0 is unused).'"`
-	Year                                       string                 `i18n:"hint='Label of a year.'"`
 	PaginationRowsPerPage                      string                 `i18n:"label='Rows per page', hint='Label of how many records a page of a listing shows.'"`
 	PaginationPageInfo                         string                 `i18n:"label='Page info', hint='Which records the page shows.', fields=(;'{currPageStart}'='the first record', '{currPageEnd}'='the last record', '{total}'='how many there are')"`
 	PaginationPage                             string                 `i18n:"label='Page', hint='Label before the page number.'"`
@@ -237,11 +220,6 @@ func (msgr *Messages) BulkActionSelectedIdsProcessNotice(ids string) string {
 		Replace(msgr.BulkActionSelectedIdsProcessNoticeTemplate)
 }
 
-func (msgr *Messages) FilterBy(filter string) string {
-	return strings.NewReplacer("{filter}", filter).
-		Replace(msgr.FilterByTemplate)
-}
-
 func (msgr *Messages) BulkActionConfirmationText(action string, count string) string {
 	return strings.NewReplacer("{Action}", action, "{count}", count).
 		Replace(msgr.BulkActionConfirmationTextTemplate)
@@ -284,10 +262,6 @@ var Messages_en_US = &Messages{
 	EditingObjectTitleTemplate:         "Editing {modelName} {id}",
 	ListingObjectTitleTemplate:         "Listing {modelName}",
 	DetailingObjectTitleTemplate:       "{modelName} {id}",
-	FiltersClear:                       "Clear Filters",
-	FiltersAdd:                         "Add Filters",
-	FilterApply:                        "Apply",
-	FilterByTemplate:                   "Filter by {filter}",
 	FiltersDateInTheLast:               "is in the last",
 	FiltersDateEquals:                  "is equal to",
 	FiltersDateBetween:                 "is between",
@@ -298,27 +272,11 @@ var Messages_en_US = &Messages{
 	FiltersDateDays:                    "days",
 	FiltersDateMonths:                  "months",
 	FiltersDateAnd:                     "and",
-	FiltersTo:                          "to",
-	FiltersNumberEquals:                "is equal to",
-	FiltersNumberBetween:               "between",
-	FiltersNumberGreaterThan:           "is greater than",
-	FiltersNumberLessThan:              "is less than",
-	FiltersNumberAnd:                   "and",
-	FiltersStringEquals:                "is equal to",
-	FiltersStringContains:              "contains",
-	FiltersMultipleSelectIn:            "in",
-	FiltersMultipleSelectNotIn:         "not in",
-	Month:                              "Month",
-	MonthNames: [13]string{
-		"", "January", "February", "March", "April", "May", "June",
-		"July", "August", "September", "October", "November", "December",
-	},
-	Year:                                       "Year",
-	PaginationRowsPerPage:                      "Rows per page: ",
-	ListingNoRecordToShow:                      "No records to show",
-	ListingSelectedCountNotice:                 "{count} records are selected. ",
-	ListingClearSelection:                      "clear selection",
-	BulkActionNoAvailableRecords:               "None of the selected records can be executed with this action.",
+	PaginationRowsPerPage:              "Rows per page: ",
+	ListingNoRecordToShow:              "No records to show",
+	ListingSelectedCountNotice:         "{count} records are selected. ",
+	ListingClearSelection:              "clear selection",
+	BulkActionNoAvailableRecords:       "None of the selected records can be executed with this action.",
 	BulkActionSelectedIdsProcessNoticeTemplate: "Partially selected records cannot be executed with this action: {ids}.",
 	ConfirmDialogPromptText:                    "Are you sure?",
 	Language:                                   "Language",
@@ -391,10 +349,6 @@ var Messages_pt_BR = &Messages{
 	EditingObjectTitleTemplate:                 "Editando ‹{modelName}› {id}",
 	ListingObjectTitleTemplate:                 "Listando ‹{modelName}›",
 	DetailingObjectTitleTemplate:               "‹{modelName}› {id}",
-	FiltersClear:                               "Limpar Filtros",
-	FiltersAdd:                                 "Adicionar Filtro",
-	FilterApply:                                "Aplicar",
-	FilterByTemplate:                           "Filtrar por {filter}",
 	FiltersDateInTheLast:                       "está no último",
 	FiltersDateEquals:                          "é igual a",
 	FiltersDateBetween:                         "é entre",
@@ -405,16 +359,6 @@ var Messages_pt_BR = &Messages{
 	FiltersDateDays:                            "dias",
 	FiltersDateMonths:                          "meses",
 	FiltersDateAnd:                             "e",
-	FiltersTo:                                  "até",
-	FiltersNumberEquals:                        "é igual a",
-	FiltersNumberBetween:                       "entre",
-	FiltersNumberGreaterThan:                   "é maior que",
-	FiltersNumberLessThan:                      "é menor que",
-	FiltersNumberAnd:                           "e",
-	FiltersStringEquals:                        "é igual a",
-	FiltersStringContains:                      "contém",
-	FiltersMultipleSelectIn:                    "em",
-	FiltersMultipleSelectNotIn:                 "fora de de",
 	PaginationRowsPerPage:                      "Registros por página: ",
 	PaginationPageInfo:                         "{currPageStart}-{currPageEnd} de {total}",
 	PaginationPage:                             "Página:",
@@ -437,8 +381,6 @@ var Messages_pt_BR = &Messages{
 	ListEditorRemoveItem:                       "Remover",
 	ListEditorActions:                          "Ações",
 	Error:                                      "Erro",
-	Month:                                      "Mês",
-	Year:                                       "Ano",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",
 	ErrRecordChanged: "Este registro foi alterado por outra pessoa em %s, depois que você abriu este formulário. " +
@@ -514,21 +456,5 @@ var Messages_pt_BR = &Messages{
 		"OldPassword":         "Senha Atual",
 		"NewPassword":         "Nova Senha",
 		"ConfirmPassword":     "Repita a Nova Senha",
-	},
-
-	MonthNames: [13]string{
-		"",
-		"Janeiro",
-		"Fevereiro",
-		"Março",
-		"Abril",
-		"Maio",
-		"Junho",
-		"Julho",
-		"Agosto",
-		"Setembro",
-		"Outubro",
-		"Novembro",
-		"Dezembro",
 	},
 }

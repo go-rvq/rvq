@@ -60,7 +60,7 @@
         <template v-slot:default="{ isActive }">
           <v-card density="compact">
             <v-toolbar density="compact">
-              <v-toolbar-title>{{ settingsTitle }}</v-toolbar-title>
+              <v-toolbar-title>{{ wSettings }}</v-toolbar-title>
               <v-spacer />
               <v-btn
                 density="compact"
@@ -74,7 +74,7 @@
             <v-card-text>
               <slot name="prepend-settings"></slot>
               <v-list density="compact" select-strategy="leaf">
-                <v-list-subheader>{{ settingsColumnsTitle }}</v-list-subheader>
+                <v-list-subheader>{{ wColumns }}</v-list-subheader>
                 <v-list-item
                   v-for="item in selectableHeaders"
                   density="compact"
@@ -104,7 +104,7 @@
                     isActive.value = false
                   }
                 "
-                >{{ settingsOkText }}
+                >{{ wOk }}
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -114,20 +114,21 @@
   </v-data-table-virtual>
 </template>
 <script setup lang="ts">
-import {isReactive, nextTick, onMounted, reactive, ref, watch} from 'vue'
+import {computed, isReactive, nextTick, onMounted, reactive, ref, watch} from 'vue'
+import {useVxMessages} from '@/lib/locale'
 
 const props = defineProps({
   settingsTitle: {
     type: String,
-    default: 'Settings'
+    default: undefined
   },
   settingsColumnsTitle: {
     type: String,
-    default: 'Colums'
+    default: undefined
   },
   settingsOkText: {
     type: String,
-    default: 'OK'
+    default: undefined
   },
   tableProps: {
     type: Object,
@@ -200,6 +201,11 @@ const props = defineProps({
     default: false
   }
 })
+// the words: the props given, else the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const wSettings = computed(() => props.settingsTitle ?? vx.value.settings)
+const wColumns = computed(() => props.settingsColumnsTitle ?? vx.value.columns)
+const wOk = computed(() => props.settingsOkText ?? vx.value.ok)
 
 const rows = ref<any[]>([])
 

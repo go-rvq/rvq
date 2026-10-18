@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {useVxMessages} from '@/lib/locale'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import {
   loadMaps,
@@ -47,12 +48,15 @@ const props = withDefaults(
     placeholder: '',
     mapHeight: '220px',
     noKeyText: '',
-    loadErrorText: 'The map could not be loaded.',
     zoom: 16,
   },
 )
 
 const emit = defineEmits<{ 'update:modelValue': [v: AddressValue | null] }>()
+
+// said when the map could not be loaded: the prop given, else the vue-i18n's (vx)
+const vx = useVxMessages()
+const loadError = () => props.loadErrorText || vx.value.mapLoadError
 
 const mapEl = ref<HTMLElement>()
 const search = ref(props.modelValue?.formatted ?? '')
@@ -95,7 +99,7 @@ watch(search, (q) => {
     } catch (e: any) {
       if (n === seq) {
         items.value = []
-        error.value = props.loadErrorText
+        error.value = loadError()
       }
     } finally {
       if (n === seq) loading.value = false
@@ -161,11 +165,11 @@ function buildMap() {
 
 onMounted(async () => {
   if (!props.apiKey) return
-  stopAuth = onMapsAuthFailure((code) => (error.value = `${props.loadErrorText} (${code})`))
+  stopAuth = onMapsAuthFailure((code) => (error.value = `${loadError()} (${code})`))
   try {
     g = await loadMaps(props.apiKey)
   } catch {
-    error.value = props.loadErrorText
+    error.value = loadError()
     return
   }
   ready.value = true

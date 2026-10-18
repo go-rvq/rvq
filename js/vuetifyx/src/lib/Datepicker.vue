@@ -46,10 +46,10 @@
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="grey lighten-1" variant="text" @click.native="clearHandler(isActive)"
-              >{{ clearText }}
+              >{{ wClear }}
             </v-btn>
             <v-btn color="green darken-1" variant="text" @click="okHandler(isActive)"
-              >{{ okText }}
+              >{{ wOk }}
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -59,6 +59,7 @@
 </template>
 
 <script lang="ts" setup>
+import {useVxMessages} from '@/lib/locale'
 import {format, parse} from 'date-fns'
 
 import {computed, nextTick, onMounted, Ref, ref} from 'vue'
@@ -95,11 +96,11 @@ const props = defineProps({
   },
   clearText: {
     type: String,
-    default: 'CLEAR'
+    default: undefined
   },
   okText: {
     type: String,
-    default: 'OK'
+    default: undefined
   },
   textFieldProps: {
     type: Object
@@ -111,6 +112,11 @@ const props = defineProps({
     type: Boolean
   }
 })
+// the words: the props given, else the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const wClear = computed(() => props.clearText ?? vx.value.clear)
+const wOk = computed(() => props.okText ?? vx.value.ok)
+
 const display = ref(false)
 const date = ref()
 

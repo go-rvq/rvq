@@ -28,6 +28,9 @@ func VXFilter(value FilterData) (r *VXFilterBuilder) {
 	}, "vx-filter")
 }
 
+// Translations change the filter's words: given only to change them — they
+// are the page's vue-i18n's (vx: Messages, merged by the admin's layout once
+// a page, in the user's language); the keys left empty keep theirs.
 func (b *VXFilterBuilder) Translations(v FilterTranslations) (r *VXFilterBuilder) {
 	b.Attr(":translations", h.JSONString(v))
 	return b

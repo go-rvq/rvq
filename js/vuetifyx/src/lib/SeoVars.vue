@@ -1,5 +1,6 @@
 <script lang="ts">
 import {defineComponent, PropType} from 'vue'
+import {useVxMessages} from '@/lib/locale'
 
 // One registered variable type: its editor component (a custom element tag) and
 // optional server action.
@@ -28,6 +29,10 @@ interface Var {
 // input. Type/Data/Action are managed here and not shown as free columns.
 export default defineComponent({
   name: 'VXSeoVars',
+  // the words: the page's vue-i18n's (vx)
+  setup() {
+    return { vx: useVxMessages() }
+  },
 
   props: {
     modelValue: {type: String, default: '[]'},
@@ -83,7 +88,7 @@ export default defineComponent({
       this.$emit('update:modelValue', this.serialize())
     },
     typeLabel(t?: string): string {
-      if (!t) return 'Texto'
+      if (!t) return this.vx.seoText
       return this.types[t]?.label || t
     },
     typeComponent(t?: string): string | null {
@@ -114,9 +119,9 @@ export default defineComponent({
     <v-table density="comfortable">
       <thead>
         <tr>
-          <th class="vx-seo-vars-col-name">Nome</th>
+          <th class="vx-seo-vars-col-name">{{ vx.seoName }}</th>
           <th class="vx-seo-vars-col-desc">Descrição</th>
-          <th>Valor</th>
+          <th>{{ vx.seoValue }}</th>
           <th class="vx-seo-vars-col-actions"></th>
         </tr>
       </thead>
@@ -152,7 +157,7 @@ export default defineComponent({
                             @update:modelValue="emit" />
               <v-btn :icon="v._multiline ? 'mdi-format-align-left' : 'mdi-format-align-justify'"
                      variant="text" density="comfortable" size="small"
-                     :title="v._multiline ? 'Uma linha' : 'Múltiplas linhas'"
+                     :title="v._multiline ? vx.seoOneLine : vx.seoMultiline"
                      @click="toggleMultiline(v)" />
             </div>
           </td>
@@ -169,10 +174,10 @@ export default defineComponent({
     <div class="mt-2">
       <v-menu>
         <template #activator="{ props }">
-          <v-btn v-bind="props" prepend-icon="mdi-plus" variant="outlined" size="small">Adicionar</v-btn>
+          <v-btn v-bind="props" prepend-icon="mdi-plus" variant="outlined" size="small">{{ vx.seoAdd }}</v-btn>
         </template>
         <v-list density="compact">
-          <v-list-item title="Texto" @click="addText" />
+          <v-list-item :title="vx.seoText" @click="addText" />
           <v-list-item
             v-for="(t, name) in types" :key="name"
             :title="t.label || name" :subtitle="t.description"

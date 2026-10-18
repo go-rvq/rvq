@@ -125,10 +125,16 @@ func TestBuilder(t *testing.T) {
 		!strings.Contains(body, `href=&#39;/admin/site-files&#39;\u003eSite files\u003c/a\u003e`) {
 		t.Errorf("the files: the button, the trail: %s", body[strings.Index(body, "breadcrumbs"):][:600])
 	}
-	// the texts of the IDE's Changes and Git panels (IdeMessages)
-	if body := w.Body.String(); !strings.Contains(body, ":messages=") || !strings.Contains(body, "chooseCommit") ||
-		!strings.Contains(body, "Choose a commit.") {
-		t.Errorf("the IDE's messages: %.300s", body[strings.Index(body, "vx-gad-ide"):])
+	// the texts of the IDE and of its Git panels (IdeMessages): merged into
+	// the page's vue-i18n once (gadIde, gadGit; vuetifyx's vx), no prop
+	if body := w.Body.String(); strings.Contains(body, ":messages=") || !strings.Contains(body, "mergeLocaleMessage") ||
+		!strings.Contains(body, "gadIde") || !strings.Contains(body, "gadGit") || !strings.Contains(body, "Choose a commit.") ||
+		!strings.Contains(body, "filterClearAll") {
+		i := strings.Index(body, "mergeLocaleMessage")
+		if i < 0 {
+			i = 0
+		}
+		t.Errorf("the IDE's messages: %.300s", body[i:])
 	}
 	// the site of the draft, under the admin
 	w = httptest.NewRecorder()

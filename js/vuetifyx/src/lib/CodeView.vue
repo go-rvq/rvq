@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {useVxMessages} from '@/lib/locale'
 import { computed, onMounted, ref, watch } from 'vue'
 import Prism from 'prismjs'
 // (the core has markup — html, xml, svg —, css, clike and javascript)
@@ -78,10 +79,10 @@ const props = withDefaults(defineProps<{
 }>(), {
   lineNumbers: true,
   matchBraces: true,
-  copyText: 'Copy',
-  copiedText: 'Copied!',
-  copyErrorText: 'Press Ctrl+C to copy',
 })
+
+// the copy button's words: the props given, else the page's vue-i18n's (vx)
+const vx = useVxMessages()
 
 // marked is the history's mode: a row per line, with its marks
 const marked = computed(
@@ -116,9 +117,9 @@ function render() {
   if (props.diff) pre.classList.add('diff-highlight')
   const label = props.label || (props.diff ? 'Diff' + (known ? ' · ' + (LABELS[known] || known) : '') : LABELS[lang] || lang)
   if (label) pre.setAttribute('data-language', label)
-  pre.setAttribute('data-prismjs-copy', props.copyText)
-  pre.setAttribute('data-prismjs-copy-success', props.copiedText)
-  pre.setAttribute('data-prismjs-copy-error', props.copyErrorText)
+  pre.setAttribute('data-prismjs-copy', props.copyText ?? vx.value.copy)
+  pre.setAttribute('data-prismjs-copy-success', props.copiedText ?? vx.value.copied)
+  pre.setAttribute('data-prismjs-copy-error', props.copyErrorText ?? vx.value.copyError)
 
   const code = document.createElement('code')
   code.className = 'language-' + prismLang

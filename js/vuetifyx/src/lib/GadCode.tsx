@@ -17,6 +17,7 @@
 // structure and the documentation follow the code, a moment after it changes,
 // while they are open.
 import {defineComponent, h, type PropType} from 'vue'
+import {useVxMessages, type VxMessages} from '@/lib/locale'
 import {StructureTree, type OutlineSym} from '@gad-lang/ide-vuetify/structure'
 import {DiffMergeView} from '@gad-lang/git-vuetify/diff'
 import {ResizeHandle, useStoredSize} from '@gad-lang/git-vuetify/resize'
@@ -40,8 +41,8 @@ const propsOptions = {
   // the help of the editor (its slot), as <vx-codemirror>'s
   help: Boolean,
   helpMode: {type: String, default: 'dialog'},
-  helpTitle: {type: String, default: 'Ajuda'},
-  helpTooltip: {type: String, default: 'Ajuda'},
+  helpTitle: {type: String, default: undefined},
+  helpTooltip: {type: String, default: undefined},
   // the words of its buttons and panels
   labels: {
     type: Object as PropType<Partial<Record<'format' | 'expand' | 'collapse' | 'structure' | 'doc' | 'refresh' | 'noStructure' | 'noDoc' | 'notFormatted' | 'undo' | 'redo' | 'compare' | 'edit' | 'prevChange' | 'nextChange' | 'revert', string>>>,
@@ -49,24 +50,19 @@ const propsOptions = {
   },
 } as const
 
-const DEFAULT_LABELS = {
-  format: 'Formatar',
-  expand: 'Expandir',
-  collapse: 'Recolher',
-  structure: 'Estrutura',
-  doc: 'Documentação',
-  refresh: 'Atualizar',
-  noStructure: 'Nenhuma declaração.',
-  noDoc: 'Nenhuma documentação.',
-  notFormatted: 'O código não pôde ser formatado: corrija o que está errado nele.',
-  undo: 'Desfazer',
-  redo: 'Refazer',
-  compare: 'Comparar com o valor inicial',
-  edit: 'Voltar ao editor',
-  prevChange: 'Mudança anterior',
-  nextChange: 'Próxima mudança',
-  revert: 'Reverter',
+// the words of its labels: the page's vue-i18n's (vx), the labels prop over
+// them
+type Labels = {
+  format: string; expand: string; collapse: string; structure: string; doc: string; refresh: string
+  noStructure: string; noDoc: string; notFormatted: string; undo: string; redo: string; compare: string
+  edit: string; prevChange: string; nextChange: string; revert: string
 }
+const labelsOf = (w: VxMessages): Labels => ({
+  format: w.format, expand: w.expand, collapse: w.collapse, structure: w.structure, doc: w.doc,
+  refresh: w.refresh, noStructure: w.noStructure, noDoc: w.noDoc, notFormatted: w.notFormatted,
+  undo: w.undo, redo: w.redo, compare: w.compare, edit: w.edit, prevChange: w.prevChange,
+  nextChange: w.nextChange, revert: w.revert,
+})
 
 const border = '1px solid rgba(var(--v-border-color), var(--v-border-opacity))'
 
@@ -79,6 +75,7 @@ export default defineComponent({
     // the widths of the structure and of the documentation, the height of
     // the editor: dragged by their edges, kept across visits
     return {
+      vx: useVxMessages(),
       structureW: useStoredSize('vx-gad-code.structure', 260, 140, 1600),
       docW: useStoredSize('vx-gad-code.doc', 420, 160, 2400),
       editorH: useStoredSize('vx-gad-code.height', 360, 120, 6000),
@@ -110,8 +107,8 @@ export default defineComponent({
   },
 
   computed: {
-    words(): typeof DEFAULT_LABELS {
-      return {...DEFAULT_LABELS, ...this.labels}
+    words(): Labels {
+      return {...labelsOf(this.vx), ...this.labels} as Labels
     },
     code(): {source: string; language: string; templateStart: string; templateEnd: string} {
       return {
@@ -325,8 +322,8 @@ export default defineComponent({
             help: this.help,
             'onUpdate:help': (v: boolean) => this.$emit('update:help', v),
             helpMode: this.helpMode,
-            helpTitle: this.helpTitle,
-            helpTooltip: this.helpTooltip,
+            helpTitle: this.helpTitle ?? this.vx.help,
+            helpTooltip: this.helpTooltip ?? this.vx.help,
           },
           this.$slots.help ? {help: () => this.$slots.help?.()} : undefined,
         )

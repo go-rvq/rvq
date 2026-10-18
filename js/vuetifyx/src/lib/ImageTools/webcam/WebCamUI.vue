@@ -2,7 +2,7 @@
   <v-card height="100%" style="display: flex; flex-direction: column">
     <v-toolbar density="compact" v-if="closable" style="justify-content: center">
       <IconButton
-        :title="translate.loadCameras"
+        :title="tr.loadCameras"
         density="compact"
         size="x-large"
         icon="mdi-camera-retake"
@@ -20,7 +20,7 @@
         ></v-select>
       </div>
       <IconButton
-        :title="translate.flipCamera"
+        :title="tr.flipCamera"
         density="compact"
         size="x-large"
         icon="mdi-camera-flip"
@@ -31,7 +31,7 @@
         <v-btn disabled />
       </template>
       <template v-slot:append>
-        <IconButton :title="translate.close" icon="mdi-close" @click="closeHandler" />
+        <IconButton :title="tr.close" icon="mdi-close" @click="closeHandler" />
       </template>
     </v-toolbar>
     <v-divider />
@@ -63,7 +63,7 @@
     <v-card-actions style="justify-content: center">
       <template v-if="picture.url">
         <IconButton
-          :title="translate.clear"
+          :title="tr.clear"
           variant="flat"
           density="compact"
           size="x-large"
@@ -71,7 +71,7 @@
           @click="takenCancel"
         />
         <IconButton
-          :title="translate.save"
+          :title="tr.save"
           color="primary"
           variant="flat"
           density="compact"
@@ -82,7 +82,7 @@
       </template>
       <IconButton
         v-else
-        :title="translate.takePicture"
+        :title="tr.takePicture"
         color="primary"
         variant="flat"
         density="compact"
@@ -95,6 +95,7 @@
 </template>
 
 <script lang="ts" setup>
+import {useVxMessages} from '@/lib/locale'
 import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef} from 'vue'
 import {Translator} from './translator'
 import IconButton from '../IconButton.vue'
@@ -116,7 +117,7 @@ const props = defineProps({
     },
     translate: {
       type: Translator,
-      default: () => new Translator()
+      default: undefined
     },
     save: {
       type: Function,
@@ -246,5 +247,16 @@ onBeforeUnmount(() => {
     clearInterval(reloadCamInterval.value as number)
   }
   exit()
+})
+
+// the words: the translate given, over the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const tr = computed<Translator>(() => {
+  const w = vx.value
+  return {
+    close: w.close, takePicture: w.takePicture, save: w.save, clear: w.clear,
+    flipCamera: w.flipCamera, loadCameras: w.loadCameras,
+    ...(props.translate ?? {})
+  }
 })
 </script>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {useVxMessages} from '@/lib/locale'
 import type {Editor} from '@tiptap/vue-3'
 import {mdiCodeTags} from '@mdi/js'
 import {ActionButton} from 'vuetify-pro-tiptap'
@@ -10,6 +11,9 @@ const props = defineProps<{
   editor: Editor
   disabled?: boolean
 }>()
+
+// the words: the page's vue-i18n's (vx)
+const vx = useVxMessages()
 
 const open = ref(false)
 const html = ref('')
@@ -40,14 +44,14 @@ function cancel() {
     :action="action"
   />
 
-  <Dialog v-model="open" expandable closable title="Código (HTML)" width="60%">
+  <Dialog v-model="open" expandable closable :title="vx.sourceCodeHtml" width="60%">
     <template #body>
       <CodeMirror v-model="html" language="html" min-height="24rem" max-height="70vh" />
     </template>
     <template #bottom>
       <div class="d-flex justify-end ga-2 pa-3">
-        <v-btn variant="text" @click="cancel">Cancelar</v-btn>
-        <v-btn color="primary" variant="flat" @click="apply">Aplicar</v-btn>
+        <v-btn variant="text" @click="cancel">{{ vx.cancel }}</v-btn>
+        <v-btn color="primary" variant="flat" @click="apply">{{ vx.apply }}</v-btn>
       </div>
     </template>
   </Dialog>

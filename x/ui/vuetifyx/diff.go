@@ -306,8 +306,9 @@ func (b *VXDiffBrowserBuilder) Height(v string) *VXDiffBrowserBuilder {
 	return b
 }
 
-// Labels are its words: the tree's title, the two sides', what a binary
-// file says, and what it says when there is no file.
+// Labels change its words (the tree's title, the two sides', what a binary
+// file says, and what it says when there is no file): they are the page's
+// vue-i18n's (vx) — given only to change them.
 func (b *VXDiffBrowserBuilder) Labels(files, old, new, binary, empty string) *VXDiffBrowserBuilder {
 	b.tag.Attr("files-title", files, "old-label", old, "new-label", new, "binary-text", binary, "empty-text", empty)
 	return b

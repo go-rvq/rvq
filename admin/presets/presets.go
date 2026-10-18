@@ -27,6 +27,7 @@ type Builder struct {
 	handler                               http.Handler
 	builder                               *web.Builder
 	i18nBuilder                           *i18n.Builder
+	vueI18nMessages                       []vueI18nMessages
 	logger                                *zap.Logger
 	permissionBuilder                     *perm.Builder
 	verifier                              *perm.Verifier
@@ -123,6 +124,8 @@ func New(i18nB *i18n.Builder) *Builder {
 		},
 	})
 	r.GetWebBuilder().RegisterEventHandler(EventOpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
+	// the words of the vuetifyx components: the page's vue-i18n's (vx)
+	r.registerVxMessages()
 	r.layoutFunc = r.DefaultLayout
 	r.detailLayoutFunc = r.DefaultLayout
 	r.pagesRegistrator = NewPagesRegistrator(
@@ -1170,6 +1173,9 @@ func (b *Builder) PlainLayout(in web.PageFunc) (out web.PageFunc) {
 				lang = i18n.DynaFromContext(ctx.Context()).GetLanguage()
 				ctx.Injector.HTMLLang(lang)
 			}
+			// Vuetify's locale and the components' words, as the default
+			// layout's
+			b.appendLocaleScripts(ctx)
 		}()
 
 		var innerPr web.PageResponse

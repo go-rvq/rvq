@@ -55,12 +55,7 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				ctx.Injector.HTMLLang(lang)
 			}
 
-			// add vuetify locale setter
-			if ls := web.VueLocaleSetterFromContext(ctx); ls != nil {
-				ls.Append(func(lang string) string {
-					return fmt.Sprintf(`window.Vuetify.useLocale().current.value = %q`, GetLocale(lang))
-				})
-			}
+			b.appendLocaleScripts(ctx)
 		}()
 
 		b.InjectAssets(ctx)

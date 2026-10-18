@@ -243,6 +243,10 @@ func (b *Builder) Draft(r *http.Request) (*Draft, Author, error) {
 func (b *Builder) Install(p *presets.Builder) error {
 	ConfigureMessages(p.I18n())
 	ConfigureIdeMessages(p.I18n())
+	// the IDE's words, its own and its Git panels': the page's vue-i18n's
+	// (merged by the layout once a page), not given at each render
+	ideWords := func(ctx context.Context) any { return GetIdeMessages(ctx) }
+	p.VueI18nMessages("gadIde", ideWords).VueI18nMessages("gadGit", ideWords)
 	if b.Path == "" {
 		b.Path = "/site-files"
 	}
@@ -438,8 +442,8 @@ func (b *Builder) ideBase(r *http.Request) string { return b.scopeURL(r) + "/ide
 // under a header.
 func (b *Builder) EditorURL(r *http.Request) string { return b.scopeURL(r) + "/editor" }
 
-// ideComponent is the IDE (<vx-gad-ide>), height tall; the texts of its
-// Changes and Git panels in the user's language (IdeMessages).
+// ideComponent is the IDE (<vx-gad-ide>), height tall; its texts are the
+// page's vue-i18n's (gadIde, gadGit: IdeMessages, registered by Install).
 func (b *Builder) ideComponent(r *http.Request, height string) h.HTMLComponent {
 	return b.ideTag(r).Attr("height", height)
 }
@@ -448,7 +452,7 @@ func (b *Builder) ideComponent(r *http.Request, height string) h.HTMLComponent {
 func (b *Builder) ideTag(r *http.Request) *h.HTMLTagBuilder {
 	base := b.ideBase(r)
 	return h.Tag("vx-gad-ide").Attr("src", base+"gadide.js?"+web.ExeMTime).Attr("css", base+"gadide.css?"+web.ExeMTime).
-		Attr("base", base).Attr(":messages", GetIdeMessages(r.Context()))
+		Attr("base", base)
 }
 
 // editorFunc is the page of the editor: a header — the admin's brand, the
@@ -944,13 +948,10 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 	}
 	var changesComp h.HTMLComponent = h.P(h.Text(m.NoChanges)).Class("text-medium-emphasis")
 	if len(files) > 0 {
+		// its words: the page's vue-i18n's (vuetifyx's vx)
 		browser := vx.VXDiffBrowser(files...).Height("70vh").
-			Labels(m.DiffFiles, m.DiffOld, m.DiffNew, m.DiffBinary, m.NoChanges).
-			RenameLabels(m.DiffRenamedTo, m.DiffContentUnchanged).
-			Load(web.Plaid().EventFunc(eventDiff)).LoadTexts(m.DiffLoading, m.DiffLoadError).
-			Save(web.Plaid().EventFunc(eventSave)).
-			EditTexts(m.DiffUndo, m.DiffRedo, m.DiffSave, m.DiffSaving, m.DiffSaved, m.DiffUnsaved, m.DiffRevert).
-			NavTexts(m.DiffPrev, m.DiffNext)
+			Load(web.Plaid().EventFunc(eventDiff)).
+			Save(web.Plaid().EventFunc(eventSave))
 		if allowed(ActionDiscard) {
 			browser.ActionsSlot(v.VBtn("").Icon("mdi-undo").Variant(v.VariantText).Size(v.SizeXSmall).
 				Attr("title", m.DiscardAction).Attr("data-discard", true).

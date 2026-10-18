@@ -40,7 +40,7 @@
                   <v-select
                     v-if="years.length"
                     :items="years"
-                    :label="yearText"
+                    :label="wYear"
                     v-model="year"
                   ></v-select>
                   <v-number-input
@@ -49,15 +49,15 @@
                     type="number"
                     clearable
                     v-else
-                    :label="yearText"
+                    :label="wYear"
                     v-model="year"
                     controlVariant="split"
                   ></v-number-input>
                   <v-select
                     :v-if="year > 0"
-                    :label="monthText"
+                    :label="wMonth"
                     :items="monthsAvailable"
-                    :item-title="(item: number) => monthNames[item]"
+                    :item-title="(item: number) => wMonthNames[item]"
                     :item-value="(item: number) => item"
                     v-model="month"
                   ></v-select>
@@ -68,10 +68,10 @@
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="grey lighten-1" variant="text" @click.native="clearHandler(isActive)"
-              >{{ clearText }}
+              >{{ wClear }}
             </v-btn>
             <v-btn color="green darken-1" variant="text" @click="okHandler(isActive)"
-              >{{ okText }}
+              >{{ wOk }}
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -81,6 +81,7 @@
 </template>
 
 <script lang="ts" setup>
+import {capitalized, useVxMessages} from '@/lib/locale'
 import {format, parse} from 'date-fns'
 
 import {computed, nextTick, onMounted, Ref, ref} from 'vue'
@@ -106,19 +107,19 @@ const props = defineProps({
     },
     clearText: {
       type: String,
-      default: 'CLEAR'
+      default: undefined
     },
     okText: {
       type: String,
-      default: 'OK'
+      default: undefined
     },
     yearText: {
       type: String,
-      default: 'Year'
+      default: undefined
     },
     monthText: {
       type: String,
-      default: 'Month'
+      default: undefined
     },
     years: {
       type: Array<number>,
@@ -130,21 +131,7 @@ const props = defineProps({
     },
     monthNames: {
       type: Array<String>,
-      default: [
-        '',
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December'
-      ]
+      default: undefined
     },
     format: {
       type: String,
@@ -318,6 +305,15 @@ const props = defineProps({
   resetPicker = () => {
     display.value = false
   }
+
+// the words: the props given, else the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const wClear = computed(() => props.clearText ?? vx.value.clear)
+const wOk = computed(() => props.okText ?? vx.value.ok)
+const wYear = computed(() => props.yearText ?? vx.value.year)
+const wMonth = computed(() => props.monthText ?? vx.value.month)
+// counted from 1, as the months
+const wMonthNames = computed<string[]>(() => ((props.monthNames as string[] | undefined) ?? ['', ...vx.value.monthNames]).map(capitalized))
 
 onMounted(() => {
   nextTick(() => {

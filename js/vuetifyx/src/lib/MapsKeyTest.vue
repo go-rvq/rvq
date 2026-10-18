@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {useVxMessages} from '@/lib/locale'
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import AddressField, { type AddressValue } from './AddressField.vue'
 import { loadMaps, mapsKeyLoaded, onMapsAuthFailure, suggest } from './googleMaps'
@@ -38,32 +39,37 @@ const props = withDefaults(
   { apiKey: '', query: 'Boston, MA', texts: () => ({}) },
 )
 
-const defaults: Texts = {
-  button: 'Test',
-  title: 'Test of the Google Maps key',
-  noKey: 'Type the key first.',
-  maps: 'Maps JavaScript API',
-  places: 'Places API (New) (search of places)',
-  geocoding: 'Geocoding API (addresses)',
-  waiting: 'Testing…',
-  ok: 'Working',
-  failed: 'Failed',
-  tryIt: 'Search an address: it shows on the map.',
-  reload: 'The page already loaded Google Maps with another key: save the settings and reload the page to test this one.',
-  close: 'Close',
-  rejected: 'Google refused the key: {code}.',
-  hints: {
-    RefererNotAllowedMapError: 'The key does not allow this site: add its address to the key’s website restrictions.',
-    ApiNotActivatedMapError: 'The Maps JavaScript API is not enabled in the key’s project.',
-    InvalidKeyMapError: 'The key is not valid.',
-    ExpiredKeyMapError: 'The key expired.',
-    BillingNotEnabledMapError: 'The key’s project has no billing account: enable billing in the Google Cloud console.',
-    ZERO_RESULTS: 'Google found nothing for the search.',
-    REQUEST_DENIED: 'The API is not enabled in the key’s project, or the key does not allow it.',
-    OVER_QUERY_LIMIT: 'The key’s quota is over.',
-  },
-}
-const t = computed<Texts>(() => ({ ...defaults, ...props.texts, hints: { ...defaults.hints, ...(props.texts.hints || {}) } }))
+// the defaults: the page's vue-i18n's (vx)
+const vx = useVxMessages()
+const defaults = computed<Texts>(() => {
+  const w = vx.value
+  return {
+    button: w.mapsTest,
+    title: w.mapsTestTitle,
+    noKey: w.mapsTestNoKey,
+    maps: w.mapsTestMaps,
+    places: w.mapsTestPlaces,
+    geocoding: w.mapsTestGeocoding,
+    waiting: w.mapsTestWaiting,
+    ok: w.mapsTestOk,
+    failed: w.mapsTestFailed,
+    tryIt: w.mapsTestTryIt,
+    reload: w.mapsTestReload,
+    close: w.close,
+    rejected: w.mapsTestRejected,
+    hints: {
+      RefererNotAllowedMapError: w.mapsErrRefererNotAllowed,
+      ApiNotActivatedMapError: w.mapsErrApiNotActivated,
+      InvalidKeyMapError: w.mapsErrInvalidKey,
+      ExpiredKeyMapError: w.mapsErrExpiredKey,
+      BillingNotEnabledMapError: w.mapsErrBillingNotEnabled,
+      ZERO_RESULTS: w.mapsErrZeroResults,
+      REQUEST_DENIED: w.mapsErrRequestDenied,
+      OVER_QUERY_LIMIT: w.mapsErrOverQueryLimit,
+    },
+  } as Texts
+})
+const t = computed<Texts>(() => ({ ...defaults.value, ...props.texts, hints: { ...defaults.value.hints, ...(props.texts.hints || {}) } }))
 
 type State = 'idle' | 'waiting' | 'ok' | 'failed'
 const dialog = ref(false)

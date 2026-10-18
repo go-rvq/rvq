@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {useVxMessages} from '@/lib/locale'
 import {computed, unref, watch} from 'vue'
 
 interface SelectImageProps {
@@ -17,6 +18,9 @@ const props = withDefaults(defineProps<SelectImageProps>(), {
 })
 
 const emits = defineEmits<SelectImageEmits>()
+
+// the words: the page's vue-i18n's (vx)
+const vx = useVxMessages()
 
 const form = computed({
   get: () => props.modelValue,
@@ -45,10 +49,10 @@ watch(
 <template>
   <VAlert class="mb-4" type="info" text="Select tab is custom component" />
 
-  <VSelect v-model="form.src" label="Select Image" :items="items" item-value="src" item-title="alt" />
+  <VSelect v-model="form.src" :label="vx.selectImage" :items="items" item-value="src" item-title="alt" />
 
-  <VTextField v-model="form.alt" label="Alt" />
+  <VTextField v-model="form.alt" :label="vx.imageAlt" />
 
-  <VCheckbox v-model="form.lockAspectRatio" label="Lock original aspect ratio" />
+  <VCheckbox v-model="form.lockAspectRatio" :label="vx.lockAspectRatio" />
 
 </template>

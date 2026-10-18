@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
+import {capitalized, useVxMessages} from '@/lib/locale'
 import {encodeFilterData, filterData} from '@/lib/Filter/FilterData'
 import {FilterItem} from '@/lib/Filter/Model'
 import ItemFilter from '@/lib/Filter/components/ItemFilter.vue'
@@ -18,43 +19,37 @@ import MonthItem from '@/lib/Filter/components/MonthItem.vue'
 const props = defineProps({
   internalValue: { type: Array<any>, required: true },
   replaceWindowLocation: Boolean,
-  translations: {
-    type: Object,
-    default: () => {
-      return {
-        month: {
-          year: 'Year',
-          month: 'Month'
-        },
-        number: {
-          equals: 'is equal to',
-          between: 'between',
-          greaterThan: 'is greater than',
-          lessThan: 'is less than',
-          and: 'and'
-        },
-        string: {
-          equals: 'is equal to',
-          contains: 'contains'
-        },
-        multipleSelect: {
-          in: 'in',
-          notIn: 'not in'
-        },
-        clearAll: 'Clear Filters',
-        clear: 'Clear',
-        add: 'Add Filters',
-        apply: 'Apply',
-        to: 'to'
-      }
-    }
-  } as any
+  // the words, over the page's vue-i18n's (vx): given only to change them
+  translations: { type: Object, default: undefined } as any
 })
 
 const model = defineModel()
 const emit = defineEmits(['data'])
 
-const t = props.translations
+// the words: the vue-i18n's vx, the translations given over them (a key, or
+// a group: month, number, string, multipleSelect)
+const vx = useVxMessages()
+const tr = computed(() => {
+  const w = vx.value
+  const given = (props.translations ?? {}) as any
+  return {
+    clearAll: given.clearAll || w.filterClearAll,
+    clear: given.clear || w.clear,
+    add: given.add || w.filterAdd,
+    apply: given.apply || w.apply,
+    to: given.to || w.filterTo,
+    filterBy: w.filterBy,
+    // the month pickers count the months from 1
+    month: { year: w.year, month: w.month, monthNames: ['', ...w.monthNames.map(capitalized)], ...given.month },
+    number: {
+      equals: w.filterNumberEquals, between: w.filterNumberBetween, greaterThan: w.filterNumberGreaterThan,
+      lessThan: w.filterNumberLessThan, and: w.filterNumberAnd, ...given.number
+    },
+    string: { equals: w.filterStringEquals, contains: w.filterStringContains, ...given.string },
+    multipleSelect: { in: w.filterIn, notIn: w.filterNotIn, ...given.multipleSelect }
+  }
+})
+const t = tr
 
 const itemTypes: any = {
   DatetimeRangeItem,
@@ -70,19 +65,22 @@ const itemTypes: any = {
   TreeSelectItem
 }
 
-const trans: any = {
-  DatetimeRangeItem: { to: t.to },
-  DateRangeItem: { to: t.to },
-  MonthRangeItem: { to: t.to, clear: t.clear, apply: t.apply, ...t.month },
-  MonthItem: { clear: t.clear, apply: t.apply, ...t.month },
-  DateItem: { to: t.to },
-  NumberItem: t.number,
-  StringItem: t.string,
-  SelectItem: {},
-  MultipleSelectItem: t.multipleSelect,
-  TreeSelectItem: t.multipleSelect,
-  LinkageSelectItem: {}
-}
+const trans = computed<any>(() => {
+  const t = tr.value
+  return {
+    DatetimeRangeItem: { to: t.to },
+    DateRangeItem: { to: t.to },
+    MonthRangeItem: { to: t.to, clear: t.clear, apply: t.apply, ...t.month },
+    MonthItem: { clear: t.clear, apply: t.apply, ...t.month },
+    DateItem: { to: t.to },
+    NumberItem: t.number,
+    StringItem: t.string,
+    SelectItem: {},
+    MultipleSelectItem: t.multipleSelect,
+    TreeSelectItem: t.multipleSelect,
+    LinkageSelectItem: {}
+  }
+})
 
 const getSelectedIndexes = (value: FilterItem[]): number[] => {
   return value
@@ -145,7 +143,7 @@ const filtersGetFunc = (f: (item: FilterItem) => boolean, isFoldedItem: boolean)
           op: op,
           internalValue: props.internalValue,
           isFoldedItem: isFoldedItem,
-          translations: props.translations,
+          translations: tr.value,
           compTranslations: trans[op.itemType],
           config: op.config,
           index: i
@@ -155,14 +153,14 @@ const filtersGetFunc = (f: (item: FilterItem) => boolean, isFoldedItem: boolean)
 }
 
 const fixedFilters = computed(() => {
-  return filtersGetFunc((item) => !item.folded, false)(itemTypes, trans)
+  return filtersGetFunc((item) => !item.folded, false)(itemTypes, trans.value)
 })
 
 const otherSelectedFilters = computed(() => {
-  return filtersGetFunc((item) => item.folded && !!item.selected, false)(itemTypes, trans)
+  return filtersGetFunc((item) => item.folded && !!item.selected, false)(itemTypes, trans.value)
 })
 const foldedFilters = computed(() => {
-  return filtersGetFunc((item) => item.folded && !item.selected, true)(itemTypes, trans)
+  return filtersGetFunc((item) => item.folded && !item.selected, true)(itemTypes, trans.value)
 })
 
 onMounted(() => {

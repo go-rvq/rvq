@@ -29,7 +29,7 @@ import VXArraySorter from '@/lib/VXArraySorter'
 import { Portal } from '@rvq/portal'
 import Messages from '@/lib/Messages'
 import CodeView from '@/lib/CodeView.vue'
-import {DiffBrowser} from '@gad-lang/git-vuetify/diff'
+import VXDiffBrowser from './VXDiffBrowser'
 import 'dockview-vue/dist/styles/dockview.css'
 import CodeMirror from '@/lib/CodeMirror'
 import DiffHunks from '@/lib/DiffHunks.vue'
@@ -71,7 +71,8 @@ const vuetifyx = {
     app.component('rvq-portal', Portal)
     app.component('vx-messages', Messages)
     app.component('vx-code', CodeView)
-    app.component('vx-diff-browser', DiffBrowser)
+    // its words the page's vue-i18n's (vx)
+    app.component('vx-diff-browser', VXDiffBrowser)
     app.component('vx-address-field', AddressField)
     app.component('vx-maps-key-test', MapsKeyTest)
     app.component('vx-codemirror', CodeMirror)

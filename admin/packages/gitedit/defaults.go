@@ -350,11 +350,11 @@ func (b *Builder) defaultsPanel(ctx *web.EventContext, extras bool) (h.HTMLCompo
 	return h.Div(
 		warn,
 		h.P(h.Text(fmt.Sprintf(m.ResetDefaultsCount, len(changes)))).Class("text-caption mb-2"),
+		// its words the vue-i18n's (vx); its sides and its "nothing" this
+		// compare's
 		vx.VXDiffBrowser(files...).Height("60vh").
-			Labels(m.DiffFiles, m.ResetDefaultsDiffOld, m.ResetDefaultsDiffNew, m.DiffBinary, m.ResetDefaultsNothing).
-			Load(web.Plaid().EventFunc(eventDefaultsDiff).Query("extras", ex)).
-			LoadTexts(m.DiffLoading, m.DiffLoadError).
-			NavTexts(m.DiffPrev, m.DiffNext),
+			Attr("old-label", m.ResetDefaultsDiffOld, "new-label", m.ResetDefaultsDiffNew, "empty-text", m.ResetDefaultsNothing).
+			Load(web.Plaid().EventFunc(eventDefaultsDiff).Query("extras", ex)),
 	).Attr("data-defaults-changes", len(changes)), nil
 }
 
