@@ -6,6 +6,7 @@
 // language's operations only.
 import { computed, defineComponent, h, onMounted, ref, watch, type PropType } from "vue";
 import { useTheme } from "vuetify";
+import { useI18n } from "vue-i18n";
 import { createHttpIdeApi, GadIde, type HeaderAction, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
 
 import "dockview-core/dist/styles/dockview.css";
@@ -42,14 +43,26 @@ const GadIdeHost = defineComponent({
     // the height it takes ("calc(100vh - 64px)"); its box's by default
     height: { type: String, default: "100%" },
     // the panels it has: no Output, no debugger — it runs no code
-    panels: { type: Array as PropType<string[]>, default: () => ["explorer", "editor", "docs"] },
-    // the texts of the Changes and Git panels, translated (the admin's)
+    panels: { type: Array as PropType<string[]>, default: () => ["explorer", "editor", "structure", "docs"] },
+    // the texts of the IDE and of its Changes and Git panels, translated (the
+    // admin's, gitedit's IdeMessages): merged into the admin's vue-i18n
     messages: { type: Object as PropType<Partial<IdeMessages>>, default: undefined },
     // buttons of the page in the IDE's header, at its right (HeaderAction)
     headerActions: { type: Array as PropType<HeaderAction[]>, default: () => [] },
   },
   setup(props) {
     const api = createHttpIdeApi(props.base);
+    // the admin's words into its vue-i18n (window.VueI18n, the page's
+    // locale): the IDE reads them there (gadIde, gadGit) — given as a prop
+    // only with no vue-i18n
+    let viaI18n = false;
+    try {
+      const i18n = useI18n({ useScope: "global" });
+      if (props.messages) i18n.mergeLocaleMessage(String(i18n.locale.value), { gadIde: props.messages, gadGit: props.messages });
+      viaI18n = true;
+    } catch {
+      /* no vue-i18n installed */
+    }
     // dark as the admin's theme is, and follows it when it changes
     const theme = useTheme();
     const dark = computed(() => theme.global.current.value.dark);
@@ -77,7 +90,7 @@ const GadIdeHost = defineComponent({
               dark: dark.value,
               runMode: "none",
               panels: props.panels,
-              messages: props.messages,
+              messages: viaI18n ? undefined : props.messages,
               headerActions: props.headerActions,
               layoutConfig: layout.value,
               "onUpdate:layoutConfig": (v: SerializedDockview) => (layout.value = v),

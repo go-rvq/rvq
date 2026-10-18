@@ -59,6 +59,7 @@ var ideOps = map[string]struct{ read, write bool }{
 	"diagnose":  {read: true},
 	"transpile": {read: true},
 	"doc":       {read: true},
+	"doc-gen":   {read: true}, // the documentation generated (the Preview)
 	"mkdir":     {write: true},
 	"delete":    {write: true},
 	"rename":    {write: true},

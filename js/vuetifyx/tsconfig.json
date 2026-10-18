@@ -20,11 +20,14 @@
       "@rvq/portal": [
        "../portal/src/index.ts"
       ],
-      "@gad-lang/ide-vuetify/diff": [
-       "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/diff/index.ts"
+      "@gad-lang/git-vuetify/diff": [
+       "../../../../../../../gade/src/github.com/gad-lang/gad/web/git-vuetify/src/diff/index.ts"
       ],
       "@gad-lang/ide-vuetify/structure": [
        "../../../../../../../gade/src/github.com/gad-lang/gad/web/ide-vuetify/src/structure/index.ts"
+      ],
+      "@gad-lang/git-vuetify/resize": [
+       "../../../../../../../gade/src/github.com/gad-lang/gad/web/git-vuetify/src/resize/index.ts"
       ]
      }
   },

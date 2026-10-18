@@ -96,8 +96,10 @@ func writeOp(d *Draft, path string) IdeOp {
 //	POST git/save               {"path", "content"}: the file written ({"saved": true})
 //
 // its branches, commits and their files — the Git panel, read only — gad's
-// IDE's (web/ide git.go), on the draft: git/branches, git/log, git/commit,
-// git/commit/diff, git/file, git/patch. Each as the IDE's own operations
+// IDE's (web/ide git.go), on the draft: git/branches (the default one
+// marked), git/log (of a file: its history), git/commit, git/commit/diff,
+// git/compare, git/compare/diff (two refs), git/authors, git/blame,
+// git/file, git/patch. Each as the IDE's own operations
 // ask: seeing the files (a file's, the one given), writing the file.
 func (h *IDE) serveGit(w http.ResponseWriter, r *http.Request, op string) {
 	allowed := func(o IdeOp, p string) bool { return h.Allowed == nil || h.Allowed(r, o, p) }
@@ -107,7 +109,7 @@ func (h *IDE) serveGit(w http.ResponseWriter, r *http.Request, op string) {
 	}
 	switch op {
 	case "git/changes", "git/diff", "git/save":
-	case "git/branches", "git/log", "git/commit", "git/commit/diff", "git/file", "git/patch":
+	case "git/branches", "git/log", "git/commit", "git/commit/diff", "git/compare", "git/compare/diff", "git/authors", "git/blame", "git/file", "git/patch":
 		if r.Method != http.MethodGet {
 			ideError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return

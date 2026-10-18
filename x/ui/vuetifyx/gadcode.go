@@ -50,7 +50,9 @@ func (b *VXGadCodeBuilder) MaxHeight(v string) *VXGadCodeBuilder {
 }
 
 // Labels are the words of its buttons and panels (format, expand, collapse,
-// structure, doc, refresh, noStructure, noDoc, notFormatted).
+// structure, doc, refresh, noStructure, noDoc, notFormatted, undo, redo,
+// compare, edit, prevChange, nextChange, revert): the admin's gadcode.Labels
+// in the user's language.
 func (b *VXGadCodeBuilder) Labels(v map[string]string) *VXGadCodeBuilder {
 	return b.Attr(":labels", h.JSONString(v))
 }

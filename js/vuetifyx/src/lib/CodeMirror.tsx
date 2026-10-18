@@ -1,10 +1,12 @@
-import {LANGUAGES} from '@gad-lang/ide-vuetify/diff'
+import {LANGUAGES} from '@gad-lang/git-vuetify/diff'
 import {defineComponent, ExtractPublicPropTypes, h, shallowRef} from 'vue'
 import {Codemirror} from 'vue-codemirror'
 import {EditorView} from '@codemirror/view'
 import {EditorState, Extension} from '@codemirror/state'
+import {redo, redoDepth, undo, undoDepth} from '@codemirror/commands'
 import {StreamLanguage} from '@codemirror/language'
 import Dialog from '@/lib/Dialog.vue'
+import {ResizeHandle, useStoredSize} from '@gad-lang/git-vuetify/resize'
 
 const propsOptions = {
   modelValue: {
@@ -68,6 +70,8 @@ export default defineComponent({
   emits: {
     'update:modelValue': (_value: string) => true,
     'update:help': (_value: boolean) => true,
+    // what its history may do, after each change
+    history: (_state: {canUndo: boolean; canRedo: boolean}) => true,
   },
 
   setup(props) {
@@ -88,8 +92,10 @@ export default defineComponent({
 
     // the editor's view (vue-codemirror's ready): what goto moves
     const view = shallowRef<EditorView | null>(null)
+    // the width of the help beside it: dragged by its edge, kept across visits
+    const helpW = useStoredSize('vx-codemirror.help', 400, 160, 2400)
 
-    return {resolvedLang, loadLang, view}
+    return {resolvedLang, loadLang, view, helpW}
   },
 
   methods: {
@@ -103,6 +109,13 @@ export default defineComponent({
       const pos = Math.min(l.from + Math.max(column, 1) - 1, l.to)
       view.dispatch({selection: {anchor: pos}, scrollIntoView: true})
       view.focus()
+    },
+    // undo and redo go back and forth in its history
+    undo() {
+      if (this.view) undo(this.view)
+    },
+    redo() {
+      if (this.view) redo(this.view)
     },
     // measure has the editor measure its lines again: after its width
     // changed (a panel beside it opened, the page it was expanded over)
@@ -148,6 +161,12 @@ export default defineComponent({
       const base: Extension[] = [
         EditorView.lineWrapping,
         ...this.resolvedLang,
+        // what the history may do, told after each change
+        EditorView.updateListener.of((u) => {
+          if (u.docChanged || u.transactions.length) {
+            this.$emit('history', {canUndo: undoDepth(u.state) > 0, canRedo: redoDepth(u.state) > 0})
+          }
+        }),
       ]
       if (this.readonly) {
         base.push(EditorState.readOnly.of(true))
@@ -204,11 +223,19 @@ export default defineComponent({
     // Panel modes: the help is a panel beside the editor, on the left or the
     // right, toggled by the button. Show/hide is v-model:help.
     if (this.helpMode === 'left' || this.helpMode === 'right') {
+      const hw = this.helpW
+      const handle =
+        this.helpOpen &&
+        h(ResizeHandle, {
+          onStart: hw.begin,
+          onDrag: (dx: number) => hw.drag(dx, this.helpMode === 'left' ? 1 : -1),
+          onReset: hw.reset,
+        })
       const panel = this.helpOpen && (
         <div
           style={{
-            flex: '0 0 40%',
-            maxWidth: '40%',
+            flex: `0 0 ${hw.size.value}px`,
+            minWidth: 0,
             overflow: 'auto',
             [this.helpMode === 'left' ? 'borderRight' : 'borderLeft']:
               '1px solid rgba(var(--v-border-color), var(--v-border-opacity))',
@@ -227,7 +254,7 @@ export default defineComponent({
       )
       return (
         <div style={{display: 'flex', gap: '8px', alignItems: 'stretch'}}>
-          {this.helpMode === 'left' ? [panel, main] : [main, panel]}
+          {this.helpMode === 'left' ? [panel, handle, main] : [main, handle, panel]}
         </div>
       )
     }

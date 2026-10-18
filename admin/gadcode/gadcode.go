@@ -142,9 +142,10 @@ func (c Code) parse() (*parser.File, *source.File, error) {
 	return file, sf, err
 }
 
-// Setup serves the operations under the admin's prefix (Path): behind its
-// login, as the rest of it.
+// Setup serves the operations under the admin's prefix (Path) — behind its
+// login, as the rest of it — and registers the editor's words (Messages).
 func Setup(p *presets.Builder) {
+	ConfigureMessages(p.I18n())
 	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
 		mux.HandleFunc("POST "+prefix+Path+"{op}", serve)
 	})

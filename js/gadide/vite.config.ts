@@ -4,7 +4,8 @@ import vueJsx from "@vitejs/plugin-vue-jsx";
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 
-// The IDE of gad (web/ide-vuetify) and its plugins, from the source of a gad
+// The IDE of gad (web/ide-vuetify), its Git panels (web/git-vuetify) and its
+// plugins, from the source of a gad
 // checkout: GAD_DIR, or the one beside this workspace. They are not on npm yet,
 // and their source is not in gad's Go module (they are its git submodules).
 const gad = resolve(process.env.GAD_DIR || resolve(__dirname, "../../../../../../../gade/src/github.com/gad-lang/gad"));
@@ -14,15 +15,16 @@ const src = (rel: string) => {
   return p;
 };
 
-// A library for the admin's page: Vue and Vuetify are the page's globals
-// (window.Vue, window.Vuetify) — one of each, the admin's theme and its
-// components —, the rest in gadide.js and gadide.css.
+// A library for the admin's page: Vue, Vuetify and vue-i18n are the page's
+// globals (window.Vue, window.Vuetify, window.VueI18n) — one of each, the
+// admin's theme, components and words —, the rest in gadide.js and gadide.css.
 export default defineConfig({
   plugins: [vue(), vueJsx()],
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   resolve: {
     alias: {
       "@gad-lang/ide-vuetify": src("web/ide-vuetify/src/index.ts"),
+      "@gad-lang/git-vuetify": src("web/git-vuetify/src/index.ts"),
       "@gad-lang/codemirror-gad": src("web/plugins/js/codemirror-gad/src/index.ts"),
       "@gad-lang/prism-gad": src("web/plugins/js/prism-gad/src/index.ts"),
     },
@@ -38,10 +40,11 @@ export default defineConfig({
     cssCodeSplit: false,
     lib: { entry: resolve(__dirname, "src/main.ts"), formats: ["iife"], name: "gadidejs", fileName: () => "gadide.js" },
     rollupOptions: {
-      external: ["vue", "vuetify", "vuetify/components", "vuetify/directives"],
+      external: ["vue", "vue-i18n", "vuetify", "vuetify/components", "vuetify/directives"],
       output: {
         globals: {
           vue: "Vue",
+          "vue-i18n": "VueI18n",
           vuetify: "Vuetify",
           "vuetify/components": "Vuetify.components",
           "vuetify/directives": "Vuetify.directives",

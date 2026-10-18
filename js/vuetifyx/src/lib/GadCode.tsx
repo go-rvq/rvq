@@ -1,8 +1,11 @@
 // <vx-gad-code>: the admin's editor of gad code (gad, gadx, gadt) — the
 // editor (<vx-codemirror>) with what an IDE gives of the code in it:
 //
-//   - Format: the code as `gad fmt` writes it;
-//   - Expand: the editor over the whole page, and back (Esc too);
+//   - in the bar of the editor: Format (the code as `gad fmt` writes it),
+//     Undo and Redo (its history), Compare (the code with the value it
+//     started from, side by side, scrolling as one — the merge view of the
+//     IDE's Git panel —, the changes stepped through, a change reverted) and
+//     Expand (the editor over the whole page, and back; Esc too);
 //   - Structure, at the left: closed to a strip, it opens on the
 //     declarations of the code as a tree (`gad symbols`, the IDE's
 //     StructureTree); a click on one moves the cursor to it;
@@ -15,6 +18,8 @@
 // while they are open.
 import {defineComponent, h, type PropType} from 'vue'
 import {StructureTree, type OutlineSym} from '@gad-lang/ide-vuetify/structure'
+import {DiffMergeView} from '@gad-lang/git-vuetify/diff'
+import {ResizeHandle, useStoredSize} from '@gad-lang/git-vuetify/resize'
 import CodeMirror from '@/lib/CodeMirror'
 
 const propsOptions = {
@@ -27,6 +32,9 @@ const propsOptions = {
   // where the code is asked of: <prefix>/__gadcode/
   api: {type: String, required: true as const},
   readonly: Boolean,
+  // the value Compare compares the code with; the value it started from
+  // when not said
+  original: {type: String, default: undefined},
   minHeight: {type: String, default: '16rem'},
   maxHeight: {type: String, default: '40rem'},
   // the help of the editor (its slot), as <vx-codemirror>'s
@@ -36,7 +44,7 @@ const propsOptions = {
   helpTooltip: {type: String, default: 'Ajuda'},
   // the words of its buttons and panels
   labels: {
-    type: Object as PropType<Partial<Record<'format' | 'expand' | 'collapse' | 'structure' | 'doc' | 'refresh' | 'noStructure' | 'noDoc' | 'notFormatted', string>>>,
+    type: Object as PropType<Partial<Record<'format' | 'expand' | 'collapse' | 'structure' | 'doc' | 'refresh' | 'noStructure' | 'noDoc' | 'notFormatted' | 'undo' | 'redo' | 'compare' | 'edit' | 'prevChange' | 'nextChange' | 'revert', string>>>,
     default: () => ({}),
   },
 } as const
@@ -51,6 +59,13 @@ const DEFAULT_LABELS = {
   noStructure: 'Nenhuma declaração.',
   noDoc: 'Nenhuma documentação.',
   notFormatted: 'O código não pôde ser formatado: corrija o que está errado nele.',
+  undo: 'Desfazer',
+  redo: 'Refazer',
+  compare: 'Comparar com o valor inicial',
+  edit: 'Voltar ao editor',
+  prevChange: 'Mudança anterior',
+  nextChange: 'Próxima mudança',
+  revert: 'Reverter',
 }
 
 const border = '1px solid rgba(var(--v-border-color), var(--v-border-opacity))'
@@ -59,6 +74,16 @@ export default defineComponent({
   name: 'VXGadCode',
 
   props: propsOptions,
+
+  setup() {
+    // the widths of the structure and of the documentation, the height of
+    // the editor: dragged by their edges, kept across visits
+    return {
+      structureW: useStoredSize('vx-gad-code.structure', 260, 140, 1600),
+      docW: useStoredSize('vx-gad-code.doc', 420, 160, 2400),
+      editorH: useStoredSize('vx-gad-code.height', 360, 120, 6000),
+    }
+  },
 
   emits: {
     'update:modelValue': (_value: string) => true,
@@ -75,6 +100,11 @@ export default defineComponent({
       docError: '',
       formatError: '',
       formatting: false,
+      comparing: false,
+      canUndo: false,
+      canRedo: false,
+      // the value the code started from (Compare)
+      initial: this.modelValue,
       timer: 0 as number | ReturnType<typeof setTimeout>,
     }
   },
@@ -110,6 +140,10 @@ export default defineComponent({
     },
     expanded(v: boolean) {
       document.documentElement.style.overflow = v ? 'hidden' : ''
+      this.remeasure()
+    },
+    comparing() {
+      this.canUndo = this.canRedo = false
       this.remeasure()
     },
   },
@@ -178,7 +212,21 @@ export default defineComponent({
       this.$nextTick(() => (this.$refs.editor as {measure?: () => void} | undefined)?.measure?.())
     },
     navigate(sym: OutlineSym) {
-      ;(this.$refs.editor as {goto?: (line: number, column: number) => void} | undefined)?.goto?.(sym.line, sym.column)
+      if (this.comparing) this.comparing = false
+      this.$nextTick(() =>
+        (this.$refs.editor as {goto?: (line: number, column: number) => void} | undefined)?.goto?.(sym.line, sym.column),
+      )
+    },
+    // the editor in use: the code's, or the current side of the comparison
+    active(): {undo?: () => void; redo?: () => void; next?: () => void; prev?: () => void} | undefined {
+      return (this.comparing ? this.$refs.merge : this.$refs.editor) as never
+    },
+    onHistory(st: {canUndo: boolean; canRedo: boolean}) {
+      this.canUndo = st.canUndo
+      this.canRedo = st.canRedo
+    },
+    dark(): boolean {
+      return !!(this as unknown as {$vuetify?: {theme?: {current?: {value?: {dark?: boolean}}}}}).$vuetify?.theme?.current?.value?.dark
     },
     onKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && this.expanded) this.expanded = false
@@ -219,57 +267,86 @@ export default defineComponent({
 
   render() {
     const w = this.words
-    const height = this.expanded ? 'calc(100vh - 56px)' : undefined
+    const height = this.expanded ? 'calc(100vh - 40px)' : `${this.editorH.size.value}px`
+    const btn = (icon: string, title: string, onClick: () => void, extra: Record<string, unknown> = {}) => (
+      <v-btn icon={icon} size="small" variant="text" density="comfortable" title={title} onClick={onClick} {...extra} />
+    )
 
-    const toolbar = (
-      <div style={{display: 'flex', alignItems: 'center', gap: '2px', padding: '2px 4px', borderBottom: border}}>
-        <span style={{flex: '1 1 auto'}} class="text-caption text-medium-emphasis">
+    // the bar of the editor: its title, and what is done to the code
+    const bar = (
+      <div style={{display: 'flex', alignItems: 'center', gap: '2px', padding: '2px 4px', borderBottom: border}} data-gad-code-bar>
+        <span style={{flex: '1 1 auto', minWidth: 0}} class="text-caption text-medium-emphasis">
           {this.$slots.title?.()}
         </span>
-        {!this.readonly && (
-          <v-btn icon="mdi-auto-fix" size="small" variant="text" density="comfortable" title={w.format}
-            loading={this.formatting} onClick={this.format} data-gad-code-format />
-        )}
-        <v-btn icon={this.expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'} size="small" variant="text"
-          density="comfortable" title={this.expanded ? w.collapse : w.expand}
-          onClick={() => (this.expanded = !this.expanded)} data-gad-code-expand />
+        {!this.readonly && !this.comparing &&
+          btn('mdi-auto-fix', w.format, this.format, {loading: this.formatting, 'data-gad-code-format': true})}
+        {!this.readonly && btn('mdi-undo', w.undo, () => this.active()?.undo?.(), {disabled: !this.canUndo, 'data-gad-code-undo': true})}
+        {!this.readonly && btn('mdi-redo', w.redo, () => this.active()?.redo?.(), {disabled: !this.canRedo, 'data-gad-code-redo': true})}
+        {this.comparing && btn('mdi-arrow-up', w.prevChange, () => this.active()?.prev?.(), {'data-gad-code-prev': true})}
+        {this.comparing && btn('mdi-arrow-down', w.nextChange, () => this.active()?.next?.(), {'data-gad-code-next': true})}
+        {btn(this.comparing ? 'mdi-code-braces' : 'mdi-compare-horizontal', this.comparing ? w.edit : w.compare,
+          () => (this.comparing = !this.comparing), {'data-gad-code-compare': true, color: this.comparing ? 'primary' : undefined})}
+        {btn(this.expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand', this.expanded ? w.collapse : w.expand,
+          () => (this.expanded = !this.expanded), {'data-gad-code-expand': true})}
       </div>
     )
 
-    const editor = h(
-      CodeMirror,
-      {
-        ref: 'editor',
-        modelValue: this.modelValue,
-        'onUpdate:modelValue': (v: string) => this.$emit('update:modelValue', v),
-        language: this.language,
-        templateStart: this.templateStart,
-        templateEnd: this.templateEnd,
-        readonly: this.readonly,
-        minHeight: height || this.minHeight,
-        maxHeight: height || this.maxHeight,
-        help: this.help,
-        'onUpdate:help': (v: boolean) => this.$emit('update:help', v),
-        helpMode: this.helpMode,
-        helpTitle: this.helpTitle,
-        helpTooltip: this.helpTooltip,
-      },
-      this.$slots.help ? {help: () => this.$slots.help?.()} : undefined,
-    )
+    const editor = this.comparing
+      ? h(
+          'div',
+          {style: {height, overflow: 'auto'}, 'data-gad-code-compare-view': true},
+          [
+            h(DiffMergeView as never, {
+              ref: 'merge',
+              old: this.original ?? this.initial,
+              current: this.modelValue,
+              language: this.language,
+              editable: !this.readonly,
+              dark: this.dark(),
+              revertTitle: w.revert,
+              onChange: (v: string) => this.$emit('update:modelValue', v),
+              onHistory: this.onHistory,
+            }),
+          ],
+        )
+      : h(
+          CodeMirror,
+          {
+            ref: 'editor',
+            modelValue: this.modelValue,
+            'onUpdate:modelValue': (v: string) => this.$emit('update:modelValue', v),
+            onHistory: this.onHistory,
+            language: this.language,
+            templateStart: this.templateStart,
+            templateEnd: this.templateEnd,
+            readonly: this.readonly,
+            minHeight: height,
+            maxHeight: height,
+            help: this.help,
+            'onUpdate:help': (v: boolean) => this.$emit('update:help', v),
+            helpMode: this.helpMode,
+            helpTitle: this.helpTitle,
+            helpTooltip: this.helpTooltip,
+          },
+          this.$slots.help ? {help: () => this.$slots.help?.()} : undefined,
+        )
 
-    const left = this.structureOpen ? (
-      <div style={{flex: '0 0 260px', maxWidth: '260px', display: 'flex', flexDirection: 'column', borderRight: border, minHeight: 0}}>
+    const sW = this.structureW, dW = this.docW, eH = this.editorH
+    const left = this.structureOpen ? [
+      <div style={{flex: `0 1 ${sW.size.value}px`, display: 'flex', flexDirection: 'column', borderRight: border, minHeight: 0, minWidth: '120px'}}>
         {this.panelHead(w.structure, this.refreshStructure, () => (this.structureOpen = false), 'mdi-chevron-left')}
-        <div style={{flex: '1 1 auto', overflow: 'auto', maxHeight: height || this.maxHeight}} data-gad-code-structure>
+        <div style={{flex: '1 1 auto', overflow: 'auto', maxHeight: height}} data-gad-code-structure>
           {h(StructureTree, {symbols: this.symbols, emptyText: w.noStructure, onNavigate: this.navigate})}
         </div>
-      </div>
-    ) : this.strip('mdi-file-tree-outline', w.structure, () => (this.structureOpen = true), 'left')
+      </div>,
+      h(ResizeHandle, {onStart: sW.begin, onDrag: (dx: number) => sW.drag(dx), onReset: sW.reset, 'data-gad-code-resize-structure': true}),
+    ] : this.strip('mdi-file-tree-outline', w.structure, () => (this.structureOpen = true), 'left')
 
-    const right = this.docOpen ? (
-      <div style={{flex: '0 0 40%', maxWidth: '40%', display: 'flex', flexDirection: 'column', borderLeft: border, minHeight: 0}}>
+    const right = this.docOpen ? [
+      h(ResizeHandle, {onStart: dW.begin, onDrag: (dx: number) => dW.drag(dx, -1), onReset: dW.reset, 'data-gad-code-resize-doc': true}),
+      <div style={{flex: `0 1 ${dW.size.value}px`, display: 'flex', flexDirection: 'column', borderLeft: border, minHeight: 0, minWidth: '120px'}}>
         {this.panelHead(w.doc, this.refreshDoc, () => (this.docOpen = false), 'mdi-chevron-right')}
-        <div style={{flex: '1 1 auto', overflow: 'auto', padding: '8px', maxHeight: height || this.maxHeight}} data-gad-code-doc>
+        <div style={{flex: '1 1 auto', overflow: 'auto', padding: '8px', maxHeight: height}} data-gad-code-doc>
           {this.docError ? (
             <pre class="text-error text-caption" style={{whiteSpace: 'pre-wrap'}}>{this.docError}</pre>
           ) : this.docHtml ? (
@@ -278,28 +355,37 @@ export default defineComponent({
             <div class="text-medium-emphasis text-caption">{w.noDoc}</div>
           )}
         </div>
-      </div>
-    ) : this.strip('mdi-book-open-variant', w.doc, () => (this.docOpen = true), 'right')
+      </div>,
+    ] : this.strip('mdi-book-open-variant', w.doc, () => (this.docOpen = true), 'right')
 
-    return (
+    const body = (
       <div
         class={['vx-gad-code', {'vx-gad-code--expanded': this.expanded}]}
         style={{
-          border, borderRadius: '4px', display: 'flex', flexDirection: 'column', background: 'rgb(var(--v-theme-surface))',
+          border, borderRadius: '4px', display: 'flex', alignItems: 'stretch', background: 'rgb(var(--v-theme-surface))',
           ...(this.expanded ? {position: 'fixed', inset: '0', zIndex: 2400, borderRadius: '0'} : {}),
         }}
       >
-        {toolbar}
-        <div style={{display: 'flex', alignItems: 'stretch', flex: '1 1 auto', minHeight: 0}}>
-          {left}
-          <div style={{flex: '1 1 auto', minWidth: 0}}>{editor}</div>
-          {right}
+        {left}
+        <div style={{flex: '1 1 0', minWidth: '200px', display: 'flex', flexDirection: 'column'}}>
+          {bar}
+          {editor}
+          {this.formatError && (
+            <div class="text-error text-caption" style={{padding: '2px 8px', borderTop: border}} data-gad-code-format-error>
+              {this.formatError}
+            </div>
+          )}
         </div>
-        {this.formatError && (
-          <div class="text-error text-caption" style={{padding: '2px 8px', borderTop: border}} data-gad-code-format-error>
-            {this.formatError}
-          </div>
-        )}
+        {right}
+      </div>
+    )
+    // the height dragged by the bottom edge (over the page, the page's)
+    if (this.expanded) return body
+    return (
+      <div>
+        {body}
+        {h(ResizeHandle, {direction: 'row', onStart: eH.begin, onDrag: (dy: number) => eH.drag(dy), onReset: eH.reset,
+          onPointerup: () => this.remeasure(), 'data-gad-code-resize-height': true})}
       </div>
     )
   },

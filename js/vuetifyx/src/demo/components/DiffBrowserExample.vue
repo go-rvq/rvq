@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useTheme } from 'vuetify'
-import { DiffBrowser, type Content, type DiffFile, type SaveState } from '@gad-lang/ide-vuetify/diff'
+import { DiffBrowser, type Content, type DiffFile, type SaveState } from '@gad-lang/git-vuetify/diff'
 // the diffs as the server computes them (vuetifyx.NewDiffFile, Go), saved
 import samples from './diffBrowserSamples.json'
 
