@@ -8,6 +8,9 @@ The backups of the database of the site.
 - The **automatic backup** makes one a day.
 - **Persistence** says how long the backups are kept: so many days, weeks,
   months, years — the older ones are removed.
+- **Backup method** says who makes the copy, when there is more than one way:
+  the database server, or the application itself. A method that cannot be used
+  now says why.
 - A backup may be downloaded, or removed.
 
 ## When it is available

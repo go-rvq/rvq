@@ -9,6 +9,9 @@ As cópias de segurança do banco de dados do site.
 - A **cópia automática** faz uma por dia.
 - A **persistência** diz por quanto tempo as cópias são mantidas: tantos
   dias, semanas, meses, anos — as mais antigas são removidas.
+- O **método de backup** diz quem faz a cópia, quando há mais de um jeito: o
+  servidor do banco, ou a própria aplicação. Um método que não pode ser usado
+  agora diz por quê.
 - Uma cópia pode ser baixada ou removida.
 
 ## Quando está disponível

@@ -9,4 +9,6 @@ import (
 type DbBackupConfig struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Persistence datatypes.NullJSONType[*db_tools.Persistence]
+	// Method is how the backups are made (BackupMethods; "" the default).
+	Method string `gorm:"size:32;not null;default:''"`
 }

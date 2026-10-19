@@ -97,6 +97,9 @@ type Messages struct {
 	Database                             string              `i18n:"hint='Title of the database tools.'"`
 	CreateBackup                         string              `i18n:"hint='Button that makes a database backup now.'"`
 	ConfigureBackupPersistence           string              `i18n:"hint='Action that sets how long backups are kept.'"`
+	BackupMethod                         string              `i18n:"hint='Title of how the backups are made (the method), and the label of its field.'"`
+	ConfigureBackupMethod                string              `i18n:"hint='Action that chooses how the backups are made.'"`
+	BackupMethodNotAvailable             string              `i18n:"hint='Said of a backup method that cannot be used now, before why.'"`
 	CreateDatabaseBackup                 string              `i18n:"hint='Title of the job that makes a database backup.'"`
 	DatabaseOlderBackupsRemover          string              `i18n:"label='Older backups remover', hint='Title of the job that removes the backups no longer kept.'"`
 	BackupStartedInBackgroundJobTemplate string              `i18n:"label='Backup started', hint='Shown once a backup job was started.'"`
@@ -148,6 +151,9 @@ var (
 		BackupRemovedTemplate:                "Backup Removed: %s",
 		BackupRemoveConfirmTemplate:          "Backup Remove Confirm: %s",
 		ConfigureBackupPersistence:           "Configure Backup Persistence",
+		BackupMethod:                         "Backup method",
+		ConfigureBackupMethod:                "Choose the backup method",
+		BackupMethodNotAvailable:             "not available",
 		Persistence: MessagesPersistence{
 			Enabled:     "<b class='text-primary'>ENABLED</b>",
 			Disabled:    "<b class='text-warning'>NOT ENABLED</b>",
@@ -171,7 +177,10 @@ var (
 		DatabaseAutoBackup:                   "Cópia de Segurança Automática do Banco de Dados",
 		Database:                             "Banco de Dados",
 		CreateBackup:                         "Criar Nova Cópia de Segurança",
-		ConfigureBackupPersistence:           "Configurar armezagem da Cópia de Segurança",
+		ConfigureBackupPersistence:           "Configurar armazenagem da Cópia de Segurança",
+		BackupMethod:                         "Método de backup",
+		ConfigureBackupMethod:                "Escolher o método de backup",
+		BackupMethodNotAvailable:             "indisponível",
 		CreateDatabaseBackup:                 "Criar Cópia de Segurança do Banco de Dados",
 		DatabaseOlderBackupsRemover:          "Remover Cópias de Segurança antigas do Banco de Dados",
 		BackupStartedInBackgroundJobTemplate: `A Cópia de Segurança está sendo gerada em segundo plano. Acesse {link} para acompanhar.`,

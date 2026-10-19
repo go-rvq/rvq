@@ -26,6 +26,7 @@ import (
 const (
 	actionCreateBackup    = "createBackup"
 	actionConfigureBackup = "configureBackup"
+	actionConfigureMethod = "configureBackupMethod"
 
 	eventRemoveBackup        = "removeBackup"
 	eventRemoveBackupConfirm = "removeBackupConfirm"
@@ -44,6 +45,12 @@ type Builder struct {
 	wb                       *worker.Builder
 	backupCronSpec           string
 	page                     *presets.PageBuilder
+	methods                  *db_tools.BackupMethods
+}
+
+// MethodForm is the form of the backup method.
+type MethodForm struct {
+	Method string
 }
 
 type MessageForm struct {
@@ -248,6 +255,10 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 
 	b.setupCreateAction(p, page)
 	b.setupConfigureBackupAction(p, page)
+	b.setupConfigureMethodAction(p, page)
+	if err = b.applyMethod(); err != nil {
+		return
+	}
 
 	b.wb.NewJob(JobCreateBackup).
 		Title(func(ctx *web.EventContext) string {
@@ -264,7 +275,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			job.AddLog("starting")
 			defer job.AddLog("done")
 			var bkp db_tools.Backuper
-			if bkp, err = b.backupController.Create(false, info.Argument.(*MessageForm).Message); err != nil {
+			if bkp, err = db_tools.CreateBackup(ctx, b.backupController, false, info.Argument.(*MessageForm).Message); err != nil {
 				return
 			}
 			job.AddLog(fmt.Sprintf(GetMessages(ctx).BackupDetailTemplate, bkp.DetailString(ctx)))
@@ -282,7 +293,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 				job.AddLog("starting")
 				defer job.AddLog("done")
 				var bkp db_tools.Backuper
-				if bkp, err = b.backupController.Create(true, "auto backup"); err != nil {
+				if bkp, err = db_tools.CreateBackup(ctx, b.backupController, true, "auto backup"); err != nil {
 					return
 				}
 				job.AddLog(fmt.Sprintf(GetMessages(ctx).BackupDetailTemplate, bkp.DetailString(ctx)))
@@ -311,6 +322,109 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	}
 
 	return
+}
+
+// SetBackupMethods says the controller has more than one way to back the
+// database up: the user chooses one (the action configureBackupMethod), kept
+// in the configuration of the backups.
+func (b *Builder) SetBackupMethods(m *db_tools.BackupMethods) *Builder {
+	b.methods = m
+	return b
+}
+
+// applyMethod sets on the controller the method of the configuration.
+func (b *Builder) applyMethod() error {
+	if b.methods == nil || b.methods.Set == nil {
+		return nil
+	}
+	cfg, err := b.GetConfig()
+	if err != nil {
+		return err
+	}
+	return b.methods.Set(cfg.Method)
+}
+
+// methodText is the method in use, as the page says it: its name, and what
+// makes it — or why it is not available.
+func (b *Builder) methodText(ctx context.Context) string {
+	if b.methods == nil || b.methods.List == nil || b.methods.Get == nil {
+		return ""
+	}
+	cur := b.methods.Get()
+	for _, m := range b.methods.List(ctx) {
+		if m.Name != cur {
+			continue
+		}
+		switch {
+		case !m.Available:
+			return m.Label + " — " + GetMessages(ctx).BackupMethodNotAvailable + ": " + m.Reason
+		case m.Version != "":
+			return m.Label + " (" + m.Version + ")"
+		}
+		return m.Label
+	}
+	return cur
+}
+
+func (b *Builder) setupConfigureMethodAction(p *presets.Builder, page *presets.PageBuilder) {
+	action := page.PrivateAction(actionConfigureMethod, func(v *perm.Verifier) *perm.Verifier {
+		return v.Do(actionConfigureBackup)
+	}).
+		SetEnabled(func(id string, ctx *web.EventContext) (ok bool, err error) {
+			return b.backupController != nil && b.methods != nil, nil
+		}).
+		SetI18nLabel(func(ctx context.Context) string {
+			return GetMessages(ctx).ConfigureBackupMethod
+		})
+
+	mb := presets.NewModelBuilder(p, &MethodForm{}, presets.ModelConfig().SetModuleKey(MessagesKey))
+	mb.Editing("Method")
+	mb.Editing().Field("Method").SetI18nLabel(func(ctx context.Context) string { return GetMessages(ctx).BackupMethod })
+	presets.ConfigureSelectField(mb, "Method", presets.EDIT, &presets.SelectConfig{
+		KeyLabelsFunc: func(ctx *presets.FieldContext, keys []string) (v []string) {
+			c := ctx.EventContext.Context()
+			labels := map[string]string{}
+			for _, m := range b.methods.List(c) {
+				l := m.Label
+				if !m.Available {
+					l += " — " + GetMessages(c).BackupMethodNotAvailable + ": " + m.Reason
+				} else if m.Version != "" {
+					l += " (" + m.Version + ")"
+				}
+				labels[m.Name] = l
+			}
+			for _, k := range keys {
+				v = append(v, labels[k])
+			}
+			return
+		},
+		AvailableKeysFunc: func(ctx *presets.FieldContext) (keys []string) {
+			for _, m := range b.methods.List(ctx.EventContext.Context()) {
+				keys = append(keys, m.Name)
+			}
+			return
+		},
+		SetSelectedKeyFunc: func(ctx *presets.FieldContext, key string) error {
+			ctx.Obj.(*MethodForm).Method = key
+			return nil
+		},
+	})
+
+	presets.ActionForm[*MethodForm](action, mb.Editing(), func(ctx *presets.ActionFormContext[*MethodForm]) (err error) {
+		if err = b.methods.Set(ctx.Form.Method); err != nil {
+			return
+		}
+		var cfg *DbBackupConfig
+		if cfg, err = b.GetConfig(); err != nil {
+			return
+		}
+		cfg.Method = ctx.Form.Method
+		return b.db.Session(&gorm.Session{}).Save(&cfg).Error
+	}).InitForm(func(fctx *presets.ActionFormContext[*MethodForm]) (err error) {
+		fctx.Form = &MethodForm{Method: b.methods.Get()}
+		return nil
+	}).
+		Build()
 }
 
 // BackupController is the controller of the backups (nil: none).
@@ -458,6 +572,21 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 									VListItemTitle(h.Text(m.Persistence.Title)),
 									VListItemSubtitle(persistence),
 								).Class("pa-0"),
+								h.Iff(b.methods != nil, func() h.HTMLComponent {
+									return VListItem(
+										web.Slot(
+											VBtn("").
+												Icon("mdi-cog").
+												Density(DensityCompact).
+												Attr("@click", web.GET().URL(ctx.R.URL.Path).
+													EventFunc(actions.Action).
+													Query(presets.ParamAction, actionConfigureMethod).
+													Query(presets.ParamTargetPortal, uid).Go()),
+										).Name("append"),
+										VListItemTitle(h.Text(m.BackupMethod)),
+										VListItemSubtitle(h.Text(b.methodText(ctx.Context()))),
+									).Class("pa-0").Attr("data-db-tools-method", true)
+								}),
 							).Class("pa-0 mb-3"),
 							h.Div(
 								web.Portal().Name(uid2),
