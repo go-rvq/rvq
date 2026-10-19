@@ -27,7 +27,7 @@ User.id.@meta   // (;db=(;primary_key, auto))
 Supported on **interfaces** — array interfaces included — (and their fields,
 accessors and methods), **enums** (and their items), **functions** — of one
 body or of several methods —, **declared unions** (`type T <A|B>`), **classes** /
-marker `type`s / **mixins** and [typed array types](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/typed_arrays.gad) (and their
+marker `type`s / **mixins** and [typed array types](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/typed_arrays.gad) (and their
 fields, properties and methods). `X.@meta` is an empty key-value array when the
 element has none, so it never errors.
 

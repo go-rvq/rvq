@@ -15,7 +15,7 @@
 `str` and `rawStr` interoperate; mixing them in `+` yields a string. `raw EXPR`
 produces a `rawStr` from any expression (folded at compile time for a string
 literal, converted at run time otherwise). Heredocs (`"""…"""`, `` ```…``` ``)
-and `code … end` literals have their own tour in [heredocs.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/heredocs.gad).
+and `code … end` literals have their own tour in [heredocs.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/heredocs.gad).
 
 ```gad
 name := "Gad"
@@ -34,7 +34,7 @@ A `` `…` `` literal is a **raw** string (`rawStr`): the body is verbatim — n
 escape sequences and no interpolation, so `\t`, `\`, `{` and `}` are all literal
 text. Backtick literals may also **span multiple lines** (the newlines are kept),
 which is the raw multiline form; the `` ```…``` `` raw heredoc in
-[heredocs.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/heredocs.gad) additionally strips common indentation.
+[heredocs.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/heredocs.gad) additionally strips common indentation.
 
 Prefix a raw form with `#` for its **template** variant (`` #`…` ``): `{expr}`
 interpolation is enabled, but the text stays verbatim — the backslash is *not* an

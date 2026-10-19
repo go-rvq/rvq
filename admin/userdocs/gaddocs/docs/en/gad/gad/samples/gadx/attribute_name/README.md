@@ -16,7 +16,7 @@ the same attribute. The formatter writes back the form the name needs, so a
 quoted name that reads whole on its own comes back bare.
 
 A name may also be computed, with `data-{key}=v` or a `**dict` spread; see
-[html](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/gadx/html.gadx).
+[html](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/gadx/html.gadx).
 
 ## Components
 

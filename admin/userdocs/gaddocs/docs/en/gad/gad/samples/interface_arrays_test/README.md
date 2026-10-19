@@ -2,7 +2,7 @@
 # Array interfaces (`interface P [] { … }`)
 
 Writing one or more `[]` after the interface's name makes the
-[interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) match an **array** — a *array interface*:
+[interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) match an **array** — a *array interface*:
 
 - `interface P [] { … }` matches a flat array whose elements each satisfy the
   body; `interface P [][][] { … }` an array nested three deep (the number of `[]`
@@ -16,12 +16,12 @@ Writing one or more `[]` after the interface's name makes the
 
 The `[]` always follows the name — the former `interface[] P { … }` is rejected.
 
-With the checked cast [`::`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) the (nested) array must already
+With the checked cast [`::`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) the (nested) array must already
 hold satisfying elements and is returned unchanged. With the transforming cast
-[`:::`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/transform_cast_test.gad) each leaf is coerced into the declared shape (its
-class-typed fields are built), at any depth; a [typed array](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/typed_arrays.gad)
+[`:::`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad) each leaf is coerced into the declared shape (its
+class-typed fields are built), at any depth; a [typed array](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/typed_arrays.gad)
 converts too. An array interface is also a parameter type, carries
-[metadata](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/metadata.gad) and answers the reflection keys `@depth` (the number of
+[metadata](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/metadata.gad) and answers the reflection keys `@depth` (the number of
 `[]`), `@elem` (the element types of an array of types, else nil) and `@meta`.
 An empty array satisfies any array interface vacuously.
 

@@ -24,7 +24,7 @@ a
 `param` declares the parameters of the main script function. It may appear only
 once, at the top level; initial values are illegal (a variadic `*x` defaults to
 `[]`, everything else to `nil`). The positional and named lists are separated by
-`;`, following the same rules as [function parameters](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functions.gad).
+`;`, following the same rules as [function parameters](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/functions.gad).
 
 ```gad ignore
 param (arg0, arg1, *rest)         // positional + variadic

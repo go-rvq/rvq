@@ -1,7 +1,7 @@
 
 # Heredocs and Code Strings
 
-Part of [Strings, bytes & regex](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/strings_bytes_regex.gad).
+Part of [Strings, bytes & regex](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/strings_bytes_regex.gad).
 
 ## Multiline strings and when to use a heredoc
 

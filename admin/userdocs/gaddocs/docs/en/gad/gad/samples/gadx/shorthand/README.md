@@ -21,7 +21,7 @@ plain text:
   shorthand for an expression;
 - a **dict of conditions**, `[class={card: true, muted: false}]`, which is how
   several classes are switched at once (see
-  [class_attribute](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/gadx/class_attribute.gadx)).
+  [class_attribute](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/gadx/class_attribute.gadx)).
 
 `gad transpile page.html` writes the shorthand wherever a page's `id` and
 `class` are plain text, which is nearly everywhere.

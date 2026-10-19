@@ -46,7 +46,7 @@ Hello, Gad!
 ## Main Function, Parameters and Return
 
 A Gad script is itself a function. It can declare parameters with
-[`param`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/33_variables_and_scopes.md) and produce a result with `return`. If
+[`param`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/33_variables_and_scopes.md) and produce a result with `return`. If
 no `return` is reached, the script returns `nil`.
 
 ```gad
@@ -76,10 +76,10 @@ at once: `include ("a.gad", "b.gad")`. While an included file's code runs,
 the including module.
 
 The full, runnable documentation lives in the sample source itself:
-[`samples/include/main.gad`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/include/main.gad) (with its partials
-[`config.gad`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/include/config.gad) and
-[`banner.gad`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/include/banner.gad)). In Gadx templates the same
-feature is the [`@include`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx/include.gadx) directive.
+[`samples/include/main.gad`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/include/main.gad) (with its partials
+[`config.gad`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/include/config.gad) and
+[`banner.gad`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/include/banner.gad)). In Gadx templates the same
+feature is the [`@include`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx/include.gadx) directive.
 
 ## The REPL
 
@@ -167,13 +167,13 @@ The CLI is organised as subcommands. Run `gad help` for the list, or
 | `-disabled-modules a,b`    | Disable specific modules.                          |
 | `-timeout 5s`              | Abort the script after a duration.                 |
 | `-trace parser,compiler`   | Trace the parse/optimize/compile steps.            |
-| `-template`                | Run the input as a template (see [Templates](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/09_template.md)). |
+| `-template`                | Run the input as a template (see [Templates](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/09_template.md)). |
 | `-template-start-delimiter` / `-template-end-delimiter` | Override the `{%`/`%}` code delimiters. |
 
 A `.gadt` file is run as a template automatically (mixed mode). A `.gadx` file is
-compiled with the [Gadx](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx) engine — the indentation/pug-style HTML
-template language. See **[Templates](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/09_template.md)** for the full mixed-mode
-reference and the [`gadx`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx) submodule for the template engine.
+compiled with the [Gadx](https://github.com/gad-lang/gad/blob/GAD_REF/gadx) engine — the indentation/pug-style HTML
+template language. See **[Templates](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/09_template.md)** for the full mixed-mode
+reference and the [`gadx`](https://github.com/gad-lang/gad/blob/GAD_REF/gadx) submodule for the template engine.
 
 ### Formatting with `gad fmt`
 
@@ -230,7 +230,7 @@ change the page:
 A script or a stylesheet keeps its content exactly, its own nesting included;
 what goes is the indentation the page put around the element, which is not part
 of the language inside and would otherwise be added to the tag's own — see
-[samples/gadx/raw_text](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx/raw_text.gadx).
+[samples/gadx/raw_text](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx/raw_text.gadx).
 
 The markup itself comes out in the tag syntax Gadx is written in, not as inline
 HTML: `<div class="card">` becomes `div[class="card"]`, and the tree is the
@@ -257,10 +257,10 @@ what the page renders, is refused and the inline HTML is kept.
 
 A plain `id` or `class` is written in its shorthand form, `#title` and `.card`,
 with a name quoted when it carries more than letters, digits, `_` and `-` — see
-[samples/gadx/shorthand](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx/shorthand.gadx). A run of sibling tags
+[samples/gadx/shorthand](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx/shorthand.gadx). A run of sibling tags
 that come out the same is folded into one `(N)` — five identical star icons
 become `i.fa-solid.fa-star(5)` — see
-[samples/gadx/repeat](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx/repeat.gadx).
+[samples/gadx/repeat](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx/repeat.gadx).
 
 The whitespace a page was indented with is dropped: between two block-level
 tags, and just inside a block — right after its open tag and right before its
@@ -271,7 +271,7 @@ written — their content is carried through as a quoted literal, which is the
 only form that survives the parse with its line breaks intact. Between inline elements the whitespace is content — the space in
 `<a>one</a> <a>two</a>` is what keeps the words apart — and it comes out as a
 `*` line, or as `{= " …" }` where a run's own edges have to survive. See
-[samples/gadx/text_space](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx/text_space.gadx).
+[samples/gadx/text_space](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx/text_space.gadx).
 
 ### The web IDE (`gad ide`)
 

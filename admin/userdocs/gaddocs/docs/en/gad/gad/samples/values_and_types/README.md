@@ -20,10 +20,10 @@ In Gad, everything is a value and every value has a type. Use `typeof` (or
 | `keyValue` / `keyValueArray` | `k=v` pair / ordered pairs | —              |
 | `error` / `nil` | error value / absence of a value  | —                   |
 
-Related chapters: [Collections](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/collections.gad),
-[KeyValue arrays](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/key_value_array.gad),
-[Strings, bytes & regex](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/strings_bytes_regex.gad),
-[Functions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functions.gad), [Properties](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/properties.gad).
+Related chapters: [Collections](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/collections.gad),
+[KeyValue arrays](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/key_value_array.gad),
+[Strings, bytes & regex](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/strings_bytes_regex.gad),
+[Functions](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/functions.gad), [Properties](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/properties.gad).
 
 ## Type constructors
 

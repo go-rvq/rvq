@@ -430,7 +430,7 @@ a concrete type, a named interface or an inline `interface { … }`.
 @func format(v int|str|float) <str>
     | {= str(v) }
 
-@comp cell[T int|uint](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/docs/v T)
+@comp cell[T int|uint](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/docs/v T)
     td {= v}
 
 @func pick(v int|str) <int|str>
@@ -445,10 +445,10 @@ substituted by the constraint at compile time, and the constraint is enforced at
 call time.
 
 ```gadx
-@func cell[T any](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/docs/v T) <T>
+@func cell[T any](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/docs/v T) <T>
     | {= v}
 
-@comp list[T stringer](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/docs/items array)
+@comp list[T stringer](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/docs/items array)
     ul
         @for it in items
             li {= it}
@@ -458,7 +458,7 @@ call time.
     +list(["a", "b"])
 ```
 
-`@func inc[T number](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/docs/v T)` rejects a non-number argument with
+`@func inc[T number](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/docs/v T)` rejects a non-number argument with
 `expected number, found str`.
 
 ### Return types

@@ -136,7 +136,7 @@ gadx/
 Compilation lives in the parent Gad module (a `.gadx`
 `gad.CompileOptions.ModuleFile`, `importers.FileImporter`); runnable examples
 are in the repository's
-[`samples/gadx/`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx).
+[`samples/gadx/`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx).
 
 ## CMS Example
 
@@ -208,4 +208,4 @@ go build .
 
 ## License
 
-See [LICENSE](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/LICENSE).
+See [LICENSE](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/LICENSE).

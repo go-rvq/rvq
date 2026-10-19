@@ -3,9 +3,9 @@
 
 A function can hold several **methods** — overloads selected at call time by the
 argument types. (Plain functions, closures, variadics, named args and `defer`
-live in [functions.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functions.gad); describing/checking signatures with
+live in [functions.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/functions.gad); describing/checking signatures with
 `<…>`, `meti` and `implements` in
-[method_interfaces.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/method_interfaces.gad).)
+[method_interfaces.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/method_interfaces.gad).)
 
 ## Typed parameters
 

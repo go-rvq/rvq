@@ -11,7 +11,7 @@ destructuring shapes:
 Forms 2 and 3 are the same feature with different brackets — both key-on-the-
 left. They work on any named data — dicts, modules, key-value arrays, named
 args — because the source is run through the default `dict()` constructor first.
-Part of the [Collections](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/collections.gad) chapter.
+Part of the [Collections](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/collections.gad) chapter.
 
 ## 1. Arrays
 

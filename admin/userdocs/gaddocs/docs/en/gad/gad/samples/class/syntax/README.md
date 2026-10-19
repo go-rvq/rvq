@@ -2,7 +2,7 @@
 # The `class` keyword
 
 The `class` keyword is a readable block syntax that lowers to the
-[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/classes.gad). A `class` block reads top to bottom:
+[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/classes.gad). A `class` block reads top to bottom:
 optional parent spreads (`*Parent`), bare fields, then `props {}`, `new` and
 `methods {}` groups (items separated by newlines or commas).
 
@@ -19,12 +19,12 @@ methods/constructors — works exactly as in the `Class(...)` builtin.
 A typed field is enforced on construction (a value of the wrong type is
 rejected); a `?` after the field name (`x? int`, `x? int|str`) makes it
 **nullable**, so it also accepts `nil`. See
-[typed & nullable fields](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/field_types.gad).
+[typed & nullable fields](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/field_types.gad).
 
 `gad fmt` keeps a class body's fields, parents, `use` and spreads in the
 order declared — a class is ordered —, then writes `props`, `new`,
 `methods`, with a member's `[k=v]` metadata on the line above it: see
-[Class bodies](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/doc/conventions.md#class-bodies).
+[Class bodies](https://github.com/gad-lang/gad/blob/GAD_REF/doc/doc/conventions.md#class-bodies).
 
 Doc comments attach to the class and its members (`///`, `/** … **/`,
 `/*** … ***/`).

@@ -6,8 +6,8 @@ This report covers two comparisons:
    where every tag/text lowers to `write()` calls) against the new *tree* model
    (tags build `Tag`/`Text` nodes returned as a tree), running **identical**
    benchmarks on both branches: at the engine level
-   ([`bench_test.go`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/bench_test.go)) and per CMS request path
-   ([`examples/cms/bench_test.go`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/examples/cms/bench_test.go)).
+   ([`bench_test.go`](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/bench_test.go)) and per CMS request path
+   ([`examples/cms/bench_test.go`](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/examples/cms/bench_test.go)).
 2. **Engine vs full app** — the gadx render engine against the CMS's full HTTP
    routes, including a cold-vs-cached breakdown.
 

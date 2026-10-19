@@ -106,4 +106,4 @@ not declare it and do not bind it to a local — just call `super`.
 - You may name the first parameter `super` explicitly (e.g. alongside scope
   parameters) — it is not injected twice: `@slot #item_image(super, item)`.
 - When invoking a slot function directly at gad level (bypassing `@slot`), pass
-  an empty super: `slots["main"](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gadx/docs/func(*_){})`.
+  an empty super: `slots["main"](https://github.com/gad-lang/gad/blob/GAD_REF/gadx/docs/func(*_){})`.

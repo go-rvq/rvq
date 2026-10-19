@@ -5,8 +5,8 @@ Functions are first-class values. A function literal is `func(params) { … }`,
 usually bound to a variable; a named `func name(params){…}` is a declaration that
 binds a `const`, with the shorthands `name(params){…}` / `name(params) => expr`.
 (Functions with several typed overloads live in
-[functions_with_methods.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functions_with_methods.gad); the `<…>` header
-and `meti` in [method_interfaces.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/method_interfaces.gad).)
+[functions_with_methods.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/functions_with_methods.gad); the `<…>` header
+and `meti` in [method_interfaces.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/method_interfaces.gad).)
 
 ## Arrow closures & closures
 
@@ -236,7 +236,7 @@ blockCleanup()
 ## Reflection
 
 A function answers `@`-prefixed reflection index keys (see also
-[metadata](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/metadata.gad)): `fn.@name`, `fn.@args` (positional parameter names),
+[metadata](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/metadata.gad)): `fn.@name`, `fn.@args` (positional parameter names),
 `fn.@nargs` (named parameter names), `fn.@ret` (the return-type signature) and
 `fn.@meta` (the `[k=v, …]` metadata, empty when none). A method-bearing function
 also exposes `fn.@methods` — its overload callers, each itself indexable.

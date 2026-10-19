@@ -58,7 +58,7 @@ A typed array type is **nominal**, like a class: `v :: numerics` and a
 converts, checking every item, in both directions:
 
 - `array ::: numerics` — an array (or another typed array, or a
-  [array interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interface_arrays_test.gad) value) into a typed array;
+  [array interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interface_arrays_test.gad) value) into a typed array;
 - `typed ::: array` — back to a plain array (a copy of the items);
 - `typed ::: iface` — into an array interface value.
 
@@ -136,7 +136,7 @@ z := measures(2)                 // the `new(n int)` overload
 
 ## Reflection and metadata
 
-A typed array type — and each of its members — carries [metadata](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/metadata.gad)
+A typed array type — and each of its members — carries [metadata](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/metadata.gad)
 (`[k=v, …]` before the declaration or member) and answers reflection keys:
 
 | Key | Value |

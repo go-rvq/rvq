@@ -2,10 +2,10 @@
 # Collections
 
 Gad's composite types are **arrays** (ordered lists) and **dicts** (string-keyed
-maps). Comprehensions live in [comprehensions.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/comprehensions.gad),
-keyValue arrays in [key_value_array.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/key_value_array.gad), the
-`map`/`filter`/`reduce` helpers in [functional.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/functional.gad), and
-destructuring in [destructuring.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/destructuring.gad).
+maps). Comprehensions live in [comprehensions.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/comprehensions.gad),
+keyValue arrays in [key_value_array.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/key_value_array.gad), the
+`map`/`filter`/`reduce` helpers in [functional.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/functional.gad), and
+destructuring in [destructuring.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/destructuring.gad).
 
 ## Arrays
 

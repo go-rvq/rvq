@@ -33,7 +33,7 @@ $ gad test math_test.gad
 test: 1 passed, 0 failed, 0 skipped
 ```
 
-A full runnable example is in [`samples/testing`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/testing/math_test.gad):
+A full runnable example is in [`samples/testing`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/testing/math_test.gad):
 
 ```
 $ gad test -v -bench=. samples/testing

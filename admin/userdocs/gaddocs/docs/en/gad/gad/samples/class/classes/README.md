@@ -4,7 +4,7 @@
 Gad's class system is built on the `Class(name, define)` builtin. A class
 describes **fields**, **methods**, **properties** and one or more
 **constructors**, and can **extend** other classes; calling a class creates an
-instance. The high-level [`class` keyword](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/syntax.gad) lowers to this
+instance. The high-level [`class` keyword](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/syntax.gad) lowers to this
 builtin.
 
 ## Defining

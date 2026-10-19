@@ -2,9 +2,9 @@
 # Operators
 
 This is the operators chapter. Focused runnable tours live in nearby samples:
-[ranges `..`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/ranges.gad), [membership `in`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/in_operator.gad),
-[unary](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/unary_operators.gad) and
-[absent-coalescing `!?`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/absent_coalescing.gad). This sample demonstrates the
+[ranges `..`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/ranges.gad), [membership `in`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/in_operator.gad),
+[unary](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/unary_operators.gad) and
+[absent-coalescing `!?`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/absent_coalescing.gad). This sample demonstrates the
 **user operators** and `met gad.*` handlers (Example below).
 
 ## Unary
@@ -67,7 +67,7 @@ guest := nil
 The **existence-based** counterparts of `??`/`??=`: they test whether a *key is
 present* (a present `nil` still counts). `a.b !? d` yields `a.b` when `b` exists,
 else `d`; `a.b !?= d` assigns only when absent (auto-creating missing
-intermediate dicts). See [absent_coalescing.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/absent_coalescing.gad).
+intermediate dicts). See [absent_coalescing.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/absent_coalescing.gad).
 
 ## Assignment, increment & array append
 

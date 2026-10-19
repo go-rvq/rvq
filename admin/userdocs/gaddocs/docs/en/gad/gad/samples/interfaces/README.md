@@ -3,7 +3,7 @@
 
 An `interface { … }` is a structural contract grouping typed fields,
 `get`/`set`/`prop` accessors, required methods and context-function checks. Like
-[`meti`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/method_interfaces.gad) it compiles to a value (`Interface`) whose
+[`meti`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/method_interfaces.gad) it compiles to a value (`Interface`) whose
 members are read by indexing; the statement form binds a const, the expression
 form is a value (compiled with an `ifaces#N` name).
 
@@ -71,7 +71,7 @@ bounds := [f for f in Shape.fields if f.name == "bounds"][0]
 
 A value **satisfies** an interface when it has every required field (with an
 assignable type), property and method (whose signatures match), plus any extended
-interface. Check it with the [`::` operator](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) or use an
+interface. Check it with the [`::` operator](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) or use an
 interface as a parameter type — a non-satisfier is rejected. Satisfaction works
 against any member-bearing value: class instances, dicts/key-value arrays (fields
 match keys, methods match callable keys) and reflected Go values (fields matched
@@ -105,7 +105,7 @@ bad := {name: "x"}                              // no callable `greet`
 
 A required field marked with a `?` after its name (`x? int`) is **nullable**: a
 member that is `nil` — or absent — still satisfies it, so `?` marks an optional
-field (see [typed & nullable fields](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/field_types.gad)).
+field (see [typed & nullable fields](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/field_types.gad)).
 
 ```gad
 interface Tagged { name str; tag? int|str }
@@ -118,7 +118,7 @@ interface Tagged { name str; tag? int|str }
 ```
 
 A `**<name>` member is a **rest capture** used with the transforming cast
-[`:::`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/transform_cast_test.gad): `d ::: interface { … }` coerces the source's
+[`:::`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad): `d ::: interface { … }` coerces the source's
 class/interface-typed fields into their declared shape and gathers the keys not
 named by the interface into a dict bound to `name`. (A `**Expr` member — any
 expression, a bare name included — is something else: members given at run
@@ -127,8 +127,8 @@ time, see [below](#members-given-at-run-time--expr).)
 `[]` written after the interface's name makes it a **array interface**, matching
 an **array** of satisfying elements: `interface P [] { … }` a flat array,
 `interface P [][][] { … }` an array nested three deep, and `interface P []<int|uint>`
-an array of the given element types (see [array interfaces](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interface_arrays_test.gad);
-for a nominal, constructible array type see [typed arrays](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/typed_arrays.gad)).
+an array of the given element types (see [array interfaces](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interface_arrays_test.gad);
+for a nominal, constructible array type see [typed arrays](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/typed_arrays.gad)).
 
 ## Nested and array fields (`name: { … }`)
 

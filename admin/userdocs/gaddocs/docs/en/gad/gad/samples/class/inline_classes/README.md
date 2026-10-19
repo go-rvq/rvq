@@ -5,7 +5,7 @@ A class field may be typed by a class declared right where the field is:
 `a class { … }`. It is a record of its own inside the record — a settings
 object reads as the tree it is, with no name to come up with for each level.
 It nests to any depth, and behaves exactly as a field typed by a named class
-([typed fields](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/field_types.gad)):
+([typed fields](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/field_types.gad)):
 
 - a **dict** given for the field is constructed into an instance of the class,
   recursively;

@@ -5,7 +5,7 @@
 (bitwise complement), and the prefix `++x` / `--x` (mutate a variable and yield
 its new value). Every unary operator is dispatched through its
 `gad.unOp{Op}(operand)` builtin (e.g. `gad.unOpSub`); a type can override it with
-`met gad.unOp{Op}(v T)`. Part of the [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) chapter.
+`met gad.unOp{Op}(v T)`. Part of the [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) chapter.
 
 ## Numbers, chars and truthiness
 

@@ -2,8 +2,8 @@
 # Control Flow
 
 `if`, `for`, `for … in` and the `match` expression. (Error handling —
-`try`/`catch`/`finally`, `throw` — lives in [Error Handling](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/07_error_handling.md);
-the `with` resource guard in [With](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/with.gad).)
+`try`/`catch`/`finally`, `throw` — lives in [Error Handling](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/07_error_handling.md);
+the `with` resource guard in [With](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/with.gad).)
 
 ## If
 
@@ -267,7 +267,7 @@ first([1,2]) = has 2
 ```
 
 The formatter keeps a match inline while it fits and switches to one arm per line
-only when it overflows; see [Conventions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/conventions.md).
+only when it overflows; see [Conventions](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/conventions.md).
 
 ## Example — `control_flow.gad`
 

@@ -42,7 +42,7 @@ w := Written(; $1={b: 2})
 - **`? { … }`** makes the field nullable, as `name? Type` does.
 - The **metadata** written before the block (`[width=2] { … }`) is the
   field's.
-- The class of a group is named as an [anonymous field's](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/inline_classes.gad),
+- The class of a group is named as an [anonymous field's](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/inline_classes.gad),
   by its path: `Contact.$1`, `Contact.$1.$1`.
 - The field is reached as any other — `c.$1` —, and given as any other —
   `Contact(; $1={…})`.

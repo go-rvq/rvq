@@ -122,7 +122,7 @@ A `BLOCK` may embed a runnable example in a ```` ```gad ````
 fence. Examples are self-contained; a line beginning with `>>> ` asserts that the
 value produced so far equals the expression after it. `gad doctest PATH…` runs
 every embedded example, and `gad doc` runs them while generating (unless
-`--no-doctest`). See also [Conventions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/conventions.md).
+`--no-doctest`). See also [Conventions](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/conventions.md).
 
 Only an **exactly-three-backtick** `` ```gad `` fence is executed. To show an
 **illustrative** Gad fragment that must *not* run — one that references files that
@@ -138,7 +138,7 @@ opened by a `//snippet NAME` line and closed by `//endsnippet` is inserted where
 a doc comment says `@snippet NAME`, and its result markers — `/**= EXPR **/` for
 a value, `/**< TEXT **/` for printed output — are verified by `gad doc`. The full
 guide, including the rules that are easy to miss, is in
-[Conventions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/conventions.md) (Verified snippets). The examples below are
+[Conventions](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/conventions.md) (Verified snippets). The examples below are
 snippets themselves.
 
 A snippet may verify several steps; each marker checks the code from the start

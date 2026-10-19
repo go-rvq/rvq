@@ -10,7 +10,7 @@ instance). It reuses the class body grammar (fields, `props { … }`,
 
 Because it has no instances, `x :: Name` and using `Name` as an instance
 parameter type are rejected — to dispatch on the type value, use
-[`type<Name>`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/meta_types_test.gad). There is also an anonymous expression form,
+[`type<Name>`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/meta_types_test.gad). There is also an anonymous expression form,
 `const Name = type { … }`.
 
 Run it: `gad test samples/static_types_test.gad`

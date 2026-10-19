@@ -6,8 +6,8 @@ ranges, key-value arrays and the iterators these helpers return — without an
 explicit loop. `map`, `filter`, `keys`, `values`, `items`, `enumerate` and `zip`
 are **lazy**: they return an iterator that does the work as it is consumed, by
 `collect` (into an array), a `for … in` loop or another helper. `reduce` and
-`each` run at once. Part of the [Collections](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/collections.gad) chapter; the
-iterator protocol for your own types is in [Control Flow](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/control_flow.gad).
+`each` run at once. Part of the [Collections](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/collections.gad) chapter; the
+iterator protocol for your own types is in [Control Flow](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/control_flow.gad).
 
 ## map and filter
 

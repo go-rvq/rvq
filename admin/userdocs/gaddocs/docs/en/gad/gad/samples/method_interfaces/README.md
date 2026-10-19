@@ -5,7 +5,7 @@ Gad can describe function signatures as values and group them into **method
 interfaces**, then check whether a callable satisfies one — a lightweight,
 structural (duck-typed) contract for functions. (The richer `interface { … }`
 construct — typed fields, accessors, methods — is in
-[interfaces.gad](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad).)
+[interfaces.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad).)
 
 ## Func-header values
 

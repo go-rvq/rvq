@@ -4,7 +4,7 @@
 `!?` / `!?=` are the existence-based counterparts of the nullish `??` / `??=`:
 they test whether a KEY is present in its container, where `??` tests whether a
 VALUE is nil (a key present with a `nil` value still counts as present). Part of
-the [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) chapter. See doc/operators.md for detailed
+the [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) chapter. See doc/operators.md for detailed
 documentation.
 
 ## Value form

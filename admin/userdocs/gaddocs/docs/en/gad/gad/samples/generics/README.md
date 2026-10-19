@@ -2,14 +2,14 @@
 # Generic classes, interfaces and mixins
 
 A `class`, an `interface` or a `mixin` may declare **type parameters** after its
-name, as a [function does](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/type_parameters.gad): `class Pair[K str, V int] { … }`.
+name, as a [function does](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/type_parameters.gad): `class Pair[K str, V int] { … }`.
 Each is a name and, optionally, the type it stands for — its **alias**. A space
 before the brackets is allowed: `class P [X int, Y float] { … }`.
 
 - **`Name[A, B]`** is the declaration with its parameters replaced by the
   arguments — K by A, V by B —: a class (interface, mixin) of its own, named so
   (`Pair[float, bool]`). It is a type where a type goes (`p Pair[str, int]`) and
-  a value where a value does (`Pair[str, int](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; key="k", value=1)`).
+  a value where a value does (`Pair[str, int](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; key="k", value=1)`).
 - **An argument left out is its parameter's alias**: `Pair[float]` is
   `Pair[float, int]`. A parameter without an alias is `any`.
 - **The name alone is the declaration with every alias**: `Pair` is written as
@@ -28,8 +28,8 @@ class P [X int, Y float] { x X; y Y }
 class Pair[K str, V int] { key K; value V }
 
 p := P(; x=1, y=2.5)                    // P alone: the aliases
-a := Pair[float, bool](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; key=1.5, value=true)
-b := Pair[float](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; key=2.5, value=3)    // V left out: its alias, int
+a := Pair[float, bool](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; key=1.5, value=true)
+b := Pair[float](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; key=2.5, value=3)    // V left out: its alias, int
 [p.x + p.y, typeName(a), typeName(b)]
 // => [3.5, "Pair[float, bool]", "Pair[float, int]"]
 ```
@@ -42,7 +42,7 @@ name a type — a field's, a param's, a return's, a parent's, the argument of
 another generic (`next? Node[T]`) — and where a value names one (`T(v)`); not as
 the name of a field or of a param, nor after a `.`. The instances are consts of
 the block, as the generic: used before it is declared, or by a declaration that
-comes before, they are there (see [const hoisting](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/variables_and_scopes.gad)).
+comes before, they are there (see [const hoisting](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/variables_and_scopes.gad)).
 `Box[int]` written twice is the same class.
 
 An instance is of the block — the module, the function body — the generic is
@@ -51,7 +51,7 @@ aliases), and makes no instance of it.
 
 ```gad
 // a use before the declaration, and in a declaration before it
-one := Box[int](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; item=1)
+one := Box[int](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; item=1)
 class Holder { b Box[int]; many? Box[int|str] }
 class Box[T] { item T }                 // T has no alias: any
 
@@ -59,7 +59,7 @@ class Box[T] { item T }                 // T has no alias: any
     Holder(; b=one).b.item,
     Box[int] == Box[int],               // one class per instance
     Box(; item="anything").item,        // Box alone: T is any
-    Box[int](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; item="x") or "rejected", // T is int
+    Box[int](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; item="x") or "rejected", // T is int
 ]
 // => [1, true, "anything", "rejected"]
 ```
@@ -77,7 +77,7 @@ class Node { v int; next? Node }
 class List[T] { v T; next? List[T] }
 
 n := Node(; v=1, next=Node(; v=2))
-l := List[str](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; v="a", next=List[str](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; v="b"))
+l := List[str](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; v="a", next=List[str](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; v="b"))
 [n.next.v, l.next.v, typeName(l.next)]
 // => [2, "b", "List[str]"]
 ```
@@ -174,12 +174,12 @@ class P [X int, Y float] { x X; y Y }
 class Pair[K str, V int] { key K; value V }
 
 p := P(; x=1, y=2.5)                    // P alone: the aliases
-a := Pair[float, bool](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; key=1.5, value=true)
-b := Pair[float](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; key=2.5, value=3)    // V left out: its alias, int
+a := Pair[float, bool](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; key=1.5, value=true)
+b := Pair[float](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; key=2.5, value=3)    // V left out: its alias, int
 [p.x + p.y, typeName(a), typeName(b)]
 
 // a use before the declaration, and in a declaration before it
-one := Box[int](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; item=1)
+one := Box[int](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; item=1)
 class Holder { b Box[int]; many? Box[int|str] }
 class Box[T] { item T }                 // T has no alias: any
 
@@ -187,14 +187,14 @@ class Box[T] { item T }                 // T has no alias: any
     Holder(; b=one).b.item,
     Box[int] == Box[int],               // one class per instance
     Box(; item="anything").item,        // Box alone: T is any
-    Box[int](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; item="x") or "rejected", // T is int
+    Box[int](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; item="x") or "rejected", // T is int
 ]
 
 class Node { v int; next? Node }
 class List[T] { v T; next? List[T] }
 
 n := Node(; v=1, next=Node(; v=2))
-l := List[str](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; v="a", next=List[str](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/; v="b"))
+l := List[str](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; v="a", next=List[str](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/; v="b"))
 [n.next.v, l.next.v, typeName(l.next)]
 
 interface Named[T str] { name T }

@@ -28,7 +28,7 @@ runs statements (emitting nothing), `{%= expr %}` writes a value, and the `-` /
 In a `.gadt` the **module doc lives inside the leading code island** — a
 `{%-- … --%}` block wrapping a `/*** … ***/` root comment, like this one — so it
 is captured as prose without being emitted as template text. Part of
-[Templates](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/template.gad).
+[Templates](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/template.gad).
 **/
 --%}
 {%

@@ -2,7 +2,7 @@
 # Comprehensions
 
 Python-like comprehensions build a collection from an iterable. Part of the
-[Collections](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/collections.gad) chapter.
+[Collections](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/collections.gad) chapter.
 
 ## Array comprehensions
 

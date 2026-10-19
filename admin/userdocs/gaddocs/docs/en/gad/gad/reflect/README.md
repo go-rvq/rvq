@@ -4,8 +4,8 @@ Raw, delegation-free index access — the functional analog of JavaScript
 `Reflect.get` / `Reflect.set`.
 
 Unlike the `target[key]` / `target[key] = value` operators, which
-[delegate](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md) to a
-stored [property](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md)'s getter/setter, the `reflect`
+[delegate](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/31_properties.md) to a
+stored [property](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/31_properties.md)'s getter/setter, the `reflect`
 functions operate on the **stored value verbatim**.
 
 `reflect` is available directly (like `strings`/`fmt`), and also via

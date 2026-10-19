@@ -23,7 +23,7 @@ order of its own); given as a **key-value array** `(; …)`, in its order. The
 declared fields always come first.
 
 An interface takes `**Expr` too, with `fields`, `methods`, `props` and
-`funcs`: see [interfaces](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad#members-given-at-run-time--expr).
+`funcs`: see [interfaces](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad#members-given-at-run-time--expr).
 
 ## Fields
 

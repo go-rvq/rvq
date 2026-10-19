@@ -60,4 +60,4 @@ replace github.com/gad-lang/gad/gadx => ../..
 ## Samples
 
 Runnable `.gadx` examples live under the repository's top-level
-[`samples/gadx/`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/samples/gadx) directory.
+[`samples/gadx/`](https://github.com/gad-lang/gad/blob/GAD_REF/samples/gadx) directory.

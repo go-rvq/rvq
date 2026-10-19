@@ -48,10 +48,64 @@ func Version() string {
 	}
 	for _, d := range info.Deps {
 		if d.Path == Module {
-			return d.Version
+			return depVersion(d)
 		}
 	}
 	return ""
+}
+
+// depVersion is the version of the module d: replaced by another version of a
+// module, that one; by a directory (its version "(devel)"), the version
+// required.
+func depVersion(d *debug.Module) string {
+	if r := d.Replace; r != nil && r.Version != "" && r.Version != "(devel)" {
+		return r.Version
+	}
+	return d.Version
+}
+
+// RefPlaceholder stands, in the links of the documents to the repository of
+// Gad (https://github.com/gad-lang/gad/blob/GAD_REF/…), for the version of Gad
+// of the program: FS puts Ref in its place, so the links follow the Gad the
+// program was built with, not the one the copy was made from.
+const RefPlaceholder = "GAD_REF"
+
+// Ref is where the repository of Gad is at the version of the program: the
+// commit of a pseudo-version (v0.1.0-rc.33.0.20261018132931-08adf6abed4d is
+// 08adf6abed4d), else the tag (v0.1.0); "main" when the program does not say
+// (a test binary, a build with no module information).
+func Ref() string { return refOf(Version()) }
+
+func refOf(v string) string {
+	switch v {
+	case "", "(devel)":
+		return "main"
+	}
+	v = strings.TrimSuffix(v, "+incompatible")
+	if i := strings.LastIndex(v, "-"); i >= 0 && len(v)-i-1 == 12 {
+		if h := v[i+1:]; strings.Trim(h, "0123456789abcdef") == "" {
+			return h
+		}
+	}
+	return v
+}
+
+// withRef are the markdown documents of base that hold RefPlaceholder, with
+// ref in its place (by their paths).
+func withRef(base fs.FS, ref string) fstest.MapFS {
+	out := fstest.MapFS{}
+	_ = fs.WalkDir(base, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".md") {
+			return err
+		}
+		b, err := fs.ReadFile(base, p)
+		if err != nil || !strings.Contains(string(b), RefPlaceholder) {
+			return err
+		}
+		out[p] = &fstest.MapFile{Data: []byte(strings.ReplaceAll(string(b), RefPlaceholder, ref))}
+		return nil
+	})
+	return out
 }
 
 // MessagesKey is the module of the words of the documentation.
@@ -108,10 +162,10 @@ func FS() fs.FS {
 	if err != nil {
 		panic(err)
 	}
-	return &overlayFS{top: fstest.MapFS{
-		"en/gad/README.md":    {Data: []byte(overview("en"))},
-		"pt-BR/gad/README.md": {Data: []byte(overview("pt-BR"))},
-	}, base: sub}
+	top := withRef(sub, Ref())
+	top["en/gad/README.md"] = &fstest.MapFile{Data: []byte(overview("en"))}
+	top["pt-BR/gad/README.md"] = &fstest.MapFile{Data: []byte(overview("pt-BR"))}
+	return &overlayFS{top: top, base: sub}
 }
 
 // Source is the documentation, as written (Raw: in English, not a template).

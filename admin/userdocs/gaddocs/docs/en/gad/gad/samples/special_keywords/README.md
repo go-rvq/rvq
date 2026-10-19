@@ -87,8 +87,8 @@ uses to exchange data with a script. It is a short form for the whole globals
 container and can be read, indexed and assigned. It replaces the former
 `globals()` builtin and pairs naturally with the absent-coalescing operators and
 with `global` declaration defaults (`global (user !?= "guest")` lowers to
-`@g["user"] !?= "guest"`). See [Variables and Scopes](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/02_values_and_types.md)
-and [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/17_unary_operators.md).
+`@g["user"] !?= "guest"`). See [Variables and Scopes](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/02_values_and_types.md)
+and [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/17_unary_operators.md).
 
 ```gad
 /**

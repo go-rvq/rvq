@@ -4,14 +4,14 @@
 `obj :: Type` is a **checked** cast: it returns `obj` unchanged when it is
 assignable to `Type`, else raises a type error. `obj ::: Type` is a
 **transforming** cast: for a dict (or any item-getter) cast to an
-[interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) it also **coerces** the value into the interface's
+[interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) it also **coerces** the value into the interface's
 declared shape.
 
 Two things happen on `dict ::: interface { … }`:
 
 - **Field coercion** — each field typed by a class is built into an instance of
   that class from its nested dict (recursively, at any depth, like
-  [nested class fields](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/field_types.gad)); a field typed by a nested
+  [nested class fields](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/field_types.gad)); a field typed by a nested
   `interface { … }` keeps its dict but coerces ITS fields the same way.
 - **Rest capture** — a `**<name>` member gathers every key NOT named by the
   interface into a dict bound to `name` in the result.

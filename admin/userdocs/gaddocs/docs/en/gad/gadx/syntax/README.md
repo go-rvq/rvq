@@ -668,7 +668,7 @@ sign. Defaulted fields auto-increment from the previous one.
 Each form compiles to a Gad `enum IDENT { … }` statement, so a member exposes
 `.value`, `.name`, `.index` and its owning enum, the enum is indexable by member
 name (`Perm["Write"]`) and iterable in declaration order. See the Gad
-[enum documentation](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gad/doc/enums.md) for the value-computation rules.
+[enum documentation](https://github.com/gad-lang/gad/blob/GAD_REF/gad/doc/enums.md) for the value-computation rules.
 
 ## Classes
 
@@ -714,7 +714,7 @@ multiple lines (indentation inside is ignored).
 ```
 
 Each form compiles to a Gad grouped declaration, e.g. `global (t, Req, Context)`.
-The `= v` / `!?= v` defaults lower onto Gad's [`global` defaults](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gad/doc/variables-and-scopes.md#defaults):
+The `= v` / `!?= v` defaults lower onto Gad's [`global` defaults](https://github.com/gad-lang/gad/blob/GAD_REF/gad/doc/variables-and-scopes.md#defaults):
 `= v` fills a nil-or-absent global, `!?= v` fills only an absent one. Globals can
 also be provided through the Go symbol table — the CMS example passes one global
 named `Model`.
@@ -738,7 +738,7 @@ named interface or an inline `interface { … }`.
 ## Params
 
 Declare the parameters the compiled template receives with `@param`, the gadx
-analog of Gad's top-level [`param`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/gad/doc/variables-and-scopes.md#parameters)
+analog of Gad's top-level [`param`](https://github.com/gad-lang/gad/blob/GAD_REF/gad/doc/variables-and-scopes.md#parameters)
 declaration. It accepts the same forms as Gad's `param`: positional names, a
 trailing variadic `*rest`, and — after a `;` — named parameters (which may carry
 defaults) and a named-variadic `**named`.

@@ -2,8 +2,8 @@
 # Output and Standard Streams
 
 Printing, formatting, capturing output and the standard streams. Part of the
-[Strings, bytes & regex](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/strings_bytes_regex.gad) chapter; the `buffer` as a
-`with` resource is in [With](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/with.gad).
+[Strings, bytes & regex](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/strings_bytes_regex.gad) chapter; the `buffer` as a
+`with` resource is in [With](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/with.gad).
 
 ## Printing and formatting
 

@@ -257,7 +257,7 @@ without it, `ain` falls back to testing each value with `in`. To run an operator
 generically from Go, call `gad.BinaryOp(vm, tok, left, right)`.
 
 The same operators are also overridable from Gad with
-`met gad.binOp{Op}(left T, right U)` (see [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/14_user_operators.md)).
+`met gad.binOp{Op}(left T, right U)` (see [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/14_user_operators.md)).
 
 Unary and self-assign operators follow the same pattern with their own generated
 interfaces:
@@ -328,7 +328,7 @@ To make modules importable, build a module map and pass it through the compile
 options. Builtin modules are `map[string]Object`; any value implementing
 `Importable` can serve as a custom module. The CLI wires a file-system importer
 (`importers.FileImporter`) that resolves module files along `GADPATH` — see
-[Modules](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/26_embed.md) for the script-side view.
+[Modules](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/26_embed.md) for the script-side view.
 
 ### Native Go modules with `StdModuleData`
 
@@ -501,7 +501,7 @@ The predicate receives the VM (nil during a VM-less check, e.g. from another
 goroutine) and returns `(matches, error)`; keep it side-effect-free. A *structural*
 interface — one that requires named fields, properties or methods — is normally
 written in Gad source with `interface { … }` rather than assembled in Go, since
-its member types are resolved per-VM (see [Interfaces](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/24_interfaces.md)).
+its member types are resolved per-VM (see [Interfaces](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/24_interfaces.md)).
 
 ## Parsing metadata from Go
 

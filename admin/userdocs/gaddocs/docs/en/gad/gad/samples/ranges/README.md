@@ -4,7 +4,7 @@
 `from .. to` builds an inclusive, iterable `Range` (sugar for the `Range(from,
 to)` builtin) over the numeric kinds, `char` and the temporal types; it runs
 ascending or descending depending on its bounds. Part of the
-[Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) chapter.
+[Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) chapter.
 
 ```gad
 [

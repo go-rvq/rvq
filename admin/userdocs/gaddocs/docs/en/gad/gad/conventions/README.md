@@ -39,10 +39,10 @@ Style recommendations for writing idiomatic Gad (beyond what the formatter
 enforces).
 
 * **Access a property through its `.v` field, not an explicit call.** For a
-  [property](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md) `x`, prefer `x.v` / `x.v = n` over `x()` / `x(n)`.
+  [property](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/31_properties.md) `x`, prefer `x.v` / `x.v = n` over `x()` / `x(n)`.
   It reads as a value rather than a call and costs the same — `.v` invokes the
   same accessor with no extra call overhead (reads are even marginally cheaper;
-  see the benchmark in [Properties](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/31_properties.md)). Reserve
+  see the benchmark in [Properties](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/31_properties.md)). Reserve
   the call form for props with typed/overloaded setters that you dispatch by
   argument type.
 

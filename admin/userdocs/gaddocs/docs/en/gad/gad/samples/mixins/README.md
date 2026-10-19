@@ -2,7 +2,7 @@
 # Mixins (`mixin`)
 
 A **mixin** is a reusable bundle of members — fields, properties and methods —
-that a [class](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/classes.gad) pulls in with a `use` clause. A mixin has the
+that a [class](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/classes.gad) pulls in with a `use` clause. A mixin has the
 basic structure of a class (parents, fields, `props`, `methods`) and parses with
 the same member syntax, but it is **not instantiable**: its members become the
 using class's own.
@@ -105,7 +105,7 @@ class Both { use Sub, Base }        // Base reachable twice: merged once
 
 ## The `this` interface
 
-An optional `this { … }` block — an [interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) body written
+An optional `this { … }` block — an [interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) body written
 without the `interface` keyword — declares what the `this` of the mixin's
 properties and methods must satisfy, so a method can call a member the final
 class provides. The `this` of a mixin method is always a class instance of the
@@ -134,7 +134,7 @@ A mixin mirrors a class's reflection attributes: `M.@fields`, `M.@props`,
 contract: `*@this ; *parent.@interface`) and `M.@interface` (the whole contract,
 extending both). Any interface has `iface.@flat` — the extends graph flattened
 into one interface. A using class exposes `C.@mixins` (like `C.@parents`). See
-[the class-samples mixin tests](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/mixins_test.gad) for the full reflection
+[the class-samples mixin tests](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/mixins_test.gad) for the full reflection
 surface and the `this`-receiver contract validation.
 
 ```gad
@@ -160,7 +160,7 @@ A mixin is also a type: it types a value — a field `m? M`, a parameter — by
 its `@interface`, so it takes an instance of a class that uses M, or anything
 else that satisfies that contract. Its body may name it (`mixin M { next? M }`),
 and it may be generic (`mixin M[T int] { v T }`, used as `use M[str]`): see
-[generics](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/generics.gad).
+[generics](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/generics.gad).
 
 A `met` added to a class after the fact sees every member — its own, those
 merged from mixins, and inherited ones — on the `this` receiver.

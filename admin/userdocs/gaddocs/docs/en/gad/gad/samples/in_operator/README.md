@@ -7,7 +7,7 @@ true when **every** value of the left operand is a member of `B`. Both have
 comparison precedence and dispatch on the **right** operand (`met gad.binOpIn` /
 `gad.binOpAin` in Gad). `in` is also the `for x in y` loop separator —
 parenthesize to use it as the operator inside a for header: `for (x in y)`. Part
-of the [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad) chapter.
+of the [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad) chapter.
 
 ## Containers
 

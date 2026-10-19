@@ -25,6 +25,9 @@ import (
 
 const out = "docs/en/gad"
 
+// refPlaceholder is gaddocs.RefPlaceholder (this program is not the package).
+const refPlaceholder = "GAD_REF"
+
 // mapped is where a file of the module goes, under out; "" left out.
 func mapped(rel string) string {
 	dirOf := func(prefix, into string) (string, bool) {
@@ -85,13 +88,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	src, version, _ := strings.Cut(strings.TrimSpace(string(dirB)), " ")
-	// the repository at the version: a pseudo-version's commit, else its tag
-	ref := version
-	if i := strings.LastIndex(version, "-"); i >= 0 && len(version)-i-1 == 12 {
-		ref = version[i+1:]
-	}
-	repo := "https://github.com/gad-lang/gad/blob/" + ref + "/"
+	src, _, _ := strings.Cut(strings.TrimSpace(string(dirB)), " ")
+	// the repository at the version of Gad of the program that serves the
+	// documents: GAD_REF, put by gaddocs.FS (Ref) when they are read — never
+	// the version this copy was made from
+	repo := "https://github.com/gad-lang/gad/blob/" + refPlaceholder + "/"
 	if err := os.RemoveAll(out); err != nil {
 		panic(err)
 	}

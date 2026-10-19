@@ -14,7 +14,7 @@ Main script and Gad source modules in Gad are all functions which have
 [`param`](#param) statement and main function returns a value with `return`
 statement as well. If return statement is missing, `nil` value is returned
 by default. All functions return single value but thanks to
-[destructuring](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/destructuring.md) feature Gad allows to return multiple values
+[destructuring](https://github.com/gad-lang/gad/blob/GAD_REF/doc/destructuring.md) feature Gad allows to return multiple values
 as an array and set returning array elements to multiple variables.
 
 Gad relies on Go's garbage collector and there is no allocation limit for
@@ -534,7 +534,7 @@ func() { /*...*/ }      // function value
 ```
 
 Here's a list of all available value types in Gad. See [runtime
-types](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md) for more information.
+types](https://github.com/gad-lang/gad/blob/GAD_REF/doc/runtime-types.md) for more information.
 
 | Gad Type         | Description                        | Equivalent Type in Go |
 |:-----------------|:-----------------------------------|:----------------------|
@@ -653,7 +653,7 @@ if isError(err1) {           // 'isError' is a builtin function
 Builtin errors do not have message but have name. With `.New(message)` function
 call on an error value creates a new error by wrapping the error.
 
-Note: See [error handling](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/07_error_handling.md) for more information about errors.
+Note: See [error handling](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/07_error_handling.md) for more information about errors.
 
 * WrongNumArgumentsError
 * InvalidOperatorError
@@ -860,7 +860,7 @@ f2(10)    // => 11
 
 Although the type is not directly specified in Gad, one can use type conversion
 [builtin functions](../builtins/README.md) to convert between value types and see
-[conversion/coersion table](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md) for more information.
+[conversion/coersion table](https://github.com/gad-lang/gad/blob/GAD_REF/doc/runtime-types.md) for more information.
 
 ```gad
 s1 := string(1984)    // "1984"
@@ -873,7 +873,7 @@ f3 := flag("a")       // yes
 f4 := flag("")        // no
 ```
 
-See [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/14_user_operators.md) for more details on type conversions/coercions as
+See [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/14_user_operators.md) for more details on type conversions/coercions as
 well.
 
 ## Order of evaluation
@@ -912,7 +912,7 @@ return d    // d == {"40": [2, 4]}
 | `!`      | logical NOT             | all types*                                                |
 
 _* In Gad, all values can be either
-[truthy or falsy](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/runtime-types.md#objectisfalsy)._
+[truthy or falsy](https://github.com/gad-lang/gad/blob/GAD_REF/doc/runtime-types.md#objectisfalsy)._
 
 ### Binary Operators
 
@@ -938,7 +938,7 @@ _* In Gad, all values can be either
 |   `>`    |       greater than       |
 |   `>=`   | greater than or equal to |
 
-_See [Operators](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/14_user_operators.md) for more details._
+_See [Operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/14_user_operators.md) for more details._
 
 ### Ternary Operators
 
@@ -1265,7 +1265,7 @@ Unlike Go, Gad does not have the following:
 * Pointers
 * Channels
 * Goroutines
-* Tuple assignment (Gad supports [destructuring](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/destructuring.md) array)
+* Tuple assignment (Gad supports [destructuring](https://github.com/gad-lang/gad/blob/GAD_REF/doc/destructuring.md) array)
 * Switch statement
 * Goto statement
 * Defer statement

@@ -21,7 +21,7 @@ export {e: 2.71, phi: 1.61}                // export several keys at once
 
 `export prop name = init` exports a **live binding** — a module-local `var`
 behind a read/write property, so external writes change the module's variable
-(see [Properties](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/properties.gad)).
+(see [Properties](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/properties.gad)).
 
 ## Module parameters
 

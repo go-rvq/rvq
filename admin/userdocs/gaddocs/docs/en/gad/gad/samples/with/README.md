@@ -131,7 +131,7 @@ noop: 42
 ```
 
 `with` introduces no new opcode: it desugars to a block that registers
-`gad.exit(resource, $err)` as a [`deferb`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/03_functions.md) and then calls
+`gad.exit(resource, $err)` as a [`deferb`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/03_functions.md) and then calls
 `gad.enter(resource)`, dispatched through the `gad.enter` / `gad.exit` functions
 in the global `gad` namespace.
 

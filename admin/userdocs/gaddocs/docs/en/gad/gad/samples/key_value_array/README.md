@@ -3,7 +3,7 @@
 
 `keyValue` (`[k = v]`) and `keyValueArray` (`(; … )`) are an ordered list of
 `key = value` pairs (duplicate keys allowed) — the literal form behind named
-arguments. Part of the [Collections](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/collections.gad) chapter.
+arguments. Part of the [Collections](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/collections.gad) chapter.
 
 ## A single pair
 

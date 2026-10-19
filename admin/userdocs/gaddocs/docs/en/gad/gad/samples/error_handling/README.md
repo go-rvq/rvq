@@ -109,7 +109,7 @@ recovered := mayThrow() or ("recovered: " + str($err)) // $err is the caught err
 
 A `defer_err` handler runs when a function exits with an error and can recover by
 clearing `$err`, optionally setting the result via `$ret` (see
-[Functions](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/03_functions.md) → deferred handlers).
+[Functions](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/03_functions.md) → deferred handlers).
 
 ```gad
 safe := func() {

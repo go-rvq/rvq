@@ -6,7 +6,7 @@
 Gad can run in **mixed / template mode**, where a file is plain text with
 embedded Gad code — useful for generating configuration, JSON, HTML or any text
 output. This sample is itself a template that generates a JSON users list (see
-the Example below); [template_example.gadt](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/template_example.gadt) is a `.gadt` variant.
+the Example below); [template_example.gadt](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/template_example.gadt) is a `.gadt` variant.
 
 ## Enabling
 

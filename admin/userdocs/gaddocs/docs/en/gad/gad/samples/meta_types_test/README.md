@@ -26,7 +26,7 @@ A type value and an instance of that type dispatch **separately** — a plain
 
 Mind the space. In a **parameter** position `type<X>` is this meta type. At an
 **expression** position `type <A|B>` is instead a first-class
-[type union](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/type_unions.gad) value — a different feature. The meta form lives
+[type union](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/type_unions.gad) value — a different feature. The meta form lives
 only where a parameter type is written.
 
 Run it: `gad test samples/meta_types_test.gad`

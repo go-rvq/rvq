@@ -135,7 +135,7 @@ array holds prop: Prop
 
 ## Raw access with `reflect`
 
-The [`reflect`](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/reflect.md) module reads and writes a key **without** delegating
+The [`reflect`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/reflect.md) module reads and writes a key **without** delegating
 to a stored prop — the functional analog of JavaScript `Reflect.get` /
 `Reflect.set`.
 
@@ -152,7 +152,7 @@ reflect.set(temp, "c", 5)                // replaces the prop
 exports a read/write property over it — a **live binding**: writing `mod.name`
 from outside changes the module's `name`, and module functions closing over it
 observe the change. `export prop name => expr` exports a read-only live binding.
-See [Modules](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/embed.gad) and `samples/modules/exports.gad`.
+See [Modules](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/embed.gad) and `samples/modules/exports.gad`.
 
 ```gad
 // exports.gad

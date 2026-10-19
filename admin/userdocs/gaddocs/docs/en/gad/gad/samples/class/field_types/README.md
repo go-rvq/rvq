@@ -2,9 +2,9 @@
 # Typed class fields
 
 A class field may declare the type(s) it accepts — `x int`, `v int|str`, a class
-(`a Point`) or an [interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) it must satisfy. The type is
+(`a Point`) or an [interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) it must satisfy. The type is
 enforced when an instance is constructed, using the **same value-based
-assignability as function parameters** (the [`::` operator](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/user_operators.gad)):
+assignability as function parameters** (the [`::` operator](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad)):
 
 - A value of a **matching type** is stored as-is.
 - A **`dict` passed for a class-typed field** is constructed into an instance of
@@ -16,8 +16,8 @@ assignability as function parameters** (the [`::` operator](https://github.com/g
   also accepts `nil`; a plain typed field rejects it.
 
 Fields declared with `class Name { … }` and with the
-[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/classes.gad) behave identically. The same `name? T`
-marker works on an [interface](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/interfaces.gad) field, where `nil` (or an
+[`Class(...)` builtin](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/classes.gad) behave identically. The same `name? T`
+marker works on an [interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) field, where `nil` (or an
 absent member) satisfies it.
 
 ## Class-typed fields
@@ -48,9 +48,9 @@ p := Point(; x = 9, y = 9)
 ## Anonymous classes and members given at run time
 
 A field may also be typed by a class declared right there — `a class { … }`,
-see [anonymous classes](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/inline_classes.gad) —, and a class may take members
+see [anonymous classes](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/inline_classes.gad) —, and a class may take members
 known only when it is declared — `**Expr`, see
-[members given at run time](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/class/spread_members.gad).
+[members given at run time](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/class/spread_members.gad).
 
 ## Type enforcement
 

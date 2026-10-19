@@ -15,7 +15,7 @@ Forms:
 - `@include ("parts/*.gad"; excludes=["*_draft.gad"])` — every file a glob
   matches, in path order, narrowed by the `includes` / `excludes` /
   `includes_re` / `excludes_re` filters (`*_test` files are skipped unless an
-  include names `_test`); see [include](https://github.com/gad-lang/gad/blob/cae9c6da3d2f/doc/samples/include/main.gad).
+  include names `_test`); see [include](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/include/main.gad).
 
 Here a glob pulls in the plain-Gad data (`include_data.gad`: `pageTitle`,
 `items`) and renders it.
