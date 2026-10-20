@@ -168,6 +168,8 @@ github.com/gad-lang/gad v0.1.0-rc.33.0.20261020004610-26e6777610ed h1:rJmIn8kJz+
 github.com/gad-lang/gad v0.1.0-rc.33.0.20261020004610-26e6777610ed/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
 github.com/gad-lang/gad v0.1.0-rc.33.0.20261020004847-195d502214d7 h1:/4S08hYt084CN+OF4iWTUc0ZcwJ4oBO/jMbDoVpxV84=
 github.com/gad-lang/gad v0.1.0-rc.33.0.20261020004847-195d502214d7/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
+github.com/gad-lang/gad v0.1.0-rc.33.0.20261020065452-2235f2275f38 h1:zalifaM2KTqKuBAZS2yUsW7mi75dJGxwA7TmMS6BVBc=
+github.com/gad-lang/gad v0.1.0-rc.33.0.20261020065452-2235f2275f38/go.mod h1:j9qv/7YUHVLA1n3WERPrPTU727FTNrIB6YfDg9bjM9Q=
 github.com/go-chi/chi/v5 v5.0.12 h1:9euLV5sTrTNTRUU9POmDUvfxyj6LAABLUcEWO+JJb4s=
 github.com/go-chi/chi/v5 v5.0.12/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
