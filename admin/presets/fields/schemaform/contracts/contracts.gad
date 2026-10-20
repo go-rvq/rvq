@@ -1,0 +1,67 @@
+/**
+The contracts of the field types of the schemaform: what a field's type is (its
+target) and what its metadata may say (the keys of its meta).
+
+Compiled once to contracts.gadb (`go generate`): a schema's program imports
+it as the module `schemaform` — linked, not compiled again —, its plugin
+`schemaform.field(f)`.
+
+A key no contract declares is a warning, not an error: an application's, a
+plugin's.
+**/
+
+// Every field: the words, the place in a row, what is drawn by what is
+// answered (a value, or a function `(this, parents) => …`), the checks.
+export contract TField {
+    target any
+    meta {
+        label? str
+        hint? str
+        help? str
+        placeholder? str
+        prefix? str
+        suffix? str
+        // a column of a row: its share in fifths (1..5)
+        width? int
+        if? any
+        show? any
+        disabled? any
+        readonly? any
+        class? any
+        changed? any
+        validation? any
+        icon? any
+    }
+}
+
+// A select: one of its options. The options are required — what makes a
+// field a select —: a key-value array (the value its label), pairs
+// [value, label], the values alone, or a function `(this, parents) => …`.
+export contract TSelectField {
+    *TField
+    target type<str|int|uint|float|decimal|enum>
+    meta {
+        options any
+        // what a field does when the options of a function could not be had
+        optionsError? enum { error; warn } = #error
+    }
+}
+
+// An enum: a select of its members — its options items of the enum (a name,
+// a value or the member), its members when none are given.
+export contract TEnumField {
+    *TSelectField
+    target type<enum>
+    meta {
+        options []target = target.@members
+    }
+}
+
+// field is the instance of the contract a field takes: the most derived it
+// fits (a select before a field, an enum before a select).
+export func field {
+    (f TEnumField) => f :> TEnumField
+    (f TSelectField) => f :> TSelectField
+    (f TField) => f :> TField
+}
+

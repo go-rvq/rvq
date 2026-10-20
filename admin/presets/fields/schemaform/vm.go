@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gad-lang/gad"
+	"github.com/go-rvq/rvq/admin/presets/fields/schemaform/contracts"
 )
 
 // DefaultName is the name the form is declared by: the schema exports it —
@@ -56,7 +57,11 @@ func (b *Builder) Parse(src string) (*Schema, error) {
 		}
 		return nil, fmt.Errorf("schemaform: the schema exports %s %d times", DefaultName, n)
 	}
-	program := defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) + "\nreturn " + DefaultName + "\n"
+	// the contracts of the field types: the module schemaform, linked (on
+	// the first line, so the lines of the schema are its own), returned
+	// beside the form
+	program := contractsPrelude + defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) +
+		"\nreturn [" + DefaultName + ", " + contracts.Name + "]\n"
 
 	key := b.typesKey() + "\x00" + program
 	if s, ok := parsed.Load(key); ok {
@@ -66,11 +71,15 @@ func (b *Builder) Parse(src string) (*Schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	var mod gad.Object
+	if pair, ok := ret.(gad.Array); ok && len(pair) == 2 {
+		ret, mod = pair[0], pair[1]
+	}
 
 	var s *Schema
 	switch t := ret.(type) {
 	case *gad.Class:
-		if s, err = b.Class(vm, t); err != nil {
+		if s, err = b.class(vm, t, mod); err != nil {
 			return nil, err
 		}
 		s.Meta = metaOf(t.Meta)
@@ -141,7 +150,8 @@ func (b *Builder) typesKey() string {
 func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 	builtins := b.Builtins()
 	st := gad.NewSymbolTable(builtins.NameSet)
-	res, err := gad.Compile(st, []byte(program), gad.CompileOptions{})
+	mm := gad.NewModuleMap().Add(contracts.Name, contracts.Module())
+	res, err := gad.Compile(st, []byte(program), gad.CompileOptions{CompilerOptions: gad.CompilerOptions{ModuleMap: mm}})
 	if err != nil {
 		return nil, nil, fmt.Errorf("schemaform: %w", err)
 	}
@@ -238,8 +248,14 @@ func TypeMarker(name string) gad.Object { return &typeMarker{name: name} }
 // of the form; a type only the application knows is named by TypeOf. vm is
 // the VM that ran the code the class comes from.
 func (b *Builder) Class(vm *gad.VM, c *gad.Class) (*Schema, error) {
+	return b.class(vm, c, nil)
+}
+
+// class is Class, the fields checked by the contracts of contractsMod (the
+// module schemaform the program imported; nil: not checked).
+func (b *Builder) class(vm *gad.VM, c *gad.Class, contractsMod gad.Object) (*Schema, error) {
 	r := &reader{vm: vm, enums: map[string]*Enum{}, typeOf: b.typeOf,
-		choiceAsName: b.choiceAsName, className: b.className}
+		choiceAsName: b.choiceAsName, className: b.className, contracts: contractsMod}
 	s, err := r.class(c)
 	if err != nil {
 		return nil, err
@@ -263,7 +279,7 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 	defer delete(r.visitingClass, c)
 	// a form is posted flat: the keys of a group's fields where its own are
 	// (`a`, not `$1.a`) — gad's [autoGroupKeys], the record built of them
-	// either way (`data ::: Form`)
+	// either way (`data :> Form`)
 	c.SetAutoGroupKeys(true)
 
 	s := &Schema{recClass: c}
@@ -327,6 +343,9 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 			f.ReadOnly = true
 		}
 		if err := r.typeInto(f, types); err != nil {
+			return nil, fmt.Errorf("%s: %w", f.Name, err)
+		}
+		if err := r.checkContract(cf, f); err != nil {
 			return nil, fmt.Errorf("%s: %w", f.Name, err)
 		}
 		if err := options(f, cf.Meta); err != nil {
@@ -457,6 +476,10 @@ type reader struct {
 	choiceAsName bool
 	// className names the classes a class extends (Builder.ClassName).
 	className ClassNameFunc
+	// contracts is the module of the contracts of the field types (the
+	// program's import of contracts.gad): a field is checked by its contract
+	// (checkContract); nil, not checked.
+	contracts gad.Object
 }
 
 // index is obj[key] through the object's own reflection.
@@ -1315,4 +1338,55 @@ func (s *Schema) shareEnums(enums map[string]*Enum) {
 			f.Schema.shareEnums(enums)
 		}
 	}
+}
+
+// contractsPrelude imports the contracts of the field types as the module
+// schemaform, on the first line of a schema's program.
+const contractsPrelude = "const " + contracts.Name + " = import(\"" + contracts.Name + "\"); "
+
+// checkContract checks the field cf by the contract of its kind — an enum
+// TEnumField, a value of gad with options TSelectField (contracts.gad) —: its
+// errors are the schema's. The contract is chosen here, by the type, not by
+// what fits: a field whose meta is wrong would fit a more general one.
+func (r *reader) checkContract(cf *gad.ClassField, f *Field) error {
+	if r.contracts == nil || len(cf.Types) != 1 {
+		return nil
+	}
+	name := ""
+	switch t := cf.Types[0].(type) {
+	case *gad.Enum:
+		name = "TEnumField"
+	case *gad.BuiltinObjType:
+		if opts := cf.Meta.Get(gad.Str(MetaOptions)); opts != gad.Nil && !isCallable(opts) {
+			switch t.Name() {
+			case "str", "int", "uint", "float", "decimal":
+				name = "TSelectField"
+			}
+		}
+	}
+	if name == "" {
+		return nil
+	}
+	v, err := r.index(r.contracts, name)
+	if err != nil {
+		return err
+	}
+	c, ok := v.(*gad.Contract)
+	if !ok {
+		return fmt.Errorf("schemaform: the contract %s is a %s", name, v.Type().Name())
+	}
+	ret, err := c.CallName("check", gad.Call{VM: r.vm, Args: gad.Args{{cf}}})
+	if err != nil {
+		return err
+	}
+	d, _ := ret.(gad.Dict)
+	errs, _ := d["errors"].(gad.Array)
+	if len(errs) == 0 {
+		return nil
+	}
+	msgs := make([]string, len(errs))
+	for i, e := range errs {
+		msgs[i] = e.ToString()
+	}
+	return fmt.Errorf("%s", strings.Join(msgs, "; "))
 }
