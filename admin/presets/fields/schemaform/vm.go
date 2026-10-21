@@ -61,7 +61,7 @@ func (b *Builder) Parse(src string) (*Schema, error) {
 	// the first line, so the lines of the schema are its own), returned
 	// beside the form
 	program := contractsPrelude + defaultDecl.ReplaceAllString(src, "${1}${2}${3} "+DefaultName) +
-		"\nreturn [" + DefaultName + ", " + contracts.Name + "]\n"
+		"\nreturn [" + DefaultName + ", " + contracts.ModuleName + "]\n"
 
 	key := b.typesKey() + "\x00" + program
 	if s, ok := parsed.Load(key); ok {
@@ -150,7 +150,7 @@ func (b *Builder) typesKey() string {
 func (b *Builder) runProgram(program string) (*gad.VM, gad.Object, error) {
 	builtins := b.Builtins()
 	st := gad.NewSymbolTable(builtins.NameSet)
-	mm := gad.NewModuleMap().Add(contracts.Name, contracts.Module())
+	mm := gad.NewModuleMap().Add(contracts.ModuleName, contracts.Module())
 	res, err := gad.Compile(st, []byte(program), gad.CompileOptions{CompilerOptions: gad.CompilerOptions{ModuleMap: mm}})
 	if err != nil {
 		return nil, nil, fmt.Errorf("schemaform: %w", err)
@@ -1342,7 +1342,7 @@ func (s *Schema) shareEnums(enums map[string]*Enum) {
 
 // contractsPrelude imports the contracts of the field types as the module
 // schemaform, on the first line of a schema's program.
-const contractsPrelude = "const " + contracts.Name + " = import(\"" + contracts.Name + "\"); "
+const contractsPrelude = "const " + contracts.ModuleName + " = import(\"" + contracts.ModuleName + "\"); "
 
 // checkContract checks the field cf by the contract of its kind — an enum
 // TEnumField, a value of gad with options TSelectField (contracts.gad) —: its

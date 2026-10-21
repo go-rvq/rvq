@@ -1,0 +1,60 @@
+/**
+# `schemaform` module
+
+The contracts of the field types of the schemaform: what a field's type is (its
+target) and what its metadata may say (the keys of its meta).
+
+Made a module of Go by `gad gomodule` (`go generate`): this package embeds it
+compiled (schemaform.gadb) and documents it (gad:doc, the API stub
+schemaform.gad); a schema's program imports it as the module `schemaform` —
+linked, not compiled again —, its plugin `schemaform.field(f)`.
+
+A key no contract declares is a warning, not an error: an application's, a
+plugin's.
+**/
+
+export contract TField {
+    target any
+    meta {
+        label? str
+        hint? str
+        help? str
+        placeholder? str
+        prefix? str
+        suffix? str
+        // a column of a row: its share in fifths (1..5)
+        width? int
+        if? any
+        show? any
+        disabled? any
+        readonly? any
+        class? any
+        changed? any
+        validation? any
+        icon? any
+    }
+}
+
+export contract TSelectField {
+    *TField
+    target type<str|int|uint|float|decimal|enum>
+    meta {
+        options any
+        // what a field does when the options of a function could not be had
+        optionsError? enum { error; warn } = #error
+    }
+}
+
+export contract TEnumField {
+    *TSelectField
+    target type<enum>
+    meta {
+        options []target = target.@members
+    }
+}
+
+export func field {
+(f TEnumField) <any> => nil
+(f TSelectField) <any> => nil
+(f TField) <any> => nil
+}

@@ -2,9 +2,10 @@
 The contracts of the field types of the schemaform: what a field's type is (its
 target) and what its metadata may say (the keys of its meta).
 
-Compiled once to contracts.gadb (`go generate`): a schema's program imports
-it as the module `schemaform` — linked, not compiled again —, its plugin
-`schemaform.field(f)`.
+Made a module of Go by `gad gomodule` (`go generate`): this package embeds it
+compiled (schemaform.gadb) and documents it (gad:doc, the API stub
+schemaform.gad); a schema's program imports it as the module `schemaform` —
+linked, not compiled again —, its plugin `schemaform.field(f)`.
 
 A key no contract declares is a warning, not an error: an application's, a
 plugin's.
