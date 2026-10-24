@@ -3,6 +3,7 @@ import {defineComponent, useModel, useTemplateRef} from 'vue'
 import TempVar from 'vue-temp-var'
 import { dragWidth, isEndSide, saveWidth, savedWidth } from './navigation-drawer-resize'
 import { lockScroll, unlockScroll } from './scroll-lock'
+import { pushEscClose, removeEscClose } from './esc-close'
 import {type Density} from 'vuetify/lib/composables/density'
 
 let _: Density
@@ -188,14 +189,26 @@ export default defineComponent({
       this.resizedWidth = null
       saveWidth(this.storageKey, null)
     },
-    // a floating (temporary) drawer locks the page's scroll while open
+    // a floating (temporary) drawer locks the page's scroll while open, and
+    // Esc closes it (the top one: esc-close)
     openCb() {
       if (this.temporary) {
         lockScroll(this, 'overflow-y-hidden')
+        pushEscClose(this, () => this.drawerEl(), () => (this.cIsOpen = false))
       }
     },
     closeCb() {
       unlockScroll(this)
+      removeEscClose(this)
+    },
+    // drawerEl is the <nav> of the drawer (its component's $el may be the
+    // placeholder of a fragment: the nav follows it)
+    drawerEl(): Element | null {
+      let n = (this.$refs.root as any)?.$el as Node | null | undefined
+      while (n && !(n instanceof Element && n.classList.contains('v-navigation-drawer'))) {
+        n = n.nextSibling
+      }
+      return (n as Element) || null
     },
     isEndSide,
     hasHeader() {
