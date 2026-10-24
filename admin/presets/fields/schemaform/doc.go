@@ -68,8 +68,8 @@
 //
 // A new Builder knows: str (and untyped), text (textarea), html (rich text),
 // int, uint, float, decimal, bool (switch), color, date, time, duration,
-// gad's time.CalendarDate (a date) and time.CalendarTime (a date and a time
-// of day, with no zone), RangeType and FormType — the form itself, one level
+// gad's time.cdate (a date), time.cdtime (a date and a time of day) and
+// time.ctime (a time of day), with no zone,, RangeType and FormType — the form itself, one level
 // down, which is what makes the schema recursive.
 //
 // # Ranges
@@ -82,7 +82,7 @@
 // (Field.RangeOpen):
 //
 //	export class default {
-//	    [open="to"] stay Range[time.CalendarDate]
+//	    [open="to"] stay Range[time.cdate]
 //	    budget? Range[int|float]
 //	    [options=[1, 2, 3, 4]] rooms Range[int]
 //	}

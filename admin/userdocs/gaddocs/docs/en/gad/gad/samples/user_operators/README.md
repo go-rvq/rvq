@@ -3,7 +3,7 @@
 
 This is the operators chapter. Focused runnable tours live in nearby samples:
 [ranges `..`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/ranges.gad), [membership `in`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/in_operator.gad),
-[unary](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/unary_operators.gad) and
+[unary](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/unary_operators.gad), [item by item `.op` and the pipe `|>`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/broadcast.gad) and
 [absent-coalescing `!?`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/absent_coalescing.gad). This sample demonstrates the
 **user operators** and `met gad.*` handlers (Example below).
 
@@ -31,7 +31,7 @@ concrete type; object identity for non-primitives), customizable via
     [0 || "fallback", "x" && "y"],         // logical ops return an operand
     ["ab" + "c", [1] + 2],                 // + concatenates / appends
 ]
-// => [[3, 1, 1024, -3], [2, 7, 5, 4], [16, 64, -6], ["fallback", "y"], ["abc", [1, 2]]]
+= [[3, 1, 1024d, -3], [2, 7, 5, 4], [16, 64, -6], ["fallback", "y"], ["abc", [1, 2]]]
 ```
 
 ## Ranges, ternary, nullish
@@ -59,7 +59,7 @@ guest := nil
     user.bye?.("bo"),                  // nil: nothing to call
     guest?.name ?? "anonymous",        // ?? supplies the fallback
 ]
-// => ["ann", nil, nil, nil, nil, "hi bo", nil, "anonymous"]
+= ["ann", nil, nil, nil, nil, "hi bo", nil, "anonymous"]
 ```
 
 ## Absent-coalescing (`!?` / `!?=`)
@@ -69,9 +69,27 @@ present* (a present `nil` still counts). `a.b !? d` yields `a.b` when `b` exists
 else `d`; `a.b !?= d` assigns only when absent (auto-creating missing
 intermediate dicts). See [absent_coalescing.gad](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/absent_coalescing.gad).
 
+## No-coalescing (`?!` / `?!=`)
+
+The counterparts of `??`/`??=` for `no` — a key **not given**, or reset (see
+[values and types](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/values_and_types.gad)): `a ?! d` yields `d` only when `a` is
+`no`, else `a` (a `nil`, a `false`, a `0` are kept); `a ?!= d` assigns `d`
+only when `a` is `no`. `d` is evaluated lazily. A named parameter not given is
+`no` until its default: `func(; a=1)` takes it with `a ?!= 1`, so a call that
+passes `a=nil` keeps `nil`.
+
+```gad
+x := no
+y := no; y ?!= 7
+z := nil; z ?!= 7                      // nil is a value: kept
+f := func(; a=1) => a
+[x ?! 5, nil ?! 5, false ?! 5, y, z, f(), f(; a=no), f(; a=nil)]
+= [5, nil, false, 7, nil, 1, 1, nil]
+```
+
 ## Assignment, increment & array append
 
-`+= -= *= /= %= **= &= |= ^= &^= <<= >>= ??=`, postfix `x++`/`x--` (statements).
+`+= -= *= /= %= **= &= |= ^= &^= <<= >>= ??= ?!=`, postfix `x++`/`x--` (statements).
 Array append has four forms: `arr + x` (append one, concatenating an iterable),
 `arr ++ it` (extend with an iterable), `arr += x` (append x as **one** element,
 in place), `arr ++= it` (extend in place). A single target with a comma list is
@@ -86,7 +104,7 @@ unset := nil; unset ??= "set"          // assigns only when nil
 kept := "kept"; kept ??= "ignored"
 count := 1; count++; count++           // postfix: statements
 [sub, mask, shift, clear, unset, kept, count]
-// => [14, 2, 8, 4, "set", "kept", 3]
+= [14, 2, 8, 4, "set", "kept", 3]
 ```
 
 ## Operator handlers and the `gad` namespace
@@ -146,16 +164,13 @@ met gad.selfAssignOpDoubleMod(a int, b int) {
 n := 7
 n %%= 5
 println(n)                        // 12
-```
-
-Output:
-
-```text
+<<<
 12345
 [12, 345]
 10 0 7
 1002
 12
+>>>
 ```
 
 ## Membership, assign-to-type, precedence
@@ -171,75 +186,102 @@ unary tightest, ternary loosest. Read/write with `.name` (literal) and `[expr]`
 ## Example — `user_operators.gad`
 
 ```gad
-[
-    [7 / 2, 7 % 2, 2 ** 10, -7 / 2],       // int division truncates
-    [6 & 3, 6 | 3, 6 ^ 3, 6 &^ 3],         // and, or, xor, and-not (bit clear)
-    [1 << 4, 256 >> 2, ^5],                // shifts; unary ^ is the complement
-    [0 || "fallback", "x" && "y"],         // logical ops return an operand
-    ["ab" + "c", [1] + 2],                 // + concatenates / appends
-]
-
-user := {name: "ann", address: nil, greet: (who) => "hi " + who}
-guest := nil
-[
-    user?.name,
-    guest?.name,                       // nil: guest is nil
-    user.address?.city,                // nil: address is nil
-    user.phone?.number,                // nil: a missing key reads as nil
-    guest?.address.city,               // nil: the chain stops at the first ?.
-    user.greet?.("bo"),                // call when non-nil
-    user.bye?.("bo"),                  // nil: nothing to call
-    guest?.name ?? "anonymous",        // ?? supplies the fallback
-]
-
-sub := 10; sub -= 3; sub *= 2          // 14
-mask := 6; mask &= 3                   // 2
-shift := 1; shift <<= 3                // 8
-clear := 6; clear &^= 2                // 4
-unset := nil; unset ??= "set"          // assigns only when nil
-kept := "kept"; kept ??= "ignored"
-count := 1; count++; count++           // postfix: statements
-[sub, mask, shift, clear, unset, kept, count]
-
-/**
-Define `<<<` and `>>>` on ints as "push"/"pop"-ish helpers.
-**/
-met gad.binOpTripleLess(a int, b int) {
-    return a * 1000 + b           // pack two small ints
-}
-met gad.binOpTripleGreater(a int, b int) {
-    return [a / 1000, a % 1000]   // unpack
+example binary_ops {
+    [
+        [7 / 2, 7 % 2, 2 ** 10, -7 / 2],       // int division truncates
+        [6 & 3, 6 | 3, 6 ^ 3, 6 &^ 3],         // and, or, xor, and-not (bit clear)
+        [1 << 4, 256 >> 2, ^5],                // shifts; unary ^ is the complement
+        [0 || "fallback", "x" && "y"],         // logical ops return an operand
+        ["ab" + "c", [1] + 2],                 // + concatenates / appends
+    ]
+    = [[3, 1, 1024d, -3], [2, 7, 5, 4], [16, 64, -6], ["fallback", "y"], ["abc", [1, 2]]]
 }
 
-packed := 12 <<< 345
-println(packed)                   // 12345
-println(packed >>> 0)             // [12, 345]
-
-/**
-`%%` as a "clamp into range" operator.
-**/
-met gad.binOpDoubleMod(v int, hi int) {
-    return v < 0 ? 0 : (v > hi ? hi : v)
+example nullish {
+    user := {name: "ann", address: nil, greet: (who) => "hi " + who}
+    guest := nil
+    [
+        user?.name,
+        guest?.name,                       // nil: guest is nil
+        user.address?.city,                // nil: address is nil
+        user.phone?.number,                // nil: a missing key reads as nil
+        guest?.address.city,               // nil: the chain stops at the first ?.
+        user.greet?.("bo"),                // call when non-nil
+        user.bye?.("bo"),                  // nil: nothing to call
+        guest?.name ?? "anonymous",        // ?? supplies the fallback
+    ]
+    = ["ann", nil, nil, nil, nil, "hi bo", nil, "anonymous"]
 }
-println(50 %% 10, -3 %% 10, 7 %% 10)   // 10 0 7
 
-/**
-The self-assign forms reuse the binary handler via gad.selfAssignOp's
-fallback: `x <<<= y` is `x = x <<< y`.
-**/
-acc := 1
-acc <<<= 2
-println(acc)                      // 1002
-
-/**
-A dedicated gad.selfAssignOp handler can differ from the binary one.
-**/
-met gad.selfAssignOpDoubleMod(a int, b int) {
-    return a + b
+example no_coalescing {
+    x := no
+    y := no; y ?!= 7
+    z := nil; z ?!= 7                      // nil is a value: kept
+    f := func(; a=1) => a
+    [x ?! 5, nil ?! 5, false ?! 5, y, z, f(), f(; a=no), f(; a=nil)]
+    = [5, nil, false, 7, nil, 1, 1, nil]
 }
-n := 7
-n %%= 5
-println(n)                        // 12
+
+example compound_assign {
+    sub := 10; sub -= 3; sub *= 2          // 14
+    mask := 6; mask &= 3                   // 2
+    shift := 1; shift <<= 3                // 8
+    clear := 6; clear &^= 2                // 4
+    unset := nil; unset ??= "set"          // assigns only when nil
+    kept := "kept"; kept ??= "ignored"
+    count := 1; count++; count++           // postfix: statements
+    [sub, mask, shift, clear, unset, kept, count]
+    = [14, 2, 8, 4, "set", "kept", 3]
+}
+
+example user_ops {
+    /**
+    Define `<<<` and `>>>` on ints as "push"/"pop"-ish helpers.
+    **/
+    met gad.binOpTripleLess(a int, b int) {
+        return a * 1000 + b           // pack two small ints
+    }
+    met gad.binOpTripleGreater(a int, b int) {
+        return [a / 1000, a % 1000]   // unpack
+    }
+
+    packed := 12 <<< 345
+    println(packed)                   // 12345
+    println(packed >>> 0)             // [12, 345]
+
+    /**
+    `%%` as a "clamp into range" operator.
+    **/
+    met gad.binOpDoubleMod(v int, hi int) {
+        return v < 0 ? 0 : (v > hi ? hi : v)
+    }
+    println(50 %% 10, -3 %% 10, 7 %% 10)   // 10 0 7
+
+    /**
+    The self-assign forms reuse the binary handler via gad.selfAssignOp's
+    fallback: `x <<<= y` is `x = x <<< y`.
+    **/
+    acc := 1
+    acc <<<= 2
+    println(acc)                      // 1002
+
+    /**
+    A dedicated gad.selfAssignOp handler can differ from the binary one.
+    **/
+    met gad.selfAssignOpDoubleMod(a int, b int) {
+        return a + b
+    }
+    n := 7
+    n %%= 5
+    println(n)                        // 12
+}
+<<<
+12345
+[12, 345]
+10 0 7
+1002
+12
+>>>
 
 return packed
 ```

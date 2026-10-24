@@ -100,7 +100,7 @@ it ideal for exploring the language:
 The script below joins its positional arguments and accepts named arguments
 `--sep` and `--ln`:
 
-```gad
+```gad ignore
 param (*args, sep=",", ln=no)
 if !args { return }
 for _, arg in args[:-1] { print(arg, sep) }
@@ -315,7 +315,8 @@ gad ide --static web/app/dist samples            # equivalent, after a build
 ```
 
 To embed Gad in a Go program instead of running it from the CLI, see
-[Embedding in Go](../embedding/README.md).
+[Embedding in Go](../embedding/README.md); to write modules in Go — or ship a module
+written in Gad as a Go package —, [Go modules](../go-modules/README.md).
 
 ## See also
 

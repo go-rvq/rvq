@@ -494,15 +494,16 @@ func New() *Builder {
 			"html":      HTMLComponentFunc,
 			"time":      TimeComponentFunc,
 			"date":      DateComponentFunc,
-			// the time namespace's calendar types: a date; a date and a time
-			// of day, with no zone
-			"calendarDate": DateComponentFunc,
-			"calendarTime": TimeComponentFunc,
-			RangeType:      RangeComponentFunc,
-			"duration":     DurationComponentFunc,
-			FileType:       FileComponentFunc,
-			ImageType:      FileComponentFunc,
-			AddressType:    AddressComponentFunc,
+			// the time namespace's calendar types, with no zone: a date; a
+			// date and a time of day; a time of day
+			"cdate":     DateComponentFunc,
+			"cdtime":    TimeComponentFunc,
+			"ctime":     TimeComponentFunc,
+			RangeType:   RangeComponentFunc,
+			"duration":  DurationComponentFunc,
+			FileType:    FileComponentFunc,
+			ImageType:   FileComponentFunc,
+			AddressType: AddressComponentFunc,
 		},
 		displays: defaultDisplays(),
 	}

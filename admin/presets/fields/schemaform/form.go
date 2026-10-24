@@ -561,18 +561,18 @@ func (d *Decoder) value(f *Field, raw any, path string) any {
 			s = strconv.FormatFloat(n, 'f', -1, 64)
 		}
 		v = n
-	case "date", "calendarDate":
+	case "date", "cdate":
 		if _, err := time.Parse("2006-01-02", s); err != nil {
 			return fail(CodeInvalid)
 		}
-	case "calendarTime":
+	case "cdtime":
 		// what datetime-local gives: 2026-01-30T14:30 (its seconds, maybe)
 		if _, err := time.Parse("2006-01-02T15:04", s); err != nil {
 			if _, err := time.Parse("2006-01-02T15:04:05", s); err != nil {
 				return fail(CodeInvalid)
 			}
 		}
-	case "time":
+	case "time", "ctime":
 		if _, err := time.Parse("15:04", s); err != nil {
 			if _, err := time.Parse("15:04:05", s); err != nil {
 				return fail(CodeInvalid)

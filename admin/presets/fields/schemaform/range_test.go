@@ -10,10 +10,10 @@ import (
 // else of open refused.
 func TestRange(t *testing.T) {
 	s, err := Parse(`export class default {
-	[open="to"] stay Range[time.CalendarDate]
+	[open="to"] stay Range[time.cdate]
 	budget? Range[int|float]
 	[options=[1, 2, 3, 4]] rooms Range[int]
-	at? Range[time.CalendarTime]
+	at? Range[time.cdtime]
 }`)
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ func TestRange(t *testing.T) {
 		}
 		got = append(got, f.Name+":"+f.Type+":"+f.Range.Type+":"+f.RangeOpen+":"+enum)
 	}
-	want := "stay:range:calendarDate:to: budget:range:float:: rooms:range:int::1,2,3,4 at:range:calendarTime::"
+	want := "stay:range:cdate:to: budget:range:float:: rooms:range:int::1,2,3,4 at:range:cdtime::"
 	if strings.Join(got, " ") != want {
 		t.Errorf("ranges:\n got %s\nwant %s", strings.Join(got, " "), want)
 	}

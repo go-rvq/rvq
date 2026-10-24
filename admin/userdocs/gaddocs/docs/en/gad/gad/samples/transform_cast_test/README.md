@@ -1,13 +1,21 @@
 
-# The transforming cast `:::`
+# The transforming cast `:>`
 
-`obj :: Type` is a **checked** cast: it returns `obj` unchanged when it is
-assignable to `Type`, else raises a type error. `obj ::: Type` is a
-**transforming** cast: for a dict (or any item-getter) cast to an
-[interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) it also **coerces** the value into the interface's
-declared shape.
+Three casts, by how much they may change a value:
 
-Two things happen on `dict ::: interface { … }`:
+| Cast | Does |
+|---|---|
+| `obj :: Type` | **checks**: `obj` unchanged when it is assignable to `Type`, else a type error |
+| `obj :> Type` | **transforms** into a **class**, an **enum value**, an **interface**, a **dict** or a **key-value array** — and only those; a value already of `Type` is itself |
+| `obj ::> Type` | **converts** to any type: a builtin type by its constructor (`1 ::> str`), a typed array's items, a transformer function (see [type casts](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/testing/type_cast_test.gad)) |
+
+`obj :> Type` is the **transforming** cast: for a dict (or any item-getter) cast
+to an [interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad) it **coerces** the value into the interface's
+declared shape; into a dict or a key-value array it takes the pairs of the
+source; a value already of the target type is itself, not a copy; any other
+target is an error that points to `::>`.
+
+Two things happen on `dict :> interface { … }`:
 
 - **Field coercion** — each field typed by a class is built into an instance of
   that class from its nested dict (recursively, at any depth, like
@@ -19,9 +27,16 @@ Two things happen on `dict ::: interface { … }`:
 The source need not be a dict literal: any item-getter works — a key-value array
 (`(; a=1)`) or a class instance — its members feed the transform.
 
-`::: Class` (a class target) converts between class shapes: it builds an instance
+`:> Class` (a class target) converts between class shapes: it builds an instance
 of the target class from the source's members, keeping only the fields that class
 declares — e.g. a `User{name, isAdmin}` becomes a `Tag{name}`.
+
+`:> Enum` takes the member of a name, or of a value — an `int` (a negative one
+finds a negative member, never a `uint` one) or a `uint`, whatever the integer
+type of the members; never a `float`, a `decimal` or a `bool` (`2.0 :> mode`
+fails, though `2.0 == 2`). `::>` takes them the same way. A field typed by an
+enum takes its member the same way. A field of another type is **checked**, not
+converted: `{x: "1"} :> P` with `x int` fails (`::>` would convert it).
 
 Run it: `gad test samples/transform_cast_test.gad`
 
@@ -44,7 +59,7 @@ test "nested class + rest capture" {
         z: "z value"
     }
 
-    got := data ::: interface { rect Rect, **<other> }
+    got := data :> interface { rect Rect, **<other> }
 
     // `rect` is now a real Rect whose a/b are Points; `z` moved into `other`.
     t.equal("Rect", typeName(got.rect))
@@ -70,7 +85,7 @@ remains a plain dict.
 test "nested interface field" {
     data := {rect: {a: {x: 1, y: 2}, b: {x: 5, y: 6}}, z: "z value"}
 
-    got := data ::: interface { rect interface{ a Point, b Point }, **<otherValue> }
+    got := data :> interface { rect interface{ a Point, b Point }, **<otherValue> }
 
     t.equal(
         repr(got),
@@ -88,21 +103,21 @@ a class instance is transformed the same way.
 test "non-dict sources" {
     // A key-value array, nested all the way down.
     kv := (; rect = (; a = (; x = 1, y = 2), b = (; x = 5, y = 6)), z = "z")
-    fromKv := kv ::: interface { rect Rect, **<other> }
+    fromKv := kv :> interface { rect Rect, **<other> }
     t.equal("Rect", typeName(fromKv.rect))
     t.equal(1, fromKv.rect.a.x)
     t.equal("z", fromKv.other.z)
 
     // A class instance: its fields feed the transform.
     class Wrapper { p Point; extra str }
-    fromInst := Wrapper(; p = {x: 1, y: 2}, extra = "hi") ::: interface { p Point, **<rest> }
+    fromInst := Wrapper(; p = {x: 1, y: 2}, extra = "hi") :> interface { p Point, **<rest> }
     t.equal("Point", typeName(fromInst.p))
     t.equal("hi", fromInst.rest.extra)
 }
 
 /**
-`::` and `:::` differ: `::` is a pure check — it returns the value unchanged and
-fails when a nested dict is not already the declared type — while `:::` coerces.
+`::` and `:>` differ: `::` is a pure check — it returns the value unchanged and
+fails when a nested dict is not already the declared type — while `:>` coerces.
 **/
 test "checked vs transforming" {
     data := {rect: {a: {x: 1, y: 2}, b: {x: 5, y: 6}}}
@@ -111,8 +126,8 @@ test "checked vs transforming" {
     // cast throws and `bool(…) or false` is false.
     t.true(!(bool(data :: interface { rect Rect }) or false))
 
-    // `:::` coerces and succeeds.
-    t.equal("Rect", typeName((data ::: interface { rect Rect }).rect))
+    // `:>` coerces and succeeds.
+    t.equal("Rect", typeName((data :> interface { rect Rect }).rect))
 }
 
 /**
@@ -121,16 +136,16 @@ A required field absent from the source fails the transform; a nullable field
 **/
 test "required and nullable fields" {
     // A missing required field is an error (the transform throws).
-    t.true(!(bool(({b: 2}) ::: interface { a int, **<rest> }) or false))
+    t.true(!(bool(({b: 2}) :> interface { a int, **<rest> }) or false))
 
     // A nullable field may be absent; the rest still captures the extras.
-    got := ({b: 2}) ::: interface { a? int, **<rest> }
+    got := ({b: 2}) :> interface { a? int, **<rest> }
     t.equal(nil, got.a)
     t.equal(2, got.rest.b)
 }
 
 /**
-`:::` to a **class** converts between class shapes: it builds an instance of the
+`:>` to a **class** converts between class shapes: it builds an instance of the
 target class from the source's members, keeping only the fields the target
 declares (extra source fields are dropped). The source may be another class
 instance, a dict or any item-getter.
@@ -142,9 +157,71 @@ test "transform from one class to another" {
     user := User(; name = "Jonh", isAdmin = true)
 
     // User -> Tag keeps `name`, drops the undeclared `isAdmin`.
-    t.equal(repr(Tag(; name = user.name)), repr(user ::: Tag))
+    t.equal(repr(Tag(; name = user.name)), repr(user :> Tag))
 
     // Chained: User -> Tag -> User; the round-trip drops isAdmin (nullable -> nil).
-    t.equal(repr(User(; name = user.name)), repr(user ::: Tag ::: User))
+    t.equal(repr(User(; name = user.name)), repr(user :> Tag :> User))
+}
+
+/**
+`:> Enum` takes the member of a value or of a name — a value of no member fails.
+The members' values may be `int` (negative ones too) or `uint`: the number is
+what matches, given as an `int` or a `uint` — not a `float`, a `decimal` or a
+`bool`.
+**/
+test "enum value" {
+    enum mode { r; w }      // r = 1, w = 2 (uint)
+    t.true(1 :> mode == mode.r)
+    t.equal("w", (2 :> mode).name)
+    t.equal("w", ("w" :> mode).name)
+    t.true(!(bool(3 :> mode) or false))
+
+    enum sign { neg = -1; neg2 }   // int values: neg2 = -2
+    t.equal("neg", (-1 :> sign).name)
+    t.equal("neg2", (-2 :> sign).name)
+
+    // a uint finds it too; a float, a decimal, a bool do not
+    t.equal("w", (2u :> mode).name)
+    fails := func(f) { try { f(); return false } catch { return true } }
+    t.true(fails(func() { 2.0 :> mode }))
+    t.true(fails(func() { 2d :> mode }))
+    t.true(fails(func() { true :> mode }))
+    t.true(fails(func() { 2.0 ::> mode }))
+    // a negative int never finds a uint member
+    t.true(fails(func() { -1 :> mode }))
+
+    // `::` only checks: an int is not a mode
+    t.true(!(bool(1 :: mode) or false))
+}
+
+/**
+A field typed by an enum takes the member of its value; a field of a builtin type
+is checked, not converted.
+**/
+test "enum and checked fields" {
+    enum mode { r; w }
+    class File { name str; mode mode }
+    f := {name: "a.txt", mode: 2} :> File
+    t.true(f.mode == mode.w)
+    t.true(!(bool({name: 1, mode: 1} :> File) or false))
+}
+
+/**
+`:>` transforms only into a class, an enum value, an interface, a dict or a
+key-value array — the last two are the pairs of the source
+(`{a: no} :> keyValueArray` is `(;a=no)`). A value already of the target type
+is itself, not a copy (`[1, 2] :> array`, `[1, 2] :> []int`); any other target
+is an error that points to `::>`, which converts (`[1, 2] :> []str`).
+**/
+test "only class, enum, interface, dict and key-value array" {
+    fails := func(f) { try { f(); return false } catch { return true } }
+    t.true(fails(func() { 1 :> str }))
+    t.true(fails(func() { [1, 2] :> []str }))
+    a := [1, 2]
+    t.true((a :> array) === a)
+    t.equal([1, 2], a :> []int)
+    t.equal("1", 1 ::> str)
+    t.equal("(;a=no)", str({a: no} :> keyValueArray))
+    t.equal({a: 1}, (;a=1) :> dict)
 }
 ```

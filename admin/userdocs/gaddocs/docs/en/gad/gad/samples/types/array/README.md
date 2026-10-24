@@ -1,0 +1,102 @@
+
+# array
+
+An **array** is an ordered, growable list of values of any types. Its literal
+is `[1, "a", [2]]`; a typed array (`type ints []int`) checks its items (see
+[typed arrays](../../typed_arrays/README.md)).
+
+## Constructors
+
+`array(*args)` collects its arguments; `array(*it)` an iterable's values.
+
+```gad
+[array(1, 2), array(*"ab"), array()]
+= [[1, 2], ['a', 'b'], []]
+```
+
+## Operators
+
+`+` appends an item (a new array: `a += v` grows `a`), `++` appends the
+values of an iterable; `in` tests an item; `==` compares item by item.
+`<`, `<=`, `>`, `>=` order arrays as Python orders lists: by the first items
+that differ (compared with the operator; `[1, 2] < [1, 3]`), else the shorter
+first (`[1] < [1, 2]`); `nil` comes before any array. An array indexes (`a[0]`, `a[-1]` from the end), slices (`a[1:]`) and is
+iterated (`for i, v in a`).
+
+```gad
+a := [1, 2]
+a += 3
+a ++= [4, 5]
+[a, 2 in a, a[-1], a[1:3], [1, 2] == [1, 2]]
+= [[1, 2, 3, 4, 5], true, 5, [2, 3], true]
+```
+
+```gad
+[[1, 2] < [1, 3], [1] < [1, 2], [2] > [1, 9], ["a"] <= ["a"], nil < [1]]
+= [true, true, true, true, true]
+sort([[2], [1, 5], [], [1]])
+= [[], [1], [1, 5], [2]]
+```
+
+## See also
+
+- [Collections](../../collections/README.md), [comprehensions](../../comprehensions/README.md),
+  [sized arrays](../../sized_arrays/README.md).
+
+## Type
+
+### array
+
+```gad
+array type
+```
+
+#### Constructors
+
+```gad
+array(…)
+```
+
+#### Operators
+
+```gad
+a + b
+a ++ b
+a ++= b
+a += b
+a < b
+a <= b
+a > b
+a >= b
+a in b
+```
+
+#### Conversions
+
+```gad
+bytes(v array)
+```
+
+## Example — `array.gad`
+
+```gad
+example constructors {
+    [array(1, 2), array(*"ab"), array()]
+    = [[1, 2], ['a', 'b'], []]
+}
+
+example operators {
+    a := [1, 2]
+    a += 3
+    a ++= [4, 5]
+    [a, 2 in a, a[-1], a[1:3], [1, 2] == [1, 2]]
+    = [[1, 2, 3, 4, 5], true, 5, [2, 3], true]
+}
+
+example ordering {
+    [[1, 2] < [1, 3], [1] < [1, 2], [2] > [1, 9], ["a"] <= ["a"], nil < [1]]
+    = [true, true, true, true, true]
+    sort([[2], [1, 5], [], [1]])
+    = [[], [1], [1, 5], [2]]
+}
+```

@@ -64,7 +64,7 @@ bounds := [f for f in Shape.fields if f.name == "bounds"][0]
     len(Shape.methods[2].headers),                   // from's signatures
     [typeName(bounds.types[0]), [f.name for f in bounds.types[0].fields]],
 ]
-// => ["Shape", ["id", "label", "bounds", "corners"], true, ["area", "scale", "title"], ["draw", "resize", "from"], 2, ["Interface", ["w", "h"]]]
+= ["Shape", ["id", "label", "bounds", "corners"], true, ["area", "scale", "title"], ["draw", "resize", "from"], 2, ["Interface", ["w", "h"]]]
 ```
 
 ## Structural satisfaction
@@ -100,7 +100,7 @@ bad := {name: "x"}                              // no callable `greet`
     (d::Greeter).greet(), welcome(d),
     bad::Greeter or "is bad",                   // `or` turns the error into a value
 ]
-// => ["hi Ada", "rejected", "hi Ada!", "hi Bo", "hi Bo!", "is bad"]
+= ["hi Ada", "rejected", "hi Ada!", "hi Bo", "hi Bo!", "is bad"]
 ```
 
 A required field marked with a `?` after its name (`x? int`) is **nullable**: a
@@ -114,11 +114,11 @@ interface Tagged { name str; tag? int|str }
     ({name: "b", tag: nil} :: Tagged).name,     // a nil tag is fine
     ({name: "c"} :: Tagged).name,               // an absent tag is fine
 ]
-// => [3, "b", "c"]
+= [3, "b", "c"]
 ```
 
 A `**<name>` member is a **rest capture** used with the transforming cast
-[`:::`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad): `d ::: interface { … }` coerces the source's
+[`:>`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad): `d :> interface { … }` coerces the source's
 class/interface-typed fields into their declared shape and gathers the keys not
 named by the interface into a dict bound to `name`. (A `**Expr` member — any
 expression, a bare name included — is something else: members given at run
@@ -129,6 +129,61 @@ an **array** of satisfying elements: `interface P [] { … }` a flat array,
 `interface P [][][] { … }` an array nested three deep, and `interface P []<int|uint>`
 an array of the given element types (see [array interfaces](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interface_arrays_test.gad);
 for a nominal, constructible array type see [typed arrays](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/typed_arrays.gad)).
+
+## Field defaults (`name? T = expr`)
+
+A field may have a **default**: the value the transforming cast
+[`:>`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad) gives it when it is **not given** — absent,
+or `no` (a [reset](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/key_value_array.gad)). A given `nil` is a value: kept in a
+nullable field, refused by one that is not. `::` only checks, so it gives no
+default.
+
+The default goes through the field's type as a given value would: an enum
+field takes the member of a name (`= #w`) or a value. A constant default is
+part of the interface; any other — an expression, a function, a closure — is
+computed where the interface is declared, and a computed value
+(`= (= expr)`) is called on every cast. An interface written as a type (a
+parameter's `interface { … }`) is a constant: so are its defaults.
+
+The field answers `field.default` (as written; `nil` when none) and
+`field.hasDefault`.
+
+```gad
+enum mode { r; w }
+k := 5
+interface Opts {
+    layout? str = "table"
+    n int = 1 + 2              // computed where the interface is declared
+    m? mode = #w               // through the type: the member w
+    note? str = nil            // nil is a default too
+    twice? int = (= k * 2)     // a computed value: called on every cast
+}
+
+a := {} :> Opts
+b := {layout: "cards", n: 9, m: 1} :> Opts
+c := {layout: no, note: no} :> Opts      // reset: not given, the default
+d := {layout: nil} :> Opts                // nil is a value: kept
+k = 7
+[a.layout, a.n, a.m == mode.w, a.note, a.twice,
+ b.layout, b.n, b.m == mode.r,
+ c.layout, c.note, d.layout, ({} :> Opts).twice,
+ Opts.fields[0].default, Opts.fields[0].hasDefault]
+= ["table", 3, true, nil, 10, "cards", 9, true, "table", nil, nil, 14, "table", true]
+```
+
+A field given `yes` — a key **without a value** (`(;readonly)`, a bare `[readonly]`)
+— is checked against its type: a `flag` field takes it; a `bool` field takes it
+as `true` on `:>` (`::` refuses it: `yes` is not a bool); a field of any other
+type wants a value — unless its types take a flag too (`mode? flag|str`).
+
+```gad
+interface F { required? flag; readonly? bool; layout? str; mode? flag|str }
+refused := func(f) { try { f(); return false } catch { return true } }
+[((;required, readonly) :> F), ({mode: yes} :> F).mode,
+ refused(() => ({layout: yes} :> F)),     // a str wants a value
+ refused(() => ({readonly: yes} :: F))]   // `::` converts nothing
+= [{required: yes, readonly: true}, yes, true, true]
+```
 
 ## Nested and array fields (`name: { … }`)
 
@@ -161,7 +216,7 @@ Poly := interface { pts: []{ x int, y int } }
     sat({ pts: [{ x: 0, y: 0 }, { x: 1, y: 2 }] }, Poly), // array: every element ok
     sat({ pts: [{ x: 0, y: 0 }, { x: 1 }] }, Poly),       // array: 2nd missing y -> false
 ]
-// => [true, false, true, false]
+= [true, false, true, false]
 ```
 
 ## Referring to itself
@@ -190,7 +245,7 @@ fits := func(v, T) { try { v :: T; return true } catch { return false } }
     fits(uuid("01a0a168-6707-748f-b487-c0ab78e25c11"), Icon),
     IconOptions.fields[0].types[2] == IconOptions, // itself
 ]
-// => [true, false, true, true, true]
+= [true, false, true, true, true]
 ```
 
 ## Context-function members (`funcs { … }`)
@@ -219,7 +274,7 @@ NotRenderable := interface { funcs { noObj <(indent int, @self)> } }
 
 r := {name: "Ada"}
 [(r :: Renderable).name, r :: NotRenderable or "no renderer"]
-// => ["Ada", "no renderer"]
+= ["Ada", "no renderer"]
 ```
 
 ## Caching (embedding)
@@ -258,7 +313,7 @@ fitsIface := func(v, T) { try { v :: T; return true } catch { return false } }
     len(Human.@flat.fields),      // name, age
     len(Associate.@flat.fields),  // name, age, tags, id
 ]
-// => [true, false, true, 2, 4]
+= [true, false, true, 2, 4]
 ```
 
 ## Members given at run time (`**Expr`)
@@ -295,7 +350,7 @@ for f in Languages.@flat.fields { names += f.name }
     ({default: "pt", pt: true}) :: Languages != nil,
     names,
 ]
-// => [true, ["default", "en", "pt"]]
+= [true, ["default", "en", "pt"]]
 ```
 
 ```gad
@@ -312,7 +367,7 @@ rejects := func(f) { try { f(); return false } catch { return true } }
     typeName(Square(; name="s") :: Shape),
     rejects(() => ({name: "x"}) :: Shape),   // no area, no label
 ]
-// => ["Square", true]
+= ["Square", true]
 ```
 
 ## Flattening (`iface.@flat`)
@@ -342,77 +397,83 @@ flat := Seeker.@flat
     str((interface { get x int; set x str; set x }).@flat.props[0]),   // mixed types
     interface { *HasRun; get run int }.@flat or "conflict rejected",   // run(): method vs getter
 ]
-// => [["pos"], ["seek", "read"], "prop x int", "prop x { get int; set str|any }", "conflict rejected"]
+= [["pos"], ["seek", "read"], "prop x int", "prop x { get int; set str|any }", "conflict rejected"]
 ```
 
 ## Example — `interfaces.gad`
 
 ````gad
-// A parent interface, spread into `Shape` with `*Base` below.
-interface Base { get kind }
+example iface_shape {
+    // A parent interface, spread into `Shape` with `*Base` below.
+    interface Base { get kind }
 
-interface Shape {
-	*Base
+    interface Shape {
+    	*Base
 
-	id int
-	label str
+    	id int
+    	label str
 
-	// a nested-interface field (short form): `bounds` is typed by an inline
-	// interface with `w int` and `h int`. Long form: `bounds interface { … }`.
-	bounds: {
-		w int
-		h int
-	}
+    	// a nested-interface field (short form): `bounds` is typed by an inline
+    	// interface with `w int` and `h int`. Long form: `bounds interface { … }`.
+    	bounds: {
+    		w int
+    		h int
+    	}
 
-	// an ARRAY-interface field (`[]{ … }`): `corners` must be an array whose
-	// elements each satisfy `{ x int; y int }`.
-	corners: []{
-		x int
-		y int
-	}
+    	// an ARRAY-interface field (`[]{ … }`): `corners` must be an array whose
+    	// elements each satisfy `{ x int; y int }`.
+    	corners: []{
+    		x int
+    		y int
+    	}
 
-	get area uint
-	set scale
-	prop title
+    	get area uint
+    	set scale
+    	prop title
 
-	draw()
-	resize(int|uint) <bool>
+    	draw()
+    	resize(int|uint) <bool>
 
-	// a method with several overload signatures
-	from {
-		(str)
-		(w int, h int)
-	}
+    	// a method with several overload signatures
+    	from {
+    		(str)
+    		(w int, h int)
+    	}
+    }
+
+    bounds := [f for f in Shape.fields if f.name == "bounds"][0]
+    [
+        Shape.name,
+        [f.name for f in Shape.fields],
+        Shape.fields[0].types[0] == int,
+        [p.name for p in Shape.props],
+        [m.name for m in Shape.methods],
+        len(Shape.methods[2].headers),                   // from's signatures
+        [typeName(bounds.types[0]), [f.name for f in bounds.types[0].fields]],
+    ]
+    = ["Shape", ["id", "label", "bounds", "corners"], true, ["area", "scale", "title"], ["draw", "resize", "from"], 2, ["Interface", ["w", "h"]]]
 }
 
-bounds := [f for f in Shape.fields if f.name == "bounds"][0]
-[
-    Shape.name,
-    [f.name for f in Shape.fields],
-    Shape.fields[0].types[0] == int,
-    [p.name for p in Shape.props],
-    [m.name for m in Shape.methods],
-    len(Shape.methods[2].headers),                   // from's signatures
-    [typeName(bounds.types[0]), [f.name for f in bounds.types[0].fields]],
-]
+example nested_fields {
+    // `sat` reports whether v satisfies interface T (a caught `::` cast).
+    sat := func(v, T) {
+        try { v :: T; return true } catch { return false }
+    }
 
-// `sat` reports whether v satisfies interface T (a caught `::` cast).
-sat := func(v, T) {
-    try { v :: T; return true } catch { return false }
+    // A `::` cast checks a nested `name: { … }` field RECURSIVELY.
+    Boxed := interface { bounds: { w int, h int } }
+
+    // An array field `name: []{ … }` checks every element of the array.
+    Poly := interface { pts: []{ x int, y int } }
+
+    [
+        sat({ bounds: { w: 10, h: 20 } }, Boxed),             // nested: both fields present
+        sat({ bounds: { w: 10 } }, Boxed),                    // nested: missing h -> false
+        sat({ pts: [{ x: 0, y: 0 }, { x: 1, y: 2 }] }, Poly), // array: every element ok
+        sat({ pts: [{ x: 0, y: 0 }, { x: 1 }] }, Poly),       // array: 2nd missing y -> false
+    ]
+    = [true, false, true, false]
 }
-
-// A `::` cast checks a nested `name: { … }` field RECURSIVELY.
-Boxed := interface { bounds: { w int, h int } }
-
-// An array field `name: []{ … }` checks every element of the array.
-Poly := interface { pts: []{ x int, y int } }
-
-[
-    sat({ bounds: { w: 10, h: 20 } }, Boxed),             // nested: both fields present
-    sat({ bounds: { w: 10 } }, Boxed),                    // nested: missing h -> false
-    sat({ pts: [{ x: 0, y: 0 }, { x: 1, y: 2 }] }, Poly), // array: every element ok
-    sat({ pts: [{ x: 0, y: 0 }, { x: 1 }] }, Poly),       // array: 2nd missing y -> false
-]
 
 /**
 ## An enum as a field's type
@@ -428,18 +489,22 @@ Inline it is anonymous — a name would have nothing to name but the field it is
 already on — and it reads back as the enum it is, values and all. A `?` after
 the field name works as it does for any other type.
 **/
-enum Perm { Read, Write }
 
-Named := interface { perm Perm }                    // declared beside, named
-Acl := interface { perm enum { Read, Write } }      // declared inline, anonymous
-OptAcl := interface { perm? enum { Read, Write } }  // nullable: nil or absent
+example enum_field {
+    enum Perm { Read, Write }
 
-inline := Acl.fields[0].types[0]
-[
-    ({perm: Perm.Read} :: Named).perm == Perm.Read,
-    [Acl.fields[0].name, typeName(inline), collect(keys(inline))],
-    {} :: OptAcl,
-]
+    Named := interface { perm Perm }                    // declared beside, named
+    Acl := interface { perm enum { Read, Write } }      // declared inline, anonymous
+    OptAcl := interface { perm? enum { Read, Write } }  // nullable: nil or absent
+
+    inline := Acl.fields[0].types[0]
+    [
+        ({perm: Perm.Read} :: Named).perm == Perm.Read,
+        [Acl.fields[0].name, typeName(inline), collect(keys(inline))],
+        {} :: OptAcl,
+    ]
+    = [true, ["perm", "Enum", ["Read", "Write"]], {}]
+}
 
 /**
 ## An array of a type (`[]T`)
@@ -479,172 +544,234 @@ An empty array satisfies any array type (there is no element to reject), and
 > closing `>` is followed by an item separator, so `f(a < (b) > c)` stays the
 > comparison it looks like.
 **/
-Ints := interface { xs []int }
-Matrix := interface { xs [][]int }                 // nested: an array OF arrays of int
-Mixed := interface { xs []<int|str> }              // several element types, enveloped
-[
-    {xs: [1, 2, 3]} :: Ints or "rejected",
-    {xs: [1, "a"]} :: Ints or "rejected",
-    {xs: 1} :: Ints or "rejected",                  // not an array
-    {xs: []} :: Ints or "rejected",                 // empty satisfies any array type
-    str(interface { xs []<int> }.fields[0].types[0]), // `[]<int>` is `[]int`, written long
-    {xs: [[1], [2, 3]]} :: Matrix or "rejected",
-    {xs: [1, 2]} :: Matrix or "rejected",
-    {xs: [1, "a"]} :: Mixed or "rejected",
-    {xs: [1, true]} :: Mixed or "rejected",
-]
 
-/**
-A **function header is a type** wherever a type goes — a field of one requires a
-CALLABLE whose signature the header matches — and it is the single type that
-keeps its envelope inside an array type (among several element types it is
-enveloped like the others).
-**/
-Fn := interface { f <(x int) <ret any>> }
-Fns := interface { fs []<(x int) <ret any>> }
-FnOrStr := interface { fs []<<(x int)>|str> }
-fits := func(v, T) => (v :: T or nil) != nil
-[
-    fits({f: func(x int) => x}, Fn), fits({f: 1}, Fn),
-    fits({fs: [func(x int) => x]}, Fns), fits({fs: [1]}, Fns),
-    fits({fs: [func(x int) => x, "a"]}, FnOrStr),
-]
+example array_field {
+    Ints := interface { xs []int }
+    Matrix := interface { xs [][]int }                 // nested: an array OF arrays of int
+    Mixed := interface { xs []<int|str> }              // several element types, enveloped
+    [
+        {xs: [1, 2, 3]} :: Ints or "rejected",
+        {xs: [1, "a"]} :: Ints or "rejected",
+        {xs: 1} :: Ints or "rejected",                  // not an array
+        {xs: []} :: Ints or "rejected",                 // empty satisfies any array type
+        str(interface { xs []<int> }.fields[0].types[0]), // `[]<int>` is `[]int`, written long
+        {xs: [[1], [2, 3]]} :: Matrix or "rejected",
+        {xs: [1, 2]} :: Matrix or "rejected",
+        {xs: [1, "a"]} :: Mixed or "rejected",
+        {xs: [1, true]} :: Mixed or "rejected",
+    ]
+    = [{xs: [1, 2, 3]}, "rejected", "rejected", {xs: []}, "[]int", {xs: [[1], [2, 3]]}, "rejected", {xs: [1, "a"]}, "rejected"]
 
-/**
-Both types are read wherever a type is written, not only on an interface field.
-**/
-func total(xs []int) {                       // a function parameter
-    sum := 0
-    for _, v in xs { sum += v }
-    return sum
+    /**
+    A **function header is a type** wherever a type goes — a field of one requires a
+    CALLABLE whose signature the header matches — and it is the single type that
+    keeps its envelope inside an array type (among several element types it is
+    enveloped like the others).
+    **/
+    Fn := interface { f <(x int) <ret any>> }
+    Fns := interface { fs []<(x int) <ret any>> }
+    FnOrStr := interface { fs []<<(x int)>|str> }
+    fits := func(v, T) => (v :: T or nil) != nil
+    [
+        fits({f: func(x int) => x}, Fn), fits({f: 1}, Fn),
+        fits({fs: [func(x int) => x]}, Fns), fits({fs: [1]}, Fns),
+        fits({fs: [func(x int) => x, "a"]}, FnOrStr),
+    ]
+    = [true, false, true, false, true]
+
+    /**
+    Both types are read wherever a type is written, not only on an interface field.
+    **/
+    func total(xs []int) {                       // a function parameter
+        sum := 0
+        for _, v in xs { sum += v }
+        return sum
+    }
+    class Basket { items []str = [] }            // a class field
+    func apply(cb <(x int)>) => cb(2)            // a function-header parameter
+    [
+        total([1, 2, 3]), total(["a"]) or "rejected",
+        Basket(; items = ["pão"]).items, Basket(; items = [1]) or "rejected",
+        apply(func(x int) => x * 3),
+    ]
+    = [6, "rejected", ["pão"], "rejected", 6]
 }
-class Basket { items []str = [] }            // a class field
-func apply(cb <(x int)>) => cb(2)            // a function-header parameter
-[
-    total([1, 2, 3]), total(["a"]) or "rejected",
-    Basket(; items = ["pão"]).items, Basket(; items = [1]) or "rejected",
-    apply(func(x int) => x * 3),
-]
 
 // The anonymous expression form is a value like any other.
 Point := interface { x int; y int; get norm float }
 println("anon:      ", typeName(Point), len(Point.fields), Point.fields[1].name)
 
-interface Greeter { name str; greet() <str> }
+example iface_satisfy {
+    interface Greeter { name str; greet() <str> }
 
-class Person {
-    name = ""
-    methods { greet() => "hi " + this.name }
-}
-class Anon { label = "?" }                      // no `name`, no greet()
-func welcome(g Greeter) => g.greet() + "!"      // an interface parameter
-
-p := Person(; name = "Ada")
-d := {name: "Bo", greet: func() => "hi Bo"}     // a dict satisfies it too
-bad := {name: "x"}                              // no callable `greet`
-[
-    (p::Greeter).greet(),
-    Anon()::Greeter or "rejected",
-    welcome(p),
-    (d::Greeter).greet(), welcome(d),
-    bad::Greeter or "is bad",                   // `or` turns the error into a value
-]
-
-render := func(indent int, obj) => "<" + str(indent) + ":" + str(obj.name) + ">"
-Renderable := interface {
-    name str
-    funcs {
-        render <(indent int, @self)>      // require render(int, <object>) in scope
+    class Person {
+        name = ""
+        methods { greet() => "hi " + this.name }
     }
+    class Anon { label = "?" }                      // no `name`, no greet()
+    func welcome(g Greeter) => g.greet() + "!"      // an interface parameter
+
+    p := Person(; name = "Ada")
+    d := {name: "Bo", greet: func() => "hi Bo"}     // a dict satisfies it too
+    bad := {name: "x"}                              // no callable `greet`
+    [
+        (p::Greeter).greet(),
+        Anon()::Greeter or "rejected",
+        welcome(p),
+        (d::Greeter).greet(), welcome(d),
+        bad::Greeter or "is bad",                   // `or` turns the error into a value
+    ]
+    = ["hi Ada", "rejected", "hi Ada!", "hi Bo", "hi Bo!", "is bad"]
 }
 
-noObj := func(indent int) => indent     // does not take the object
-NotRenderable := interface { funcs { noObj <(indent int, @self)> } }
+example iface_funcs {
+    render := func(indent int, obj) => "<" + str(indent) + ":" + str(obj.name) + ">"
+    Renderable := interface {
+        name str
+        funcs {
+            render <(indent int, @self)>      // require render(int, <object>) in scope
+        }
+    }
 
-r := {name: "Ada"}
-[(r :: Renderable).name, r :: NotRenderable or "no renderer"]
+    noObj := func(indent int) => indent     // does not take the object
+    NotRenderable := interface { funcs { noObj <(indent int, @self)> } }
 
-interface Tagged { name str; tag? int|str }
-[
-    ({name: "a", tag: 3} :: Tagged).tag,
-    ({name: "b", tag: nil} :: Tagged).name,     // a nil tag is fine
-    ({name: "c"} :: Tagged).name,               // an absent tag is fine
-]
-
-icons := func() {
-    interface IconOptions { icon str|uuid|IconOptions; width? int }
-    type Icon <str|uuid|IconOptions>
-    return [IconOptions, Icon]
+    r := {name: "Ada"}
+    [(r :: Renderable).name, r :: NotRenderable or "no renderer"]
+    = ["Ada", "no renderer"]
 }
-[IconOptions, Icon] := icons()   // used after icons() returned
-fits := func(v, T) { try { v :: T; return true } catch { return false } }
-[
-    fits({icon: {icon: "home", width: 24}}, IconOptions),
-    fits({icon: {icon: 24}}, IconOptions),        // 24: no icon
-    fits("home", Icon),
-    fits(uuid("01a0a168-6707-748f-b487-c0ab78e25c11"), Icon),
-    IconOptions.fields[0].types[2] == IconOptions, // itself
-]
 
-interface Reader { get pos int; read() <_ str> }
-interface Seeker { *Reader; set pos; seek(n int) }
-interface HasRun { run() }
-flat := Seeker.@flat
-[
-    [p.name for p in flat.props], [m.name for m in flat.methods],
-    str((interface { get x int; set x int }).@flat.props[0]),          // same type
-    str((interface { get x int; set x str; set x }).@flat.props[0]),   // mixed types
-    interface { *HasRun; get run int }.@flat or "conflict rejected",   // run(): method vs getter
-]
+example iface_defaults {
+    enum mode { r; w }
+    k := 5
+    interface Opts {
+        layout? str = "table"
+        n int = 1 + 2              // computed where the interface is declared
+        m? mode = #w               // through the type: the member w
+        note? str = nil            // nil is a default too
+        twice? int = (= k * 2)     // a computed value: called on every cast
+    }
 
-// what a glob import of plugins would give: a field per plugin
-plugins := {pt: 1, en: 2}
-langFields := {}
-for name, _ in plugins { langFields[name] = (; types=[bool], nullable=true) }
-interface Languages {
-    default str
-    **{fields: langFields}
+    a := {} :> Opts
+    b := {layout: "cards", n: 9, m: 1} :> Opts
+    c := {layout: no, note: no} :> Opts      // reset: not given, the default
+    d := {layout: nil} :> Opts                // nil is a value: kept
+    k = 7
+    [a.layout, a.n, a.m == mode.w, a.note, a.twice,
+     b.layout, b.n, b.m == mode.r,
+     c.layout, c.note, d.layout, ({} :> Opts).twice,
+     Opts.fields[0].default, Opts.fields[0].hasDefault]
+    = ["table", 3, true, nil, 10, "cards", 9, true, "table", nil, nil, 14, "table", true]
 }
-names := []
-for f in Languages.@flat.fields { names += f.name }
-[
-    ({default: "pt", pt: true}) :: Languages != nil,
-    names,
-]
 
-render := func(indent int, obj) => "<" + str(indent) + ">"
-extra := {methods: {area: <() <float>>}, props: {label: <() <str>>}}
-interface Shape {
-    name str
-    **extra
-    **{funcs: {render: (; fn=render, headers=[<(indent int, @self)>])}}
+example iface_yes {
+    interface F { required? flag; readonly? bool; layout? str; mode? flag|str }
+    refused := func(f) { try { f(); return false } catch { return true } }
+    [((;required, readonly) :> F), ({mode: yes} :> F).mode,
+     refused(() => ({layout: yes} :> F)),     // a str wants a value
+     refused(() => ({readonly: yes} :: F))]   // `::` converts nothing
+    = [{required: yes, readonly: true}, yes, true, true]
 }
-class Square { name str; methods { area() => 4.0 }; props { label = "square" } }
-rejects := func(f) { try { f(); return false } catch { return true } }
-[
-    typeName(Square(; name="s") :: Shape),
-    rejects(() => ({name: "x"}) :: Shape),   // no area, no label
-]
 
-interface HasName { name str }
-interface HasAge  { age int }
-interface HasTags { tags []str }
+example iface_nullable {
+    interface Tagged { name str; tag? int|str }
+    [
+        ({name: "a", tag: 3} :: Tagged).tag,
+        ({name: "b", tag: nil} :: Tagged).name,     // a nil tag is fine
+        ({name: "c"} :: Tagged).name,               // an absent tag is fine
+    ]
+    = [3, "b", "c"]
+}
 
-// a literal list of parents
-interface Human { *[HasName, HasAge] }
+example iface_self {
+    icons := func() {
+        interface IconOptions { icon str|uuid|IconOptions; width? int }
+        type Icon <str|uuid|IconOptions>
+        return [IconOptions, Icon]
+    }
+    [IconOptions, Icon] := icons()   // used after icons() returned
+    fits := func(v, T) { try { v :: T; return true } catch { return false } }
+    [
+        fits({icon: {icon: "home", width: 24}}, IconOptions),
+        fits({icon: {icon: 24}}, IconOptions),        // 24: no icon
+        fits("home", Icon),
+        fits(uuid("01a0a168-6707-748f-b487-c0ab78e25c11"), Icon),
+        IconOptions.fields[0].types[2] == IconOptions, // itself
+    ]
+    = [true, false, true, true, true]
+}
 
-// a list held in a variable (nested arrays flatten), plus an own field
-personParts := [HasName, [HasAge, HasTags]]
-interface Associate { *personParts; id int }
+example iface_flat {
+    interface Reader { get pos int; read() <_ str> }
+    interface Seeker { *Reader; set pos; seek(n int) }
+    interface HasRun { run() }
+    flat := Seeker.@flat
+    [
+        [p.name for p in flat.props], [m.name for m in flat.methods],
+        str((interface { get x int; set x int }).@flat.props[0]),          // same type
+        str((interface { get x int; set x str; set x }).@flat.props[0]),   // mixed types
+        interface { *HasRun; get run int }.@flat or "conflict rejected",   // run(): method vs getter
+    ]
+    = [["pos"], ["seek", "read"], "prop x int", "prop x { get int; set str|any }", "conflict rejected"]
+}
 
-fitsIface := func(v, T) { try { v :: T; return true } catch { return false } }
-[
-    fitsIface({name: "ann", age: 30}, Human),
-    fitsIface({name: "ann"}, Human),              // no age
-    fitsIface({name: "b", age: 1, tags: ["x"], id: 7}, Associate),
-    len(Human.@flat.fields),      // name, age
-    len(Associate.@flat.fields),  // name, age, tags, id
-]
+example iface_spread {
+    // what a glob import of plugins would give: a field per plugin
+    plugins := {pt: 1, en: 2}
+    langFields := {}
+    for name, _ in plugins { langFields[name] = (; types=[bool], nullable=true) }
+    interface Languages {
+        default str
+        **{fields: langFields}
+    }
+    names := []
+    for f in Languages.@flat.fields { names += f.name }
+    [
+        ({default: "pt", pt: true}) :: Languages != nil,
+        names,
+    ]
+    = [true, ["default", "en", "pt"]]
+}
+
+example iface_spread_members {
+    render := func(indent int, obj) => "<" + str(indent) + ">"
+    extra := {methods: {area: <() <float>>}, props: {label: <() <str>>}}
+    interface Shape {
+        name str
+        **extra
+        **{funcs: {render: (; fn=render, headers=[<(indent int, @self)>])}}
+    }
+    class Square { name str; methods { area() => 4.0 }; props { label = "square" } }
+    rejects := func(f) { try { f(); return false } catch { return true } }
+    [
+        typeName(Square(; name="s") :: Shape),
+        rejects(() => ({name: "x"}) :: Shape),   // no area, no label
+    ]
+    = ["Square", true]
+}
+
+example interface_parents {
+    interface HasName { name str }
+    interface HasAge  { age int }
+    interface HasTags { tags []str }
+
+    // a literal list of parents
+    interface Human { *[HasName, HasAge] }
+
+    // a list held in a variable (nested arrays flatten), plus an own field
+    personParts := [HasName, [HasAge, HasTags]]
+    interface Associate { *personParts; id int }
+
+    fitsIface := func(v, T) { try { v :: T; return true } catch { return false } }
+    [
+        fitsIface({name: "ann", age: 30}, Human),
+        fitsIface({name: "ann"}, Human),              // no age
+        fitsIface({name: "b", age: 1, tags: ["x"], id: 7}, Associate),
+        len(Human.@flat.fields),      // name, age
+        len(Associate.@flat.fields),  // name, age, tags, id
+    ]
+    = [true, false, true, 2, 4]
+}
 
 return Shape.name
 ````

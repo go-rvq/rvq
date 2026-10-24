@@ -13,7 +13,7 @@ arguments. Part of the [Collections](https://github.com/gad-lang/gad/blob/GAD_RE
 ```gad
 pair := [color = "red"]
 [pair.k, pair.v, pair.array, typeName(pair), typeName(["color"])]
-// => ["color", "red", ["color", "red"], "keyValue", "array"]
+= ["color", "red", ["color", "red"], "keyValue", "array"]
 ```
 
 ## Ordered pairs
@@ -27,18 +27,68 @@ kva := (; a = 1, b = 2)
 anyKeys := (; name = "x", "a b" = 1, 42 = 2, true = 3, [("k" + "1") = 9])
 built := keyValueArray([a=1], keyValue("b", 2))
 [str(kva), str(anyKeys), str(built)]
-// => ["(;a=1, b=2)", "(;name=\"x\", \"a b\"=1, 42=2, true=3, k1=9)", "(;a=1, b=2)"]
+= ["(;a=1, b=2)", "(;name=\"x\", \"a b\"=1, 42=2, true=3, k1=9)", "(;a=1, b=2)"]
 ```
 
-## Flags
+## Flags: given without a value, and resets
 
-A bare key is a flag (`key` == `key=yes`); `key=no` drops the entry.
-`kva.flag(name)` reads one.
+A bare key is the flag `yes` — the key **given without a value** (`key` ==
+`key=yes`); `key=true`, `key=nil`, … give it a value (see
+[values and types](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/values_and_types.gad)). `kva.flag(name)` reads a key as a
+switch: true when its value is truthy.
+
+`key=no` **resets** the key: as if it had not been given. In a sequence of
+pairs a reset removes the pairs of its key that come before it — and is
+dropped itself when a pair of the key comes after it:
+
+| Pairs | Are |
+|-------|-----|
+| `(;a=1, a=2, a=no, a=3, a=4)` | `(;a=3, a=4)` |
+| `(;a=2, a=no)` | `(;a=no)` |
+| `(;a=no)` | `(;a=no)` |
+| `(;a=no, a=2)` | `(;a=2)` |
+| `(;a) + (;a=2) + (;a=no)` | `(;a=no)` |
+
+A reset that is the last pair of its key **stays**, so the array still resets
+the key when merged on another: `(;a) + (;a=2) + (;a=no)` — and
+`(;a=1) + ((;a=2) + (;a=no))` — are `(;a=no)`, `{}` as a dict; a dict holding
+`no` converts to one (`{a: no} :> keyValueArray` is `(;a=no)`). An array
+built in Go is read the same way: its resets applied by every read. The rule is the same for
+every merge: `+`, `++`, a `**spread` in a literal, the arguments of `dict(…)`,
+the named arguments of a call.
+
+Reading a reset key finds nothing: `kva.get(k)` is `nil`, `k in kva` is false,
+`kva.values(k)` holds the values given after the last reset.
 
 ```gad
-flags := (; debug, verbose = no, level = 3)
-[str(flags), flags.flag("debug"), flags.flag("verbose")]
-// => ["(;debug, level=3)", true, false]
+flags := (; debug, verbose = no, level = 3, color = true)
+[str(flags), flags.flag("debug"), flags.flag("verbose"), flags.get("debug") == yes, typeName(flags.get("color"))]
+= ["(;debug, verbose=no, level=3, color=true)", true, false, true, "bool"]
+```
+
+```gad
+seq := (;a=1, a=2, a=no, a=3, a=4)
+base := (;a=1, b=2)
+[str(seq), seq == (;a=3, a=4), str((;a) + (;a=2) + (;a=no)),
+ dict((;a) + (;a=2)), dict((;a) + (;a=2) + (;a=no)), dict((;a=1) + ((;a=2) + (;a=no))),
+ str((;**base, a=no)), dict(base, (;b=no))]
+= ["(;a=3, a=4)", true, "(;a=no)", {a: 2}, {}, {}, "(;b=2, a=no)", {a: 1}]
+
+reset := (;a=1, a=no)
+["a" in reset, reset.get("a"), (;a=1, a=no, a=2, a=3).values("a")]
+= [false, nil, [2, 3]]
+```
+
+A named argument reset is not given: its parameter is `no` until its default
+(`?!=`, see [operators](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/user_operators.gad)) — and one given `nil` is `nil` —,
+and the rest (`**na`) has neither it nor the reset. Resetting a name the function does
+not take is no error.
+
+```gad
+f := func(; a=1, **rest) => [a, dict(rest)]
+defaults := (;a=5)
+[f(), f(; a=2), f(; a=no), f(; a=nil), f(; a=yes), f(; **defaults), f(; **defaults, a=no), f(; b=2, b=no, c)]
+= [[1, {}], [2, {}], [1, {}], [nil, {}], [yes, {}], [5, {}], [1, {}], [1, {c: yes}]]
 ```
 
 ## Function values
@@ -48,7 +98,7 @@ A value may be a function or closure, written in method form.
 ```gad
 fns := (; greet() => "hi", add(a, b) => a + b, twice(x) { return x * 2 })
 [fns[0].v(), fns[1].v(2, 3), fns[2].v(4)]
-// => ["hi", 5, 8]
+= ["hi", 5, 8]
 ```
 
 ## Typed keys
@@ -59,7 +109,7 @@ that types a function's named parameters (`func(; n int = 0)`).
 ```gad
 typed := (; id int, label str = "none")
 [typed[0].k.name, len(typed[0].k.types), typed[1].v]
-// => ["id", 1, "none"]
+= ["id", 1, "none"]
 ```
 
 ## Duplicates, lookup and mutation
@@ -74,7 +124,7 @@ removed := str(dup.delete("tag"))
 m := (; x = 1)
 m[0].v = 99                          // indexing yields the keyValue
 [found, removed, str(m)]
-// => [[[1, 2], [1, 2, 3]], "(;name=3)", "(;x=99)"]
+= [[[1, 2], [1, 2, 3]], "(;name=3)", "(;x=99)"]
 ```
 
 ## Spread, iteration and conversion
@@ -88,55 +138,137 @@ base := (; a = 1, b = 2)
 merged := (; head = 0, **base)
 show := func(; a = 0, b = 0, **rest) => [a, b, dict(rest)]
 [str(merged), dict(base), show(; **(; a = 1, b = 2, c = 3))]
-// => ["(;head=0, a=1, b=2)", {a: 1, b: 2}, [1, 2, {c: 3}]]
+= ["(;head=0, a=1, b=2)", {a: 1, b: 2}, [1, 2, {c: 3}]]
 
 for k, v in base {
     println(k, "=", v)
 }
-```
-
-Output:
-
-```text
+<<<
 a = 1
 b = 2
+>>>
+```
+
+## Typed key-value arrays (`KeyValueArrayType[K, V]`)
+
+`KeyValueArrayType[K, V]` is the type of a key-value array whose keys are of
+`K` — **any type**: a key-value array's keys are — and whose values are of
+`V`, as [typed dicts](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/typed_dicts.gad) are for dicts. `KeyValueArrayType[V]` is
+`KeyValueArrayType[any, V]`, and **`keyValueArray` is
+`KeyValueArrayType[any, any]`** — the same object.
+
+- The pairs keep their **order and duplicates**, each checked; a **reset**
+  (`key=no`) is no value: never checked.
+- It is **structural** (a plain key-value array of those pairs is of it) and a
+  **constructor**: named args, `[k=v]`, `[key, value]` pairs, a key-value array
+  or a dict as pairs — one array alone its indexes as keys —, each checked;
+  `::>` converts each key and value.
+- `type NAME keyValueArray[K, V]` declares a **nominal** type, a child of the
+  generic: its instances are key-value arrays (`o :: keyValueArray`), each pair
+  added (`+`, `++`) checked, a new instance; its constructors and overloads are
+  its own. Written where a value goes: `type keyValueArray[K, V]` (anonymous),
+  `type NAME keyValueArray[…]` (named).
+
+```gad
+K := KeyValueArrayType[str, int]
+[K(; a=1, a=2), (;a="1") ::> K, keyValueArray === KeyValueArrayType[any, any]]
+= [(;a=1, a=2), (;a=1), true]
+type opts keyValueArray[str, int|bool]
+o := opts(; width=2, wrap=true) + [height=3]
+[typeName(o), len(o), o :: keyValueArray == o]
+= ["opts", 3, true]
 ```
 
 ## Example — `key_value_array.gad`
 
 ```gad
-pair := [color = "red"]
-[pair.k, pair.v, pair.array, typeName(pair), typeName(["color"])]
-
-kva := (; a = 1, b = 2)
-anyKeys := (; name = "x", "a b" = 1, 42 = 2, true = 3, [("k" + "1") = 9])
-built := keyValueArray([a=1], keyValue("b", 2))
-[str(kva), str(anyKeys), str(built)]
-
-flags := (; debug, verbose = no, level = 3)
-[str(flags), flags.flag("debug"), flags.flag("verbose")]
-
-fns := (; greet() => "hi", add(a, b) => a + b, twice(x) { return x * 2 })
-[fns[0].v(), fns[1].v(2, 3), fns[2].v(4)]
-
-typed := (; id int, label str = "none")
-[typed[0].k.name, len(typed[0].k.types), typed[1].v]
-
-dup := (; tag = 1, tag = 2, name = 3)
-found := [dup.values("tag"), dup.values()]
-removed := str(dup.delete("tag"))
-m := (; x = 1)
-m[0].v = 99                          // indexing yields the keyValue
-[found, removed, str(m)]
-
-base := (; a = 1, b = 2)
-merged := (; head = 0, **base)
-show := func(; a = 0, b = 0, **rest) => [a, b, dict(rest)]
-[str(merged), dict(base), show(; **(; a = 1, b = 2, c = 3))]
-
-for k, v in base {
-    println(k, "=", v)
+example kv_pair {
+    pair := [color = "red"]
+    [pair.k, pair.v, pair.array, typeName(pair), typeName(["color"])]
+    = ["color", "red", ["color", "red"], "keyValue", "array"]
 }
 
+example kva_keys {
+    kva := (; a = 1, b = 2)
+    anyKeys := (; name = "x", "a b" = 1, 42 = 2, true = 3, [("k" + "1") = 9])
+    built := keyValueArray([a=1], keyValue("b", 2))
+    [str(kva), str(anyKeys), str(built)]
+    = ["(;a=1, b=2)", "(;name=\"x\", \"a b\"=1, 42=2, true=3, k1=9)", "(;a=1, b=2)"]
+}
+
+example kva_flags {
+    flags := (; debug, verbose = no, level = 3, color = true)
+    [str(flags), flags.flag("debug"), flags.flag("verbose"), flags.get("debug") == yes, typeName(flags.get("color"))]
+    = ["(;debug, verbose=no, level=3, color=true)", true, false, true, "bool"]
+}
+
+example kva_resets {
+    seq := (;a=1, a=2, a=no, a=3, a=4)
+    base := (;a=1, b=2)
+    [str(seq), seq == (;a=3, a=4), str((;a) + (;a=2) + (;a=no)),
+     dict((;a) + (;a=2)), dict((;a) + (;a=2) + (;a=no)), dict((;a=1) + ((;a=2) + (;a=no))),
+     str((;**base, a=no)), dict(base, (;b=no))]
+    = ["(;a=3, a=4)", true, "(;a=no)", {a: 2}, {}, {}, "(;b=2, a=no)", {a: 1}]
+
+    reset := (;a=1, a=no)
+    ["a" in reset, reset.get("a"), (;a=1, a=no, a=2, a=3).values("a")]
+    = [false, nil, [2, 3]]
+}
+
+example kva_named_resets {
+    f := func(; a=1, **rest) => [a, dict(rest)]
+    defaults := (;a=5)
+    [f(), f(; a=2), f(; a=no), f(; a=nil), f(; a=yes), f(; **defaults), f(; **defaults, a=no), f(; b=2, b=no, c)]
+    = [[1, {}], [2, {}], [1, {}], [nil, {}], [yes, {}], [5, {}], [1, {}], [1, {c: yes}]]
+}
+
+example kva_funcs {
+    fns := (; greet() => "hi", add(a, b) => a + b, twice(x) { return x * 2 })
+    [fns[0].v(), fns[1].v(2, 3), fns[2].v(4)]
+    = ["hi", 5, 8]
+}
+
+example kva_typed {
+    typed := (; id int, label str = "none")
+    [typed[0].k.name, len(typed[0].k.types), typed[1].v]
+    = ["id", 1, "none"]
+}
+
+example kva_access {
+    dup := (; tag = 1, tag = 2, name = 3)
+    found := [dup.values("tag"), dup.values()]
+    removed := str(dup.delete("tag"))
+    m := (; x = 1)
+    m[0].v = 99                          // indexing yields the keyValue
+    [found, removed, str(m)]
+    = [[[1, 2], [1, 2, 3]], "(;name=3)", "(;x=99)"]
+}
+
+example kva_spread {
+    base := (; a = 1, b = 2)
+    merged := (; head = 0, **base)
+    show := func(; a = 0, b = 0, **rest) => [a, b, dict(rest)]
+    [str(merged), dict(base), show(; **(; a = 1, b = 2, c = 3))]
+    = ["(;head=0, a=1, b=2)", {a: 1, b: 2}, [1, 2, {c: 3}]]
+
+    for k, v in base {
+        println(k, "=", v)
+    }
+}
+<<<
+a = 1
+b = 2
+>>>
+
 return str(kva)
+
+example kva_type {
+    K := KeyValueArrayType[str, int]
+    [K(; a=1, a=2), (;a="1") ::> K, keyValueArray === KeyValueArrayType[any, any]]
+    = [(;a=1, a=2), (;a=1), true]
+    type opts keyValueArray[str, int|bool]
+    o := opts(; width=2, wrap=true) + [height=3]
+    [typeName(o), len(o), o :: keyValueArray == o]
+    = ["opts", 3, true]
+}
 ```

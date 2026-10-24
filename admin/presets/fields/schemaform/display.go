@@ -603,7 +603,7 @@ func displayTextOf(ctx context.Context, f *Field, v any, record any) string {
 			}
 		}
 		text = FormatNumber(contextLanguage(ctx), v, fieldDecimals(f))
-	case "date", "time", "calendarDate", "calendarTime":
+	case "date", "time", "cdate", "cdtime", "ctime":
 		if t, hasDate, hasTime, ok := parseDateTime(v); ok {
 			text = FormatDateTime(ctx, t, hasDate, hasTime)
 		}
@@ -661,7 +661,7 @@ func FormatDateTime(ctx context.Context, t time.Time, hasDate, hasTime bool) str
 }
 
 // DateTimeDisplayFunc shows a date, a time or both — "date", "time",
-// "calendarDate", "calendarTime" — as the language of the request writes it
+// "cdate", "cdtime", "ctime" — as the language of the request writes it
 // (the short forms of i18n's DateFormatter, TimeFormatter, DateTimeFormatter:
 // pt-BR 10/03/2026, 08:05, 10/03/2026 08:05), with its prefix and suffix;
 // what is not one of them, as text.
@@ -871,23 +871,24 @@ func EnumDisplayFunc(c *Context) h.HTMLComponent {
 
 func defaultDisplays() map[string]ComponentFunc {
 	return map[string]ComponentFunc{
-		DefaultType:    TextDisplayFunc,
-		"int":          NumberDisplayFunc,
-		"uint":         NumberDisplayFunc,
-		"float":        NumberDisplayFunc,
-		"decimal":      NumberDisplayFunc,
-		"duration":     TextDisplayFunc,
-		"time":         DateTimeDisplayFunc,
-		"date":         DateTimeDisplayFunc,
-		"calendarDate": DateTimeDisplayFunc,
-		"calendarTime": DateTimeDisplayFunc,
-		RangeType:      RangeDisplayFunc,
-		"text":         LongTextDisplayFunc,
-		"html":         HTMLDisplayFunc,
-		"bool":         BoolDisplayFunc,
-		"color":        ColorDisplayFunc,
-		FileType:       FileDisplayFunc,
-		ImageType:      FileDisplayFunc,
-		AddressType:    AddressDisplayFunc,
+		DefaultType: TextDisplayFunc,
+		"int":       NumberDisplayFunc,
+		"uint":      NumberDisplayFunc,
+		"float":     NumberDisplayFunc,
+		"decimal":   NumberDisplayFunc,
+		"duration":  TextDisplayFunc,
+		"time":      DateTimeDisplayFunc,
+		"date":      DateTimeDisplayFunc,
+		"cdate":     DateTimeDisplayFunc,
+		"cdtime":    DateTimeDisplayFunc,
+		"ctime":     DateTimeDisplayFunc,
+		RangeType:   RangeDisplayFunc,
+		"text":      LongTextDisplayFunc,
+		"html":      HTMLDisplayFunc,
+		"bool":      BoolDisplayFunc,
+		"color":     ColorDisplayFunc,
+		FileType:    FileDisplayFunc,
+		ImageType:   FileDisplayFunc,
+		AddressType: AddressDisplayFunc,
 	}
 }

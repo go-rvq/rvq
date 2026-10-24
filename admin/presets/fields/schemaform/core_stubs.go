@@ -27,7 +27,7 @@ type (
 func New() *Builder {
 	types := map[string]ComponentFunc{}
 	for _, name := range []string{DefaultType, "int", "uint", "bool", "color", "float", "decimal", "text", "html",
-		"time", "date", "calendarDate", "calendarTime", RangeType, "duration", FileType, ImageType, AddressType} {
+		"time", "date", "cdate", "cdtime", "ctime", RangeType, "duration", FileType, ImageType, AddressType} {
 		types[name] = nil
 	}
 	return &Builder{types: types, displays: map[string]ComponentFunc{}}

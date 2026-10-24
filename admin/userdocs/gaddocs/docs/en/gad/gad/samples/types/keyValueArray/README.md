@@ -1,0 +1,91 @@
+
+# keyValueArray
+
+A **keyValueArray** is an ordered list of key/value pairs — keys may repeat,
+the order is kept. Its literal is `(;a=1, b=2)`, the form named arguments
+take; a typed one (`type opts keyValueArray[str, int]`) checks its pairs.
+
+## Constructors
+
+`keyValueArray(*pairs)` of `keyValue`s, of `[k, v]` pairs, or of a dict.
+
+```gad
+[keyValueArray(keyValue("a", 1), [b=2]), keyValueArray({c: 3})]
+= [(;a=1, b=2), (;c=3)]
+```
+
+## Methods
+
+`get(key)` is the value of the last pair of the key; `values(key)` all of
+them; `delete(key)` removes the pairs; `flag(key)` the truth of a flag
+(`debug`, in `(;debug)`); `sort()`/`sortReverse()` order the pairs by key —
+in place; `sort(true)` a sorted copy.
+
+```gad
+o := (;b=2, a=3, a=1, debug)
+[o.get("a"), o.values("a"), o.flag("debug"), o.sort(true), o.delete("b")]
+= [1, [3, 1], true, (;a=1, a=3, b=2, debug), (;a=3, a=1, debug)]
+```
+
+## Operators
+
+`+` appends pairs (a new key-value array); `in` tests a key. `<`, `<=`, `>`,
+`>=` order them as Python orders lists of `(key, value)` tuples: by the first
+pairs that differ — key, then value —, else the shorter first.
+
+```gad
+o := (;a=1) + (;b=2)
+[o, "a" in o, (;a=1, b=2) < (;a=1, b=3), (;a=1) < (;b=0), (;a=1) < (;a=1, b=0)]
+= [(;a=1, b=2), true, true, true, true]
+```
+
+## See also
+
+- [Key-value arrays](../../key_value_array/README.md), [keyValue](../keyValue/README.md).
+
+## Type
+
+### keyValueArray
+
+```gad
+keyValueArray type
+```
+
+#### Constructors
+
+```gad
+keyValueArray(…)
+```
+
+#### Operators
+
+```gad
+a + b
+a ++ b
+a < b
+a <= b
+a > b
+a >= b
+a in b
+```
+
+## Example — `keyValueArray.gad`
+
+```gad
+example constructors {
+    [keyValueArray(keyValue("a", 1), [b=2]), keyValueArray({c: 3})]
+    = [(;a=1, b=2), (;c=3)]
+}
+
+example methods {
+    o := (;b=2, a=3, a=1, debug)
+    [o.get("a"), o.values("a"), o.flag("debug"), o.sort(true), o.delete("b")]
+    = [1, [3, 1], true, (;a=1, a=3, b=2, debug), (;a=3, a=1, debug)]
+}
+
+example operators {
+    o := (;a=1) + (;b=2)
+    [o, "a" in o, (;a=1, b=2) < (;a=1, b=3), (;a=1) < (;b=0), (;a=1) < (;a=1, b=0)]
+    = [(;a=1, b=2), true, true, true, true]
+}
+```

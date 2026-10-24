@@ -16,6 +16,15 @@ Type is a type of Time Value
 
 Weekdays
 
+MonthSpans are the named counts of months of trunc/round's m:
+Bimester (2), Quarter (3), Semester (6).
+
+HourSpans are the named counts of hours of trunc/round's h:
+QuarterDay (6), HalfDay (12).
+
+MinuteSpans are the named counts of minutes of trunc/round's min:
+QuarterHour (15), HalfHour (30).
+
 ### Layouts
 
 ANSIC
@@ -144,7 +153,7 @@ Dynamically calculated getters for a time value are as follows:
 
 ## Functions
 
-```gad
+```gad ignore
 utc() <Location>
 ```
 
@@ -152,7 +161,7 @@ Returns Universal Coordinated Time (UTC) location.
 
 ---
 
-```gad
+```gad ignore
 local() <Location>
 ```
 
@@ -160,7 +169,7 @@ Returns the system's local time zone location.
 
 ---
 
-```gad
+```gad ignore
 monthString(m Months) <str>
 ```
 
@@ -168,7 +177,7 @@ Returns English name of the month m ("January", "February", ...).
 
 ---
 
-```gad
+```gad ignore
 weekdayString(w Weekdays) <str>
 ```
 
@@ -176,7 +185,7 @@ Returns English name of the int weekday w, note that 0 is Sunday.
 
 ---
 
-```gad
+```gad ignore
 durationString(d duration) <str>
 ```
 
@@ -184,7 +193,7 @@ Returns a string representing the duration d in the form "72h3m0.5s".
 
 ---
 
-```gad
+```gad ignore
 durationNanoseconds(d duration) <int>
 ```
 
@@ -192,7 +201,7 @@ Returns the duration d as an int nanosecond count.
 
 ---
 
-```gad
+```gad ignore
 durationMicroseconds(d duration) <int>
 ```
 
@@ -200,7 +209,7 @@ Returns the duration d as an int microsecond count.
 
 ---
 
-```gad
+```gad ignore
 durationMilliseconds(d duration) <int>
 ```
 
@@ -208,7 +217,7 @@ Returns the duration d as an int millisecond count.
 
 ---
 
-```gad
+```gad ignore
 durationSeconds(d duration) <float>
 ```
 
@@ -216,7 +225,7 @@ Returns the duration d as a floating point number of seconds.
 
 ---
 
-```gad
+```gad ignore
 durationMinutes(d duration) <float>
 ```
 
@@ -224,7 +233,7 @@ Returns the duration d as a floating point number of minutes.
 
 ---
 
-```gad
+```gad ignore
 durationHours(d duration) <float>
 ```
 
@@ -235,7 +244,7 @@ Pauses the current goroutine for at least the duration.
 
 ---
 
-```gad
+```gad ignore
 parseDuration(s str) <duration>
 ```
 
@@ -243,7 +252,7 @@ Parses duration s and returns duration as int or error.
 
 ---
 
-```gad
+```gad ignore
 durationRound(d duration, m duration) <duration>
 ```
 
@@ -251,7 +260,7 @@ Returns the result of rounding duration to the nearest multiple of m.
 
 ---
 
-```gad
+```gad ignore
 durationTruncate(d duration, m duration) <duration>
 ```
 
@@ -259,7 +268,7 @@ Returns the result of rounding duration toward zero to a multiple of m.
 
 ---
 
-```gad
+```gad ignore
 fixedZone(name str, sec int) <Location>
 ```
 
@@ -268,7 +277,7 @@ Returns a Location that always uses the given zone name and offset
 
 ---
 
-```gad
+```gad ignore
 loadLocation(name str) <Location>
 ```
 
@@ -276,7 +285,7 @@ Returns the Location with the given name.
 
 ---
 
-```gad
+```gad ignore
 isLocation(any) <bool>
 ```
 
@@ -284,7 +293,7 @@ Reports whether any value is of location type.
 
 ---
 
-```gad
+```gad ignore
 time() <time>
 ```
 
@@ -292,7 +301,7 @@ Returns zero time.
 
 ---
 
-```gad
+```gad ignore
 since(t time) <duration>
 ```
 
@@ -300,7 +309,7 @@ Returns the time elapsed since t.
 
 ---
 
-```gad
+```gad ignore
 until(t time) <duration>
 ```
 
@@ -308,7 +317,7 @@ Returns the duration until t.
 
 ---
 
-```gad
+```gad ignore
 date(year int, month Months, day int, hour int, min int, sec int, nsec int, loc Location) <time>
 ```
 
@@ -318,7 +327,7 @@ of optional arguments are used if not provided.
 
 ---
 
-```gad
+```gad ignore
 now() <time>
 ```
 
@@ -326,7 +335,7 @@ Returns the current local time.
 
 ---
 
-```gad
+```gad ignore
 parse(layout str, value str, loc Location) <time>
 ```
 
@@ -336,7 +345,7 @@ otherwise `time.ParseInLocation` is called.
 
 ---
 
-```gad
+```gad ignore
 strToDate(s str) <date>
 ```
 
@@ -344,7 +353,7 @@ Parses a date from "YYYYMMDD" or "YYYY-MM-DD".
 
 ---
 
-```gad
+```gad ignore
 strToTime(s str) <time>
 ```
 
@@ -353,15 +362,23 @@ zone is present).
 
 ---
 
-```gad
-strToCalendarTime(s str) <calendarTime>
+```gad ignore
+strToCtime(s str) <ctime>
+```
+
+Parses a time of day "HH:MM[:SS[.frac]]".
+
+---
+
+```gad ignore
+strToCdtime(s str) <cdtime>
 ```
 
 Parses a zone-less "YYYY-MM-DD[ HH:MM:SS[.frac]]" timestamp.
 
 ---
 
-```gad
+```gad ignore
 strToDuration(s str) <duration>
 ```
 
@@ -369,7 +386,7 @@ Parses a Go duration string (e.g. "1h30m").
 
 ---
 
-```gad
+```gad ignore
 strToLocation(s str) <Location>
 ```
 
@@ -377,7 +394,7 @@ Parses a location from an offset ("-0300"/"-03:00") or an IANA name.
 
 ---
 
-```gad
+```gad ignore
 unix(sec int, nsec int) <time>
 ```
 
@@ -387,7 +404,7 @@ Zero values of optional arguments are used if not provided.
 
 ---
 
-```gad
+```gad ignore
 add(t time, d duration) <time>
 ```
 
@@ -396,7 +413,7 @@ Returns the time of t+duration.
 
 ---
 
-```gad
+```gad ignore
 sub(t1 time, t2 time) <duration>
 ```
 
@@ -405,7 +422,7 @@ Returns the duration of t1-t2.
 
 ---
 
-```gad
+```gad ignore
 addDate(t time, years int, months int, days int) <time>
 ```
 
@@ -415,7 +432,7 @@ years, months, and days to t.
 
 ---
 
-```gad
+```gad ignore
 after(t1 time, t2 time) <bool>
 ```
 
@@ -424,7 +441,7 @@ Reports whether the time t1 is after t2.
 
 ---
 
-```gad
+```gad ignore
 before(t1 time, t2 time) <bool>
 ```
 
@@ -433,7 +450,7 @@ Reports whether the time t1 is before t2.
 
 ---
 
-```gad
+```gad ignore
 format(t time, layout str) <str>
 ```
 
@@ -443,7 +460,7 @@ to layout.
 
 ---
 
-```gad
+```gad ignore
 appendFormat(t time, b bytes, layout str) <bytes>
 ```
 
@@ -453,7 +470,7 @@ returns the extended buffer.
 
 ---
 
-```gad
+```gad ignore
 in(t time, loc Location) <time>
 ```
 
@@ -463,7 +480,7 @@ location information set to loc for display purposes.
 
 ---
 
-```gad
+```gad ignore
 round(t time, d duration) <time>
 ```
 
@@ -473,7 +490,7 @@ duration.
 
 ---
 
-```gad
+```gad ignore
 truncate(t time, d duration) <time>
 ```
 
@@ -482,7 +499,7 @@ Truncate returns the result of rounding t down to a multiple of duration.
 
 ---
 
-```gad
+```gad ignore
 isTime(any) <bool>
 ```
 

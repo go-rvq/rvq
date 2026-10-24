@@ -4,7 +4,7 @@
 `gad.transform(value; ".path" = fn, …)` rewrites a JSON-like value — nested
 dicts and arrays — by mapping **yq-style path patterns** to transformer
 functions. It is the imperative, path-driven sibling of the
-[transforming cast `:::`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad): where `:::` coerces by an
+[transforming cast `:>`](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/transform_cast_test.gad): where `:>` coerces by an
 interface's declared shape, `gad.transform` lets you name exactly which nodes to
 rewrite and how.
 

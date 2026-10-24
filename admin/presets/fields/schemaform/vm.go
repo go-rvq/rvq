@@ -553,7 +553,7 @@ const (
 // TextTypes, [minlength, maxlength].
 var (
 	NumberTypes = map[string]bool{"int": true, "uint": true, "float": true, "decimal": true}
-	DateTypes   = map[string]bool{"date": true, "time": true, "calendarDate": true, "calendarTime": true}
+	DateTypes   = map[string]bool{"date": true, "time": true, "cdate": true, "cdtime": true, "ctime": true}
 	TextTypes   = map[string]bool{DefaultType: true, "text": true}
 )
 

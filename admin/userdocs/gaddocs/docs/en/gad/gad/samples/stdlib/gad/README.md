@@ -52,7 +52,7 @@ Example:
 ```gad
 class Point { x int; y int }
 bool(Point(; x=1, y=2) :: gad.Class)
->>> true
+= true
 ```
 
 ## Meta
@@ -73,7 +73,7 @@ reported file name.
 Example:
 ```gad
 typeName(gad.parse("a := 1"))
->>> "SourceFileObject"
+= "SourceFileObject"
 ```
 
 ### parseFile
@@ -96,9 +96,9 @@ its result.
 Example:
 ```gad
 gad.eval("40 + 2")
->>> 42
+= 42
 gad.eval(gad.parse("40 + 2"))
->>> 42
+= 42
 ```
 
 ### quote
@@ -112,7 +112,7 @@ strings and `fence` picks the quoting style.
 Example:
 ```gad
 gad.quote("hi")
->>> "\"hi\""
+= "\"hi\""
 ```
 
 ### unquote
@@ -125,7 +125,7 @@ The inverse of `quote`: parses a Gad string literal `lit` back to its str value.
 Example:
 ```gad
 gad.unquote(gad.quote("hi"))
->>> "hi"
+= "hi"
 ```
 
 ### invoker
@@ -146,7 +146,7 @@ args := [int]
 inv := gad.invoker(str, args)
 args[0] = 42
 inv()
->>> "42"
+= "42"
 ```
 
 ### transform
@@ -157,8 +157,9 @@ transform(value any; **paths) <_ any>
 
 Rewrites a JSON-like `value` — nested dicts and arrays — by mapping yq-style
 path patterns to transformer functions. Each named arg is a `".path" = fn` rule:
-`fn` receives a matched node and returns its replacement. It is the imperative,
-path-driven sibling of the `:::` transforming cast — where `:::` coerces by an
+`fn` — a `<(node any) <any>>` — receives a matched node and returns its
+replacement. It is the imperative,
+path-driven sibling of the `:>` transforming cast — where `:>` coerces by an
 interface's declared shape, `transform` names exactly which nodes to rewrite.
 
 The rewrite is a single BOTTOM-UP pass: a node's children are transformed and
@@ -190,12 +191,12 @@ d := gad.transform({points: [[1, 2], [3, 4]]};
     ".points[]" = (p array) => Point(; x = p[0], y = p[1])
 )
 [typeName(d), typeName(d.pts[0]), d.pts[1].y]
->>> ["Poly", "Point", 4]
+= ["Poly", "Point", 4]
 ```
 ```gad
 // `.*` matches every dict child.
 gad.transform({a: 1, b: 2}; ".*" = (n int) => n + 100)
->>> {a: 101, b: 102}
+= {a: 101, b: 102}
 ```
 
 ## Example — `gad.gad`
@@ -208,7 +209,7 @@ reported file name.
 Example:
 ```gad
 typeName(gad.parse("a := 1"))
->>> "SourceFileObject"
+= "SourceFileObject"
 ```
 **/
 export parse(script str|rawstr; type, name) <_ SourceFileObject> => nil
@@ -225,9 +226,9 @@ its result.
 Example:
 ```gad
 gad.eval("40 + 2")
->>> 42
+= 42
 gad.eval(gad.parse("40 + 2"))
->>> 42
+= 42
 ```
 **/
 export eval(source any; type) <any> => nil
@@ -238,7 +239,7 @@ strings and `fence` picks the quoting style.
 Example:
 ```gad
 gad.quote("hi")
->>> "\"hi\""
+= "\"hi\""
 ```
 **/
 export quote(s str; maxCols, fence) <str> => nil
@@ -248,7 +249,7 @@ The inverse of `quote`: parses a Gad string literal `lit` back to its str value.
 Example:
 ```gad
 gad.unquote(gad.quote("hi"))
->>> "hi"
+= "hi"
 ```
 **/
 export unquote(lit str) <str> => nil
@@ -266,7 +267,7 @@ args := [int]
 inv := gad.invoker(str, args)
 args[0] = 42
 inv()
->>> "42"
+= "42"
 ```
 **/
 export invoker(fn any, args array; **nargs) <ret callable> => nil
@@ -274,8 +275,9 @@ export invoker(fn any, args array; **nargs) <ret callable> => nil
 /**
 Rewrites a JSON-like `value` — nested dicts and arrays — by mapping yq-style
 path patterns to transformer functions. Each named arg is a `".path" = fn` rule:
-`fn` receives a matched node and returns its replacement. It is the imperative,
-path-driven sibling of the `:::` transforming cast — where `:::` coerces by an
+`fn` — a `<(node any) <any>>` — receives a matched node and returns its
+replacement. It is the imperative,
+path-driven sibling of the `:>` transforming cast — where `:>` coerces by an
 interface's declared shape, `transform` names exactly which nodes to rewrite.
 
 The rewrite is a single BOTTOM-UP pass: a node's children are transformed and
@@ -307,12 +309,12 @@ d := gad.transform({points: [[1, 2], [3, 4]]};
     ".points[]" = (p array) => Point(; x = p[0], y = p[1])
 )
 [typeName(d), typeName(d.pts[0]), d.pts[1].y]
->>> ["Poly", "Point", 4]
+= ["Poly", "Point", 4]
 ```
 ```gad
 // `.*` matches every dict child.
 gad.transform({a: 1, b: 2}; ".*" = (n int) => n + 100)
->>> {a: 101, b: 102}
+= {a: 101, b: 102}
 ```
 **/
 export transform(value any; **paths) <_ any> => nil

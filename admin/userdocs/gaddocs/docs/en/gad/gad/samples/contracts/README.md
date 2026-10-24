@@ -1,0 +1,384 @@
+
+# Contracts (`contract NAME { … }`)
+
+A **contract** says two things of a type: what it is — its **target** — and
+what its **metadata** may say — the keys of `meta { … }`, the body of an
+[interface](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad): each key typed, optional (`?`) or required, with a
+[default](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/interfaces.gad#field-defaults-name-t--expr).
+
+```gad ignore
+contract TSelectField {
+    *TField                      // parent contracts: target and meta merged
+    target type<str|int|enum>    // the types the target may be (none: any)
+    meta {
+        options []str            // required: what makes it a select
+        layout? str = "table"    // a key not given takes its default
+    }
+}
+```
+
+The target's types are written as a field's are — `type<str>` the type `str`
+itself, `type<enum>` any enum (a [category](https://github.com/gad-lang/gad/blob/GAD_REF/doc/samples/meta_types_test.gad)). A child
+contract (`*Parent`) narrows its parents: its target must fit theirs too, its
+meta is theirs and its own, a key of its own over a parent's of the same name.
+
+```gad
+contract TField {
+    meta { label? str; hint? str }
+}
+
+contract TSelectField {
+    *TField
+    target type<str|int|enum>
+    meta {
+        options []str|[]int
+        layout? str = "table"
+    }
+}
+
+[options=["a", "b"], label="City"]
+type city <str>
+
+inst := city :> TSelectField
+[typeof(inst) == TSelectField, inst.target == str, inst.meta.options, inst.meta.layout,
+ inst.meta.label, inst.meta.hint, inst.given("layout"), inst.given("label")]
+= [true, true, ["a", "b"], "table", "City", no, false, true]
+```
+
+## The subject
+
+A contract is checked against a **subject**:
+
+- a **type** — a class, an enum, a typed array, a declared union of one type
+  (`[options=[…]] type city <str>`, which is `str` with that metadata) —: the
+  target is the type, the meta its `@meta`;
+- a **field** of a class or an interface (`Form.city`): the target is its type,
+  the meta its type's `@meta` and then the field's own, the field's over the
+  type's;
+- an **instance** of a contract: its target and meta.
+
+| Cast | Does |
+|---|---|
+| `subject :: C` | checks: the subject itself, or an error saying what does not fit |
+| `subject :> C` | the **instance** of the contract |
+| `C(subject; k=v, …)` | the instance, the named arguments the strongest layer of the meta |
+| `C.check(subject)` | `{errors: […], warnings: […]}` — every problem, not only the first |
+
+The instance: `inst.target`, `inst.meta` (a dict of **every** key of the
+contract: the values checked and transformed — an enum's member by its name
+or value —, the defaults applied, a key not given `no`, as a named parameter
+not given), `inst.rawMeta` (the metadata as written, the keys of other
+plugins too), `inst.given(key)` (given, with or without a value — a default
+does not count, a reset `no` is not given) and `typeof(inst) == C`.
+
+A key the contract does not declare is a **warning** of `check`, not an
+error: another plugin's, maybe.
+
+```gad
+contract TField {
+    meta { label? str; hint? str }
+}
+
+contract TSelectField {
+    *TField
+    target type<str|int|enum>
+    meta {
+        options []str|[]int
+        layout? str = "table"
+    }
+}
+
+[options=["a", "b"], label="City"]
+type city <str>
+
+class Form {
+    pick city                       // the type's meta
+    [label="Billing"] billing? city // the field's over the type's
+    name str                        // no options: not a select
+}
+
+[(Form.pick :> TSelectField).meta.label, (Form.billing :> TSelectField).meta.label,
+ TSelectField(city; layout="cards").meta.layout,   // the call: the strongest layer
+ TSelectField(city; layout=no).meta.layout,        // a reset: the default
+ city :: TSelectField == city,
+ TSelectField.check(Form.name; color="red")]
+= ["City", "Billing", "cards", "table", true,
+      {errors: ["meta \"options\" is required"], warnings: ["meta \"color\": not declared by ‹TSelectField›"]}]
+```
+
+## `target` in the meta
+
+Inside the contract `target` is a type and a value — the target given: the
+meta of each target is built for it. An enum's options are its members:
+
+```gad
+contract TSelectField {
+    target type<str|int|enum>
+    meta { options []str|[]int }
+}
+
+// an enum: a select of its members — `options` redeclared, its items of the
+// enum (`target` as a type), its default the members (`target` as a value)
+contract TEnumField {
+    *TSelectField
+    target type<enum>
+    meta { options []target = target.@members }
+}
+
+enum Service { Kitchen, Bathroom, Addition }
+
+class Form {
+    service Service                          // its members
+    [options=["Kitchen", 2]] svc2 Service    // by name, by value
+    [options=["x"]] bad Service
+}
+
+[(Form.service :> TEnumField).meta.options == Service.@members,
+ (Form.svc2 :> TEnumField).meta.options == [Service.Kitchen, Service.Bathroom],
+ (Form.service :> TEnumField) :: TSelectField != nil,   // it is a TSelectField too
+ len(TEnumField.check(Form.bad).errors),
+ TEnumField.check(Form.service).errors]
+= [true, true, true, 1, []]
+```
+
+## Plugins: overloads by contract
+
+A plugin is a function of several methods whose params are contracts: a field
+(a type, an instance) fits the param when it fits the contract. The call takes,
+of the methods it fits, the contract with **more required keys** of its meta
+(a select's `options`), then the one **deeper** in its parents — whatever the
+order the methods are written in. Two of the same rank that both fit are an
+**ambiguity**, an error.
+
+```gad
+contract TField { meta { label? str } }
+contract TTextField { *TField; target type<str>; meta { maxlength? int } }
+contract TSelectField { *TField; target type<str|int|enum>; meta { options []str|[]int } }
+contract TEnumField { *TSelectField; target type<enum>; meta { options []target = target.@members } }
+contract TNumberField { *TField; target type<int|float>; meta { min? int } }
+
+enum Service { Kitchen, Bathroom }
+
+class Form {
+    [options=["a", "b"]] pick str   // a str with options: a select
+    service Service                 // an enum: a select of its members
+    name str                        // a str: a text
+    [min=1] rooms int
+    flag bool                       // nothing more of its own: the field
+}
+
+// the component each field is drawn with
+draw := func {
+    (f TField) => "field"
+    (f TTextField) => "text"
+    (f TNumberField) => "number"
+    (f TSelectField) => "select"
+    (f TEnumField) => "enum"
+}
+
+[draw(Form.pick), draw(Form.service), draw(Form.name), draw(Form.rooms), draw(Form.flag)]
+= ["select", "enum", "text", "number", "field"]
+```
+
+## A contract as a value
+
+`contract { … }` is a contract as a value — anonymous, or named
+(`contract NAME { … }` written where a value goes) —: bound to a constant,
+made by a function, written where a type goes (a param's).
+
+```gad
+const TSel = contract { target type<str>; meta { options []str } }
+
+// made by a function: each call, a contract of its own
+withDefault := (n) => contract { meta { n? int = n } }
+
+class F { [options=["a"]] a str; b int }
+
+// written where a type goes
+d := func {
+    (f contract { target type<str> }) => "a str"
+    (f contract { target type<int> }) => "an int"
+}
+
+[(F.a :> TSel).meta.options, (str :> withDefault(5)).meta.n, d(F.a), d(F.b)]
+= [["a"], 5, "a str", "an int"]
+```
+
+## Reflection
+
+`C.@name`, `C.@meta` (the `[k=v]` before the declaration), `C.@parents`,
+`C.@target` (the types the target may be), `C.@depth` (how deep in its
+parents) and `C.metaIface(target)` (the interface of the meta of a target).
+
+```gad
+contract TField {
+    meta { label? str }
+}
+
+[since=2]
+contract TSelectField {
+    *TField
+    target type<str|int>
+    meta { options []str }
+}
+
+[TSelectField.@name, TSelectField.@meta, TSelectField.@parents[0] == TField,
+ str(TSelectField.@target), TSelectField.@depth,
+ [f.name for f in TSelectField.metaIface(str).fields]]
+= ["TSelectField", (;since=2), true, "[type<str>, type<int>]", 1, ["label", "options"]]
+```
+
+## Example — `contracts.gad`
+
+```gad
+example declare {
+    contract TField {
+        meta { label? str; hint? str }
+    }
+
+    contract TSelectField {
+        *TField
+        target type<str|int|enum>
+        meta {
+            options []str|[]int
+            layout? str = "table"
+        }
+    }
+
+    [options=["a", "b"], label="City"]
+    type city <str>
+
+    inst := city :> TSelectField
+    [typeof(inst) == TSelectField, inst.target == str, inst.meta.options, inst.meta.layout,
+     inst.meta.label, inst.meta.hint, inst.given("layout"), inst.given("label")]
+    = [true, true, ["a", "b"], "table", "City", no, false, true]
+}
+
+example subject {
+    contract TField {
+        meta { label? str; hint? str }
+    }
+
+    contract TSelectField {
+        *TField
+        target type<str|int|enum>
+        meta {
+            options []str|[]int
+            layout? str = "table"
+        }
+    }
+
+    [options=["a", "b"], label="City"]
+    type city <str>
+
+    class Form {
+        pick city                       // the type's meta
+        [label="Billing"] billing? city // the field's over the type's
+        name str                        // no options: not a select
+    }
+
+    [(Form.pick :> TSelectField).meta.label, (Form.billing :> TSelectField).meta.label,
+     TSelectField(city; layout="cards").meta.layout,   // the call: the strongest layer
+     TSelectField(city; layout=no).meta.layout,        // a reset: the default
+     city :: TSelectField == city,
+     TSelectField.check(Form.name; color="red")]
+    = ["City", "Billing", "cards", "table", true,
+          {errors: ["meta \"options\" is required"], warnings: ["meta \"color\": not declared by ‹TSelectField›"]}]
+}
+
+example target {
+    contract TSelectField {
+        target type<str|int|enum>
+        meta { options []str|[]int }
+    }
+
+    // an enum: a select of its members — `options` redeclared, its items of the
+    // enum (`target` as a type), its default the members (`target` as a value)
+    contract TEnumField {
+        *TSelectField
+        target type<enum>
+        meta { options []target = target.@members }
+    }
+
+    enum Service { Kitchen, Bathroom, Addition }
+
+    class Form {
+        service Service                          // its members
+        [options=["Kitchen", 2]] svc2 Service    // by name, by value
+        [options=["x"]] bad Service
+    }
+
+    [(Form.service :> TEnumField).meta.options == Service.@members,
+     (Form.svc2 :> TEnumField).meta.options == [Service.Kitchen, Service.Bathroom],
+     (Form.service :> TEnumField) :: TSelectField != nil,   // it is a TSelectField too
+     len(TEnumField.check(Form.bad).errors),
+     TEnumField.check(Form.service).errors]
+    = [true, true, true, 1, []]
+}
+
+example plugins {
+    contract TField { meta { label? str } }
+    contract TTextField { *TField; target type<str>; meta { maxlength? int } }
+    contract TSelectField { *TField; target type<str|int|enum>; meta { options []str|[]int } }
+    contract TEnumField { *TSelectField; target type<enum>; meta { options []target = target.@members } }
+    contract TNumberField { *TField; target type<int|float>; meta { min? int } }
+
+    enum Service { Kitchen, Bathroom }
+
+    class Form {
+        [options=["a", "b"]] pick str   // a str with options: a select
+        service Service                 // an enum: a select of its members
+        name str                        // a str: a text
+        [min=1] rooms int
+        flag bool                       // nothing more of its own: the field
+    }
+
+    // the component each field is drawn with
+    draw := func {
+        (f TField) => "field"
+        (f TTextField) => "text"
+        (f TNumberField) => "number"
+        (f TSelectField) => "select"
+        (f TEnumField) => "enum"
+    }
+
+    [draw(Form.pick), draw(Form.service), draw(Form.name), draw(Form.rooms), draw(Form.flag)]
+    = ["select", "enum", "text", "number", "field"]
+}
+
+example anonymous {
+    const TSel = contract { target type<str>; meta { options []str } }
+
+    // made by a function: each call, a contract of its own
+    withDefault := (n) => contract { meta { n? int = n } }
+
+    class F { [options=["a"]] a str; b int }
+
+    // written where a type goes
+    d := func {
+        (f contract { target type<str> }) => "a str"
+        (f contract { target type<int> }) => "an int"
+    }
+
+    [(F.a :> TSel).meta.options, (str :> withDefault(5)).meta.n, d(F.a), d(F.b)]
+    = [["a"], 5, "a str", "an int"]
+}
+
+example reflection {
+    contract TField {
+        meta { label? str }
+    }
+
+    [since=2]
+    contract TSelectField {
+        *TField
+        target type<str|int>
+        meta { options []str }
+    }
+
+    [TSelectField.@name, TSelectField.@meta, TSelectField.@parents[0] == TField,
+     str(TSelectField.@target), TSelectField.@depth,
+     [f.name for f in TSelectField.metaIface(str).fields]]
+    = ["TSelectField", (;since=2), true, "[type<str>, type<int>]", 1, ["label", "options"]]
+}
+```

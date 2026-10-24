@@ -77,16 +77,16 @@ func LimitValue(t, s string) (float64, bool) {
 	case "int", "uint", "float", "decimal":
 		n, err := strconv.ParseFloat(s, 64)
 		return n, err == nil
-	case "date", "calendarDate":
+	case "date", "cdate":
 		d, err := time.Parse("2006-01-02", s)
 		return float64(d.Unix() / 86400), err == nil
-	case "time":
+	case "time", "ctime":
 		for _, layout := range []string{"15:04", "15:04:05"} {
 			if d, err := time.Parse(layout, s); err == nil {
 				return float64(d.Hour()*3600 + d.Minute()*60 + d.Second()), true
 			}
 		}
-	case "calendarTime":
+	case "cdtime":
 		for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05"} {
 			if d, err := time.Parse(layout, s); err == nil {
 				return float64(d.Unix()), true
