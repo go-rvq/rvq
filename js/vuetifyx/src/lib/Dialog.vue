@@ -4,14 +4,9 @@ import TempVar from 'vue-temp-var'
 import {type Density} from 'vuetify/lib/composables/density'
 
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
+import { lockScroll, unlockScroll } from '@/lib/scroll-lock'
 
 let _: Density
-
-const state = {
-  closeChanging: false,
-  expandChanging: false,
-  windowOverflowToggler: false
-}
 
 export default defineComponent({
   name: 'Dialog',
@@ -106,17 +101,13 @@ export default defineComponent({
 
   methods: {
     computed,
+    // the page's scroll, locked while it is open (its own lock: a dialog
+    // opened from it, closed, does not give the page its scroll back)
     openCb() {
-      const cl = window.document.body.parentElement?.classList as DOMTokenList
-      state.windowOverflowToggler = !cl.contains('overflow-hidden')
-      if (state.windowOverflowToggler) {
-        cl.add('overflow-hidden')
-      }
+      lockScroll(this, 'overflow-hidden')
     },
     closeCb() {
-      if (state.windowOverflowToggler) {
-        window.document.body.parentElement?.classList.remove('overflow-hidden')
-      }
+      unlockScroll(this)
     },
     hasHeader() {
       return this.expandable || this.closable || this.$slots.header || false
@@ -168,6 +159,11 @@ export default defineComponent({
       if (val && this.isExpanded) {
         this.isExpanded = false
       }
+      if (!val) {
+        // closed: its menus too (a menu left open holds the page's scroll)
+        this.isMainMenuOpen = false
+        this.isSecondaryMenuOpen = false
+      }
       this.$emit(val ? 'open' : 'close')
       if (val) {
         this.openCb()
@@ -181,6 +177,10 @@ export default defineComponent({
     if (this.isOpen) {
       this.openCb()
     }
+  },
+
+  unmounted() {
+    this.closeCb()
   }
 })
 </script>
@@ -205,8 +205,8 @@ export default defineComponent({
             close-icon="mdi-arrow-left"
             location="left"
             :style="mm.drawerUpStyle"
-            @close="mm.close"
-            v-model="mm.open"
+            :model-value="mm.open"
+            @update:model-value="(v: boolean) => v || mm.close()"
             temporary
             closable
             :density="density"
@@ -225,8 +225,8 @@ export default defineComponent({
             close-icon="mdi-arrow-left"
             location="right"
             :style="s.drawerUpStyle"
-            @close="s.close()"
-            v-model="s.open"
+            :model-value="s.open"
+            @update:model-value="(v: boolean) => v || s.close()"
             temporary
             closable
             :density="density"

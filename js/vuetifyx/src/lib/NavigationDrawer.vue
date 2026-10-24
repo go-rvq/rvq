@@ -2,6 +2,7 @@
 import {defineComponent, useModel, useTemplateRef} from 'vue'
 import TempVar from 'vue-temp-var'
 import { dragWidth, isEndSide, saveWidth, savedWidth } from './navigation-drawer-resize'
+import { lockScroll, unlockScroll } from './scroll-lock'
 import {type Density} from 'vuetify/lib/composables/density'
 
 let _: Density
@@ -117,8 +118,7 @@ export default defineComponent({
     resizing: false,
     state: {
       closeChanging: false,
-      expandChanging: false,
-      windowOverflowToggler: false
+      expandChanging: false
     }
   }),
   computed: {
@@ -188,21 +188,14 @@ export default defineComponent({
       this.resizedWidth = null
       saveWidth(this.storageKey, null)
     },
+    // a floating (temporary) drawer locks the page's scroll while open
     openCb() {
       if (this.temporary) {
-        const cl = window.document.body.parentElement?.classList as DOMTokenList
-        this.state.windowOverflowToggler = !(
-          cl.contains('overflow-y-hidden') || cl.contains('overflow-hidden')
-        )
-        if (this.state.windowOverflowToggler) {
-          cl.add('overflow-y-hidden')
-        }
+        lockScroll(this, 'overflow-y-hidden')
       }
     },
     closeCb() {
-      if (this.state.windowOverflowToggler) {
-        window.document.body.parentElement?.classList.remove('overflow-y-hidden')
-      }
+      unlockScroll(this)
     },
     isEndSide,
     hasHeader() {
@@ -254,7 +247,10 @@ export default defineComponent({
         this.isExpanded = false
       }
       if (!val) {
+        // closed: its menus too (a menu left open holds the page's scroll)
         this.isExpanded = false
+        this.isMainMenuOpen = false
+        this.isSecondaryMenuOpen = false
       }
       this.$emit(val ? 'open' : 'close')
       if (val) {
@@ -303,8 +299,8 @@ export default defineComponent({
           close-icon="mdi-arrow-left"
           location="left"
           :style="mm.drawerUpStyle"
-          @close="mm.close"
-          v-model="mm.open"
+          :model-value="mm.open"
+          @update:model-value="(v: boolean) => v || mm.close()"
           temporary
           closable
           :density="density"
@@ -323,8 +319,8 @@ export default defineComponent({
           location="right"
           variant="menu"
           :style="sms.drawerUpStyle"
-          @close="sms.close()"
-          v-model="sms.open"
+          :model-value="sms.open"
+          @update:model-value="(v: boolean) => v || sms.close()"
           temporary
           closable
           :density="density"
