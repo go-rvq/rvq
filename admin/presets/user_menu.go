@@ -160,14 +160,14 @@ func (b *Builder) userMenuLanguage(ctx *web.EventContext) h.HTMLComponent {
 	).Location("start").OpenOnHover(false)
 }
 
-// userMenuTheme: light or dark, kept in the browser.
+// userMenuTheme: light, dark or auto (the system's), kept in the browser.
 func (b *Builder) userMenuTheme(ctx *web.EventContext) h.HTMLComponent {
 	msgr := MustGetMessages(ctx.Context())
 	return VListItem(
 		web.Slot(VIcon("mdi-theme-light-dark")).Name(VSlotPrepend),
 		VListItemTitle(h.Text(msgr.Theme)),
 		web.Slot(
-			h.Tag("vx-theme-toggle").Attr("storage-key", UserMenuThemeStorageKey),
+			h.Tag("vx-theme-select").Attr("storage-key", UserMenuThemeStorageKey),
 		).Name(VSlotAppend),
 	)
 }

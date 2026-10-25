@@ -28,6 +28,7 @@ type Messages struct {
 	FilterAction    string `i18n:"label='Filter: action', hint='Filter of the activity log by kind of action.'"`
 	FilterCreatedAt string `i18n:"label='Filter: date', hint='Filter of the activity log by date.'"`
 	FilterCreator   string `i18n:"label='Filter: creator', hint='Filter of the activity log by who did the action.'"`
+	MyActivity      string `i18n:"hint='Item of the menu of the user: the activity log of what they did.'"`
 	FilterModel     string `i18n:"label='Filter: model', hint='Filter of the activity log by model.'"`
 
 	DiffDetail               string `i18n:"label='Diff: detail', hint='Title of the detail of a change.'"`
@@ -80,6 +81,7 @@ var Messages_en_US = &Messages{
 	FilterAction:    "Action",
 	FilterCreatedAt: "Create Time",
 	FilterCreator:   "Creator",
+	MyActivity:      "My activity",
 	FilterModel:     "Model Name",
 
 	DiffDetail:               "Detail",
@@ -131,6 +133,7 @@ var Messages_zh_CN = &Messages{
 	FilterAction:    "操作类型",
 	FilterCreatedAt: "操作时间",
 	FilterCreator:   "操作人",
+	MyActivity:      "My activity",
 	FilterModel:     "操作对象",
 	DiffDetail:      "详情",
 	DiffNew:         "新加",
@@ -170,6 +173,7 @@ var Messages_pt_BR = &Messages{
 	FilterAction:    "Ação",
 	FilterCreatedAt: "Data",
 	FilterCreator:   "Autor",
+	MyActivity:      "Minha atividade",
 	FilterModel:     "Modelo",
 
 	DiffDetail:               "Detalhe",

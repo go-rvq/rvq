@@ -4,21 +4,7 @@
 import { computed, defineComponent, h, onMounted, resolveComponent } from 'vue'
 import {useVxMessages} from '@/lib/locale'
 import { useTheme } from 'vuetify'
-
-const read = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-const write = (key: string, v: string) => {
-  try {
-    localStorage.setItem(key, v)
-  } catch {
-    /* private window */
-  }
-}
+import { applyMode, readMode, writeMode } from '@/lib/theme-mode'
 
 export default defineComponent({
   name: 'VxThemeToggle',
@@ -37,8 +23,9 @@ export default defineComponent({
       if (theme.themes.value[name]) theme.global.name.value = name
     }
     onMounted(() => {
-      const saved = read(props.storageKey)
-      if (saved) set(saved)
+      // the mode kept (light, dark, auto: the system's, followed)
+      const saved = readMode(props.storageKey)
+      if (saved) applyMode(saved, set)
     })
     return () =>
       h(resolveComponent('v-btn'), {
@@ -48,8 +35,8 @@ export default defineComponent({
         'data-theme-toggle': dark.value ? 'dark' : 'light',
         onClick: () => {
           const name = dark.value ? 'light' : 'dark'
-          set(name)
-          write(props.storageKey, name)
+          applyMode(name, set)
+          writeMode(props.storageKey, name)
         }
       })
   }

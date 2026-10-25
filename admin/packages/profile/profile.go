@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/admin/packages/login_session"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
@@ -111,6 +112,31 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 
 	m.Singleton(true)
 	c.mb = m
+
+	// the menu of the user: the places they are logged in (the action of the
+	// profile, in a dialog)
+	p.AddUserMenuItem(&presets.UserMenuItem{
+		Name:    "MySessions",
+		Group:   presets.UserMenuQuick,
+		Order:   30,
+		Enabled: true,
+		Handler: func(ctx *web.EventContext) h.HTMLComponent {
+			u := user.GetCurrentUser(ctx.R)
+			if u == nil || u.Anonymous() {
+				return nil
+			}
+			return VListItem(
+				web.Slot(VIcon("mdi-devices")).Name(VSlotPrepend),
+				VListItemTitle(h.Text(login_session.GetMessages(ctx.Context()).LoginSessions)),
+			).Attr("@click", web.Plaid().
+				URL(p.URIPrefixCtx(ctx.R.Context())+"/"+ModelID).
+				EventFunc(actions.Action).
+				Query(presets.ParamID, u.GetID().String()).
+				Query(presets.ParamAction, "login_sessions").
+				Query(presets.ParamOverlay, actions.Dialog).
+				Go())
+		},
+	})
 
 	// the menu of the user: their profile first
 	p.AddUserMenuItem(&presets.UserMenuItem{

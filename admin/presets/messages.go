@@ -122,6 +122,10 @@ type Messages struct {
 	MoreActions                                string                 `i18n:"hint='Title of the button of the bar of the page that opens its menu of more actions.'"`
 	CollapseMenu                               string                 `i18n:"hint='Button at the foot of the main menu that shows its icons alone.'"`
 	Reload                                     string                 `i18n:"hint='Button beside the search of a listing that loads it again.'"`
+	SearchAdmin                                string                 `i18n:"hint='The search of the top bar of the admin (the field, its placeholder).'"`
+	SearchHint                                 string                 `i18n:"hint='Under the field of the search of the admin, before anything is typed.'"`
+	SearchNoResults                            string                 `i18n:"hint='The search of the admin found nothing.'"`
+	SearchMenu                                 string                 `i18n:"hint='Title of the items of the menu among the results of the search of the admin.'"`
 	SwitchedNoAccess                           string                 `i18n:"hint='Notice on the home of an account the user switched to, whose user may not see the page they were on.'"`
 	Filter                                     string                 `i18n:"hint='Button beside the search of a listing that shows or hides its filters.'"`
 	ExpandMenu                                 string                 `i18n:"hint='Button of the main menu, as its icons alone, that shows it whole again.'"`
@@ -293,6 +297,10 @@ var Messages_en_US = &Messages{
 	MoreActions:                                "More actions",
 	CollapseMenu:                               "Collapse menu",
 	Reload:                                     "Reload",
+	SearchAdmin:                                "Search the admin",
+	SearchHint:                                 "Type at least 2 letters: the pages of the menu and the records.",
+	SearchNoResults:                            "Nothing found.",
+	SearchMenu:                                 "Menu",
 	SwitchedNoAccess:                           "This account may not see the page you were on: here is its home.",
 	Filter:                                     "Filters",
 	ExpandMenu:                                 "Expand menu",
@@ -393,6 +401,10 @@ var Messages_pt_BR = &Messages{
 	MoreActions:                                "Mais ações",
 	CollapseMenu:                               "Recolher menu",
 	Reload:                                     "Recarregar",
+	SearchAdmin:                                "Pesquisar no admin",
+	SearchHint:                                 "Digite ao menos 2 letras: as páginas do menu e os registros.",
+	SearchNoResults:                            "Nada encontrado.",
+	SearchMenu:                                 "Menu",
 	SwitchedNoAccess:                           "Esta conta não tem acesso à página em que você estava: aqui está o painel dela.",
 	Filter:                                     "Filtros",
 	ExpandMenu:                                 "Expandir menu",

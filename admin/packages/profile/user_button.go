@@ -111,7 +111,7 @@ func (c *Builder) UserButton(b *presets.Builder) func(ctx *web.EventContext) h.H
 		return VMenu(
 			web.Slot(activator).Name("activator").Scope("{ props }"),
 			menu,
-		).Location(LocationBottom + " end").Offset(6).CloseOnContentClick(false).MaxHeight("calc(100vh - 72px)")
+		).Location(LocationBottom + " end").Offset(6).CloseOnContentClick(true).MaxHeight("calc(100vh - 72px)")
 	}
 }
 

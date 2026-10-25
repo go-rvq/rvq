@@ -128,7 +128,8 @@ func TestAuthenticator(t *testing.T) {
 		code string
 		want error
 	}{
-		"wrong":    {code[:len(code)-1] + "x", ErrKeyNotFound},
+		// its last character changed (to "x", or "y" when it is one already)
+		"wrong":    {code[:len(code)-1] + map[bool]string{true: "y", false: "x"}[code[len(code)-1] == 'x'], ErrKeyNotFound},
 		"unknown":  {func() string { c, _ := NewCode(); return c }(), ErrKeyNotFound},
 		"disabled": {disabled, ErrKeyUnusable},
 		"expired":  {expired, ErrKeyUnusable},

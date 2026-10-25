@@ -207,3 +207,31 @@
 .rvq-listing-search {
     margin: 0 0 16px;
 }
+
+/* the search of the top bar (global_search.go): a field that opens the
+   palette */
+.rvq-app-bar__search {
+    flex: 0 1 420px;
+    min-width: 0;
+}
+.rvq-global-search__field {
+    width: 100%;
+    max-width: 420px;
+    height: 36px !important;
+    justify-content: flex-start;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+.rvq-global-search__field .v-btn__content {
+    width: 100%;
+}
+.rvq-global-search__kbd {
+    font: 500 0.7rem/1 inherit;
+    padding: 3px 6px;
+    border-radius: 4px;
+    border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+    opacity: 0.7;
+}
+.rvq-global-search__input input {
+    font-size: 1.05rem;
+}

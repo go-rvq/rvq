@@ -1,19 +1,20 @@
 # Help bar
 
-At the right of every screen of the admin is the **help bar**: the
-documentation of what you are doing, without leaving the screen. It takes a
-strip of its own and the screen narrows beside it, without being covered.
+At the right of the screens of the admin opens the **help bar**: the
+documentation of what you are doing, without leaving the screen. Open, it
+takes a strip of its own and the screen narrows beside it, without being
+covered.
 
 ## Opening and closing it
 
-- Closed, the bar is only a narrow strip with the help icon (**?**). Click
-  it to open the bar.
+- The bar starts closed. The **?** of the [top bar](../top-bar/README.md) opens and
+  closes it.
 - Open, the **»** button at its top closes it again.
 - The **F1** key opens and closes the bar on any screen.
 - Drag the left edge of the bar to change its width; a double click on the
   edge brings the initial width back.
 
-The browser remembers whether the bar was open, and its width.
+The browser remembers the width of the bar.
 
 ## The Focus tab
 

@@ -62,6 +62,8 @@ type ModelBuilder struct {
 
 	modelType reflect.Type
 	notInMenu bool
+	// notInGlobalSearch: the search of the top bar does not look in it
+	notInGlobalSearch bool
 	// noRecordStateStamp turns off the state-hash fallback of the optimistic
 	// lock for a model with no UpdatedAt (see SetRecordStateStamp).
 	noRecordStateStamp bool

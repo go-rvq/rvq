@@ -1,19 +1,19 @@
 # Painel de ajuda
 
-À direita de todas as telas do admin fica o **painel de ajuda**: a
-documentação do que você está fazendo, sem sair da tela. Ele ocupa uma faixa
+À direita das telas do admin abre-se o **painel de ajuda**: a documentação
+do que você está fazendo, sem sair da tela. Aberto, ele ocupa uma faixa
 própria e a tela encolhe ao lado dele, sem ser coberta.
 
 ## Abrir e fechar
 
-- Fechado, o painel é só uma faixa estreita com o ícone de ajuda (**?**).
-  Clique nele para abrir.
+- O painel começa fechado. O **?** da [barra superior](../top-bar/README.md) o abre e o
+  fecha.
 - Aberto, o botão **»** no alto o fecha de novo.
 - A tecla **F1** abre e fecha o painel em qualquer tela.
 - Arraste a borda esquerda do painel para mudar a largura; um duplo clique
   na borda volta à largura inicial.
 
-O navegador lembra se o painel estava aberto e a largura dele.
+O navegador lembra a largura do painel.
 
 ## A aba Foco
 

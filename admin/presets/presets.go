@@ -127,6 +127,8 @@ func New(i18nB *i18n.Builder) *Builder {
 		},
 	})
 	r.GetWebBuilder().RegisterEventHandler(EventOpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
+	// the search of the top bar (global_search.go)
+	r.GetWebBuilder().RegisterEventHandler(GlobalSearchEvent, web.EventFunc(r.globalSearch))
 	// the words of the vuetifyx components: the page's vue-i18n's (vx)
 	r.registerVxMessages()
 	r.layoutFunc = r.DefaultLayout
@@ -682,7 +684,10 @@ var defaultMenuIconREs = []defaultMenuIconRE{
 	{re: regexp.MustCompile(`\bsettings?\b`), icon: "mdi-cog"},
 }
 
-func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
+// menuNodes are the nodes of the main menu the user of ctx may see (the
+// tree, the rail, the search of the top bar), the groups to open (the way to
+// the active item) and the active item.
+func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGroups, activated []string) {
 	var (
 		mMap = make(map[string]*ModelBuilder)
 		pMap = make(map[string]*HttpPageBuilder)
@@ -700,11 +705,9 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		}
 	}
 
-	var (
-		openedGroups = []string{} // groups to auto-expand: the active item's ancestor chain
-		activated    = []string{} // the active leaf's value (its path), for the highlight
-		inOrderMap   = make(map[string]struct{})
-	)
+	openedGroups = []string{} // groups to auto-expand: the active item's ancestor chain
+	activated = []string{}    // the active leaf's value (its path), for the highlight
+	inOrderMap := make(map[string]struct{})
 
 	// pageNode / modelNode build a leaf node (or nil when hidden/denied), record
 	// it as placed, and flag the active one.
@@ -848,7 +851,12 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 
 	// The root's items, in order. Anything never moved sits here in the order it
 	// was registered, so a model or page nobody placed still shows up.
-	nodes, _ := itemNodes(b.MenuTree().items)
+	nodes, _ = itemNodes(b.MenuTree().items)
+	return
+}
+
+func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
+	nodes, openedGroups, activated := b.menuNodes(ctx)
 
 	// The side menu is a VTreeview: it filters (search, bound to vars.menuFilter)
 	// and auto-expands matches natively, and a leaf's value is its path — so

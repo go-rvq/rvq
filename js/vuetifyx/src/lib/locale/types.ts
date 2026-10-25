@@ -44,6 +44,8 @@ export interface VxMessages {
   themeLight: string
   /** Title of the button that turns the theme dark. */
   themeDark: string
+  /** The theme that follows the system's (light or dark). */
+  themeAuto: string
   /** Label of a year (a month picker). */
   year: string
   /** Label of a month (a month picker). */

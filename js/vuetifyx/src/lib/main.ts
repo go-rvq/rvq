@@ -41,6 +41,7 @@ import MapsKeyTest from '@/lib/MapsKeyTest.vue'
 import GadIde from '@/lib/GadIde'
 import GadCode from '@/lib/GadCode'
 import ThemeToggle from '@/lib/ThemeToggle'
+import ThemeSelect from '@/lib/ThemeSelect'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -85,6 +86,7 @@ const vuetifyx = {
     app.component('vx-gad-ide', GadIde)
     app.component('vx-gad-code', GadCode)
     app.component('vx-theme-toggle', ThemeToggle)
+    app.component('vx-theme-select', ThemeSelect)
   }
 }
 declare const window: any

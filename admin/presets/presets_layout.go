@@ -114,6 +114,9 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 					Attr("@click.stop", "vars.navDrawer = !vars.navDrawer"),
 				h.Div(b.RunBrandFunc(ctx)).Class("rvq-app-bar__brand"),
 				VSpacer(),
+				// the search of the admin (Ctrl K), in the middle
+				h.Div(b.globalSearchBar(ctx, m)).Class("rvq-app-bar__search d-flex justify-center"),
+				VSpacer(),
 				h.Div(b.topBarItemsOf(ctx), profile).Class("rvq-app-bar__user d-flex align-center ga-1"),
 				// the theme kept in the browser, taken again as the page opens
 				// (the toggle of the menu of the user mounts only with it open)

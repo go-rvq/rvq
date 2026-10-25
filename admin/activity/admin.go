@@ -11,7 +11,9 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/account"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/login"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"golang.org/x/text/language"
@@ -30,7 +32,30 @@ func (ab *Builder) Install(b *presets.Builder) error {
 	if permB := b.GetPermission(); permB != nil {
 		permB.CreatePolicies(ab.permPolicy)
 	}
-	mb := b.Model(ab.logModel).MenuIcon("mdi-book-edit")
+	// the log is not looked in by the search of the top bar: its words are of
+	// other records
+	mb := b.Model(ab.logModel).MenuIcon("mdi-book-edit").GlobalSearch(false)
+
+	// the menu of the user: what they did (the log by its creator), for who
+	// may read the log
+	b.AddUserMenuItem(&presets.UserMenuItem{
+		Name:    "MyActivity",
+		Group:   presets.UserMenuQuick,
+		Order:   50,
+		Enabled: true,
+		Handler: func(ctx *web.EventContext) h.HTMLComponent {
+			u, _ := login.CurrentUserFromRequest(ctx.R).(interface{ GetName() string })
+			if u == nil || u.GetName() == "" || mb.Permissioner().ReqLister(ctx.R).Denied() {
+				return nil
+			}
+			href := account.URL(b.GetURIPrefix(), mb.Info().ListingHref(), account.IndexOf(ctx.R)) +
+				"?f_creator=" + url.QueryEscape(u.GetName())
+			return VListItem(
+				web.Slot(VIcon("mdi-history")).Name(VSlotPrepend),
+				VListItemTitle(h.Text(i18n.MustGetModuleMessages(ctx.Context(), I18nActivityKey, Messages_en_US).(*Messages).MyActivity)),
+			).Href(href)
+		},
+	})
 
 	return ab.logModelInstall(mb)
 }
