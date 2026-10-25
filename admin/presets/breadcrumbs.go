@@ -69,30 +69,38 @@ func (b *BreadcrumbsBuilder) Empty() bool {
 	return len(b.items) == 0
 }
 
+// Component is the trail: a compact line under the title — the home an icon,
+// the steps quiet links between small chevrons, the page itself last, in
+// evidence —; youAreHere names it to who reads the page aloud (aria-label).
 func (b *BreadcrumbsBuilder) Component(youAreHere string) h.HTMLComponent {
-	var (
-		children h.HTMLComponents
-		i        = 1
-	)
-
-	for _, item := range b.items[:len(b.items)-1] {
-		comp := h.Text(item.Label)
-		if len(item.URI) > 0 {
-			comp = h.A(comp).Href(item.URI)
+	var children h.HTMLComponents
+	last := len(b.items) - 1
+	for i, item := range b.items {
+		var comp h.HTMLComponent = h.Text(item.Label)
+		if i == 0 && item.URI != "" && last > 0 {
+			// the home: its icon, its name in its title
+			comp = VIcon("mdi-home-outline").Size(SizeSmall)
 		}
-		children = append(children, VBreadcrumbsItem(comp).Style("text-wrap-mode: nowrap"), VBreadcrumbsDivider())
-		i += 2
+		if i < last {
+			if item.URI != "" {
+				comp = h.A(comp).Href(item.URI).Class("rvq-breadcrumbs__link").Attr("title", item.Label)
+			} else {
+				comp = h.Span("").Children(comp).Class("rvq-breadcrumbs__group")
+			}
+			children = append(children,
+				VBreadcrumbsItem(comp).Class("rvq-breadcrumbs__item"),
+				VBreadcrumbsDivider(VIcon("mdi-chevron-right").Size(SizeXSmall)).Class("rvq-breadcrumbs__divider"),
+			)
+			continue
+		}
+		children = append(children, VBreadcrumbsItem(comp).Class("rvq-breadcrumbs__item rvq-breadcrumbs__current").
+			Active(true).Attr("aria-current", "page"))
 	}
-	children = append(children, VBreadcrumbsItem(h.Text(b.items[len(b.items)-1].Label)).Style("text-wrap-mode: nowrap").Active(true))
-	crumbs := VBreadcrumbs(children...).Class("flex-wrap rvq-presets-breadcrumbs").Style("padding:0")
-
-	if !b.youAreHereDisable && len(youAreHere) > 0 {
-		return h.Div(
-			h.Div(h.Text(youAreHere), h.Span(":")).Style("text-wrap-mode: nowrap").Class("font-italic v-breadcrumbs-item-youarehere"),
-			crumbs,
-		).Class("d-flex rvq-presets-breadcrumbs-wraper")
+	crumbs := VBreadcrumbs(children...).Class("flex-wrap rvq-presets-breadcrumbs").Density(DensityCompact)
+	if !b.youAreHereDisable && youAreHere != "" {
+		crumbs.Attr("aria-label", youAreHere)
 	}
-	return crumbs
+	return h.Nav(crumbs).Class("rvq-presets-breadcrumbs-wraper")
 }
 
 func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*ModelBuilder, parentsID IDSlice, bc *BreadcrumbsBuilder) (records []any, err error) {

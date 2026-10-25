@@ -122,7 +122,7 @@ func TestBuilder(t *testing.T) {
 	// its floating button (the IDE over the whole window); its trail: the
 	// page it is under, linked
 	if body := w.Body.String(); !strings.Contains(body, "data-ide-full") ||
-		!strings.Contains(body, `href=&#39;/admin/site-files&#39;\u003eSite files\u003c/a\u003e`) {
+		!strings.Contains(body, `href=&#39;/admin/site-files&#39; title=&#39;Site files&#39;`) {
 		t.Errorf("the files: the button, the trail: %s", body[strings.Index(body, "breadcrumbs"):][:600])
 	}
 	// the texts of the IDE and of its Git panels (IdeMessages): merged into

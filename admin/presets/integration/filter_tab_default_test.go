@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -67,8 +68,9 @@ func TestFilterTabDefault(t *testing.T) {
 	if !strings.Contains(body, "zz-text-note") || strings.Contains(body, "zz-system-note") {
 		t.Error("no tab picked: the listing should be the default tab's (texts only)")
 	}
-	// the tabs' model value is the default tab's index (1)
-	if !strings.Contains(body, `:model-value=&#39;1&#39; class=&#39;mb-2&#39;`) {
+	// the tabs' model value is the default tab's index (1) (the page is in a
+	// JSON string: its tags escaped)
+	if !regexp.MustCompile(`v-tabs .{0,200}?:model-value=&#39;1&#39;`).MatchString(body) {
 		t.Error("no tab picked: the default tab should be the selected one")
 	}
 
@@ -93,7 +95,7 @@ func TestFilterTabDefault(t *testing.T) {
 		strings.Contains(page, `"active_filter_tab":["texts"]`) {
 		t.Error("the tabs: by their names, the default one by none")
 	}
-	if !strings.Contains(body, `:model-value=&#39;2&#39; class=&#39;mb-2&#39;`) {
+	if !regexp.MustCompile(`v-tabs .{0,200}?:model-value=&#39;2&#39;`).MatchString(body) {
 		t.Error("a tab named alone: the selected one")
 	}
 

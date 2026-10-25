@@ -22,7 +22,7 @@ func RevokeTOTP(
 }
 
 func GetSessionToken(b *Builder, r *http.Request) string {
-	c, err := r.Cookie(b.authCookieName)
+	c, err := r.Cookie(b.authCookieOf(r))
 	if err != nil {
 		return ""
 	}

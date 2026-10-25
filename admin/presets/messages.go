@@ -117,6 +117,14 @@ type Messages struct {
 	ConfirmDialogPromptTitle                   string                 `i18n:"label='Confirmation title', hint='Title of a confirmation dialog.'"`
 	ConfirmDialogPromptText                    string                 `i18n:"label='Confirmation text', hint='Question of a confirmation dialog.'"`
 	Language                                   string                 `i18n:"hint='Label of a language.'"`
+	Theme                                      string                 `i18n:"hint='Item of the menu of the user that turns the theme light or dark.'"`
+	MenuToggle                                 string                 `i18n:"hint='Title of the button of the top bar that opens and closes the side menu.'"`
+	MoreActions                                string                 `i18n:"hint='Title of the button of the bar of the page that opens its menu of more actions.'"`
+	CollapseMenu                               string                 `i18n:"hint='Button at the foot of the main menu that shows its icons alone.'"`
+	Reload                                     string                 `i18n:"hint='Button beside the search of a listing that loads it again.'"`
+	SwitchedNoAccess                           string                 `i18n:"hint='Notice on the home of an account the user switched to, whose user may not see the page they were on.'"`
+	Filter                                     string                 `i18n:"hint='Button beside the search of a listing that shows or hides its filters.'"`
+	ExpandMenu                                 string                 `i18n:"hint='Button of the main menu, as its icons alone, that shows it whole again.'"`
 	Colon                                      string                 `i18n:"hint='The colon put after a label, as the language writes it.'"`
 	NotFoundPageNotice                         string                 `i18n:"label='Page not found', hint='Shown when the page asked for does not exist.'"`
 	AddRow                                     string                 `i18n:"hint='Button that adds a row to a list.'"`
@@ -280,6 +288,14 @@ var Messages_en_US = &Messages{
 	BulkActionSelectedIdsProcessNoticeTemplate: "Partially selected records cannot be executed with this action: {ids}.",
 	ConfirmDialogPromptText:                    "Are you sure?",
 	Language:                                   "Language",
+	Theme:                                      "Theme",
+	MenuToggle:                                 "Open or close the menu",
+	MoreActions:                                "More actions",
+	CollapseMenu:                               "Collapse menu",
+	Reload:                                     "Reload",
+	SwitchedNoAccess:                           "This account may not see the page you were on: here is its home.",
+	Filter:                                     "Filters",
+	ExpandMenu:                                 "Expand menu",
 	Colon:                                      ":",
 	NotFoundPageNotice:                         "Sorry, the requested page cannot be found. Please check the URL.",
 	PleaseSelectRecord:                         "Please select a record",
@@ -372,6 +388,14 @@ var Messages_pt_BR = &Messages{
 	ConfirmDialogPromptText:                    "Tem certeza?",
 	ConfirmDialogPromptTitle:                   "Confirmação",
 	Language:                                   "Idioma",
+	Theme:                                      "Tema",
+	MenuToggle:                                 "Abrir ou fechar o menu",
+	MoreActions:                                "Mais ações",
+	CollapseMenu:                               "Recolher menu",
+	Reload:                                     "Recarregar",
+	SwitchedNoAccess:                           "Esta conta não tem acesso à página em que você estava: aqui está o painel dela.",
+	Filter:                                     "Filtros",
+	ExpandMenu:                                 "Expandir menu",
 	Colon:                                      ":",
 	NotFoundPageNotice:                         "Desculpe, a página solicitada não pode ser encontrada. Verifique o URL.",
 	PleaseSelectRecord:                         "Selecione pelo menos um registro.",

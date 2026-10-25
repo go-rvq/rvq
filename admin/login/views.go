@@ -80,6 +80,32 @@ func defaultLoginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 		}
 
 		wIn := vh.GetWrongLoginInputFlash(ctx.W, ctx.R)
+		// several accounts in the browser: another one, or one whose session
+		// expired — its account already in the field —, and the way back
+		al := vh.Builder().AccountLoginOf(ctx.R)
+		if al != nil && al.Again && wIn.Account == "" {
+			wIn.Account = al.Account
+		}
+		var accountTitle, accountBack HTMLComponent
+		if al != nil && (al.Adding || al.Again) {
+			title, hint := msgr.AddAccountTitle, msgr.AddAccountHint
+			if al.Again {
+				title, hint = msgr.LoginAgainTitle, fmt.Sprintf(msgr.LoginAgainHint, al.Name)
+			}
+			accountTitle = Div(
+				Div(Text(title)).Class("text-h6"),
+				Div(Text(hint)).Class("text-body-2 text-medium-emphasis mt-1"),
+			).Class("text-center mb-6").Attr("data-account-login", true)
+		}
+		if al != nil && al.BackURL != "" {
+			accountBack = Div(
+				VBtn(fmt.Sprintf(msgr.BackToAccount, al.BackName)).
+					PrependIcon("mdi-arrow-left").
+					Variant(VariantText).
+					Class("text-none").
+					Href(al.BackURL),
+			).Class("text-center mt-6")
+		}
 		isRecaptchaEnabled := vh.RecaptchaEnabled()
 		if isRecaptchaEnabled {
 			DefaultViewCommon.InjectRecaptchaAssets(ctx, "login-form", "token")
@@ -130,8 +156,10 @@ func defaultLoginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 
 		bodyForm = Div(
 			headerSection,
+			accountTitle,
 			userPassHTML,
 			oauthHTML,
+			accountBack,
 			If(len(langs) > 0,
 				web.Scope(
 					VSelect().

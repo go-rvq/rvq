@@ -2,6 +2,7 @@ package presets
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -11,7 +12,9 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/printer"
 	"github.com/go-rvq/rvq/web/vue"
+	"github.com/go-rvq/rvq/x/account"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
@@ -29,10 +32,10 @@ const EmbeddedWindowName = "rvq-embedded"
 func BuildBreadcrumbsComponent(b *Builder, bc *BreadcrumbsBuilder, ctx *web.EventContext, pageTitle string) (breadcrumb h.HTMLComponent) {
 	home := &Breadcrumb{
 		Label: i18n.T(ctx.Context(), ModelsI18nModuleKey, b.brandTitle),
-		URI:   b.prefix + "/",
+		URI:   b.URIPrefixCtx(ctx.R.Context()) + "/",
 	}
 
-	if path.Clean(ctx.R.URL.Path) != path.Clean(home.URI) {
+	if path.Clean(ctx.R.URL.Path) != path.Clean(b.prefix+"/") {
 		msgr := MustGetMessages(ctx.Context())
 		bc.Prepend(home)
 		if len(pageTitle) > 0 {
@@ -69,6 +72,13 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 
 		innerPr, err = in(ctx)
 
+		// another account of the browser chosen (its link: SwitchAccountQuery)
+		// whose user may not see this page: its home, with a notice
+		if err != nil && errors.Is(err, perm.PermissionDenied) && ctx.R.URL.Query().Get(SwitchAccountQuery) == "1" {
+			pr.RedirectURL = b.URIPrefixCtx(ctx.R.Context()) + "/?" + NoAccessQuery + "=1"
+			return pr, nil
+		}
+
 		if ctx.W.Writed() || innerPr.RedirectURL != "" {
 			return innerPr, nil
 		}
@@ -76,17 +86,6 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		// b.RunSwitchLanguageFunc(ctx)
 
 		m := MustGetMessages(ctx.Context())
-
-		toolbar := h.Div(
-			b.RunBrandFunc(ctx),
-			h.Div(
-				VBtn("").
-					Icon("mdi-menu").
-					Density(DensityCompact).
-					Variant(VariantText).
-					Attr("@click", "vars.navDrawer = !vars.navDrawer").Density(DensityCompact),
-			).Class(H75),
-		).Class("d-flex ga-1 v-card-text")
 
 		menu := b.CreateMenus(ctx)
 		if err != nil {
@@ -100,6 +99,42 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		var profile h.HTMLComponent
 		if b.profileFunc != nil {
 			profile = b.profileFunc(ctx)
+		}
+
+		// the top bar: opens and closes the menu, the brand, the user (their
+		// button, their notifications: the ProfileFunc); the progress of the
+		// requests at its foot
+		topBar := VAppBar(
+			h.Div(
+				VBtn("").
+					Icon("mdi-menu").
+					Variant(VariantText).
+					Attr("title", m.MenuToggle).
+					Attr("aria-label", m.MenuToggle).
+					Attr("@click.stop", "vars.navDrawer = !vars.navDrawer"),
+				h.Div(b.RunBrandFunc(ctx)).Class("rvq-app-bar__brand"),
+				VSpacer(),
+				h.Div(b.topBarItemsOf(ctx), profile).Class("rvq-app-bar__user d-flex align-center ga-1"),
+				// the theme kept in the browser, taken again as the page opens
+				// (the toggle of the menu of the user mounts only with it open)
+				h.Div(h.Tag("vx-theme-toggle").Attr("storage-key", UserMenuThemeStorageKey)).Style("display: none"),
+			).Class("d-flex align-center ga-2 px-2 w-100"),
+			VProgressLinear().
+				Attr(":active", "isFetching").
+				Absolute(true).
+				Location(LocationBottom).
+				Indeterminate(true).
+				Height(2).
+				Color(b.progressBarColor),
+		).
+			Elevation(0).
+			Height(56).
+			Class("rvq-app-bar border-b noprint")
+
+		// a page of the account N of a browser holding several (/admin/u/N/…)
+		// stays in it: its requests, its links (x/account)
+		if n := account.IndexOf(ctx.R); n > 0 {
+			ctx.Injector.HeadHTMLComponent("rvq-account", accountScript(b.prefix, n), true)
 		}
 
 		var helpBar h.HTMLComponent
@@ -117,6 +152,16 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		// showSearchBox := cfg == nil || !cfg.SearchBoxInvisible
 
 		// _ := i18n.MustGetModuleMessages(ctx.R, CoreI18nModuleKey, Messages_en_US).(*Messages)
+
+		// the page another account was switched to, which it may not see:
+		// this one (its home) instead, said
+		if ctx.R.URL.Query().Get(NoAccessQuery) == "1" {
+			innerPr.Body = h.HTMLComponents{
+				VAlert(h.Text(m.SwitchedNoAccess)).Type("warning").Variant(VariantTonal).
+					Closable(true).Density(DensityCompact).Class("mx-4 mt-3").Attr("data-no-access", true),
+				innerPr.Body,
+			}
+		}
 
 		pr.PageTitle = innerPr.PageTitle
 		pr.Actions = innerPr.Actions
@@ -156,13 +201,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 		var menuCloser h.HTMLComponent
 
 		if menu := append(pr.Menu, GetMenuComponent(ctx)...); len(menu) > 0 {
-			menuCloser = VBtn("").
-				Variant(VariantFlat).
-				Icon(true).
-				Density(DensityComfortable).
-				Children(
-					VIcon("mdi-menu"),
-				).Attr("@click.menu", "vars.contentPageMenu = !vars.contentPageMenu")
+			menuCloser = PageBarIconButton("mdi-dots-vertical", m.MoreActions, false).
+				Attr("@click.menu", "vars.contentPageMenu = !vars.contentPageMenu")
 
 			innerPr.Body = h.HTMLComponents{
 				vx.VXNavigationDrawer(menu).
@@ -190,14 +230,12 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 
 		actions := h.SimplifyItems(append(pr.Actions, GetActionsComponent(ctx)...))
 
-		if !b.printButtonDisabled {
+		if !b.printButtonDisabled && (cfg == nil || !cfg.PrintInvisible) {
 			actions = append(actions, VMenu(
 				web.Slot(
 					VTooltip(
 						web.Slot(
-							VBtn("").
-								Icon("mdi-printer").
-								Density(DensityComfortable).
+							PageBarIconButton("mdi-printer", "", false).
 								Class("noprint").
 								Attr("v-bind", "Vue.mergeProps(menu, tooltip)"),
 						).
@@ -252,20 +290,23 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				Timeout(3000).
 				Location(LocationTop),
 
+			// the top bar, the first of the layout: over the whole width
+			topBar,
 			// the help bar: at the right edge, the first of the layout's drawers
 			// there — the drawers of the page open beside it
 			helpBar,
 			vx.VXNavigationDrawer(
 				// Configurable items before and after the model menu (the language
 				// selector is a default pre-menu item).
-				b.preMenu(ctx),
+				// the filter and what follows the menu: with the menu whole
+				h.Div(b.preMenu(ctx)).Attr("v-show", "!vars.navRail || vars.navMobile"),
 				menu,
-				b.postMenu(ctx),
+				h.Div(b.postMenu(ctx)).Attr("v-show", "!vars.navRail || vars.navMobile"),
 				// ).Class("ma-2").
 				// 	Style("height: calc(100% - 20px); border: 1px solid grey"),
 			).
-				SlotTop(toolbar).
-				SlotBottom(profile).
+				// its foot: its icons alone, or whole again (menu_rail.go)
+				SlotBottom(navRailToggle(m)).
 				Width("320").
 				// its right edge drags its width, kept in the browser
 				Resizable("rvq.presets.navDrawer.width").
@@ -276,28 +317,18 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 				// on a narrow screen (vars.navMobile) the menu goes over the page —
 				// closed by a click out of it —, not beside it, which would leave
 				// the page no room
-				ContainerProps(`{permanent: !vars.navMobile, temporary: vars.navMobile, floating:true, elevation:0, class:"border-e"}`),
+				ContainerProps(`{permanent: !vars.navMobile, temporary: vars.navMobile, floating:true, elevation:0, class:"border-e",
+					rail: !!vars.navRail && !vars.navMobile, railWidth: `+fmt.Sprint(navRailWidth)+`}`),
 			VMain(
 				scoped(
 					h.If(hasHeader,
 						VAppBar(
 							h.Div(
-								VProgressLinear().
-									Attr(":active", "isFetching").
-									Class("ml-4").
-									Attr("style", "position: fixed; z-index: 99;").
-									Indeterminate(true).
-									Height(2).
-									Color(b.progressBarColor),
-								VAppBarNavIcon().
-									Density("compact").
-									Class("mr-2").
-									Attr("v-if", "!vars.navDrawer").
-									On("click.stop", "vars.navDrawer = !vars.navDrawer"),
-
-								h.If(!titleDisabled && innerPr.PageTitle != "", h.Div(
-									VToolbarTitle(innerPr.PageTitle), // Class("text-h6 font-weight-regular"),
-								).Class("mr-auto")),
+								// the title; the actions at the end, with it or without
+								// (a page not found has none)
+								h.Div(h.If(!titleDisabled && innerPr.PageTitle != "",
+									VToolbarTitle(innerPr.PageTitle),
+								)).Class("mr-auto"),
 								actions,
 								menuCloser,
 							).Class("d-flex align-center mx-2 border-b w-100 rvq-page-header").Style("height: 48px"),
@@ -346,6 +377,8 @@ func (b *Builder) DefaultLayout(in web.PageFunc, cfg *LayoutConfig) (out web.Pag
 	// a narrow screen (Vuetify's md breakpoint): the menu starts hidden
 	navMobile: window.innerWidth < 960,
 	navDrawer: window.name !== "`+EmbeddedWindowName+`" && window.innerWidth >= 960,
+	// the main menu as its icons alone (kept in the browser: menu_rail.go)
+	navRail: (() => { try { return window.localStorage.getItem("`+NavRailStorageKey+`") === "1" } catch (e) { return false } })(),
 	contentPageMenu: false,
 	menuFilter: "",
 	printer: {show:false},

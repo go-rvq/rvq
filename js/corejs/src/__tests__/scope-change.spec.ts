@@ -8,7 +8,7 @@ describe('scope change', () => {
     const wrapper = mountTemplate(`
       <div>
         <go-plaid-scope 
-            :init='{debouncedValue: 1, debouncedCount: 0, value: 1}' 
+            :locals='{debouncedValue: 1, debouncedCount: 0, value: 1}' 
             v-slot="{ locals }" 
             @change-debounced='({locals}) => { locals.debouncedCount++; locals.debouncedValue=locals.value }'
             :use-debounce='800'
@@ -51,7 +51,7 @@ describe('scope change', () => {
     const wrapper = mountTemplate(`
       <div>
         <go-plaid-scope 
-            :init='{ value: "0" }' 
+            :locals='{ value: "0" }' 
             @change-debounced='({locals, form}) => { plaid().form(form).locals(locals).vars(vars).eventFunc("hello").go() }'
             :use-debounce='600'
             v-slot="{ locals, form }">
@@ -79,7 +79,7 @@ describe('scope change', () => {
     const wrapper = mountTemplate(`
       <div>
         <go-plaid-scope 
-            :form-init="{value:0}"
+            :form="{value:0}"
             v-slot="{ form }" 
             @change-debounced='({form,locals,oldLocals,oldForm}) => { form.value++ }'
             :use-debounce='800'
@@ -114,7 +114,7 @@ describe('scope change', () => {
     const wrapper = mountTemplate(`
       <div>
         <go-plaid-scope 
-            :form-init='{value: ""}'
+            :form='{value: ""}'
             v-slot='{ form }' 
             :observers='[
                 {

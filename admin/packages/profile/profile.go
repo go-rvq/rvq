@@ -3,11 +3,11 @@ package profile
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/login_session"
 	"github.com/go-rvq/rvq/admin/packages/user"
@@ -86,62 +86,16 @@ func (c *Builder) ProfilePage(p *presets.Builder) http.Handler {
 		}, nil))
 }
 
+// Brand is what the top bar shows of the user (presets.ProfileFunc): their
+// notifications and their button (UserButton), with its menu.
 func (c *Builder) Brand(b *presets.Builder) func(ctx *web.EventContext) h.HTMLComponent {
+	button := c.UserButton(b)
 	return func(ctx *web.EventContext) h.HTMLComponent {
-		u := user.GetCurrentUser(ctx.R)
-		if u == nil {
-			return VBtn("Entrar").Variant(VariantText).Href(c.lb.GetLoginPageURL())
-		}
-
-		var (
-			notification h.HTMLComponent
-			roles        = u.GetRoles()
-		)
-
-		if c.notificationComponentFunc != nil {
+		var notification h.HTMLComponent
+		if u := user.GetCurrentUser(ctx.R); u != nil && !u.Anonymous() && c.notificationComponentFunc != nil {
 			notification = c.notificationComponentFunc(ctx, u)
 		}
-
-		prependProfile := VCard(
-			web.Slot(
-				VAvatar().Text(c.getAvatarShortName(u)).
-					Color(ColorPrimaryLighten2).
-					Size(SizeLarge).
-					Class(fmt.Sprintf("rounded-lg text-%s", ColorPrimary)),
-			).Name(VSlotPrepend),
-			web.Slot(
-				h.Div(
-					VBtn(u.GetName()).
-						Class("px-0").
-						Style("min-width: 0").
-						Variant(VariantText).
-						Density(DensityCompact).
-						Attr("@click", web.Plaid().URL(b.GetURIPrefix()+"/"+ModelID).PushState(true).Go()).
-						Class(fmt.Sprintf(`text-subtitle-2 text-%s`, ColorSecondary)),
-				).Class("d-flex justify-space-between align-center"),
-			).Name(VSlotTitle),
-			web.Slot(
-				h.Div(h.Text(roles.FirstName())),
-			).Name(VSlotSubtitle),
-		).Class(W100).Flat(true)
-
-		profileNewLook := VCard(
-			VCardTitle(
-				prependProfile,
-				VCardText(
-					h.Div(
-						notification,
-						VBtn("").
-							Icon(true).
-							Color("error").
-							Density(DensityCompact).
-							Variant(VariantText).
-							Attr("@click", web.Plaid().URL(c.lb.GetLogoutURL()).Go()).
-							Children(VIcon("mdi-logout")),
-					).Class("border-s-md", "pl-4", H75)),
-			).Class("d-inline-flex align-center justify-space-between  justify-center pa-0", W100),
-		).Class("pa-0").Class(W100)
-		return profileNewLook
+		return h.HTMLComponents{notification, button(ctx)}
 	}
 }
 
@@ -157,6 +111,20 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 
 	m.Singleton(true)
 	c.mb = m
+
+	// the menu of the user: their profile first
+	p.AddUserMenuItem(&presets.UserMenuItem{
+		Name:    "MyProfile",
+		Group:   presets.UserMenuQuick,
+		Order:   10,
+		Enabled: true,
+		Handler: func(ctx *web.EventContext) h.HTMLComponent {
+			return VListItem(
+				web.Slot(VIcon("mdi-account-outline")).Name(VSlotPrepend),
+				VListItemTitle(h.Text(GetMessages(ctx.Context()).MyProfile)),
+			).Href(p.URIPrefixCtx(ctx.R.Context()) + "/" + ModelID)
+		},
+	})
 	m.DeletingRestriction.ObjHandler(presets.OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (ok, handled bool) {
 		return true, true
 	}))
@@ -172,6 +140,9 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		profile.Name = u.GetName()
 		profile.AccountName = u.GetAccountName()
 		profile.Roles = strings.Join(u.GetRoles().Names(), ", ")
+		if au, ok := u.(AvatarUser); ok {
+			profile.Avatar = au.GetAvatar()
+		}
 		return
 	}
 
@@ -187,6 +158,12 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		if err = c.db.First(u).Error; err != nil {
 			return
 		}
+		// what the profile edits: the name, the picture
+		profile := obj.(*Profile)
+		u.SetName(profile.Name)
+		if au, ok := u.(AvatarUser); ok {
+			au.SetAvatar(profile.Avatar)
+		}
 
 		if err = c.db.Save(u).Error; err != nil {
 			return
@@ -197,6 +174,7 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 
 	d := m.Detailing()
 	d.FetchFunc(fetch)
+	configureAvatarField(c.db, e, d)
 
 	d.Action("login_sessions").
 		Icon("mdi-account-network").
@@ -227,18 +205,6 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 	return
 }
 
-func (c *Builder) getAvatarShortName(u user.User) string {
-	name := u.GetName()
-	if name == "" {
-		name = u.GetAccountName()
-	}
-	if rs := []rune(name); len(rs) > 1 {
-		name = string(rs[:1])
-	}
-
-	return strings.ToUpper(name)
-}
-
 func (c *Builder) loginSession(_ string, ctx *web.EventContext, cb *presets.ContentComponentBuilder) (err error) {
 	u := user.GetCurrentUser(ctx.R)
 	if u == nil {
@@ -261,8 +227,11 @@ func (c *Builder) loginSession(_ string, ctx *web.EventContext, cb *presets.Cont
 }
 
 type Profile struct {
-	ID          uuid.UUID `admin:"ro" gorm:"type:uuid"`
-	Name        string
+	ID   uuid.UUID `admin:"ro" gorm:"type:uuid"`
+	Name string
+	// Avatar is the picture of the user, when their model has one
+	// (AvatarUser)
+	Avatar      media_library.MediaBox
 	AccountName string `admin:"ro"`
 	Status      string `admin:"ro"`
 	Roles       string `admin:"ro"`

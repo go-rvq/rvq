@@ -46,6 +46,8 @@ type Builder struct {
 	brandProfileSwitchLanguageDisplayFunc func(brand, profile, switchLanguage h.HTMLComponent) h.HTMLComponent
 	menuTopItems                          map[string]ComponentFunc
 	preMenuItems                          []*SideMenuItem
+	userMenuItems                         []*UserMenuItem
+	topBarItems                           []ComponentFunc
 	postMenuItems                         []*SideMenuItem
 	preMenuOrder                          []string
 	postMenuOrder                         []string
@@ -112,6 +114,7 @@ func New(i18nB *i18n.Builder) *Builder {
 		notFoundPageLayoutConfig: &LayoutConfig{
 			SearchBoxInvisible:          true,
 			NotificationCenterInvisible: true,
+			PrintInvisible:              true,
 		},
 		wrapHandlers:        make(map[string]func(in http.Handler) (out http.Handler)),
 		ModelSetupFactories: DefaultModelSetupFactories,
@@ -149,9 +152,11 @@ func New(i18nB *i18n.Builder) *Builder {
 	// Default pre-menu items (first in the side menu): the language selector
 	// (invisible with a single language) and, below it, a menu filter.
 	r.AddPreMenuItem(
+		// the language is in the menu of the user (UserMenuItemLanguage), in
+		// the top bar; this one stays, off, for who wants it here
 		&SideMenuItem{
 			Name:    PreMenuItemLanguageSwitch,
-			Enabled: true,
+			Enabled: false,
 			Handler: r.RunSwitchLanguageFunc,
 		},
 		&SideMenuItem{
@@ -160,6 +165,7 @@ func New(i18nB *i18n.Builder) *Builder {
 			Handler: r.RunMenuFilterFunc,
 		},
 	)
+	r.addDefaultUserMenuItems()
 	return r
 }
 
@@ -882,10 +888,15 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		// "g:<name>" and are ignored.
 		Attr("@update:activated", `(v) => { const p = Array.isArray(v) ? v[v.length-1] : v; if (p && String(p).charAt(0) === '/') { plaid().vars(vars).pushStateURL(String(p)).go(); } }`)
 
-	r = web.Scope(tree).Slot("{ locals }").LocalsInit(
+	whole := web.Scope(tree).Slot("{ locals }").LocalsInit(
 		fmt.Sprintf(`{ items: %s}`, h.JSONString(nodes)),
 		fmt.Sprintf(`{ opened: %s}`, h.JSONString(openedGroups)),
 		fmt.Sprintf(`{ activated: %s}`, h.JSONString(activated)),
+	)
+	// the menu whole, or its icons alone (vars.navRail: menu_rail.go)
+	r = h.Components(
+		h.Div(whole).Attr("v-show", "!vars.navRail || vars.navMobile"),
+		h.Div(railMenu(nodes, activated)).Attr("v-show", "vars.navRail && !vars.navMobile"),
 	)
 	return
 }
@@ -1133,6 +1144,9 @@ func (b *Builder) contentDrawer(ctx *web.EventContext, r *web.EventResponse, com
 type LayoutConfig struct {
 	SearchBoxInvisible          bool
 	NotificationCenterInvisible bool
+	// PrintInvisible: no print button in the bar of the page (a page not
+	// found: nothing of it to print)
+	PrintInvisible bool
 }
 
 func (b *Builder) notificationCenter(ctx *web.EventContext) (er web.EventResponse, err error) {

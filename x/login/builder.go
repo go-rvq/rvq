@@ -16,6 +16,7 @@ import (
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/account"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/markbates/goth"
@@ -66,9 +67,13 @@ type RecaptchaConfig struct {
 }
 
 type Builder struct {
-	secret                string
-	providers             []*Provider
-	authCookieName        string
+	secret         string
+	providers      []*Provider
+	authCookieName string
+	// several accounts in a browser (accounts.go): how many (0: the
+	// default), and the paths whose /u/N says the account
+	maxAccounts           int
+	accountPrefixes       []string
 	authSecureCookieName  string
 	continueUrlCookieName string
 	unauthorizedResponder UnauthorizedResponder
@@ -966,6 +971,7 @@ func (b *Builder) completeUserAuthCallbackComplete(w http.ResponseWriter, r *htt
 		userID = objectID(user)
 	}
 
+	r = b.accountOfUser(w, r, userID)
 	claims := UserClaims{
 		Provider:         ouser.Provider,
 		Email:            ouser.Email,
@@ -979,14 +985,14 @@ func (b *Builder) completeUserAuthCallbackComplete(w http.ResponseWriter, r *htt
 	}
 
 	if b.afterLoginHook != nil {
-		setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(claims)})
+		setCookieForRequest(r, &http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(claims)})
 		if err = b.afterLoginHook(r, user); err != nil {
 			setNoticeOrPanic(w, err)
 			return
 		}
 	}
 
-	if err = b.setSecureCookiesByClaims(w, user, claims); err != nil {
+	if err = b.setSecureCookiesByClaims(w, r, user, claims); err != nil {
 		panic(err)
 	}
 
@@ -995,6 +1001,7 @@ func (b *Builder) completeUserAuthCallbackComplete(w http.ResponseWriter, r *htt
 		redirectURL = v
 	}
 
+	b.clearLoginAccount(w)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -1108,6 +1115,8 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any) (err error) {
 	u := user.(UserPasser)
 	userID := objectID(user)
+	// an account already logged in this browser is logged in its own index
+	r = b.accountOfUser(w, r, userID)
 	claims := UserClaims{
 		UserID:           userID,
 		PassUpdatedAt:    u.GetPasswordUpdatedAt(),
@@ -1116,7 +1125,7 @@ func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any
 
 	if !b.totpEnabled {
 		if b.afterLoginHook != nil {
-			setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(claims)})
+			setCookieForRequest(r, &http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(claims)})
 			if err = b.afterLoginHook(r, user); err != nil {
 				setNoticeOrPanic(w, err)
 				return
@@ -1124,7 +1133,7 @@ func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any
 		}
 	}
 
-	if err = b.setSecureCookiesByClaims(w, user, claims); err != nil {
+	if err = b.setSecureCookiesByClaims(w, r, user, claims); err != nil {
 		panic(err)
 	}
 
@@ -1157,6 +1166,7 @@ func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any
 		redirectURL = v
 	}
 
+	b.clearLoginAccount(w)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 	return nil
 }
@@ -1178,9 +1188,10 @@ func (b *Builder) mustGetSessionToken(claims UserClaims) string {
 	return mustSignClaims(claims, b.secret)
 }
 
-func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, claims *UserClaims, secureSalt string) {
+func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, r *http.Request, claims *UserClaims, secureSalt string) {
+	b.rememberAccount(w, r, claims.UserID)
 	http.SetCookie(w, &http.Cookie{
-		Name:    b.authCookieName,
+		Name:    b.authCookieOf(r),
 		Value:   b.mustGetSessionToken(*claims),
 		Path:    b.cookieConfig.Path,
 		Domain:  b.cookieConfig.Domain,
@@ -1194,7 +1205,7 @@ func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, claims *Us
 
 	if secureSalt != "" {
 		http.SetCookie(w, &http.Cookie{
-			Name:   b.authSecureCookieName,
+			Name:   b.authSecureCookieOf(r),
 			Value:  mustSignClaims(&claims.RegisteredClaims, b.secret+secureSalt),
 			Path:   b.cookieConfig.Path,
 			Domain: b.cookieConfig.Domain,
@@ -1208,9 +1219,9 @@ func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, claims *Us
 	}
 }
 
-func (b *Builder) cleanAuthCookies(w http.ResponseWriter) {
+func (b *Builder) cleanAuthCookies(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.authCookieName,
+		Name:     b.authCookieOf(r),
 		Value:    "",
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -1220,7 +1231,7 @@ func (b *Builder) cleanAuthCookies(w http.ResponseWriter) {
 		Secure:   true,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.authSecureCookieName,
+		Name:     b.authSecureCookieOf(r),
 		Value:    "",
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -1287,7 +1298,7 @@ func (b *Builder) getContinueURL(w http.ResponseWriter, r *http.Request) string 
 	return c.Value
 }
 
-func (b *Builder) setSecureCookiesByClaims(w http.ResponseWriter, user interface{}, claims UserClaims) (err error) {
+func (b *Builder) setSecureCookiesByClaims(w http.ResponseWriter, r *http.Request, user interface{}, claims UserClaims) (err error) {
 	var secureSalt string
 	if b.sessionSecureEnabled {
 		if user.(SessionSecurer).GetSecure() == "" {
@@ -1298,7 +1309,7 @@ func (b *Builder) setSecureCookiesByClaims(w http.ResponseWriter, user interface
 		}
 		secureSalt = user.(SessionSecurer).GetSecure()
 	}
-	b.setAuthCookiesFromUserClaims(w, &claims, secureSalt)
+	b.setAuthCookiesFromUserClaims(w, r, &claims, secureSalt)
 	return nil
 }
 
@@ -1331,19 +1342,60 @@ func (b *Builder) logout(w http.ResponseWriter, r *http.Request) {
 		//
 	}
 
-	b.cleanAuthCookies(w)
-
-	if b.afterLogoutHook != nil {
-		user := CurrentUserFromRequest(r)
-		if user != nil {
-			if herr := b.afterLogoutHook(r, user); herr != nil {
-				setNoticeOrPanic(w, herr)
-				http.Redirect(w, r, b.loginPageURL, http.StatusFound)
-				return
-			}
+	// several accounts: all=1 logs every one out; otherwise the account of
+	// the request alone, and the browser goes to the next one logged in
+	if b.GetMaxAccounts() > 1 {
+		if r.URL.Query().Get("all") == "1" {
+			b.logoutAll(w, r)
+			return
 		}
+		n := account.IndexOf(r)
+		b.cleanAuthCookies(w, r)
+		b.forgetAccount(w, r, n)
+		if herr := b.runAfterLogoutHook(r); herr != nil {
+			setNoticeOrPanic(w, herr)
+			http.Redirect(w, r, b.loginPageURL, http.StatusFound)
+			return
+		}
+		if next := b.OtherLoggedInAccount(r, n); next >= 0 {
+			st, _ := r.Context().Value(accountStateKey{}).(*accountState)
+			if st != nil {
+				st.n = next
+			}
+			http.Redirect(w, r, b.AccountHomeURL(next), http.StatusFound)
+			return
+		}
+		if st, _ := r.Context().Value(accountStateKey{}).(*accountState); st != nil {
+			st.n = 0
+		}
+		http.Redirect(w, r, b.logoutRedirect(r), http.StatusFound)
+		return
 	}
 
+	b.cleanAuthCookies(w, r)
+
+	if herr := b.runAfterLogoutHook(r); herr != nil {
+		setNoticeOrPanic(w, herr)
+		http.Redirect(w, r, b.loginPageURL, http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, b.logoutRedirect(r), http.StatusFound)
+}
+
+// runAfterLogoutHook is the after-logout hook for the user of r.
+func (b *Builder) runAfterLogoutHook(r *http.Request) error {
+	if b.afterLogoutHook == nil {
+		return nil
+	}
+	if user := CurrentUserFromRequest(r); user != nil {
+		return b.afterLogoutHook(r, user)
+	}
+	return nil
+}
+
+// logoutRedirect is where a logout goes: the login, or redirect_to.
+func (b *Builder) logoutRedirect(r *http.Request) string {
 	var redirectTo = b.loginPageURL
 	if redirectToParam := r.URL.Query().Get("redirect_to"); redirectToParam != "" {
 		if redirectToParam == "REFERER" {
@@ -1352,8 +1404,38 @@ func (b *Builder) logout(w http.ResponseWriter, r *http.Request) {
 			redirectTo = redirectToParam
 		}
 	}
+	return redirectTo
+}
 
-	http.Redirect(w, r, redirectTo, http.StatusFound)
+// logoutAll logs out every account of the browser: their cookies, their
+// sessions (the after-logout hook, as the user of each), the list.
+func (b *Builder) logoutAll(w http.ResponseWriter, r *http.Request) {
+	list := b.readAccounts(r)
+	list[account.IndexOf(r)] = ""
+	// those the list lost too: by their cookies
+	for n := 0; n < b.GetMaxAccounts(); n++ {
+		if _, err := r.Cookie(account.CookieName(b.authCookieName, n)); err == nil {
+			list[n] = ""
+		}
+	}
+	for n := range list {
+		rn := r.WithContext(account.WithIndex(r.Context(), n))
+		if claims, err := b.ParseClaims(rn); err == nil && b.userModel != nil && b.afterLogoutHook != nil {
+			if u, err := b.findUserByID(claims.UserID); err == nil {
+				rn = rn.WithContext(context.WithValue(rn.Context(), UserKey, u))
+				if herr := b.afterLogoutHook(rn, u); herr != nil {
+					setNoticeOrPanic(w, herr)
+				}
+			}
+		}
+		b.cleanAuthCookies(w, rn)
+	}
+	b.writeAccounts(w, r, nil)
+	b.clearLoginAccount(w)
+	if st, _ := r.Context().Value(accountStateKey{}).(*accountState); st != nil {
+		st.n = 0
+	}
+	http.Redirect(w, r, b.loginPageURL, http.StatusFound)
 }
 
 // beginAuth is for url "/auth/{provider}"
@@ -1784,7 +1866,7 @@ func (b *Builder) totpDo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var claims *UserClaims
-	claims, err := parseUserClaimsFromCookie(r, b.authCookieName, b.secret)
+	claims, err := parseUserClaimsFromCookie(r, b.authCookieOf(r), b.secret)
 	if err != nil {
 		http.Redirect(w, r, b.logoutURL, http.StatusFound)
 		return
@@ -1846,14 +1928,14 @@ func (b *Builder) totpDo(w http.ResponseWriter, r *http.Request) {
 
 	claims.TOTPValidated = true
 	if b.afterLoginHook != nil {
-		setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(*claims)})
+		setCookieForRequest(r, &http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(*claims)})
 		if err = b.afterLoginHook(r, user); err != nil {
 			setNoticeOrPanic(w, err)
 			return
 		}
 	}
 
-	err = b.setSecureCookiesByClaims(w, user, *claims)
+	err = b.setSecureCookiesByClaims(w, r, user, *claims)
 	if err != nil {
 		panic(err)
 	}
@@ -1862,6 +1944,7 @@ func (b *Builder) totpDo(w http.ResponseWriter, r *http.Request) {
 	if v := b.getContinueURL(w, r); v != "" {
 		redirectURL = v
 	}
+	b.clearLoginAccount(w)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 

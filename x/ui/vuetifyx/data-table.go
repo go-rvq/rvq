@@ -369,7 +369,8 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 								b.rowExpandFunc(obj, ctx),
 								v.VDivider(),
 							).Attr("v-if", fmt.Sprintf("locals.%s_%d", expandVarName, i)).
-								Class("bg-grey-lighten-5"), // bg-grey-lighten-5 | grey lighten-5
+								// a light shade of the theme's (light or dark)
+								Style(themeShade),
 						),
 					).Attr("colspan", fmt.Sprint(tdCount)).Class("pa-0").Style("height: auto; border-bottom: none"),
 				).Class("v-data-table__expand-row"),
@@ -516,9 +517,10 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 				heads = append(heads, h.Tr(trow...))
 			}
 
+			// its shade: the cells' (VTable's style)
 			thead = h.Thead(
 				heads...,
-			).Class("bg-grey-lighten-5")
+			)
 		}
 	}
 
@@ -720,3 +722,8 @@ func (b *DataTableHeaderBuilder) CellComponentFunc(v CellComponentFunc) (r *Data
 	b.cellComponentFunc = v
 	return b
 }
+
+// themeShade is a background a shade off the surface, in the theme of the
+// page — light or dark —, the text its own (not a fixed light grey: white
+// on white in the dark theme).
+const themeShade = "background: rgba(var(--v-theme-on-surface), 0.04)"

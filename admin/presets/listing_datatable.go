@@ -326,7 +326,23 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 			Title(col.Label).
 			CellComponentFunc(col.cell)
 	}
+
+	// no record (the filters, the search, the tab as they are): no table —
+	// its header over nothing —, the notice alone
+	if sr.TotalCount == 0 {
+		dataTable = listingEmpty(MustGetMessages(ctx.Context()))
+	}
 	return
+}
+
+// listingEmpty is what a listing without a record shows in place of its
+// table.
+func listingEmpty(msgr *Messages) h.HTMLComponent {
+	return h.Div(
+		VIcon("mdi-inbox-outline").Size(48).Class("mb-2").Style("opacity: .45"),
+		h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("text-body-1 text-medium-emphasis"),
+	).Class("rvq-listing-empty d-flex flex-column align-center justify-center text-center py-12").
+		Attr("data-listing-empty", true)
 }
 
 // layoutFields are the fields the listing's current layout shows, in order, and
@@ -517,7 +533,8 @@ func (lcb *ListingComponentBuilder) BuildTableAdditions(ctx *web.EventContext, s
 
 		return tpb
 	}
-	return h.Div(h.Text(msgr.ListingNoRecordToShow)).Class("text-center grey--text text--darken-2")
+	// no record: the notice is in place of the table (listingEmpty)
+	return nil
 }
 
 func (b *ListingBuilder) reloadList(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -590,15 +607,8 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 
 		actionBtns = append(actionBtns,
 			a.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
-				buttonColor := a.buttonColor
-				if buttonColor == "" {
-					buttonColor = ColorPrimary
-				}
-				return VBtn(a.RequestTitle(lcb.b.mb, ctx.Context())).
-					Color(buttonColor).
-					PrependIcon(a.icon).
-					Variant(VariantFlat).
-					Class("ml-2").
+				// as the other actions of the bar of the page (PageBarButton)
+				return pageBarColor(PageBarButton(a.RequestTitle(lcb.b.mb, ctx.Context()), a.icon), a.buttonColor).
 					Attr("@click", onclick.String())
 			}, onclick, "", nil, ctx))
 	}
@@ -651,16 +661,10 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 			if openNew == "" {
 				openNew = ListingNewScope + ".show = true"
 			}
-			actionBtns = append(actionBtns, VBtn("").
-				Color("primary").
-				Variant(VariantFlat).
-				Theme("dark").Class("ml-2").
-				// Size(SizeSmall).
+			// the new record: the action in evidence of the bar
+			actionBtns = append(actionBtns, PageBarPrimaryButton(MustGetMessages(ctx.Context()).New, "mdi-plus").
 				Attr("data-event", "new").
-				Attr("@click", openNew).
-				Icon(true).
-				Density("comfortable").
-				Children(VIcon("mdi-plus")))
+				Attr("@click", openNew))
 
 		}
 	}

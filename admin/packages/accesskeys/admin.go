@@ -13,6 +13,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/account"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -133,6 +134,21 @@ func (b *Builder) Install(p *presets.Builder, users *presets.ModelBuilder) error
 		b.Profile.AddChild(myKeys)
 	}
 	b.configureKeys(myKeys, currentUserID)
+
+	// the menu of the user (the top bar): their keys
+	p.AddUserMenuItem(&presets.UserMenuItem{
+		Name:    "MyAccessKeys",
+		Group:   presets.UserMenuQuick,
+		Order:   20,
+		Enabled: true,
+		Handler: func(ctx *web.EventContext) h.HTMLComponent {
+			href := account.URL(p.GetURIPrefix(), myKeys.Info().ListingHref(), account.IndexOf(ctx.R))
+			return v.VListItem(
+				web.Slot(v.VIcon("mdi-key-chain")).Name(v.VSlotPrepend),
+				v.VListItemTitle(h.Text(myKeys.TTitlePlural(ctx.Context()))),
+			).Href(href)
+		},
+	})
 
 	for _, keys := range []*presets.ModelBuilder{userKeys, myKeys} {
 		uses := presets.NewModelBuilder(p, &AccessKeyUse{}, config(UsesModelID+"_"+keys.MenuID()))

@@ -19,12 +19,9 @@ import (
 // — the content of the help bar.
 const HelpEvent = "userdocs_Help"
 
-// HelpBarStorageKey is where the browser keeps the help bar: open or not,
-// and its width (…​.width).
+// HelpBarStorageKey is where the browser keeps the width of the help bar
+// (….width); the bar opens closed — by its button (HelpButton) or F1.
 const HelpBarStorageKey = "rvq.presets.helpBar"
-
-// helpBarRailWidth is the width of the help bar collapsed: its icon.
-const helpBarRailWidth = 56
 
 // NodeOfURI is the node of the documentation of the address uri — of a page
 // of the admin, or of the event that filled a drawer or a dialog (its path
@@ -327,38 +324,44 @@ func (b *Builder) HelpBar(ctx *web.EventContext) h.HTMLComponent {
 			Attr(":class", "{'rvq-help-bar__tab--active': vars.helpBar.active === i}"),
 	).Class("d-flex flex-column h-100").Attr("v-if", "vars.helpBar.open")
 
-	rail := h.Div(
-		v.VBtn("").Icon("mdi-help-circle-outline").Variant(v.VariantText).Color("primary").
-			Attr("title", msgs.HelpBar+" (F1)").Attr("aria-label", msgs.HelpBar).
-			Attr("@click", "vars.helpBar.toggle(true)"),
-		h.Div(h.Text(msgs.HelpBar)).Class("text-caption text-medium-emphasis"),
-	).Class("d-flex flex-column align-center pt-3").Attr("v-else", true)
-
-	drawer := vx.VXNavigationDrawer(open, rail).
+	// closed, hidden: the button of the top bar (HelpButton) or F1 opens it
+	drawer := vx.VXNavigationDrawer(open).
 		Location(v.LocationRight).
 		Width("400").
 		Resizable(HelpBarStorageKey+".width").
 		MinWidth(320).
 		MaxWidth(900).
-		Attr("v-model", "vars.helpBar.visible").
+		Attr("v-model", "vars.helpBar.open").
 		Class("rvq-help-bar").
 		Attr("role", "complementary").
 		Attr("aria-label", msgs.HelpBar).
 		// at the right edge, the first there (order): the page's drawers
 		// open beside it; on a narrow screen, open, over the page
 		ContainerProps(`{order: -1, floating: true, class: "border-s rvq-help-bar",
-			permanent: !(vars.navMobile && vars.helpBar.open),
-			temporary: !!(vars.navMobile && vars.helpBar.open),
-			rail: !vars.helpBar.open, railWidth: ` + strconv.Itoa(helpBarRailWidth) + `}`)
+			permanent: !vars.navMobile, temporary: !!vars.navMobile}`)
 
 	return h.Tag("user-component").
-		Attr(":assign", `[[vars, {helpBar: vars.helpBar || {visible: true, open: false, active: 0, seq: 0,
+		Attr(":assign", `[[vars, {helpBar: vars.helpBar || {open: false, active: 0, seq: 0,
 			tabs: [{id: 0, src: "", kind: "", title: "", content: "", history: [], pos: -1, loading: false, error: false}]}}]]`).
 		Attr(":setup", "[("+helpBarSetupScript(base, kinds)+")]").
 		Children(
 			h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML(helpBarStyle)),
 			drawer,
 		)
+}
+
+// HelpButton is the button of the help bar in the top bar of the admin
+// (presets.Builder.AddTopBarItem): it opens and closes the bar (F1 too);
+// none where the bar is none.
+func (b *Builder) HelpButton(ctx *web.EventContext) h.HTMLComponent {
+	if b.mb == nil || !b.canList(b.mb, ctx) {
+		return nil
+	}
+	msgs := GetMessages(ctx.Context())
+	return v.VBtn("").Icon("mdi-help-circle-outline").Variant(v.VariantText).
+		Attr(":color", "vars.helpBar && vars.helpBar.open ? 'primary' : undefined").
+		Attr("title", msgs.HelpBar+" (F1)").Attr("aria-label", msgs.HelpBar).
+		Attr("@click", "vars.helpBar && vars.helpBar.toggle()")
 }
 
 // helpBarStyle: the dialogs open beside the help bar, not over it — their
@@ -378,13 +381,7 @@ const helpBarStyle = `
 func helpBarSetupScript(base, kinds string) string {
 	return `({window}) => {
 	const w = window, d = w.document, hb = vars.helpBar;
-	const key = ` + strconv.Quote(HelpBarStorageKey) + `;
 	hb.kinds = ` + kinds + `;
-	if (!hb.restored) {
-		hb.restored = true;
-		try { hb.open = !!JSON.parse(w.localStorage.getItem(key) || "{}").open } catch (e) {}
-	}
-	const save = () => { try { w.localStorage.setItem(key, JSON.stringify({open: !!hb.open})) } catch (e) {} };
 	const page = () => w.location.pathname + w.location.search;
 	const at = (kind, uri) => JSON.stringify({kind, uri});
 	// a tab's document: the body of the help event for its address (src) —
@@ -418,7 +415,7 @@ func helpBarSetupScript(base, kinds string) string {
 	};
 	const width = () => {
 		const el = d.querySelector(".v-navigation-drawer.rvq-help-bar");
-		d.documentElement.style.setProperty("--rvq-help-bar-width", (el && !vars.navMobile ? el.offsetWidth : 0) + "px");
+		d.documentElement.style.setProperty("--rvq-help-bar-width", (el && hb.open && !vars.navMobile ? el.offsetWidth : 0) + "px");
 	};
 	// the first tab follows the focus
 	hb.tick = () => {
@@ -427,10 +424,11 @@ func helpBarSetupScript(base, kinds string) string {
 		const t = hb.tabs[0], f = focus(), s = at(f.kind, f.uri);
 		if (s !== t.src) { t.kind = f.kind; t.src = s; load(t) }
 	};
-	hb.toggle = (v) => { hb.open = v === undefined ? !hb.open : v; save(); w.setTimeout(hb.tick, 0) };
+	hb.toggle = (v) => { hb.open = v === undefined ? !hb.open : v; w.setTimeout(hb.tick, 0) };
 	// show: the document of uri in a new tab, the one shown — the tab that
 	// shows it already, when there is one
 	hb.show = (uri) => {
+		if (!hb.open) hb.toggle(true);
 		const src = at("doc", uri);
 		const i = hb.tabs.findIndex((t, j) => j > 0 && t.src === src);
 		if (i > 0) { hb.active = i; return }

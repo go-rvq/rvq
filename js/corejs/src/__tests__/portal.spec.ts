@@ -126,7 +126,7 @@ describe('portal', () => {
   it('scoped new form replace value with portal', async () => {
     const Root = defineComponent({
       template: `
-        <go-plaid-scope v-slot="{ form }" :form-init="{ Age: '222', Company: 'The Plant', Name: '222' }">
+        <go-plaid-scope v-slot="{ form }" :form="{ Age: '222', Company: 'The Plant', Name: '222' }">
           <div>{{ form.Age }}</div>
           <input v-model='form.Age' type="text" />
           <input v-model='form.Company' type="text" />
@@ -181,7 +181,7 @@ describe('portal', () => {
 
     const wrapper = mountTemplate(`
       <div class="mycomp">
-        <go-plaid-scope :init='{interval: 200}' v-slot='{ locals }'>
+        <go-plaid-scope :locals='{interval: 200}' v-slot='{ locals }'>
           <go-plaid-portal
             portal-name="portal1"
             :visible='true' 
@@ -224,7 +224,7 @@ describe('portal', () => {
             <button id='createNewBtn' v-bind='activatorProps'>Create New</button>
             </template>
             
-            <go-plaid-scope v-slot='{ locals, form }' :form-init='{"Company":"42","Error":""}'>
+            <go-plaid-scope v-slot='{ locals, form }' :form='{"Company":"42","Error":""}'>
             <go-plaid-portal :visible='true' :form='form' :locals='locals' :loader='plaid().vars(vars).locals(locals).form(form).method("POST").eventFunc("addItemForm")' portal-name='addItemForm'></go-plaid-portal>
             </go-plaid-scope>        
             </v-dialog>

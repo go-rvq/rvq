@@ -40,7 +40,9 @@ describe('utils', () => {
 
       expect(formData.get('Name')).toBe('John Doe')
       expect(formData.get('Age')).toBe('30')
-      expect(formData.getAll('Hobbies')).toEqual(['coding', 'reading'])
+      // a list of values: each by its index (the server's form, web.UnmarshalForm)
+      expect(formData.get('Hobbies[0]')).toBe('coding')
+      expect(formData.get('Hobbies[1]')).toBe('reading')
       expect(formData.get('Address.City')).toBe('New York')
       expect(formData.get('Address.Country')).toBe('USA')
       expect(formData.get('Employees[0].Name')).toBe('John Doe')

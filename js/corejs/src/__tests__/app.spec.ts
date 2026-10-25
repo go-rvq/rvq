@@ -79,7 +79,8 @@ describe('app', () => {
       `
       <go-plaid-scope v-slot="{locals}">
           <h1 @click='plaid().locals(locals).eventFunc("hello").go()' :number="locals.number"></h1>
-          <go-plaid-scope v-slot="{locals}">
+          <!-- its own locals (:locals): a scope without them shares its parent's -->
+          <go-plaid-scope v-slot="{locals}" :locals="{}">
               <h2 @click='plaid().locals(locals).eventFunc("hello").go()' :number="locals.number"></h2>
           </go-plaid-scope>
       </go-plaid-scope>
@@ -119,7 +120,7 @@ describe('app', () => {
   it('GlobalEvents', async () => {
     const wrapper = mountTemplate(
       `
-      <go-plaid-scope v-slot="{locals}" :init='{count: 10}'>
+      <go-plaid-scope v-slot="{locals}" :locals='{count: 10}'>
         <h1>{{ locals.count }}</h1>
         <global-events @keydown.enter='locals.count = 42'></global-events>
       </go-plaid-scope>

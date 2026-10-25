@@ -603,18 +603,14 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 		// only turns the variable on — which mounts the block and loads the form.
 		host := GetDetailingEditHost(ctx)
 		editBtn := h.HTMLComponents{
-			VBtn("").
-				Variant(VariantFlat).
-				Color("primary").
+			// the edit: the action in evidence of the bar
+			PageBarPrimaryButton(MustGetMessages(ctx.Context()).Edit, "mdi-pencil").
 				Attr(":disabled", "isFetching").
 				Attr(":loading", "isFetching").
 				Attr("data-event", "edit").
 				Attr("@click", host.ShowExprOr(DetailingEditScope)).
 				Attr("@click.middle",
-					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))).
-				Icon(true).
-				Density("comfortable").
-				Children(VIcon("mdi-pencil")),
+					fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, b.mb.Info().EditingHrefCtx(ctx, f.b.id))),
 		}
 
 		if host.OpenerWrapped() {
@@ -735,14 +731,9 @@ func (b *DetailingBuilder) toolbarActionButton(a *ActionBuilder, id string, obj 
 		onclick.Query(ParamToolbarAction, "page")
 	}
 	return a.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
-		return VBtn("").
-			Variant(VariantText).
+		return PageBarIconButton(icon, title, false).
 			Attr(":disabled", "isFetching").
-			Attr("title", title).
 			Attr("data-action", a.name).
-			Icon(true).
-			Density("comfortable").
-			Children(VIcon(icon)).
 			Attr("@click", onclick.String())
 	}, onclick, id, obj, ctx)
 }

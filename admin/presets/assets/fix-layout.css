@@ -41,3 +41,169 @@
 .schemaform-hide-warnings .schemaform-warning {
     display: none !important;
 }
+
+/* the top bar (presets_layout.go): the brand fits its height, cut short of
+   room; the user's button at the end */
+.rvq-app-bar__brand {
+    min-width: 0;
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+    max-height: 52px;
+    overflow: hidden;
+}
+.rvq-app-bar__brand img {
+    max-height: 40px !important;
+}
+.rvq-app-bar__brand .text-h5 {
+    font-size: 1.15rem !important;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+@media (max-width: 599px) {
+    /* the phone: the logo, not the name */
+    .rvq-app-bar__brand .text-h5 > div:not(:first-child) {
+        display: none !important;
+    }
+}
+.rvq-user-button {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+.rvq-user-menu {
+    width: 320px;
+    max-width: 100vw;
+}
+.rvq-user-menu .v-list-subheader {
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.rvq-user-menu__expired {
+    opacity: 0.6;
+}
+
+/* the trail (breadcrumbs.go): a compact line under the title, quiet links,
+   the page itself last */
+.rvq-presets-breadcrumbs-wraper {
+    margin: 2px 0 6px;
+}
+.rvq-presets-breadcrumbs.v-breadcrumbs {
+    padding: 0 !important;
+    /* the text of the admin's pages (its tables, its fields): 1rem, the
+       admin's root size */
+    font-size: 1rem;
+    line-height: 1.5;
+    letter-spacing: 0.0178571429em;
+    min-height: 0;
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__link .v-icon {
+    font-size: 18px;
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__item {
+    padding: 0 !important;
+    white-space: nowrap;
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__divider {
+    padding: 0 4px !important;
+    opacity: 0.45;
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__link {
+    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    padding: 1px 4px;
+    margin: 0 -4px;
+    transition: color .15s, background-color .15s;
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__link:hover {
+    color: rgb(var(--v-theme-primary));
+    background: rgba(var(--v-theme-primary), 0.08);
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__group {
+    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+.rvq-presets-breadcrumbs .rvq-breadcrumbs__current {
+    color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+    font-weight: 500;
+    opacity: 1 !important;
+}
+
+/* the bar of the page (its title, its actions): one height, one case — the
+   actions as text, their icon; the new record, primary, in evidence */
+.rvq-page-header .v-btn {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+}
+.rvq-page-header .v-btn:not(.v-btn--icon) {
+    height: 36px !important;
+    padding: 0 12px;
+}
+.rvq-page-header .v-btn.v-btn--icon {
+    width: 36px !important;
+    height: 36px !important;
+}
+.rvq-page-header .v-toolbar-title {
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-inline-start: 4px;
+}
+.rvq-page-header .v-btn .v-btn__prepend .v-icon,
+.rvq-page-header .v-btn--icon .v-icon {
+    font-size: 20px;
+}
+.rvq-page-header .v-btn + .v-btn {
+    margin-inline-start: 4px;
+}
+
+/* the main menu as its icons alone (menu_rail.go): no edge to drag; its
+   icons, their floating menus */
+.v-navigation-drawer--rail .vx-navigation-drawer__resizer {
+    display: none;
+}
+.rvq-nav-rail .rvq-nav-rail__btn {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 10px;
+}
+.rvq-nav-rail__flyout .v-list-subheader.rvq-nav-rail__sub {
+    min-height: 28px;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.rvq-nav-rail__flyout .rvq-nav-rail__nested {
+    padding-inline-start: 20px !important;
+}
+.v-navigation-drawer--rail .rvq-nav-rail__toggle {
+    padding: 8px 0 !important;
+}
+
+/* the icons of the top bar beside the user: close together */
+.rvq-app-bar__user {
+    gap: 0 !important;
+}
+.rvq-app-bar__user > .v-btn--icon,
+.rvq-app-bar__user .v-btn.v-btn--icon {
+    width: 40px !important;
+    height: 40px !important;
+}
+
+/* the listing: its tabs on a line of their own (their base the full width,
+   the end tabs — the trash — on it), then the search, at the start, apart
+   from the tabs and from the table */
+.rvq-listing-tabs-bar {
+    border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+    margin-bottom: 16px;
+}
+.rvq-listing-tabs-bar .v-tab {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+}
+.rvq-listing-search {
+    margin: 0 0 16px;
+}

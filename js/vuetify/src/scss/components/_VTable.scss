@@ -4,8 +4,10 @@
 .v-table > .v-table__wrapper > table > tbody > tr > th,
 .v-table > .v-table__wrapper > table > thead > tr > th,
 .v-table > .v-table__wrapper > table > tfoot > tr > th {
-  color: var(--v-theme-on-background);
-  background-color: variables.$color-grey-50;
+  // a shade of the surface of the theme (light or dark), the text its own:
+  // a fixed light grey was white on white in the dark theme
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+  background-color: rgba(var(--v-theme-on-surface), 0.04);
 }
 .v-table > .v-table__wrapper > table {
   border: vuetify.$table-border;

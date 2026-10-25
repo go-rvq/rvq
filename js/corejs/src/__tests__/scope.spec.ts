@@ -15,21 +15,22 @@ describe('scope', () => {
   it('vars and form', async () => {
     const wrapper = mountTemplate(`
       <div>
-      <go-plaid-scope :init='{hello: "123"}' v-slot="{locals}">
+      <go-plaid-scope :locals='{hello: "123"}' v-slot="{locals}">
         <div id="l1">{{ locals.hello }}</div>
         <button id="l1Btn" @click='locals.hello = "456"'></button>
-        <go-plaid-scope :init='{hello: "789"}' v-slot="{locals}">
+        <go-plaid-scope :locals='{hello: "789"}' v-slot="{locals}">
           <div id="l2">{{ locals.hello }}</div>
           <button id="l2Btn" @click='locals.hello = "999"'></button>
 
-          <go-plaid-scope v-slot="{form}">
+          <!-- each its own form (:form): a scope without one shares its parent's -->
+          <go-plaid-scope v-slot="{form}" :form="{}">
             <div id="l3">{{ form.Name }}</div>
             <input type="text"
                  :value='form.Name = "AAA"'>
             <button id="l3Btn"
                 @click='locals.hello = form.Name'></button>
 
-            <go-plaid-scope v-slot="{ form }">
+            <go-plaid-scope v-slot="{ form }" :form="{}">
               <div id="l4">{{ form.Name }}</div>
               <input id="input4" type="text"
                    :value='form.Name = "BBB"'>
@@ -72,10 +73,10 @@ describe('scope', () => {
   it('scope init can be array or object', async () => {
     const wrapper = mountTemplate(`
       <div>
-        <go-plaid-scope :init='[{hello: "123"}, {checked: true}, {file: "two"}]' v-slot="{ locals }">
+        <go-plaid-scope :locals='[{hello: "123"}, {checked: true}, {file: "two"}]' v-slot="{ locals }">
          <div id="testArray">{{ locals.hello }}, {{ locals.checked }}, {{ locals.file }}</div>
         </go-plaid-scope>      
-        <go-plaid-scope :init='{a: "123", b: "456", file: "three"}' v-slot="{ locals }">
+        <go-plaid-scope :locals='{a: "123", b: "456", file: "three"}' v-slot="{ locals }">
          <div id="testObject">{{ locals.a }}, {{ locals.b }}, {{ locals.file }}</div>
         </go-plaid-scope>
       </div>
@@ -93,7 +94,7 @@ describe('scope', () => {
   it('scope locals update portal', async () => {
     const Root = {
       template: `
-              <go-plaid-scope :init="{hello:'123'}" v-slot="{locals }">
+              <go-plaid-scope :locals="{hello:'123'}" v-slot="{locals }">
                 <go-plaid-portal portal-name="test" :locals="locals" :visible="true">
                 </go-plaid-portal>
                 <button

@@ -456,7 +456,10 @@ export class Builder {
         }
 
         if (r.redirectURL) {
-          document.location.replace(r.redirectURL)
+          // a page of the account N (/admin/u/N/…) goes on in it (the layout's
+          // window.__rvqAccount, only there)
+          const acc = (window as any).__rvqAccount
+          document.location.replace(acc ? acc.fix(r.redirectURL) : r.redirectURL)
         }
 
         if (r.reloadPortals && r.reloadPortals.length > 0) {

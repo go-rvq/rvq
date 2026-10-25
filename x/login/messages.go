@@ -78,6 +78,10 @@ type Messages struct {
 	PasswordLabel       string `i18n:"hint='Label of the password field of the sign-in.'"`
 	PasswordPlaceholder string `i18n:"hint='Placeholder of the password field of the sign-in.'"`
 	SignInBtn           string `i18n:"label='Sign in button', hint='Button that signs in.'"`
+	AddAccountTitle     string `i18n:"hint='Title of the login of another account, the others staying logged in.'"`
+	AddAccountHint      string `i18n:"hint='Under the title of the login of another account.'"`
+	LoginAgainHint      string `i18n:"hint='Under the title of the login of an account whose session expired; %s is its name.'"`
+	BackToAccount       string `i18n:"hint='Link of the login of another account back to the account logged in; %s is its name.'"`
 	SignOutBtn          string `i18n:"label='Sign out button', hint='Button that signs out.'"`
 	ForgetPasswordLink  string `i18n:"label='Forgot password link', hint='Link to the recovery of a forgotten password.'"`
 	// login dialog: the session ended under a page the user was working on, so
@@ -161,6 +165,10 @@ var Messages_en_US = &Messages{
 	PasswordLabel:                       "Password",
 	PasswordPlaceholder:                 "Password",
 	SignInBtn:                           "Sign In",
+	AddAccountTitle:                     "Log in with another account",
+	AddAccountHint:                      "The other accounts stay logged in.",
+	LoginAgainHint:                      "The session of %s expired.",
+	BackToAccount:                       "Back to %s",
 	SignOutBtn:                          "Sign Out",
 	LoginAgainTitle:                     "Please sign in again",
 	ForgetPasswordLink:                  "Forget your password?",
@@ -234,6 +242,10 @@ var Messages_zh_CN = &Messages{
 	PasswordLabel:                       "密码",
 	PasswordPlaceholder:                 "密码",
 	SignInBtn:                           "登录",
+	AddAccountTitle:                     "Log in with another account",
+	AddAccountHint:                      "The other accounts stay logged in.",
+	LoginAgainHint:                      "The session of %s expired.",
+	BackToAccount:                       "Back to %s",
 	ForgetPasswordLink:                  "忘记密码？",
 	ForgetPasswordPageTitle:             "忘记密码？",
 	ForgotMyPasswordTitle:               "我忘记密码了",
@@ -305,6 +317,10 @@ var Messages_ja_JP = &Messages{
 	PasswordLabel:                       "パスワード",
 	PasswordPlaceholder:                 "パスワード",
 	SignInBtn:                           "ログイン",
+	AddAccountTitle:                     "Log in with another account",
+	AddAccountHint:                      "The other accounts stay logged in.",
+	LoginAgainHint:                      "The session of %s expired.",
+	BackToAccount:                       "Back to %s",
 	ForgetPasswordLink:                  "パスワードをお忘れですか？",
 	ForgetPasswordPageTitle:             "パスワードをお忘れですか？",
 	ForgotMyPasswordTitle:               "パスワードを忘れました",
@@ -375,6 +391,10 @@ var Messages_pt_BR = &Messages{
 	PasswordLabel:                       "Senha",
 	PasswordPlaceholder:                 "Senha",
 	SignInBtn:                           "Entrar",
+	AddAccountTitle:                     "Entrar com outra conta",
+	AddAccountHint:                      "As outras contas continuam conectadas.",
+	LoginAgainHint:                      "A sessão de %s expirou.",
+	BackToAccount:                       "Voltar para %s",
 	SignOutBtn:                          "Sair",
 	LoginAgainTitle:                     "Faça login novamente",
 	ForgetPasswordLink:                  "Esqueceu sua senha?",

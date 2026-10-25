@@ -287,22 +287,9 @@ func (b *BulkActionBuilder) DefaulButtonOnClick(ctx *web.EventContext) *web.VueE
 }
 
 func (b *BulkActionBuilder) DefaultButton(_ *web.EventContext, title func() string, onClick *web.VueEventTagBuilder) h.HTMLComponent {
-	buttonColor := b.buttonColor
-	if buttonColor == "" {
-		buttonColor = v.ColorSecondary
-	}
-
-	btn := v.VBtn(title()).
-		Color(buttonColor).
-		Variant(v.VariantFlat).
-		Density(v.DensityComfortable).
-		// Size(SizeSmall).
-		Class("ml-2").
+	// as the other actions of the bar of the page (PageBarButton)
+	return pageBarColor(PageBarButton(title(), b.icon), b.buttonColor).
 		Attr("@click", onClick.Go())
-	if b.icon != "" {
-		btn.Icon(b.icon)
-	}
-	return btn
 }
 
 func (b *BulkActionBuilder) component(selectedIds []string, ctx *web.EventContext) h.HTMLComponent {
@@ -347,7 +334,6 @@ func (b *ListingBuilder) BulkAction(name string) (r *BulkActionBuilder) {
 		l: b,
 	}
 	r.name = name
-	r.buttonColor = "black"
 	r.dialogWidth = defaultBulkActionDialogWidth
 	b.bulkActions = append(b.bulkActions, r)
 	return

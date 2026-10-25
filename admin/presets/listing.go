@@ -876,7 +876,6 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	}
 
 	tabs := VTabs().
-		Class("mb-2").
 		ShowArrows(true).
 		Color("primary").
 		Density(DensityCompact)
@@ -966,7 +965,8 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	}
 
 	if len(endTabs) == 0 {
-		return tabs.ModelValue(value)
+		// on a line of their own, apart from the content (fix-layout.css)
+		return h.Div(tabs.ModelValue(value)).Class("rvq-listing-tabs-bar")
 	}
 	if value == -1 {
 		// none chosen: the first, as a bar alone forces it
@@ -997,7 +997,7 @@ func (b *ListingBuilder) filterTabs(portals *ListingPortals,
 	return h.Div(
 		tabs.ModelValue(value).Mandatory(false).Class("flex-grow-1").Style("min-width: 0"),
 		h.Div(ends...).Class("d-flex flex-shrink-0"),
-	).Class("d-flex align-start")
+	).Class("d-flex align-end rvq-listing-tabs-bar")
 }
 
 type selectColumns struct {

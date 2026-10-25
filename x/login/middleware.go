@@ -41,7 +41,7 @@ func MockCurrentUser(user any) func(next http.Handler) http.Handler {
 }
 
 func (b *Builder) ParseClaims(r *http.Request) (*UserClaims, error) {
-	return parseUserClaimsFromCookie(r, b.authCookieName, b.secret)
+	return parseUserClaimsFromCookie(r, b.authCookieOf(r), b.secret)
 }
 
 func (b *Builder) ParseRequestUser(r *http.Request) (user any, err, userStateErr error) {
@@ -81,7 +81,7 @@ func (b *Builder) ParseRequestUser(r *http.Request) (user any, err, userStateErr
 
 		if b.sessionSecureEnabled {
 			secureSalt = user.(SessionSecurer).GetSecure()
-			if _, err = parseBaseClaimsFromCookie(r, b.authSecureCookieName, b.secret+secureSalt); err != nil {
+			if _, err = parseBaseClaimsFromCookie(r, b.authSecureCookieOf(r), b.secret+secureSalt); err != nil {
 				return
 			}
 		}
@@ -144,7 +144,7 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 							if err != nil {
 								errorMessage(err)
 								return
-							} else if err = b.setSecureCookiesByClaims(w, found, *claims); err != nil {
+							} else if err = b.setSecureCookiesByClaims(w, r, found, *claims); err != nil {
 								errorMessage(err)
 								return
 							}
@@ -183,7 +183,7 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 
 			if b.sessionSecureEnabled {
 				secureSalt = user.(SessionSecurer).GetSecure()
-				_, err := parseBaseClaimsFromCookie(r, b.authSecureCookieName, b.secret+secureSalt)
+				_, err := parseBaseClaimsFromCookie(r, b.authSecureCookieOf(r), b.secret+secureSalt)
 				if err != nil {
 					errorMessage(err)
 					return
@@ -198,10 +198,10 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 			oldSessionToken := b.mustGetSessionToken(*claims)
 
 			claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
-			b.setAuthCookiesFromUserClaims(w, claims, secureSalt)
+			b.setAuthCookiesFromUserClaims(w, r, claims, secureSalt)
 
 			if b.afterExtendSessionHook != nil {
-				setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(*claims)})
+				setCookieForRequest(r, &http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(*claims)})
 				if err := b.afterExtendSessionHook(r, user, oldSessionToken); err != nil {
 					errorMessage(err)
 					return
@@ -353,7 +353,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 				if b.sessionSecureEnabled {
 					secureSalt = user.(SessionSecurer).GetSecure()
-					_, err := parseBaseClaimsFromCookie(r, b.authSecureCookieName, b.secret+secureSalt)
+					_, err := parseBaseClaimsFromCookie(r, b.authSecureCookieOf(r), b.secret+secureSalt)
 					if err != nil {
 						if !mustLogin {
 							next.ServeHTTP(w, r)
@@ -375,10 +375,10 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 				oldSessionToken := b.mustGetSessionToken(*claims)
 
 				claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
-				b.setAuthCookiesFromUserClaims(w, claims, secureSalt)
+				b.setAuthCookiesFromUserClaims(w, r, claims, secureSalt)
 
 				if b.afterExtendSessionHook != nil {
-					setCookieForRequest(r, &http.Cookie{Name: b.authCookieName, Value: b.mustGetSessionToken(*claims)})
+					setCookieForRequest(r, &http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(*claims)})
 					if herr := b.afterExtendSessionHook(r, user, oldSessionToken); herr != nil {
 						if !mustLogin {
 							next.ServeHTTP(w, r)

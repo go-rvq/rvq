@@ -161,26 +161,34 @@ function addObservers() {
 onMounted(() => {
   setTimeout(() => {
     if (props.useDebounce) {
+      // a change of the locals or of the form (a field edited: the form's
+      // OnChange, its auto-save) — once, after debounceWait of quiet —; what
+      // the handler itself changes (form.value++) is no new change
       const debounceWait = props.useDebounce
+      let emitting = false
       const _watch = debounce((obj: any) => {
-        emit('change-debounced', obj)
+        emitting = true
+        try {
+          emit('change-debounced', obj)
+        } finally {
+          emitting = false
+        }
       }, debounceWait)
-      watch(locals, (value, oldValue) => {
-        _watch({
-          locals: value,
-          form: form,
-          oldLocals: oldValue,
-          oldForm: form
-        })
-      })
-      /*watch(form, (value, oldValue) => {
-        _watch({
-          locals: locals,
-          form: value,
-          oldLocals: locals,
-          oldForm: oldValue
-        })
-      })*/
+      const fire = (obj: any) => {
+        if (!emitting) _watch(obj)
+      }
+      watch(
+        locals,
+        (value, oldValue) => fire({ locals: value, form: form, oldLocals: oldValue, oldForm: form }),
+        { deep: true, flush: 'sync' }
+      )
+      if (form) {
+        watch(
+          form,
+          (value, oldValue) => fire({ locals: locals, form: value, oldLocals: locals, oldForm: oldValue }),
+          { deep: true, flush: 'sync' }
+        )
+      }
     }
   }, 0)
 

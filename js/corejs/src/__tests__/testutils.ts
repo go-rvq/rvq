@@ -13,6 +13,21 @@ const vuetify = createVuetify({
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
+// jsdom has no visualViewport (the overlays of Vuetify read it): the window's
+if (!(globalThis as any).visualViewport) {
+  ;(globalThis as any).visualViewport = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    offsetLeft: 0,
+    offsetTop: 0,
+    pageLeft: 0,
+    pageTop: 0,
+    scale: 1,
+    addEventListener: () => {},
+    removeEventListener: () => {}
+  }
+}
+
 export function mockFetchWithReturnTemplate(requestedForm: Ref<FormData>, responseFuncOrJSON: any) {
   global.fetch = vi.fn().mockImplementation((url, opts) => {
     requestedForm.value = opts.body

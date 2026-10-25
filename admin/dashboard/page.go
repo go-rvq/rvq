@@ -179,21 +179,24 @@ func pushPeriod(key string, customize bool) *web.VueEventTagBuilder {
 }
 
 func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, period Period, customize bool) h.HTMLComponent {
-	var chips h.HTMLComponents
+	// the period: a select of the periods — the custom one shows its dates
+	var periods []map[string]string
 	for _, k := range Periods {
-		chip := v.VChip(h.Text(msgs.PeriodLabel(k))).Size(v.SizeSmall).Class("me-1 mb-1").Attr("data-dashboard-period", k)
-		if k == period.Key {
-			chip.Color("primary").Variant(v.VariantFlat)
-		} else {
-			chip.Variant(v.VariantOutlined)
-		}
-		if k == PeriodCustom {
-			chip.Attr("@click", "locals.custom = !locals.custom")
-		} else {
-			chip.Attr("@click", pushPeriod(k, customize).Go())
-		}
-		chips = append(chips, chip)
+		periods = append(periods, map[string]string{"title": msgs.PeriodLabel(k), "value": k})
 	}
+	choose := web.Plaid().PushState(true).Query("period", web.Var("$event"))
+	if customize {
+		choose.Query("customize", "1")
+	}
+	selector := v.VSelect().Items(periods).ItemTitle("title").ItemValue("value").
+		Attr(":model-value", fmt.Sprintf("locals.custom ? %q : %q", PeriodCustom, period.Key)).
+		Label(msgs.Period).Density(v.DensityCompact).HideDetails(true).Variant(v.VariantOutlined).
+		PrependInnerIcon("mdi-calendar-range").
+		Style("min-width: 200px; max-width: 240px").
+		Attr("data-dashboard-period", period.Key).
+		Attr("aria-label", msgs.Period).
+		Attr("@update:model-value", fmt.Sprintf(`(k) => { if (k === %q) { locals.custom = true } else { locals.custom = false; (($event) => %s)(k) } }`,
+			PeriodCustom, choose.Go()))
 	from, to := ctx.R.FormValue("from"), ctx.R.FormValue("to")
 	if period.Key != PeriodCustom {
 		from, to = period.From.Format("2006-01-02"), period.To.Add(-time.Second).Format("2006-01-02")
@@ -235,8 +238,8 @@ func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, pe
 	}
 	return web.Scope(
 		h.Div(
-			h.H1(msgs.Dashboard).Class("text-h5 me-4"),
-			h.Div(chips...).Class("d-flex flex-wrap align-center").Attr("aria-label", msgs.Period),
+			// the title is the page's (its bar, PageTitle): not again here
+			selector,
 			v.VSpacer(),
 			tools,
 		).Class("d-flex flex-wrap align-center ga-2"),

@@ -170,9 +170,9 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 
 	var searchBoxDefault h.HTMLComponent
 	if !lcb.SearchbarDisabled && (b.mb.layoutConfig == nil || !b.mb.layoutConfig.SearchBoxInvisible) {
-		// the field takes the room there is — up to a width, centered on a
-		// wide screen —, the buttons beside it: on a narrow screen it is not
-		// squeezed between two spacers
+		// the field takes the room there is — up to a width, at the start —,
+		// the buttons beside it: on a narrow screen it is not squeezed
+		// between two spacers
 		searchBoxDefault = VResponsive(
 			web.Scope(
 				h.Div(
@@ -198,25 +198,17 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 							Go()).
 						Class("flex-grow-1").
 						Style("max-width: 420px; min-width: 0"),
-					VBtn("").
-						// Size(SizeSmall).
+					// beside it, as the actions of the bar of the page
+					PageBarIconButton("mdi-reload", msgr.Reload, false).
 						Attr("@click", web.Plaid().
 							PushState(true).
-							Go()).
-						Icon(true).
-						Variant(VariantFlat).
-						Density(DensityCompact).
-						Children(VIcon("mdi-reload")),
+							Go()),
 					h.If(filterBar != nil,
-						VBtn("").
+						PageBarIconButton("mdi-filter-variant", msgr.Filter, false).
 							Attr("@click", "filterBarVisible.value = !filterBarVisible.value").
-							Attr(":color", `filterBarVisible.value ? "primary": ""`).
-							Icon(true).
-							Variant(VariantFlat).
-							Density(DensityCompact).
-							Children(VIcon("mdi-filter")),
+							Attr(":color", `filterBarVisible.value ? "primary": ""`),
 					),
-				).Class("d-flex align-center justify-center ga-1 my-2"),
+				).Class("d-flex align-center ga-1 rvq-listing-search"),
 			).Slot("{ locals }").LocalsInit(`{isFocus: false}`),
 		)
 	}
@@ -366,14 +358,16 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 	)
 
 	if searchBoxDefault != nil {
-		cb.PreBody = append(cb.PreBody, h.Div(searchBoxDefault).Class("mb-2"))
+		cb.PreBody = append(cb.PreBody, h.Div(searchBoxDefault))
 	}
 
 	if filterBar != nil {
 		cb.PreBody = append(cb.PreBody,
 			h.Div(
 				VDivider(),
-				VContainer(VRow(filterBar.(*vx.VXFilterBuilder).Attr("@data", `data => filterBarVisible.value = true`))).Style("background-color:#fafafa"),
+				VContainer(VRow(filterBar.(*vx.VXFilterBuilder).Attr("@data", `data => filterBarVisible.value = true`))).
+					// a shade of the theme's (light or dark)
+					Style("background: rgba(var(--v-theme-on-surface), 0.03)"),
 				VDivider(),
 				h.Div().Class("mb-2"),
 			).Attr(":style", `filterBarVisible.value ? "" : "display:none"`),

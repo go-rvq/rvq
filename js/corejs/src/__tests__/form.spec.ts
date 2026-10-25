@@ -25,7 +25,7 @@ describe('form', () => {
     const Text1 = {
       template: `
         <div>
-          <go-plaid-scope v-slot='{ form }' :form-init='{Text1: 123}'>
+          <go-plaid-scope v-slot='{ form }' :form='{Text1: 123}'>
             <input type="text" v-model='form.Text1'/>
             <button @click='plaid().form(form).eventFunc("hello").go()'>Submit</button>
           </go-plaid-scope>
@@ -56,7 +56,7 @@ describe('form', () => {
     const initObject = `{ ChipGroup1: ["NY", "HZ"] }`
     const template = `
         <div>
-          <go-plaid-scope v-slot='{ form }' :form-init='${initObject}'>
+          <go-plaid-scope v-slot='{ form }' :form='${initObject}'>
             <v-chip-group v-model="form.ChipGroup1" multiple>
               <v-chip id="id_hz" value="TK" filter>Hangzhou</v-chip>
               <v-chip id="id_tk" value="NY" filter>Tokyo</v-chip>
@@ -72,7 +72,10 @@ describe('form', () => {
     const wrapper = mountTemplate(template)
     await nextTick()
     await wrapper.find('button').trigger('click')
-    expect(form.value.getAll('ChipGroup1')).toEqual(['NY', 'HZ'])
+    // a list: each value by its index (ChipGroup1[0], …: web.UnmarshalForm)
+    const list = (name: string) =>
+      [...form.value.entries()].filter(([k]) => k.startsWith(name + '[')).map(([, v]) => v)
+    expect(list('ChipGroup1')).toEqual(['NY', 'HZ'])
 
     await wrapper.find('#id_hz').trigger('click')
     await nextTick()
@@ -80,13 +83,13 @@ describe('form', () => {
 
     await wrapper.find('button').trigger('click')
     await flushPromises()
-    expect(form.value.getAll('ChipGroup1')).toEqual(['NY', 'HZ', 'TK'])
+    expect(list('ChipGroup1')).toEqual(['NY', 'HZ', 'TK'])
   })
 
   it('v-file-input', async () => {
     const template = `
         <div>
-          <go-plaid-scope v-slot='{ form }' :form-init='{}'>
+          <go-plaid-scope v-slot='{ form }' :form='{}'>
             <v-file-input label="File input" v-model="form.Files1"></v-file-input>
             <button @click='plaid().form(form).eventFunc("hello").go()'>Submit</button>
           </go-plaid-scope>
@@ -107,7 +110,7 @@ describe('form', () => {
   it('input type file', async () => {
     const template = `
         <div>
-          <go-plaid-scope v-slot='{ form }' :form-init='{}'>
+          <go-plaid-scope v-slot='{ form }' :form='{}'>
             <input id="file1" type="file" @change="form.Files1 = $event.target.files">
             <button @click='plaid().form(form).eventFunc("hello").go()'>Submit</button>
           </go-plaid-scope>
@@ -141,7 +144,7 @@ describe('form', () => {
     const Text1 = {
       template: `
         <div>
-          <go-plaid-scope v-slot="{ form }" :form-init="{Text1: '111'}">
+          <go-plaid-scope v-slot="{ form }" :form="{Text1: '111'}">
             <input type="text" v-model='form.Text1'
               v-on:input="change2($event.target.value+'later')"
               v-on:input.trim="change2($event.target.value+'later2')"
@@ -176,7 +179,7 @@ describe('form', () => {
     const Text1 = {
       template: `
         <div class="Text1">
-          <go-plaid-scope v-slot="{ form }" :form-init="{BaseInput1: 'base input value'}">
+          <go-plaid-scope v-slot="{ form }" :form="{BaseInput1: 'base input value'}">
             <base-input v-model='form.BaseInput1' label="Label1"></base-input>
             <button @click='plaid().form(form).eventFunc("hello").go()'></button>
           </go-plaid-scope>
@@ -226,7 +229,7 @@ describe('form', () => {
       },
       template: `
 				<div class="Text1">
-          <go-plaid-scope v-slot="{ form }" :form-init="{
+          <go-plaid-scope v-slot="{ form }" :form="{
             Textarea1: 'textarea1 value',
             Text1: 'text value',
             Radio1: 'Radio1A',
@@ -286,7 +289,7 @@ describe('form', () => {
       const wrapper = mountTemplate(
         `
         <div class="Text1">
-          <go-plaid-scope v-slot="{ form }" :form-init='{Checkbox2: ["CheckBoxA"]}'>
+          <go-plaid-scope v-slot="{ form }" :form='{Checkbox2: ["CheckBoxA"]}'>
             <input id="check1" type="checkbox" name="checkbox2" v-model='form.Checkbox2' value="CheckBoxA"/>
             <input id="check2" type="checkbox" name="checkbox2" v-model='form.Checkbox2' value="CheckBoxB"/>
             <button @click='plaid().form(form).eventFunc("hello").go()'></button>
@@ -306,7 +309,7 @@ describe('form', () => {
     it('test text input value', async () => {
       const template = `
         <div class="Text1">
-          <go-plaid-scope v-slot="{ form }" :form-init='{Text1: "text value 1"}'>
+          <go-plaid-scope v-slot="{ form }" :form='{Text1: "text value 1"}'>
             <input type="text" v-model="form.Text1"/>
             <button @click='plaid().form(form).eventFunc("hello").go()'></button>
           </go-plaid-scope>
@@ -326,10 +329,10 @@ describe('form', () => {
       expect(form.value.get('Text1')).toEqual(value)
     })
 
-    it('test assign form value without :form-init', async () => {
+    it('test assign form value without :form', async () => {
       const template = `
         <div class="Text1">
-          <go-plaid-scope v-slot="{ form }" :form-init='{Text1: "text value 1"}'>
+          <go-plaid-scope v-slot="{ form }" :form='{Text1: "text value 1"}'>
             <input type="text" v-model="form.Text1" v-assign='[form, {Text1: "123"}]'/>
             <button @click='plaid().form(form).eventFunc("hello").go()'></button>
           </go-plaid-scope>
