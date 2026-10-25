@@ -25,6 +25,8 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   themeLight: "Light",
   themeDark: "Dark",
   themeAuto: "Auto",
+  tagRemove: "Remove",
+  tagsNone: "No tags",
   year: "Year",
   month: "Month",
   filterClearAll: "Clear Filters",

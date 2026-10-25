@@ -46,6 +46,10 @@ export interface VxMessages {
   themeDark: string
   /** The theme that follows the system's (light or dark). */
   themeAuto: string
+  /** Takes a tag off (the trash of a chip). */
+  tagRemove: string
+  /** No tag to choose from. */
+  tagsNone: string
   /** Label of a year (a month picker). */
   year: string
   /** Label of a month (a month picker). */

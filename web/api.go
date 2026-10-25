@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-playground/form/v4"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/google/uuid"
 	"github.com/mpvl/unique"
 	"github.com/sunfmin/reflectutils"
 )
@@ -416,7 +417,19 @@ type CustoFormTypeDecoder struct {
 	Types   []any
 }
 
-var FormTypeDecoders []CustoFormTypeDecoder
+var FormTypeDecoders = []CustoFormTypeDecoder{
+	// a UUID is its text ("" none): without it the decoder takes it for
+	// its 16 bytes ([16]uint8) and fails — the record's key, a foreign key
+	// read as zero
+	{Decoder: decodeUUID, Types: []any{uuid.UUID{}}},
+}
+
+func decodeUUID(vals []string) (any, error) {
+	if len(vals) == 0 || strings.TrimSpace(vals[0]) == "" {
+		return uuid.Nil, nil
+	}
+	return uuid.Parse(strings.TrimSpace(vals[0]))
+}
 
 func (ctx *EventContext) FormSliceValues(key string) (r []string) {
 	for _, key := range ctx.FormSliceKeys(key) {

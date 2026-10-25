@@ -42,6 +42,7 @@ import GadIde from '@/lib/GadIde'
 import GadCode from '@/lib/GadCode'
 import ThemeToggle from '@/lib/ThemeToggle'
 import ThemeSelect from '@/lib/ThemeSelect'
+import TagChips from '@/lib/TagChips'
 
 const vuetifyx = {
   install: (app: App) => {
@@ -87,6 +88,7 @@ const vuetifyx = {
     app.component('vx-gad-code', GadCode)
     app.component('vx-theme-toggle', ThemeToggle)
     app.component('vx-theme-select', ThemeSelect)
+    app.component('vx-tag-chips', TagChips)
   }
 }
 declare const window: any
