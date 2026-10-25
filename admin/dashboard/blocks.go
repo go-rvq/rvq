@@ -43,7 +43,14 @@ type Action struct {
 	Arg   string
 	Label string
 	Icon  string
+	// Removes: done, the row is gone (read, approved): it leaves at the
+	// click — slides, fades, its height closes —, the action runs after; a
+	// failure brings it back (the widget drawn again)
+	Removes bool
 }
+
+// rowLeaveMS is how long a row takes to leave (Action.Removes).
+const rowLeaveMS = 280
 
 func (rc *renderCtx) action(a *Action) h.HTMLComponent {
 	if a == nil {
@@ -57,8 +64,22 @@ func (rc *renderCtx) action(a *Action) h.HTMLComponent {
 		Query("from", rc.ctx.R.FormValue("from")).
 		Query("to", rc.ctx.R.FormValue("to")).
 		Go()
+	click := ev
+	if a.Removes {
+		// the row leaves first, the action after it
+		click = fmt.Sprintf(`(e) => {
+	const row = e.currentTarget.closest("[data-dashboard-row], [data-dashboard-status]");
+	if (row) {
+		row.style.height = row.offsetHeight + "px";
+		void row.offsetHeight;
+		row.classList.add("dash-row--leaving");
+	}
+	e.currentTarget.disabled = true;
+	window.setTimeout(() => { %s }, %d);
+}`, ev, rowLeaveMS)
+	}
 	btn := v.VBtn(a.Label).Size(v.SizeXSmall).Variant(v.VariantTonal).Color("primary").
-		Attr("@click.stop", ev).Attr("data-dashboard-action", a.Name)
+		Attr("@click.stop", click).Attr("data-dashboard-action", a.Name)
 	if a.Icon != "" {
 		btn.PrependIcon(a.Icon)
 	}
@@ -285,9 +306,9 @@ func (l *List) render(rc *renderCtx) h.HTMLComponent {
 			).Style("min-width:0;flex:1"),
 			h.If(r.Right != "", h.Div(h.Text(r.Right)).Class("text-caption text-medium-emphasis ms-2 flex-shrink-0")),
 			h.If(r.Action != nil, h.Div(rc.action(r.Action)).Class("ms-2 flex-shrink-0")),
-		).Class("d-flex align-center py-1").Style("border-bottom:1px solid rgba(var(--v-border-color), var(--v-border-opacity))").Attr("data-dashboard-row", true))
+		).Class("d-flex align-center py-1 dash-row").Style("border-bottom:1px solid rgba(var(--v-border-color), var(--v-border-opacity))").Attr("data-dashboard-row", true))
 	}
-	return h.Div(rows...).AppendChildren(link(l.Link, lt))
+	return h.Div(rowLeaveStyle, h.Div(rows...)).AppendChildren(link(l.Link, lt))
 }
 
 // StatusItem is a state: a dot of its Level, a title, a detail, a link, a
@@ -327,9 +348,9 @@ func (s *Status) render(rc *renderCtx) h.HTMLComponent {
 				h.If(it.Detail != "", h.Div(h.Text(it.Detail)).Class("text-caption text-medium-emphasis")),
 				h.If(it.Action != nil, h.Div(rc.action(it.Action)).Class("mt-1")),
 			),
-		).Class("d-flex mb-2").Attr("data-dashboard-status", string(it.Level)))
+		).Class("d-flex mb-2 dash-row").Attr("data-dashboard-status", string(it.Level)))
 	}
-	return h.Div(items...)
+	return h.Div(rowLeaveStyle, h.Div(items...))
 }
 
 // Bar is a share done of a total (a language's texts translated).
@@ -417,3 +438,10 @@ func (s *Stack) render(rc *renderCtx) h.HTMLComponent {
 	}
 	return h.Div(out...)
 }
+
+// rowLeaveStyle is how a row leaves (Action.Removes): to the side, fading,
+// its height closing.
+var rowLeaveStyle = h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML(fmt.Sprintf(`
+.dash-row { transition: opacity %[1]dms ease, transform %[1]dms ease, height %[1]dms ease, padding %[1]dms ease, margin %[1]dms ease; }
+.dash-row--leaving { opacity: 0; transform: translateX(32px); height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; border-color: transparent !important; overflow: hidden; }
+`, rowLeaveMS)))
