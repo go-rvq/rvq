@@ -53,8 +53,10 @@ func (s *SelectConfig) AvailableKeys(ctx *FieldContext) []string {
 	return s.AvailableKeysFunc(ctx)
 }
 
+// KeyLabels are the labels of the keys: KeyLabelsFunc's, else the labels of
+// KeyLabelsAndHintsFunc, else the keys themselves.
 func (s *SelectConfig) KeyLabels(ctx *FieldContext, key []string) (r []string) {
-	if s.KeyLabelsFunc == nil {
+	if s.KeyLabelsFunc == nil && s.KeyLabelsAndHintsFunc != nil {
 		labelsAndHints := s.KeyLabelsAndHintsFunc(ctx, key)
 		r = make([]string, len(labelsAndHints))
 		for i, label := range labelsAndHints {
