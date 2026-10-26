@@ -37,23 +37,34 @@ const (
 )
 
 type Builder struct {
-	db *gorm.DB
+	db   *gorm.DB
+	logs *presets.ModelBuilder
 }
 
+// New is the mail sender of db: every message sent from now on is recorded
+// in its central of the mails sent (MailLog, SetRecorder).
 func New(db *gorm.DB, i18nB *i18n.Builder) *Builder {
 	uuidkey.MustRegister(db) // its records have UUID keys
 	ConfigureMessages(i18nB)
+	SetRecorder(db)
 	return &Builder{
 		db: db,
 	}
 }
 
+// MailLogs is the model of the central of the mails sent (after Install).
+func (b *Builder) MailLogs() *presets.ModelBuilder {
+	return b.logs
+}
+
 func (b *Builder) Install(p *presets.Builder) (err error) {
 	if err = b.db.AutoMigrate(
 		&MailSender{},
+		&MailLog{},
 	); err != nil {
 		return
 	}
+	b.installMailLogs(p)
 
 	mb := Model(p,
 		&MailSender{},
@@ -244,9 +255,10 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			Message string `admin:"required"`
 		}
 
-		mb := NewModel(p, &sendMailTestForm{})
-		e := mb.Editing()
-		presets.ConfigureSelectField(mb, "Sender", presets.WRITE, &presets.SelectConfig{
+		// the model of the action's form (not the settings', mb)
+		fmb := NewModel(p, &sendMailTestForm{})
+		e := fmb.Editing()
+		presets.ConfigureSelectField(fmb, "Sender", presets.WRITE, &presets.SelectConfig{
 			AvailableKeysFunc: func(ctx *presets.FieldContext) (keys []string) {
 				s := presets.GetActionFormContext[*sendMailTestForm](ctx.EventContext).Obj.(*MailSender)
 				if s.Gmail.IsValid() {
@@ -272,7 +284,10 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 					To(ctx.Form.To).
 					Label(ctx.Context.R.Host).
 					Subject(ctx.Form.Subject).
-					Body(ctx.Form.Message))
+					Body(ctx.Form.Message).
+					Kind(KindTest).
+					RecordPath(mb.Info().RecordPath(nil, model.ID{})).
+					Origin(ctx.Context.R.RemoteAddr, ctx.Context.R.UserAgent()))
 
 				if err == nil {
 					ctx.Context.Flash = GetMessages(ctx.Context.Context()).SendMailSuccessfully
@@ -334,7 +349,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		}
 		return presets.NewFieldsTabs("MailSender",
 			&presets.FieldsGroup{Name: "Sending", Title: title(func(m *Messages) string { return m.MailSenderTabSending }),
-				Items: presets.FieldsLayout{"Sender", "SubjectPrefix", "Gmail", "SMTP", "MaxPerRecipientHour", "MaxPerRecipientDay"}},
+				Items: presets.FieldsLayout{"Sender", "SubjectPrefix", "Gmail", "SMTP", "MaxPerRecipientHour", "MaxPerRecipientDay", "MailLogRetentionDays"}},
 			&presets.FieldsGroup{Name: "Answers", Title: title(func(m *Messages) string { return m.MailSenderTabAnswers }),
 				Items: presets.FieldsLayout{"Inbound"}},
 		)

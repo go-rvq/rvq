@@ -20,7 +20,9 @@ A configuração tem duas abas, no detalhe e na edição:
     dia. Acima disso o e-mail é recusado e o erro fica registrado; os
     e-mails para a própria equipe não contam. Os limites impedem que um
     formulário do site seja usado para encher a caixa de alguém. `0`: sem
-    limite.
+    limite;
+  - por quantos dias a {%= admin.model("mail_logs").link %} guarda cada
+    e-mail enviado (padrão 365; `0`, para sempre).
 - **Respostas** — quem lê o que as pessoas respondem aos e-mails:
   - **Pessoas, na caixa da equipe**: as respostas chegam à caixa de e-mail
     da equipe e são lidas lá, como qualquer e-mail;
@@ -35,6 +37,8 @@ A configuração tem duas abas, no detalhe e na edição:
 As senhas (da conta SMTP e da caixa IMAP) nunca são mostradas no detalhe.
 Na edição a senha salva vem no campo, oculta (o ícone do olho a mostra):
 apagá-la a remove.
+
+Todo e-mail enviado, ou que falhou, fica na {%= admin.model("mail_logs").link %}, com o conteúdo sensível oculto.
 
 Antes de o site depender da conta, confira-a com
 {%= admin.action("mail_sender", "TestSendMail").link %}.

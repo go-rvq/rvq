@@ -22,6 +22,9 @@ type MailSender struct {
 	// Inbound is where the answers to the messages sent are read from
 	// (Inbox): the team's mailbox, by people (manual), or by IMAP.
 	Inbound InboundSettings `gorm:"embedded;embeddedPrefix:inbound__"`
+	// MailLogRetentionDays is how long the central of the mails sent keeps
+	// a message (MailLog); 0, for ever.
+	MailLogRetentionDays uint `gorm:"not null;default:365"`
 }
 
 // IsValid reports whether the settings send: a sender set, or the override
@@ -30,19 +33,28 @@ func (c *MailSender) IsValid() bool {
 	return SMTPOverride() != "" || c.Gmail.IsValid() || c.SMTP.IsValid()
 }
 
+// SendByMethod sends b by the sender senderName ("GMAIL", "SMTP"); every
+// message, sent or not, is recorded in the central of the mails sent
+// (MailLog), its sensitive content hidden.
 func (c *MailSender) SendByMethod(senderName string, b *MessageBuilder) (err error) {
+	method := senderName
+	defer func() { record(b, method, err) }()
+
 	if b.external {
 		if err = limiter.take(b.to, c.MaxPerRecipientHour, c.MaxPerRecipientDay); err != nil {
 			return
 		}
 	}
-	b.PrependSubject(c.SubjectPrefix)
+	if !b.verbatim {
+		b.PrependSubject(c.SubjectPrefix)
+	}
 
 	var sender Sender
 
 	// the local development's and the tests' server, whatever the settings
 	// say (SMTPOverrideEnv)
 	if addr := SMTPOverride(); addr != "" {
+		method = MethodOverride
 		if sender, err = c.overrideSender(addr); err != nil {
 			return
 		}

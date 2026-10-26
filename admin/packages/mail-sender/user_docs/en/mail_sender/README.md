@@ -19,7 +19,9 @@ The settings have two tabs, in the detail and in the edit form:
     team (whoever wrote through the site, a customer) gets per hour and per
     day. Past them the e-mail is refused and the error recorded; e-mails to
     the team itself do not count. The limits keep a form of the site from
-    being used to flood somebody's mailbox. `0`: no limit.
+    being used to flood somebody's mailbox. `0`: no limit;
+  - for how many days {%= admin.model("mail_logs").link %} keeps each e-mail
+    sent (365 by default; `0`, for ever).
 - **Answers** — who reads what people answer to the e-mails:
   - **People, in the team mailbox**: the answers reach the team's mailbox
     and are read there, as any e-mail;
@@ -34,6 +36,8 @@ The settings have two tabs, in the detail and in the edit form:
 The passwords (of the SMTP account and of the IMAP mailbox) are never shown
 in the detail. In the edit form the password saved is in its field, hidden
 (the eye icon shows it): clearing it removes it.
+
+Every e-mail sent, or that failed, is in {%= admin.model("mail_logs").link %}, its sensitive content hidden.
 
 Before the site relies on the account, check it with
 {%= admin.action("mail_sender", "TestSendMail").link %}.
