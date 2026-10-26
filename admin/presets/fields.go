@@ -409,6 +409,21 @@ type FieldsGroup struct {
 	AutoHint  bool
 	Hint      func(ctx context.Context) string
 	Items     FieldsLayout
+	// Tabs draws the group, in a form, as tabs: each of its items that is a
+	// *FieldsGroup a tab — titled by the group's title —, its fields under
+	// it; what is not a group goes in a tab of its own, untitled. A tab with
+	// a field in error is marked.
+	Tabs bool
+}
+
+// NewFieldsTabs is a group drawn as tabs (FieldsGroup.Tabs): each of tabs a
+// tab.
+func NewFieldsTabs(name string, tabs ...*FieldsGroup) *FieldsGroup {
+	g := &FieldsGroup{Name: name, Tabs: true}
+	for _, t := range tabs {
+		g.Items = append(g.Items, t)
+	}
+	return g
 }
 
 func NewFieldsGroup(name string, items ...any) *FieldsGroup {
@@ -1271,6 +1286,10 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 					)
 				}
 			case *FieldsGroup:
+				if t.Tabs {
+					comp = b.tabsComponent(t, info, parentKey, vErr, ctx, doLayout)
+					break
+				}
 				if g := doLayout(t.Items); len(g) > 0 {
 					var (
 						titleComp,
@@ -1291,7 +1310,7 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 					if t.AutoHint {
 						hint = b.GroupHint(info, ctx.Context(), t.Name)
 					} else if t.Hint != nil {
-						hint = t.Title(ctx.Context())
+						hint = t.Hint(ctx.Context())
 					}
 
 					if len(hint) > 0 {
@@ -1320,6 +1339,90 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 	}
 
 	return h.Components(append(comps, doLayout(b.CurrentLayout())...)...)
+}
+
+// tabsComponent draws the group g as tabs (FieldsGroup.Tabs): a tab of each
+// of its groups, its fields drawn by doLayout — all of them, eager: a field
+// of a tab not shown is still in the form —; a tab with a field in error
+// (vErr) is marked, and the first of them is the one open.
+func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey string, vErr *web.ValidationErrors, ctx *web.EventContext,
+	doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
+	type tab struct {
+		title  string
+		layout FieldsLayout
+	}
+	var tabs []tab
+	var loose FieldsLayout
+	for _, it := range g.Items {
+		sub, ok := it.(*FieldsGroup)
+		if !ok {
+			loose = append(loose, it)
+			continue
+		}
+		title := ""
+		if sub.AutoTitle {
+			title = b.GroupTitle(info, ctx.Context(), sub.Name)
+		} else if sub.Title != nil {
+			title = sub.Title(ctx.Context())
+		}
+		layout := sub.Items
+		if sub.Tabs {
+			layout = FieldsLayout{sub}
+		}
+		tabs = append(tabs, tab{title: title, layout: layout})
+	}
+	if len(loose) > 0 {
+		tabs = append([]tab{{layout: loose}}, tabs...)
+	}
+
+	key := func(name string) string {
+		if parentKey == "" {
+			return name
+		}
+		return parentKey + "." + name
+	}
+	var (
+		heads   []h.HTMLComponent
+		windows []h.HTMLComponent
+		drawn   []int
+		open    = -1
+	)
+	for i, t := range tabs {
+		// before drawing: a field drawn takes its errors (GetRemoveFieldErrors)
+		inError := false
+		_ = t.layout.WalkNames(func(name string) error {
+			if len(vErr.GetFieldErrors(key(name))) > 0 || len(vErr.GetFieldErrorsUnder(key(name))) > 0 {
+				inError = true
+			}
+			return nil
+		})
+		content := doLayout(t.layout)
+		if len(content) == 0 {
+			continue
+		}
+		head := v.VTab(h.Text(t.title)).Value(i).Attr("data-fields-tab", i)
+		if inError {
+			head.PrependIcon("mdi-alert-circle").Color("error")
+			if open < 0 {
+				open = i
+			}
+		}
+		drawn = append(drawn, i)
+		heads = append(heads, head)
+		windows = append(windows, v.VWindowItem(content...).Value(i).Eager(true).Class("pt-4"))
+	}
+	if len(heads) == 0 {
+		return nil
+	}
+	if open < 0 {
+		open = drawn[0]
+	}
+	return web.Scope(h.Div(
+		v.VTabs(heads...).Attr("v-model", "locals.tab").Color(v.ColorPrimary).Density(v.DensityCompact).
+			Class("border-b"),
+		v.VWindow(windows...).Attr("v-model", "locals.tab"),
+	).Class("mb-4").Attr("data-fields-tabs", g.Name)).
+		LocalsInit(fmt.Sprintf(`{tab: %d}`, open)).Slot("{ locals }")
 }
 
 func (b *FieldsBuilder) GroupTitle(info *ModelInfo, ctx context.Context, name string) (r string) {
