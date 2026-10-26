@@ -10,65 +10,77 @@ import (
 const MessagesKey i18n.ModuleKey = "rvq-admin/mail-sender"
 
 type Messages struct {
-	ModuleDescription                 string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	MailSender                        string           `i18n:"hint='Name of the mail sender settings (menu, title).'"`
-	TestMessageSubject                string           `i18n:"label='Test message: subject', hint='Subject of the test email.'"`
-	TestMessageBody                   string           `i18n:"label='Test message: body', hint='Body of the test email.'"`
-	MailSenderSender                  string           `i18n:"label='Sender', hint='Label of the kind of sender (Gmail, SMTP).'"`
-	MailSenderSubjectPrefix           string           `i18n:"label='Subject prefix', hint='Label of the text put before the subject of every email.'"`
-	MailSenderGmail                   string           `i18n:"label='Gmail', hint='Name of the Gmail sender.'"`
-	MailSenderSMTP                    string           `i18n:"label='SMTP', hint='Name of the SMTP sender.'"`
-	MailSender_Action_TestSendMail    string           `i18n:"label='Send test mail', hint='Action that sends a test email.'"`
-	GmailSenderConfiguredSuccessfully string           `i18n:"label='Gmail configured', hint='Shown once the Gmail sender was authorized.'"`
-	GmailSenderLogOutSuccessfully     string           `i18n:"label='Gmail logged out', hint='Shown once the Gmail sender was signed out.'"`
-	GmailSenderConnectPage            string           `i18n:"label='Gmail: connect', hint='Page that sends to Google to authorize the Gmail sender (a permission of its own).'"`
-	GmailSenderLogoutPage             string           `i18n:"label='Gmail: disconnect', hint='Page that signs the Gmail sender out (a permission of its own).'"`
-	GmailSenderCallbackPage           string           `i18n:"label='Gmail: authorization return', hint='Page Google returns to after the authorization (a permission of its own).'"`
-	GmailSenderSuccessPage            string           `i18n:"label='Gmail: authorized', hint='Page shown once the Gmail sender was authorized (a permission of its own).'"`
-	GmailSenderCallbackURI            string           `i18n:"label='Gmail: callback URI', hint='Label of the address Google returns to after the authorization.'"`
-	GmailSenderCredentials            string           `i18n:"label='Gmail: app credentials', hint='Label of the OAuth credentials of the Gmail sender.'"`
-	GmailSenderCredentialsFile        string           `i18n:"label='Gmail: app credentials file', hint='Label of the field that uploads the credentials file.'"`
-	GmailSenderCredentialsFile_Hint   string           `i18n:"label='Gmail: app credentials file hint', hint='Hint of the credentials file: the .json of a Desktop application from the Google Cloud Console.'"`
-	GmailSenderSetup                  string           `i18n:"label='Gmail: setup', hint='Button that opens how to create the Gmail credentials.'"`
-	GmailSenderSetupTitle             string           `i18n:"label='Gmail: setup title', hint='First paragraph of the Gmail setup: why the OAuth client is created by hand.'"`
-	GmailSenderSetupSteps             []string         `i18n:"label='Gmail: setup steps', hint='The steps to create the Gmail credentials, one per item.'"`
-	GmailSenderSetupScopes            string           `i18n:"label='Gmail: scopes', hint='Title of the scopes to declare on the consent screen.'"`
-	GmailSenderSetupScopesHint        string           `i18n:"label='Gmail: scopes hint', hint='Why the scopes listed are the ones needed.'"`
-	GmailSenderSetupScopesSteps       []string         `i18n:"label='Gmail: scopes steps', hint='The steps to declare the scopes, one per item.'"`
-	GmailSenderSetupBlocked           string           `i18n:"label='Gmail: access blocked', hint='What to do when Google blocks the access because the app is not verified.'"`
-	GmailSenderSetupCallback          string           `i18n:"label='Gmail: setup callback', hint='Title of the callback address of this installation.'"`
-	GmailSenderSetupCallbackHint      string           `i18n:"label='Gmail: setup callback hint', hint='Why the callback address need not be registered.'"`
-	GmailSenderSetupConsoleBtn        string           `i18n:"label='Gmail: open console', hint='Button that opens the Google Cloud Console.'"`
-	SmtpSenderTLS                     string           `i18n:"label='SMTP: TLS', hint='Label of whether the SMTP connection uses TLS.'"`
-	SmtpSenderServer                  string           `i18n:"label='SMTP: server', hint='Label of the SMTP server.'"`
-	SmtpSenderPort                    string           `i18n:"label='SMTP: port', hint='Label of the SMTP port.'"`
-	SmtpSenderFromMail                string           `i18n:"label='SMTP: from', hint='Label of the address the emails are sent from.'"`
-	SmtpSenderUser                    string           `i18n:"label='SMTP: user', hint='Label of the SMTP user.'"`
-	SmtpSenderPassword                string           `i18n:"label='SMTP: password', hint='Label of the SMTP password.'"`
-	MailSenderMaxPerRecipientHour     string           `i18n:"label='Limit per address: hour', hint='Label of the most emails an address outside the team (a contact) gets in an hour; 0, no limit.'"`
-	MailSenderMaxPerRecipientDay      string           `i18n:"label='Limit per address: day', hint='Label of the most emails an address outside the team (a contact) gets in a day; 0, no limit.'"`
-	MailSenderInbound                 string           `i18n:"label='Answers', hint='Label of the group that says where the answers to the emails are read from.'"`
-	InboundSettingsMode               string           `i18n:"label='Answers: read by', hint='Label of who reads the answers: people, in the team mailbox, or the application, by IMAP.'"`
-	InboundSettingsServer             string           `i18n:"label='Answers: IMAP server', hint='Label of the IMAP server the answers are read from.'"`
-	InboundSettingsPort               string           `i18n:"label='Answers: IMAP port', hint='Label of the IMAP port; 0, the default (993 with TLS, 143 without).'"`
-	InboundSettingsTLS                string           `i18n:"label='Answers: TLS', hint='Label of whether the IMAP connection uses TLS (port 993).'"`
-	InboundSettingsStartTLS           string           `i18n:"label='Answers: STARTTLS', hint='Label of whether the IMAP connection uses STARTTLS.'"`
-	InboundSettingsUser               string           `i18n:"label='Answers: user', hint='Label of the IMAP user (the team mailbox address).'"`
-	InboundSettingsPassword           string           `i18n:"label='Answers: password', hint='Label of the IMAP password.'"`
-	InboundSettingsMailbox            string           `i18n:"label='Answers: mailbox', hint='Label of the IMAP mailbox read; empty, INBOX.'"`
-	InboundManual                     string           `i18n:"label='Answers: by people', hint='Choice: the answers are read by people, in the team mailbox.'"`
-	InboundIMAP                       string           `i18n:"label='Answers: by the application', hint='Choice: the application reads the answers by IMAP.'"`
-	MailSenderTabSending              string           `i18n:"label='Tab: sending', hint='Tab of how the emails are sent: the sender, its account, the limits.'"`
-	MailSenderTabAnswers              string           `i18n:"label='Tab: answers', hint='Tab of how the answers to the emails are read.'"`
-	SendMailTestFormTo                string           `i18n:"label='Test: to', hint='Label of who the test email goes to.'"`
-	SendMailTestFormSubject           string           `i18n:"label='Test: subject', hint='Label of the subject of the test email.'"`
-	SendMailTestFormMessage           string           `i18n:"label='Test: message', hint='Label of the body of the test email.'"`
-	SendMailTestFormSender            string           `i18n:"label='Test: sender', hint='Label of the sender the test email goes through.'"`
-	ErrGmailSenderCredentialsInvalid  i18n.ErrorString `i18n:"hint='Error when the credentials file is not of a Desktop application.'"`
-	ErrGmailSenderScopeNotGranted     string           `i18n:"hint='Error when Google gave a token without the scope needed.', fields=(;'%s'='the scope')"`
-	SendMailSuccessfully              string           `i18n:"label='Mail sent', hint='Shown once an email was sent.'"`
-	GmailSenderToken                  string           `i18n:"hint='Label of the token field of the Gmail sender.'"`
-	GmailSenderUser                   string           `i18n:"hint='Label of the user field of the Gmail sender.'"`
+	ModuleDescription                  string           `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	MailSender                         string           `i18n:"hint='Name of the mail sender settings (menu, title).'"`
+	TestMessageSubject                 string           `i18n:"label='Test message: subject', hint='Subject of the test email.'"`
+	TestMessageBody                    string           `i18n:"label='Test message: body', hint='Body of the test email.'"`
+	MailSenderSender                   string           `i18n:"label='Sender', hint='Label of the kind of sender (Gmail, SMTP).'"`
+	MailSenderSubjectPrefix            string           `i18n:"label='Subject prefix', hint='Label of the text put before the subject of every email.'"`
+	MailSenderGmail                    string           `i18n:"label='Gmail', hint='Name of the Gmail sender.'"`
+	MailSenderSMTP                     string           `i18n:"label='SMTP', hint='Name of the SMTP sender.'"`
+	MailSender_Action_TestSendMail     string           `i18n:"label='Send test mail', hint='Action that sends a test email.'"`
+	GmailSenderConfiguredSuccessfully  string           `i18n:"label='Gmail configured', hint='Shown once the Gmail sender was authorized.'"`
+	GmailSenderLogOutSuccessfully      string           `i18n:"label='Gmail logged out', hint='Shown once the Gmail sender was signed out.'"`
+	GmailSenderConnectPage             string           `i18n:"label='Gmail: connect', hint='Page that sends to Google to authorize the Gmail sender (a permission of its own).'"`
+	GmailSenderLogoutPage              string           `i18n:"label='Gmail: disconnect', hint='Page that signs the Gmail sender out (a permission of its own).'"`
+	GmailSenderCallbackPage            string           `i18n:"label='Gmail: authorization return', hint='Page Google returns to after the authorization (a permission of its own).'"`
+	GmailSenderSuccessPage             string           `i18n:"label='Gmail: authorized', hint='Page shown once the Gmail sender was authorized (a permission of its own).'"`
+	GmailSenderCallbackURI             string           `i18n:"label='Gmail: callback URI', hint='Label of the address Google returns to after the authorization.'"`
+	GmailSenderCredentials             string           `i18n:"label='Gmail: app credentials', hint='Label of the OAuth credentials of the Gmail sender.'"`
+	GmailSenderCredentialsFile         string           `i18n:"label='Gmail: app credentials file', hint='Label of the field that uploads the credentials file.'"`
+	GmailSenderCredentialsFile_Hint    string           `i18n:"label='Gmail: app credentials file hint', hint='Hint of the credentials file: the .json of a Desktop application from the Google Cloud Console.'"`
+	GmailSenderSetup                   string           `i18n:"label='Gmail: setup', hint='Button that opens how to create the Gmail credentials.'"`
+	GmailSenderSetupTitle              string           `i18n:"label='Gmail: setup title', hint='First paragraph of the Gmail setup: why the OAuth client is created by hand.'"`
+	GmailSenderSetupSteps              []string         `i18n:"label='Gmail: setup steps', hint='The steps to create the Gmail credentials, one per item.'"`
+	GmailSenderSetupScopes             string           `i18n:"label='Gmail: scopes', hint='Title of the scopes to declare on the consent screen.'"`
+	GmailSenderSetupScopesHint         string           `i18n:"label='Gmail: scopes hint', hint='Why the scopes listed are the ones needed.'"`
+	GmailSenderSetupScopesSteps        []string         `i18n:"label='Gmail: scopes steps', hint='The steps to declare the scopes, one per item.'"`
+	GmailSenderSetupBlocked            string           `i18n:"label='Gmail: access blocked', hint='What to do when Google blocks the access because the app is not verified.'"`
+	GmailSenderSetupCallback           string           `i18n:"label='Gmail: setup callback', hint='Title of the callback address of this installation.'"`
+	GmailSenderSetupCallbackHint       string           `i18n:"label='Gmail: setup callback hint', hint='Why the callback address need not be registered.'"`
+	GmailSenderSetupConsoleBtn         string           `i18n:"label='Gmail: open console', hint='Button that opens the Google Cloud Console.'"`
+	SmtpSenderTLS                      string           `i18n:"label='SMTP: TLS', hint='Label of whether the SMTP connection uses TLS.'"`
+	SmtpSenderServer                   string           `i18n:"label='SMTP: server', hint='Label of the SMTP server.'"`
+	SmtpSenderPort                     string           `i18n:"label='SMTP: port', hint='Label of the SMTP port.'"`
+	SmtpSenderFromMail                 string           `i18n:"label='SMTP: from', hint='Label of the address the emails are sent from.'"`
+	SmtpSenderUser                     string           `i18n:"label='SMTP: user', hint='Label of the SMTP user.'"`
+	SmtpSenderPassword                 string           `i18n:"label='SMTP: password', hint='Label of the SMTP password.'"`
+	MailSenderMaxPerRecipientHour      string           `i18n:"label='Limit per address: hour', hint='Label of the most emails an address outside the team (a contact) gets in an hour; 0, no limit.'"`
+	MailSenderMaxPerRecipientDay       string           `i18n:"label='Limit per address: day', hint='Label of the most emails an address outside the team (a contact) gets in a day; 0, no limit.'"`
+	MailSenderInbound                  string           `i18n:"label='Answers', hint='Label of the group that says where the answers to the emails are read from.'"`
+	InboundSettingsMode                string           `i18n:"label='Answers: read by', hint='Label of who reads the answers: people, in the team mailbox, or the application, by IMAP.'"`
+	InboundSettingsServer              string           `i18n:"label='Answers: IMAP server', hint='Label of the IMAP server the answers are read from.'"`
+	InboundSettingsPort                string           `i18n:"label='Answers: IMAP port', hint='Label of the IMAP port; 0, the default (993 with TLS, 143 without).'"`
+	InboundSettingsTLS                 string           `i18n:"label='Answers: TLS', hint='Label of whether the IMAP connection uses TLS (port 993).'"`
+	InboundSettingsStartTLS            string           `i18n:"label='Answers: STARTTLS', hint='Label of whether the IMAP connection uses STARTTLS.'"`
+	InboundSettingsUser                string           `i18n:"label='Answers: user', hint='Label of the IMAP user (the team mailbox address).'"`
+	InboundSettingsPassword            string           `i18n:"label='Answers: password', hint='Label of the IMAP password.'"`
+	InboundSettingsMailbox             string           `i18n:"label='Answers: mailbox', hint='Label of the IMAP mailbox read; empty, INBOX.'"`
+	InboundManual                      string           `i18n:"label='Answers: by people', hint='Choice: the answers are read by people, in the team mailbox.'"`
+	InboundIMAP                        string           `i18n:"label='Answers: by the application', hint='Choice: the application reads the answers by IMAP.'"`
+	MailSenderTabSending               string           `i18n:"label='Tab: sending', hint='Tab of how the emails are sent: the sender, its account, the limits.'"`
+	MailSenderTabAnswers               string           `i18n:"label='Tab: answers', hint='Tab of how the answers to the emails are read.'"`
+	MailSenderSender_Hint              string           `i18n:"label='Mail sender: sending method hint', hint='Hint of the sender: Gmail or SMTP; the fields of its account follow the choice.'"`
+	MailSenderSubjectPrefix_Hint       string           `i18n:"label='Mail sender: subject prefix hint', hint='Hint of the text put before the subject of every email.'"`
+	MailSenderMaxPerRecipientHour_Hint string           `i18n:"label='Mail sender: limit per hour hint', hint='Hint of the hourly limit per address outside the team.'"`
+	MailSenderMaxPerRecipientDay_Hint  string           `i18n:"label='Mail sender: limit per day hint', hint='Hint of the daily limit per address outside the team.'"`
+	InboundSettingsMode_Hint           string           `i18n:"label='Answers: who reads them hint', hint='Hint of who reads the answers to the emails.'"`
+	InboundSettingsServer_Hint         string           `i18n:"label='Answers: IMAP server hint', hint='Hint of the IMAP server.'"`
+	InboundSettingsPort_Hint           string           `i18n:"label='Answers: IMAP port hint', hint='Hint of the IMAP port.'"`
+	InboundSettingsTLS_Hint            string           `i18n:"label='Answers: IMAP TLS hint', hint='Hint of TLS of the IMAP connection.'"`
+	InboundSettingsStartTLS_Hint       string           `i18n:"label='Answers: IMAP STARTTLS hint', hint='Hint of STARTTLS of the IMAP connection.'"`
+	InboundSettingsUser_Hint           string           `i18n:"label='Answers: IMAP user hint', hint='Hint of the IMAP user.'"`
+	InboundSettingsPassword_Hint       string           `i18n:"label='Answers: IMAP password hint', hint='Hint of the IMAP password.'"`
+	InboundSettingsMailbox_Hint        string           `i18n:"label='Answers: IMAP mailbox hint', hint='Hint of the IMAP mailbox read.'"`
+	SendMailTestFormTo                 string           `i18n:"label='Test: to', hint='Label of who the test email goes to.'"`
+	SendMailTestFormSubject            string           `i18n:"label='Test: subject', hint='Label of the subject of the test email.'"`
+	SendMailTestFormMessage            string           `i18n:"label='Test: message', hint='Label of the body of the test email.'"`
+	SendMailTestFormSender             string           `i18n:"label='Test: sender', hint='Label of the sender the test email goes through.'"`
+	ErrGmailSenderCredentialsInvalid   i18n.ErrorString `i18n:"hint='Error when the credentials file is not of a Desktop application.'"`
+	ErrGmailSenderScopeNotGranted      string           `i18n:"hint='Error when Google gave a token without the scope needed.', fields=(;'%s'='the scope')"`
+	SendMailSuccessfully               string           `i18n:"label='Mail sent', hint='Shown once an email was sent.'"`
+	GmailSenderToken                   string           `i18n:"hint='Label of the token field of the Gmail sender.'"`
+	GmailSenderUser                    string           `i18n:"hint='Label of the user field of the Gmail sender.'"`
 }
 
 var (
@@ -114,40 +126,52 @@ var (
 			"Add nothing else. Each extra Gmail scope (mail.google.com, gmail.modify, gmail.compose) moves the app to the \"restricted\" tier, whose verification demands a security assessment.",
 			"If this sender already has a token, click Sign Out and sign in again: an existing token keeps the scopes it was issued with.",
 		},
-		GmailSenderSetupBlocked:          "Seeing \"Access blocked: ... has not completed the Google verification process\"? The consent screen is published. Switch it back to Testing and add the sending account under Test users. On the \"Google hasn't verified this app\" warning, click Advanced and continue. Note that in Testing the refresh token expires after 7 days.",
-		GmailSenderSetupCallback:         "Callback URL of this installation",
-		GmailSenderSetupCallbackHint:     "A Desktop app client accepts any loopback address, so this URL does not need to be registered on the Console.",
-		GmailSenderSetupConsoleBtn:       "Open the Google Cloud Console",
-		SmtpSenderTLS:                    "TLS",
-		SmtpSenderServer:                 "Server",
-		SmtpSenderPort:                   "Port",
-		SmtpSenderFromMail:               "FromMail",
-		SmtpSenderUser:                   "User",
-		SmtpSenderPassword:               "Password",
-		MailSenderMaxPerRecipientHour:    "Emails per address, per hour",
-		MailSenderMaxPerRecipientDay:     "Emails per address, per day",
-		MailSenderInbound:                "Answers to the emails",
-		InboundSettingsMode:              "Who reads the answers",
-		InboundSettingsServer:            "IMAP server",
-		InboundSettingsPort:              "Port",
-		InboundSettingsTLS:               "TLS",
-		InboundSettingsStartTLS:          "STARTTLS",
-		InboundSettingsUser:              "User",
-		InboundSettingsPassword:          "Password",
-		InboundSettingsMailbox:           "Mailbox",
-		InboundManual:                    "People, in the team mailbox",
-		InboundIMAP:                      "The application, by IMAP",
-		MailSenderTabSending:             "Sending",
-		MailSenderTabAnswers:             "Answers",
-		SendMailTestFormTo:               "To",
-		SendMailTestFormSubject:          "Subject",
-		SendMailTestFormMessage:          "Message",
-		SendMailTestFormSender:           "Sender",
-		ErrGmailSenderScopeNotGranted:    "Google issued the token without the %s scope, so this sender cannot send mail. Declare that scope on the consent screen under \"Data access\", then Sign Out and sign in again, ticking the permission that lets the app send email on your behalf.",
-		ErrGmailSenderCredentialsInvalid: "The credentials is not a valid DESKTOP APPLICATION credentials",
-		SendMailSuccessfully:             "Send mail successfully",
-		GmailSenderToken:                 "Token",
-		GmailSenderUser:                  "User",
+		GmailSenderSetupBlocked:            "Seeing \"Access blocked: ... has not completed the Google verification process\"? The consent screen is published. Switch it back to Testing and add the sending account under Test users. On the \"Google hasn't verified this app\" warning, click Advanced and continue. Note that in Testing the refresh token expires after 7 days.",
+		GmailSenderSetupCallback:           "Callback URL of this installation",
+		GmailSenderSetupCallbackHint:       "A Desktop app client accepts any loopback address, so this URL does not need to be registered on the Console.",
+		GmailSenderSetupConsoleBtn:         "Open the Google Cloud Console",
+		SmtpSenderTLS:                      "TLS",
+		SmtpSenderServer:                   "Server",
+		SmtpSenderPort:                     "Port",
+		SmtpSenderFromMail:                 "FromMail",
+		SmtpSenderUser:                     "User",
+		SmtpSenderPassword:                 "Password",
+		MailSenderMaxPerRecipientHour:      "Emails per address, per hour",
+		MailSenderMaxPerRecipientDay:       "Emails per address, per day",
+		MailSenderInbound:                  "Answers to the emails",
+		InboundSettingsMode:                "Who reads the answers",
+		InboundSettingsServer:              "IMAP server",
+		InboundSettingsPort:                "Port",
+		InboundSettingsTLS:                 "TLS",
+		InboundSettingsStartTLS:            "STARTTLS",
+		InboundSettingsUser:                "User",
+		InboundSettingsPassword:            "Password",
+		InboundSettingsMailbox:             "Mailbox",
+		InboundManual:                      "People, in the team mailbox",
+		InboundIMAP:                        "The application, by IMAP",
+		MailSenderTabSending:               "Sending",
+		MailSenderTabAnswers:               "Answers",
+		MailSenderSender_Hint:              "Which account sends the emails: Gmail (authorized with Google) or SMTP (a server and its account). The fields of the account follow the choice.",
+		MailSenderSubjectPrefix_Hint:       "Text put before the subject of every email, such as the site's name; empty, the subject as it is.",
+		MailSenderMaxPerRecipientHour_Hint: "The most emails one address outside the team (a contact, a customer) gets in an hour; past it, the email is refused. The team's own emails do not count. 0: no limit.",
+		MailSenderMaxPerRecipientDay_Hint:  "The same, in a day. Together they keep a form of the site from being used to flood somebody's mailbox.",
+		InboundSettingsMode_Hint:           "People: the answers stay in the team mailbox, read there. The application: it reads them by IMAP, and an answer to a conversation it knows becomes part of it.",
+		InboundSettingsServer_Hint:         "The IMAP server of the team mailbox, such as imap.gmail.com.",
+		InboundSettingsPort_Hint:           "0: the usual one, 993 with TLS, 143 without.",
+		InboundSettingsTLS_Hint:            "An encrypted connection from the start (port 993): what most servers ask for.",
+		InboundSettingsStartTLS_Hint:       "Encryption turned on after connecting (port 143), for servers that use it instead of TLS.",
+		InboundSettingsUser_Hint:           "The account of the team mailbox, usually its address.",
+		InboundSettingsPassword_Hint:       "Its password (with Gmail, an app password). Never shown again after saved.",
+		InboundSettingsMailbox_Hint:        "The folder read; empty, the inbox (INBOX).",
+		SendMailTestFormTo:                 "To",
+		SendMailTestFormSubject:            "Subject",
+		SendMailTestFormMessage:            "Message",
+		SendMailTestFormSender:             "Sender",
+		ErrGmailSenderScopeNotGranted:      "Google issued the token without the %s scope, so this sender cannot send mail. Declare that scope on the consent screen under \"Data access\", then Sign Out and sign in again, ticking the permission that lets the app send email on your behalf.",
+		ErrGmailSenderCredentialsInvalid:   "The credentials is not a valid DESKTOP APPLICATION credentials",
+		SendMailSuccessfully:               "Send mail successfully",
+		GmailSenderToken:                   "Token",
+		GmailSenderUser:                    "User",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -192,40 +216,52 @@ var (
 			"Não inclua mais nada. Cada escopo extra do Gmail (mail.google.com, gmail.modify, gmail.compose) joga o app na faixa \"restricted\", cuja verificação exige avaliação de segurança.",
 			"Se este remetente já tiver token, clique em Sign Out e entre de novo: um token existente mantém os escopos com que foi emitido.",
 		},
-		GmailSenderSetupBlocked:          "Apareceu \"Acesso bloqueado: ... não concluiu o processo de verificação do Google\"? A tela de consentimento está publicada. Volte-a para Testing e inclua a conta remetente em Usuários de teste. No aviso \"O Google não verificou este app\", clique em Avançado e prossiga. Atenção: em Testing o refresh token expira em 7 dias.",
-		GmailSenderSetupCallback:         "URL de callback desta instalação",
-		GmailSenderSetupCallbackHint:     "Um cliente do tipo App para computador aceita qualquer endereço de loopback, então esta URL não precisa ser registrada no Console.",
-		GmailSenderSetupConsoleBtn:       "Abrir o Google Cloud Console",
-		SmtpSenderTLS:                    "TLS",
-		SmtpSenderServer:                 "Servidor",
-		SmtpSenderPort:                   "Porta",
-		SmtpSenderFromMail:               "Email DE",
-		SmtpSenderUser:                   "Usuário",
-		SmtpSenderPassword:               "Senha",
-		MailSenderMaxPerRecipientHour:    "E-mails por endereço, por hora",
-		MailSenderMaxPerRecipientDay:     "E-mails por endereço, por dia",
-		MailSenderInbound:                "Respostas aos e-mails",
-		InboundSettingsMode:              "Quem lê as respostas",
-		InboundSettingsServer:            "Servidor IMAP",
-		InboundSettingsPort:              "Porta",
-		InboundSettingsTLS:               "TLS",
-		InboundSettingsStartTLS:          "STARTTLS",
-		InboundSettingsUser:              "Usuário",
-		InboundSettingsPassword:          "Senha",
-		InboundSettingsMailbox:           "Caixa de entrada",
-		InboundManual:                    "Pessoas, na caixa da equipe",
-		InboundIMAP:                      "A aplicação, por IMAP",
-		MailSenderTabSending:             "Envio",
-		MailSenderTabAnswers:             "Respostas",
-		SendMailTestFormTo:               "Para",
-		SendMailTestFormSubject:          "Assunto",
-		SendMailTestFormMessage:          "Mensagem",
-		SendMailTestFormSender:           "Método de Envio",
-		ErrGmailSenderScopeNotGranted:    "O Google emitiu o token sem o escopo %s, então este remetente não consegue enviar. Declare esse escopo na tela de consentimento, em \"Acesso a dados\", depois clique em Sign Out e entre de novo, marcando a permissão que autoriza o app a enviar email em seu nome.",
-		ErrGmailSenderCredentialsInvalid: "Estas crendencias não são do tipo DESKTOP APPLICATION (Aplicação de Desktop).",
-		SendMailSuccessfully:             "Email enviado com sucesso",
-		GmailSenderToken:                 "Token",
-		GmailSenderUser:                  "Usuário",
+		GmailSenderSetupBlocked:            "Apareceu \"Acesso bloqueado: ... não concluiu o processo de verificação do Google\"? A tela de consentimento está publicada. Volte-a para Testing e inclua a conta remetente em Usuários de teste. No aviso \"O Google não verificou este app\", clique em Avançado e prossiga. Atenção: em Testing o refresh token expira em 7 dias.",
+		GmailSenderSetupCallback:           "URL de callback desta instalação",
+		GmailSenderSetupCallbackHint:       "Um cliente do tipo App para computador aceita qualquer endereço de loopback, então esta URL não precisa ser registrada no Console.",
+		GmailSenderSetupConsoleBtn:         "Abrir o Google Cloud Console",
+		SmtpSenderTLS:                      "TLS",
+		SmtpSenderServer:                   "Servidor",
+		SmtpSenderPort:                     "Porta",
+		SmtpSenderFromMail:                 "Email DE",
+		SmtpSenderUser:                     "Usuário",
+		SmtpSenderPassword:                 "Senha",
+		MailSenderMaxPerRecipientHour:      "E-mails por endereço, por hora",
+		MailSenderMaxPerRecipientDay:       "E-mails por endereço, por dia",
+		MailSenderInbound:                  "Respostas aos e-mails",
+		InboundSettingsMode:                "Quem lê as respostas",
+		InboundSettingsServer:              "Servidor IMAP",
+		InboundSettingsPort:                "Porta",
+		InboundSettingsTLS:                 "TLS",
+		InboundSettingsStartTLS:            "STARTTLS",
+		InboundSettingsUser:                "Usuário",
+		InboundSettingsPassword:            "Senha",
+		InboundSettingsMailbox:             "Caixa de entrada",
+		InboundManual:                      "Pessoas, na caixa da equipe",
+		InboundIMAP:                        "A aplicação, por IMAP",
+		MailSenderTabSending:               "Envio",
+		MailSenderTabAnswers:               "Respostas",
+		MailSenderSender_Hint:              "Qual conta envia os e-mails: Gmail (autorizada com o Google) ou SMTP (um servidor e a sua conta). Os campos da conta acompanham a escolha.",
+		MailSenderSubjectPrefix_Hint:       "Texto posto antes do assunto de todo e-mail, como o nome do site; vazio, o assunto como está.",
+		MailSenderMaxPerRecipientHour_Hint: "O máximo de e-mails que um endereço de fora da equipe (um contato, um cliente) recebe em uma hora; acima, o e-mail é recusado. Os e-mails da própria equipe não contam. 0: sem limite.",
+		MailSenderMaxPerRecipientDay_Hint:  "O mesmo, em um dia. Juntos, impedem que um formulário do site seja usado para encher a caixa de alguém.",
+		InboundSettingsMode_Hint:           "Pessoas: as respostas ficam na caixa da equipe, lidas lá. A aplicação: ela as lê por IMAP, e a resposta a uma conversa que ela conhece passa a fazer parte dela.",
+		InboundSettingsServer_Hint:         "O servidor IMAP da caixa da equipe, como imap.gmail.com.",
+		InboundSettingsPort_Hint:           "0: a de costume, 993 com TLS, 143 sem.",
+		InboundSettingsTLS_Hint:            "Conexão criptografada desde o início (porta 993): o que a maioria dos servidores pede.",
+		InboundSettingsStartTLS_Hint:       "Criptografia ligada depois de conectar (porta 143), nos servidores que a usam no lugar do TLS.",
+		InboundSettingsUser_Hint:           "A conta da caixa da equipe, em geral o seu endereço.",
+		InboundSettingsPassword_Hint:       "A senha dela (no Gmail, uma senha de app). Nunca é mostrada de novo depois de salva.",
+		InboundSettingsMailbox_Hint:        "A pasta lida; vazio, a caixa de entrada (INBOX).",
+		SendMailTestFormTo:                 "Para",
+		SendMailTestFormSubject:            "Assunto",
+		SendMailTestFormMessage:            "Mensagem",
+		SendMailTestFormSender:             "Método de Envio",
+		ErrGmailSenderScopeNotGranted:      "O Google emitiu o token sem o escopo %s, então este remetente não consegue enviar. Declare esse escopo na tela de consentimento, em \"Acesso a dados\", depois clique em Sign Out e entre de novo, marcando a permissão que autoriza o app a enviar email em seu nome.",
+		ErrGmailSenderCredentialsInvalid:   "Estas crendencias não são do tipo DESKTOP APPLICATION (Aplicação de Desktop).",
+		SendMailSuccessfully:               "Email enviado com sucesso",
+		GmailSenderToken:                   "Token",
+		GmailSenderUser:                    "Usuário",
 	}
 )
 

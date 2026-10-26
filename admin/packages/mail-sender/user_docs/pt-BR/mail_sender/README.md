@@ -1,11 +1,47 @@
-# Remetentes de e-mail
+# Envio de e-mails
 
-As contas pelas quais os e-mails do site são enviados — as mensagens do
-formulário de contato, as redefinições de senha, as notificações.
+Uma tela só, de configuração: a conta pela qual saem todos os e-mails do
+site — as mensagens dos formulários de contato, as redefinições de senha, as
+notificações — e quem lê as respostas a eles. Não há uma lista de
+remetentes: o que se configura aqui vale para tudo.
 
-![Os remetentes de e-mail](images/listing.png)
+![A configuração do envio de e-mails](images/listing.png)
 
-- Cada remetente é uma conta SMTP (servidor, porta, usuário e senha) ou uma
-  conta do Gmail autorizada com o Google.
-- O remetente marcado como **padrão** é o usado quando nada escolhe outro.
-- Confira um remetente com {%= admin.action("mail_sender", "TestSendMail").link %}.
+A configuração tem duas abas, no detalhe e na edição:
+
+- **Envio** — como os e-mails saem:
+  - o **Método de envio**: **Gmail**, uma conta do Google autorizada pelo
+    próprio painel, ou **SMTP**, um servidor e a sua conta (servidor, porta,
+    usuário, senha). Só a conta do método escolhido é usada; a do outro fica
+    guardada;
+  - o **prefixo do assunto**, posto antes do assunto de todo e-mail;
+  - os **limites por endereço**: quantos e-mails um mesmo endereço de fora
+    da equipe (quem escreveu pelo site, um cliente) recebe por hora e por
+    dia. Acima disso o e-mail é recusado e o erro fica registrado; os
+    e-mails para a própria equipe não contam. Os limites impedem que um
+    formulário do site seja usado para encher a caixa de alguém. `0`: sem
+    limite.
+- **Respostas** — quem lê o que as pessoas respondem aos e-mails:
+  - **Pessoas, na caixa da equipe**: as respostas chegam à caixa de e-mail
+    da equipe e são lidas lá, como qualquer e-mail;
+  - **A aplicação, por IMAP**: a aplicação lê a caixa pelo IMAP; a resposta
+    a uma conversa que ela conhece (uma mensagem de contato, um comentário)
+    passa a fazer parte dela, e a mensagem é marcada como lida na caixa. Os
+    campos do servidor IMAP só aparecem neste modo.
+
+As senhas (da conta SMTP e da caixa IMAP) nunca são mostradas no detalhe.
+Na edição a senha salva vem no campo, oculta (o ícone do olho a mostra):
+apagá-la a remove.
+
+Antes de o site depender da conta, confira-a com
+{%= admin.action("mail_sender", "TestSendMail").link %}.
+
+## Em desenvolvimento e nos testes
+
+Com a variável de ambiente `RVQ_MAIL_SMTP` (por exemplo
+`127.0.0.1:2525`), todo e-mail vai para esse servidor SMTP, seja qual for o
+método configurado aqui — e nada sai da máquina. O servidor de testes do
+rvq (`make mail-dev`) recebe ali, mostra cada mensagem que chega e a deixa
+legível por IMAP (`127.0.0.1:1143`, qualquer endereço, senha `test`): é com
+ele que o modo **A aplicação, por IMAP** é testado. Em produção a variável
+não existe.
