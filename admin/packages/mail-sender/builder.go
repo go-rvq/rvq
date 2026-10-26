@@ -20,6 +20,7 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/markbates/goth"
 	google2 "github.com/markbates/goth/providers/google"
 	"golang.org/x/oauth2"
@@ -75,6 +76,64 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Field("SMTP").
 		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
 			b.Field("Password").ComponentFunc(presets.PasswordFieldComponentFunc)
+			return b
+		})
+
+	// a password is never shown in the detail: set or not
+	hiddenPassword := func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+		b.Field("Password").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			if s, _ := field.Value().(string); s == "" {
+				return nil
+			}
+			return vx.VXReadonlyField(h.Text("••••••")).Label(field.Label)
+		})
+		return b
+	}
+	nested.New(mb).Field("SMTP").Detailing(hiddenPassword)
+	// who reads the answers, always said (empty: people)
+	inboundMode := func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+		b.Field("Mode").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			msgs := GetMessages(ctx.Context())
+			text := msgs.InboundManual
+			if mode, _ := field.Value().(string); mode == InboundIMAP {
+				text = msgs.InboundIMAP
+			}
+			return vx.VXReadonlyField(h.Text(text)).Label(field.Label)
+		})
+		return b
+	}
+	nested.New(mb).Field("Inbound").Detailing(hiddenPassword, inboundMode)
+
+	// the answers: by people, or by IMAP — its password hidden as the
+	// SMTP's
+	nested.New(mb).
+		Field("Inbound").
+		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+			b.Field("Password").ComponentFunc(presets.PasswordFieldComponentFunc)
+			b.Field("Mode").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+				msgs := GetMessages(ctx.Context())
+				value, _ := field.Value().(string)
+				if value == "" {
+					value = InboundManual
+				}
+				return v.VSelect().
+					Label(field.Label).
+					Items([]map[string]string{
+						{"title": msgs.InboundManual, "value": InboundManual},
+						{"title": msgs.InboundIMAP, "value": InboundIMAP},
+					}).
+					ItemTitle("title").ItemValue("value").
+					Attr(web.VField(field.FormKey, value)...)
+			})
+			// the account, only when the application reads it
+			for _, name := range []string{"Server", "Port", "TLS", "StartTLS", "User", "Password", "Mailbox"} {
+				b.Field(name).WrapComponentFunc(func(in presets.FieldComponentFunc) presets.FieldComponentFunc {
+					return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+						mode := strings.TrimSuffix(field.FormKey, field.Name) + "Mode"
+						return h.Div(in(field, ctx)).Attr("v-if", fmt.Sprintf("form[%q] === %q", mode, InboundIMAP))
+					}
+				})
+			}
 			return b
 		})
 
@@ -238,6 +297,20 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	}
 
 	e := mb.Editing()
+	// two tabs: how the emails are sent, and how their answers are read
+	tabs := func() *presets.FieldsGroup {
+		title := func(f func(*Messages) string) func(context.Context) string {
+			return func(ctx context.Context) string { return f(GetMessages(ctx)) }
+		}
+		return presets.NewFieldsTabs("MailSender",
+			&presets.FieldsGroup{Name: "Sending", Title: title(func(m *Messages) string { return m.MailSenderTabSending }),
+				Items: presets.FieldsLayout{"Sender", "SubjectPrefix", "Gmail", "SMTP", "MaxPerRecipientHour", "MaxPerRecipientDay"}},
+			&presets.FieldsGroup{Name: "Answers", Title: title(func(m *Messages) string { return m.MailSenderTabAnswers }),
+				Items: presets.FieldsLayout{"Inbound"}},
+		)
+	}
+	e.Only(tabs())
+	d.Only(tabs())
 	isSenderEnabled(e.Field("Gmail"))
 	isSenderEnabled(e.Field("SMTP"))
 

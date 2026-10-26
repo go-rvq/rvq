@@ -45,6 +45,7 @@ GO_TEST_PKGS := \
 # Pacotes que precisam apenas compilar: sem testes próprios, mais as fixtures
 # dos testes de integração.
 GO_BUILD_PKGS := \
+	./cmd/... \
 	./web/... \
 	./admin/docs/... \
 	./admin/l10n/... \
@@ -76,7 +77,7 @@ check: check-fmt check-go check-ui
 
 check-fmt:
 	@echo "== gofmt =="
-	@out=$$(gofmt -s -l admin web thirdpart x js/api 2>/dev/null); \
+	@out=$$(gofmt -s -l admin cmd web thirdpart x js/api 2>/dev/null); \
 	if [ -n "$$out" ]; then echo "arquivos não formatados:"; echo "$$out"; exit 1; fi
 
 check-go:
@@ -96,3 +97,15 @@ check-ui:
 	done
 	@echo "-- js/portal (vitest)"
 	@cd js/portal && npx vitest run
+
+# O servidor de e-mail do desenvolvimento e dos testes (cmd/mailtest, pacote
+# admin/packages/mail-sender/mailtest): SMTP e IMAP em memória, nada sai da
+# máquina. A aplicação manda para ele com RVQ_MAIL_SMTP=$(MAIL_SMTP); cada
+# e-mail recebido aparece aqui; a caixa de qualquer endereço se lê por IMAP em
+# $(MAIL_IMAP), senha "test". Ctrl-C encerra.
+MAIL_SMTP ?= 127.0.0.1:2525
+MAIL_IMAP ?= 127.0.0.1:1143
+
+.PHONY: mail-dev
+mail-dev:
+	$(GO) run ./cmd/mailtest -smtp $(MAIL_SMTP) -imap $(MAIL_IMAP)

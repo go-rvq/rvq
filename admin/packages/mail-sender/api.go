@@ -15,6 +15,10 @@ type Attachment struct {
 
 type MessageBuilder struct {
 	to          []string
+	external    bool
+	messageID   string
+	inReplyTo   string
+	references  []string
 	replyTo     string
 	subject     string
 	body        string
@@ -30,6 +34,36 @@ func (b *MessageBuilder) To(v ...string) *MessageBuilder {
 	b.to = append(b.to, v...)
 	return b
 }
+
+// External says the message goes to somebody outside the installation — a
+// contact, the author of an issue —, not to its team: it counts toward the
+// limits of each recipient (MailSender.MaxPerRecipientHour, …Day).
+func (b *MessageBuilder) External(v bool) *MessageBuilder {
+	b.external = v
+	return b
+}
+
+// MessageID is the Message-ID of the message (`<id@host>`; the brackets are
+// added when missing): what an answer to it names (In-Reply-To), the
+// conversation it starts.
+func (b *MessageBuilder) MessageID(v string) *MessageBuilder {
+	b.messageID = v
+	return b
+}
+
+// InReplyTo is the Message-ID the message answers, and References those of
+// its conversation: what the mail clients group it by.
+func (b *MessageBuilder) InReplyTo(v string) *MessageBuilder {
+	b.inReplyTo = v
+	return b
+}
+
+func (b *MessageBuilder) References(v ...string) *MessageBuilder {
+	b.references = append(b.references, v...)
+	return b
+}
+
+func (b *MessageBuilder) GetMessageID() string { return b.messageID }
 
 // ReplyTo is the address an answer to the mail goes to: who wrote what it
 // carries (a form's visitor), not the sender.
@@ -130,6 +164,19 @@ func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
 			return
 		}
 	}
+	if b.messageID != "" {
+		m.SetMessageIDWithValue(strings.Trim(b.messageID, "<>"))
+	}
+	if b.inReplyTo != "" {
+		m.SetGenHeader(mail.HeaderInReplyTo, msgID(b.inReplyTo))
+	}
+	if len(b.references) > 0 {
+		refs := make([]string, len(b.references))
+		for i, r := range b.references {
+			refs[i] = msgID(r)
+		}
+		m.SetGenHeader(mail.HeaderReferences, strings.Join(refs, " "))
+	}
 	m.Subject(b.FormattedSubject())
 	m.SetBodyString(mail.TypeTextHTML, b.body)
 	return
@@ -138,3 +185,6 @@ func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
 type Sender interface {
 	Send(b *MessageBuilder) (err error)
 }
+
+// msgID is v as a message id: `<…>`.
+func msgID(v string) string { return "<" + strings.Trim(v, "<>") + ">" }

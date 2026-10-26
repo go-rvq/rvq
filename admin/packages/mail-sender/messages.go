@@ -45,6 +45,21 @@ type Messages struct {
 	SmtpSenderFromMail                string           `i18n:"label='SMTP: from', hint='Label of the address the emails are sent from.'"`
 	SmtpSenderUser                    string           `i18n:"label='SMTP: user', hint='Label of the SMTP user.'"`
 	SmtpSenderPassword                string           `i18n:"label='SMTP: password', hint='Label of the SMTP password.'"`
+	MailSenderMaxPerRecipientHour     string           `i18n:"label='Limit per address: hour', hint='Label of the most emails an address outside the team (a contact) gets in an hour; 0, no limit.'"`
+	MailSenderMaxPerRecipientDay      string           `i18n:"label='Limit per address: day', hint='Label of the most emails an address outside the team (a contact) gets in a day; 0, no limit.'"`
+	MailSenderInbound                 string           `i18n:"label='Answers', hint='Label of the group that says where the answers to the emails are read from.'"`
+	InboundSettingsMode               string           `i18n:"label='Answers: read by', hint='Label of who reads the answers: people, in the team mailbox, or the application, by IMAP.'"`
+	InboundSettingsServer             string           `i18n:"label='Answers: IMAP server', hint='Label of the IMAP server the answers are read from.'"`
+	InboundSettingsPort               string           `i18n:"label='Answers: IMAP port', hint='Label of the IMAP port; 0, the default (993 with TLS, 143 without).'"`
+	InboundSettingsTLS                string           `i18n:"label='Answers: TLS', hint='Label of whether the IMAP connection uses TLS (port 993).'"`
+	InboundSettingsStartTLS           string           `i18n:"label='Answers: STARTTLS', hint='Label of whether the IMAP connection uses STARTTLS.'"`
+	InboundSettingsUser               string           `i18n:"label='Answers: user', hint='Label of the IMAP user (the team mailbox address).'"`
+	InboundSettingsPassword           string           `i18n:"label='Answers: password', hint='Label of the IMAP password.'"`
+	InboundSettingsMailbox            string           `i18n:"label='Answers: mailbox', hint='Label of the IMAP mailbox read; empty, INBOX.'"`
+	InboundManual                     string           `i18n:"label='Answers: by people', hint='Choice: the answers are read by people, in the team mailbox.'"`
+	InboundIMAP                       string           `i18n:"label='Answers: by the application', hint='Choice: the application reads the answers by IMAP.'"`
+	MailSenderTabSending              string           `i18n:"label='Tab: sending', hint='Tab of how the emails are sent: the sender, its account, the limits.'"`
+	MailSenderTabAnswers              string           `i18n:"label='Tab: answers', hint='Tab of how the answers to the emails are read.'"`
 	SendMailTestFormTo                string           `i18n:"label='Test: to', hint='Label of who the test email goes to.'"`
 	SendMailTestFormSubject           string           `i18n:"label='Test: subject', hint='Label of the subject of the test email.'"`
 	SendMailTestFormMessage           string           `i18n:"label='Test: message', hint='Label of the body of the test email.'"`
@@ -109,6 +124,21 @@ var (
 		SmtpSenderFromMail:               "FromMail",
 		SmtpSenderUser:                   "User",
 		SmtpSenderPassword:               "Password",
+		MailSenderMaxPerRecipientHour:    "Emails per address, per hour",
+		MailSenderMaxPerRecipientDay:     "Emails per address, per day",
+		MailSenderInbound:                "Answers to the emails",
+		InboundSettingsMode:              "Who reads the answers",
+		InboundSettingsServer:            "IMAP server",
+		InboundSettingsPort:              "Port",
+		InboundSettingsTLS:               "TLS",
+		InboundSettingsStartTLS:          "STARTTLS",
+		InboundSettingsUser:              "User",
+		InboundSettingsPassword:          "Password",
+		InboundSettingsMailbox:           "Mailbox",
+		InboundManual:                    "People, in the team mailbox",
+		InboundIMAP:                      "The application, by IMAP",
+		MailSenderTabSending:             "Sending",
+		MailSenderTabAnswers:             "Answers",
 		SendMailTestFormTo:               "To",
 		SendMailTestFormSubject:          "Subject",
 		SendMailTestFormMessage:          "Message",
@@ -172,6 +202,21 @@ var (
 		SmtpSenderFromMail:               "Email DE",
 		SmtpSenderUser:                   "Usuário",
 		SmtpSenderPassword:               "Senha",
+		MailSenderMaxPerRecipientHour:    "E-mails por endereço, por hora",
+		MailSenderMaxPerRecipientDay:     "E-mails por endereço, por dia",
+		MailSenderInbound:                "Respostas aos e-mails",
+		InboundSettingsMode:              "Quem lê as respostas",
+		InboundSettingsServer:            "Servidor IMAP",
+		InboundSettingsPort:              "Porta",
+		InboundSettingsTLS:               "TLS",
+		InboundSettingsStartTLS:          "STARTTLS",
+		InboundSettingsUser:              "Usuário",
+		InboundSettingsPassword:          "Senha",
+		InboundSettingsMailbox:           "Caixa de entrada",
+		InboundManual:                    "Pessoas, na caixa da equipe",
+		InboundIMAP:                      "A aplicação, por IMAP",
+		MailSenderTabSending:             "Envio",
+		MailSenderTabAnswers:             "Respostas",
 		SendMailTestFormTo:               "Para",
 		SendMailTestFormSubject:          "Assunto",
 		SendMailTestFormMessage:          "Mensagem",

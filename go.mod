@@ -15,6 +15,10 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/documize/html-diff v0.0.0-20160503140253-f61c192c7796
 	github.com/dustin/go-humanize v1.0.1
+	github.com/emersion/go-imap/v2 v2.0.0-beta.8
+	github.com/emersion/go-message v0.18.2
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
+	github.com/emersion/go-smtp v0.25.0
 	github.com/fatih/color v1.17.0
 	github.com/gad-lang/gad v0.1.0-rc.33.0.20261026171559-2ad80aa848af
 	github.com/go-chi/chi/v5 v5.0.12
