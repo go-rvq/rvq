@@ -355,6 +355,16 @@ func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 	title := b.TTitle(ctx.R.Context())
 	r.PageTitle = title
 
+	// the page of an action of the listing (".../action:<name>")
+	if ok, aerr := actionPage(ctx, &r, b.mb, b.actions, "", func(a *ActionBuilder) bool {
+		return !b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied()
+	}); ok {
+		if errors.Is(aerr, errNoActionPage) {
+			return b.mb.p.DefaultNotFoundPageFunc(ctx)
+		}
+		return r, aerr
+	}
+
 	r.Body, err = b.listingComponent(ctx)
 	r.Wrap(func(comp h.HTMLComponent) h.HTMLComponent {
 		// return comp

@@ -264,6 +264,10 @@ func (b *ActionBuilder) RequestTitle(mb *ModelBuilder, ctx context.Context) (lab
 
 		label = b.name
 	}
+	if mb == nil {
+		// an action of a page: no model to translate it
+		return HumanizeString(label)
+	}
 
 	return i18n.Translate(mb.ActionTranslator(), ctx, label)
 }
@@ -274,6 +278,9 @@ func (b *ActionBuilder) RequestTitle(mb *ModelBuilder, ctx context.Context) (lab
 func (b *ActionBuilder) RequestDescription(mb *ModelBuilder, ctx context.Context) string {
 	if b.i18nDescription != nil {
 		return b.i18nDescription(ctx)
+	}
+	if mb == nil {
+		return ""
 	}
 	key := b.labelKey
 	if key == "" {
@@ -377,9 +384,8 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 
 	if err = b.updateFunc(id, ctx); err != nil {
 		if verr, _ := err.(*web.ValidationErrors); verr != nil {
-			if verr.HaveGlobalErrors() {
-				ctx.Flash = verr
-			}
+			// the form again with its errors — of its fields too: not done
+			ctx.Flash = verr
 			err = nil
 		} else {
 			return
@@ -396,6 +402,14 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 			goto done
 		default:
 			var comp h.HTMLComponent
+			if IsActionPage(ctx.R) {
+				// the form of the action's page, again, with its errors
+				if comp, err = b.PageComponent(baseModel, id, ctx); err != nil {
+					return
+				}
+				ctx.Resp.UpdatePortal(ActionPagePortalName, comp)
+				return
+			}
 			if comp, err = b.form(baseModel, id, ctx); err != nil {
 				return
 			}
@@ -410,6 +424,22 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		ctx.Flash = MustGetMessages(ctx.Context()).SuccessfullyExecutedAction
 	}
 done:
+	if IsActionPage(ctx.R) {
+		if IsErrorFlash(ctx.Flash) {
+			// it says it failed: the page of the action stays, the message
+			// shown
+			ShowMessage(ctx.Resp, ctx.Flash)
+			return
+		}
+		// done on the page of the action: to what it is of, the message
+		// shown there
+		success = true
+		ctx.Resp.PushState = web.Location(url.Values{}).URL(ctx.R.URL.Path)
+		if ctx.Flash != nil {
+			ShowMessage(ctx.Resp, ctx.Flash)
+		}
+		return
+	}
 	success = true
 
 	switch b.typ {
@@ -465,8 +495,19 @@ done:
 }
 
 func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.OverlayMode, ctx *web.EventContext) (comp h.HTMLComponent, err error) {
+	var cb *ContentComponentBuilder
+	if cb, comp, err = b.content(mb, id, overlay, ctx); err != nil || comp != nil {
+		return
+	}
+	return cb.BuildOverlay(), nil
+}
+
+// content is what the form of the action shows: its content, or the whole
+// component of a full component action (comp).
+func (b *ActionBuilder) content(mb *ModelBuilder, id string, overlay actions.OverlayMode, ctx *web.EventContext) (cb *ContentComponentBuilder, comp h.HTMLComponent, err error) {
 	if b.fullComponent {
-		return b.compFunc(id, ctx)
+		comp, err = b.compFunc(id, ctx)
+		return
 	}
 
 	var body h.HTMLComponent
@@ -477,13 +518,14 @@ func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.Overla
 		}
 	}
 
-	cb := ContentComponentBuilder{
+	cb = &ContentComponentBuilder{
 		Overlay: &ContentComponentBuilderOverlay{
 			Mode:  overlay,
 			Width: b.dialogWidth,
 		},
-		Title: b.RequestTitle(mb, ctx.Context()),
-		Body:  body,
+		Context: ctx,
+		Title:   b.RequestTitle(mb, ctx.Context()),
+		Body:    body,
 	}
 
 	if b.updateFunc != nil {
@@ -517,7 +559,7 @@ func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.Overla
 	}
 
 	if b.buildCompFunc != nil {
-		if err = b.buildCompFunc(id, ctx, &cb); err != nil {
+		if err = b.buildCompFunc(id, ctx, cb); err != nil {
 			return
 		}
 	}
@@ -526,8 +568,7 @@ func (b *ActionBuilder) Form(mb *ModelBuilder, id string, overlay actions.Overla
 		cb.Notice(ctx.Flash)
 		ctx.Flash = nil
 	}
-
-	return cb.BuildOverlay(), nil
+	return
 }
 
 // PermName is the permission of the action: "!publish" (ActionPerm).

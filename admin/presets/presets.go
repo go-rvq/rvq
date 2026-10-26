@@ -1372,7 +1372,7 @@ func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if b.handler == nil {
 		b.Build()
 	}
-	redirectSlashes(b.handler).ServeHTTP(w, r)
+	redirectSlashes(b.handler).ServeHTTP(w, withActionSuffix(r))
 }
 
 func (b *Builder) Models() []*ModelBuilder {

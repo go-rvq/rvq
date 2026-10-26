@@ -109,6 +109,11 @@ func (b *PageBuilder) Layout(pf web.PageFunc, layout ...*LayoutConfig) *PageBuil
 				if r.PageTitle == "" {
 					r.PageTitle = b.page.TTitle(ctx.Context())
 				}
+				// the page of an action of the page (".../action:<name>")
+				var ok bool
+				if ok, err = actionPage(ctx, &r, nil, b.actions, "", nil); ok && errors.Is(err, errNoActionPage) {
+					return b.r.b.DefaultNotFoundPageFunc(ctx)
+				}
 			}
 			return
 		}), b.buildPage)

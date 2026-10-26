@@ -270,8 +270,17 @@ func (b *DetailingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRes
 	// The body lives in a portal so a save can bring the page up to date without
 	// reloading it: ReloadDetail re-renders THIS portal and answers with the new
 	// page title, which the client puts straight into <title>.
-	r.Body = web.Portal(b.pageComponent(ctx, id, obj)).Name(DetailPagePortalName)
+	// the page of an action of the record (".../action:<name>")
+	if ok, aerr := actionPage(ctx, &r, b.mb, b.actions, id, func(a *ActionBuilder) bool {
+		return !b.mb.permissioner.ObjectReadActioner(ctx.R, a.PermName(), mid, ParentsModelID(ctx.R)...).Denied()
+	}); ok {
+		if errors.Is(aerr, errNoActionPage) {
+			return b.mb.p.DefaultNotFoundPageFunc(ctx)
+		}
+		return r, aerr
+	}
 
+	r.Body = web.Portal(b.pageComponent(ctx, id, obj)).Name(DetailPagePortalName)
 	return
 }
 
