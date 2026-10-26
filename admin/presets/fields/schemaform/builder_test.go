@@ -644,3 +644,19 @@ export class default { [hint="The title"] title str; done bool; address Address 
 	mustContain(t, got, "<v-text-field")
 	mustNotContain(t, got, "data-schemaform-readonly")
 }
+
+// A field defaulting to a member of an enum (`state E = E.Send`) has that
+// member as its default, by the name the field stores — the select starts on
+// it —; one with no default, none.
+func TestEnumMemberDefault(t *testing.T) {
+	s, err := Parse("enum E { Draft; Send }\nexport class default { state E = E.Send\n other? E\n back? E = E.Draft }")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{"state": "Send", "other": nil, "back": "Draft"}
+	for _, f := range s.Fields {
+		if f.Default != want[f.Name] {
+			t.Errorf("%s: default %#v, want %#v", f.Name, f.Default, want[f.Name])
+		}
+	}
+}

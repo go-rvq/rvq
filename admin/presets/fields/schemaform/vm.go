@@ -1237,6 +1237,9 @@ func metaOf(o gad.Object) Meta {
 
 func metaValue(o gad.Object) any {
 	switch v := o.(type) {
+	case *gad.EnumValue:
+		// a member, as the field stores it: its name (`state E = E.Send`)
+		return v.Name
 	case gad.Str:
 		return string(v)
 	case gad.RawStr:
