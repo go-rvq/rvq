@@ -22,7 +22,7 @@ func ConfigureChangePasswordAction(lb *login.Builder, currentPasswordCheck bool,
 
 	if currentPasswordCheck {
 		cpfe.Field("OldPassword").
-			ComponentFunc(presets.PasswordFieldComponentFunc).
+			ComponentFunc(presets.PasswordFieldComponentFuncAutocomplete("current-password")).
 			SetI18nLabel(func(ctx context.Context) string {
 				return login.GetMessages(ctx).ChangePasswordOldLabel
 			})

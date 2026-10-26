@@ -202,27 +202,40 @@ func FileFieldComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComp
 		Disabled(field.ReadOnly))
 }
 
+// PasswordFieldComponentFunc is a password being set (a new one, an
+// account's): autocomplete "new-password", so the browser never fills it
+// with a password it saved — the admin's own login.
 func PasswordFieldComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	if field.ReadOnly {
-		v := field.StringValue()
-		if v == "" {
-			return nil
+	return PasswordFieldComponentFuncAutocomplete("new-password")(field, ctx)
+}
+
+// PasswordFieldComponentFuncAutocomplete is the password field with the
+// autocomplete given: "current-password" for the password one already has
+// (the browser may fill it), "new-password" for one being set.
+func PasswordFieldComponentFuncAutocomplete(autocomplete string) FieldComponentFunc {
+	return func(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		if field.ReadOnly {
+			v := field.StringValue()
+			if v == "" {
+				return nil
+			}
+			field.ValueOverride = "***"
+			return ReadonlyComponentFunc(field, nil)
 		}
-		field.ValueOverride = "***"
-		return ReadonlyComponentFunc(field, nil)
+		return vue.FormField(
+			FieldWithHint(field, VTextField().
+				Variant(FieldVariantUnderlined).
+				Label(field.InputLabel()).
+				ErrorMessages(field.Errors...).
+				Attr("autocomplete", autocomplete).
+				Attr(":append-inner-icon", []byte(`visible.v ? "mdi-eye-off" : "mdi-eye"`)).
+				Attr(`:type`, []byte(`visible.v ? "text" : "password"`)).
+				Attr("v-model", "fieldValue.value").
+				PrependInnerIcon("mdi-lock-outline").
+				Attr(`@click:append-inner`, []byte(`visible.v = !visible.v`))),
+		).Value(field.FormKey, field.Value()).
+			ScopeVar("visible", `{v:false}`)
 	}
-	return vue.FormField(
-		VTextField().
-			Variant(FieldVariantUnderlined).
-			Label(field.InputLabel()).
-			ErrorMessages(field.Errors...).
-			Attr(":append-inner-icon", []byte(`visible.v ? "mdi-eye-off" : "mdi-eye"`)).
-			Attr(`:type`, []byte(`visible.v ? "text" : "password"`)).
-			Attr("v-model", "fieldValue.value").
-			PrependInnerIcon("mdi-lock-outline").
-			Attr(`@click:append-inner`, []byte(`visible.v = !visible.v`)),
-	).Value(field.FormKey, field.Value()).
-		ScopeVar("visible", `{v:false}`)
 }
 
 func EditorJSComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {

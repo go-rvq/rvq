@@ -76,6 +76,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Field("SMTP").
 		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
 			b.Field("Password").ComponentFunc(presets.PasswordFieldComponentFunc)
+			b.Field("User").ComponentFunc(accountUser)
 			return b
 		})
 
@@ -132,6 +133,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Field("Inbound").
 		Editing(func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
 			b.Field("Password").ComponentFunc(presets.PasswordFieldComponentFunc)
+			b.Field("User").ComponentFunc(accountUser)
 			b.Field("Mode").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 				msgs := GetMessages(ctx.Context())
 				value, _ := field.Value().(string)
@@ -462,4 +464,14 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	})
 
 	return
+}
+
+// accountUser is the user of an account (SMTP, IMAP): never filled by the
+// browser with a login it saved — the admin's own.
+func accountUser(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	comp := presets.TextFieldComponentFunc(field, ctx)
+	if t, ok := comp.(h.TagGetter); ok {
+		t.GetHTMLTagBuilder().Attr("autocomplete", "off")
+	}
+	return comp
 }
