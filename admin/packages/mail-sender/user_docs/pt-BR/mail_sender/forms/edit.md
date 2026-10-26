@@ -15,6 +15,11 @@ com um campo em erro fica marcada e é a que se abre ao salvar.
   usuário, a senha e a caixa de entrada só aparecem quando **Quem lê as
   respostas** é **A aplicação, por IMAP**. Em **Pessoas, na caixa da
   equipe** a aplicação não lê nada, e esses campos ficam guardados sem uso.
+- **Mesmo usuário e senha do SMTP**, marcado, esconde o usuário e a senha do
+  IMAP (no formulário e no detalhe): a leitura usa o usuário e a senha da
+  conta SMTP da aba **Envio**. O que estava neles fica guardado, sem uso, e
+  volta a valer se a opção for desmarcada. Com o método de envio **Gmail**
+  não há conta SMTP a usar: deixe desmarcado e informe a conta do IMAP.
 - A senha salva vem no campo, oculta (o ícone do olho a mostra); apagá-la
   a remove.
 

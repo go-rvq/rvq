@@ -53,6 +53,7 @@ type Messages struct {
 	InboundSettingsPort                string           `i18n:"label='Answers: IMAP port', hint='Label of the IMAP port; 0, the default (993 with TLS, 143 without).'"`
 	InboundSettingsTLS                 string           `i18n:"label='Answers: TLS', hint='Label of whether the IMAP connection uses TLS (port 993).'"`
 	InboundSettingsStartTLS            string           `i18n:"label='Answers: STARTTLS', hint='Label of whether the IMAP connection uses STARTTLS.'"`
+	InboundSettingsUseSMTPLogin        string           `i18n:"label='Answers: the SMTP login', hint='Label of the option that reads the answers with the user and password of the SMTP sender.'"`
 	InboundSettingsUser                string           `i18n:"label='Answers: user', hint='Label of the IMAP user (the team mailbox address).'"`
 	InboundSettingsPassword            string           `i18n:"label='Answers: password', hint='Label of the IMAP password.'"`
 	InboundSettingsMailbox             string           `i18n:"label='Answers: mailbox', hint='Label of the IMAP mailbox read; empty, INBOX.'"`
@@ -69,6 +70,7 @@ type Messages struct {
 	InboundSettingsPort_Hint           string           `i18n:"label='Answers: IMAP port hint', hint='Hint of the IMAP port.'"`
 	InboundSettingsTLS_Hint            string           `i18n:"label='Answers: IMAP TLS hint', hint='Hint of TLS of the IMAP connection.'"`
 	InboundSettingsStartTLS_Hint       string           `i18n:"label='Answers: IMAP STARTTLS hint', hint='Hint of STARTTLS of the IMAP connection.'"`
+	InboundSettingsUseSMTPLogin_Hint   string           `i18n:"label='Answers: the SMTP login hint', hint='Hint of the option that reads the answers with the user and password of the SMTP sender.'"`
 	InboundSettingsUser_Hint           string           `i18n:"label='Answers: IMAP user hint', hint='Hint of the IMAP user.'"`
 	InboundSettingsPassword_Hint       string           `i18n:"label='Answers: IMAP password hint', hint='Hint of the IMAP password.'"`
 	InboundSettingsMailbox_Hint        string           `i18n:"label='Answers: IMAP mailbox hint', hint='Hint of the IMAP mailbox read.'"`
@@ -144,6 +146,7 @@ var (
 		InboundSettingsPort:                "Port",
 		InboundSettingsTLS:                 "TLS",
 		InboundSettingsStartTLS:            "STARTTLS",
+		InboundSettingsUseSMTPLogin:        "Same user and password as the SMTP",
 		InboundSettingsUser:                "User",
 		InboundSettingsPassword:            "Password",
 		InboundSettingsMailbox:             "Mailbox",
@@ -160,6 +163,7 @@ var (
 		InboundSettingsPort_Hint:           "0: the usual one, 993 with TLS, 143 without.",
 		InboundSettingsTLS_Hint:            "An encrypted connection from the start (port 993): what most servers ask for.",
 		InboundSettingsStartTLS_Hint:       "Encryption turned on after connecting (port 143), for servers that use it instead of TLS.",
+		InboundSettingsUseSMTPLogin_Hint:   "Reads the answers with the user and password of the SMTP sender (Sending tab): the mailbox that sends is the one that receives. Marked, the user and password below are hidden and not used.",
 		InboundSettingsUser_Hint:           "The account of the team mailbox, usually its address.",
 		InboundSettingsPassword_Hint:       "Its password (with Gmail, an app password). Never shown again after saved.",
 		InboundSettingsMailbox_Hint:        "The folder read; empty, the inbox (INBOX).",
@@ -234,6 +238,7 @@ var (
 		InboundSettingsPort:                "Porta",
 		InboundSettingsTLS:                 "TLS",
 		InboundSettingsStartTLS:            "STARTTLS",
+		InboundSettingsUseSMTPLogin:        "Mesmo usuário e senha do SMTP",
 		InboundSettingsUser:                "Usuário",
 		InboundSettingsPassword:            "Senha",
 		InboundSettingsMailbox:             "Caixa de entrada",
@@ -250,6 +255,7 @@ var (
 		InboundSettingsPort_Hint:           "0: a de costume, 993 com TLS, 143 sem.",
 		InboundSettingsTLS_Hint:            "Conexão criptografada desde o início (porta 993): o que a maioria dos servidores pede.",
 		InboundSettingsStartTLS_Hint:       "Criptografia ligada depois de conectar (porta 143), nos servidores que a usam no lugar do TLS.",
+		InboundSettingsUseSMTPLogin_Hint:   "Lê as respostas com o usuário e a senha do envio por SMTP (aba Envio): a caixa que envia é a que recebe. Marcado, o usuário e a senha abaixo ficam ocultos e não são usados.",
 		InboundSettingsUser_Hint:           "A conta da caixa da equipe, em geral o seu endereço.",
 		InboundSettingsPassword_Hint:       "A senha dela (no Gmail, uma senha de app). Nunca é mostrada de novo depois de salva.",
 		InboundSettingsMailbox_Hint:        "A pasta lida; vazio, a caixa de entrada (INBOX).",

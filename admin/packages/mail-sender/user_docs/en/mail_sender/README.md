@@ -26,7 +26,10 @@ The settings have two tabs, in the detail and in the edit form:
   - **The application, by IMAP**: the application reads the mailbox by IMAP;
     an answer to a conversation it knows (a contact message, a comment)
     becomes part of it, and the message is marked read in the mailbox. The
-    fields of the IMAP server are shown in this mode only.
+    fields of the IMAP server are shown in this mode only. When the mailbox
+    that receives is the one that sends, mark **Same user and password as
+    the SMTP**: the reading uses the account of the **Sending** tab, and the
+    IMAP user and password leave the form — one password to change.
 
 The passwords (of the SMTP account and of the IMAP mailbox) are never shown
 in the detail. In the edit form the password saved is in its field, hidden

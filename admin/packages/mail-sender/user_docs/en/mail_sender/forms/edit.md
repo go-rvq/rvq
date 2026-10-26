@@ -16,6 +16,12 @@ a field in error is marked, and is the one open after saving.
   password and mailbox are shown only when **Who reads the answers** is
   **The application, by IMAP**. With **People, in the team mailbox** the
   application reads nothing, and those fields are kept unused.
+- **Same user and password as the SMTP**, marked, hides the IMAP user and
+  password (in the form and in the detail): the reading uses the user and
+  password of the SMTP account of the **Sending** tab. What they held is kept,
+  unused, and counts again if the option is unmarked. With the sending
+  method **Gmail** there is no SMTP account to use: leave it unmarked and give
+  the IMAP account.
 - The password saved is in its field, hidden (the eye icon shows it);
   clearing it removes it.
 

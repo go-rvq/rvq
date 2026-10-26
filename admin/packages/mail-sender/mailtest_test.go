@@ -85,7 +85,8 @@ func TestSendRecipientLimits(t *testing.T) {
 
 // The answers are read by IMAP: an answer delivered to the team's mailbox is
 // unread, with the conversation it answers; once Done, it is not read
-// again. Manual: nothing to read.
+// again; with UseSMTPLogin, the account is the SMTP sender's. Manual:
+// nothing to read.
 func TestInbox(t *testing.T) {
 	srv := startMailtest(t)
 	raw := strings.ReplaceAll(`From: Ana <ana@example.com>
@@ -133,6 +134,22 @@ Obrigada, pode ligar amanhã.
 	}
 	if got, err := in.Unread(ctx); err != nil || len(got) != 0 {
 		t.Errorf("after Done: %d unread, %v", len(got), err)
+	}
+
+	// the SMTP sender's login: the user and password of its own unused
+	if err := srv.Deliver([]byte(strings.Replace(raw, "answer-1@", "answer-2@", 1)), "team@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	settings.Inbound.UseSMTPLogin = true
+	settings.Inbound.User, settings.Inbound.Password = "nobody@example.com", "wrong"
+	settings.SMTP.User, settings.SMTP.Password = "team@example.com", mailtest.Password
+	shared, err := settings.Inbox()
+	if err != nil {
+		t.Fatalf("with the SMTP login: %v", err)
+	}
+	defer shared.Close()
+	if got, err := shared.Unread(ctx); err != nil || len(got) != 1 || got[0].MessageID != "answer-2@example.com" {
+		t.Errorf("with the SMTP login: %d unread, %v", len(got), err)
 	}
 
 	manual, _ := (&mail_sender.MailSender{}).Inbox()

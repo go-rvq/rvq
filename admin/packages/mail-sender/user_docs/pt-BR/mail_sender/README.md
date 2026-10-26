@@ -27,7 +27,10 @@ A configuração tem duas abas, no detalhe e na edição:
   - **A aplicação, por IMAP**: a aplicação lê a caixa pelo IMAP; a resposta
     a uma conversa que ela conhece (uma mensagem de contato, um comentário)
     passa a fazer parte dela, e a mensagem é marcada como lida na caixa. Os
-    campos do servidor IMAP só aparecem neste modo.
+    campos do servidor IMAP só aparecem neste modo. Quando a caixa que recebe
+    é a mesma que envia, marque **Mesmo usuário e senha do SMTP**: a leitura
+    usa a conta da aba **Envio**, e o usuário e a senha do IMAP somem do
+    formulário — uma senha só para trocar.
 
 As senhas (da conta SMTP e da caixa IMAP) nunca são mostradas no detalhe.
 Na edição a senha salva vem no campo, oculta (o ícone do olho a mostra):

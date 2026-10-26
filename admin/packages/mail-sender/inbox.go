@@ -38,14 +38,17 @@ type InboundSettings struct {
 	Mode string
 	// The IMAP server and account: Server and Port ("imap.gmail.com", 993),
 	// TLS — implicit (993) —, or STARTTLS, or none (a local server); the
-	// Mailbox read ("" INBOX).
-	Server   string
-	Port     uint16
-	TLS      bool
-	StartTLS bool
-	User     string
-	Password string
-	Mailbox  string
+	// Mailbox read ("" INBOX). With UseSMTPLogin, the account is the SMTP
+	// sender's (its User and Password), and User and Password here are not
+	// used: the team mailbox that sends is the one that receives.
+	Server       string
+	Port         uint16
+	TLS          bool
+	StartTLS     bool
+	UseSMTPLogin bool
+	User         string
+	Password     string
+	Mailbox      string
 }
 
 // InboundMessage is a message an Inbox read.
@@ -86,7 +89,11 @@ func (c *MailSender) Inbox() (Inbox, error) {
 	case "", InboundManual:
 		return ManualInbox{}, nil
 	case InboundIMAP:
-		return DialIMAP(c.Inbound)
+		s := c.Inbound
+		if s.UseSMTPLogin {
+			s.User, s.Password = c.SMTP.User, c.SMTP.Password
+		}
+		return DialIMAP(s)
 	}
 	return nil, fmt.Errorf("mail sender: inbound mode %q", c.Inbound.Mode)
 }
