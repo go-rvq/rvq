@@ -313,10 +313,8 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			field.Set(reflect.Zero(field.Type()))
 
 			for _, key := range keys {
-				id, _ := b.foreignModel.ParseRecordID(key)
-				if !id.IsZero() {
-					entry := b.foreignModel.NewModel()
-					id.SetTo(entry)
+				// the record whole, read (fetchByID)
+				if entry := fetchByID(b.foreignModel, key, ctx); entry != nil {
 					field.Set(reflect.Append(field, reflect.ValueOf(entry)))
 				}
 			}
@@ -675,4 +673,21 @@ func (b *ModelSelectorBuilder) foreignKeyFields(suffix string) []string {
 
 func ModelSelect(model *presets.ModelBuilder, field string) {
 	NewModelSelectorBuilder(model, field).Build()
+}
+
+// fetchByID is the record of mb of the id key, read whole; nil when key is
+// no id of it or it is not there. An association saved with records made of
+// their id alone would write them again with their other columns empty —
+// NULL for a model.UUID, refused by a NOT NULL —: what is chosen is read.
+func fetchByID(mb *presets.ModelBuilder, key string, ctx *web.EventContext) any {
+	id, err := mb.ParseRecordID(key)
+	if err != nil || id.IsZero() {
+		return nil
+	}
+	r := mb.NewModel()
+	id.SetTo(r)
+	if err = mb.CurrentDataOperator().Fetch(r, id, ctx); err != nil {
+		return nil
+	}
+	return r
 }

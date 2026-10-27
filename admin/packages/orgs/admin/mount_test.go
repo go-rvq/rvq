@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
@@ -79,8 +80,8 @@ func TestMountUnderOrgPathAndScope(t *testing.T) {
 
 	// two real organizations owned by the current user, one sample each
 	me := uuid.New()
-	orgA := &models.Organizacao{Nome: "Alpha SA", OwnerID: me}
-	orgB := &models.Organizacao{Nome: "Beta Ltda", OwnerID: me}
+	orgA := &models.Organizacao{Nome: "Alpha SA", OwnerID: model.UUID(me)}
+	orgB := &models.Organizacao{Nome: "Beta Ltda", OwnerID: model.UUID(me)}
 	db.Create(orgA)
 	db.Create(orgB)
 	db.Create(&sampleModel{OrganizacaoID: orgA.ID, Nome: "Alpha Item"})

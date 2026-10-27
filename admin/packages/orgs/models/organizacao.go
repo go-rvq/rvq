@@ -4,7 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/uuid"
+	"github.com/go-rvq/rvq/admin/model"
+
 	"gorm.io/gorm"
 )
 
@@ -20,7 +21,7 @@ type Organizacao struct {
 
 	// OwnerID is the owning user (a hermon/rvq user UUID). The owner is never
 	// removed from the organization and always has full access.
-	OwnerID uuid.UUID `gorm:"type:uuid;not null;index"`
+	OwnerID model.UUID `gorm:"type:uuid;not null;index"`
 }
 
 func (Organizacao) TableName() string { return "org_organizacoes" }
@@ -36,7 +37,7 @@ func (o *Organizacao) BeforeSave(*gorm.DB) error {
 	if strings.TrimSpace(o.Nome) == "" {
 		return ErrNomeObrigatorio
 	}
-	if o.OwnerID == uuid.Nil {
+	if o.OwnerID.IsZero() {
 		return ErrProprietarioObrigatorio
 	}
 	return nil

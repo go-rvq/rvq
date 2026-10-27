@@ -1,13 +1,13 @@
 package admin
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -35,9 +35,9 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
 	ed.Field("Nome").Required(true)
 	ed.SetterFunc(func(obj interface{}, ctx *web.EventContext) {
 		o := obj.(*models.Organizacao)
-		if o.OwnerID == uuid.Nil {
+		if o.OwnerID.IsZero() {
 			if u := user.GetCurrentUser(ctx.R); u != nil {
-				o.OwnerID = u.GetID()
+				o.OwnerID = model.UUID(u.GetID())
 			}
 		}
 	})

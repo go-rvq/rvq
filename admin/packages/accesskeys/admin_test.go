@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
@@ -86,7 +87,7 @@ func TestMyKeys(t *testing.T) {
 		t.Fatalf("keys: %+v\n%.500s", keys, w.Body.String())
 	}
 	k := keys[0]
-	if k.UserID != ana || k.CreatedByID == nil || *k.CreatedByID != ana || !k.Enabled || len(k.Prefix) != 10 || k.CodeHash == "" {
+	if k.UserID != model.UUID(ana) || k.CreatedByID != model.UUID(ana) || !k.Enabled || len(k.Prefix) != 10 || k.CodeHash == "" {
 		t.Errorf("the key: %+v", k)
 	}
 	if !strings.Contains(w.Body.String(), CodePrefix+k.Prefix+"_") {

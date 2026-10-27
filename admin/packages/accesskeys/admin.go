@@ -282,13 +282,13 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 			if k.ID == uuid.Nil {
 				k.ID = uuid.New()
 			}
-			k.UserID = owner
+			k.UserID = model.UUID(owner)
 			k.Code, k.Prefix = NewCode()
 			k.CodeHash = CodeHash(k.Code)
 			if by, ok := currentUserID(ctx.R); ok {
-				k.CreatedByID = &by
+				k.CreatedByID = model.UUID(by)
 			}
-		} else if k.UserID != owner {
+		} else if k.UserID != model.UUID(owner) {
 			return errors.New("accesskeys: not a key of this user")
 		}
 		// its permissions: allows, of its subject

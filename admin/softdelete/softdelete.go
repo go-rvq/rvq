@@ -4,8 +4,8 @@
 package softdelete
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/origin"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -16,13 +16,13 @@ import (
 // and clears them when it restores it.
 type Deletion struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index"`
-	DeletedByID   *uuid.UUID     `gorm:"type:uuid"`
+	DeletedByID   model.UUID     `gorm:"type:uuid"`
 	DeletedOrigin origin.Origin  `gorm:"embedded;embeddedPrefix:deleted_origin_"`
 }
 
 // Columns are the values of the columns of a deletion — by, from o —, to set
-// with its deleted_at (by nil: nobody known).
-func Columns(by *uuid.UUID, o origin.Origin) map[string]any {
+// with its deleted_at (by zero: nobody known, NULL).
+func Columns(by model.UUID, o origin.Origin) map[string]any {
 	cols := map[string]any{"deleted_by_id": by}
 	cols["deleted_origin_ip"] = o.IP
 	cols["deleted_origin_user_agent"] = o.UserAgent
@@ -38,7 +38,7 @@ func Columns(by *uuid.UUID, o origin.Origin) map[string]any {
 // Restored are the values of the columns of a record that is not deleted
 // anymore: no deletion, by nobody, from nowhere.
 func Restored() map[string]any {
-	cols := Columns(nil, origin.Origin{})
+	cols := Columns(model.Nil, origin.Origin{})
 	cols["deleted_at"] = nil
 	return cols
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -26,7 +27,7 @@ func TestOrganizacaoCRUDAndValidation(t *testing.T) {
 	owner := uuid.New()
 
 	// name required
-	if err := db.Create(&Organizacao{OwnerID: owner}).Error; !errors.Is(err, ErrNomeObrigatorio) {
+	if err := db.Create(&Organizacao{OwnerID: model.UUID(owner)}).Error; !errors.Is(err, ErrNomeObrigatorio) {
 		t.Fatalf("empty name should fail with ErrNomeObrigatorio, got %v", err)
 	}
 	// owner required
@@ -35,7 +36,7 @@ func TestOrganizacaoCRUDAndValidation(t *testing.T) {
 	}
 
 	// valid create assigns a UUID id
-	o := &Organizacao{Nome: "Acme", Descricao: "Test", OwnerID: owner}
+	o := &Organizacao{Nome: "Acme", Descricao: "Test", OwnerID: model.UUID(owner)}
 	if err := db.Create(o).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +52,7 @@ func TestOrganizacaoCRUDAndValidation(t *testing.T) {
 	if err := db.First(&got, "id = ?", o.ID).Error; err != nil {
 		t.Fatal(err)
 	}
-	if got.Nome != "Acme" || got.OwnerID != owner {
+	if got.Nome != "Acme" || got.OwnerID != model.UUID(owner) {
 		t.Errorf("read back = %+v", got)
 	}
 }

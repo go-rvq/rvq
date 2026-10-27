@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -34,7 +35,7 @@ func testDB(t *testing.T) *gorm.DB {
 func newKey(t *testing.T, db *gorm.DB, user uuid.UUID, mod func(*AccessKey)) (*AccessKey, string) {
 	t.Helper()
 	code, prefix := NewCode()
-	k := &AccessKey{UserID: user, Name: "deploy", Prefix: prefix, CodeHash: CodeHash(code),
+	k := &AccessKey{UserID: model.UUID(user), Name: "deploy", Prefix: prefix, CodeHash: CodeHash(code),
 		ExpiresAt: time.Now().Add(time.Hour), Enabled: true}
 	if mod != nil {
 		mod(k)
@@ -108,7 +109,7 @@ func TestAuthenticator(t *testing.T) {
 	var uses []AccessKeyUse
 	db.Find(&uses)
 	if len(uses) != 1 || uses[0].Kind != "git" || uses[0].IP != "10.0.0.1" || uses[0].Place != "Viçosa, BR" ||
-		uses[0].Status != 200 || uses[0].Path != "/admin/site-files.git/info/refs" || uses[0].UserID != ana {
+		uses[0].Status != 200 || uses[0].Path != "/admin/site-files.git/info/refs" || uses[0].UserID != model.UUID(ana) {
 		t.Errorf("the history: %+v", uses)
 	}
 	var kept AccessKey

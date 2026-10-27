@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/google/uuid"
 )
 
@@ -41,8 +43,8 @@ type ActivityLogInterface interface {
 }
 
 type ActivityLog struct {
-	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID     uuid.UUID `gorm:"type:uuid;index"`
+	ID         uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID     model.UUID `gorm:"type:uuid;index"`
 	CreatedAt  time.Time
 	Creator    string
 	Action     string
@@ -97,11 +99,11 @@ func (al ActivityLog) GetCreatedAt() time.Time {
 }
 
 func (al *ActivityLog) SetUserID(id uuid.UUID) {
-	al.UserID = id
+	al.UserID = model.UUID(id)
 }
 
 func (al ActivityLog) GetUserID() uuid.UUID {
-	return al.UserID
+	return al.UserID.UUID()
 }
 
 func (al *ActivityLog) SetCreator(s string) {

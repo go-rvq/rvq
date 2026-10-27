@@ -8,6 +8,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/origin"
 	"github.com/go-rvq/rvq/admin/origin/originui"
 	"github.com/go-rvq/rvq/admin/packages/user"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-rvq/rvq/admin/softdelete"
 	"github.com/go-rvq/rvq/web"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -68,12 +68,11 @@ func MigrateDeleted(db *gorm.DB, table string, obj any) error {
 // deleted_at.
 func DeletedBy(r *http.Request) map[string]any {
 	if r == nil {
-		return softdelete.Columns(nil, origin.Origin{})
+		return softdelete.Columns(model.Nil, origin.Origin{})
 	}
-	var by *uuid.UUID
+	var by model.UUID
 	if u := user.GetCurrentUser(r); u != nil {
-		id := u.GetID()
-		by = &id
+		by = model.UUID(u.GetID())
 	}
 	return softdelete.Columns(by, origin.Of(r))
 }
@@ -104,10 +103,10 @@ func deletedAtOf(obj any) time.Time {
 }
 
 // userName is the name of the user id; "" when not found.
-func userName(db *gorm.DB, id *uuid.UUID) (name string) {
-	if id != nil {
+func userName(db *gorm.DB, id model.UUID) (name string) {
+	if !id.IsZero() {
 		db.Session(&gorm.Session{NewDB: true}).Table(UsersTable).
-			Select(UserNameColumn).Where("id = ?", *id).Limit(1).Scan(&name)
+			Select(UserNameColumn).Where("id = ?", id).Limit(1).Scan(&name)
 	}
 	return
 }

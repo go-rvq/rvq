@@ -64,7 +64,7 @@ func TestInviteAcceptGrants(t *testing.T) {
 	if n.accepted != 1 {
 		t.Errorf("acceptance should notify the inviter")
 	}
-	subs, _ := Subjects(db, invites[0].SharedID)
+	subs, _ := Subjects(db, invites[0].SharedID.UUID())
 	if len(subs) != 1 || subs[0].Subject != "ana" {
 		t.Fatalf("accepting should grant ana a shared policy, got %v", subs)
 	}
@@ -84,7 +84,7 @@ func TestInviteAcceptGrants(t *testing.T) {
 	if pend, _ = PendingFor(db, "bruno"); len(pend) != 0 {
 		t.Errorf("rejected invite should leave the pending list")
 	}
-	if subs, _ := Subjects(db, invites[1].SharedID); len(subs) != 1 {
+	if subs, _ := Subjects(db, invites[1].SharedID.UUID()); len(subs) != 1 {
 		// only ana's grant exists under the shared id (bruno rejected)
 		t.Errorf("only the accepted subject should have a policy, got %v", subs)
 	}
@@ -120,7 +120,7 @@ func TestAcceptForVerifiesSubject(t *testing.T) {
 	if err := AcceptFor(db, id, "ana", nil); err != nil {
 		t.Fatal(err)
 	}
-	if subs, _ := Subjects(db, invites[0].SharedID); len(subs) != 1 {
+	if subs, _ := Subjects(db, invites[0].SharedID.UUID()); len(subs) != 1 {
 		t.Errorf("ana's acceptance should grant one policy, got %d", len(subs))
 	}
 }

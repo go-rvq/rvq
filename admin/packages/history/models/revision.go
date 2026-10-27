@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/go-rvq/rvq/thirdpart/gorm/datatypes"
-	"github.com/google/uuid"
 )
 
 // Fields is the per-revision snapshot: each versioned field's value as raw JSON,
@@ -49,7 +50,7 @@ type Revision struct {
 
 	// CreatorID is the author's user id (FK users.id) — never nil: the logged-in
 	// user, or the static AnonymousID. Creator is the display name at the time.
-	CreatorID uuid.UUID `gorm:"type:uuid;index"`
+	CreatorID model.UUID `gorm:"type:uuid;index"`
 	Creator   string
 
 	// Origin is where the author made the revision from: the address, the

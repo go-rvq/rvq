@@ -13,6 +13,7 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"errors"
+	"github.com/go-rvq/rvq/admin/model"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ type AccessKey struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	// UserID is whose key it is.
-	UserID uuid.UUID `gorm:"type:uuid;index;not null"`
+	UserID model.UUID `gorm:"type:uuid;index;not null"`
 	// Name says what it is for ("deploy from the notebook").
 	Name        string `gorm:"not null"`
 	Description string
@@ -47,7 +48,7 @@ type AccessKey struct {
 	LastUsedAt *time.Time
 	LastUsedIP string
 	// CreatedByID is who made it: the user, or an administrator.
-	CreatedByID *uuid.UUID `gorm:"type:uuid"`
+	CreatedByID model.UUID `gorm:"type:uuid"`
 
 	// Permissions restrict it: the policies whose ReferID is its id, its
 	// subject Subject(); allows only.
@@ -83,8 +84,8 @@ type AccessKeyUse struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time `gorm:"index"`
 
-	KeyID     uuid.UUID `gorm:"type:uuid;index;not null"`
-	UserID    uuid.UUID `gorm:"type:uuid;index;not null"`
+	KeyID     model.UUID `gorm:"type:uuid;index;not null"`
+	UserID    model.UUID `gorm:"type:uuid;index;not null"`
 	IP        string
 	UserAgent string
 	// Place is where IP is, when it is known.

@@ -74,7 +74,7 @@ func ForResource(db *gorm.DB, resource string) ([]perm.DefaultDBPolicy, error) {
 	}
 	out := pols[:0:0]
 	for _, p := range pols {
-		if p.SharedID != nil {
+		if !p.SharedID.IsZero() {
 			out = append(out, p)
 		}
 	}

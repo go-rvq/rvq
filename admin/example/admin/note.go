@@ -3,8 +3,10 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/google/uuid"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/note"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
@@ -139,7 +141,7 @@ GROUP BY resource_type, resource_id;
 			var userNotes []note.UserNote
 			for _, result := range results {
 				un := note.UserNote{
-					UserID:       u.ID,
+					UserID:       model.UUID(u.ID),
 					ResourceType: result.ResourceType,
 					ResourceID:   result.ResourceID,
 					Number:       int64(result.Count),

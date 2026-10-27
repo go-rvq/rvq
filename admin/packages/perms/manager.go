@@ -291,7 +291,7 @@ func managerBody(m *Messages, mb *presets.ModelBuilder, pols []perm.DefaultDBPol
 		// SharedID is shown read-only; shared policies are managed in the Sharing
 		// dialog and must not be removed from the permission manager.
 		sharedCell := h.Td(h.Text(""))
-		if p.SharedID != nil {
+		if !p.SharedID.IsZero() {
 			sharedCell = h.Td(
 				v.VChip(h.Text(p.SharedID.String())).Size(v.SizeXSmall).Attr("readonly", true).Class("mr-1"),
 				h.Span(m.SharedNote).Class("text-caption text-medium-emphasis"),

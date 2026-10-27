@@ -3,6 +3,7 @@ package perms
 import (
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -53,7 +54,7 @@ func TestSharedGrantListRevoke(t *testing.T) {
 		t.Fatalf("ListShared = %+v, want ana then bruno", got)
 	}
 	for _, p := range got {
-		if p.SharedID == nil || *p.SharedID != share {
+		if p.SharedID != model.UUID(share) {
 			t.Errorf("policy %s missing shared id", p.ReferID)
 		}
 	}

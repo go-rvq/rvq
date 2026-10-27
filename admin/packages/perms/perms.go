@@ -5,13 +5,14 @@
 package perms
 
 import (
+	"strings"
+
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
 )
 
 // Permission verbs granted per record. They map to the presets action names
@@ -95,7 +96,7 @@ func GrantShared(db *gorm.DB, referID, subject, resource string, actions []strin
 	if err != nil {
 		return nil, err
 	}
-	p.SharedID = &sharedID
+	p.SharedID = model.UUID(sharedID)
 	return p, db.Model(p).Update("shared_id", sharedID).Error
 }
 
@@ -127,7 +128,7 @@ func IsShared(db *gorm.DB, referID string) (bool, error) {
 		}
 		return false, err
 	}
-	return p.SharedID != nil, nil
+	return !p.SharedID.IsZero(), nil
 }
 
 // List returns the active policies whose resources contain resource.

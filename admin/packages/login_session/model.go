@@ -3,9 +3,10 @@ package login_session
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/x/place"
-	"github.com/google/uuid"
 )
 
 // The kinds of access a LoginSession records.
@@ -24,7 +25,7 @@ const (
 type LoginSession struct {
 	uuidkey.Model
 
-	UserID uuid.UUID `gorm:"type:uuid;index"`
+	UserID model.UUID `gorm:"type:uuid;index"`
 	// Device is the family of the browser and its system ("Chrome -
 	// Linux"), or what the access was by (an access key's name).
 	Device string

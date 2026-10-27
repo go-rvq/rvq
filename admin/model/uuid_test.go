@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/web/zeroer"
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -102,5 +103,59 @@ func TestUUIDColumn(t *testing.T) {
 	db.Raw("SELECT page_id IS NULL FROM uuid_forms WHERE id = ?", f.ID).Scan(&null)
 	if !null {
 		t.Error("cleared, not NULL")
+	}
+}
+
+type uuidOwner struct {
+	ID   uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name string
+}
+
+type uuidThing struct {
+	ID      model.UUID `gorm:"primaryKey"`
+	OwnerID model.UUID
+	Owner   *uuidOwner `gorm:"foreignKey:OwnerID"`
+	PageID  model.UUID
+	Page    *uuidPage `gorm:"foreignKey:PageID"`
+}
+
+// Associations load by a model.UUID foreign key — of a uuid.UUID key, of a
+// model.UUID one —, and a record with none (zero, NULL) loads with none.
+func TestUUIDPreload(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:uuidpre?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&uuidOwner{}, &uuidPage{}, &uuidThing{}); err != nil {
+		t.Fatal(err)
+	}
+	o := &uuidOwner{ID: uuid.New(), Name: "o"}
+	p := &uuidPage{ID: model.NewUUID(), Name: "p"}
+	db.Create(o)
+	db.Create(p)
+	with := &uuidThing{ID: model.NewUUID(), OwnerID: model.UUID(o.ID), PageID: p.ID}
+	without := &uuidThing{ID: model.NewUUID()}
+	db.Create(with)
+	db.Create(without)
+
+	var got []*uuidThing
+	if err = db.Preload("Owner").Preload("Page").Order("id").Find(&got).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, g := range got {
+		switch g.ID {
+		case with.ID:
+			if g.Owner == nil || g.Owner.Name != "o" || g.Page == nil || g.Page.Name != "p" {
+				t.Errorf("with: %+v %+v", g.Owner, g.Page)
+			}
+		case without.ID:
+			if g.Owner != nil || g.Page != nil {
+				t.Errorf("without: %+v %+v", g.Owner, g.Page)
+			}
+		}
+	}
+	var one uuidThing
+	if err = db.Joins("Owner").First(&one, "uuid_things.id = ?", without.ID).Error; err != nil || one.Owner != nil {
+		t.Errorf("joins, none: %+v %v", one.Owner, err)
 	}
 }

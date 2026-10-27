@@ -38,6 +38,11 @@ This unifies [rvq/web](https://github.com/go-rvq/web),
   a partial translation renders as blanks, not as English. When adding a field to
   a `Messages` struct, fill it in for every language that module already has.
 - **Idiomatic Go**, with errors wrapped as `fmt.Errorf("...: %w", err)`.
+- **A UUID field of a model is a `model.UUID`** (`admin/model`), never a
+  `*uuid.UUID` nor a bare `uuid.UUID`: its zero is none — NULL in the database,
+  and a NULL reads back as the zero —, it implements `IsZero()` (zeroer), and a
+  form's `""` is the zero. An optional foreign key is a `model.UUID` that may be
+  zero, not a pointer. See [UUID fields](developer.md#uuid-fields-are-modeluuid).
 
 ## Tests
 

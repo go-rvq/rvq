@@ -6,6 +6,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/perms"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -26,8 +27,8 @@ const (
 
 // ScopeFunc resolves the permission-template scope (typically the organization
 // id) for the record being shared, so the dialog can offer that scope's
-// templates. Return nil for global templates only.
-type ScopeFunc func(ctx *web.EventContext) *uuid.UUID
+// templates. Return the zero for global templates only.
+type ScopeFunc func(ctx *web.EventContext) model.UUID
 
 // Option configures Install.
 type Option func(*shareConfig)

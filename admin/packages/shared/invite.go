@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/go-rvq/rvq/admin/packages/perms"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -23,8 +25,8 @@ const (
 // Access is only granted (the perm rules are only written) once the invited
 // user accepts — see Accept.
 type ShareInvite struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	SharedID  uuid.UUID `gorm:"type:uuid;index"`
+	ID        uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	SharedID  model.UUID `gorm:"type:uuid;index"`
 	Resource  string
 	Subject   string         `gorm:"index"` // the invited user
 	Actions   pq.StringArray `gorm:"type:text[]"`
@@ -72,7 +74,7 @@ func Invite(db *gorm.DB, resource string, subjects, actions []string, invitedBy 
 	var invites []*ShareInvite
 	for _, s := range subjects {
 		inv := &ShareInvite{
-			SharedID:  sharedID,
+			SharedID:  model.UUID(sharedID),
 			Resource:  resource,
 			Subject:   s,
 			Actions:   actions,
@@ -104,7 +106,7 @@ func Accept(db *gorm.DB, inviteID uuid.UUID, n Notifier) error {
 		if inv.Status != StatusPending {
 			return ErrInviteNotPending
 		}
-		if _, err := perms.GrantShared(tx, ReferID(inv.SharedID, inv.Subject), inv.Subject, inv.Resource, []string(inv.Actions), inv.SharedID); err != nil {
+		if _, err := perms.GrantShared(tx, ReferID(inv.SharedID.UUID(), inv.Subject), inv.Subject, inv.Resource, []string(inv.Actions), inv.SharedID.UUID()); err != nil {
 			return err
 		}
 		if err := tx.Model(&inv).Update("status", StatusAccepted).Error; err != nil {

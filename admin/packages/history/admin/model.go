@@ -628,7 +628,7 @@ func (h *ModelHistory) createEventRevision(obj interface{}, event string, creato
 		Fields:        datatypes.NewJSONType(snap),
 		ChangedFields: datatypes.NewJSONType(changed),
 		CreatedAt:     time.Now(),
-		CreatorID:     creatorID,
+		CreatorID:     model.UUID(creatorID),
 		Creator:       creator,
 		Origin:        origin,
 		Event:         event,

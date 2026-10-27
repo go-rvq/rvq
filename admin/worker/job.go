@@ -12,6 +12,7 @@ import (
 	"time"
 
 	. "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
@@ -275,7 +276,7 @@ func (jb *JobBuilder) newJobInstance(
 	}
 
 	inst := JobInstance{
-		JobID:   jobID,
+		JobID:   model.UUID(jobID),
 		Args:    mArgs,
 		Context: ctx,
 		Job:     jobName,
@@ -422,7 +423,7 @@ func (job *JobInstance) SetProgressText(s string) error {
 
 func (job *JobInstance) AddLog(log string) error {
 	if err := job.jb.b.db.Create(&JobLog{
-		JobInstanceID: job.ID,
+		JobInstanceID: model.UUID(job.ID),
 		Log:           log,
 	}).Error; err != nil {
 		return err
@@ -479,7 +480,7 @@ func (job *JobInstance) shouldCallSave() bool {
 }
 
 func (job *JobInstance) callSave() error {
-	err := job.jb.b.setStatus(job.JobID, job.Status)
+	err := job.jb.b.setStatus(job.JobID.UUID(), job.Status)
 	if err != nil {
 		return err
 	}

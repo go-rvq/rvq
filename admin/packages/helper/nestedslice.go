@@ -424,9 +424,12 @@ func (b *NestedSliceBuilder) Build() *NestedSliceBuilder {
 				var records = reflect.ValueOf(b.targetModel.NewModelSlice()).Elem()
 
 				for key := range ids {
-					r := b.targetModel.NewModel()
-					b.targetModel.MustParseRecordID(key).SetTo(r)
-					records = reflect.Append(records, reflect.ValueOf(r))
+					// the record whole, read: one made of its id alone would be
+					// written again with the rest of its columns empty (NULL) when
+					// the association is saved
+					if r := fetchByID(b.targetModel, key, ctx); r != nil {
+						records = reflect.Append(records, reflect.ValueOf(r))
+					}
 				}
 
 				reflectutils.Set(obj, field.Name, records.Interface())

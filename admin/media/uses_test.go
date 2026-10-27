@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web/multipartestutils"
@@ -76,7 +77,7 @@ func usesText(t *testing.T, db *gorm.DB, a, b media_library.MediaLibrary) string
 	name := map[uuid.UUID]string{a.ID: "a", b.ID: "b"}
 	var out []string
 	for _, u := range uses {
-		out = append(out, u.Field+"="+name[u.MediaLibraryID])
+		out = append(out, u.Field+"="+name[u.MediaLibraryID.UUID()])
 	}
 	// the records' keys are random: in no order of theirs
 	sort.Strings(out)
@@ -196,7 +197,7 @@ func TestBackfillUses(t *testing.T) {
 	db.Session(&gorm.Session{SkipHooks: true}).Create(&p1)
 	db.Session(&gorm.Session{SkipHooks: true}).Create(&p2)
 	// a stale use of a record gone
-	db.Create(&MediaLibraryUse{RecordTable: "uses_posts", RecordID: uuid.NewString(), Field: "Cover", MediaLibraryID: a.ID})
+	db.Create(&MediaLibraryUse{RecordTable: "uses_posts", RecordID: uuid.NewString(), Field: "Cover", MediaLibraryID: model.UUID(a.ID)})
 	n, err := BackfillUses(db, &usesPost{}, &media_library.MediaLibrary{})
 	if err != nil || n != 2 {
 		t.Fatalf("BackfillUses: %d %v", n, err)

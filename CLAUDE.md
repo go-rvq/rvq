@@ -69,6 +69,12 @@ Always run native Go tooling to verify compliance and correctness:
 ## Code Style & Naming Conventions
 - **Idiomatic Go**: Follow standard `golang/go` conventions (Receiver names short, explicit error handling as returning values).
 - **Error Wrapping**: Use `fmt.Errorf("...: %w", err)` for contextual errors in parsing/compilation steps.
+- **UUID fields are `model.UUID`** (`admin/model`): never `*uuid.UUID` nor a
+  bare `uuid.UUID` for a field of a model. The zero is none — NULL in the
+  database, `IsZero()`, `""` in a form —; an optional foreign key is a
+  `model.UUID` that may be zero. Records chosen through an association are read
+  whole (`helper` `fetchByID`), never made of their id alone. See
+  `developer.md` ("UUID fields are `model.UUID`").
 - **Language**: **everything written for developers is in English** — code
   comments, doc comments, `docs/**.md`, `README.md`, test names and test
   comments. **What the end user reads is translated**: every i18n module ships

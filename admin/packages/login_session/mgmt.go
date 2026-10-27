@@ -12,6 +12,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
@@ -140,7 +141,7 @@ func (m *Manager) RecordAccess(db *gorm.DB, r *http.Request, a Access) error {
 		}).Error
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		row = LoginSession{
-			UserID: userID, Device: dev, IP: ip, UserAgent: r.UserAgent(), Kind: kind, Auth: auth, Place: m.place(r),
+			UserID: model.UUID(userID), Device: dev, IP: ip, UserAgent: r.UserAgent(), Kind: kind, Auth: auth, Place: m.place(r),
 			LastAccessAt: &now, Requests: 1, ExpiredAt: now.Add(m.window()),
 		}
 		err = db.Create(&row).Error
@@ -175,7 +176,7 @@ func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uui
 	token := login.GetSessionToken(m.lb, r)
 
 	if err = db.Model(&LoginSession{}).Create(&LoginSession{
-		UserID:    userID,
+		UserID:    model.UUID(userID),
 		Device:    device(r),
 		IP:        GetIP(r),
 		TokenHash: GetStringHash(token, LoginTokenHashLen),

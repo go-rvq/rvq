@@ -4,8 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
-	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
@@ -50,7 +51,7 @@ type DefaultDBPolicy struct {
 	// (e.g. an organization or project shared with another user). It identifies
 	// the share so the sharing UI can group/manage the policies it created,
 	// separately from ad-hoc grants made in the permission manager.
-	SharedID *uuid.UUID `gorm:"type:uuid;index"`
+	SharedID model.UUID `gorm:"type:uuid;index"`
 }
 
 // BeforeSave makes a policy of no actions one of any (*): the action asked

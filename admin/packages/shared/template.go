@@ -3,6 +3,8 @@ package shared
 import (
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -18,7 +20,7 @@ import (
 // each organization define its own templates.
 type ShareTemplate struct {
 	ID        uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Scope     *uuid.UUID     `gorm:"type:uuid;index"`
+	Scope     model.UUID     `gorm:"type:uuid;index"`
 	Name      string         `gorm:"size:120;not null"`
 	Actions   pq.StringArray `gorm:"type:text[]"`
 	CreatedAt time.Time
@@ -39,10 +41,10 @@ func AutoMigrateTemplates(db *gorm.DB) error { return db.AutoMigrate(&ShareTempl
 
 // Templates lists the templates available for scope: the scope's own templates
 // plus the global ones (Scope IS NULL), ordered by name.
-func Templates(db *gorm.DB, scope *uuid.UUID) ([]ShareTemplate, error) {
+func Templates(db *gorm.DB, scope model.UUID) ([]ShareTemplate, error) {
 	q := db.Model(&ShareTemplate{})
-	if scope != nil {
-		q = q.Where("scope = ? OR scope IS NULL", *scope)
+	if !scope.IsZero() {
+		q = q.Where("scope = ? OR scope IS NULL", scope)
 	} else {
 		q = q.Where("scope IS NULL")
 	}
@@ -59,19 +61,19 @@ func TemplateActions(db *gorm.DB, id uuid.UUID) ([]string, error) {
 	return []string(t.Actions), nil
 }
 
-// CreateTemplate adds a template for scope (nil = global).
-func CreateTemplate(db *gorm.DB, scope *uuid.UUID, name string, actions []string) (*ShareTemplate, error) {
+// CreateTemplate adds a template for scope (zero = global).
+func CreateTemplate(db *gorm.DB, scope model.UUID, name string, actions []string) (*ShareTemplate, error) {
 	t := &ShareTemplate{Scope: scope, Name: name, Actions: actions}
 	return t, db.Create(t).Error
 }
 
 // SeedDefaultTemplates creates the standard Viewer/Editor/Manager templates for
 // scope if it has none yet (idempotent).
-func SeedDefaultTemplates(db *gorm.DB, scope *uuid.UUID) error {
+func SeedDefaultTemplates(db *gorm.DB, scope model.UUID) error {
 	var n int64
 	q := db.Model(&ShareTemplate{})
-	if scope != nil {
-		q = q.Where("scope = ?", *scope)
+	if !scope.IsZero() {
+		q = q.Where("scope = ?", scope)
 	} else {
 		q = q.Where("scope IS NULL")
 	}

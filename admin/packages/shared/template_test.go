@@ -3,6 +3,7 @@ package shared
 import (
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -25,19 +26,19 @@ func TestShareTemplates(t *testing.T) {
 	org := uuid.New()
 
 	// a global template and the per-org defaults
-	if _, err := CreateTemplate(db, nil, "Global-View", VerbView); err != nil {
+	if _, err := CreateTemplate(db, model.Nil, "Global-View", VerbView); err != nil {
 		t.Fatal(err)
 	}
-	if err := SeedDefaultTemplates(db, &org); err != nil {
+	if err := SeedDefaultTemplates(db, model.UUID(org)); err != nil {
 		t.Fatal(err)
 	}
 	// seeding is idempotent
-	if err := SeedDefaultTemplates(db, &org); err != nil {
+	if err := SeedDefaultTemplates(db, model.UUID(org)); err != nil {
 		t.Fatal(err)
 	}
 
 	// the org sees its 3 defaults + the global one
-	forOrg, err := Templates(db, &org)
+	forOrg, err := Templates(db, model.UUID(org))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +48,7 @@ func TestShareTemplates(t *testing.T) {
 
 	// another org sees only the global one (not the first org's defaults)
 	other := uuid.New()
-	forOther, _ := Templates(db, &other)
+	forOther, _ := Templates(db, model.UUID(other))
 	if len(forOther) != 1 || forOther[0].Name != "Global-View" {
 		t.Fatalf("another org should see only the global template, got %v", forOther)
 	}

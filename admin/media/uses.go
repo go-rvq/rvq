@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
+
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -31,7 +33,7 @@ type MediaLibraryUse struct {
 	RecordTable    string                      `gorm:"primaryKey;size:128"`
 	RecordID       string                      `gorm:"primaryKey;size:255"`
 	Field          string                      `gorm:"primaryKey;size:128"`
-	MediaLibraryID uuid.UUID                   `gorm:"type:uuid;not null;index"`
+	MediaLibraryID model.UUID                  `gorm:"type:uuid;not null;index"`
 	MediaLibrary   *media_library.MediaLibrary `gorm:"foreignKey:MediaLibraryID;constraint:OnDelete:RESTRICT"`
 	UpdatedAt      time.Time
 }
@@ -275,7 +277,7 @@ func setUse(tx *gorm.DB, table, recordID, field string, box media_library.MediaB
 		Columns:   []clause.Column{{Name: "record_table"}, {Name: "record_id"}, {Name: "field"}},
 		DoUpdates: clause.AssignmentColumns([]string{"media_library_id", "updated_at"}),
 	}).Create(&MediaLibraryUse{RecordTable: table, RecordID: recordID, Field: field,
-		MediaLibraryID: file, UpdatedAt: time.Now()}).Error
+		MediaLibraryID: model.UUID(file), UpdatedAt: time.Now()}).Error
 	if err != nil {
 		_ = tx.AddError(err)
 		return false

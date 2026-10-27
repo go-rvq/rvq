@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
@@ -100,7 +101,7 @@ func (a *Authenticator) AuthKey(r *http.Request, code string) (any, context.Cont
 	if !k.Usable(a.now()) {
 		return nil, nil, ErrKeyUnusable
 	}
-	user, err := a.FindUser(r.Context(), k.UserID)
+	user, err := a.FindUser(r.Context(), k.UserID.UUID())
 	if err != nil || user == nil {
 		return nil, nil, ErrKeyNoUser
 	}
@@ -121,7 +122,7 @@ func (a *Authenticator) KeyServed(r *http.Request, status int) {
 			kind = s
 		}
 	}
-	use := &AccessKeyUse{KeyID: k.ID, UserID: k.UserID, IP: ip, UserAgent: r.UserAgent(), Kind: kind,
+	use := &AccessKeyUse{KeyID: model.UUID(k.ID), UserID: k.UserID, IP: ip, UserAgent: r.UserAgent(), Kind: kind,
 		Method: r.Method, Path: r.URL.Path, Status: status}
 	if a.Locate != nil {
 		use.Place = a.Locate(ip)

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"sync"
 	"time"
 
@@ -21,7 +22,7 @@ type Job struct {
 type JobInstance struct {
 	uuidkey.Model
 
-	JobID uuid.UUID `gorm:"type:uuid;index"`
+	JobID model.UUID `gorm:"type:uuid;index"`
 
 	Operator string
 
@@ -45,7 +46,7 @@ type JobLog struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time `gorm:"index"`
 
-	JobInstanceID uuid.UUID `gorm:"type:uuid;index"`
+	JobInstanceID model.UUID `gorm:"type:uuid;index"`
 	Log           string
 }
 

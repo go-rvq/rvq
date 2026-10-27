@@ -682,7 +682,7 @@ func (b *Builder) eventAbortJob(ctx *web.EventContext) (er web.EventResponse, er
 		}
 		b.ab.AddCustomizedRecord(action, false, ctx.R.Context(), &Job{
 			Model: uuidkey.Model{
-				ID: inst.JobID,
+				ID: inst.JobID.UUID(),
 			},
 		})
 	}
@@ -752,7 +752,7 @@ func (b *Builder) eventRerunJob(ctx *web.EventContext) (er web.EventResponse, er
 	if b.ab != nil {
 		b.ab.AddCustomizedRecord("Rerun", false, ctx.R.Context(), &Job{
 			Model: uuidkey.Model{
-				ID: inst.JobID,
+				ID: inst.JobID.UUID(),
 			},
 		})
 	}
@@ -820,13 +820,13 @@ func (b *Builder) eventUpdateJob(ctx *web.EventContext) (er web.EventResponse, e
 			ctx.R.Context(),
 			&Job{
 				Model: uuidkey.Model{
-					ID: newInst.JobID,
+					ID: newInst.JobID.UUID(),
 				},
 				Args: oldArgs,
 			},
 			&Job{
 				Model: uuidkey.Model{
-					ID: newInst.JobID,
+					ID: newInst.JobID.UUID(),
 				},
 				Args: newArgs,
 			},

@@ -3,6 +3,7 @@ package shared
 import (
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/perms"
 	"github.com/go-rvq/rvq/x/perm"
 	"gorm.io/driver/sqlite"
@@ -38,7 +39,7 @@ func TestShareLifecycle(t *testing.T) {
 		t.Fatalf("share should have 2 subjects, got %d", len(subs))
 	}
 	for _, p := range subs {
-		if p.SharedID == nil || *p.SharedID != sid {
+		if p.SharedID != model.UUID(sid) {
 			t.Errorf("policy %s not stamped with the share id", p.ReferID)
 		}
 		if len(p.Resources) != 1 || p.Resources[0] != resource {

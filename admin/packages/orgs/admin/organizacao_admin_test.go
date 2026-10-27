@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -89,10 +90,10 @@ func TestOrganizacaoOwnerScoping(t *testing.T) {
 
 	userA := uuid.New()
 	userB := uuid.New()
-	if err := db.Create(&models.Organizacao{Nome: "Alpha SA", OwnerID: userA}).Error; err != nil {
+	if err := db.Create(&models.Organizacao{Nome: "Alpha SA", OwnerID: model.UUID(userA)}).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Create(&models.Organizacao{Nome: "Beta Ltda", OwnerID: userB}).Error; err != nil {
+	if err := db.Create(&models.Organizacao{Nome: "Beta Ltda", OwnerID: model.UUID(userB)}).Error; err != nil {
 		t.Fatal(err)
 	}
 

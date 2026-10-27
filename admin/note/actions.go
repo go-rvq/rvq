@@ -1,6 +1,7 @@
 package note
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
@@ -17,7 +18,7 @@ func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 
 		userID, creator := GetUserData(ctx)
 		note := Note{
-			UserID:       userID,
+			UserID:       model.UUID(userID),
 			Creator:      creator,
 			ResourceID:   ri,
 			ResourceType: rt,
@@ -30,7 +31,7 @@ func createNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 			return
 		}
 
-		userNote := UserNote{UserID: userID, ResourceType: rt, ResourceID: ri}
+		userNote := UserNote{UserID: model.UUID(userID), ResourceType: rt, ResourceID: ri}
 		db.Where(userNote).FirstOrCreate(&userNote)
 
 		var total int64
@@ -64,7 +65,7 @@ func updateUserNoteAction(b *Builder, mb *presets.ModelBuilder) web.EventFunc {
 			return
 		}
 
-		userNote := UserNote{UserID: userID, ResourceType: rt, ResourceID: ri}
+		userNote := UserNote{UserID: model.UUID(userID), ResourceType: rt, ResourceID: ri}
 		if err = db.Where(userNote).FirstOrCreate(&userNote).Error; err != nil {
 			return
 		}

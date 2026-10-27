@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
@@ -18,9 +19,9 @@ func TestOrgSelectorComponent(t *testing.T) {
 	b, db := newTestAdmin(t)
 
 	me := uuid.New()
-	db.Create(&models.Organizacao{Nome: "Alpha SA", OwnerID: me})
-	db.Create(&models.Organizacao{Nome: "Beta Ltda", OwnerID: me})
-	db.Create(&models.Organizacao{Nome: "Foreign Inc", OwnerID: uuid.New()})
+	db.Create(&models.Organizacao{Nome: "Alpha SA", OwnerID: model.UUID(me)})
+	db.Create(&models.Organizacao{Nome: "Beta Ltda", OwnerID: model.UUID(me)})
+	db.Create(&models.Organizacao{Nome: "Foreign Inc", OwnerID: model.NewUUID()})
 
 	r := httptest.NewRequest("GET", "/admin", nil)
 	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: me}))

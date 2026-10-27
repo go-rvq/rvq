@@ -4,6 +4,7 @@
 package models
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/softdelete"
@@ -21,8 +22,8 @@ import (
 // org in the request path (/orgs/{id}/people/...) on save and used to scope
 // reads (see orgs MountUnderOrg / ScopeToOrg).
 type Base struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	OrganizacaoID uuid.UUID `gorm:"type:uuid;index"`
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	OrganizacaoID model.UUID `gorm:"type:uuid;index"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	softdelete.Deletion

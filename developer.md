@@ -103,11 +103,65 @@ refuses to register — it reads the first word as a method.
 
 See [the menu reference](admin/presets/docs/menu.md) for the tree itself.
 
+## UUID fields are `model.UUID`
+
+Every UUID field of a model — a foreign key above all — is a `model.UUID`
+(`github.com/go-rvq/rvq/admin/model`):
+
+```go
+type Form struct {
+	ID               uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	RedirectToPageID model.UUID `gorm:"type:uuid;index"` // optional: zero is none
+	RedirectToPage   *PageConfig `gorm:"foreignKey:RedirectToPageID"`
+}
+```
+
+Its zero is **none**, the same everywhere:
+
+| Where | The zero is |
+|---|---|
+| the database (`Value`) | `NULL` — never `00000000-0000-0000-0000-000000000000` |
+| reading (`Scan`) | what a `NULL` comes back as |
+| Go | `IsZero()` (it is a `zeroer.Zeroer`), `model.Nil` |
+| a form | `""` (the `web` decoder), so an emptied select clears it |
+| text / JSON | `""` / `null` |
+
+Not a pointer: an optional foreign key is a `model.UUID` that may be zero.
+Test it with `IsZero()`, never `== nil`; pass it as it is — `Where("x = ?",
+id)` — never `*id`.
+
+**Why.** A `uuid.UUID` has no zero of its own: left empty, it was written as
+the zero UUID, which no record has, and the foreign key refused it (a form
+saved with no page to redirect to). A `*uuid.UUID` reads `nil` as none, but
+every use has to remember the pointer, and the form decoder wrote the zero
+into a pointer that was set before.
+
+**Converting.** `model.UUID(id)` from a `uuid.UUID`, `u.UUID()` back — for a
+key that is still a `uuid.UUID`, a function that takes one, a map keyed by one.
+`model.NewUUID()` is a new v7, `model.ParseUUID(s)` reads one (`""` is the
+zero), and a `model.UUID` primary key gets its v7 from `uuidkey` as a
+`uuid.UUID` one does.
+
+**Associations: what is chosen is read.** A record made of its id alone and
+saved through an association (a many-to-many's chips, a many select) is
+written again by gorm with its other columns empty — `NULL` now, which a
+`NOT NULL` foreign key refuses, before the conflict that used to swallow it. A
+selector reads the records chosen (`helper` `fetchByID`); do the same when you
+build one.
+
+**Queries.** A zero argument is `NULL`: `Where("parent_id = ?", model.Nil)`
+matches nothing — ask `IS NULL` for none.
+
+Primary keys that are a `uuid.UUID` today stay so; a new model may use
+`model.UUID` for its key too.
+
 ## Checklist for a new package
 
 - [ ] Every `TableName()` starts with the package prefix.
 - [ ] Every model registers with an explicit `presets.ModelWithID`, prefixed.
 - [ ] Models that are not menu entries pass `presets.ModelNotInMenu()`.
+- [ ] Every UUID field is a `model.UUID` — no `*uuid.UUID` —, tested with
+      `IsZero()`.
 - [ ] Menu group names are URL-safe, with `Title` for display.
 - [ ] `AutoMigrate` runs behind a `renameLegacy` for anything you renamed.
 - [ ] The i18n module ships `Messages_en_US` and `Messages_pt_BR`, both

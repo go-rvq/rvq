@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
-	"github.com/google/uuid"
 	"golang.org/x/text/language"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -50,7 +50,7 @@ func nestedMenuAdmin(t *testing.T, pb *perm.Builder) (*presets.Builder, *gorm.DB
 	MountUnderOrg(OrganizacaoModel(b), child, "finance")
 	b.Build()
 
-	org := &models.Organizacao{Nome: "Alpha", OwnerID: uuid.New()}
+	org := &models.Organizacao{Nome: "Alpha", OwnerID: model.NewUUID()}
 	if err := db.Create(org).Error; err != nil {
 		t.Fatal(err)
 	}

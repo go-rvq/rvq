@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/messages"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/shared"
@@ -39,7 +40,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	if err := shared.AutoMigrateTemplates(b.db); err != nil {
 		return err
 	}
-	if err := shared.SeedDefaultTemplates(b.db, nil); err != nil {
+	if err := shared.SeedDefaultTemplates(b.db, model.Nil); err != nil {
 		return err
 	}
 	messages.Register(pb.I18n())

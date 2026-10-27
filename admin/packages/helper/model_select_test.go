@@ -160,6 +160,12 @@ func TestModelSelector_SlugMultiFieldKey(t *testing.T) {
 // must land in owner.Types.
 func TestModelSelector_ManyReadsAssociationKey(t *testing.T) {
 	db := newSelDB(t, &selManyType{}, &selManyOwner{})
+	// the records chosen are read (fetchByID): they are there
+	for _, id := range []uint{1, 2} {
+		if err := db.Create(&selManyType{ID: id}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
 	b := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
 	mb := b.Model(&selManyOwner{})
 	NewModelSelectorBuilder(mb, "Types").SetMany(true).
