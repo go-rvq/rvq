@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-rvq/rvq/web/str_utils"
+	"github.com/go-rvq/rvq/x/features"
 	"regexp"
 	"sort"
 	"strconv"
@@ -402,6 +403,9 @@ func (r *reader) choice(types gad.Array) (*Schema, error) {
 		if !ok {
 			return nil, nil
 		}
+		if !ClassAvailable(c) {
+			continue // its feature off: not offered
+		}
 		sub, err := r.class(c)
 		if err != nil {
 			return nil, err
@@ -423,6 +427,9 @@ func classNames(types gad.Array) *Enum {
 		if !ok {
 			return nil
 		}
+		if !ClassAvailable(c) {
+			continue // its feature off: not offered
+		}
 		it := EnumItem{Name: c.Name(), Label: str_utils.HumanizeString(c.Name())}
 		meta := metaOf(c.Meta)
 		if l, _ := meta["label"].(string); l != "" {
@@ -436,6 +443,28 @@ func classNames(types gad.Array) *Enum {
 	}
 	e.Name = strings.Join(e.Names, "|")
 	return e
+}
+
+// MetaFeature is the meta of a class that names the feature it needs
+// (`[feature="hermon.issues"] export class Issues {…}`, x/features): off — or
+// not in the binary —, the class is not offered in a choice of classes
+// (ClassAvailable).
+const MetaFeature = "feature"
+
+// ClassFeature is the feature c needs (its MetaFeature), or "".
+func ClassFeature(c *gad.Class) string {
+	if c == nil {
+		return ""
+	}
+	f, _ := metaOf(c.Meta)[MetaFeature].(string)
+	return strings.TrimSpace(f)
+}
+
+// ClassAvailable says c is offered: it needs no feature, or the one it
+// needs is on (features.Enabled: declared, compiled, turned on).
+func ClassAvailable(c *gad.Class) bool {
+	f := ClassFeature(c)
+	return f == "" || features.Enabled(f)
 }
 
 // typeMarker is a type the builder knows and gad does not — `color`, `html` —
