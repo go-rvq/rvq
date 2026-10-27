@@ -7,6 +7,17 @@ import (
 	"github.com/lib/pq"
 )
 
+// NotifyChannels are the channels a notification goes by, a bit each: a
+// field of bits (presets.BitsComponentFunc).
+type NotifyChannels uint8
+
+// The bits of NotifyChannels.
+const (
+	NotifyEmail NotifyChannels = 1 << iota
+	NotifySMS
+	NotifyPush
+)
+
 type InputDemo struct {
 	ID               uint
 	TextField1       string
@@ -30,6 +41,8 @@ type InputDemo struct {
 	DatePickerMonth1 string
 	TimePicker1      string
 	MediaLibrary1    media_library.MediaBox `sql:"type:text;"`
-	UpdatedAt        time.Time
-	CreatedAt        time.Time
+	// Notifications1 is a field of bits: chips, one a channel
+	Notifications1 NotifyChannels `gorm:"not null;default:0"`
+	UpdatedAt      time.Time
+	CreatedAt      time.Time
 }

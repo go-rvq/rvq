@@ -39,6 +39,7 @@ func SamplesHandler(mux examples.Muxer, prefix string) {
 	addExample(mux, db, PresetsDetailInlineEditInspectTables)
 	addExample(mux, db, PresetsDetailInlineEditFieldSections)
 	addExample(mux, db, PresetsDetailSimple)
+	addExample(mux, db, PresetsBitsField)
 }
 
 type exampleFunc func(b *presets.Builder, db *gorm.DB) (

@@ -64,6 +64,17 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	); err != nil {
 		return
 	}
+	// the old switch of the SMTP's login (UseSMTPLogin): its user and
+	// password (Reuse)
+	if m := b.db.Migrator(); m.HasColumn(&MailSender{}, "inbound__use_smtp_login") {
+		if err = b.db.Exec(`UPDATE mail_sender_settings SET inbound__reuse = ? WHERE inbound__use_smtp_login`,
+			SMTPReuseUser|SMTPReusePassword).Error; err != nil {
+			return
+		}
+		if err = m.DropColumn(&MailSender{}, "inbound__use_smtp_login"); err != nil {
+			return
+		}
+	}
 	b.installMailLogs(p)
 
 	mb := Model(p,
@@ -114,20 +125,14 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		})
 		return b
 	}
-	// with the SMTP login, the user and password of its own are not used:
-	// not shown
-	smtpLogin := func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
-		for _, name := range []string{"User", "Password"} {
+	// what it takes of the SMTP's (Reuse): its chips; the values of its own
+	// that it does not use, not shown
+	reuse := func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+		b.Field("Reuse").ComponentFunc(presets.BitsComponentFunc(smtpReuseOptions()...))
+		for name, bit := range smtpReuseFields {
 			b.Field(name).WrapComponentFunc(func(in presets.FieldComponentFunc) presets.FieldComponentFunc {
 				return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-					var s InboundSettings
-					switch obj := field.Obj.(type) {
-					case *InboundSettings:
-						s = *obj
-					case *MailSender:
-						s = obj.Inbound
-					}
-					if s.UseSMTPLogin {
+					if inboundOf(field.Obj).Reuse.Has(bit) {
 						return nil
 					}
 					return in(field, ctx)
@@ -136,7 +141,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		}
 		return b
 	}
-	nested.New(mb).Field("Inbound").Detailing(hiddenPassword, inboundMode, smtpLogin)
+	nested.New(mb).Field("Inbound").Detailing(hiddenPassword, inboundMode, reuse)
 
 	// the answers: by people, or by IMAP — its password hidden as the
 	// SMTP's
@@ -160,16 +165,18 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 					ItemTitle("title").ItemValue("value").
 					Attr(web.VField(field.FormKey, value)...)
 			})
-			// the account, only when the application reads it; its user and
-			// password, only when they are not the SMTP sender's
-			for _, name := range []string{"Server", "Port", "TLS", "StartTLS", "UseSMTPLogin", "User", "Password", "Mailbox"} {
-				own := name == "User" || name == "Password"
+			// what it takes of the SMTP's: chips that toggle
+			b.Field("Reuse").ComponentFunc(presets.BitsComponentFunc(smtpReuseOptions()...))
+			// the account, only when the application reads it; its host, user
+			// and password, only when they are not the SMTP sender's (Reuse)
+			for _, name := range []string{"Reuse", "Server", "Port", "TLS", "StartTLS", "User", "Password", "Mailbox"} {
+				bit, reused := smtpReuseFields[name]
 				b.Field(name).WrapComponentFunc(func(in presets.FieldComponentFunc) presets.FieldComponentFunc {
 					return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 						prefix := strings.TrimSuffix(field.FormKey, field.Name)
 						cond := fmt.Sprintf("form[%q] === %q", prefix+"Mode", InboundIMAP)
-						if own {
-							cond += fmt.Sprintf(" && !form[%q]", prefix+"UseSMTPLogin")
+						if reused {
+							cond += fmt.Sprintf(" && ((Number(form[%q]) || 0) & %d) === 0", prefix+"Reuse", bit)
 						}
 						return h.Div(in(field, ctx)).Attr("v-if", cond)
 					}

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/i18n"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"gorm.io/gorm"
@@ -58,7 +60,14 @@ func configInputDemo(b *presets.Builder, _ *gorm.DB) {
 		"DatePickerMonth1",
 		"TimePicker1",
 		"MediaLibrary1",
+		"Notifications1",
 	)
+
+	// a field of bits: a chip a channel, its label and its description (the
+	// `?` of the chip) of the messages; the same component draws the detail
+	notifications := presets.BitsComponentFunc(notifyChannelOptions()...)
+	ed.Field("Notifications1").ComponentFunc(notifications)
+	inputDemo.Detailing().Field("Notifications1").ComponentFunc(notifications)
 
 	// TextField1       string
 	// TextArea1        string
@@ -228,4 +237,22 @@ func configInputDemo(b *presets.Builder, _ *gorm.DB) {
 					},
 				},
 			})
+}
+
+// notifyChannelOptions are the bits of models.NotifyChannels as options of a
+// field of bits: the label and the description of each, of the messages.
+func notifyChannelOptions() []presets.BitOption {
+	msgs := func(ctx context.Context) *Messages {
+		return i18n.MustGetModuleMessages(ctx, I18nExampleKey, Messages_en_US).(*Messages)
+	}
+	opt := func(bit models.NotifyChannels, label, desc func(*Messages) string) presets.BitOption {
+		return presets.BitOption{Bit: uint64(bit),
+			Label:       func(ctx context.Context) string { return label(msgs(ctx)) },
+			Description: func(ctx context.Context) string { return desc(msgs(ctx)) }}
+	}
+	return []presets.BitOption{
+		opt(models.NotifyEmail, func(m *Messages) string { return m.DemoNotifyEmail }, func(m *Messages) string { return m.DemoNotifyEmailDesc }),
+		opt(models.NotifySMS, func(m *Messages) string { return m.DemoNotifySMS }, func(m *Messages) string { return m.DemoNotifySMSDesc }),
+		opt(models.NotifyPush, func(m *Messages) string { return m.DemoNotifyPush }, func(m *Messages) string { return m.DemoNotifyPushDesc }),
+	}
 }

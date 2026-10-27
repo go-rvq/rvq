@@ -32,23 +32,44 @@ const (
 	InboundIMAP = "imap"
 )
 
+// SMTPReuse are the bits of what of the SMTP sender's account (MailSender.SMTP)
+// an account takes for its own — the team mailbox that sends is the one that
+// receives —: its user, its password, its host. A bit set, that value is the
+// SMTP's, and the account's own is not used.
+type SMTPReuse uint8
+
+// The bits of SMTPReuse.
+const (
+	// SMTPReuseUser takes the SMTP's user
+	SMTPReuseUser SMTPReuse = 1 << iota
+	// SMTPReusePassword takes the SMTP's password
+	SMTPReusePassword
+	// SMTPReuseHost takes the SMTP's host (Server)
+	SMTPReuseHost
+)
+
+// SMTPReuseBits are the bits of SMTPReuse, in order.
+var SMTPReuseBits = []SMTPReuse{SMTPReuseUser, SMTPReusePassword, SMTPReuseHost}
+
+// Has says every bit of b is set.
+func (r SMTPReuse) Has(b SMTPReuse) bool { return r&b == b }
+
 // InboundSettings are where the answers are read from.
 type InboundSettings struct {
 	// Mode is InboundManual (or "") or InboundIMAP.
 	Mode string
 	// The IMAP server and account: Server and Port ("imap.gmail.com", 993),
 	// TLS — implicit (993) —, or STARTTLS, or none (a local server); the
-	// Mailbox read ("" INBOX). With UseSMTPLogin, the account is the SMTP
-	// sender's (its User and Password), and User and Password here are not
-	// used: the team mailbox that sends is the one that receives.
-	Server       string
-	Port         uint16
-	TLS          bool
-	StartTLS     bool
-	UseSMTPLogin bool
-	User         string
-	Password     string
-	Mailbox      string
+	// Mailbox read ("" INBOX). Reuse takes values of the SMTP sender's
+	// account (SMTPReuse: user, password, host) instead of the ones here.
+	Reuse    SMTPReuse `gorm:"not null;default:0"`
+	Server   string
+	Port     uint16
+	TLS      bool
+	StartTLS bool
+	User     string
+	Password string
+	Mailbox  string
 }
 
 // InboundMessage is a message an Inbox read.
@@ -89,11 +110,7 @@ func (c *MailSender) Inbox() (Inbox, error) {
 	case "", InboundManual:
 		return ManualInbox{}, nil
 	case InboundIMAP:
-		s := c.Inbound
-		if s.UseSMTPLogin {
-			s.User, s.Password = c.SMTP.User, c.SMTP.Password
-		}
-		return DialIMAP(s)
+		return DialIMAP(c.Inbound.WithSMTP(&c.SMTP))
 	}
 	return nil, fmt.Errorf("mail sender: inbound mode %q", c.Inbound.Mode)
 }
@@ -242,4 +259,19 @@ func ParseInbound(raw []byte) (*InboundMessage, error) {
 		}
 	}
 	return m, nil
+}
+
+// WithSMTP is s with the values of smtp it reuses (Reuse): its user, its
+// password, its host.
+func (s InboundSettings) WithSMTP(smtp *SmtpSender) InboundSettings {
+	if s.Reuse.Has(SMTPReuseUser) {
+		s.User = smtp.User
+	}
+	if s.Reuse.Has(SMTPReusePassword) {
+		s.Password = smtp.Password
+	}
+	if s.Reuse.Has(SMTPReuseHost) {
+		s.Server = smtp.Server
+	}
+	return s
 }

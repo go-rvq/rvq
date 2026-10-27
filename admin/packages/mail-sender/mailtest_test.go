@@ -85,7 +85,7 @@ func TestSendRecipientLimits(t *testing.T) {
 
 // The answers are read by IMAP: an answer delivered to the team's mailbox is
 // unread, with the conversation it answers; once Done, it is not read
-// again; with UseSMTPLogin, the account is the SMTP sender's. Manual:
+// again; what it reuses (Reuse), the SMTP sender's. Manual:
 // nothing to read.
 func TestInbox(t *testing.T) {
 	srv := startMailtest(t)
@@ -136,13 +136,14 @@ Obrigada, pode ligar amanhã.
 		t.Errorf("after Done: %d unread, %v", len(got), err)
 	}
 
-	// the SMTP sender's login: the user and password of its own unused
+	// what it reuses of the SMTP sender's account — user, password, host —:
+	// its own, wrong, unused
 	if err := srv.Deliver([]byte(strings.Replace(raw, "answer-1@", "answer-2@", 1)), "team@example.com"); err != nil {
 		t.Fatal(err)
 	}
-	settings.Inbound.UseSMTPLogin = true
-	settings.Inbound.User, settings.Inbound.Password = "nobody@example.com", "wrong"
-	settings.SMTP.User, settings.SMTP.Password = "team@example.com", mailtest.Password
+	settings.Inbound.Reuse = mail_sender.SMTPReuseUser | mail_sender.SMTPReusePassword | mail_sender.SMTPReuseHost
+	settings.Inbound.User, settings.Inbound.Password, settings.Inbound.Server = "nobody@example.com", "wrong", "nowhere.invalid"
+	settings.SMTP.User, settings.SMTP.Password, settings.SMTP.Server = "team@example.com", mailtest.Password, host
 	shared, err := settings.Inbox()
 	if err != nil {
 		t.Fatalf("with the SMTP login: %v", err)
@@ -155,5 +156,29 @@ Obrigada, pode ligar amanhã.
 	manual, _ := (&mail_sender.MailSender{}).Inbox()
 	if got, err := manual.Unread(ctx); err != nil || got != nil {
 		t.Errorf("manual: %v %v", got, err)
+	}
+}
+
+// WithSMTP takes, bit by bit, the SMTP's user, password and host; a bit not
+// set keeps the account's own.
+func TestInboundWithSMTP(t *testing.T) {
+	own := mail_sender.InboundSettings{User: "u", Password: "p", Server: "imap.example.com"}
+	smtp := &mail_sender.SmtpSender{User: "su", Password: "sp", Server: "smtp.example.com"}
+	for _, c := range []struct {
+		reuse      mail_sender.SMTPReuse
+		u, p, host string
+	}{
+		{0, "u", "p", "imap.example.com"},
+		{mail_sender.SMTPReuseUser, "su", "p", "imap.example.com"},
+		{mail_sender.SMTPReusePassword, "u", "sp", "imap.example.com"},
+		{mail_sender.SMTPReuseHost, "u", "p", "smtp.example.com"},
+		{mail_sender.SMTPReuseUser | mail_sender.SMTPReusePassword, "su", "sp", "imap.example.com"},
+	} {
+		s := own
+		s.Reuse = c.reuse
+		got := s.WithSMTP(smtp)
+		if got.User != c.u || got.Password != c.p || got.Server != c.host {
+			t.Errorf("reuse %03b: %q %q %q", c.reuse, got.User, got.Password, got.Server)
+		}
 	}
 }

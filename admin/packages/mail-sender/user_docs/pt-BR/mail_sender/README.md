@@ -30,9 +30,10 @@ A configuração tem duas abas, no detalhe e na edição:
     a uma conversa que ela conhece (uma mensagem de contato, um comentário)
     passa a fazer parte dela, e a mensagem é marcada como lida na caixa. Os
     campos do servidor IMAP só aparecem neste modo. Quando a caixa que recebe
-    é a mesma que envia, marque **Mesmo usuário e senha do SMTP**: a leitura
-    usa a conta da aba **Envio**, e o usuário e a senha do IMAP somem do
-    formulário — uma senha só para trocar.
+    é a mesma que envia, marque em **O mesmo do SMTP** o que a
+    leitura aproveita da conta da aba **Envio** — o usuário, a senha, o
+    servidor —; cada um marcado some do formulário (uma senha só para
+    trocar). As opções e os exemplos estão na {%= admin.doc("mail_sender/forms/edit").link %}.
 
 As senhas (da conta SMTP e da caixa IMAP) nunca são mostradas no detalhe.
 Na edição a senha salva vem no campo, oculta (o ícone do olho a mostra):

@@ -7,6 +7,12 @@ import (
 const I18nExampleKey i18n.ModuleKey = "I18nExampleKey"
 
 type Messages struct {
+	DemoNotifyEmail                string
+	DemoNotifyEmailDesc            string
+	DemoNotifySMS                  string
+	DemoNotifySMSDesc              string
+	DemoNotifyPush                 string
+	DemoNotifyPushDesc             string
 	FilterTabsAll                  string
 	FilterTabsHasUnreadNotes       string
 	FilterTabsActive               string
@@ -42,6 +48,12 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	DemoNotifyEmail:                "Email",
+	DemoNotifyEmailDesc:            "Notifies by email, to the address of the account.",
+	DemoNotifySMS:                  "SMS",
+	DemoNotifySMSDesc:              "Notifies by a text message, to the phone of the account.",
+	DemoNotifyPush:                 "Push",
+	DemoNotifyPushDesc:             "Notifies on the devices where the account is signed in.",
 	FilterTabsAll:                  "All",
 	FilterTabsHasUnreadNotes:       "Has Unread Notes",
 	FilterTabsActive:               "Active",
@@ -77,6 +89,12 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_ja_JP = &Messages{
+	DemoNotifyEmail:                "電子メール",
+	DemoNotifyEmailDesc:            "アカウントのアドレスにメールで通知します。",
+	DemoNotifySMS:                  "SMS",
+	DemoNotifySMSDesc:              "アカウントの電話にSMSで通知します。",
+	DemoNotifyPush:                 "プッシュ",
+	DemoNotifyPushDesc:             "アカウントがログインしているデバイスに通知します。",
 	FilterTabsAll:                  "すべて",
 	FilterTabsHasUnreadNotes:       "未読のノートがあります",
 	FilterTabsActive:               "有効",
@@ -112,6 +130,12 @@ var Messages_ja_JP = &Messages{
 }
 
 var Messages_zh_CN = &Messages{
+	DemoNotifyEmail:                "电子邮件",
+	DemoNotifyEmailDesc:            "通过电子邮件通知到账户的地址。",
+	DemoNotifySMS:                  "短信",
+	DemoNotifySMSDesc:              "通过短信通知到账户的电话。",
+	DemoNotifyPush:                 "推送",
+	DemoNotifyPushDesc:             "在账户已登录的设备上通知。",
 	FilterTabsAll:                  "全部",
 	FilterTabsHasUnreadNotes:       "未读备注",
 	FilterTabsActive:               "有效",

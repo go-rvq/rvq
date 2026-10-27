@@ -170,3 +170,38 @@ func TestDescription(t *testing.T) {
 		t.Errorf("a string: %q", got)
 	}
 }
+
+// A tag written by Encode (StructTag) is read back as it was: apostrophes,
+// backslashes, double quotes, accents in its texts. An apostrophe not
+// escaped, or escaped once in the source (no Go string), is an error that
+// says how.
+func TestEncodeTag(t *testing.T) {
+	for _, tag := range []Tag{
+		{Type: Text, Hint: "Takes the SMTP's user."},
+		{Type: Text, Label: `a \ backslash, a "quote"`, Hint: "it's 'quoted' — ação"},
+		{Type: HTML, Label: "x", Fields: []Field{{"%d", "how many"}, {"%[2]s", "the model's name"}}},
+		{Type: Form, Schema: "class X { a str }"},
+		{Type: Text},
+	} {
+		st := tag.StructTag()
+		got, err := ParseTag(st)
+		if err != nil {
+			t.Errorf("%s: %v", st, err)
+			continue
+		}
+		if !reflect.DeepEqual(got, tag) {
+			t.Errorf("%s: got %+v, want %+v", st, got, tag)
+		}
+	}
+	if q := Quote("it's"); q != `'it\'s'` {
+		t.Errorf("Quote: %s", q)
+	}
+	for _, bad := range []reflect.StructTag{
+		`i18n:"hint='the SMTP's user'"`,     // not escaped
+		"i18n:\"hint='the SMTP\\'s user'\"", // escaped once: no Go string
+	} {
+		if _, err := ParseTag(bad); err == nil || !strings.Contains(err.Error(), "Quote") {
+			t.Errorf("%s: %v, want an error saying how", bad, err)
+		}
+	}
+}

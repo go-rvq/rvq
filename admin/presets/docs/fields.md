@@ -102,6 +102,38 @@ in `FieldDefaults.builtInFieldTypes()`:
 Wrappers: `FieldComponentWrapper` (adds a label container),
 `FormFieldComponentWrapper`, `FieldWithHint` (adds the hint).
 
+## A field of bits — `BitsComponentFunc`
+
+An unsigned integer whose bits are options is drawn as chips, one an option:
+
+```go
+type SMTPReuse uint8
+
+const (
+	SMTPReuseUser SMTPReuse = 1 << iota
+	SMTPReusePassword
+	SMTPReuseHost
+)
+
+b.Field("Reuse").ComponentFunc(presets.BitsComponentFunc(
+	presets.BitOption{Bit: uint64(SMTPReuseUser),
+		Label:       func(ctx context.Context) string { return GetMessages(ctx).SMTPReuseUser },
+		Description: func(ctx context.Context) string { return GetMessages(ctx).SMTPReuseUser_Desc }},
+	// …
+))
+```
+
+- **To edit** (new, edit): the chips toggle, and the field's value is the sum
+  of the bits marked — a form value like any integer's.
+- **In the detail**: the set ones marked (a check), the others outlined.
+- Each option has a **label** and a **description**, both of the messages of the
+  module (never written in the code): the description opens from a `?` icon at
+  the right of its chip, on hover and on click — a click on the `?` does not
+  toggle the chip.
+- The field's label above the chips, its hint (`<Field>_Hint`) below.
+
+A worked example, step by step: [the example application's field of bits](../../example/docs/bits-field.md).
+
 ## MustInput — bare inputs for table cells
 
 Set `FieldContext.MustInput = true` to render **only the input**, with no label,

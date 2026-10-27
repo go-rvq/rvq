@@ -29,9 +29,10 @@ The settings have two tabs, in the detail and in the edit form:
     an answer to a conversation it knows (a contact message, a comment)
     becomes part of it, and the message is marked read in the mailbox. The
     fields of the IMAP server are shown in this mode only. When the mailbox
-    that receives is the one that sends, mark **Same user and password as
-    the SMTP**: the reading uses the account of the **Sending** tab, and the
-    IMAP user and password leave the form — one password to change.
+    that receives is the one that sends, mark in **The same as the SMTP**
+    what the reading takes from the account of the **Sending** tab — the
+    user, the password, the host —; each one marked leaves the form (one
+    password to change). The options and examples are in {%= admin.doc("mail_sender/forms/edit").link %}.
 
 The passwords (of the SMTP account and of the IMAP mailbox) are never shown
 in the detail. In the edit form the password saved is in its field, hidden

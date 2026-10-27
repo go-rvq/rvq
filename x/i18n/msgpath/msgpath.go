@@ -10,6 +10,15 @@
 //	Help    h.RawHTML     `i18n:"type=html"`
 //	Usage   gadxtpl.Template `i18n:"type=gadx"`
 //
+// An apostrophe in a text is escaped, \' — and so is a backslash, \\ —;
+// in a Go struct tag, whose value is itself a quoted Go string, each backslash
+// is written twice:
+//
+//	Reuse string `i18n:"hint='Takes the SMTP\\'s user.'"`
+//
+// Quote and Tag.Encode write them so (Tag.StructTag, the whole struct tag);
+// an apostrophe not escaped is a parse error that says how.
+//
 // A text is a field whose kind is string (string, h.RawHTML, a template, …).
 // A struct, a pointer to one, a slice or an array holds texts: its own path is
 // the prefix of theirs; an embedded struct adds no name. A field of type form
@@ -101,12 +110,19 @@ const TagKey = "i18n"
 func ParseTag(st reflect.StructTag) (t Tag, err error) {
 	t.Type = Text
 	src, ok := st.Lookup(TagKey)
-	if !ok || strings.TrimSpace(src) == "" {
+	if !ok {
+		// there, but no Go string: a \' written with one backslash
+		if strings.Contains(string(st), TagKey+`:"`) {
+			return t, fmt.Errorf("i18n tag of %q: not a Go string — an apostrophe in a text is \\\\' in the source (Quote)", string(st))
+		}
+		return
+	}
+	if strings.TrimSpace(src) == "" {
 		return
 	}
 	kva, err := parser.ParseMetadata(src, 0)
 	if err != nil {
-		return t, fmt.Errorf("i18n tag %q: %w", src, err)
+		return t, fmt.Errorf("i18n tag %q: %w — an apostrophe in a text is \\\\' in the source (Quote)", src, err)
 	}
 	for _, e := range kva.Elements {
 		kv, ok := e.(*node.KeyValuePairLit)
@@ -167,6 +183,45 @@ func ParseTag(st reflect.StructTag) (t Tag, err error) {
 		return t, fmt.Errorf("i18n tag %q: unknown type %s", src, t.Type)
 	}
 	return
+}
+
+// tagText escapes the backslashes and apostrophes of a text of a tag.
+var tagText = strings.NewReplacer(`\`, `\\`, `'`, `\'`)
+
+// Quote is s as a text of a tag — label, hint, a field's name or description
+// —: in single quotes, its apostrophes and backslashes escaped (\' and \\);
+// what ParseTag reads back as s.
+func Quote(s string) string {
+	return "'" + tagText.Replace(s) + "'"
+}
+
+// Encode is the value of the i18n tag that says t — its type when not Text,
+// its label, hint and schema, its fields —, each text quoted (Quote): what
+// ParseTag reads back as t. "" when t says nothing.
+func (t Tag) Encode() string {
+	var parts []string
+	if t.Type != "" && t.Type != Text {
+		parts = append(parts, "type="+string(t.Type))
+	}
+	for _, kv := range []struct{ key, value string }{{"label", t.Label}, {"hint", t.Hint}, {"schema", t.Schema}} {
+		if kv.value != "" {
+			parts = append(parts, kv.key+"="+Quote(kv.value))
+		}
+	}
+	if len(t.Fields) > 0 {
+		fields := make([]string, len(t.Fields))
+		for i, f := range t.Fields {
+			fields[i] = Quote(f.Name) + "=" + Quote(f.Description)
+		}
+		parts = append(parts, "fields=(;"+strings.Join(fields, ", ")+")")
+	}
+	return strings.Join(parts, ", ")
+}
+
+// StructTag is the struct tag of t, `i18n:"…"`: Encode as a Go string — its
+// backslashes written twice, as the source of a struct tag has them.
+func (t Tag) StructTag() reflect.StructTag {
+	return reflect.StructTag(TagKey + ":" + strconv.Quote(t.Encode()))
 }
 
 // name is an identifier or a string: a key, a type.

@@ -53,6 +53,23 @@ Tabs can be added by using ~AppendTabsPanelFunc~ func on ~EditingBuilder~:
 `),
 	ch.Code(generated.PresetsEditingCustomizationTabsSample).Language("go"),
 	utils.DemoWithSnippetLocation("Presets Editing Customization Tabs", examples.URLPathByFunc(examples_presets.PresetsEditingCustomizationTabs)+"/companies", generated.PresetsEditingCustomizationTabsSampleLocation),
+	utils.Anchor(H2(""), "A field of bits"),
+	Markdown(`
+An unsigned integer whose bits are options — ~type Channels uint8~ with its
+constants ~1 << iota~ — is edited as chips, one an option, with
+~presets.BitsComponentFunc~:
+`),
+	ch.Code(generated.PresetsBitsFieldSample).Language("go"),
+	utils.DemoWithSnippetLocation("Presets Bits Field", examples.URLPathByFunc(examples_presets.PresetsBitsField)+"/subscribers", generated.PresetsBitsFieldSampleLocation),
+	Markdown(`
+- Each ~BitOption~ is a bit, its **label** and its **description**, both read from
+  the messages of the module — translated, never written in the code
+- To edit, the chips toggle, and the field's value is the sum of the bits marked
+- In the detail, the set bits are marked (a check), the others outlined
+- The description opens from the ~?~ at the right of a chip, on hover and on
+  click; a click on the ~?~ does not toggle the chip
+- The field's label is above the chips, its hint (~<Model><Field>_Hint~) below
+`),
 	utils.Anchor(H2(""), "Validation"),
 	Markdown(`
 Field level validation and display on field can be added by implement ~ValidateFunc~,
