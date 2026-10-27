@@ -99,6 +99,11 @@ type Messages struct {
 	ResetPasswordLinkSentPageTitle string `i18n:"label='Reset link sent: page title', hint='Title of the page shown once the reset link was sent.'"`
 	ResetPasswordLinkWasSentTo     string `i18n:"label='Reset link sent to', hint='Text before the address the reset link was sent to.'"`
 	ResetPasswordLinkSentPrompt    string `i18n:"label='Reset link sent: prompt', hint='What to do once the reset link was sent.'"`
+	ResetPasswordEmailSubject      string `i18n:"label='Reset email: subject', hint='Subject of the email with the link to reset the password.'"`
+	ResetPasswordEmailGreeting     string `i18n:"label='Reset email: greeting', hint='Greeting of the reset email; %s is the name of the user.'"`
+	ResetPasswordEmailIntro        string `i18n:"label='Reset email: intro', hint='What the reset email says before its link.'"`
+	ResetPasswordEmailLink         string `i18n:"label='Reset email: link', hint='Text of the link of the reset email.'"`
+	ResetPasswordEmailIgnore       string `i18n:"label='Reset email: ignore', hint='What the reset email says after its link.'"`
 	// reset password page
 	ResetPasswordPageTitle          string `i18n:"hint='Title of the page that resets the password.'"`
 	ResetYourPasswordTitle          string `i18n:"hint='Heading of the reset of the password.'"`
@@ -182,6 +187,11 @@ var Messages_en_US = &Messages{
 	ResetPasswordLinkSentPageTitle:      "Forget Your Password?",
 	ResetPasswordLinkWasSentTo:          "A reset password link was sent to",
 	ResetPasswordLinkSentPrompt:         "You can close this page and reset your password from this link.",
+	ResetPasswordEmailSubject:           "Reset your password",
+	ResetPasswordEmailGreeting:          "Hello, %s,",
+	ResetPasswordEmailIntro:             "We received a request to reset the password of your account. To choose a new one, open the link below:",
+	ResetPasswordEmailLink:              "Reset my password",
+	ResetPasswordEmailIgnore:            "If you did not ask for it, ignore this email: your password stays the same.",
 	ResetPasswordPageTitle:              "Reset Password",
 	ResetYourPasswordTitle:              "Reset your password",
 	ResetPasswordLabel:                  "Change your password",
@@ -257,6 +267,11 @@ var Messages_zh_CN = &Messages{
 	ResetPasswordLinkSentPageTitle:      "忘记密码？",
 	ResetPasswordLinkWasSentTo:          "已将重置密码链接发送到",
 	ResetPasswordLinkSentPrompt:         "您可以关闭此页面并从此链接重置密码。",
+	ResetPasswordEmailSubject:           "重置您的密码",
+	ResetPasswordEmailGreeting:          "%s，您好：",
+	ResetPasswordEmailIntro:             "我们收到了重置您账户密码的请求。要设置新密码，请打开下面的链接：",
+	ResetPasswordEmailLink:              "重置我的密码",
+	ResetPasswordEmailIgnore:            "如果这不是您本人的操作，请忽略此邮件：您的密码不会改变。",
 	ResetPasswordPageTitle:              "重置密码",
 	ResetYourPasswordTitle:              "重置您的密码",
 	ResetPasswordLabel:                  "改变您的密码",
@@ -332,6 +347,11 @@ var Messages_ja_JP = &Messages{
 	ResetPasswordLinkSentPageTitle:      "パスワードをお忘れですか？",
 	ResetPasswordLinkWasSentTo:          "パスワードリセット用リンクが送信されました",
 	ResetPasswordLinkSentPrompt:         "このリンクからパスワードリセット手続きを行い、終了後はページを閉じてください",
+	ResetPasswordEmailSubject:           "パスワードの再設定",
+	ResetPasswordEmailGreeting:          "%s 様",
+	ResetPasswordEmailIntro:             "アカウントのパスワード再設定のリクエストを受け付けました。新しいパスワードを設定するには、次のリンクを開いてください：",
+	ResetPasswordEmailLink:              "パスワードを再設定する",
+	ResetPasswordEmailIgnore:            "お心当たりがない場合は、このメールを無視してください。パスワードは変更されません。",
 	ResetPasswordPageTitle:              "パスワードをリセットしてください",
 	ResetYourPasswordTitle:              "パスワードをリセットしてください",
 	ResetPasswordLabel:                  "パスワードを変更する",
@@ -408,6 +428,11 @@ var Messages_pt_BR = &Messages{
 	ResetPasswordLinkSentPageTitle:      "Esqueceu sua senha?",
 	ResetPasswordLinkWasSentTo:          "Um link para redefinir a senha foi enviado para",
 	ResetPasswordLinkSentPrompt:         "Você pode fechar esta página e redefinir sua senha por aquele link.",
+	ResetPasswordEmailSubject:           "Redefina a sua senha",
+	ResetPasswordEmailGreeting:          "Olá, %s,",
+	ResetPasswordEmailIntro:             "Recebemos um pedido para redefinir a senha da sua conta. Para escolher uma nova, abra o link abaixo:",
+	ResetPasswordEmailLink:              "Redefinir minha senha",
+	ResetPasswordEmailIgnore:            "Se não foi você quem pediu, ignore este e-mail: a sua senha continua a mesma.",
 	ResetPasswordPageTitle:              "Redefinir senha",
 	ResetYourPasswordTitle:              "Redefina sua senha",
 	ResetPasswordLabel:                  "Troque sua senha",
