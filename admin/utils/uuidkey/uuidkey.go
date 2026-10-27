@@ -4,7 +4,7 @@
 // after the other sort — and sit in an index — together, as integers did.
 //
 // Register installs one gorm callback that fills, before a record is created,
-// every primary-key field of type uuid.UUID still zero with a new key. It
+// every primary-key field of type uuid.UUID (or model.UUID) still zero with a new key. It
 // replaces a BeforeCreate on each model, which a model with a BeforeCreate of
 // its own would silently shadow (Go promotes only the outermost method), and it
 // covers what no model hook sees: a link table's rows, a record created through
@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/softdelete"
 
 	"github.com/google/uuid"
@@ -26,7 +27,10 @@ import (
 // CallbackName is the name the create callback is registered under.
 const CallbackName = "rvq:uuid_key"
 
-var uuidType = reflect.TypeOf(uuid.UUID{})
+var (
+	uuidType      = reflect.TypeOf(uuid.UUID{})
+	modelUUIDType = reflect.TypeOf(model.UUID{})
+)
 
 // New is a new key: a UUID v7, or — should the clock-based generator fail — a
 // random (v4) one.
@@ -46,7 +50,7 @@ func Register(db *gorm.DB) error {
 	return cb.Before("gorm:create").Register(CallbackName, fill)
 }
 
-// fill gives every zero uuid.UUID primary key of the statement's record(s) a
+// fill gives every zero uuid.UUID (or model.UUID) primary key of the statement's record(s) a
 // new key.
 func fill(db *gorm.DB) {
 	s := db.Statement.Schema
@@ -55,7 +59,7 @@ func fill(db *gorm.DB) {
 	}
 	var fields []*schema.Field
 	for _, f := range s.PrimaryFields {
-		if f.FieldType == uuidType {
+		if f.FieldType == uuidType || f.FieldType == modelUUIDType {
 			fields = append(fields, f)
 		}
 	}
@@ -66,7 +70,13 @@ func fill(db *gorm.DB) {
 	ctx := db.Statement.Context
 	set := func(rv reflect.Value) {
 		for _, f := range fields {
-			if v, zero := f.ValueOf(ctx, rv); zero || v == uuid.Nil {
+			v, zero := f.ValueOf(ctx, rv)
+			if !zero && v != uuid.Nil && v != model.Nil {
+				continue
+			}
+			if f.FieldType == modelUUIDType {
+				_ = f.Set(ctx, rv, model.UUID(New()))
+			} else {
 				_ = f.Set(ctx, rv, New())
 			}
 		}

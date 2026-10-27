@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-playground/form/v4"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/google/uuid"
 	"github.com/mpvl/unique"
 	"github.com/sunfmin/reflectutils"
@@ -422,6 +423,16 @@ var FormTypeDecoders = []CustoFormTypeDecoder{
 	// its 16 bytes ([16]uint8) and fails — the record's key, a foreign key
 	// read as zero
 	{Decoder: decodeUUID, Types: []any{uuid.UUID{}}},
+	// a UUID whose zero is none (model.UUID): "" is the zero, NULL in the
+	// database
+	{Decoder: decodeModelUUID, Types: []any{model.UUID{}}},
+}
+
+func decodeModelUUID(vals []string) (any, error) {
+	if len(vals) == 0 {
+		return model.Nil, nil
+	}
+	return model.ParseUUID(strings.TrimSpace(vals[0]))
 }
 
 func decodeUUID(vals []string) (any, error) {

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -133,5 +134,31 @@ func TestShortPath(t *testing.T) {
 	}
 	if len(seen) < 16 {
 		t.Errorf("64 keys in %d first levels: they do not spread", len(seen))
+	}
+}
+
+type modelKeyed struct {
+	ID     model.UUID `gorm:"primaryKey"`
+	PageID model.UUID
+}
+
+// A model.UUID key gets a new v7 key too; a model.UUID foreign key left
+// zero stays none (NULL), not a key.
+func TestCreateFillsModelUUIDKeys(t *testing.T) {
+	db := testDB(t)
+	if err := db.AutoMigrate(&modelKeyed{}); err != nil {
+		t.Fatal(err)
+	}
+	r := &modelKeyed{}
+	if err := db.Create(r).Error; err != nil {
+		t.Fatal(err)
+	}
+	if r.ID.IsZero() || r.ID.UUID().Version() != 7 || !r.PageID.IsZero() {
+		t.Errorf("record: %v %v", r.ID, r.PageID)
+	}
+	var null bool
+	db.Raw("SELECT page_id IS NULL FROM model_keyeds WHERE id = ?", r.ID).Scan(&null)
+	if !null {
+		t.Error("the foreign key left zero is not NULL")
 	}
 }

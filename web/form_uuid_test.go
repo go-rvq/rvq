@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/web"
 	"github.com/google/uuid"
 )
@@ -35,5 +36,19 @@ func TestUnmarshalFormUUID(t *testing.T) {
 	}
 	if err = (&web.EventContext{}).UnmarshalFormValues(url.Values{"None": {"not-a-uuid"}}, &v); err == nil {
 		t.Error("a bad UUID: no error")
+	}
+}
+
+// A model.UUID (a foreign key whose zero is none) is read from its text;
+// "" is the zero — set before, it is none now.
+func TestUnmarshalFormModelUUID(t *testing.T) {
+	var v struct{ PageID, Other model.UUID }
+	other := model.NewUUID()
+	v.PageID = other
+	if err := (&web.EventContext{}).UnmarshalFormValues(url.Values{"PageID": {""}, "Other": {other.String()}}, &v); err != nil {
+		t.Fatal(err)
+	}
+	if !v.PageID.IsZero() || v.Other != other {
+		t.Errorf("decoded: %v %v", v.PageID, v.Other)
 	}
 }
