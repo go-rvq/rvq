@@ -48,6 +48,7 @@ Detailed docs live under [`docs/`](docs/):
 - [Fields](docs/fields.md) — FieldsBuilder, FieldBuilder, FieldContext, the default component funcs, and `MustInput`.
 - [List editor & tables](docs/list-editor.md) — nested slices, the client-side list editor, and the table renderer.
 - [Record IDs](docs/record-id.md) — how primary keys are encoded/parsed.
+- [Record paths](docs/record-path.md) — a record, page or action as text, its admin address, and the page of an action.
 
 ## Feature map
 
