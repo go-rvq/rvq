@@ -411,6 +411,13 @@ func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContex
 			return
 		}
 		r.PageTitle = msgr.CreatingObjectTitle(inflection.Singular(b.mb.label), b.mb.female)
+		// a new record as the event of the form makes it (formNew): what
+		// WrapNew sets — its defaults —, on the page too
+		if nb := b.CreatingBuilder(); nb.New != nil {
+			if err = nb.New(ctx, obj); err != nil {
+				return
+			}
+		}
 	} else {
 		if !b.mb.singleton {
 			// the record of the address (`/{id}/edit`), else of the query

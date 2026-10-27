@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,5 +95,22 @@ func TestCreatingPageFuncFollowsCreatingFlag(t *testing.T) {
 				t.Errorf("err = %v, want the guard to let it through", err)
 			}
 		})
+	}
+}
+
+// The page of a new record (/new) makes it as the form's event does: its
+// New (WrapNew) runs — the defaults a new record starts with.
+func TestNewPageRunsNew(t *testing.T) {
+	b := New(i18n.New())
+	mb := b.Model(&routesProduct{}).URIName("products")
+	stop := errors.New("new ran")
+	var got any
+	mb.Editing().WrapNew(func(_ *web.EventContext, obj any) error {
+		got = obj
+		return stop
+	})
+	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/products/new", nil)}
+	if _, err := mb.Editing().DefaultPageFuncMode(true, ctx); err != stop || got == nil {
+		t.Errorf("the page of a new record: %v, New given %T", err, got)
 	}
 }
