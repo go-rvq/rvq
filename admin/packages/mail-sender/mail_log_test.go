@@ -83,12 +83,14 @@ func TestMailLog(t *testing.T) {
 		t.Errorf("sending again a redacted one: %v", err)
 	}
 
-	// over the limit: failed, and why
+	// over the limit: failed, and why —
 	if err := sender.Send(mail_sender.Message().To("ana@example.com").Subject("x").Body("x").External(true)); err == nil {
 		t.Fatal("over the limit, sent")
 	}
-	if l := lastLog(t, db); l.Status != mail_sender.MailLogFailed || !strings.Contains(l.Error, "too many messages") {
-		t.Errorf("the failure: %q %q", l.Status, l.Error)
+	// by the method it would have gone, with the subject it would have had
+	if l := lastLog(t, db); l.Status != mail_sender.MailLogFailed || !strings.Contains(l.Error, "too many messages") ||
+		l.Method != mail_sender.MethodOverride || l.Subject != "[Site] x" {
+		t.Errorf("the failure: %q %q, method %q, subject %q", l.Status, l.Error, l.Method, l.Subject)
 	}
 
 	// the body hidden

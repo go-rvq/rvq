@@ -38,23 +38,27 @@ func (c *MailSender) IsValid() bool {
 // (MailLog), its sensitive content hidden.
 func (c *MailSender) SendByMethod(senderName string, b *MessageBuilder) (err error) {
 	method := senderName
+	// the local development's and the tests' server, whatever the settings
+	// say (SMTPOverrideEnv): its method even for a message the limits stop
+	addr := SMTPOverride()
+	if addr != "" {
+		method = MethodOverride
+	}
 	defer func() { record(b, method, err) }()
 
+	// the subject as it would go, in the central too when it does not
+	if !b.verbatim {
+		b.PrependSubject(c.SubjectPrefix)
+	}
 	if b.external {
 		if err = limiter.take(b.to, c.MaxPerRecipientHour, c.MaxPerRecipientDay); err != nil {
 			return
 		}
 	}
-	if !b.verbatim {
-		b.PrependSubject(c.SubjectPrefix)
-	}
 
 	var sender Sender
 
-	// the local development's and the tests' server, whatever the settings
-	// say (SMTPOverrideEnv)
-	if addr := SMTPOverride(); addr != "" {
-		method = MethodOverride
+	if addr != "" {
 		if sender, err = c.overrideSender(addr); err != nil {
 			return
 		}
