@@ -667,13 +667,15 @@ func (mb *ModelBuilder) SubRoutesSetup(f func(mux *http.ServeMux, baseUri string
 	return mb
 }
 
+// BindEventFunc wraps an event of the model: of a child model, it runs with
+// the IDs and the records of the parents. The parent is looked for when the
+// event runs — an event may be registered before the model is made a child.
 func (mb *ModelBuilder) BindEventFunc(f web.EventHandler) web.EventHandler {
-	if mb.parent == nil {
-		return f
-	}
 	return web.EventFunc(func(ctx *web.EventContext) (r web.EventResponse, err error) {
-		if err = WithModelAndLoadBreadcrumbsAndParents(ctx, mb); err != nil {
-			return
+		if mb.parent != nil {
+			if err = WithModelAndLoadBreadcrumbsAndParents(ctx, mb); err != nil {
+				return
+			}
 		}
 		return f.Handle(ctx)
 	})
