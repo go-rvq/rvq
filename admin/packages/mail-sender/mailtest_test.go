@@ -11,6 +11,7 @@ import (
 
 	mail_sender "github.com/go-rvq/rvq/admin/packages/mail-sender"
 	"github.com/go-rvq/rvq/admin/packages/mail-sender/mailtest"
+	"github.com/google/uuid"
 )
 
 func startMailtest(t *testing.T) *mailtest.Server {
@@ -180,5 +181,80 @@ func TestInboundWithSMTP(t *testing.T) {
 		if got.User != c.u || got.Password != c.p || got.Server != c.host {
 			t.Errorf("reuse %03b: %q %q %q", c.reuse, got.User, got.Password, got.Server)
 		}
+	}
+}
+
+// The settings as the screen saves them — answers by IMAP, the SMTP's user,
+// password and host reused (Reuse 7), the IMAP's own fields wrong —, written
+// and read back by the database: the answers are fetched from the mailbox of
+// the SMTP account, and only the unread ones; with the host alone reused
+// (Reuse 4), the IMAP's own user and password count.
+func TestInboxWithSavedReuse(t *testing.T) {
+	srv := startMailtest(t)
+	db := mailLogDB(t)
+	host, port, _ := net.SplitHostPort(srv.IMAPAddr)
+	p, _ := strconv.Atoi(port)
+	answer := func(id string) []byte {
+		return []byte(strings.ReplaceAll(`From: Ana <ana@example.com>
+To: contact@example.com
+Subject: Re: [#01A2] Recebemos sua mensagem
+Message-ID: <`+id+`>
+In-Reply-To: <hermon.contact.2@example.com>
+Date: Mon, 26 Oct 2026 15:00:00 -0300
+Content-Type: text/plain; charset=utf-8
+
+Pode ligar amanhã.
+`, "\n", "\r\n"))
+	}
+	if err := srv.Deliver(answer("answer-a@example.com"), "contact@example.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	saved := &mail_sender.MailSender{ID: uuid.New(), Sender: "SMTP",
+		SMTP: mail_sender.SmtpSender{Server: host, Port: 587, User: "contact@example.com", Password: mailtest.Password},
+		Inbound: mail_sender.InboundSettings{Mode: mail_sender.InboundIMAP, Port: uint16(p),
+			Reuse:  mail_sender.SMTPReuseUser | mail_sender.SMTPReusePassword | mail_sender.SMTPReuseHost,
+			Server: "nowhere.invalid", User: "nobody@example.com", Password: "wrong"}}
+	if err := db.Create(saved).Error; err != nil {
+		t.Fatal(err)
+	}
+	fetch := func() []*mail_sender.InboundMessage {
+		t.Helper()
+		var s mail_sender.MailSender
+		if err := db.First(&s, "id = ?", saved.ID).Error; err != nil {
+			t.Fatal(err)
+		}
+		in, err := s.Inbox()
+		if err != nil {
+			t.Fatalf("inbox (reuse %03b): %v", s.Inbound.Reuse, err)
+		}
+		defer in.Close()
+		got, err := in.Unread(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+
+	var s mail_sender.MailSender
+	db.First(&s, "id = ?", saved.ID)
+	if s.Inbound.Reuse != 7 || !s.Inbound.Reuse.Has(mail_sender.SMTPReuseHost) {
+		t.Fatalf("saved reuse: %03b", s.Inbound.Reuse)
+	}
+	got := fetch()
+	if len(got) != 1 || got[0].MessageID != "answer-a@example.com" ||
+		len(got[0].InReplyTo) != 1 || got[0].InReplyTo[0] != "hermon.contact.2@example.com" {
+		t.Fatalf("fetched: %d", len(got))
+	}
+	// fetched, not taken: still unread until Done
+	if again := fetch(); len(again) != 1 {
+		t.Errorf("peeked twice: %d", len(again))
+	}
+
+	// the host alone: the IMAP's own user and password, the SMTP's host
+	db.Model(saved).Updates(map[string]any{"inbound__reuse": mail_sender.SMTPReuseHost,
+		"inbound__user": "contact@example.com", "inbound__password": mailtest.Password})
+	if got := fetch(); len(got) != 1 {
+		t.Errorf("host reused: %d", len(got))
 	}
 }
