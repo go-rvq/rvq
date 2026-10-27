@@ -668,7 +668,14 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 		menuActions = append(menuActions, a)
 	}
 
-	actionsMenus, actionsErrors := BuildMenuItemCompomentsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, menuActions...)
+	// an action of the menu of a detail that is a page: the page shown again
+	// once done (ParamToolbarAction "page"), as by a button of the toolbar —
+	// its own dialog is no overlay of the detail
+	var pageQuery func(*web.VueEventTagBuilder)
+	if !actions.OverlayMode(ctx.R.FormValue(ParamOverlay)).Overlayed() {
+		pageQuery = func(e *web.VueEventTagBuilder) { e.Query(ParamToolbarAction, "page") }
+	}
+	actionsMenus, actionsErrors := buildMenuItemsOfActions(sharedPortal, ctx, f.b.mb, f.b.id, obj, pageQuery, menuActions...)
 
 	if len(actionsErrors) > 0 {
 		f.Body = append(actionsErrors, f.Body)

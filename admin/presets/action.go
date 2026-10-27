@@ -450,9 +450,13 @@ done:
 			// (the button shows it again), the listing behind it refreshed
 			ctx.Resp.AppendRunScript("presetsListing?.loader?.go()")
 		case "page":
-			// of a page: the page shown again — its toolbar too
+			// of a page: the page shown again — its toolbar too —; done in
+			// the action's own dialog (an action of the menu), it closed
 			if ctx.Resp.PushState == nil {
 				ctx.Resp.PushState = web.Location(url.Values{})
+			}
+			if IsInDialog(ctx) {
+				ctx.Resp.AppendRunScript("closer.show = false")
 			}
 		default:
 			// An update func that already chose where to go keeps its choice:
@@ -600,6 +604,12 @@ func (b *ActionBuilder) BuildButton(defaultBtnBuilder ButtonComponentFunc, oncli
 }
 
 func BuildMenuItemCompomentsOfActions(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, actionBuilders ...*ActionBuilder) (items []*VListItemBuilder, errors h.HTMLComponents) {
+	return buildMenuItemsOfActions(sharedPortal, ctx, mb, id, obj, nil, actionBuilders...)
+}
+
+// buildMenuItemsOfActions is BuildMenuItemCompomentsOfActions, with what
+// each item's click also says (query: the detail's page, ParamToolbarAction).
+func buildMenuItemsOfActions(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, query func(*web.VueEventTagBuilder), actionBuilders ...*ActionBuilder) (items []*VListItemBuilder, errors h.HTMLComponents) {
 	// a record of the trash: only the actions available there
 	inTrash := InTrash(ctx) || mb.IsDeleted(obj)
 	for _, action := range actionBuilders {
@@ -613,26 +623,26 @@ func BuildMenuItemCompomentsOfActions(sharedPortal string, ctx *web.EventContext
 			continue
 		}
 
-		var (
-			onclick = web.Plaid().
-				EventFunc(actions.Action).
-				Query(ParamID, id).
-				Query(ParamAction, action.name).
-				Query(ParamTargetPortal, sharedPortal).
-				Query(ParamOverlay, actions.Dialog).
-				URL(mb.Info().ListingHrefCtx(ctx))
-
-			btn = action.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
-				return VListItem(
-					h.If(
-						action.icon != "", web.Slot(
-							VIcon(action.icon),
-						).Name("prepend"),
-					),
-					VListItemTitle(h.Text(action.RequestTitle(mb, ctx.Context()))),
-				).Attr("@click", onclick.String())
-			}, onclick, id, obj, ctx)
-		)
+		onclick := web.Plaid().
+			EventFunc(actions.Action).
+			Query(ParamID, id).
+			Query(ParamAction, action.name).
+			Query(ParamTargetPortal, sharedPortal).
+			Query(ParamOverlay, actions.Dialog).
+			URL(mb.Info().ListingHrefCtx(ctx))
+		if query != nil {
+			query(onclick)
+		}
+		btn := action.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
+			return VListItem(
+				h.If(
+					action.icon != "", web.Slot(
+						VIcon(action.icon),
+					).Name("prepend"),
+				),
+				VListItemTitle(h.Text(action.RequestTitle(mb, ctx.Context()))),
+			).Attr("@click", onclick.String())
+		}, onclick, id, obj, ctx)
 
 		if li, _ := btn.(*VListItemBuilder); li != nil {
 			items = append(items, li)

@@ -42,7 +42,8 @@ const (
 	// ParamToolbarAction says an action is done by its button of the
 	// detailing's toolbar (ActionBuilder.ToolbarButton), and where the detail
 	// is: "overlay" — it stays open, the button shows it again, the listing
-	// behind it refreshed —, or "page" — the page shown again.
+	// behind it refreshed —, or "page" — the page shown again (also an
+	// action of the menu of a detail that is a page).
 	ParamToolbarAction = "presets_toolbar_action"
 	// ParamCloserProvided tells the responder that the caller already provides the
 	// overlay's `closer` (a form host owns it, see FormHost), so the response must
