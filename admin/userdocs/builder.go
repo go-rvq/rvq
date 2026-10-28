@@ -56,6 +56,8 @@ type Builder struct {
 	models []*presets.ModelBuilder
 	// funcs are the application's functions of the templates (Func)
 	funcs map[string]Func
+	// parsed are the files of the packages' values last read (content)
+	parsed parsedFiles
 }
 
 // Func is a function of the templates of the documents, admin.<name>(args…),
@@ -278,6 +280,14 @@ func (b *Builder) openScript() string {
 // look.
 var docStyle = web.StdContentCSS(".user-doc")
 
+// Document is the document of node in the language of ctx, as the
+// documentation page shows it, without the page around it (its tree, the
+// admin's menu): its file rendered, or the node's parts where nothing was
+// written. tree is the request's (Tree).
+func (b *Builder) Document(ctx *web.EventContext, tree []*Node, node string) h.HTMLComponent {
+	return b.document(ctx, tree, node)
+}
+
 // document is the document of node in the request's language: its file, as
 // the package keeps it in that language; a page made of the node's parts
 // where nothing was written.
@@ -403,11 +413,11 @@ func (b *Builder) content(locale string, src *Source, file string) (string, bool
 	if err != nil {
 		return "", false, err
 	}
-	files, err := ParseFiles(row.Value)
+	files, err := b.parsed.of(locale, src.Package, row.Value)
 	if err != nil {
 		return "", false, err
 	}
-	c, ok := filesByPath(files)[file]
+	c, ok := files[file]
 	return c, ok, nil
 }
 
