@@ -19,6 +19,13 @@ export const path = '/_rvq/portal'
 export const headerToken = 'X-Rvq-Portal'
 export const headerAction = 'X-Rvq-Portal-Action'
 
+// plugins are installed in the app of every portal before it mounts — the
+// page's scripts add theirs (RvqPortal.plugins.push(app => app.use(…))): the
+// components a content uses that need a plugin of their app (Vuetify's).
+export const plugins: Array<(app: App) => void> = []
+
+const usePlugins = (app: App) => plugins.forEach((p) => p(app))
+
 // how far before the viewport a portal starts loading
 const rootMargin = '200px 0px'
 
@@ -205,6 +212,7 @@ export function mount(el: Element, opts: { base?: string; observe?: boolean } = 
       }
     }
   })
+  usePlugins(app)
   app.mount(host)
   ;(host as any).__rvqPortal = app
 
@@ -232,6 +240,7 @@ export function mount(el: Element, opts: { base?: string; observe?: boolean } = 
 export function mountContent(el: Element, c: Loaded): App {
   const content = contentOf(c, null)
   const app = createApp({ setup: () => () => h(Portal, { tag: 'div', modelValue: content }) })
+  usePlugins(app)
   app.mount(el)
   return app
 }

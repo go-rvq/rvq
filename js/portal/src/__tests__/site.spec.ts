@@ -213,4 +213,17 @@ describe('the portals of a site', () => {
     await settle()
     expect(document.querySelector('.pv')!.textContent).toBe('none')
   })
+
+  it('the plugins of the page are installed in the app of a portal', async () => {
+    document.body.innerHTML = '<div id="p"></div>'
+    const plugin = (app: any) => app.component('x-plug', { template: '<b class="plug">plugged</b>' })
+    site.plugins.push(plugin)
+    try {
+      site.mountContent(document.getElementById('p')!, { template: '<x-plug></x-plug>' })
+      await settle()
+      expect(document.querySelector('.plug')!.textContent).toBe('plugged')
+    } finally {
+      site.plugins.splice(site.plugins.indexOf(plugin), 1)
+    }
+  })
 })
