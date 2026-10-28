@@ -389,8 +389,10 @@ func DocFiles(node string) []string {
 
 // content is the file of src as kept in locale, and whether there is one.
 func (b *Builder) content(locale string, src *Source, file string) (string, bool, error) {
+	// its time first: the value (megabytes) read and parsed only when it
+	// changed since the last one kept (parsed)
 	var row UserDocPackage
-	err := b.db.Session(&gorm.Session{}).Select("value").
+	err := b.db.Session(&gorm.Session{}).Select("updated_at").
 		Take(&row, "locale_code = ? AND id = ?", locale, src.Package).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// not synced yet: the source's own — the language's, where written
@@ -413,9 +415,15 @@ func (b *Builder) content(locale string, src *Source, file string) (string, bool
 	if err != nil {
 		return "", false, err
 	}
-	files, err := b.parsed.of(locale, src.Package, row.Value)
-	if err != nil {
-		return "", false, err
+	files, ok := b.parsed.get(locale, src.Package, row.UpdatedAt)
+	if !ok {
+		if err = b.db.Session(&gorm.Session{}).Select("value", "updated_at").
+			Take(&row, "locale_code = ? AND id = ?", locale, src.Package).Error; err != nil {
+			return "", false, err
+		}
+		if files, err = b.parsed.parse(locale, src.Package, row.UpdatedAt, row.Value); err != nil {
+			return "", false, err
+		}
 	}
 	c, ok := files[file]
 	return c, ok, nil
