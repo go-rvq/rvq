@@ -241,4 +241,32 @@ describe('the portals of a site', () => {
       site.plugins.splice(site.plugins.indexOf(plugin), 1)
     }
   })
+
+  it('a plugin added after a portal mounted is installed in its app, before its content', async () => {
+    answers['T10|'] = json({ template: '<x-late></x-late>' })
+    document.body.innerHTML = '<rvq-portal source="T10"></rvq-portal>'
+    site.mountAll()
+    await settle()
+    const plugin = (app: any) => app.component('x-late', { template: '<i class="late">late</i>' })
+    site.plugins.push(plugin)
+    try {
+      enter()
+      await settle()
+      expect(document.querySelector('.late')!.textContent).toBe('late')
+    } finally {
+      site.plugins.splice(site.plugins.indexOf(plugin), 1)
+    }
+  })
+
+  it('a field of a primitive value of the data of a content renders again when it changes', async () => {
+    answers['T11|'] = json({ template: '<div><button class="t" @click="open = !open">t</button><p v-if="open" class="o">open</p></div>', data: { open: false } })
+    document.body.innerHTML = '<rvq-portal source="T11"></rvq-portal>'
+    site.mountAll()
+    enter()
+    await settle()
+    expect(document.querySelector('.o')).toBeNull()
+    ;(document.querySelector('.t') as HTMLButtonElement).click()
+    await settle()
+    expect(document.querySelector('.o')!.textContent).toBe('open')
+  })
 })

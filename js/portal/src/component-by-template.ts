@@ -71,6 +71,22 @@ const callCallbacks = (callbacks: Callbacks, args:CallbackArgs) => {
   }
 }
 
+// linkFields makes each field of source one of target too, read and written
+// through source — not a copy: a reactive source (a portal's data) stays
+// reactive, a field of a primitive value (editing = true) renders again as
+// an object's field does. A field target had is replaced, source untouched.
+export function linkFields(target: Record<string, any>, source: Record<string, any>) {
+  Object.keys(source).forEach(name => {
+    Object.defineProperty(target, name, {
+      get: () => Reflect.get(source, name),
+      set: (v) => Reflect.set(source, name, v),
+      enumerable: true,
+      configurable: true
+    })
+  })
+  return target
+}
+
 export function buildComponentData(cd: ComponentDefinition) {
   const options = cd.options ?? {}
   const data: Data = {
@@ -79,10 +95,7 @@ export function buildComponentData(cd: ComponentDefinition) {
   }
 
   if (options.data) {
-    const od = options.data as Record<string, any>
-    Object.keys(options.data).forEach(name => {
-      data[name] = Reflect.get(od, name)
-    })
+    linkFields(data, options.data)
   }
   data.vx$scope = data
   return data

@@ -15,6 +15,7 @@ import {
 
 import {
   buildComponentData,
+  linkFields,
   type Callbacks,
   type ComponentDefinition,
   componentByTemplate,
@@ -81,10 +82,7 @@ export default defineComponent({
       const od = options.data as Record<string, any>
 
       if (props.data) {
-        const pd = props.data as Record<string, any>
-        Object.keys(props.data).forEach((name) => {
-          od[name] = Reflect.get(pd, name)
-        })
+        linkFields(od, props.data as Record<string, any>)
       }
 
       return options
@@ -173,15 +171,13 @@ export default defineComponent({
         model.value = c.template
       }
 
-      // unreactives options
+      // the options' own data: the content's fields linked (its reactivity
+      // kept), what is set here (the portal's data, vx$portal) its own
       const data: Record<string, any> = {},
         co = c.options as RenderOptions
 
       if (co.data) {
-        const cod = co.data as Record<string, any>
-        Object.keys(cod).forEach((name) => {
-          data[name] = Reflect.get(cod, name)
-        })
+        linkFields(data, co.data as Record<string, any>)
       }
 
       const options = {
