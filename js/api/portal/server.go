@@ -89,6 +89,12 @@ type Server struct {
 	ttl     time.Duration
 	mu      sync.RWMutex
 	sources map[string]Source
+
+	// the bundle (script)
+	scriptOnce    sync.Once
+	scriptBody    []byte
+	scriptVersion string
+	scriptErr     error
 }
 
 // NewServer is a server whose tokens signer signs.

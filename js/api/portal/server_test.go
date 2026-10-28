@@ -149,7 +149,7 @@ func TestServer(t *testing.T) {
 }
 
 // The bundle is served with the server's path in it, and cached by its
-// ETag.
+// ETag; its address for a page carries its version, the ETag's.
 func TestScript(t *testing.T) {
 	s := newServer()
 	s.Path = "/x/portal"
@@ -167,6 +167,9 @@ func TestScript(t *testing.T) {
 	mux.ServeHTTP(w2, r)
 	if w2.Code != http.StatusNotModified {
 		t.Errorf("cached: %d", w2.Code)
+	}
+	if u := s.ScriptURL(); u != "/x/portal.js?v="+strings.Trim(w.Header().Get("ETag"), `"`) {
+		t.Errorf("the address of the bundle: %s", u)
 	}
 	w3 := httptest.NewRecorder()
 	mux.ServeHTTP(w3, httptest.NewRequest(http.MethodPost, "/x/portal", nil))

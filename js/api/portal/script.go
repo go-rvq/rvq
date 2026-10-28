@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/go-rvq/rvq/js"
 )
@@ -28,30 +27,42 @@ const (
 		`else{var n=0,t=setInterval(function(){if(window.Vue||++n>400){clearInterval(t);if(window.Vue)run()}},50)}})();`
 )
 
+// script is the bundle of the portals with the server's path written in it,
+// and its version (a hash of it); made once.
+func (s *Server) script() (body []byte, version string, err error) {
+	s.scriptOnce.Do(func() {
+		var b []byte
+		if b, s.scriptErr = fs.ReadFile(js.Portal, "portal/dist/rvq-portal.umd.js"); s.scriptErr != nil {
+			return
+		}
+		s.scriptBody = []byte(scriptPrefix + strings.ReplaceAll(string(b), strconv.Quote(DefaultPath), strconv.Quote(s.Path)) + scriptSuffix)
+		sum := sha256.Sum256(s.scriptBody)
+		s.scriptVersion = base64.RawURLEncoding.EncodeToString(sum[:12])
+	})
+	return s.scriptBody, s.scriptVersion, s.scriptErr
+}
+
+// ScriptURL is the address of the bundle for a page: ScriptPath with its
+// version (?v=) — a page of a new bundle never runs the old one a browser
+// kept.
+func (s *Server) ScriptURL() string {
+	if _, v, err := s.script(); err == nil {
+		return s.ScriptPath() + "?v=" + v
+	}
+	return s.ScriptPath()
+}
+
 // ScriptHandler serves the bundle of the portals of a site (js.Portal:
 // rvq-portal.umd.js) with the server's path written in it — the page loads
 // it, and names no other address.
 func (s *Server) ScriptHandler() http.Handler {
-	var (
-		once sync.Once
-		body []byte
-		etag string
-		err  error
-	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		once.Do(func() {
-			var b []byte
-			if b, err = fs.ReadFile(js.Portal, "portal/dist/rvq-portal.umd.js"); err != nil {
-				return
-			}
-			body = []byte(scriptPrefix + strings.ReplaceAll(string(b), strconv.Quote(DefaultPath), strconv.Quote(s.Path)) + scriptSuffix)
-			sum := sha256.Sum256(body)
-			etag = `"` + base64.RawURLEncoding.EncodeToString(sum[:12]) + `"`
-		})
+		body, version, err := s.script()
 		if err != nil {
 			http.Error(w, "no bundle", http.StatusInternalServerError)
 			return
 		}
+		etag := `"` + version + `"`
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		w.Header().Set("ETag", etag)
