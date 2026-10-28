@@ -2,6 +2,7 @@ package mail_sender
 
 import (
 	"errors"
+	"html"
 	"io"
 	"net"
 	"strings"
@@ -15,13 +16,23 @@ type Attachment struct {
 }
 
 type MessageBuilder struct {
-	to          []string
-	external    bool
-	messageID   string
-	inReplyTo   string
-	references  []string
-	replyTo     string
-	subject     string
+	to         []string
+	external   bool
+	messageID  string
+	inReplyTo  string
+	references []string
+	replyTo    string
+	subject    string
+	// the parts of the subject (subject.go): the thing it is of, the record,
+	// an answer of a conversation
+	topic, ref string
+	reply      bool
+	// token is the record the message is of, for whoever reads a mailbox
+	// many things write to ("hermon:issue:<id>"); idFooter, the settings say
+	// to put it, and the message's ids, at the end of the body (footed: put)
+	token       string
+	idFooter    bool
+	footed      bool
 	body        string
 	labels      []string
 	attachments []*Attachment
@@ -104,6 +115,40 @@ func (b *MessageBuilder) HideBody() *MessageBuilder {
 	b.hideBody = true
 	return b
 }
+
+// Topic is the thing the message is of — "ISSUE - Chamados" —: a part of its
+// subject, "[Topic]", when the settings put it (SubjectTopic).
+func (b *MessageBuilder) Topic(v string) *MessageBuilder {
+	b.topic = v
+	return b
+}
+
+// Ref is the record the message is of — "#12", "#5C2E1B0F" —: a part of its
+// subject, "[Ref]", when the settings put it (SubjectRef).
+func (b *MessageBuilder) Ref(v string) *MessageBuilder {
+	b.ref = v
+	return b
+}
+
+// Reply says the message answers its conversation: "Re: " first in its
+// subject.
+func (b *MessageBuilder) Reply() *MessageBuilder {
+	b.reply = true
+	return b
+}
+
+// Identify is the token of the record the message is of —
+// "hermon:issue:<id>" —: in its header X-Mail-Record, and at the end of its
+// body with its ids when the settings say (MailSender.IDFooter) — what finds
+// it in a mailbox many things write to, and what an answer that lost its
+// headers still quotes.
+func (b *MessageBuilder) Identify(token string) *MessageBuilder {
+	b.token = token
+	return b
+}
+
+// GetToken is the token of the record of the message (Identify).
+func (b *MessageBuilder) GetToken() string { return b.token }
 
 // Verbatim sends the subject as it is: no labels, no prefix of the
 // settings — a message sent again (MailLog), whose subject has them.
@@ -208,18 +253,14 @@ func (b *MessageBuilder) GetAttachments() []*Attachment {
 	return b.attachments
 }
 
+// FormattedSubject is the subject as it goes: made by the settings
+// (MailSender.composeWith) when it was sent; before, with every part of it
+// but the site's name.
 func (b *MessageBuilder) FormattedSubject() string {
 	if b.verbatim {
 		return b.subject
 	}
-	var s []string
-	if len(b.labels) > 0 {
-		for _, label := range b.labels {
-			s = append(s, "["+label+"]")
-		}
-	}
-	s = append(s, b.subject)
-	return strings.Join(s, " ")
+	return b.composeSubject("", SubjectTopic|SubjectRef)
 }
 
 func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
@@ -256,9 +297,46 @@ func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
 		}
 		m.SetGenHeader(mail.HeaderReferences, strings.Join(refs, " "))
 	}
+	if b.kind != "" {
+		m.SetGenHeader("X-Mail-Kind", b.kind)
+	}
+	if b.token != "" {
+		m.SetGenHeader("X-Mail-Record", b.token)
+	}
 	m.Subject(b.FormattedSubject())
+	if b.idFooter && b.token != "" && !b.footed {
+		b.body += b.idsFooter()
+		b.footed = true
+	}
 	m.SetBodyString(mail.TypeTextHTML, b.body)
 	return
+}
+
+// idsFooter is the end of the body of a message of a record: its reference
+// and thing, its token, its Message-ID and kind — small, to read and to
+// search.
+func (b *MessageBuilder) idsFooter() string {
+	var lines []string
+	if ref := strings.TrimSpace(strings.Join(nonEmpty(b.ref, b.topic), " · ")); ref != "" {
+		lines = append(lines, "Ref.: "+html.EscapeString(ref))
+	}
+	lines = append(lines, "ID: "+html.EscapeString(b.token))
+	msg := "Message-ID: " + html.EscapeString(msgID(b.messageID))
+	if b.kind != "" {
+		msg += " · " + html.EscapeString(b.kind)
+	}
+	lines = append(lines, msg)
+	return `<hr style="border:none;border-top:1px solid #eee;margin:24px 0 8px">` +
+		`<p style="font-family:monospace;font-size:11px;color:#999" data-mail-ids>` + strings.Join(lines, "<br>") + "</p>"
+}
+
+func nonEmpty(v ...string) (out []string) {
+	for _, s := range v {
+		if s = strings.TrimSpace(s); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 type Sender interface {

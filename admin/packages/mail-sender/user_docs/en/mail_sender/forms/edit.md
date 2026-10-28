@@ -21,6 +21,20 @@ a field in error is marked, and is the one open after saving.
 - The password saved is in its field, hidden (the eye icon shows it);
   clearing it removes it.
 
+## The subject parts
+
+A row by type of message and **Others** (what has no row of its own); in each
+column — **To the team**, **To outside** —, the boxes of the parts:
+
+| Part | In the subject | Where it comes from |
+| --- | --- | --- |
+| **Site** | `[PAC]` | **Site name in the subject**; empty, the name of the site's settings |
+| **Thing** | `[ISSUE - Issues]` | the type of message: the issue's type, the form — translatable in the site's messages (`mail_topic.*`) |
+| **Record** | `[#12]` | the issue's number, the contact message's reference |
+
+The title always goes, and an answer always begins with `Re:`. An issue with
+everything marked: `Re: [PAC] [ISSUE - Issues] [#12] The page does not open`.
+
 ## The Answers tab
 
 **Who reads the answers** decides the rest of the tab:
@@ -64,6 +78,14 @@ form and in the detail:
 - **User** and **Password** — the account of the team mailbox (with Gmail, an
   app password). The password is never shown again once saved.
 - **Mailbox** — the folder read; empty, `INBOX`.
+- **After importing** — what is done with the answer imported (a comment now):
+  **Mark read**, **Delete from the server** or **Move to a folder**. Only it is
+  touched: deleting needs the server's UIDPLUS extension (`UID EXPUNGE` of it
+  alone) and moving MOVE (or UIDPLUS); a server without them only marks it
+  read, and the log says why — a plain `EXPUNGE` would also delete what
+  another program marked deleted in the same mailbox.
+- **Folder** — only when moving: where the answers imported go; empty, the
+  domain of the sending's address (`pac.com`), made when it is not there.
 
 ### Examples
 

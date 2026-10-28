@@ -20,6 +20,20 @@ com um campo em erro fica marcada e é a que se abre ao salvar.
 - A senha salva vem no campo, oculta (o ícone do olho a mostra); apagá-la
   a remove.
 
+## As partes do assunto
+
+Uma linha por tipo de mensagem e **Outros** (o que não tem linha própria);
+em cada coluna — **Para a equipe**, **Para fora** —, as caixas das partes:
+
+| Parte | No assunto | De onde vem |
+| --- | --- | --- |
+| **Site** | `[PAC]` | **Nome do site no assunto**; vazio, o nome das configurações do site |
+| **Coisa** | `[CHAMADO - Chamados]` | o tipo de mensagem: o tipo do chamado, o formulário — traduzível nas mensagens do site (`mail_topic.*`) |
+| **Registro** | `[#12]` | o número do chamado, a referência da mensagem de contato |
+
+O título vem sempre, e uma resposta começa sempre com `Re:`. Exemplo, um chamado
+com tudo marcado: `Re: [PAC] [CHAMADO - Chamados] [#12] A página não abre`.
+
 ## A aba Respostas
 
 **Quem lê as respostas** decide o resto da aba:
@@ -61,6 +75,14 @@ da conta SMTP e esconde o campo dele no IMAP, no formulário e no detalhe:
 - **Usuário** e **Senha** — a conta da caixa da equipe (no Gmail, uma senha de
   app). A senha nunca é mostrada de novo depois de salva.
 - **Caixa de entrada** — a pasta lida; vazia, `INBOX`.
+- **Depois de importar** — o que é feito com a resposta importada (que virou
+  comentário): **Marcar como lida**, **Excluir do servidor** ou **Mover para
+  uma pasta**. Só ela é tocada: excluir pede a extensão UIDPLUS do servidor
+  (`UID EXPUNGE` dela apenas) e mover pede MOVE (ou UIDPLUS); um servidor sem
+  elas só a marca como lida, e o log diz por quê — um `EXPUNGE` comum
+  apagaria também o que outro programa marcou como excluído na mesma caixa.
+- **Pasta** — só ao mover: para onde vão as respostas importadas; vazia, o
+  domínio do endereço de envio (`pac.com`), criada se não existir.
 
 ### Exemplos
 

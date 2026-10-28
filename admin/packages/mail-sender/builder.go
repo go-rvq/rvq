@@ -115,6 +115,13 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	nested.New(mb).Field("SMTP").Detailing(hiddenPassword)
 	// who reads the answers, always said (empty: people)
 	inboundMode := func(b *presets.FieldsBuilder) *presets.FieldsBuilder {
+		b.Field("After").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			if inboundOf(field.Obj).Mode != InboundIMAP {
+				return nil
+			}
+			value, _ := field.Value().(string)
+			return vx.VXReadonlyField(h.Text(afterLabel(GetMessages(ctx.Context()), value))).Label(field.Label)
+		})
 		b.Field("Mode").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			msgs := GetMessages(ctx.Context())
 			text := msgs.InboundManual
@@ -165,11 +172,27 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 					ItemTitle("title").ItemValue("value").
 					Attr(web.VField(field.FormKey, value)...)
 			})
+			// what is done with an answer imported
+			b.Field("After").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+				msgs := GetMessages(ctx.Context())
+				value, _ := field.Value().(string)
+				if value == "" {
+					value = InboundAfterRead
+				}
+				var items []map[string]string
+				for _, a := range []string{InboundAfterRead, InboundAfterDelete, InboundAfterMove} {
+					items = append(items, map[string]string{"title": afterLabel(msgs, a), "value": a})
+				}
+				field.LoadHint()
+				return v.VSelect().Label(field.Label).Items(items).ItemTitle("title").ItemValue("value").
+					Hint(field.Hint).PersistentHint(true).
+					Attr(web.VField(field.FormKey, value)...)
+			})
 			// what it takes of the SMTP's: chips that toggle
 			b.Field("Reuse").ComponentFunc(presets.BitsComponentFunc(smtpReuseOptions()...))
 			// the account, only when the application reads it; its host, user
 			// and password, only when they are not the SMTP sender's (Reuse)
-			for _, name := range []string{"Reuse", "Server", "Port", "TLS", "StartTLS", "User", "Password", "Mailbox"} {
+			for _, name := range []string{"Reuse", "Server", "Port", "TLS", "StartTLS", "User", "Password", "Mailbox", "After", "MoveTo"} {
 				bit, reused := smtpReuseFields[name]
 				b.Field(name).WrapComponentFunc(func(in presets.FieldComponentFunc) presets.FieldComponentFunc {
 					return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -177,6 +200,10 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 						cond := fmt.Sprintf("form[%q] === %q", prefix+"Mode", InboundIMAP)
 						if reused {
 							cond += fmt.Sprintf(" && ((Number(form[%q]) || 0) & %d) === 0", prefix+"Reuse", bit)
+						}
+						// the folder, only when they are moved
+						if field.Name == "MoveTo" {
+							cond += fmt.Sprintf(" && form[%q] === %q", prefix+"After", InboundAfterMove)
 						}
 						return h.Div(in(field, ctx)).Attr("v-if", cond)
 					}
@@ -356,13 +383,16 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		}
 		return presets.NewFieldsTabs("MailSender",
 			&presets.FieldsGroup{Name: "Sending", Title: title(func(m *Messages) string { return m.MailSenderTabSending }),
-				Items: presets.FieldsLayout{"Sender", "SubjectPrefix", "Gmail", "SMTP", "MaxPerRecipientHour", "MaxPerRecipientDay", "MailLogRetentionDays"}},
+				Items: presets.FieldsLayout{"Sender", "SubjectPrefix", "SubjectRules", "IDFooter", "Gmail", "SMTP", "MaxPerRecipientHour", "MaxPerRecipientDay", "MailLogRetentionDays"}},
 			&presets.FieldsGroup{Name: "Answers", Title: title(func(m *Messages) string { return m.MailSenderTabAnswers }),
 				Items: presets.FieldsLayout{"Inbound"}},
 		)
 	}
 	e.Only(tabs())
 	d.Only(tabs())
+	// the parts of the subject: a table by type of message and to whom
+	e.Field("SubjectRules").ComponentFunc(subjectRulesComponent).SetterFunc(subjectRulesSetter)
+	d.Field("SubjectRules").ComponentFunc(subjectRulesComponent)
 	isSenderEnabled(e.Field("Gmail"))
 	isSenderEnabled(e.Field("SMTP"))
 
@@ -496,4 +526,15 @@ func accountUser(field *presets.FieldContext, ctx *web.EventContext) h.HTMLCompo
 		t.GetHTMLTagBuilder().Attr("autocomplete", "off")
 	}
 	return comp
+}
+
+// afterLabel is what is done with an answer imported, in the words of m.
+func afterLabel(m *Messages, after string) string {
+	switch after {
+	case InboundAfterDelete:
+		return m.InboundAfterDelete
+	case InboundAfterMove:
+		return m.InboundAfterMove
+	}
+	return m.InboundAfterRead
 }

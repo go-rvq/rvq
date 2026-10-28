@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/mail"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -70,7 +72,23 @@ type InboundSettings struct {
 	User     string
 	Password string
 	Mailbox  string
+	// After is what is done with a message taken (Inbox.Done): marked read
+	// (InboundAfterRead, or ""), deleted from the server (InboundAfterDelete),
+	// moved to the folder MoveTo (InboundAfterMove; empty, the domain of the
+	// sending's address: "pac.com" — made when it is not there).
+	After  string
+	MoveTo string
 }
+
+// What is done with a message taken (InboundSettings.After). Deleting and
+// moving touch only it: by UID EXPUNGE (UIDPLUS) or MOVE; a server with
+// neither only marks it read — a plain EXPUNGE would delete what anything
+// else marked deleted in the same mailbox.
+const (
+	InboundAfterRead   = "read"
+	InboundAfterDelete = "delete"
+	InboundAfterMove   = "move"
+)
 
 // InboundMessage is a message an Inbox read.
 type InboundMessage struct {
@@ -110,9 +128,22 @@ func (c *MailSender) Inbox() (Inbox, error) {
 	case "", InboundManual:
 		return ManualInbox{}, nil
 	case InboundIMAP:
-		return DialIMAP(c.Inbound.WithSMTP(&c.SMTP))
+		s := c.Inbound.WithSMTP(&c.SMTP)
+		if s.After == InboundAfterMove && strings.TrimSpace(s.MoveTo) == "" {
+			s.MoveTo = c.defaultMoveTo()
+		}
+		return DialIMAP(s)
 	}
 	return nil, fmt.Errorf("mail sender: inbound mode %q", c.Inbound.Mode)
+}
+
+// defaultMoveTo is the folder the messages taken go to when the settings name
+// none: the domain of the sending's address ("pac.com"), else "Imported".
+func (c *MailSender) defaultMoveTo() string {
+	if _, d, ok := strings.Cut(c.FromAddress(), "@"); ok && strings.TrimSpace(d) != "" {
+		return strings.TrimSpace(d)
+	}
+	return "Imported"
 }
 
 // ManualInbox is the answers left to people, in the team's mailbox: nothing
@@ -124,9 +155,13 @@ func (ManualInbox) Done(context.Context, *InboundMessage) error       { return n
 func (ManualInbox) Close() error                                      { return nil }
 
 // IMAPInbox reads an IMAP account's mailbox: the messages not \Seen are the
-// unread ones; Done marks one \Seen.
+// unread ones; Done marks one \Seen, deletes it or moves it (after).
 type IMAPInbox struct {
-	c *imapclient.Client
+	c      *imapclient.Client
+	after  string
+	moveTo string
+	// made: the folder moveTo is there
+	made bool
 }
 
 // DialIMAP connects to the account of s and selects its mailbox.
@@ -169,7 +204,7 @@ func DialIMAP(s InboundSettings) (*IMAPInbox, error) {
 		c.Close()
 		return nil, fmt.Errorf("imap %s: select %s: %w", addr, mailbox, err)
 	}
-	return &IMAPInbox{c: c}, nil
+	return &IMAPInbox{c: c, after: s.After, moveTo: strings.TrimSpace(s.MoveTo)}, nil
 }
 
 func (in *IMAPInbox) Unread(ctx context.Context) ([]*InboundMessage, error) {
@@ -201,10 +236,53 @@ func (in *IMAPInbox) Unread(ctx context.Context) ([]*InboundMessage, error) {
 	return out, nil
 }
 
+// Done is m handled, as the settings say (InboundSettings.After): deleted —
+// with UIDPLUS: \Deleted and UID EXPUNGE of it alone —, moved to its folder —
+// with MOVE (or UIDPLUS) —, else marked \Seen; a server that cannot delete
+// or move one message alone gets it marked \Seen, and the log says why.
 func (in *IMAPInbox) Done(_ context.Context, m *InboundMessage) error {
-	return in.c.Store(imap.UIDSetNum(imap.UID(m.UID)), &imap.StoreFlags{
+	uid := imap.UIDSetNum(imap.UID(m.UID))
+	caps := in.c.Caps()
+	switch in.after {
+	case InboundAfterDelete:
+		if caps.Has(imap.CapUIDPlus) {
+			if err := in.c.Store(uid, &imap.StoreFlags{Op: imap.StoreFlagsAdd, Silent: true, Flags: []imap.Flag{imap.FlagDeleted}}, nil).Close(); err != nil {
+				return err
+			}
+			return in.c.UIDExpunge(uid).Close()
+		}
+		log.Printf("mail sender: the IMAP server has no UIDPLUS: %s marked read, not deleted", m.MessageID)
+	case InboundAfterMove:
+		if in.moveTo != "" && (caps.Has(imap.CapMove) || caps.Has(imap.CapUIDPlus)) {
+			if err := in.ensureMailbox(in.moveTo); err != nil {
+				return err
+			}
+			_, err := in.c.Move(uid, in.moveTo).Wait()
+			return err
+		}
+		log.Printf("mail sender: the IMAP server has neither MOVE nor UIDPLUS: %s marked read, not moved", m.MessageID)
+	}
+	return in.c.Store(uid, &imap.StoreFlags{
 		Op: imap.StoreFlagsAdd, Silent: true, Flags: []imap.Flag{imap.FlagSeen},
 	}, nil).Close()
+}
+
+// ensureMailbox makes the folder name, once, when it is not there.
+func (in *IMAPInbox) ensureMailbox(name string) error {
+	if in.made {
+		return nil
+	}
+	list, err := in.c.List("", name, nil).Collect()
+	if err != nil {
+		return fmt.Errorf("imap: list %s: %w", name, err)
+	}
+	if len(list) == 0 {
+		if err := in.c.Create(name, nil).Wait(); err != nil {
+			return fmt.Errorf("imap: create %s: %w", name, err)
+		}
+	}
+	in.made = true
+	return nil
 }
 
 func (in *IMAPInbox) Close() error {

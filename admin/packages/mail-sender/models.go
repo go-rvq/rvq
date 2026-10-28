@@ -7,11 +7,19 @@ import (
 )
 
 type MailSender struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" admin:"-"`
+	ID uuid.UUID `gorm:"type:uuid;primaryKey" admin:"-"`
+	// SubjectPrefix is the site's name in the subjects ("PAC"; empty, the
+	// application's: SiteName), SubjectRules which parts of the subject go,
+	// by family of messages and to whom (subject.go).
 	SubjectPrefix string
-	Sender        string
-	Gmail         GmailSender `gorm:"embedded;embeddedPrefix:gmail__"`
-	SMTP          SmtpSender  `gorm:"embedded;embeddedPrefix:smtp__"`
+	SubjectRules  SubjectRules `gorm:"type:jsonb"`
+	// IDFooter puts at the end of the body of a message of a record its
+	// ids — its token, its Message-ID, its kind (MessageBuilder.Identify) —:
+	// what finds it in a mailbox many things write to.
+	IDFooter bool `gorm:"not null;default:true"`
+	Sender   string
+	Gmail    GmailSender `gorm:"embedded;embeddedPrefix:gmail__"`
+	SMTP     SmtpSender  `gorm:"embedded;embeddedPrefix:smtp__"`
 	// MaxPerRecipientHour and MaxPerRecipientDay are the most messages an
 	// address outside the installation (MessageBuilder.External: a contact,
 	// the author of an issue) gets in an hour and in a day; 0, no limit. A
@@ -47,9 +55,8 @@ func (c *MailSender) SendByMethod(senderName string, b *MessageBuilder) (err err
 	defer func() { record(b, method, err) }()
 
 	// the subject as it would go, in the central too when it does not
-	if !b.verbatim {
-		b.PrependSubject(c.SubjectPrefix)
-	}
+	// its parts as the settings say (subject.go)
+	c.composeWith(b)
 	if b.external {
 		if err = limiter.take(b.to, c.MaxPerRecipientHour, c.MaxPerRecipientDay); err != nil {
 			return

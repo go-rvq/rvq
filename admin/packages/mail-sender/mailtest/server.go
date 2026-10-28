@@ -67,6 +67,10 @@ type Options struct {
 	SMTPAddr, IMAPAddr string
 	// Logger logs what the servers say; nil, nothing.
 	Logger *log.Logger
+	// Caps are capabilities the IMAP server advertises besides IMAP4rev1 —
+	// imap.CapUIDPlus, imap.CapMove: a server that moves and deletes one
+	// message at a time —; none, a plain one.
+	Caps []imap.Cap
 }
 
 // Start starts the servers.
@@ -109,7 +113,7 @@ func Start(opts Options) (*Server, error) {
 		// IMAP4rev1: search, fetch and store by UID, what an inbox needs;
 		// rev2 would need the session's own methods, which imapSession
 		// (it makes the user at login) does not pass on
-		Caps:         imap.CapSet{imap.CapIMAP4rev1: {}},
+		Caps:         caps(opts.Caps),
 		InsecureAuth: true,
 		Logger:       logger,
 	})
@@ -272,6 +276,20 @@ func (ss *smtpSession) Logout() error { return nil }
 type imapSession struct {
 	imapserver.Session
 	s *Server
+}
+
+// caps are the capabilities of the IMAP server: IMAP4rev1 and extra.
+func caps(extra []imap.Cap) imap.CapSet {
+	set := imap.CapSet{imap.CapIMAP4rev1: {}}
+	for _, c := range extra {
+		set[c] = struct{}{}
+	}
+	return set
+}
+
+// Move is the memory session's (MOVE, when the server advertises it).
+func (is *imapSession) Move(w *imapserver.MoveWriter, numSet imap.NumSet, dest string) error {
+	return is.Session.(imapserver.SessionMove).Move(w, numSet, dest)
 }
 
 func (is *imapSession) Login(username, password string) error {

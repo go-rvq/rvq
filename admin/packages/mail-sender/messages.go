@@ -16,6 +16,17 @@ type Messages struct {
 	TestMessageBody                     string           `i18n:"label='Test message: body', hint='Body of the test email.'"`
 	MailSenderSender                    string           `i18n:"label='Sender', hint='Label of the kind of sender (Gmail, SMTP).'"`
 	MailSenderSubjectPrefix             string           `i18n:"label='Subject prefix', hint='Label of the text put before the subject of every email.'"`
+	MailSenderIDFooter                  string           `i18n:"label='IDs in the body', hint='Label of the option that puts the ids of a message at the end of its body.'"`
+	MailSenderIDFooter_Hint             string           `i18n:"label='IDs in the body: hint', hint='Hint of the option of the ids in the body.'"`
+	MailSenderSubjectRules              string           `i18n:"label='Subject parts', hint='Label of the table of the parts of the subject by type of message and to whom.'"`
+	MailSenderSubjectRules_Hint         string           `i18n:"label='Subject parts: hint', hint='Hint of the table of the parts of the subject.'"`
+	SubjectRulesFamily                  string           `i18n:"label='Subject parts: type column', hint='Column of the type of message.'"`
+	SubjectRulesTeam                    string           `i18n:"label='Subject parts: to the team', hint='Column of the messages to the team.'"`
+	SubjectRulesExternal                string           `i18n:"label='Subject parts: outside', hint='Column of the messages to outside the installation (a visitor, an author).'"`
+	SubjectPartSite                     string           `i18n:"label='Subject part: site', hint='The part of the site name.'"`
+	SubjectPartTopic                    string           `i18n:"label='Subject part: thing', hint='The part of the thing the message is of.'"`
+	SubjectPartRef                      string           `i18n:"label='Subject part: record', hint='The part of the record (#12).'"`
+	SubjectFamilyOther                  string           `i18n:"label='Subject parts: others', hint='The row of the types with no row of their own.'"`
 	MailSenderGmail                     string           `i18n:"label='Gmail', hint='Name of the Gmail sender.'"`
 	MailSenderSMTP                      string           `i18n:"label='SMTP', hint='Name of the SMTP sender.'"`
 	MailSender_Action_TestSendMail      string           `i18n:"label='Send test mail', hint='Action that sends a test email.'"`
@@ -56,6 +67,13 @@ type Messages struct {
 	InboundSettingsReuse                string           `i18n:"label='Answers: reuse of the SMTP', hint='Label of what the reading of the answers takes from the SMTP sender (user, password, host).'"`
 	InboundSettingsUser                 string           `i18n:"label='Answers: user', hint='Label of the IMAP user (the team mailbox address).'"`
 	InboundSettingsPassword             string           `i18n:"label='Answers: password', hint='Label of the IMAP password.'"`
+	InboundSettingsAfter                string           `i18n:"label='Answers: after importing', hint='Label of what is done with a message imported by IMAP.'"`
+	InboundSettingsAfter_Hint           string           `i18n:"label='Answers: after importing hint', hint='Hint of what is done with a message imported.'"`
+	InboundSettingsMoveTo               string           `i18n:"label='Answers: folder', hint='Label of the folder the answers imported are moved to.'"`
+	InboundSettingsMoveTo_Hint          string           `i18n:"label='Answers: folder hint', hint='Hint of the folder the answers imported are moved to.'"`
+	InboundAfterRead                    string           `i18n:"label='After importing: read', hint='Choice: the message imported is marked read.'"`
+	InboundAfterDelete                  string           `i18n:"label='After importing: delete', hint='Choice: the message imported is deleted from the server.'"`
+	InboundAfterMove                    string           `i18n:"label='After importing: move', hint='Choice: the message imported is moved to a folder.'"`
 	InboundSettingsMailbox              string           `i18n:"label='Answers: mailbox', hint='Label of the IMAP mailbox read; empty, INBOX.'"`
 	InboundManual                       string           `i18n:"label='Answers: by people', hint='Choice: the answers are read by people, in the team mailbox.'"`
 	InboundIMAP                         string           `i18n:"label='Answers: by the application', hint='Choice: the application reads the answers by IMAP.'"`
@@ -125,7 +143,18 @@ var (
 		MailSender:                        "Mail Sender",
 		TestMessageSubject:                "Test Send Mail",
 		TestMessageBody:                   "Test OK.",
-		MailSenderSubjectPrefix:           "Subject Prefix",
+		MailSenderSubjectPrefix:           "Site name in the subject",
+		MailSenderIDFooter:                "IDs in the body",
+		MailSenderIDFooter_Hint:           "At the end of every message of a record, its ids — the record (hermon:issue:…), the Message-ID, the kind —: what finds it in a mailbox many things write to, and what an answer that lost its headers still quotes.",
+		MailSenderSubjectRules:            "Subject parts",
+		MailSenderSubjectRules_Hint:       "Which parts each subject has, by type of message and to whom it goes: the site's name, the thing it is of (an issue's type, a form), the record (#12). An answer always begins with Re:. A type with no row of its own follows Others.",
+		SubjectRulesFamily:                "Type of message",
+		SubjectRulesTeam:                  "To the team",
+		SubjectRulesExternal:              "To outside",
+		SubjectPartSite:                   "Site",
+		SubjectPartTopic:                  "Thing",
+		SubjectPartRef:                    "Record",
+		SubjectFamilyOther:                "Others",
 		MailSenderSender:                  "Sender",
 		MailSenderGmail:                   "GMAIL",
 		MailSenderSMTP:                    "SMTP",
@@ -183,13 +212,20 @@ var (
 		InboundSettingsReuse:                "The same as the SMTP",
 		InboundSettingsUser:                 "User",
 		InboundSettingsPassword:             "Password",
+		InboundSettingsAfter:                "After importing",
+		InboundSettingsAfter_Hint:           "What is done with an answer imported (a comment now): marked read, deleted from the server or moved to a folder. Deleting needs UIDPLUS and moving MOVE (or UIDPLUS): a server without them only marks it read — anything else in the mailbox is never touched.",
+		InboundSettingsMoveTo:               "Folder",
+		InboundSettingsMoveTo_Hint:          "Where the answers imported go; empty, the domain of the sending's address (pac.com). Made when it is not there.",
+		InboundAfterRead:                    "Mark read",
+		InboundAfterDelete:                  "Delete from the server",
+		InboundAfterMove:                    "Move to a folder",
 		InboundSettingsMailbox:              "Mailbox",
 		InboundManual:                       "People, in the team mailbox",
 		InboundIMAP:                         "The application, by IMAP",
 		MailSenderTabSending:                "Sending",
 		MailSenderTabAnswers:                "Answers",
 		MailSenderSender_Hint:               "Which account sends the emails: Gmail (authorized with Google) or SMTP (a server and its account). The fields of the account follow the choice.",
-		MailSenderSubjectPrefix_Hint:        "Text put before the subject of every email, such as the site's name; empty, the subject as it is.",
+		MailSenderSubjectPrefix_Hint:        "The site's name, in brackets in the subjects (\"[PAC]\") as the subject parts say; empty, the site's name of its settings.",
 		MailSenderMaxPerRecipientHour_Hint:  "The most emails one address outside the team (a contact, a customer) gets in an hour; past it, the email is refused. The team's own emails do not count. 0: no limit.",
 		MailSenderMaxPerRecipientDay_Hint:   "The same, in a day. Together they keep a form of the site from being used to flood somebody's mailbox.",
 		InboundSettingsMode_Hint:            "People: the answers stay in the team mailbox, read there. The application: it reads them by IMAP, and an answer to a conversation it knows becomes part of it.",
@@ -251,7 +287,18 @@ var (
 		MailSender:                        "Envio de Email",
 		TestMessageSubject:                "Teste de envio de email",
 		TestMessageBody:                   "Teste executado com sucesso.",
-		MailSenderSubjectPrefix:           "Prefixo do Assunto",
+		MailSenderSubjectPrefix:           "Nome do site no assunto",
+		MailSenderIDFooter:                "IDs no corpo",
+		MailSenderIDFooter_Hint:           "Ao fim de toda mensagem de um registro, os seus IDs — o registro (hermon:issue:…), o Message-ID, o tipo —: o que a acha numa caixa de entrada usada por várias coisas, e o que uma resposta que perdeu os cabeçalhos ainda cita.",
+		MailSenderSubjectRules:            "Partes do assunto",
+		MailSenderSubjectRules_Hint:       "Que partes cada assunto tem, por tipo de mensagem e a quem vai: o nome do site, a coisa (o tipo do chamado, o formulário), o registro (#12). Uma resposta começa sempre com Re:. Um tipo sem linha própria segue Outros.",
+		SubjectRulesFamily:                "Tipo de mensagem",
+		SubjectRulesTeam:                  "Para a equipe",
+		SubjectRulesExternal:              "Para fora",
+		SubjectPartSite:                   "Site",
+		SubjectPartTopic:                  "Coisa",
+		SubjectPartRef:                    "Registro",
+		SubjectFamilyOther:                "Outros",
 		MailSenderSender:                  "Método de Envio",
 		MailSenderGmail:                   "GMAIL",
 		MailSenderSMTP:                    "SMTP",
@@ -309,13 +356,20 @@ var (
 		InboundSettingsReuse:                "O mesmo do SMTP",
 		InboundSettingsUser:                 "Usuário",
 		InboundSettingsPassword:             "Senha",
+		InboundSettingsAfter:                "Depois de importar",
+		InboundSettingsAfter_Hint:           "O que é feito com uma resposta importada (agora um comentário): marcada como lida, excluída do servidor ou movida para uma pasta. Excluir pede UIDPLUS e mover pede MOVE (ou UIDPLUS): um servidor sem eles só a marca como lida — nada mais da caixa é tocado.",
+		InboundSettingsMoveTo:               "Pasta",
+		InboundSettingsMoveTo_Hint:          "Para onde vão as respostas importadas; vazio, o domínio do endereço de envio (pac.com). Criada se não existir.",
+		InboundAfterRead:                    "Marcar como lida",
+		InboundAfterDelete:                  "Excluir do servidor",
+		InboundAfterMove:                    "Mover para uma pasta",
 		InboundSettingsMailbox:              "Caixa de entrada",
 		InboundManual:                       "Pessoas, na caixa da equipe",
 		InboundIMAP:                         "A aplicação, por IMAP",
 		MailSenderTabSending:                "Envio",
 		MailSenderTabAnswers:                "Respostas",
 		MailSenderSender_Hint:               "Qual conta envia os e-mails: Gmail (autorizada com o Google) ou SMTP (um servidor e a sua conta). Os campos da conta acompanham a escolha.",
-		MailSenderSubjectPrefix_Hint:        "Texto posto antes do assunto de todo e-mail, como o nome do site; vazio, o assunto como está.",
+		MailSenderSubjectPrefix_Hint:        "O nome do site, entre colchetes nos assuntos (\"[PAC]\") como dizem as partes do assunto; vazio, o nome do site das suas configurações.",
 		MailSenderMaxPerRecipientHour_Hint:  "O máximo de e-mails que um endereço de fora da equipe (um contato, um cliente) recebe em uma hora; acima, o e-mail é recusado. Os e-mails da própria equipe não contam. 0: sem limite.",
 		MailSenderMaxPerRecipientDay_Hint:   "O mesmo, em um dia. Juntos, impedem que um formulário do site seja usado para encher a caixa de alguém.",
 		InboundSettingsMode_Hint:            "Pessoas: as respostas ficam na caixa da equipe, lidas lá. A aplicação: ela as lê por IMAP, e a resposta a uma conversa que ela conhece passa a fazer parte dela.",

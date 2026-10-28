@@ -14,7 +14,19 @@ A configuração tem duas abas, no detalhe e na edição:
     próprio painel, ou **SMTP**, um servidor e a sua conta (servidor, porta,
     usuário, senha). Só a conta do método escolhido é usada; a do outro fica
     guardada;
-  - o **prefixo do assunto**, posto antes do assunto de todo e-mail;
+  - o **assunto em partes**: `Re: [PAC] [CHAMADO - Chamados] [#12] Título`
+    — a resposta (`Re:`, sempre na frente), o **nome do site no assunto**
+    (vazio, o das configurações do site), a **coisa** de que o e-mail é (o
+    tipo do chamado, o formulário), o **registro** (`#12`) e o título. A
+    tabela **Partes do assunto** diz, por tipo de mensagem (contato,
+    formulários, chamados; **Outros** para o resto) e a quem vai (**Para a
+    equipe**, **Para fora** — quem escreveu pelo site, o autor), que partes
+    cada assunto tem;
+  - os **IDs no corpo**: ao fim de toda mensagem de um registro, o registro
+    (`hermon:issue:…`), o `Message-ID` e o tipo, em letra pequena — o que acha
+    a mensagem numa caixa de entrada usada por várias coisas, e o que uma
+    resposta que perdeu os cabeçalhos ainda cita. Os mesmos dados vão nos
+    cabeçalhos `X-Mail-Record` e `X-Mail-Kind`, para os filtros do servidor;
   - os **limites por endereço**: quantos e-mails um mesmo endereço de fora
     da equipe (quem escreveu pelo site, um cliente) recebe por hora e por
     dia. Acima disso o e-mail é recusado e o erro fica registrado; os
@@ -28,7 +40,12 @@ A configuração tem duas abas, no detalhe e na edição:
     da equipe e são lidas lá, como qualquer e-mail;
   - **A aplicação, por IMAP**: a aplicação lê a caixa pelo IMAP; a resposta
     a uma conversa que ela conhece (uma mensagem de contato, um comentário)
-    passa a fazer parte dela, e a mensagem é marcada como lida na caixa. Os
+    passa a fazer parte dela — achada pelos cabeçalhos, ou pelo ID que ela
+    cita —, e a mensagem, como diz **Depois de importar**: marcada como lida,
+    excluída do servidor ou movida para uma pasta (por padrão, o domínio do
+    endereço de envio). Só ela é tocada: excluir pede a extensão UIDPLUS do
+    servidor e mover pede MOVE (ou UIDPLUS); sem elas, a mensagem só é marcada
+    como lida. Os
     campos do servidor IMAP só aparecem neste modo. Quando a caixa que recebe
     é a mesma que envia, marque em **O mesmo do SMTP** o que a
     leitura aproveita da conta da aba **Envio** — o usuário, a senha, o
