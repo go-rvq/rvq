@@ -63,6 +63,9 @@ function injectStyle(doc: Document) {
 // the fetch's.
 export interface Client {
   action(name: string, body?: BodyInit | Record<string, any> | null, init?: RequestInit): Promise<Response>
+  // reload asks the content again and shows it in place — what an action
+  // changed —, with no progress meanwhile (a portal's; not a preview's)
+  reload?: () => Promise<void>
 }
 
 export function client(token: string, base = path): Client {
@@ -166,8 +169,8 @@ export function mount(el: Element, opts: { base?: string; observe?: boolean } = 
   })
   const api = client(token, base)
 
-  const fetchContent = async () => {
-    state.status = 'loading'
+  const fetchContent = async (quiet = false) => {
+    if (!quiet) state.status = 'loading'
     try {
       const c = await load(token, base)
       for (const src of c.scripts || []) await loadScript(src, doc)
@@ -179,6 +182,9 @@ export function mount(el: Element, opts: { base?: string; observe?: boolean } = 
       state.status = e?.message === 'expired' ? 'expired' : 'error'
     }
   }
+
+  // the content again, in place: what an action changed
+  api.reload = () => fetchContent(true)
 
   // the element of the page becomes the place of the app
   const host = doc.createElement('div')

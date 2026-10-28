@@ -214,6 +214,21 @@ describe('the portals of a site', () => {
     expect(document.querySelector('.pv')!.textContent).toBe('none')
   })
 
+  it('a content reloads itself in place (portal.reload): what an action changed, no progress', async () => {
+    let n = 0
+    answers['T9|'] = () => json({ template: '<button class="r" @click="portal.reload()">' + (++n) + '</button>' })()
+    document.body.innerHTML = '<rvq-portal source="T9"></rvq-portal>'
+    site.mountAll()
+    enter()
+    await settle()
+    expect(document.querySelector('.r')!.textContent).toBe('1')
+    ;(document.querySelector('.r') as HTMLButtonElement).click()
+    await flushPromises()
+    expect(document.querySelector('.rvq-portal-progress')).toBeNull()
+    await settle()
+    expect(document.querySelector('.r')!.textContent).toBe('2')
+  })
+
   it('the plugins of the page are installed in the app of a portal', async () => {
     document.body.innerHTML = '<div id="p"></div>'
     const plugin = (app: any) => app.component('x-plug', { template: '<b class="plug">plugged</b>' })
