@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -195,13 +196,27 @@ func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uuid.UUID) (Q
 	return nil
 }
 
+// Shutdown stops the workers, all at once: a worker's Stop waits half a
+// second at least (its ticker), so one after the other they took that times
+// the number of jobs.
 func (q *goque) Shutdown(ctx context.Context) error {
-	var errs error
+	var (
+		wg   sync.WaitGroup
+		mu   sync.Mutex
+		errs error
+	)
 	for _, wk := range q.wks {
-		if err := wk.Stop(ctx); err != nil {
-			errs = multierr.Append(errs, err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := wk.Stop(ctx); err != nil {
+				mu.Lock()
+				errs = multierr.Append(errs, err)
+				mu.Unlock()
+			}
+		}()
 	}
+	wg.Wait()
 	return errs
 }
 
