@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -23,19 +24,36 @@ const MailLogModelID = "mail_logs"
 // retention of the settings (MailSender.MailLogRetentionDays).
 const JobMailLogsPurge = "MailLogs:Purge"
 
-// installMailLogs is the central of the mails sent: its listing, the newest
-// first, all or the failed ones, by kind, period, recipient and status; the
-// detail of each one — its body (redacted) in a sandbox, the link to the
-// record it is of, the other messages of its conversation —; sending again
-// one that had nothing hidden. Nobody edits, creates or deletes them.
-func (b *Builder) installMailLogs(p *presets.Builder) {
-	mb := Model(p, &MailLog{}, presets.ModelConfig().SetId(MailLogModelID)).
+// installMailLogs is the central of the mails sent, a child of the settings
+// of the sending (sender: a singleton, so no id of it in its address —
+// <sender>/mail-logs —, its node in the menu under the sender's): its
+// listing, the newest first, all or the failed ones, by kind, period,
+// recipient and status; the detail of each one — its body (redacted) in a
+// sandbox, the link to the record it is of, the other messages of its
+// conversation —; sending again one that had nothing hidden. Nobody edits,
+// creates or deletes them.
+func (b *Builder) installMailLogs(p *presets.Builder, sender *presets.ModelBuilder) {
+	mb := NewModel(p, &MailLog{}, presets.ModelConfig().SetId(MailLogModelID)).
 		URIName("mail-logs").
-		InMenu(true).
 		MenuIcon("mdi-email-search-outline").
 		GlobalSearch(false)
 	mb.SetEditingDisabled(true).SetCreatingDisabled(true).SetDeletingDisabled(true)
+	sender.AddChild(mb)
 	b.logs = mb
+	// in the menu, under the sender's node: to who may list them
+	sender.MenuChildren(func(ctx *web.EventContext) ([]*presets.MenuNode, string) {
+		if mb.Permissioner().Lister(ctx.R).Denied() {
+			return nil, ""
+		}
+		href := mb.Info().ListingHref()
+		node := &presets.MenuNode{Title: mb.TTitlePlural(ctx.Context()), Value: href,
+			Props: map[string]any{"href": href, "prependIcon": "mdi-email-search-outline"}}
+		active := ""
+		if strings.HasPrefix(strings.TrimSuffix(ctx.R.URL.Path, "/"), href) {
+			active = href
+		}
+		return []*presets.MenuNode{node}, active
+	})
 
 	l := mb.Listing("CreatedAt", "Status", "Kind", "Recipients", "Subject", "Method").
 		SearchColumns("subject", "recipients", "record_path", "message_id").

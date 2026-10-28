@@ -75,14 +75,14 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			return
 		}
 	}
-	b.installMailLogs(p)
-
 	mb := Model(p,
 		&MailSender{},
 		presets.ModelConfig().SetSingleton(true),
 	).
 		InMenu(true).
 		MenuIcon("mdi-email-fast")
+	// the central of the mails sent: its child
+	b.installMailLogs(p, mb)
 
 	// The URL Google will call back into. A Desktop app client accepts any
 	// loopback address, so it follows wherever the admin happens to be mounted.
