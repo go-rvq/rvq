@@ -1105,6 +1105,12 @@ func emptyItemJS(schema *Schema) string {
 	parts := make([]string, 0, len(schema.Fields))
 	for _, f := range schema.Fields {
 		value := emptyValueJS(f)
+		// the default its class declares (`perPage int = 20`): a record
+		// chosen, or added, begins with it — as a record loaded is filled
+		// (Schema.record)
+		if f.Default != nil && f.Schema == nil {
+			value = string(h.JSONString(f.Default))
+		}
 		if f.Schema != nil {
 			value = emptyItemJS(f.Schema)
 			if f.Schema.Slice {

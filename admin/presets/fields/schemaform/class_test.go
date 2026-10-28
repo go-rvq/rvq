@@ -115,8 +115,8 @@ func TestChoiceFilled(t *testing.T) {
 // The form of a choice: a select of the classes, by their labels with their
 // hints under them, the hint of the select the chosen class's (else the
 // field's), and the form of the one chosen only while it is; choosing another
-// starts it empty. Labels and hints the application does not give come from
-// the metadata.
+// starts it with the defaults its class declares, the rest empty. Labels and
+// hints the application does not give come from the metadata.
 func TestChoiceComponent(t *testing.T) {
 	b, s := classSchema(t)
 	comp := b.ComponentFunc(s)(&presets.FieldContext{
@@ -137,7 +137,7 @@ func TestChoiceComponent(t *testing.T) {
 		`:hint='({"gridLayout":"cartões numa grade"})[Object.keys(form["Value"].posts.layout || {})[0]] || ""'`,
 		`v-if='Object.keys(form["Value"].posts.layout || {})[0] === "gridLayout"'`,
 		`form["Value"].posts.layout["gridLayout"].columns`,
-		`"gridLayout": {"columns": 0}`,
+		`"gridLayout": {"columns": 3}`,
 		"Desenho", "Colunas", "de 1 a 6", "Tipo de post")
 }
 
