@@ -26,7 +26,7 @@ import Card from '@/lib/Card.vue'
 import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
 import VXMarkdownEditor from '@/lib/MarkdownEditor/VXMarkdownEditor.vue'
 import {registerTiptapPlugin} from '@/lib/TipTap/plugins'
-import {install as installMdKit} from '@rvq/mdkit'
+import {install as installMdKit, watchLinkCards} from '@rvq/mdkit'
 import {VuetifyViewer} from 'vuetify-pro-tiptap'
 import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
@@ -98,6 +98,13 @@ const vuetifyx = {
     // the editors of a text of rvq mdkit (mdkit-markdown-editor, …: the
     // MarkdownBuilder's)
     installMdKit(app)
+    // the link cards of the texts of the page, where its meta says
+    // (mdkit-link-cards: the admin's presets_LinkCards)
+    if (typeof document !== 'undefined') {
+      const start = () => watchLinkCards()
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start)
+      else start()
+    }
   }
 }
 declare const window: any

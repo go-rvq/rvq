@@ -38,6 +38,9 @@ var policy = func() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(footnoteClassRe).OnElements("a", "div", "sup", "section")
 	p.AllowAttrs("class").Matching(tableClassRe).OnElements("table")
+	// a link card: its class, its target (a path of the site, a record's)
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^` + LinkCardClass + `$`)).OnElements("div")
+	p.AllowAttrs("data-href").Matching(cardTargetRe).OnElements("div")
 	return p
 }()
 
@@ -70,7 +73,7 @@ func Render(format, body string) string {
 		return policy.Sanitize(body)
 	}
 	var buf bytes.Buffer
-	if err := md.Convert([]byte(body), &buf); err != nil {
+	if err := md.Convert([]byte(linkCards(body)), &buf); err != nil {
 		return policy.Sanitize("<p>" + stdhtml.EscapeString(body) + "</p>")
 	}
 	return policy.Sanitize(buf.String())
@@ -197,6 +200,11 @@ func (w *mdWriter) block(n *html.Node, prefix string) {
 	}
 	switch n.Data {
 	case "div", "section":
+		if attr(n, "class") == LinkCardClass && LinkCardTarget(attr(n, "data-href")) {
+			// a link card: its line
+			w.b.WriteString(prefix + "[[" + attr(n, "data-href") + "]]\n\n")
+			return
+		}
 		if attr(n, "class") == "footnotes" {
 			// the notes: their definitions ([^label]: …)
 			w.footnotes(n, prefix)

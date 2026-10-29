@@ -4,7 +4,8 @@
 // together) —, Vue components made with Vuetify (the page's), their words
 // the page's (configure, or window.mdkitWords). For a site (its bundle:
 // window.RvqMdKit, the pack of rvq x/ui/mdkit) and for the admin (vuetifyx:
-// the plugins of vx-tiptap-editor, the MarkdownBuilder).
+// the plugins of vx-tiptap-editor, the MarkdownBuilder); the link cards of
+// a text drawn (watchLinkCards).
 import RichEditor from './rich-editor.js'
 import MarkdownEditor from './markdown-editor.js'
 import TableBuilder from './table-builder.js'
@@ -19,6 +20,8 @@ export * as footnotes from './footnote-model.js'
 export { FootnoteRef, Footnotes, numbers as footnoteNumbers } from './footnote-tiptap.js'
 export { finalize as finalizeFootnotes, noteHTML } from './footnote-rich.js'
 export { tiptapFootnoteAdapter } from './footnote-adapter.js'
+// the link cards of a text (a page, a record linked on a line of its own)
+export { linkCards, watchLinkCards, metaResolver, drawCard, safeHref, cardClass } from './link-cards.js'
 
 // components are the components, by their names after the prefix
 export const components = {

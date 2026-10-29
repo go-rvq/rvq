@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	stdhtml "html"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -75,7 +76,9 @@ type Builder struct {
 	verifiers                             perm.PermVerifiers
 	pagesRegistrator                      *PagesRegistrator
 	formSigner                            FormSigner
-	recordUserFinder                      RecordUserFinder
+	// linkCardResolvers: the application's (link_cards.go)
+	linkCardResolvers []LinkCardResolver
+	recordUserFinder  RecordUserFinder
 
 	datafield.DataField[*Builder]
 }
@@ -129,6 +132,8 @@ func New(i18nB *i18n.Builder) *Builder {
 	r.GetWebBuilder().RegisterEventHandler(EventOpenConfirmDialog, web.EventFunc(r.openConfirmDialog))
 	// the search of the top bar (global_search.go)
 	r.GetWebBuilder().RegisterEventHandler(GlobalSearchEvent, web.EventFunc(r.globalSearch))
+	// the cards of the links of a text (link_cards.go)
+	r.GetWebBuilder().RegisterEventHandler(LinkCardsEvent, web.EventFunc(r.linkCards))
 	// the words of the vuetifyx components: the page's vue-i18n's (vx)
 	r.registerVxMessages()
 	r.layoutFunc = r.DefaultLayout
@@ -1276,6 +1281,10 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 				}
 			</style>
 		`))
+
+	// where the cards of the links of the texts are asked (link_cards.go;
+	// rvq mdkit's watchLinkCards reads it)
+	ctx.Injector.HeadHTML(`<meta name="mdkit-link-cards" content="` + stdhtml.EscapeString(b.URIPrefixCtx(ctx.R.Context())+"?__execute_event__="+LinkCardsEvent) + `">`)
 
 	b.InjectExtraAssets(ctx)
 

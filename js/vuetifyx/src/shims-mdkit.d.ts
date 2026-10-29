@@ -17,4 +17,7 @@ declare module '@rvq/mdkit' {
   export function footnoteBalloons(): void
   export function install(app: any, options?: { prefix?: string }): void
   export const components: Record<string, any>
+  export function linkCards(root: Element, resolve: (targets: string[]) => Promise<Record<string, any>>): Promise<void>
+  export function watchLinkCards(root?: Element, resolve?: ((targets: string[]) => Promise<Record<string, any>>) | null): void
+  export function metaResolver(doc?: Document): ((targets: string[]) => Promise<Record<string, any>>) | null
 }

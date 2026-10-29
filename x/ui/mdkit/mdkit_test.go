@@ -11,3 +11,11 @@ func TestJSComponentsPack(t *testing.T) {
 		t.Errorf("the pack of mdkit: %d bytes, RvqMdKit %v", len(js), strings.Contains(js, "RvqMdKit"))
 	}
 }
+
+// TestLinkCardsPack: the script of the link cards is in the binary, small,
+// reading the page's meta.
+func TestLinkCardsPack(t *testing.T) {
+	if js := string(LinkCardsPack()); !strings.Contains(js, "mdkit-link-cards") || len(js) > 20000 {
+		t.Errorf("the pack of the link cards: %d bytes", len(js))
+	}
+}
