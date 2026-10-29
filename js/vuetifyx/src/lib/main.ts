@@ -24,6 +24,7 @@ import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import Dialog from '@/lib/Dialog.vue'
 import Card from '@/lib/Card.vue'
 import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
+import VXMarkdownEditor from '@/lib/MarkdownEditor/VXMarkdownEditor.vue'
 import {registerTiptapPlugin} from '@/lib/TipTap/plugins'
 import {install as installMdKit} from '@rvq/mdkit'
 import {VuetifyViewer} from 'vuetify-pro-tiptap'
@@ -72,6 +73,9 @@ const vuetifyx = {
     app.component('vx-dialog', Dialog)
     app.component('vx-card', Card)
     app.component('vx-tiptap-editor', VXTipTapEditor)
+    // a text in Markdown (rvq mdkit's editor, its words vx's): the
+    // MarkdownBuilder's
+    app.component('vx-markdown-editor', VXMarkdownEditor)
     app.component('vx-tiptap-viewer', VuetifyViewer)
     app.component('vx-btn', VXBtn)
     app.component('vx-array-sorter', VXArraySorter)

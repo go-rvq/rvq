@@ -118,7 +118,9 @@ export default {
   name: 'MdkitMarkdownEditor',
   props: {
     modelValue: { type: String, default: '' },
-    preview: { type: String, default: '' },
+    // preview: the address that renders a text (POST {format, body} →
+    // {html}), or a function of the text giving its HTML (a promise)
+    preview: { type: [String, Function], default: '' },
     rows: { type: [Number, String], default: 8 },
     placeholder: { type: String, default: '' },
     maxlength: { type: [Number, String], default: null },
@@ -131,7 +133,8 @@ export default {
     inputId: { type: String, default: '' },
     path: { type: String, default: '' },
     // its pictures: sent at once (an address, or a function of the FormData
-    // that sends it), `token` the secret link's; or given to the page
+    // that sends it: its response, or what it says — { url } or { message }
+    // —), `token` the secret link's; or given to the page
     upload: { type: [String, Function], default: '' },
     token: { type: String, default: '' },
     images: { type: Boolean, default: false },
@@ -512,12 +515,17 @@ export default {
     async renderHTML(text) {
       let body = text || ''
       this.pending.forEach((url, name) => { body = body.split('attachment:' + name).join(inlineURL(name)) })
-      const res = await fetch(this.preview, {
-        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ format: 'markdown', body }),
-      }).catch(() => null)
-      const out = res ? await res.json().catch(() => ({})) : {}
-      let html = out.html || ''
+      let html = ''
+      if (typeof this.preview === 'function') {
+        html = (await Promise.resolve(this.preview(body)).catch(() => '')) || ''
+      } else {
+        const res = await fetch(this.preview, {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ format: 'markdown', body }),
+        }).catch(() => null)
+        const out = res ? await res.json().catch(() => ({})) : {}
+        html = out.html || ''
+      }
       this.pending.forEach((url, name) => { html = html.split(inlineURL(name)).join(url) })
       return html
     },
@@ -576,8 +584,10 @@ export default {
           const res = typeof this.upload === 'function'
             ? await this.upload(body)
             : await fetch(this.upload, { method: 'POST', credentials: 'same-origin', body })
-          const out = await res.json().catch(() => ({}))
-          if (!res.ok || !out.url) {
+          // a response (fetch's), or what it says
+          const sent = res && typeof res.json === 'function'
+          const out = sent ? await res.json().catch(() => ({})) : (res || {})
+          if ((sent && !res.ok) || !out.url) {
             this.notice = out.message || b.uploadError || 'The picture could not be sent.'
             return ''
           }

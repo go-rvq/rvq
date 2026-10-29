@@ -78,6 +78,7 @@ declare module 'vue' {
     TreeSelectItem: typeof import('./src/lib/Filter/components/TreeSelectItem.vue')['default']
     Videojs: typeof import('./src/lib/EditorJS/Videojs.vue')['default']
     View: typeof import('./src/lib/TipTap/extensions/codeblock-script-value/View.vue')['default']
+    VXMarkdownEditor: typeof import('./src/lib/MarkdownEditor/VXMarkdownEditor.vue')['default']
     Wc: typeof import('./src/lib/ImageTools/webcam/wc.vue')['default']
     WebCam: typeof import('./src/lib/ImageTools/webcam/WebCam.vue')['default']
     WebCamUI: typeof import('./src/lib/ImageTools/webcam/WebCamUI.vue')['default']
