@@ -297,6 +297,16 @@ type Messages struct {
 	MdkitMarkdownRule           string `json:"mdkitMarkdownRule" i18n:"hint='Editors of a text (mdkit), markdown: rule.'"`
 	MdkitMarkdownFullscreen     string `json:"mdkitMarkdownFullscreen" i18n:"hint='Editors of a text (mdkit), markdown: fullscreen.'"`
 	MdkitMarkdownHelpUrl        string `json:"mdkitMarkdownHelpUrl" i18n:"hint='Editors of a text (mdkit), markdown: helpUrl.'"`
+	MdkitCardButton             string `json:"mdkitCardButton" i18n:"hint='Editors of a text (mdkit), card: button.'"`
+	MdkitCardTitle              string `json:"mdkitCardTitle" i18n:"hint='Editors of a text (mdkit), card: title.'"`
+	MdkitCardSearch             string `json:"mdkitCardSearch" i18n:"hint='Editors of a text (mdkit), card: search.'"`
+	MdkitCardUseAddress         string `json:"mdkitCardUseAddress" i18n:"hint='Editors of a text (mdkit), card: useAddress.'"`
+	MdkitCardNone               string `json:"mdkitCardNone" i18n:"hint='Editors of a text (mdkit), card: none.'"`
+	MdkitCardHint               string `json:"mdkitCardHint" i18n:"hint='Editors of a text (mdkit), card: hint.'"`
+	MdkitCardCancel             string `json:"mdkitCardCancel" i18n:"hint='Editors of a text (mdkit), card: cancel.'"`
+	MdkitCardRemove             string `json:"mdkitCardRemove" i18n:"hint='Editors of a text (mdkit), card: remove.'"`
+	MdkitCardPages              string `json:"mdkitCardPages" i18n:"hint='Editors of a text (mdkit), card: pages.'"`
+	MdkitCardPosts              string `json:"mdkitCardPosts" i18n:"hint='Editors of a text (mdkit), card: posts.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -564,6 +574,16 @@ var Messages_en_US = &Messages{
 	MdkitMarkdownRule:           "Horizontal line",
 	MdkitMarkdownFullscreen:     "Full screen",
 	MdkitMarkdownHelpUrl:        "https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax",
+	MdkitCardButton:             "Link card",
+	MdkitCardTitle:              "Link card",
+	MdkitCardSearch:             "Search, or type an address of the site (/…)",
+	MdkitCardUseAddress:         "Use the address",
+	MdkitCardNone:               "Nothing found.",
+	MdkitCardHint:               "The card shows the title, the cover and the summary, in the language of the page.",
+	MdkitCardCancel:             "Cancel",
+	MdkitCardRemove:             "Remove the card",
+	MdkitCardPages:              "Pages of the site",
+	MdkitCardPosts:              "Posts of the site",
 }
 
 var Messages_pt_BR = &Messages{
@@ -831,6 +851,16 @@ var Messages_pt_BR = &Messages{
 	MdkitMarkdownRule:           "Linha horizontal",
 	MdkitMarkdownFullscreen:     "Tela cheia",
 	MdkitMarkdownHelpUrl:        "https://docs.github.com/pt/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax",
+	MdkitCardButton:             "Cartão de link",
+	MdkitCardTitle:              "Cartão de link",
+	MdkitCardSearch:             "Busque, ou digite um endereço do site (/…)",
+	MdkitCardUseAddress:         "Usar o endereço",
+	MdkitCardNone:               "Nada encontrado.",
+	MdkitCardHint:               "O cartão mostra o título, a capa e o resumo, no idioma da página.",
+	MdkitCardCancel:             "Cancelar",
+	MdkitCardRemove:             "Tirar o cartão",
+	MdkitCardPages:              "Páginas do site",
+	MdkitCardPosts:              "Posts do site",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

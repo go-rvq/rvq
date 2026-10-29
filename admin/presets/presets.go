@@ -78,6 +78,7 @@ type Builder struct {
 	formSigner                            FormSigner
 	// linkCardResolvers: the application's (link_cards.go)
 	linkCardResolvers []LinkCardResolver
+	linkCardSearchers []LinkCardSearcher
 	recordUserFinder  RecordUserFinder
 
 	datafield.DataField[*Builder]
@@ -134,6 +135,7 @@ func New(i18nB *i18n.Builder) *Builder {
 	r.GetWebBuilder().RegisterEventHandler(GlobalSearchEvent, web.EventFunc(r.globalSearch))
 	// the cards of the links of a text (link_cards.go)
 	r.GetWebBuilder().RegisterEventHandler(LinkCardsEvent, web.EventFunc(r.linkCards))
+	r.GetWebBuilder().RegisterEventHandler(LinkCardSearchEvent, web.EventFunc(r.linkCardSearch))
 	// the words of the vuetifyx components: the page's vue-i18n's (vx)
 	r.registerVxMessages()
 	r.layoutFunc = r.DefaultLayout
@@ -1282,9 +1284,12 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 			</style>
 		`))
 
-	// where the cards of the links of the texts are asked (link_cards.go;
-	// rvq mdkit's watchLinkCards reads it)
-	ctx.Injector.HeadHTML(`<meta name="mdkit-link-cards" content="` + stdhtml.EscapeString(b.URIPrefixCtx(ctx.R.Context())+"?__execute_event__="+LinkCardsEvent) + `">`)
+	// where the cards of the links of the texts are asked, and what a card
+	// may link is searched (link_cards.go; rvq mdkit's watchLinkCards and
+	// its picker read it)
+	prefix := b.URIPrefixCtx(ctx.R.Context())
+	ctx.Injector.HeadHTML(`<meta name="mdkit-link-cards" content="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardsEvent) +
+		`" data-search="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardSearchEvent) + `">`)
 
 	b.InjectExtraAssets(ctx)
 

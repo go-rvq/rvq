@@ -61,7 +61,7 @@ func TestLinkCards(t *testing.T) {
 	).SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
 	p.DataOperator(gorm2op.DataOperator(db))
 	arts := p.Model(&LCArticle{}).URIName("lc-articles")
-	arts.Listing("ID", "Name")
+	arts.Listing("ID", "Name").SearchColumns("name")
 	arts.Detailing("Name")
 	p.Model(&LCSecret{}).URIName("lc-secrets").Listing("ID", "Name")
 	p.LinkCardResolver(func(_ *web.EventContext, target string) *presets.LinkCard {
@@ -69,6 +69,10 @@ func TestLinkCards(t *testing.T) {
 			return &presets.LinkCard{Href: target, Title: "About us"}
 		}
 		return nil
+	})
+
+	p.LinkCardSearcher(func(_ *web.EventContext, q string) []*presets.LinkCardOptionGroup {
+		return []*presets.LinkCardOptionGroup{{Title: "Site", Items: []presets.LinkCardOption{{Title: "Roof page " + q, Target: "/en-us/roof"}}}}
 	})
 
 	art := arts.Info().RecordPath(nil, arts.MustRecordID(&LCArticle{ID: 1}))
@@ -101,5 +105,18 @@ func TestLinkCards(t *testing.T) {
 		if c, ok := out.Data[none]; ok {
 			t.Errorf("%s: a card %+v", none, c)
 		}
+	}
+
+	// the options of a card: the application's, then the records by their paths
+	w = httptest.NewRecorder()
+	p.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/admin/lc-articles?__execute_event__="+presets.LinkCardSearchEvent+"&q=Roo", nil))
+	var found struct {
+		Data []presets.LinkCardOptionGroup `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &found); err != nil {
+		t.Fatalf("%v: %s", err, w.Body.String())
+	}
+	if len(found.Data) != 2 || found.Data[0].Items[0].Target != "/en-us/roof" || found.Data[1].Items[0].Target != art || found.Data[1].Items[0].Title != "Roofs" {
+		t.Errorf("the options: %+v", found.Data)
 	}
 }

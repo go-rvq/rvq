@@ -25,6 +25,8 @@ import css from './vendor/easymde-css.js'
 import TableBuilder from './table-builder.js'
 import FootnoteBuilder from './footnote-builder.js'
 import { tableAt } from './table-model.js'
+import LinkCardPicker from './link-card-picker.js'
+import { cardTarget } from './link-cards.js'
 import * as F from './footnote-model.js'
 import { config, wordsOf } from './config.js'
 
@@ -130,6 +132,8 @@ export default {
     words: { type: Object, default: () => wordsOf('markdown') },
     // the words of the buttons it shares with the rich text editor
     barWords: { type: Object, default: () => wordsOf('rich') },
+    // the words of the link card (its button, its picker)
+    cardWords: { type: Object, default: () => wordsOf('card') },
     inputId: { type: String, default: '' },
     path: { type: String, default: '' },
     // its pictures: sent at once (an address, or a function of the FormData
@@ -163,12 +167,13 @@ export default {
       ]
     },
   },
-  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder },
+  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker },
   template: `
 <div class="mdkit-markdown-editor" :class="{ invalid, disabled }" data-markdown-editor>
   <textarea ref="area" :id="inputId || undefined" :data-path="path || undefined"></textarea>
   <mdkit-table-builder ref="tables" :image="canImage ? imageText : null" :render="preview ? renderHTML : null"
     :footnote="footnotePick"></mdkit-table-builder>
+  <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
   <mdkit-footnote-builder ref="footnotes" :render="preview ? renderHTML : null"></mdkit-footnote-builder>
   <v-dialog v-model="helping" max-width="620" scrollable data-markdown-help>
     <v-card>
@@ -226,6 +231,8 @@ export default {
       button('code', EasyMDE.toggleCodeBlock, 'mdi-code-braces', t('code', 'Code')),
       '|',
       button('link', EasyMDE.drawLink, 'mdi-link-variant', t('link', 'Link')),
+      // a page of the site or a record of the admin, as its card: [[target]]
+      button('card', () => this.openCard(), 'mdi-card-text-outline', this.cardWords.button || 'Link card'),
       ...(this.canImage ? [button('image', () => this.chooseImages(), 'mdi-image-plus', t('image', 'Picture'))] : []),
       // the table under the cursor, or a new one: built as a sheet
       button('table', (editor) => this.openTable(editor), 'mdi-table', t('table', 'Table')),
@@ -332,7 +339,21 @@ export default {
         }
       }
     })
-    this.mde.codemirror.on('paste', (cm, e) => take(cm, e, e.clipboardData && e.clipboardData.files))
+    this.mde.codemirror.on('paste', (cm, e) => {
+      // an address of the site alone: its card, on a line of its own — the
+      // text pasted first, a step of its own (Ctrl+Z: the text)
+      const text = e.clipboardData && !(e.clipboardData.files && e.clipboardData.files.length) && e.clipboardData.getData('text/plain')
+      const target = text && !/\n/.test(text.trim()) && cardTarget(text)
+      if (target) {
+        e.preventDefault()
+        const from = cm.getCursor('from')
+        cm.replaceSelection(text.trim())
+        cm.changeGeneration(true)
+        cm.replaceRange(this.cardLine(cm, from, target), from, { line: from.line, ch: from.ch + text.trim().length })
+        return
+      }
+      take(cm, e, e.clipboardData && e.clipboardData.files)
+    })
     this.mde.codemirror.on('drop', (cm, e) => take(cm, e, e.dataTransfer && e.dataTransfer.files))
   },
   beforeUnmount() {
@@ -528,6 +549,24 @@ export default {
       }
       this.pending.forEach((url, name) => { html = html.split(inlineURL(name)).join(url) })
       return html
+    },
+    // cardLine is the text of the card of target at pos: [[target]] on a line
+    // of its own (a line break before and after it when the line has more)
+    cardLine(cm, pos, target) {
+      const line = cm.getLine(pos.line) || ''
+      const before = line.slice(0, pos.ch).trim() ? '\n\n' : ''
+      const after = line.slice(pos.ch).trim() ? '\n\n' : ''
+      return before + '[[' + target + ']]' + after
+    },
+    // openCard picks a page or a record (the picker); its card at the cursor
+    openCard() {
+      const cm = this.mde.codemirror
+      const from = cm.getCursor('from')
+      const to = cm.getCursor('to')
+      this.$refs.cards.open((target) => {
+        cm.replaceRange(this.cardLine(cm, from, target), from, to)
+        cm.focus()
+      })
     },
     // pick is the pictures the user chooses
     pick() {

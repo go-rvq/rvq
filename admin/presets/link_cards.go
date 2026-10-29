@@ -118,3 +118,70 @@ func (b *Builder) linkCards(ctx *web.EventContext) (r web.EventResponse, err err
 	}
 	return
 }
+
+// LinkCardSearchEvent answers what a link card may link matching q — the
+// application's (LinkCardSearcher: the pages of its site), then the records
+// of the search of the top bar (by their record paths) —, in groups.
+const LinkCardSearchEvent = "presets_LinkCardSearch"
+
+// LinkCardOption is what a link card may link: its title, its target (a path
+// of the site, a record path), where it is (sub).
+type LinkCardOption struct {
+	Title  string `json:"title"`
+	Target string `json:"target"`
+	Sub    string `json:"sub,omitempty"`
+}
+
+// LinkCardOptionGroup is a group of options: its title, or its kind (the
+// picker's word of it: pages, posts).
+type LinkCardOptionGroup struct {
+	Kind  string           `json:"kind,omitempty"`
+	Title string           `json:"title"`
+	Icon  string           `json:"icon,omitempty"`
+	Items []LinkCardOption `json:"items"`
+}
+
+// LinkCardSearcher is the application's options matching q.
+type LinkCardSearcher func(ctx *web.EventContext, q string) []*LinkCardOptionGroup
+
+// LinkCardSearcher adds a searcher of the application's options, before the
+// admin's records.
+func (b *Builder) LinkCardSearcher(f LinkCardSearcher) *Builder {
+	b.linkCardSearchers = append(b.linkCardSearchers, f)
+	return b
+}
+
+// linkCardSearch is LinkCardSearchEvent.
+func (b *Builder) linkCardSearch(ctx *web.EventContext) (r web.EventResponse, err error) {
+	q := strings.TrimSpace(ctx.R.FormValue("q"))
+	groups := []*LinkCardOptionGroup{}
+	r.Data = groups
+	if len([]rune(q)) < 2 {
+		return
+	}
+	for _, f := range b.linkCardSearchers {
+		for _, g := range f(ctx, q) {
+			if g != nil && len(g.Items) > 0 {
+				groups = append(groups, g)
+			}
+		}
+	}
+	gs, err := b.globalSearch(ctx)
+	if err != nil {
+		return
+	}
+	found, _ := gs.Data.([]*globalSearchGroup)
+	for _, g := range found {
+		og := &LinkCardOptionGroup{Title: g.Title, Icon: g.Icon}
+		for _, it := range g.Items {
+			if it.Path != "" {
+				og.Items = append(og.Items, LinkCardOption{Title: it.Title, Target: it.Path, Sub: g.Title})
+			}
+		}
+		if len(og.Items) > 0 {
+			groups = append(groups, og)
+		}
+	}
+	r.Data = groups
+	return
+}

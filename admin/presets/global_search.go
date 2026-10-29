@@ -27,6 +27,9 @@ type globalSearchItem struct {
 	Title string `json:"title"`
 	Href  string `json:"href"`
 	Icon  string `json:"icon,omitempty"`
+	// Path is the record path of the record (RecordPath): what a link card
+	// of a text links (LinkCardSearchEvent)
+	Path string `json:"path,omitempty"`
 }
 
 type globalSearchGroup struct {
@@ -154,6 +157,7 @@ func (b *Builder) globalSearchModel(ctx *web.EventContext, mb *ModelBuilder, q s
 		g.Items = append(g.Items, globalSearchItem{
 			Title: mb.RecordTitle(obj, ctx),
 			Href:  account.URL(b.prefix, href, n),
+			Path:  mb.Info().RecordPath(parents, id),
 		})
 	}
 	if len(g.Items) == 0 {

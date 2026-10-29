@@ -28,6 +28,8 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
 import { FootnoteRef, Footnotes, numbers } from './footnote-tiptap.js'
+import { LinkCard } from './link-card-tiptap.js'
+import LinkCardPicker from './link-card-picker.js'
 import { finalize } from './footnote-rich.js'
 import FootnoteBuilder from './footnote-builder.js'
 import { tiptapFootnoteAdapter } from './footnote-adapter.js'
@@ -135,9 +137,11 @@ const RichEditor = {
     footnotes: { type: Boolean, default: true },
     // the words: by default the page's (config wordsOf)
     words: { type: Object, default: () => wordsOf('rich') },
+    // the words of the link card (its button, its picker, its bin)
+    cardWords: { type: Object, default: () => wordsOf('card') },
   },
   emits: ['update:modelValue', 'file'],
-  components: { MdkitFootnoteBuilder: FootnoteBuilder },
+  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker },
   data: () => ({
     active: {}, notice: '', linking: false, link: '',
     sizes: { show: false, target: null, width: null, small: false },
@@ -151,6 +155,7 @@ const RichEditor = {
   },
   template: `
 <v-theme-provider theme="light" with-background class="mdkit-rich-editor" data-rich-editor>
+  <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
   <mdkit-footnote-builder v-if="footnotes" ref="footnoteBuilder" :note-editor="noteEditor"></mdkit-footnote-builder>
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
@@ -159,6 +164,9 @@ const RichEditor = {
         :disabled="disabled" @mousedown.prevent @click="run(b.key)"><v-icon :icon="b.icon"></v-icon><v-tooltip activator="parent" location="top" :text="words[b.key] || b.key"></v-tooltip></v-btn>
       <v-btn icon="mdi-link-variant" size="small" variant="text" density="comfortable" :active="!!active.link"
         data-rich-editor-button="link" :disabled="disabled" @mousedown.prevent @click="openLink"><v-icon icon="mdi-link-variant"></v-icon><v-tooltip activator="parent" location="top" :text="words.link || 'link'"></v-tooltip></v-btn>
+      <v-btn icon="mdi-card-text-outline" size="small" variant="text" density="comfortable"
+        data-rich-editor-button="card" :disabled="disabled"
+        @mousedown.prevent @click="openCard"><v-icon icon="mdi-card-text-outline"></v-icon><v-tooltip activator="parent" location="top" :text="cardWords.button || 'Link card'"></v-tooltip></v-btn>
       <v-btn v-if="footnotes" icon="mdi-format-superscript" size="small" variant="text" density="comfortable"
         data-rich-editor-button="footnote" :disabled="disabled"
         @mousedown.prevent @click="openFootnotes()"><v-icon icon="mdi-format-superscript"></v-icon><v-tooltip activator="parent" location="top" :text="words.footnote || 'Footnote'"></v-tooltip></v-btn>
@@ -217,6 +225,8 @@ const RichEditor = {
         Hints,
         FootnoteRef,
         Footnotes,
+        // a page of the site, as its card (a bin; an address pasted alone)
+        LinkCard.configure({ removeTitle: this.cardWords.remove || 'Remove the card' }),
         // an empty paragraph: its hint; the editor empty, its placeholder
         Placeholder.configure({
           showOnlyCurrent: false,
@@ -270,6 +280,10 @@ const RichEditor = {
     },
   },
   methods: {
+    // openCard picks a page (the picker); its card at the cursor
+    openCard() {
+      this.$refs.cards.open((target) => this.editor && this.editor.chain().focus().insertLinkCard(target).run())
+    },
     // emptyText is the placeholder of the editor empty: of pictures, when it
     // takes them
     emptyText() {

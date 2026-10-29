@@ -167,6 +167,9 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
   },
 
   setup(props, { expose, slots, emit }) {
+    // what the editor emitted last: as it was (lastRaw), as the field got it (lastOut)
+    let lastRaw: any
+    let lastOut: any
     const { t, locale } = useI18n()
 
     ttLocale.setLang((locale.value as any) as string)
@@ -191,6 +194,9 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
         return /^\d+$/.test(s) ? s + 'px' : s
       },
       model = useModel(props, 'modelValue'),
+      // the editor's value: its own (lastRaw) when the field's is what it
+      // emitted (lastOut: made by the plugins' output) — its echo, no change
+      inner = () => (lastOut !== undefined && model.value === lastOut ? lastRaw : model.value),
       helpVisible = ref(false),
       helpExpanded = ref(false),
       extensions = [
@@ -359,8 +365,12 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
         editorComp = (
           <VuetifyTiptap
             class={props.label ? 'rounded-t-0' : (detailComp ? 'rounded-b-0' : undefined)}
-            model-value={model.value}
-            onUpdate:modelValue={(v: any) => emit('update:modelValue', output(v))}
+            model-value={inner()}
+            onUpdate:modelValue={(v: any) => {
+              lastRaw = v
+              lastOut = output(v)
+              emit('update:modelValue', lastOut)
+            }}
             output={props.output}
             dense={props.dense}
             max-height={props.maxHeight}

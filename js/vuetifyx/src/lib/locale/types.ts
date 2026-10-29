@@ -539,4 +539,24 @@ export interface VxMessages {
   mdkitMarkdownFullscreen: string
   /** Editors of a text (mdkit), markdown: helpUrl. */
   mdkitMarkdownHelpUrl: string
+  /** Editors of a text (mdkit), card: button. */
+  mdkitCardButton: string
+  /** Editors of a text (mdkit), card: title. */
+  mdkitCardTitle: string
+  /** Editors of a text (mdkit), card: search. */
+  mdkitCardSearch: string
+  /** Editors of a text (mdkit), card: useAddress. */
+  mdkitCardUseAddress: string
+  /** Editors of a text (mdkit), card: none. */
+  mdkitCardNone: string
+  /** Editors of a text (mdkit), card: hint. */
+  mdkitCardHint: string
+  /** Editors of a text (mdkit), card: cancel. */
+  mdkitCardCancel: string
+  /** Editors of a text (mdkit), card: remove. */
+  mdkitCardRemove: string
+  /** Editors of a text (mdkit), card: pages. */
+  mdkitCardPages: string
+  /** Editors of a text (mdkit), card: posts. */
+  mdkitCardPosts: string
 }

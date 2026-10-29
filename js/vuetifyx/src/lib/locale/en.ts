@@ -268,7 +268,17 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitMarkdownTable: "Table",
   mdkitMarkdownRule: "Horizontal line",
   mdkitMarkdownFullscreen: "Full screen",
-  mdkitMarkdownHelpUrl: "https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax"
+  mdkitMarkdownHelpUrl: "https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax",
+  mdkitCardButton: "Link card",
+  mdkitCardTitle: "Link card",
+  mdkitCardSearch: "Search, or type an address of the site (/…)",
+  mdkitCardUseAddress: "Use the address",
+  mdkitCardNone: "Nothing found.",
+  mdkitCardHint: "The card shows the title, the cover and the summary, in the language of the page.",
+  mdkitCardCancel: "Cancel",
+  mdkitCardRemove: "Remove the card",
+  mdkitCardPages: "Pages of the site",
+  mdkitCardPosts: "Posts of the site",
 }
 
 export default messages

@@ -75,7 +75,8 @@ func (b *VXTipTapEditorBuilder) Translator(v any) *VXTipTapEditorBuilder {
 }
 
 // Plugins are the plugins of the editor, by name — rvq's: "footnotes" (the
-// footnotes builder of mdkit), "tables" (its table builder, a sheet); an
+// footnotes builder of mdkit), "tables" (its table builder, a sheet),
+// "cards" (its link cards: a page of the site, a record of the admin); an
 // application's (window.vxRegisterTiptapPlugin) —.
 func (b *VXTipTapEditorBuilder) Plugins(names ...string) *VXTipTapEditorBuilder {
 	return b.Attr(":plugins", names)

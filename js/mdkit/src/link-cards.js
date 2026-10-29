@@ -22,6 +22,18 @@ export function safeHref(href, origin = (typeof location !== 'undefined' ? locat
   return ''
 }
 
+// targetRe is what a card may link: a path of the site (not //host), or a
+// record path of the admin (admin:…:, an action after) — x/markup's rule.
+const targetRe = /^(\/|\/[^/\\\s"'<>][^\s"'<>]*|admin:[^\s"'\\]*:(![A-Za-z0-9_]+)?)$/
+
+// cardTarget is the target of a card of text — typed or pasted: a path of
+// the site, an address of this site (its path), a record path —; '', none.
+export function cardTarget(text, origin = (typeof location !== 'undefined' ? location.origin : '')) {
+  let t = String(text || '').trim()
+  if (origin && (t === origin || t.startsWith(origin + '/'))) t = t.slice(origin.length) || '/'
+  return targetRe.test(t) ? t : ''
+}
+
 // cardsOf is the map of the cards of what the server answered.
 export function cardsOf(out) {
   if (!out || typeof out !== 'object') return {}
@@ -104,23 +116,32 @@ export function metaResolver(doc = (typeof document !== 'undefined' ? document :
   }
 }
 
+// known are the cards asked of a resolver, by target (null: none): a text
+// drawn again (a preview) asks nothing again.
+const known = new WeakMap()
+
 // linkCards draws the cards under root not drawn yet, asking resolve for
-// their targets (all of them at once).
+// the targets it was not asked for yet (all of them at once).
 export async function linkCards(root, resolve) {
   if (!root || !resolve) return
   style()
   const els = [...root.querySelectorAll('.' + cardClass + '[data-href]:not([data-card])')]
   if (!els.length) return
   els.forEach((el) => el.setAttribute('data-card', 'asked'))
-  const targets = [...new Set(els.map((el) => el.getAttribute('data-href')))]
-  let cards = {}
-  try {
-    cards = (await resolve(targets)) || {}
-  } catch (e) {
-    cards = {}
+  if (!known.has(resolve)) known.set(resolve, new Map())
+  const cache = known.get(resolve)
+  const targets = [...new Set(els.map((el) => el.getAttribute('data-href')))].filter((t) => !cache.has(t))
+  if (targets.length) {
+    let cards = {}
+    try {
+      cards = (await resolve(targets)) || {}
+    } catch (e) {
+      cards = {}
+    }
+    targets.forEach((t) => cache.set(t, cards[t] || null))
   }
   for (const el of els) {
-    if (!drawCard(el, cards[el.getAttribute('data-href')])) el.setAttribute('data-card', 'none')
+    if (!drawCard(el, cache.get(el.getAttribute('data-href')))) el.setAttribute('data-card', 'none')
   }
 }
 

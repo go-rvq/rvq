@@ -86,7 +86,7 @@ func (b *Builder) WrapEditor(f func(ctx *presets.FieldContext, comp *vx.VXTipTap
 }
 
 // Plugins are the plugins of its editors (vx VXTipTapEditorBuilder.Plugins):
-// "footnotes", "tables", an application's.
+// "footnotes", "tables", "cards", an application's.
 func (b *Builder) Plugins(names ...string) *Builder {
 	b.plugins = append(b.plugins, names...)
 	return b

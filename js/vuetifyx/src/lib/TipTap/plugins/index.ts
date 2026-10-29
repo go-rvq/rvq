@@ -2,7 +2,7 @@
 // VXTipTapEditorBuilder.Plugins and TiptapBuilder.Plugins), each its
 // extensions — with their buttons on the bar — and what it makes of the HTML
 // the field keeps (output). Registered here: footnotes, tables (rvq mdkit's
-// builders); an application registers its own (registerTiptapPlugin).
+// builders), cards (its link cards); an application registers its own (registerTiptapPlugin).
 import type {AnyExtension} from '@tiptap/core'
 
 export interface TiptapPluginContext {
@@ -32,6 +32,8 @@ export function tiptapPlugins(names: readonly string[] = []): TiptapPlugin[] {
 // the plugins of rvq: the footnotes and the tables of mdkit
 import footnotes from './footnotes'
 import tablesPlugin from './tables'
+import cards from './cards'
 
 registerTiptapPlugin('footnotes', footnotes)
 registerTiptapPlugin('tables', tablesPlugin)
+registerTiptapPlugin('cards', cards)
