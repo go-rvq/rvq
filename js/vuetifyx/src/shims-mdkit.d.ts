@@ -19,6 +19,9 @@ declare module '@rvq/mdkit' {
   export const components: Record<string, any>
   export const LinkCard: any
   export const LinkCardPicker: any
+  export const LinkPicker: any
+  export const LinkForm: any
+  export function hrefOf(target: string): Promise<string>
   export function cardTarget(text: string, origin?: string): string
   export function metaSearch(doc?: Document): ((q: string) => Promise<any[]>) | null
   export function linkCards(root: Element, resolve: (targets: string[]) => Promise<Record<string, any>>): Promise<void>

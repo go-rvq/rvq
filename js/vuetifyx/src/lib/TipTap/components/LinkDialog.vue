@@ -1,12 +1,14 @@
 <script setup lang="ts">
+// The dialog of the link button of vx-tiptap-editor (vuetify-pro-tiptap's
+// Link: its dialogComponent, the button its activator): rvq mdkit's link
+// form — an address typed, or a page of the site or a record of the admin
+// found as one types (a record: its address in the admin); a new tab or
+// not; the link taken out.
 import type {Editor} from '@tiptap/vue-3'
-import {computed, ref, watch} from 'vue'
-import {locale} from 'vuetify-pro-tiptap'
-
-interface LinkAttrs {
-  href?: string
-  target?: '_self' | '_blank'
-}
+import {ref} from 'vue'
+import {LinkForm} from '@rvq/mdkit'
+import {useI18n} from '@/lib/locale'
+import {mdkitWords} from '@/lib/locale/mdkit'
 
 interface Props {
   value?: string
@@ -21,74 +23,37 @@ const props = withDefaults(defineProps<Props>(), {
   destroy: undefined
 })
 
-const generateLinkAttrs = (): LinkAttrs => ({
-  href: '',
-  target: '_blank'
-})
-
-const attrs = ref(generateLinkAttrs())
-
+const {t} = useI18n()
+const words = mdkitWords(t).link
 const dialog = ref<boolean>(false)
 
-const isDisabled = computed(() => {
-  const { href, target } = attrs.value
-  if (!href) return true
+function apply(link: { href: string, target: string | null }) {
+  props.editor.chain().focus().extendMarkRange('link').setLink({href: link.href, target: link.target}).run()
+  close()
+}
 
-  return props.value === href && props.target === target
-})
-
-function apply() {
-  const { href, target } = attrs.value
-
-  if (href) {
-    props.editor.chain().focus().extendMarkRange('link').setLink({ href, target }).run()
-  }
+function remove() {
+  props.editor.chain().focus().extendMarkRange('link').unsetLink().run()
   close()
 }
 
 function close() {
   dialog.value = false
-  attrs.value = generateLinkAttrs()
-
   setTimeout(() => props.destroy?.(), 300)
 }
-
-watch(dialog, val => {
-  if (!val) return
-
-  attrs.value = {
-    href: props.value,
-    target: props.target
-  }
-})
 </script>
 
 <template>
-  <VDialog v-model="dialog" max-width="400" activator="parent" @click:outside="close">
+  <VDialog v-model="dialog" max-width="560" activator="parent" scrollable @click:outside="close" data-tiptap-link-dialog>
     <VCard>
-      <VToolbar class="px-6" density="compact">
-        <span class="headline">{{ locale.message[locale.lang]['editor.link.dialog.title'] }}</span>
-
-        <VSpacer />
-
-        <VBtn class="mx-0" icon @click="close">
-          <VIcon icon="$close" />
-        </VBtn>
-      </VToolbar>
-
+      <VCardTitle class="d-flex align-center ga-2">
+        <VIcon icon="mdi-link-variant"/>
+        {{ words.title }}
+      </VCardTitle>
       <VCardText>
-        <div>This is a custom dialog component;</div>
-
-        <div>please use the <strong>dialogComponent</strong> parameter.</div>
-
-        <VTextField v-model="attrs.href" :label="locale.message[locale.lang]['editor.link.dialog.link']" autofocus />
+        <LinkForm v-if="dialog" :href="value || ''" :target="value ? (target || '') : '_blank'" :linked="!!value" :words="words"
+                  @apply="apply" @remove="remove" @cancel="close"/>
       </VCardText>
-
-      <VCardActions>
-        <VBtn :disabled="isDisabled" @click="apply">
-          {{ locale.message[locale.lang]['editor.link.dialog.button.apply'] }}
-        </VBtn>
-      </VCardActions>
     </VCard>
   </VDialog>
 </template>

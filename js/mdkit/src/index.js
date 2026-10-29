@@ -11,6 +11,7 @@ import MarkdownEditor from './markdown-editor.js'
 import TableBuilder from './table-builder.js'
 import FootnoteBuilder from './footnote-builder.js'
 import LinkCardPicker from './link-card-picker.js'
+import LinkPicker, { LinkForm } from './link-picker.js'
 import { config, configure, wordsOf } from './config.js'
 import { textStyle } from './text-style.js'
 import { footnoteBalloons } from './balloons.js'
@@ -25,6 +26,7 @@ export { tiptapFootnoteAdapter } from './footnote-adapter.js'
 export { linkCards, watchLinkCards, metaResolver, drawCard, safeHref, cardClass, cardTarget } from './link-cards.js'
 export { LinkCard } from './link-card-tiptap.js'
 export { default as LinkCardPicker, metaSearch } from './link-card-picker.js'
+export { default as LinkPicker, LinkForm, hrefOf } from './link-picker.js'
 
 // components are the components, by their names after the prefix
 export const components = {
@@ -33,6 +35,8 @@ export const components = {
   'table-builder': TableBuilder,
   'footnote-builder': FootnoteBuilder,
   'link-card-picker': LinkCardPicker,
+  'link-picker': LinkPicker,
+  'link-form': LinkForm,
 }
 
 // install gives app the components, named prefix-… (mdkit-rich-editor, …)

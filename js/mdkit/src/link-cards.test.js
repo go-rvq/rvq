@@ -30,3 +30,12 @@ test('the target of a card typed or pasted: a path, an address of the site, a re
     expect(cardTarget(bad, o)).toBe('')
   }
 })
+
+test('the address of a link chosen: a path as it is; a record, its address in the admin', async () => {
+  const { hrefOf } = await import('./link-picker.js')
+  const resolve = async (targets) => Object.fromEntries(targets.map((t) => [t, { href: '/admin/posts/1', title: 'A post' }]))
+  expect(await hrefOf('/en-us/about', resolve)).toBe('/en-us/about')
+  expect(await hrefOf('admin:posts:<1>:', resolve)).toBe('/admin/posts/1')
+  expect(await hrefOf('admin:posts:<2>:', async () => ({}))).toBe('')
+  expect(await hrefOf('admin:posts:<2>:', null)).toBe('')
+})

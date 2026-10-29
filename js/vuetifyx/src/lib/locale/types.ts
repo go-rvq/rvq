@@ -559,4 +559,24 @@ export interface VxMessages {
   mdkitCardPages: string
   /** Editors of a text (mdkit), card: posts. */
   mdkitCardPosts: string
+  /** Editors of a text (mdkit), link: title. */
+  mdkitLinkTitle: string
+  /** Editors of a text (mdkit), link: address. */
+  mdkitLinkAddress: string
+  /** Editors of a text (mdkit), link: search. */
+  mdkitLinkSearch: string
+  /** Editors of a text (mdkit), link: newTab. */
+  mdkitLinkNewTab: string
+  /** Editors of a text (mdkit), link: apply. */
+  mdkitLinkApply: string
+  /** Editors of a text (mdkit), link: remove. */
+  mdkitLinkRemove: string
+  /** Editors of a text (mdkit), link: cancel. */
+  mdkitLinkCancel: string
+  /** Editors of a text (mdkit), link: none. */
+  mdkitLinkNone: string
+  /** Editors of a text (mdkit), link: pages. */
+  mdkitLinkPages: string
+  /** Editors of a text (mdkit), link: posts. */
+  mdkitLinkPosts: string
 }

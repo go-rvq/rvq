@@ -26,6 +26,7 @@ import TableBuilder from './table-builder.js'
 import FootnoteBuilder from './footnote-builder.js'
 import { tableAt } from './table-model.js'
 import LinkCardPicker from './link-card-picker.js'
+import LinkPicker from './link-picker.js'
 import { cardTarget } from './link-cards.js'
 import * as F from './footnote-model.js'
 import { config, wordsOf } from './config.js'
@@ -134,6 +135,8 @@ export default {
     barWords: { type: Object, default: () => wordsOf('rich') },
     // the words of the link card (its button, its picker)
     cardWords: { type: Object, default: () => wordsOf('card') },
+    // the words of the link (its picker)
+    linkWords: { type: Object, default: () => wordsOf('link') },
     inputId: { type: String, default: '' },
     path: { type: String, default: '' },
     // its pictures: sent at once (an address, or a function of the FormData
@@ -167,13 +170,14 @@ export default {
       ]
     },
   },
-  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker },
+  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker },
   template: `
 <div class="mdkit-markdown-editor" :class="{ invalid, disabled }" data-markdown-editor>
   <textarea ref="area" :id="inputId || undefined" :data-path="path || undefined"></textarea>
   <mdkit-table-builder ref="tables" :image="canImage ? imageText : null" :render="preview ? renderHTML : null"
     :footnote="footnotePick"></mdkit-table-builder>
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
+  <mdkit-link-picker ref="links" :words="linkWords" :targets="false"></mdkit-link-picker>
   <mdkit-footnote-builder ref="footnotes" :render="preview ? renderHTML : null"></mdkit-footnote-builder>
   <v-dialog v-model="helping" max-width="620" scrollable data-markdown-help>
     <v-card>
@@ -230,7 +234,8 @@ export default {
       button('quote', EasyMDE.toggleBlockquote, 'mdi-format-quote-close', t('quote', 'Quote')),
       button('code', EasyMDE.toggleCodeBlock, 'mdi-code-braces', t('code', 'Code')),
       '|',
-      button('link', EasyMDE.drawLink, 'mdi-link-variant', t('link', 'Link')),
+      // a link: an address, or a page or a record found (the picker)
+      button('link', () => this.openLink(), 'mdi-link-variant', t('link', 'Link')),
       // a page of the site or a record of the admin, as its card: [[target]]
       button('card', () => this.openCard(), 'mdi-card-text-outline', this.cardWords.button || 'Link card'),
       ...(this.canImage ? [button('image', () => this.chooseImages(), 'mdi-image-plus', t('image', 'Picture'))] : []),
@@ -557,6 +562,22 @@ export default {
       const before = line.slice(0, pos.ch).trim() ? '\n\n' : ''
       const after = line.slice(pos.ch).trim() ? '\n\n' : ''
       return before + '[[' + target + ']]' + after
+    },
+    // openLink picks the address of a link (the picker): [the text chosen —
+    // else the page's title, the address —](address) in its place
+    openLink() {
+      const cm = this.mde.codemirror
+      const from = cm.getCursor('from')
+      const to = cm.getCursor('to')
+      const text = cm.getRange(from, to)
+      // a link chosen whole: its address there
+      const m = /^\[([^\]]*)\]\(([^)\s]*)\)$/.exec(text)
+      this.$refs.links.open({ href: m ? m[2] : '' }, (link) => {
+        if (!link) return
+        const label = (m ? m[1] : text) || link.title || link.href
+        cm.replaceRange('[' + label.replace(/[[\]]/g, '') + '](' + link.href.replace(/[\s)]/g, (c) => encodeURIComponent(c)) + ')', from, to)
+        cm.focus()
+      })
     },
     // openCard picks a page or a record (the picker); its card at the cursor
     openCard() {

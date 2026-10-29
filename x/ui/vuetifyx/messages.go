@@ -307,6 +307,16 @@ type Messages struct {
 	MdkitCardRemove             string `json:"mdkitCardRemove" i18n:"hint='Editors of a text (mdkit), card: remove.'"`
 	MdkitCardPages              string `json:"mdkitCardPages" i18n:"hint='Editors of a text (mdkit), card: pages.'"`
 	MdkitCardPosts              string `json:"mdkitCardPosts" i18n:"hint='Editors of a text (mdkit), card: posts.'"`
+	MdkitLinkTitle              string `json:"mdkitLinkTitle" i18n:"hint='Editors of a text (mdkit), link: title.'"`
+	MdkitLinkAddress            string `json:"mdkitLinkAddress" i18n:"hint='Editors of a text (mdkit), link: address.'"`
+	MdkitLinkSearch             string `json:"mdkitLinkSearch" i18n:"hint='Editors of a text (mdkit), link: search.'"`
+	MdkitLinkNewTab             string `json:"mdkitLinkNewTab" i18n:"hint='Editors of a text (mdkit), link: newTab.'"`
+	MdkitLinkApply              string `json:"mdkitLinkApply" i18n:"hint='Editors of a text (mdkit), link: apply.'"`
+	MdkitLinkRemove             string `json:"mdkitLinkRemove" i18n:"hint='Editors of a text (mdkit), link: remove.'"`
+	MdkitLinkCancel             string `json:"mdkitLinkCancel" i18n:"hint='Editors of a text (mdkit), link: cancel.'"`
+	MdkitLinkNone               string `json:"mdkitLinkNone" i18n:"hint='Editors of a text (mdkit), link: none.'"`
+	MdkitLinkPages              string `json:"mdkitLinkPages" i18n:"hint='Editors of a text (mdkit), link: pages.'"`
+	MdkitLinkPosts              string `json:"mdkitLinkPosts" i18n:"hint='Editors of a text (mdkit), link: posts.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -584,6 +594,16 @@ var Messages_en_US = &Messages{
 	MdkitCardRemove:             "Remove the card",
 	MdkitCardPages:              "Pages of the site",
 	MdkitCardPosts:              "Posts of the site",
+	MdkitLinkTitle:              "Link",
+	MdkitLinkAddress:            "Address",
+	MdkitLinkSearch:             "Search a page or a record",
+	MdkitLinkNewTab:             "Open in a new tab",
+	MdkitLinkApply:              "Apply",
+	MdkitLinkRemove:             "Remove the link",
+	MdkitLinkCancel:             "Cancel",
+	MdkitLinkNone:               "Nothing found.",
+	MdkitLinkPages:              "Pages of the site",
+	MdkitLinkPosts:              "Posts of the site",
 }
 
 var Messages_pt_BR = &Messages{
@@ -861,6 +881,16 @@ var Messages_pt_BR = &Messages{
 	MdkitCardRemove:             "Tirar o cartão",
 	MdkitCardPages:              "Páginas do site",
 	MdkitCardPosts:              "Posts do site",
+	MdkitLinkTitle:              "Link",
+	MdkitLinkAddress:            "Endereço",
+	MdkitLinkSearch:             "Buscar uma página ou um registro",
+	MdkitLinkNewTab:             "Abrir em nova aba",
+	MdkitLinkApply:              "Aplicar",
+	MdkitLinkRemove:             "Tirar o link",
+	MdkitLinkCancel:             "Cancelar",
+	MdkitLinkNone:               "Nada encontrado.",
+	MdkitLinkPages:              "Páginas do site",
+	MdkitLinkPosts:              "Posts do site",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

@@ -279,6 +279,16 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitCardRemove: "Tirar o cartão",
   mdkitCardPages: "Páginas do site",
   mdkitCardPosts: "Posts do site",
+  mdkitLinkTitle: "Link",
+  mdkitLinkAddress: "Endereço",
+  mdkitLinkSearch: "Buscar uma página ou um registro",
+  mdkitLinkNewTab: "Abrir em nova aba",
+  mdkitLinkApply: "Aplicar",
+  mdkitLinkRemove: "Tirar o link",
+  mdkitLinkCancel: "Cancelar",
+  mdkitLinkNone: "Nada encontrado.",
+  mdkitLinkPages: "Páginas do site",
+  mdkitLinkPosts: "Posts do site",
 }
 
 export default messages

@@ -153,6 +153,18 @@ export const mdkitKeys: Record<string, Record<string, string>> = {
     pages: 'mdkitCardPages',
     posts: 'mdkitCardPosts',
   },
+  link: {
+    title: 'mdkitLinkTitle',
+    address: 'mdkitLinkAddress',
+    search: 'mdkitLinkSearch',
+    newTab: 'mdkitLinkNewTab',
+    apply: 'mdkitLinkApply',
+    remove: 'mdkitLinkRemove',
+    cancel: 'mdkitLinkCancel',
+    none: 'mdkitLinkNone',
+    pages: 'mdkitLinkPages',
+    posts: 'mdkitLinkPosts',
+  },
 }
 
 export function mdkitWords(t: (key: string) => string): Record<string, Record<string, string>> {

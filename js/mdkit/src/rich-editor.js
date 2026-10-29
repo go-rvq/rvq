@@ -30,6 +30,7 @@ import { Placeholder } from '@tiptap/extensions'
 import { FootnoteRef, Footnotes, numbers } from './footnote-tiptap.js'
 import { LinkCard } from './link-card-tiptap.js'
 import LinkCardPicker from './link-card-picker.js'
+import LinkPicker from './link-picker.js'
 import { finalize } from './footnote-rich.js'
 import FootnoteBuilder from './footnote-builder.js'
 import { tiptapFootnoteAdapter } from './footnote-adapter.js'
@@ -139,11 +140,13 @@ const RichEditor = {
     words: { type: Object, default: () => wordsOf('rich') },
     // the words of the link card (its button, its picker, its bin)
     cardWords: { type: Object, default: () => wordsOf('card') },
+    // the words of the link (its picker)
+    linkWords: { type: Object, default: () => wordsOf('link') },
   },
   emits: ['update:modelValue', 'file'],
-  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker },
+  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker },
   data: () => ({
-    active: {}, notice: '', linking: false, link: '',
+    active: {}, notice: '',
     sizes: { show: false, target: null, width: null, small: false },
   }),
   computed: {
@@ -156,6 +159,7 @@ const RichEditor = {
   template: `
 <v-theme-provider theme="light" with-background class="mdkit-rich-editor" data-rich-editor>
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
+  <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>
   <mdkit-footnote-builder v-if="footnotes" ref="footnoteBuilder" :note-editor="noteEditor"></mdkit-footnote-builder>
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
@@ -179,12 +183,6 @@ const RichEditor = {
       <v-btn icon="mdi-redo" size="small" variant="text" density="comfortable"
         :disabled="disabled" @mousedown.prevent @click="run('redo')"><v-icon icon="mdi-redo"></v-icon><v-tooltip activator="parent" location="top" :text="words.redo || 'redo'"></v-tooltip></v-btn>
     </v-toolbar>
-    <div v-if="linking" class="d-flex ga-2 align-center px-2 py-1" data-rich-editor-link>
-      <v-text-field v-model="link" type="url" density="compact" hide-details variant="outlined"
-        :placeholder="words.linkPrompt || 'https://…'" @keydown.enter.prevent="setLink"></v-text-field>
-      <v-btn size="small" color="primary" variant="tonal" @click="setLink">{{ words.linkSet || 'OK' }}</v-btn>
-      <v-btn size="small" variant="text" @click="linking = false">{{ words.cancel || 'Cancel' }}</v-btn>
-    </div>
     <v-divider></v-divider>
     <div ref="area" class="px-3 py-2" :class="{ 'opacity-60': disabled }"></div>
   </v-sheet>
@@ -316,14 +314,14 @@ const RichEditor = {
       const b = bar.find((x) => x[0] === key)
       if (b) b[2](c).run()
     },
+    // openLink picks the link of the text chosen (the picker: an address, a
+    // page found; a new tab or not), or takes it out
     openLink() {
-      this.link = this.editor.getAttributes('link').href || ''
-      this.linking = true
-    },
-    setLink() {
-      const c = this.editor.chain().focus().extendMarkRange('link')
-      ;(this.link ? c.setLink({ href: this.link }) : c.unsetLink()).run()
-      this.linking = false
+      const { href, target } = this.editor.getAttributes('link')
+      this.$refs.links.open({ href, target }, (link) => {
+        const c = this.editor.chain().focus().extendMarkRange('link')
+        ;(link ? c.setLink({ href: link.href, target: link.target }) : c.unsetLink()).run()
+      })
     },
     // mark sets what is on, and the sizes of the picture selected
     mark() {
