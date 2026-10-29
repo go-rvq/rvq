@@ -46,6 +46,7 @@ declare module 'vue' {
     LinkageSelect: typeof import('./src/lib/LinkageSelect.vue')['default']
     LinkageSelectExample: typeof import('./src/demo/components/LinkageSelectExample.vue')['default']
     LinkageSelectItem: typeof import('./src/lib/Filter/components/LinkageSelectItem.vue')['default']
+    LinkCardAction: typeof import('./src/lib/TipTap/components/LinkCardAction.vue')['default']
     LinkDialog: typeof import('./src/lib/TipTap/components/LinkDialog.vue')['default']
     MapsKeyTest: typeof import('./src/lib/MapsKeyTest.vue')['default']
     MessageListener: typeof import('./src/lib/MessageListener.vue')['default']
