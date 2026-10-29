@@ -11,7 +11,11 @@
 // the text, the default — or not — as wide as its columns, placed left,
 // center or right (its class: mdkit-fit mdkit-<position>; HTML too) —.
 //
-//	{ rows, cols, cells: [[text]], merges: [{ r, c, rs, cs }], header, aligns: ['' | 'left' | 'center' | 'right'], widths: ['' | '120' | '25%'], fluid, position: 'left' | 'center' | 'right' }
+// A cell's content placed on its own: across (halign, over its column's
+// align) and up and down (valign: top, middle, bottom); with any, HTML (align,
+// valign on the cell).
+//
+//	{ rows, cols, cells: [[text]], merges: [{ r, c, rs, cs }], header, aligns: ['' | 'left' | 'center' | 'right'], widths: ['' | '120' | '25%'], fluid, position: 'left' | 'center' | 'right', halign: [['' | 'left' | 'center' | 'right']], valign: [['' | 'top' | 'middle' | 'bottom']] }
 
 // create is a table of rows × cols, empty, its first row the header.
 export function create(rows = 3, cols = 3) {
@@ -19,9 +23,12 @@ export function create(rows = 3, cols = 3) {
     rows, cols,
     cells: Array.from({ length: rows }, () => Array(cols).fill('')),
     merges: [], header: true, aligns: Array(cols).fill(''), widths: Array(cols).fill(''),
-    fluid: true, position: 'left',
+    fluid: true, position: 'left', halign: grid(rows, cols), valign: grid(rows, cols),
   }
 }
+
+// grid is rows × cols of ''.
+const grid = (rows, cols) => Array.from({ length: rows }, () => Array(cols).fill(''))
 
 const positions = ['left', 'center', 'right']
 
@@ -43,6 +50,9 @@ export function normalize(t) {
   const fit = (a) => Array.from({ length: t.cols }, (_, i) => (a && a[i]) || '')
   t.aligns = fit(t.aligns)
   t.widths = fit(t.widths)
+  const fitGrid = (g) => Array.from({ length: t.rows }, (_, r) => fit(g && g[r]))
+  t.halign = fitGrid(t.halign)
+  t.valign = fitGrid(t.valign)
   if (t.fluid === undefined) t.fluid = true
   if (!positions.includes(t.position)) t.position = 'left'
   return t
@@ -71,6 +81,8 @@ function clean(t) {
 // within grows.
 export function insertRow(t, at) {
   t.cells.splice(at, 0, Array(t.cols).fill(''))
+  t.halign.splice(at, 0, Array(t.cols).fill(''))
+  t.valign.splice(at, 0, Array(t.cols).fill(''))
   for (const m of t.merges) {
     if (m.r >= at) m.r++
     else if (at < m.r + m.rs) m.rs++
@@ -83,9 +95,13 @@ export function insertRow(t, at) {
 export function removeRow(t, at) {
   if (t.rows <= 1) return
   for (const m of t.merges) {
-    if (m.r === at && m.rs > 1) t.cells[at + 1][m.c] = t.cells[at][m.c]
+    if (m.r === at && m.rs > 1) {
+      for (const g of [t.cells, t.halign, t.valign]) g[at + 1][m.c] = g[at][m.c]
+    }
   }
   t.cells.splice(at, 1)
+  t.halign.splice(at, 1)
+  t.valign.splice(at, 1)
   for (const m of t.merges) {
     if (m.r > at) m.r--
     else if (at < m.r + m.rs) m.rs--
@@ -96,7 +112,7 @@ export function removeRow(t, at) {
 
 // insertCol puts an empty column at the index at (0..cols).
 export function insertCol(t, at) {
-  for (const row of t.cells) row.splice(at, 0, '')
+  for (const row of [...t.cells, ...t.halign, ...t.valign]) row.splice(at, 0, '')
   t.aligns.splice(at, 0, '')
   t.widths.splice(at, 0, '')
   for (const m of t.merges) {
@@ -110,9 +126,11 @@ export function insertCol(t, at) {
 export function removeCol(t, at) {
   if (t.cols <= 1) return
   for (const m of t.merges) {
-    if (m.c === at && m.cs > 1) t.cells[m.r][at + 1] = t.cells[m.r][at]
+    if (m.c === at && m.cs > 1) {
+      for (const g of [t.cells, t.halign, t.valign]) g[m.r][at + 1] = g[m.r][at]
+    }
   }
-  for (const row of t.cells) row.splice(at, 1)
+  for (const row of [...t.cells, ...t.halign, ...t.valign]) row.splice(at, 1)
   t.aligns.splice(at, 1)
   t.widths.splice(at, 1)
   for (const m of t.merges) {
@@ -155,6 +173,7 @@ export function merge(t, r1, c1, r2, c2) {
     for (let c = s.c1; c <= s.c2; c++) {
       if (!covered(t, r, c) && t.cells[r][c].trim()) texts.push(t.cells[r][c].trim())
       t.cells[r][c] = ''
+      if (r !== s.r1 || c !== s.c1) t.halign[r][c] = t.valign[r][c] = ''
     }
   }
   t.merges = t.merges.filter((m) => !(m.r >= s.r1 && m.r <= s.r2 && m.c >= s.c1 && m.c <= s.c2))
@@ -170,8 +189,20 @@ export function unmerge(t, r, c) {
   return !!m
 }
 
-// gfm says the table is Markdown's (GFM): a header, no merged cell, no width.
-export const gfm = (t) => t.header && t.merges.length === 0 && !(t.widths || []).some((w) => w) && t.fluid !== false
+// placed says a cell has its content placed on its own (halign, valign).
+const placed = (t) => [...(t.halign || []), ...(t.valign || [])].some((row) => row.some((a) => a))
+
+// gfm says the table is Markdown's (GFM): a header, no merged cell, no width,
+// no cell placed on its own.
+export const gfm = (t) => t.header && t.merges.length === 0 && !(t.widths || []).some((w) => w) && t.fluid !== false && !placed(t)
+
+// cellAlign is where the content of the cell (r, c) goes across: its own, else
+// its column's ('' the default).
+export const cellAlign = (t, r, c) => (t.halign && t.halign[r] && t.halign[r][c]) || t.aligns[c] || ''
+
+// cellVAlign is where the content of the cell (r, c) goes up and down ('' the
+// default).
+export const cellVAlign = (t, r, c) => (t.valign && t.valign[r] && t.valign[r][c]) || ''
 
 // pipeCell is a cell of a line of GFM: its pipes escaped, its lines broken
 // by <br>
@@ -208,7 +239,8 @@ export function toHTML(t) {
       let attrs = ''
       if (m && m.cs > 1) attrs += ` colspan="${m.cs}"`
       if (m && m.rs > 1) attrs += ` rowspan="${m.rs}"`
-      if (t.aligns[c]) attrs += ` align="${t.aligns[c]}"`
+      if (cellAlign(t, r, c)) attrs += ` align="${cellAlign(t, r, c)}"`
+      if (cellVAlign(t, r, c)) attrs += ` valign="${cellVAlign(t, r, c)}"`
       // its Markdown between blank lines: read as Markdown within the HTML
       // (CommonMark: a block of HTML ends at a blank line); plain text, as it is
       const text = (t.cells[r][c] || '').trim()
@@ -266,7 +298,10 @@ export function fromMarkdown(lines) {
   const fit = (cells) => Array.from({ length: cols }, (_, i) => cells[i] || '')
   const br = (cells) => cells.map((x) => x.replace(/<br\s*\/?>/gi, '\n'))
   const cells = [head, ...lines.slice(2).map(splitRow)].map(fit).map(br)
-  return { rows: cells.length, cols, cells, merges: [], header: true, aligns, widths: Array(cols).fill(''), fluid: true, position: 'left' }
+  return {
+    rows: cells.length, cols, cells, merges: [], header: true, aligns, widths: Array(cols).fill(''), fluid: true, position: 'left',
+    halign: grid(cells.length, cols), valign: grid(cells.length, cols),
+  }
 }
 
 // inlineMarkdown is the content of a cell of HTML as Markdown: the table
@@ -290,13 +325,16 @@ function inlineMarkdown(html) {
 
 // fromHTML is the table of the HTML of a table: its rows, its cells (th, td)
 // in place — their spans the merges —, its header (a first row of th), its
-// columns' alignment (the first cell's align); null, no row.
+// columns' alignment (the align all its cells have), its cells' own (align —
+// or a style text-align — other than their column's; valign, or a style
+// vertical-align); null, no row.
 export function fromHTML(html) {
   const rowsHTML = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) => m[1])
   if (!rowsHTML.length) return null
   const grid = []
   const merges = []
-  const aligns = []
+  const hs = []
+  const vs = []
   let header = false
   rowsHTML.forEach((rowHTML, r) => {
     grid[r] = grid[r] || []
@@ -308,8 +346,10 @@ export function fromHTML(html) {
       const num = (name) => Math.max(1, parseInt((new RegExp(name + '\\s*=\\s*"?(\\d+)', 'i').exec(attrs) || [])[1] || '1', 10))
       const cs = num('colspan')
       const rs = num('rowspan')
-      const align = (/align\s*=\s*"?(left|center|right)/i.exec(attrs) || [])[1] || ''
-      if (align && aligns[c] === undefined) aligns[c] = align.toLowerCase()
+      const align = (/(?:\balign\s*=\s*"?|text-align\s*:\s*)(left|center|right)/i.exec(attrs) || [])[1] || ''
+      const valign = (/(?:\bvalign\s*=\s*"?|vertical-align\s*:\s*)(top|middle|bottom)/i.exec(attrs) || [])[1] || ''
+      hs.push({ r, c, a: align.toLowerCase() })
+      vs.push({ r, c, a: valign.toLowerCase() })
       for (let i = 0; i < rs; i++) {
         grid[r + i] = grid[r + i] || []
         for (let j = 0; j < cs; j++) grid[r + i][c + j] = i === 0 && j === 0 ? inlineMarkdown(inner) : ''
@@ -338,11 +378,21 @@ export function fromHTML(html) {
     }
   }
   const cells = grid.map((row) => Array.from({ length: cols }, (_, i) => row[i] ?? ''))
+  // a column's alignment: the one all its cells have; a cell's other, its own
+  const aligns = Array.from({ length: cols }, (_, c) => {
+    const of = hs.filter((h) => h.c === c).map((h) => h.a)
+    return of.length && of.every((a) => a === of[0]) ? of[0] : ''
+  })
+  const halign = Array.from({ length: rows }, () => Array(cols).fill(''))
+  const valign = Array.from({ length: rows }, () => Array(cols).fill(''))
+  for (const h of hs) if (h.a !== aligns[h.c]) halign[h.r][h.c] = h.a || 'left'
+  for (const v of vs) valign[v.r][v.c] = v.a
   return {
     ...layoutOf((/<table\b[^>]*\bclass\s*=\s*"([^"]*)"/i.exec(html) || [])[1]),
     rows, cols, cells, merges, header,
-    aligns: Array.from({ length: cols }, (_, i) => aligns[i] || ''),
+    aligns,
     widths: Array.from({ length: cols }, (_, i) => widths[i] || ''),
+    halign, valign,
   }
 }
 
@@ -375,8 +425,8 @@ export function tableAt(lines, at) {
 // text (Markdown) made HTML by inline (a paragraph each), the header's th,
 // the merged cells' spans, the widths in pixels of the columns on the cells
 // (colwidth) — a part of the table, none: the table is fluid, a column as
-// wide as it takes —, the alignment of a column on its paragraphs (style
-// text-align).
+// wide as it takes —, where a cell's content goes on the cell (align,
+// valign: the editor's cell attributes, the plugin tables').
 export function toRichHTML(t, inline) {
   const widths = (t.widths || []).map((w) => (/%$/.test(w) ? '' : w || ''))
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
@@ -392,9 +442,10 @@ export function toRichHTML(t, inline) {
       const cw = widths.slice(c, c + cs)
       let attrs = ` colspan="${cs}" rowspan="${rs}"`
       if (cw.some((w) => w)) attrs += ` colwidth="${esc(cw.map((w) => w || '0').join(','))}"`
-      const align = t.aligns[c] ? ` style="text-align: ${t.aligns[c]}"` : ''
+      if (cellAlign(t, r, c)) attrs += ` align="${cellAlign(t, r, c)}"`
+      if (cellVAlign(t, r, c)) attrs += ` valign="${cellVAlign(t, r, c)}"`
       const lines = String(t.cells[r][c] || '').split('\n').map((l) => inline(l)).join('<br>')
-      cells.push(`<${tag}${attrs}><p${align}>${lines}</p></${tag}>`)
+      cells.push(`<${tag}${attrs}><p>${lines}</p></${tag}>`)
     }
     rows.push('<tr>' + cells.join('') + '</tr>')
   }

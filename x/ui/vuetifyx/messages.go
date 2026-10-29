@@ -215,6 +215,10 @@ type Messages struct {
 	MdkitTablePositionLeft      string `json:"mdkitTablePositionLeft" i18n:"hint='Editors of a text (mdkit), table: positionLeft.'"`
 	MdkitTablePositionCenter    string `json:"mdkitTablePositionCenter" i18n:"hint='Editors of a text (mdkit), table: positionCenter.'"`
 	MdkitTablePositionRight     string `json:"mdkitTablePositionRight" i18n:"hint='Editors of a text (mdkit), table: positionRight.'"`
+	MdkitTableValignTop         string `json:"mdkitTableValignTop" i18n:"hint='Editors of a text (mdkit), table: valignTop.'"`
+	MdkitTableValignMiddle      string `json:"mdkitTableValignMiddle" i18n:"hint='Editors of a text (mdkit), table: valignMiddle.'"`
+	MdkitTableValignBottom      string `json:"mdkitTableValignBottom" i18n:"hint='Editors of a text (mdkit), table: valignBottom.'"`
+	MdkitTableCellPlace         string `json:"mdkitTableCellPlace" i18n:"hint='Editors of a text (mdkit), table: cellPlace.'"`
 	MdkitTableModeSheet         string `json:"mdkitTableModeSheet" i18n:"hint='Editors of a text (mdkit), table: modeSheet.'"`
 	MdkitTableModeSplit         string `json:"mdkitTableModeSplit" i18n:"hint='Editors of a text (mdkit), table: modeSplit.'"`
 	MdkitTableModePreview       string `json:"mdkitTableModePreview" i18n:"hint='Editors of a text (mdkit), table: modePreview.'"`
@@ -458,6 +462,10 @@ var Messages_en_US = &Messages{
 	MdkitTablePositionLeft:      "Table on the left",
 	MdkitTablePositionCenter:    "Table in the center",
 	MdkitTablePositionRight:     "Table on the right",
+	MdkitTableValignTop:         "Content at the top",
+	MdkitTableValignMiddle:      "Content in the middle",
+	MdkitTableValignBottom:      "Content at the bottom",
+	MdkitTableCellPlace:         "Place the content of the cells",
 	MdkitTableModeSheet:         "Sheet",
 	MdkitTableModeSplit:         "Side by side",
 	MdkitTableModePreview:       "Preview only",
@@ -701,6 +709,10 @@ var Messages_pt_BR = &Messages{
 	MdkitTablePositionLeft:      "Tabela à esquerda",
 	MdkitTablePositionCenter:    "Tabela ao centro",
 	MdkitTablePositionRight:     "Tabela à direita",
+	MdkitTableValignTop:         "Conteúdo no alto",
+	MdkitTableValignMiddle:      "Conteúdo no meio",
+	MdkitTableValignBottom:      "Conteúdo embaixo",
+	MdkitTableCellPlace:         "Posição do conteúdo das células",
 	MdkitTableModeSheet:         "Planilha",
 	MdkitTableModeSplit:         "Lado a lado",
 	MdkitTableModePreview:       "Só a prévia",

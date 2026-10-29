@@ -26,6 +26,9 @@ const gadResize = resolve(gadDir, 'web/git-vuetify/src/resize/index.ts')
 // the one tiptap (its core, its ProseMirror) of the bundle: vuetifyx's own
 const tiptapCore = realpathSync(resolve(__dirname, 'node_modules/@tiptap/core/dist/index.js'))
 const tiptapPm = realpathSync(resolve(__dirname, 'node_modules/@tiptap/pm'))
+// the ProseMirror of tiptap's pm, for the packages that import it by its own
+// names (prosemirror-tables: its column resizing's decorations)
+const prosemirror = (name: string) => realpathSync(resolve(tiptapPm, '../..', name, 'dist/index.js'))
 if (!existsSync(gadDiff)) throw new Error(`vuetifyx: no ${gadDiff} (set GAD_DIR to a gad checkout with its submodules)`)
 
 // https://vitejs.dev/config/
@@ -114,6 +117,7 @@ export default ({mode}) => {
         // left the nested copies)
         {find: /^@tiptap\/core$/, replacement: tiptapCore},
         {find: /^@tiptap\/pm\/(.+)$/, replacement: tiptapPm + '/dist/$1/index.js'},
+        ...['view', 'state', 'model', 'transform'].map((n) => ({find: new RegExp(`^prosemirror-${n}$`), replacement: prosemirror('prosemirror-' + n)})),
         {find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url))}
       ],
       // one of each — the gad source's imports resolved here, not in its

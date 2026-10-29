@@ -4,7 +4,11 @@ import {Extension} from '@tiptap/core'
 import {Plugin, PluginKey} from '@tiptap/pm/state'
 import {Decoration, DecorationSet} from '@tiptap/pm/view'
 import TableAction from '../components/TableAction.vue'
+import CellPlaceAction from '../components/CellPlaceAction.vue'
 import type {TiptapPlugin} from './index'
+
+// oneOf is v when it is one of values, else null.
+const oneOf = (v: string | null, values: string[]) => (v && values.includes(v.toLowerCase()) ? v.toLowerCase() : null)
 
 export const TableBuilderButton = Extension.create({
   name: 'mdkitTables',
@@ -20,13 +24,34 @@ export const TableBuilderButton = Extension.create({
           renderHTML: (attrs: any) => (attrs.mdkitLayout ? {class: attrs.mdkitLayout} : {})
         }
       }
+    }, {
+      // where the content of a cell goes: across (align) and up and down
+      // (valign) — the attributes of the HTML the server keeps; a style
+      // (another editor's) read as well
+      types: ['tableCell', 'tableHeader'],
+      attributes: {
+        align: {
+          default: null,
+          parseHTML: (el: HTMLElement) => oneOf(el.getAttribute('align') || el.style.textAlign, ['left', 'center', 'right']),
+          renderHTML: (attrs: any) => (attrs.align ? {align: attrs.align} : {})
+        },
+        valign: {
+          default: null,
+          parseHTML: (el: HTMLElement) => oneOf(el.getAttribute('valign') || el.style.verticalAlign, ['top', 'middle', 'bottom']),
+          renderHTML: (attrs: any) => (attrs.valign ? {valign: attrs.valign} : {})
+        }
+      }
     }]
   },
   addOptions() {
     return {
       divider: false,
       spacer: false,
-      button: ({editor}: any) => ({component: TableAction, componentProps: {editor}})
+      // the builder; where the content of the cells under the cursor goes
+      button: ({editor}: any) => [
+        {component: TableAction, componentProps: {editor}},
+        {component: CellPlaceAction, componentProps: {editor}}
+      ]
     } as any
   },
   // the layout seen in the editor: tiptap's view of a table puts no class on

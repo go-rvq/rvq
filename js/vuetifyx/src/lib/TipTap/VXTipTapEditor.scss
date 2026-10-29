@@ -83,3 +83,22 @@
     margin-right: 0 !important;
   }
 }
+
+// where the content of a cell goes (its align, valign: the table builder's,
+// the tables plugin's), over the look's own rules
+.ProseMirror,
+.std-content {
+  td,
+  th {
+    @each $a in left, center, right {
+      &[align='#{$a}'] {
+        text-align: $a !important;
+      }
+    }
+    @each $v in top, middle, bottom {
+      &[valign='#{$v}'] {
+        vertical-align: $v !important;
+      }
+    }
+  }
+}

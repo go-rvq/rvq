@@ -81,3 +81,16 @@ func TestTableLayout(t *testing.T) {
 		t.Errorf("another class of a table kept: %s", got)
 	}
 }
+
+// TestCellPlace: where the content of a cell goes (the table builder's align
+// and valign) is kept, in Markdown and in the rich text; another value is not.
+func TestCellPlace(t *testing.T) {
+	for _, format := range []string{Markdown, Rich} {
+		got := Render(format, `<table><tr><td align="center" valign="bottom">a</td><th valign="middle">b</th><td valign="evil">c</td></tr></table>`)
+		for _, want := range []string{`<td align="center" valign="bottom">a</td>`, `<th valign="middle">b</th>`, `<td>c</td>`} {
+			if !strings.Contains(got, want) {
+				t.Errorf("%s: no %s in %s", format, want, got)
+			}
+		}
+	}
+}

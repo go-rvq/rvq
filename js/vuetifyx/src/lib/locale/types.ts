@@ -375,6 +375,14 @@ export interface VxMessages {
   mdkitTablePositionCenter: string
   /** Editors of a text (mdkit), table: positionRight. */
   mdkitTablePositionRight: string
+  /** Editors of a text (mdkit), table: valignTop. */
+  mdkitTableValignTop: string
+  /** Editors of a text (mdkit), table: valignMiddle. */
+  mdkitTableValignMiddle: string
+  /** Editors of a text (mdkit), table: valignBottom. */
+  mdkitTableValignBottom: string
+  /** Editors of a text (mdkit), table: cellPlace. */
+  mdkitTableCellPlace: string
   /** Editors of a text (mdkit), table: modeSheet. */
   mdkitTableModeSheet: string
   /** Editors of a text (mdkit), table: modeSplit. */

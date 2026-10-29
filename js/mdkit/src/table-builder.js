@@ -3,7 +3,8 @@
 // a range chosen by dragging (or Shift and a click; a column by its letter,
 // a row by its number), grown to the merges it touches; rows and columns put
 // before and after it, or taken out; its cells merged into one, or one
-// merge undone; the first row the header or not; the columns aligned, and
+// merge undone; the first row the header or not; the content of the cells
+// placed across (whole columns: the columns') and up and down; the columns
 // sized by dragging the border of their letter — in pixels or in parts of
 // the table (a double click: automatic) —; the table fluid (the default: as
 // wide as the text) or not, then placed left, center or right; the
@@ -47,6 +48,10 @@ function style() {
     '.htb-grid td.htb-sel{background:#dbeafe}' +
     // side by side: the preview by the sheet, a vertical line between
     '.htb-split{border-left:1px solid #d1d5db;margin-left:.75rem;padding-top:0!important}' +
+    // the bars: groups of controls that wrap, a line between groups
+    '.htb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;padding:.25rem .75rem;background:#f5f5f5;border-top:1px solid #e5e7eb}' +
+    '.htb-group{display:flex;align-items:center;flex:0 0 auto;gap:.1rem;padding-right:.5rem;border-right:1px solid #e0e0e0}' +
+    '.htb-group:last-child{border-right:0}' +
     '.htb-grid textarea{display:block;width:100%;border:0;outline:0;resize:none;background:transparent;padding:.35rem .5rem;font:inherit;line-height:1.4;min-height:2.1rem;user-select:text}'
   document.head.append(st)
 }
@@ -94,6 +99,32 @@ export default {
         { key: 'total', icon: 'mdi-eye-outline', title: w.modePreview || 'Preview only' },
       ]
     },
+    // the places of the content of a cell, across and up and down; of the
+    // table not fluid
+    across() {
+      const w = this.words
+      return [
+        { value: 'left', icon: 'mdi-format-align-left', title: w.alignLeft || 'Align left' },
+        { value: 'center', icon: 'mdi-format-align-center', title: w.alignCenter || 'Center' },
+        { value: 'right', icon: 'mdi-format-align-right', title: w.alignRight || 'Align right' },
+      ]
+    },
+    upDown() {
+      const w = this.words
+      return [
+        { value: 'top', icon: 'mdi-format-vertical-align-top', title: w.valignTop || 'Content at the top' },
+        { value: 'middle', icon: 'mdi-format-vertical-align-center', title: w.valignMiddle || 'Content in the middle' },
+        { value: 'bottom', icon: 'mdi-format-vertical-align-bottom', title: w.valignBottom || 'Content at the bottom' },
+      ]
+    },
+    positions() {
+      const w = this.words
+      return [
+        { value: 'left', icon: 'mdi-format-horizontal-align-left', title: w.positionLeft || 'Table on the left' },
+        { value: 'center', icon: 'mdi-format-horizontal-align-center', title: w.positionCenter || 'Table in the center' },
+        { value: 'right', icon: 'mdi-format-horizontal-align-right', title: w.positionRight || 'Table on the right' },
+      ]
+    },
     html() { return !T.gfm(this.t) },
     // sized: a column has its width
     sized() { return this.t.widths.some((w) => w) },
@@ -105,65 +136,77 @@ export default {
     },
     multi() { return this.sel.r1 !== this.sel.r2 || this.sel.c1 !== this.sel.c2 },
     merged() { return this.t.merges.some((m) => m.r >= this.sel.r1 && m.r <= this.sel.r2 && m.c >= this.sel.c1 && m.c <= this.sel.c2) },
-    align() { return this.t.aligns[this.sel.c1] || 'left' },
+    // where the content of the first cell chosen goes (none: the default)
+    align() { return T.cellAlign(this.t, this.sel.r1, this.sel.c1) },
+    valign() { return T.cellVAlign(this.t, this.sel.r1, this.sel.c1) },
+    // columns says whole columns are chosen (their letters): the alignment
+    // of the columns, not of their cells
+    columns() { return this.sel.r1 === 0 && this.sel.r2 === this.t.rows - 1 && this.t.rows > 1 },
   },
   template: `
 <v-dialog v-model="show" :max-width="mode === 'split' ? 1400 : 960" scrollable data-table-builder>
   <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon icon="mdi-table" class="me-2"></v-icon>{{ words.title || 'Table' }}
-      <v-spacer></v-spacer>
+    <v-card-title class="d-flex align-center flex-wrap ga-2 pb-1">
+      <v-icon icon="mdi-table"></v-icon>{{ words.title || 'Table' }}
       <span class="text-caption text-medium-emphasis">{{ t.rows }} × {{ t.cols }}</span>
-    </v-card-title>
-    <v-toolbar density="compact" color="grey-lighten-4" class="px-2 flex-wrap" style="height:auto">
-      <v-btn icon="mdi-table-row-plus-before" size="small" variant="text" :title="words.rowAbove || 'Row above'" data-table-op="row-above" @click="op('rowAbove')"></v-btn>
-      <v-btn icon="mdi-table-row-plus-after" size="small" variant="text" :title="words.rowBelow || 'Row below'" data-table-op="row-below" @click="op('rowBelow')"></v-btn>
-      <v-btn icon="mdi-table-row-remove" size="small" variant="text" :title="words.rowRemove || 'Remove rows'" :disabled="t.rows <= 1" data-table-op="row-remove" @click="op('rowRemove')"></v-btn>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-btn icon="mdi-table-column-plus-before" size="small" variant="text" :title="words.colLeft || 'Column left'" data-table-op="col-left" @click="op('colLeft')"></v-btn>
-      <v-btn icon="mdi-table-column-plus-after" size="small" variant="text" :title="words.colRight || 'Column right'" data-table-op="col-right" @click="op('colRight')"></v-btn>
-      <v-btn icon="mdi-table-column-remove" size="small" variant="text" :title="words.colRemove || 'Remove columns'" :disabled="t.cols <= 1" data-table-op="col-remove" @click="op('colRemove')"></v-btn>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-btn icon="mdi-table-merge-cells" size="small" variant="text" :title="words.merge || 'Merge cells'" :disabled="!multi" data-table-op="merge" @click="op('merge')"></v-btn>
-      <v-btn icon="mdi-table-split-cell" size="small" variant="text" :title="words.unmerge || 'Unmerge cells'" :disabled="!merged" data-table-op="unmerge" @click="op('unmerge')"></v-btn>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-btn v-for="f in formats" :key="f.key" :icon="f.icon" size="small" variant="text" :title="(f.key === 'footnote' ? words.footnote : barWords[f.key]) || f.key"
-        :disabled="!cell" :data-table-format="f.key" @mousedown.prevent @click="format(f.key)"></v-btn>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-btn-toggle :model-value="align" density="compact" variant="text" mandatory @update:model-value="setAlign">
-        <v-btn value="left" icon="mdi-format-align-left" size="small" :title="words.alignLeft || 'Align left'"></v-btn>
-        <v-btn value="center" icon="mdi-format-align-center" size="small" :title="words.alignCenter || 'Center'"></v-btn>
-        <v-btn value="right" icon="mdi-format-align-right" size="small" :title="words.alignRight || 'Align right'"></v-btn>
-      </v-btn-toggle>
-      <v-divider vertical class="mx-1"></v-divider>
+      <v-spacer></v-spacer>
       <v-menu v-if="render" location="bottom">
         <template #activator="{ props }">
-          <v-btn v-bind="props" :icon="modes.find((m) => m.key === mode).icon" size="small" variant="text"
-            :active="mode !== 'sheet'" :title="words.preview || 'Preview'" data-table-op="preview"></v-btn>
+          <v-btn v-bind="props" :prepend-icon="modes.find((m) => m.key === mode).icon" size="small" variant="tonal"
+            :active="mode !== 'sheet'" :title="words.preview || 'Preview'" data-table-op="preview">{{ modes.find((m) => m.key === mode).title }}</v-btn>
         </template>
         <v-list density="compact">
           <v-list-item v-for="m in modes" :key="m.key" :prepend-icon="m.icon" :title="m.title" :active="mode === m.key"
             :data-table-mode="m.key" @click="setMode(m.key)"></v-list-item>
         </v-list>
       </v-menu>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-btn-toggle :model-value="unit" density="compact" variant="text" mandatory @update:model-value="setUnit" data-table-unit>
-        <v-btn value="px" size="small" :title="words.widthFixed || 'Widths in pixels'">px</v-btn>
-        <v-btn value="%" size="small" :title="words.widthPercent || 'Widths in parts of the table'">%</v-btn>
-      </v-btn-toggle>
-      <v-btn icon="mdi-arrow-expand-horizontal" size="small" variant="text" :disabled="!sized"
-        :title="words.widthAuto || 'Automatic widths'" data-table-op="width-auto" @click="t.widths = t.widths.map(() => '')"></v-btn>
-      <v-divider vertical class="mx-1"></v-divider>
-      <v-switch v-model="t.fluid" color="primary" density="compact" hide-details class="flex-grow-0 ms-2"
-        :label="words.fluid || 'Fluid'" data-table-fluid></v-switch>
-      <v-btn-toggle v-if="!t.fluid" v-model="t.position" density="compact" variant="text" mandatory class="ms-1" data-table-position>
-        <v-btn value="left" icon="mdi-format-horizontal-align-left" size="small" :title="words.positionLeft || 'Table on the left'"></v-btn>
-        <v-btn value="center" icon="mdi-format-horizontal-align-center" size="small" :title="words.positionCenter || 'Table in the center'"></v-btn>
-        <v-btn value="right" icon="mdi-format-horizontal-align-right" size="small" :title="words.positionRight || 'Table on the right'"></v-btn>
-      </v-btn-toggle>
-      <v-switch v-model="t.header" color="primary" density="compact" hide-details class="flex-grow-0 ms-2"
-        :label="words.header || 'Header row'" data-table-header></v-switch>
-    </v-toolbar>
+    </v-card-title>
+    <!-- the table: rows, columns, merges, widths, layout, header -->
+    <div class="htb-bar" data-table-bar="table">
+      <div class="htb-group">
+        <v-btn icon="mdi-table-row-plus-before" size="small" variant="text" data-table-op="row-above" @click="op('rowAbove')"><v-icon icon="mdi-table-row-plus-before"></v-icon><v-tooltip activator="parent" location="top" :text="words.rowAbove || 'Row above'"></v-tooltip></v-btn>
+        <v-btn icon="mdi-table-row-plus-after" size="small" variant="text" data-table-op="row-below" @click="op('rowBelow')"><v-icon icon="mdi-table-row-plus-after"></v-icon><v-tooltip activator="parent" location="top" :text="words.rowBelow || 'Row below'"></v-tooltip></v-btn>
+        <v-btn icon="mdi-table-row-remove" size="small" variant="text" :disabled="t.rows <= 1" data-table-op="row-remove" @click="op('rowRemove')"><v-icon icon="mdi-table-row-remove"></v-icon><v-tooltip activator="parent" location="top" :text="words.rowRemove || 'Remove rows'"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn icon="mdi-table-column-plus-before" size="small" variant="text" data-table-op="col-left" @click="op('colLeft')"><v-icon icon="mdi-table-column-plus-before"></v-icon><v-tooltip activator="parent" location="top" :text="words.colLeft || 'Column left'"></v-tooltip></v-btn>
+        <v-btn icon="mdi-table-column-plus-after" size="small" variant="text" data-table-op="col-right" @click="op('colRight')"><v-icon icon="mdi-table-column-plus-after"></v-icon><v-tooltip activator="parent" location="top" :text="words.colRight || 'Column right'"></v-tooltip></v-btn>
+        <v-btn icon="mdi-table-column-remove" size="small" variant="text" :disabled="t.cols <= 1" data-table-op="col-remove" @click="op('colRemove')"><v-icon icon="mdi-table-column-remove"></v-icon><v-tooltip activator="parent" location="top" :text="words.colRemove || 'Remove columns'"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn icon="mdi-table-merge-cells" size="small" variant="text" :disabled="!multi" data-table-op="merge" @click="op('merge')"><v-icon icon="mdi-table-merge-cells"></v-icon><v-tooltip activator="parent" location="top" :text="words.merge || 'Merge cells'"></v-tooltip></v-btn>
+        <v-btn icon="mdi-table-split-cell" size="small" variant="text" :disabled="!merged" data-table-op="unmerge" @click="op('unmerge')"><v-icon icon="mdi-table-split-cell"></v-icon><v-tooltip activator="parent" location="top" :text="words.unmerge || 'Unmerge cells'"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn-toggle :model-value="unit" density="compact" variant="text" mandatory @update:model-value="setUnit" data-table-unit>
+          <v-btn value="px" size="small"><v-tooltip activator="parent" location="top" :text="words.widthFixed || 'Widths in pixels'"></v-tooltip>px</v-btn>
+          <v-btn value="%" size="small"><v-tooltip activator="parent" location="top" :text="words.widthPercent || 'Widths in parts of the table'"></v-tooltip>%</v-btn>
+        </v-btn-toggle>
+        <v-btn icon="mdi-table-column-width" size="small" variant="text" :disabled="!sized" data-table-op="width-auto" @click="t.widths = t.widths.map(() => '')"><v-icon icon="mdi-table-column-width"></v-icon><v-tooltip activator="parent" location="top" :text="words.widthAuto || 'Automatic widths'"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn icon="mdi-arrow-expand-horizontal" size="small" variant="text" :active="t.fluid !== false" data-table-fluid @click="t.fluid = t.fluid === false"><v-icon icon="mdi-arrow-expand-horizontal"></v-icon><v-tooltip activator="parent" location="top" :text="words.fluid || 'Fluid'"></v-tooltip></v-btn>
+        <template v-if="!t.fluid">
+          <v-btn v-for="o in positions" :key="o.value" :icon="o.icon" size="small" variant="text" :active="t.position === o.value" :data-table-position="o.value" @click="t.position = o.value"><v-icon :icon="o.icon"></v-icon><v-tooltip activator="parent" location="top" :text="o.title"></v-tooltip></v-btn>
+        </template>
+      </div>
+      <div class="htb-group">
+        <v-btn icon="mdi-page-layout-header" size="small" variant="text" :active="t.header" data-table-header @click="t.header = !t.header"><v-icon icon="mdi-page-layout-header"></v-icon><v-tooltip activator="parent" location="top" :text="words.header || 'Header row'"></v-tooltip></v-btn>
+      </div>
+    </div>
+    <!-- the cells chosen: their text formatted, their content placed -->
+    <div class="htb-bar" data-table-bar="cells">
+      <div class="htb-group">
+        <v-btn v-for="f in formats" :key="f.key" :icon="f.icon" size="small" variant="text"
+          :disabled="!cell" :data-table-format="f.key" @mousedown.prevent @click="format(f.key)"><v-icon :icon="f.icon"></v-icon><v-tooltip activator="parent" location="top" :text="(f.key === 'footnote' ? words.footnote : barWords[f.key]) || f.key"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn v-for="o in across" :key="o.value" :icon="o.icon" size="small" variant="text" :active="align === o.value" :data-table-align="o.value" @click="setAlign(align === o.value ? '' : o.value)"><v-icon :icon="o.icon"></v-icon><v-tooltip activator="parent" location="top" :text="o.title"></v-tooltip></v-btn>
+      </div>
+      <div class="htb-group">
+        <v-btn v-for="o in upDown" :key="o.value" :icon="o.icon" size="small" variant="text" :active="valign === o.value" :data-table-valign="o.value" @click="setVAlign(valign === o.value ? '' : o.value)"><v-icon :icon="o.icon"></v-icon><v-tooltip activator="parent" location="top" :text="o.title"></v-tooltip></v-btn>
+      </div>
+    </div>
     <v-card-text class="pt-3">
       <div class="d-flex" :class="mode === 'split' ? '' : 'flex-column ga-3'">
       <div v-show="mode !== 'total'" ref="grid" class="htb-grid flex-grow-1" :style="mode === 'split' ? 'flex-basis:0;min-width:0' : ''"
@@ -186,10 +229,10 @@ export default {
           <tr v-for="(row, r) in t.cells" :key="r">
             <th class="htb-ref" @mousedown.prevent="pick(r, 0, r, t.cols - 1)">{{ r + 1 }}</th>
             <template v-for="(cell, c) in row" :key="c">
-              <td v-if="!covered(r, c)" :colspan="spanOf(r, c).cs" :rowspan="spanOf(r, c).rs"
+              <td v-if="!covered(r, c)" :colspan="spanOf(r, c).cs" :rowspan="spanOf(r, c).rs" :style="cellStyle(r, c)"
                 :class="{ 'htb-sel': inSel(r, c), 'htb-head': t.header && r === 0 }"
                 @mousedown="down($event, r, c)" @mouseenter="enter(r, c)" :data-cell="r + ',' + c">
-                <textarea rows="1" v-model="t.cells[r][c]" :style="{ textAlign: t.aligns[c] || 'left' }"
+                <textarea rows="1" v-model="t.cells[r][c]" :style="{ textAlign: cellAlign(r, c) || 'left' }"
                   @focus="focus(r, c, $event.target)" @input="grow($event.target)"
                   @keydown.enter.exact.prevent="move(r, c, 1)"
                   @keydown.ctrl.b.prevent="format('bold')" @keydown.meta.b.prevent="format('bold')"
@@ -243,6 +286,7 @@ export default {
     },
     letter: letters,
     covered(r, c) { return T.covered(this.t, r, c) },
+    cellAlign(r, c) { return T.cellAlign(this.t, r, c) },
     spanOf(r, c) { return T.mergeAt(this.t, r, c) || { rs: 1, cs: 1 } },
     inSel(r, c) { return r >= this.sel.r1 && r <= this.sel.r2 && c >= this.sel.c1 && c <= this.sel.c2 },
     // pick chooses the range, grown to the merges it touches
@@ -437,8 +481,24 @@ export default {
         if (this.render) this.previewHTML = await this.render(T.toMarkdown(this.t))
       }, wait)
     },
+    // setAlign places the content of the cells chosen across — of whole
+    // columns, the columns' (GFM when it can) —; a, none: the default
     setAlign(a) {
-      for (let c = this.sel.c1; c <= this.sel.c2; c++) this.t.aligns[c] = a === 'left' ? '' : a
+      const s = this.sel
+      for (let c = s.c1; c <= s.c2; c++) {
+        if (this.columns) this.t.aligns[c] = a || ''
+        for (let r = s.r1; r <= s.r2; r++) this.t.halign[r][c] = this.columns ? '' : a || ''
+      }
+    },
+    // setVAlign places the content of the cells chosen up and down
+    setVAlign(a) {
+      const s = this.sel
+      for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) this.t.valign[r][c] = a || ''
+    },
+    // cellStyle is where the content of the cell goes in the sheet
+    cellStyle(r, c) {
+      const v = T.cellVAlign(this.t, r, c)
+      return v ? { verticalAlign: v } : {}
     },
     finish() {
       const text = T.toMarkdown(this.t)

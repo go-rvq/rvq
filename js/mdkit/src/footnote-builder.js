@@ -127,10 +127,10 @@ export default {
             </div>
             <div v-if="!rich" class="d-flex align-center mb-1">
               <v-btn v-for="f in formats" :key="f.key" :icon="f.icon" size="small" variant="text" density="comfortable"
-                :title="barWords[f.key] || f.key" :disabled="mode === 'total'" @mousedown.prevent @click="format(f)"></v-btn>
+                :disabled="mode === 'total'" @mousedown.prevent @click="format(f)"><v-icon :icon="f.icon"></v-icon><v-tooltip activator="parent" location="top" :text="barWords[f.key] || f.key"></v-tooltip></v-btn>
               <v-spacer></v-spacer>
               <v-btn-toggle v-if="render" v-model="mode" density="compact" variant="text" mandatory @update:model-value="schedule(0)">
-                <v-btn v-for="m in modes" :key="m.key" :value="m.key" :icon="m.icon" size="small" :title="m.title" :data-footnote-mode="m.key"></v-btn>
+                <v-btn v-for="m in modes" :key="m.key" :value="m.key" :icon="m.icon" size="small" :data-footnote-mode="m.key"><v-icon :icon="m.icon"></v-icon><v-tooltip activator="parent" location="top" :text="m.title"></v-tooltip></v-btn>
               </v-btn-toggle>
             </div>
             <div v-if="rich">

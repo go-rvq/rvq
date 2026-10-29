@@ -138,7 +138,7 @@ test('the rich text editor\'s table: from its HTML (colwidth), to it', () => {
   t.widths = ['50%', '']
   const bold = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   expect(T.toRichHTML(t, bold)).toBe('<table><tbody><tr><th colspan="1" rowspan="1"><p>A <strong>b</strong></p></th>' +
-    '<th colspan="1" rowspan="1"><p style="text-align: center">B</p></th></tr>' +
+    '<th colspan="1" rowspan="1" align="center"><p>B</p></th></tr>' +
     '<tr><td colspan="2" rowspan="1"><p>x</p></td></tr></tbody></table>')
   t.widths = ['300', '']
   expect(T.toRichHTML(t, bold)).toContain('<td colspan="2" rowspan="1" colwidth="300,0">')
@@ -157,4 +157,39 @@ test('fluid, or not and placed: its class; GFM only fluid', () => {
   expect(T.toRichHTML(t, (s) => s).startsWith('<table class="mdkit-fit mdkit-center"><tbody>')).toBe(true)
   expect(T.fromHTML('<table><tr><td>a</td></tr></table>').fluid).toBe(true)
   expect(T.normalize({ rows: 1, cols: 1, cells: [['a']], merges: [], header: true, aligns: [''] }).fluid).toBe(true)
+})
+
+test('a cell placed on its own: across and up and down, HTML, read back', () => {
+  const t = T.create(2, 2)
+  t.cells = [['A', 'B'], ['x', 'y']]
+  t.aligns[1] = 'right'
+  expect(T.gfm(t)).toBe(true)
+  t.halign[1][1] = 'center'
+  t.valign[1][0] = 'bottom'
+  expect(T.gfm(t)).toBe(false)
+  const html = T.toMarkdown(t)
+  expect(html).toContain('<th align="right">B</th>')
+  expect(html).toContain('<td valign="bottom">x</td>')
+  expect(html).toContain('<td align="center">y</td>')
+  const back = T.fromHTML(html)
+  expect(back.aligns).toEqual(['', ''])
+  expect(back.halign).toEqual([['', 'right'], ['', 'center']])
+  expect(back.valign).toEqual([['', ''], ['bottom', '']])
+  // the rich text editor's: on the cell
+  expect(T.toRichHTML(t, (s) => s)).toContain('<td colspan="1" rowspan="1" valign="bottom"><p>x</p></td>')
+  // a style (another editor's) read as well
+  const st = T.fromHTML('<table><tr><td style="text-align: center; vertical-align: middle">a</td><td>b</td></tr></table>')
+  expect(st.aligns[0]).toBe('center') // all of its column's: the column's
+  expect(st.valign[0][0]).toBe('middle')
+  // rows and columns put in and taken out keep the grids as the cells
+  T.insertRow(back, 1)
+  T.insertCol(back, 0)
+  expect(back.valign[2]).toEqual(['', 'bottom', ''])
+  T.removeCol(back, 0)
+  T.removeRow(back, 1)
+  expect(back.valign).toEqual([['', ''], ['bottom', '']])
+  // merged: the first cell's kept
+  T.merge(back, 1, 0, 1, 1)
+  expect(back.halign[1]).toEqual(['', ''])
+  expect(back.valign[1]).toEqual(['bottom', ''])
 })

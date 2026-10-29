@@ -155,21 +155,21 @@ const RichEditor = {
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
       <v-btn v-for="b in buttons" :key="b.key" :icon="b.icon" size="small" variant="text" density="comfortable"
-        :active="!!active[b.key]" :title="words[b.key] || b.key" :data-rich-editor-button="b.key"
-        :disabled="disabled" @mousedown.prevent @click="run(b.key)"></v-btn>
+        :active="!!active[b.key]" :data-rich-editor-button="b.key"
+        :disabled="disabled" @mousedown.prevent @click="run(b.key)"><v-icon :icon="b.icon"></v-icon><v-tooltip activator="parent" location="top" :text="words[b.key] || b.key"></v-tooltip></v-btn>
       <v-btn icon="mdi-link-variant" size="small" variant="text" density="comfortable" :active="!!active.link"
-        :title="words.link || 'link'" data-rich-editor-button="link" :disabled="disabled" @mousedown.prevent @click="openLink"></v-btn>
+        data-rich-editor-button="link" :disabled="disabled" @mousedown.prevent @click="openLink"><v-icon icon="mdi-link-variant"></v-icon><v-tooltip activator="parent" location="top" :text="words.link || 'link'"></v-tooltip></v-btn>
       <v-btn v-if="footnotes" icon="mdi-format-superscript" size="small" variant="text" density="comfortable"
-        :title="words.footnote || 'Footnote'" data-rich-editor-button="footnote" :disabled="disabled"
-        @mousedown.prevent @click="openFootnotes()"></v-btn>
+        data-rich-editor-button="footnote" :disabled="disabled"
+        @mousedown.prevent @click="openFootnotes()"><v-icon icon="mdi-format-superscript"></v-icon><v-tooltip activator="parent" location="top" :text="words.footnote || 'Footnote'"></v-tooltip></v-btn>
       <v-btn v-if="canImage" icon="mdi-image-plus" size="small" variant="text" density="comfortable"
-        :title="words.image || 'image'" data-rich-editor-button="image" :disabled="disabled"
-        @mousedown.prevent @click="$refs.pick.click()"></v-btn>
+        data-rich-editor-button="image" :disabled="disabled"
+        @mousedown.prevent @click="$refs.pick.click()"><v-icon icon="mdi-image-plus"></v-icon><v-tooltip activator="parent" location="top" :text="words.image || 'image'"></v-tooltip></v-btn>
       <v-spacer></v-spacer>
-      <v-btn icon="mdi-undo" size="small" variant="text" density="comfortable" :title="words.undo || 'undo'"
-        :disabled="disabled" @mousedown.prevent @click="run('undo')"></v-btn>
-      <v-btn icon="mdi-redo" size="small" variant="text" density="comfortable" :title="words.redo || 'redo'"
-        :disabled="disabled" @mousedown.prevent @click="run('redo')"></v-btn>
+      <v-btn icon="mdi-undo" size="small" variant="text" density="comfortable"
+        :disabled="disabled" @mousedown.prevent @click="run('undo')"><v-icon icon="mdi-undo"></v-icon><v-tooltip activator="parent" location="top" :text="words.undo || 'undo'"></v-tooltip></v-btn>
+      <v-btn icon="mdi-redo" size="small" variant="text" density="comfortable"
+        :disabled="disabled" @mousedown.prevent @click="run('redo')"><v-icon icon="mdi-redo"></v-icon><v-tooltip activator="parent" location="top" :text="words.redo || 'redo'"></v-tooltip></v-btn>
     </v-toolbar>
     <div v-if="linking" class="d-flex ga-2 align-center px-2 py-1" data-rich-editor-link>
       <v-text-field v-model="link" type="url" density="compact" hide-details variant="outlined"
