@@ -1,0 +1,20 @@
+{
+  "name": "@go-rvq/mdkit",
+  "private": true,
+  "description": "The editors of a text (Markdown: EasyMDE; rich: tiptap) and their builders (tables, footnotes), Vue components with Vuetify: for a site (dist/mdkit.js: window.RvqMdKit) and the admin (vuetifyx).",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "bun test",
+    "build": "sh build.sh"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "easymde": "2.21.0",
+    "marked": "^4.3.0"
+  }
+}

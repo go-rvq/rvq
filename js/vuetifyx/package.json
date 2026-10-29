@@ -112,7 +112,7 @@
     "vue3-draggable": "^2.0.9",
     "vuedraggable": "^4.1.0",
     "vuetify": "^3.8.1",
-    "vuetify-pro-tiptap": "go-rvq/vuetify-pro-tiptap#f2aad1a"
+    "vuetify-pro-tiptap": "file:../../../vuetify-pro-tiptap"
   },
   "devDependencies": {
     "@babel/types": "^7.24.0",

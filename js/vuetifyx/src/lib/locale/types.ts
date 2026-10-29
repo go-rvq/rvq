@@ -279,4 +279,208 @@ export interface VxMessages {
   diffPrev: string
   /** Title of the button of a diff. */
   diffNext: string
+  /** Editors of a text (mdkit), rich: bold. */
+  mdkitRichBold: string
+  /** Editors of a text (mdkit), rich: italic. */
+  mdkitRichItalic: string
+  /** Editors of a text (mdkit), rich: strike. */
+  mdkitRichStrike: string
+  /** Editors of a text (mdkit), rich: heading. */
+  mdkitRichHeading: string
+  /** Editors of a text (mdkit), rich: subheading. */
+  mdkitRichSubheading: string
+  /** Editors of a text (mdkit), rich: bullets. */
+  mdkitRichBullets: string
+  /** Editors of a text (mdkit), rich: numbers. */
+  mdkitRichNumbers: string
+  /** Editors of a text (mdkit), rich: quote. */
+  mdkitRichQuote: string
+  /** Editors of a text (mdkit), rich: code. */
+  mdkitRichCode: string
+  /** Editors of a text (mdkit), rich: link. */
+  mdkitRichLink: string
+  /** Editors of a text (mdkit), rich: linkPrompt. */
+  mdkitRichLinkPrompt: string
+  /** Editors of a text (mdkit), rich: linkSet. */
+  mdkitRichLinkSet: string
+  /** Editors of a text (mdkit), rich: cancel. */
+  mdkitRichCancel: string
+  /** Editors of a text (mdkit), rich: image. */
+  mdkitRichImage: string
+  /** Editors of a text (mdkit), rich: undo. */
+  mdkitRichUndo: string
+  /** Editors of a text (mdkit), rich: redo. */
+  mdkitRichRedo: string
+  /** Editors of a text (mdkit), rich: notImage. */
+  mdkitRichNotImage: string
+  /** Editors of a text (mdkit), rich: uploadError. */
+  mdkitRichUploadError: string
+  /** Editors of a text (mdkit), rich: placeholder. */
+  mdkitRichPlaceholder: string
+  /** Editors of a text (mdkit), rich: placeholderText. */
+  mdkitRichPlaceholderText: string
+  /** Editors of a text (mdkit), rich: footnote. */
+  mdkitRichFootnote: string
+  /** Editors of a text (mdkit), rich: size_small. */
+  mdkitRichSizeSmall: string
+  /** Editors of a text (mdkit), rich: size_medium. */
+  mdkitRichSizeMedium: string
+  /** Editors of a text (mdkit), rich: size_large. */
+  mdkitRichSizeLarge: string
+  /** Editors of a text (mdkit), rich: size_original. */
+  mdkitRichSizeOriginal: string
+  /** Editors of a text (mdkit), table: title. */
+  mdkitTableTitle: string
+  /** Editors of a text (mdkit), table: rowAbove. */
+  mdkitTableRowAbove: string
+  /** Editors of a text (mdkit), table: rowBelow. */
+  mdkitTableRowBelow: string
+  /** Editors of a text (mdkit), table: rowRemove. */
+  mdkitTableRowRemove: string
+  /** Editors of a text (mdkit), table: colLeft. */
+  mdkitTableColLeft: string
+  /** Editors of a text (mdkit), table: colRight. */
+  mdkitTableColRight: string
+  /** Editors of a text (mdkit), table: colRemove. */
+  mdkitTableColRemove: string
+  /** Editors of a text (mdkit), table: merge. */
+  mdkitTableMerge: string
+  /** Editors of a text (mdkit), table: unmerge. */
+  mdkitTableUnmerge: string
+  /** Editors of a text (mdkit), table: alignLeft. */
+  mdkitTableAlignLeft: string
+  /** Editors of a text (mdkit), table: alignCenter. */
+  mdkitTableAlignCenter: string
+  /** Editors of a text (mdkit), table: alignRight. */
+  mdkitTableAlignRight: string
+  /** Editors of a text (mdkit), table: header. */
+  mdkitTableHeader: string
+  /** Editors of a text (mdkit), table: footnote. */
+  mdkitTableFootnote: string
+  /** Editors of a text (mdkit), table: preview. */
+  mdkitTablePreview: string
+  /** Editors of a text (mdkit), table: resize. */
+  mdkitTableResize: string
+  /** Editors of a text (mdkit), table: widthFixed. */
+  mdkitTableWidthFixed: string
+  /** Editors of a text (mdkit), table: widthPercent. */
+  mdkitTableWidthPercent: string
+  /** Editors of a text (mdkit), table: widthAuto. */
+  mdkitTableWidthAuto: string
+  /** Editors of a text (mdkit), table: modeSheet. */
+  mdkitTableModeSheet: string
+  /** Editors of a text (mdkit), table: modeSplit. */
+  mdkitTableModeSplit: string
+  /** Editors of a text (mdkit), table: modePreview. */
+  mdkitTableModePreview: string
+  /** Editors of a text (mdkit), table: htmlNote. */
+  mdkitTableHtmlNote: string
+  /** Editors of a text (mdkit), table: insert. */
+  mdkitTableInsert: string
+  /** Editors of a text (mdkit), table: update. */
+  mdkitTableUpdate: string
+  /** Editors of a text (mdkit), table: cancel. */
+  mdkitTableCancel: string
+  /** Editors of a text (mdkit), footnote: title. */
+  mdkitFootnoteTitle: string
+  /** Editors of a text (mdkit), footnote: add. */
+  mdkitFootnoteAdd: string
+  /** Editors of a text (mdkit), footnote: empty. */
+  mdkitFootnoteEmpty: string
+  /** Editors of a text (mdkit), footnote: noNote. */
+  mdkitFootnoteNoNote: string
+  /** Editors of a text (mdkit), footnote: noRef. */
+  mdkitFootnoteNoRef: string
+  /** Editors of a text (mdkit), footnote: refs. */
+  mdkitFootnoteRefs: string
+  /** Editors of a text (mdkit), footnote: label. */
+  mdkitFootnoteLabel: string
+  /** Editors of a text (mdkit), footnote: text. */
+  mdkitFootnoteText: string
+  /** Editors of a text (mdkit), footnote: rename. */
+  mdkitFootnoteRename: string
+  /** Editors of a text (mdkit), footnote: remove. */
+  mdkitFootnoteRemove: string
+  /** Editors of a text (mdkit), footnote: removeAsk. */
+  mdkitFootnoteRemoveAsk: string
+  /** Editors of a text (mdkit), footnote: removeYes. */
+  mdkitFootnoteRemoveYes: string
+  /** Editors of a text (mdkit), footnote: insert. */
+  mdkitFootnoteInsert: string
+  /** Editors of a text (mdkit), footnote: useHere. */
+  mdkitFootnoteUseHere: string
+  /** Editors of a text (mdkit), footnote: here. */
+  mdkitFootnoteHere: string
+  /** Editors of a text (mdkit), footnote: save. */
+  mdkitFootnoteSave: string
+  /** Editors of a text (mdkit), footnote: choose. */
+  mdkitFootnoteChoose: string
+  /** Editors of a text (mdkit), footnote: taken. */
+  mdkitFootnoteTaken: string
+  /** Editors of a text (mdkit), footnote: modeWrite. */
+  mdkitFootnoteModeWrite: string
+  /** Editors of a text (mdkit), footnote: modeSplit. */
+  mdkitFootnoteModeSplit: string
+  /** Editors of a text (mdkit), footnote: modePreview. */
+  mdkitFootnoteModePreview: string
+  /** Editors of a text (mdkit), footnote: done. */
+  mdkitFootnoteDone: string
+  /** Editors of a text (mdkit), footnote: cancel. */
+  mdkitFootnoteCancel: string
+  /** Editors of a text (mdkit), markdown: write. */
+  mdkitMarkdownWrite: string
+  /** Editors of a text (mdkit), markdown: preview. */
+  mdkitMarkdownPreview: string
+  /** Editors of a text (mdkit), markdown: hint. */
+  mdkitMarkdownHint: string
+  /** Editors of a text (mdkit), markdown: heading. */
+  mdkitMarkdownHeading: string
+  /** Editors of a text (mdkit), markdown: headingLevel. */
+  mdkitMarkdownHeadingLevel: string
+  /** Editors of a text (mdkit), markdown: paragraph. */
+  mdkitMarkdownParagraph: string
+  /** Editors of a text (mdkit), markdown: help. */
+  mdkitMarkdownHelp: string
+  /** Editors of a text (mdkit), markdown: footnote. */
+  mdkitMarkdownFootnote: string
+  /** Editors of a text (mdkit), markdown: include. */
+  mdkitMarkdownInclude: string
+  /** Editors of a text (mdkit), markdown: shortcuts. */
+  mdkitMarkdownShortcuts: string
+  /** Editors of a text (mdkit), markdown: guide. */
+  mdkitMarkdownGuide: string
+  /** Editors of a text (mdkit), markdown: close. */
+  mdkitMarkdownClose: string
+  /** Editors of a text (mdkit), markdown: headingSmaller. */
+  mdkitMarkdownHeadingSmaller: string
+  /** Editors of a text (mdkit), markdown: headingBigger. */
+  mdkitMarkdownHeadingBigger: string
+  /** Editors of a text (mdkit), markdown: headingLevels. */
+  mdkitMarkdownHeadingLevels: string
+  /** Editors of a text (mdkit), markdown: cleanBlock. */
+  mdkitMarkdownCleanBlock: string
+  /** Editors of a text (mdkit), markdown: taskList. */
+  mdkitMarkdownTaskList: string
+  /** Editors of a text (mdkit), markdown: exitFullscreen. */
+  mdkitMarkdownExitFullscreen: string
+  /** Editors of a text (mdkit), markdown: tipPictures. */
+  mdkitMarkdownTipPictures: string
+  /** Editors of a text (mdkit), markdown: tipFootnote. */
+  mdkitMarkdownTipFootnote: string
+  /** Editors of a text (mdkit), markdown: tipLists. */
+  mdkitMarkdownTipLists: string
+  /** Editors of a text (mdkit), markdown: tipTables. */
+  mdkitMarkdownTipTables: string
+  /** Editors of a text (mdkit), markdown: sideBySide. */
+  mdkitMarkdownSideBySide: string
+  /** Editors of a text (mdkit), markdown: previewOnly. */
+  mdkitMarkdownPreviewOnly: string
+  /** Editors of a text (mdkit), markdown: table. */
+  mdkitMarkdownTable: string
+  /** Editors of a text (mdkit), markdown: rule. */
+  mdkitMarkdownRule: string
+  /** Editors of a text (mdkit), markdown: fullscreen. */
+  mdkitMarkdownFullscreen: string
+  /** Editors of a text (mdkit), markdown: helpUrl. */
+  mdkitMarkdownHelpUrl: string
 }

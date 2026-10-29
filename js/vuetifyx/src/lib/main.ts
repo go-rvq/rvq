@@ -24,6 +24,8 @@ import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import Dialog from '@/lib/Dialog.vue'
 import Card from '@/lib/Card.vue'
 import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
+import {registerTiptapPlugin} from '@/lib/TipTap/plugins'
+import {install as installMdKit} from '@rvq/mdkit'
 import {VuetifyViewer} from 'vuetify-pro-tiptap'
 import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
@@ -89,6 +91,9 @@ const vuetifyx = {
     app.component('vx-theme-toggle', ThemeToggle)
     app.component('vx-theme-select', ThemeSelect)
     app.component('vx-tag-chips', TagChips)
+    // the editors of a text of rvq mdkit (mdkit-markdown-editor, …: the
+    // MarkdownBuilder's)
+    installMdKit(app)
   }
 }
 declare const window: any
@@ -96,3 +101,6 @@ window.__goplaidVueComponentRegisters = window.__goplaidVueComponentRegisters ||
 window.__goplaidVueComponentRegisters.push((app: App, vueOptions: any): any => {
   app.use(vuetifyx)
 })
+// an application registers the plugins of its vx-tiptap-editor so (its name,
+// its extensions, its output)
+window.vxRegisterTiptapPlugin = registerTiptapPlugin

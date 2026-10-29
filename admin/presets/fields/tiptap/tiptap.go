@@ -30,6 +30,7 @@ type Builder struct {
 	wrapReadonlyValue func(ctx *presets.FieldContext, value string) (string, error)
 	wrapEditor        func(ctx *presets.FieldContext, comp *vx.VXTipTapEditorBuilder)
 	validateScript    presets.FieldValidatorFunc
+	plugins           []string
 }
 
 func New() *Builder {
@@ -84,6 +85,22 @@ func (b *Builder) WrapEditor(f func(ctx *presets.FieldContext, comp *vx.VXTipTap
 	return b
 }
 
+// Plugins are the plugins of its editors (vx VXTipTapEditorBuilder.Plugins):
+// "footnotes", "tables", an application's.
+func (b *Builder) Plugins(names ...string) *Builder {
+	b.plugins = append(b.plugins, names...)
+	return b
+}
+
+// editor is a new editor of the field: its plugins.
+func (b *Builder) editor() *vx.VXTipTapEditorBuilder {
+	comp := vx.VXTipTapEditor()
+	if len(b.plugins) > 0 {
+		comp.Plugins(b.plugins...)
+	}
+	return comp
+}
+
 func (b *Builder) WithValidateScript(f presets.FieldValidatorFunc) *Builder {
 	b.validateScript = f
 	return b
@@ -128,7 +145,7 @@ func (b *Builder) DetailComponentFunc(field *presets.FieldContext, ctx *web.Even
 	}
 
 	var (
-		comp = vx.VXTipTapEditor().
+		comp = b.editor().
 			Label(field.Label).
 			Lang("pt").
 			Output("html").
@@ -164,7 +181,7 @@ func (b *Builder) DetailComponentFunc(field *presets.FieldContext, ctx *web.Even
 func (b *Builder) AutoComponentFunc(field *presets.FieldContext, _ *web.EventContext) (r h.HTMLComponent) {
 	var (
 		ro   = field.ReadOnly || !field.Mode.IsWrite()
-		comp = vx.VXTipTapEditor().
+		comp = b.editor().
 			Label(field.Label).
 			Lang("pt").
 			Output("html").

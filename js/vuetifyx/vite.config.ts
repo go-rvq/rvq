@@ -12,7 +12,7 @@ import svgLoader from 'vite-svg-loader';
 // Utilities
 import {defineConfig, loadEnv} from 'vite'
 import {fileURLToPath, URL} from 'node:url'
-import {existsSync} from 'node:fs'
+import {existsSync, realpathSync} from 'node:fs'
 
 // The diff browser (<vx-diff-browser>) is gad's git-vuetify's (web/git-vuetify,
 // src/diff): from the source of a gad checkout — GAD_DIR, or the one beside
@@ -23,6 +23,9 @@ const gadDiff = resolve(gadDir, 'web/git-vuetify/src/diff/index.ts')
 const gadStructure = resolve(gadDir, 'web/ide-vuetify/src/structure/index.ts')
 // the edges panes are resized by (<vx-gad-code>, <vx-codemirror>'s help)
 const gadResize = resolve(gadDir, 'web/git-vuetify/src/resize/index.ts')
+// the one tiptap (its core, its ProseMirror) of the bundle: vuetifyx's own
+const tiptapCore = realpathSync(resolve(__dirname, 'node_modules/@tiptap/core/dist/index.js'))
+const tiptapPm = realpathSync(resolve(__dirname, 'node_modules/@tiptap/pm'))
 if (!existsSync(gadDiff)) throw new Error(`vuetifyx: no ${gadDiff} (set GAD_DIR to a gad checkout with its submodules)`)
 
 // https://vitejs.dev/config/
@@ -95,18 +98,27 @@ export default ({mode}) => {
       },
     },
     resolve: {
-      alias: {
-        '@gad-lang/git-vuetify/diff': gadDiff,
-        '@gad-lang/ide-vuetify/structure': gadStructure,
-        '@gad-lang/git-vuetify/resize': gadResize,
+      alias: [
+        {find: '@gad-lang/git-vuetify/diff', replacement: gadDiff},
+        {find: '@gad-lang/ide-vuetify/structure', replacement: gadStructure},
+        {find: '@gad-lang/git-vuetify/resize', replacement: gadResize},
         // <rvq-portal> and the compilation of templates: the portal package's
         // source (js/portal)
-        '@rvq/portal': resolve(__dirname, '../portal/src/index.ts'),
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      },
+        {find: '@rvq/portal', replacement: resolve(__dirname, '../portal/src/index.ts')},
+        // the editors of a text and their builders (the plugins of the
+        // TipTap, the MarkdownBuilder): the mdkit package's source (js/mdkit)
+        {find: '@rvq/mdkit', replacement: resolve(__dirname, '../mdkit/src/index.js')},
+        // one tiptap, one ProseMirror for every importer — vuetify-pro-tiptap
+        // has copies of its own (its node_modules), mdkit the workspace's —:
+        // a plugin, a decoration, a node of one are the editor's (dedupe
+        // left the nested copies)
+        {find: /^@tiptap\/core$/, replacement: tiptapCore},
+        {find: /^@tiptap\/pm\/(.+)$/, replacement: tiptapPm + '/dist/$1/index.js'},
+        {find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url))}
+      ],
       // one of each — the gad source's imports resolved here, not in its
       // node_modules: CodeMirror's state fields need it, Vuetify's provides
-      dedupe: ['vue', 'vuetify', '@codemirror/state', '@codemirror/view', '@codemirror/language',
+      dedupe: ['vue', 'vuetify', '@tiptap/core', '@tiptap/pm', '@codemirror/state', '@codemirror/view', '@codemirror/language',
         '@codemirror/autocomplete', '@codemirror/lint', '@codemirror/commands', '@codemirror/merge',
         '@codemirror/theme-one-dark', '@codemirror/lang-css', '@codemirror/lang-go', '@codemirror/lang-html',
         '@codemirror/lang-javascript', '@codemirror/lang-json',

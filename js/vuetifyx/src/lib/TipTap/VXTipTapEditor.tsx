@@ -7,6 +7,7 @@ import {makeComponentProps} from 'vuetify/lib/composables/component'
 import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/density'
 import {makeThemeProps} from 'vuetify/lib/composables/theme'
 import {useI18n} from '@/lib/locale'
+import {tiptapPlugins} from './plugins'
 
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
 import {Blockquote as TiptapBlockquote} from '@tiptap/extension-blockquote'
@@ -106,6 +107,9 @@ export const makeProps = propsFactory({
   readonlyClass: { type: String, default: '' },
   headings: { type: Array<TiptapHeadingLevel>, default: [1, 2, 3, 4, 5, 6] },
   viewerProps: { type: Object, default: () => ({}) },
+  // plugins are the names of the plugins of the editor (plugins/index.ts:
+  // footnotes, tables, an application's)
+  plugins: { type: Array as PropType<string[]>, default: () => [] },
   ...makeComponentProps(),
   ...makeDensityProps(),
   ...makeThemeProps(),
@@ -141,6 +145,7 @@ export interface PI extends DensityProps {
   maxHeight?: Number
   headings?: TiptapHeadingLevel[]
   viewerProps?: Object
+  plugins?: string[]
   'onUpdate:modelValue'?: (value: ModelType) => void
 }
 
@@ -165,6 +170,10 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
     const { t, locale } = useI18n()
 
     ttLocale.setLang((locale.value as any) as string)
+
+    // the plugins of the editor, and the HTML the field keeps by them
+    const plugins = tiptapPlugins(props.plugins),
+      output = (v: any) => typeof v === 'string' ? plugins.reduce((html, p) => p.output ? p.output(html) : html, v) : v
 
     const imageTabs: any[] = [
       { name: t('home'), component: markRaw(ImageTab as Object) }
@@ -268,7 +277,9 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
         })] : []),
         ToolsButton.configure({
           items: [CopyAndPasteContentItem()]
-        })
+        }),
+        // the plugins' (their buttons after the editor's own)
+        ...plugins.flatMap((p) => p.extensions?.({ t }) ?? [])
       ],
       messages = computed(() => {
         if (props.errorMessages?.length) {
@@ -349,7 +360,7 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
           <VuetifyTiptap
             class={props.label ? 'rounded-t-0' : (detailComp ? 'rounded-b-0' : undefined)}
             model-value={model.value}
-            onUpdate:modelValue={(v: any) => emit('update:modelValue', v)}
+            onUpdate:modelValue={(v: any) => emit('update:modelValue', output(v))}
             output={props.output}
             dense={props.dense}
             max-height={props.maxHeight}
