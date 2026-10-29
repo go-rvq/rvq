@@ -19,10 +19,15 @@ export function textStyle(cls = config.textClass) {
     '.' + cls + ' h5{font-size:1em;font-weight:600;line-height:1.4;margin-top:.8em}',
     '.' + cls + ' h6{font-size:.9em;font-weight:600;line-height:1.4;margin-top:.8em;color:#4b5563}',
     '.' + cls + ' hr{border:0;border-top:1px solid #d1d5db;margin:1.25em 0}',
-    '.' + cls + ' table{border-collapse:collapse;display:block;overflow-x:auto}',
-    // a table of its own widths (col width; 100%): a table, as wide as asked
-    '.' + cls + ' table[width]{display:table}',
-    '.' + cls + ' table:has(col[width]){display:table}',
+    // a table fluid (the default): as wide as the text (its widths parts or
+    // least widths of it); not (mdkit-fit): as wide as its columns, placed
+    // left, center or right; on a narrow screen, scrolled
+    '.' + cls + ' table{border-collapse:collapse}',
+    '.' + cls + ' table:not(.mdkit-fit){width:100% !important}',
+    '.' + cls + ' table.mdkit-fit{width:auto !important}',
+    '.' + cls + ' table.mdkit-center{margin-left:auto;margin-right:auto}',
+    '.' + cls + ' table.mdkit-right{margin-left:auto;margin-right:0}',
+    '@media (max-width:640px){.' + cls + ' table{display:block;overflow-x:auto}}',
     '.' + cls + ' th,.' + cls + ' td{border:1px solid #d1d5db;padding:.35em .75em}',
     '.' + cls + ' th{background:#f3f4f6;font-weight:600}',
     '.' + cls + '>:first-child{margin-top:0}',

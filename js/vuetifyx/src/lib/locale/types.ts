@@ -367,6 +367,14 @@ export interface VxMessages {
   mdkitTableWidthPercent: string
   /** Editors of a text (mdkit), table: widthAuto. */
   mdkitTableWidthAuto: string
+  /** Editors of a text (mdkit), table: fluid. */
+  mdkitTableFluid: string
+  /** Editors of a text (mdkit), table: positionLeft. */
+  mdkitTablePositionLeft: string
+  /** Editors of a text (mdkit), table: positionCenter. */
+  mdkitTablePositionCenter: string
+  /** Editors of a text (mdkit), table: positionRight. */
+  mdkitTablePositionRight: string
   /** Editors of a text (mdkit), table: modeSheet. */
   mdkitTableModeSheet: string
   /** Editors of a text (mdkit), table: modeSplit. */

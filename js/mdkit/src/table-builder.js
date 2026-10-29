@@ -5,7 +5,8 @@
 // before and after it, or taken out; its cells merged into one, or one
 // merge undone; the first row the header or not; the columns aligned, and
 // sized by dragging the border of their letter — in pixels or in parts of
-// the table (a double click: automatic) —; the
+// the table (a double click: automatic) —; the table fluid (the default: as
+// wide as the text) or not, then placed left, center or right; the
 // text of a cell formatted (Markdown: bold, italic, strikethrough, code, a
 // link, a picture — when `image` —, a footnote — when `footnote` —;
 // Shift+Enter, a line break); its
@@ -153,6 +154,13 @@ export default {
       <v-btn icon="mdi-arrow-expand-horizontal" size="small" variant="text" :disabled="!sized"
         :title="words.widthAuto || 'Automatic widths'" data-table-op="width-auto" @click="t.widths = t.widths.map(() => '')"></v-btn>
       <v-divider vertical class="mx-1"></v-divider>
+      <v-switch v-model="t.fluid" color="primary" density="compact" hide-details class="flex-grow-0 ms-2"
+        :label="words.fluid || 'Fluid'" data-table-fluid></v-switch>
+      <v-btn-toggle v-if="!t.fluid" v-model="t.position" density="compact" variant="text" mandatory class="ms-1" data-table-position>
+        <v-btn value="left" icon="mdi-format-horizontal-align-left" size="small" :title="words.positionLeft || 'Table on the left'"></v-btn>
+        <v-btn value="center" icon="mdi-format-horizontal-align-center" size="small" :title="words.positionCenter || 'Table in the center'"></v-btn>
+        <v-btn value="right" icon="mdi-format-horizontal-align-right" size="small" :title="words.positionRight || 'Table on the right'"></v-btn>
+      </v-btn-toggle>
       <v-switch v-model="t.header" color="primary" density="compact" hide-details class="flex-grow-0 ms-2"
         :label="words.header || 'Header row'" data-table-header></v-switch>
     </v-toolbar>

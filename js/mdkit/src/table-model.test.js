@@ -134,9 +134,27 @@ test('the rich text editor\'s table: from its HTML (colwidth), to it', () => {
   expect(t.merges).toEqual([{ r: 1, c: 0, rs: 1, cs: 2 }])
   expect(t.widths).toEqual(['150', ''])
   t.aligns[1] = 'center'
+  // a part of the table: no width (fluid); pixels, its colwidth
   t.widths = ['50%', '']
-  const out = T.toRichHTML(t, (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'), 600)
-  expect(out).toBe('<table><tbody><tr><th colspan="1" rowspan="1" colwidth="300"><p>A <strong>b</strong></p></th>' +
+  const bold = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  expect(T.toRichHTML(t, bold)).toBe('<table><tbody><tr><th colspan="1" rowspan="1"><p>A <strong>b</strong></p></th>' +
     '<th colspan="1" rowspan="1"><p style="text-align: center">B</p></th></tr>' +
-    '<tr><td colspan="2" rowspan="1" colwidth="300,0"><p>x</p></td></tr></tbody></table>')
+    '<tr><td colspan="2" rowspan="1"><p>x</p></td></tr></tbody></table>')
+  t.widths = ['300', '']
+  expect(T.toRichHTML(t, bold)).toContain('<td colspan="2" rowspan="1" colwidth="300,0">')
+})
+
+test('fluid, or not and placed: its class; GFM only fluid', () => {
+  const t = filled()
+  expect(t.fluid).toBe(true)
+  expect(T.toMarkdown(t).startsWith('|')).toBe(true)
+  t.fluid = false
+  t.position = 'center'
+  const html = T.toMarkdown(t)
+  expect(html.startsWith('<table class="mdkit-fit mdkit-center">')).toBe(true)
+  const back = T.fromHTML(html)
+  expect([back.fluid, back.position]).toEqual([false, 'center'])
+  expect(T.toRichHTML(t, (s) => s).startsWith('<table class="mdkit-fit mdkit-center"><tbody>')).toBe(true)
+  expect(T.fromHTML('<table><tr><td>a</td></tr></table>').fluid).toBe(true)
+  expect(T.normalize({ rows: 1, cols: 1, cells: [['a']], merges: [], header: true, aligns: [''] }).fluid).toBe(true)
 })

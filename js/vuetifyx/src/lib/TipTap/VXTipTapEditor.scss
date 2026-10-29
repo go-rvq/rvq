@@ -49,3 +49,37 @@
     }
   }
 }
+
+// a table fluid (the default) — in the editor, and the text shown
+// (std-content: the detail, the readonly) —: as wide as the text, whatever
+// width tiptap gave it (its columns sized: least widths); not (mdkit-fit, the
+// table builder's): as wide as its columns, placed left, center or right
+.ProseMirror,
+.std-content {
+  table:not(.mdkit-fit) {
+    width: 100% !important;
+  }
+  table.mdkit-fit {
+    width: auto !important;
+  }
+  table.mdkit-center {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  table.mdkit-right {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+  // in the editor: the class on tiptap's view of the table (tables plugin)
+  .mdkit-fit > table {
+    width: auto !important;
+  }
+  .mdkit-center > table {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .mdkit-right > table {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+}

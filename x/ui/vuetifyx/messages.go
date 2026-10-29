@@ -211,6 +211,10 @@ type Messages struct {
 	MdkitTableWidthFixed        string `json:"mdkitTableWidthFixed" i18n:"hint='Editors of a text (mdkit), table: widthFixed.'"`
 	MdkitTableWidthPercent      string `json:"mdkitTableWidthPercent" i18n:"hint='Editors of a text (mdkit), table: widthPercent.'"`
 	MdkitTableWidthAuto         string `json:"mdkitTableWidthAuto" i18n:"hint='Editors of a text (mdkit), table: widthAuto.'"`
+	MdkitTableFluid             string `json:"mdkitTableFluid" i18n:"hint='Editors of a text (mdkit), table: fluid.'"`
+	MdkitTablePositionLeft      string `json:"mdkitTablePositionLeft" i18n:"hint='Editors of a text (mdkit), table: positionLeft.'"`
+	MdkitTablePositionCenter    string `json:"mdkitTablePositionCenter" i18n:"hint='Editors of a text (mdkit), table: positionCenter.'"`
+	MdkitTablePositionRight     string `json:"mdkitTablePositionRight" i18n:"hint='Editors of a text (mdkit), table: positionRight.'"`
 	MdkitTableModeSheet         string `json:"mdkitTableModeSheet" i18n:"hint='Editors of a text (mdkit), table: modeSheet.'"`
 	MdkitTableModeSplit         string `json:"mdkitTableModeSplit" i18n:"hint='Editors of a text (mdkit), table: modeSplit.'"`
 	MdkitTableModePreview       string `json:"mdkitTableModePreview" i18n:"hint='Editors of a text (mdkit), table: modePreview.'"`
@@ -450,6 +454,10 @@ var Messages_en_US = &Messages{
 	MdkitTableWidthFixed:        "Widths in pixels",
 	MdkitTableWidthPercent:      "Widths in parts of the table",
 	MdkitTableWidthAuto:         "Automatic widths",
+	MdkitTableFluid:             "Fluid table (as wide as the text)",
+	MdkitTablePositionLeft:      "Table on the left",
+	MdkitTablePositionCenter:    "Table in the center",
+	MdkitTablePositionRight:     "Table on the right",
 	MdkitTableModeSheet:         "Sheet",
 	MdkitTableModeSplit:         "Side by side",
 	MdkitTableModePreview:       "Preview only",
@@ -689,6 +697,10 @@ var Messages_pt_BR = &Messages{
 	MdkitTableWidthFixed:        "Larguras em pixels",
 	MdkitTableWidthPercent:      "Larguras em partes da tabela",
 	MdkitTableWidthAuto:         "Larguras automáticas",
+	MdkitTableFluid:             "Tabela fluida (da largura do texto)",
+	MdkitTablePositionLeft:      "Tabela à esquerda",
+	MdkitTablePositionCenter:    "Tabela ao centro",
+	MdkitTablePositionRight:     "Tabela à direita",
 	MdkitTableModeSheet:         "Planilha",
 	MdkitTableModeSplit:         "Lado a lado",
 	MdkitTableModePreview:       "Só a prévia",

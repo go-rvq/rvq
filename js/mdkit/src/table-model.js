@@ -7,9 +7,11 @@
 // from either (the table under the cursor, edited again). Text only (no DOM).
 //
 // The widths of its columns: '' (automatic), pixels ('120') or a part of the
-// table's ('25%'); with any, HTML (GFM has none).
+// table's ('25%'); with any, HTML (GFM has none). The table fluid — as wide as
+// the text, the default — or not — as wide as its columns, placed left,
+// center or right (its class: mdkit-fit mdkit-<position>; HTML too) —.
 //
-//	{ rows, cols, cells: [[text]], merges: [{ r, c, rs, cs }], header, aligns: ['' | 'left' | 'center' | 'right'], widths: ['' | '120' | '25%'] }
+//	{ rows, cols, cells: [[text]], merges: [{ r, c, rs, cs }], header, aligns: ['' | 'left' | 'center' | 'right'], widths: ['' | '120' | '25%'], fluid, position: 'left' | 'center' | 'right' }
 
 // create is a table of rows × cols, empty, its first row the header.
 export function create(rows = 3, cols = 3) {
@@ -17,7 +19,22 @@ export function create(rows = 3, cols = 3) {
     rows, cols,
     cells: Array.from({ length: rows }, () => Array(cols).fill('')),
     merges: [], header: true, aligns: Array(cols).fill(''), widths: Array(cols).fill(''),
+    fluid: true, position: 'left',
   }
+}
+
+const positions = ['left', 'center', 'right']
+
+// tableClass is the class of a table not fluid (mdkit-fit and its position);
+// '' fluid.
+export const tableClass = (t) => (t.fluid === false ? 'mdkit-fit mdkit-' + (positions.includes(t.position) ? t.position : 'left') : '')
+
+// layoutOf is the fluid and the position of the class of a table.
+function layoutOf(cls) {
+  const c = String(cls || '')
+  if (!/\bmdkit-fit\b/.test(c)) return { fluid: true, position: 'left' }
+  const m = /\bmdkit-(left|center|right)\b/.exec(c)
+  return { fluid: false, position: m ? m[1] : 'left' }
 }
 
 // normalize gives a table what it may lack (its widths: a table of before),
@@ -26,6 +43,8 @@ export function normalize(t) {
   const fit = (a) => Array.from({ length: t.cols }, (_, i) => (a && a[i]) || '')
   t.aligns = fit(t.aligns)
   t.widths = fit(t.widths)
+  if (t.fluid === undefined) t.fluid = true
+  if (!positions.includes(t.position)) t.position = 'left'
   return t
 }
 
@@ -152,7 +171,7 @@ export function unmerge(t, r, c) {
 }
 
 // gfm says the table is Markdown's (GFM): a header, no merged cell, no width.
-export const gfm = (t) => t.header && t.merges.length === 0 && !(t.widths || []).some((w) => w)
+export const gfm = (t) => t.header && t.merges.length === 0 && !(t.widths || []).some((w) => w) && t.fluid !== false
 
 // pipeCell is a cell of a line of GFM: its pipes escaped, its lines broken
 // by <br>
@@ -175,7 +194,8 @@ export function toMarkdown(t) {
 // it, between blank lines (rendered by the server, then sanitized).
 export function toHTML(t) {
   const widths = t.widths || []
-  const out = [percent(t) ? '<table width="100%">' : '<table>']
+  const cls = tableClass(t)
+  const out = ['<table' + (cls ? ` class="${cls}"` : '') + (percent(t) && !cls ? ' width="100%"' : '') + '>']
   // the widths of the columns
   if (widths.some((w) => w)) {
     out.push('<colgroup>' + Array.from({ length: t.cols }, (_, c) => (widths[c] ? `<col width="${widths[c]}">` : '<col>')).join('') + '</colgroup>')
@@ -246,7 +266,7 @@ export function fromMarkdown(lines) {
   const fit = (cells) => Array.from({ length: cols }, (_, i) => cells[i] || '')
   const br = (cells) => cells.map((x) => x.replace(/<br\s*\/?>/gi, '\n'))
   const cells = [head, ...lines.slice(2).map(splitRow)].map(fit).map(br)
-  return { rows: cells.length, cols, cells, merges: [], header: true, aligns, widths: Array(cols).fill('') }
+  return { rows: cells.length, cols, cells, merges: [], header: true, aligns, widths: Array(cols).fill(''), fluid: true, position: 'left' }
 }
 
 // inlineMarkdown is the content of a cell of HTML as Markdown: the table
@@ -319,6 +339,7 @@ export function fromHTML(html) {
   }
   const cells = grid.map((row) => Array.from({ length: cols }, (_, i) => row[i] ?? ''))
   return {
+    ...layoutOf((/<table\b[^>]*\bclass\s*=\s*"([^"]*)"/i.exec(html) || [])[1]),
     rows, cols, cells, merges, header,
     aligns: Array.from({ length: cols }, (_, i) => aligns[i] || ''),
     widths: Array.from({ length: cols }, (_, i) => widths[i] || ''),
@@ -352,11 +373,12 @@ export function tableAt(lines, at) {
 
 // toRichHTML is the table as the rich text editor's (tiptap) HTML: its cells'
 // text (Markdown) made HTML by inline (a paragraph each), the header's th,
-// the merged cells' spans, the widths of the columns in pixels on the cells
-// (colwidth; a part of the table, of base pixels), the alignment of a column
-// on its paragraphs (style text-align).
-export function toRichHTML(t, inline, base = 900) {
-  const widths = (t.widths || []).map((w) => (/%$/.test(w) ? String(Math.round((parseFloat(w) / 100) * base)) : w || ''))
+// the merged cells' spans, the widths in pixels of the columns on the cells
+// (colwidth) — a part of the table, none: the table is fluid, a column as
+// wide as it takes —, the alignment of a column on its paragraphs (style
+// text-align).
+export function toRichHTML(t, inline) {
+  const widths = (t.widths || []).map((w) => (/%$/.test(w) ? '' : w || ''))
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
   const rows = []
   for (let r = 0; r < t.rows; r++) {
@@ -376,5 +398,6 @@ export function toRichHTML(t, inline, base = 900) {
     }
     rows.push('<tr>' + cells.join('') + '</tr>')
   }
-  return '<table><tbody>' + rows.join('') + '</tbody></table>'
+  const cls = tableClass(t)
+  return '<table' + (cls ? ` class="${cls}"` : '') + '><tbody>' + rows.join('') + '</tbody></table>'
 }

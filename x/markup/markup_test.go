@@ -67,3 +67,17 @@ func TestMarkdownTables(t *testing.T) {
 		t.Errorf("HTML table: not sanitized: %s", got)
 	}
 }
+
+// TestTableLayout: the class of a table not fluid kept (only it).
+func TestTableLayout(t *testing.T) {
+	got := Render(Markdown, "<table class=\"mdkit-fit mdkit-center\"><tr><td>a</td></tr></table>")
+	if !strings.Contains(got, `<table class="mdkit-fit mdkit-center">`) {
+		t.Errorf("the class of a table not fluid: %s", got)
+	}
+	if got := Render(Rich, `<table class="table-wrapper mdkit-fit mdkit-right"><tr><td>a</td></tr></table>`); !strings.Contains(got, `class="table-wrapper mdkit-fit mdkit-right"`) {
+		t.Errorf("the class of the admin's TipTap: %s", got)
+	}
+	if got := Render(Rich, `<table class="evil"><tr><td>a</td></tr></table>`); strings.Contains(got, "class") {
+		t.Errorf("another class of a table kept: %s", got)
+	}
+}

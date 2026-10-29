@@ -37,12 +37,18 @@ const (
 var policy = func() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(footnoteClassRe).OnElements("a", "div", "sup", "section")
+	p.AllowAttrs("class").Matching(tableClassRe).OnElements("table")
 	return p
 }()
 
 // footnoteClassRe are the classes of the footnotes (goldmark's, and the rich
 // text editor's, the same HTML): a reference, the way back, the notes.
 var footnoteClassRe = regexp.MustCompile(`^(footnote-ref|footnote-backref|footnotes)$`)
+
+// tableClassRe is the class of a table not fluid (the table builder's): as
+// wide as its columns, placed left, center or right (the admin's TipTap puts
+// table-wrapper before it).
+var tableClassRe = regexp.MustCompile(`^(table-wrapper )?mdkit-fit( mdkit-(left|center|right))?$`)
 
 // md is Markdown as GitHub's (GFM) — its footnotes too: `text[^1]`, `[^1]:
 // the note` —, its HTML kept — a table with merged cells is HTML (the

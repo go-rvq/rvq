@@ -14,7 +14,7 @@ import {TableBuilder, configure, inlineHTML, tables, textStyle} from '@rvq/mdkit
 import {useI18n} from '@/lib/locale'
 import {mdkitWords} from '@/lib/locale/mdkit'
 
-const props = defineProps<{ editor: Editor, disabled?: boolean, base?: number }>()
+const props = defineProps<{ editor: Editor, disabled?: boolean }>()
 const {t} = useI18n()
 const words = mdkitWords(t)
 configure({words})
@@ -37,7 +37,7 @@ function open() {
   // done: the table put in its place (the one found, still there), or at
   // the cursor
   builder.value?.open(table, () => {
-    const html = tables.toRichHTML(builder.value.t, inlineHTML, props.base || 900)
+    const html = tables.toRichHTML(builder.value.t, inlineHTML)
     const now = found && tableAt()
     const chain = props.editor.chain().focus()
     if (now) chain.insertContentAt({from: now.pos, to: now.pos + now.node.nodeSize}, html).run()
