@@ -10,7 +10,11 @@
 // wide as the text) or not, then placed left, center or right; the
 // text of a cell formatted (Markdown: bold, italic, strikethrough, code, a
 // link, a picture — when `image` —, a footnote — when `footnote` —;
-// Shift+Enter, a line break); its
+// Shift+Enter, a line break); the dialog expanded to the whole screen; a
+// table pasted — a spreadsheet's cells (Excel's HTML, or its text of tabs:
+// Ctrl+V in a cell spreads them), a page's table, a CSV of a separator
+// detected or chosen, or a CSV file —, replacing the table or from the chosen
+// cell; its
 // preview, as it is written — when `render` (the server's) —, as the
 // editor's: a menu of modes, the sheet alone, side by side — a line between,
 // their vertical scrolls together —, the preview alone. Done,
@@ -52,6 +56,8 @@ function style() {
     '.htb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;padding:.25rem .75rem;background:#f5f5f5;border-top:1px solid #e5e7eb}' +
     '.htb-group{display:flex;align-items:center;flex:0 0 auto;gap:.1rem;padding-right:.5rem;border-right:1px solid #e0e0e0}' +
     '.htb-group:last-child{border-right:0}' +
+    '.htb-mini{border-collapse:collapse;font-size:.8125rem}' +
+    '.htb-mini td{border:1px solid #e5e7eb;padding:.15rem .4rem;white-space:pre-wrap;max-width:12rem;overflow:hidden;text-overflow:ellipsis}' +
     '.htb-grid textarea{display:block;width:100%;border:0;outline:0;resize:none;background:transparent;padding:.35rem .5rem;font:inherit;line-height:1.4;min-height:2.1rem;user-select:text}'
   document.head.append(st)
 }
@@ -75,7 +81,8 @@ export default {
   data: () => ({
     show: false, editing: false, t: T.create(), sel: { r1: 0, c1: 0, r2: 0, c2: 0 },
     anchor: { r: 0, c: 0 }, dragging: false, done: null, cell: null,
-    mode: 'sheet', previewHTML: '', following: null, unit: 'px', resizing: null,
+    mode: 'sheet', previewHTML: '', following: null, unit: 'px', resizing: null, expanded: false,
+    pasting: false, pasteText: '', pasteHTML: '', sep: '', sepOther: '', pasteMode: 'replace',
   }),
   computed: {
     // the class of a text shown (config: the page's)
@@ -126,6 +133,24 @@ export default {
       ]
     },
     html() { return !T.gfm(this.t) },
+    // the sheet and the preview as tall as the screen lets them, expanded
+    boxHeight() { return this.expanded ? 'max-height:calc(100vh - 15rem)' : '' },
+    // the separators of the columns of a CSV ('' detected)
+    sepItems() {
+      const w = this.words
+      return [
+        { value: '', title: w.sepAuto || 'Automatic' }, { value: '\t', title: w.sepTab || 'Tab' },
+        { value: ',', title: w.sepComma || 'Comma ,' }, { value: ';', title: w.sepSemicolon || 'Semicolon ;' },
+        { value: '|', title: w.sepPipe || 'Vertical bar |' }, { value: 'other', title: w.sepOther || 'Other' },
+      ]
+    },
+    // pasted is the table of what is to be pasted; null, nothing
+    pasted() {
+      const sep = this.sep === 'other' ? this.sepOther : this.sep
+      if (this.sep === 'other' && !sep) return null
+      if (!this.pasteHTML && !this.pasteText.trim()) return null
+      return T.fromClipboard(this.pasteHTML, this.pasteText, sep)
+    },
     // sized: a column has its width
     sized() { return this.t.widths.some((w) => w) },
     // the sheet as wide as the parts of its columns ask (100%), else as its
@@ -144,7 +169,7 @@ export default {
     columns() { return this.sel.r1 === 0 && this.sel.r2 === this.t.rows - 1 && this.t.rows > 1 },
   },
   template: `
-<v-dialog v-model="show" :max-width="mode === 'split' ? 1400 : 960" scrollable data-table-builder>
+<v-dialog v-model="show" :max-width="mode === 'split' ? 1400 : 960" :fullscreen="expanded" scrollable data-table-builder>
   <v-card>
     <v-card-title class="d-flex align-center flex-wrap ga-2 pb-1">
       <v-icon icon="mdi-table"></v-icon>{{ words.title || 'Table' }}
@@ -160,9 +185,16 @@ export default {
             :data-table-mode="m.key" @click="setMode(m.key)"></v-list-item>
         </v-list>
       </v-menu>
+      <v-btn :icon="expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'" size="small" variant="text" data-table-op="expand"
+        @click="expanded = !expanded"><v-icon :icon="expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"></v-icon><v-tooltip activator="parent" location="top"
+        :text="expanded ? (words.shrink || 'Back to the dialog') : (words.expand || 'Expand to the whole screen')"></v-tooltip></v-btn>
     </v-card-title>
     <!-- the table: rows, columns, merges, widths, layout, header -->
     <div class="htb-bar" data-table-bar="table">
+      <div class="htb-group">
+        <v-btn icon="mdi-content-paste" size="small" variant="text" data-table-op="paste" @click="openPaste"><v-icon icon="mdi-content-paste"></v-icon><v-tooltip
+          activator="parent" location="top" :text="words.paste || 'Paste CSV, Excel or HTML'"></v-tooltip></v-btn>
+      </div>
       <div class="htb-group">
         <v-btn icon="mdi-table-row-plus-before" size="small" variant="text" data-table-op="row-above" @click="op('rowAbove')"><v-icon icon="mdi-table-row-plus-before"></v-icon><v-tooltip activator="parent" location="top" :text="words.rowAbove || 'Row above'"></v-tooltip></v-btn>
         <v-btn icon="mdi-table-row-plus-after" size="small" variant="text" data-table-op="row-below" @click="op('rowBelow')"><v-icon icon="mdi-table-row-plus-after"></v-icon><v-tooltip activator="parent" location="top" :text="words.rowBelow || 'Row below'"></v-tooltip></v-btn>
@@ -209,7 +241,7 @@ export default {
     </div>
     <v-card-text class="pt-3">
       <div class="d-flex" :class="mode === 'split' ? '' : 'flex-column ga-3'">
-      <div v-show="mode !== 'total'" ref="grid" class="htb-grid flex-grow-1" :style="mode === 'split' ? 'flex-basis:0;min-width:0' : ''"
+      <div v-show="mode !== 'total'" ref="grid" class="htb-grid flex-grow-1" :style="[mode === 'split' ? 'flex-basis:0;min-width:0' : '', boxHeight]"
         @scroll="follow('grid')" @mouseup="dragging = false" @mouseleave="dragging = false"
         @dragstart.prevent @drop.prevent data-table-grid>
         <table ref="sheet" :class="{ 'htb-sized': sized }" :style="sheetStyle">
@@ -232,7 +264,7 @@ export default {
               <td v-if="!covered(r, c)" :colspan="spanOf(r, c).cs" :rowspan="spanOf(r, c).rs" :style="cellStyle(r, c)"
                 :class="{ 'htb-sel': inSel(r, c), 'htb-head': t.header && r === 0 }"
                 @mousedown="down($event, r, c)" @mouseenter="enter(r, c)" :data-cell="r + ',' + c">
-                <textarea rows="1" v-model="t.cells[r][c]" :style="{ textAlign: cellAlign(r, c) || 'left' }"
+                <textarea rows="1" v-model="t.cells[r][c]" @paste="pasteCells($event, r, c)" :style="{ textAlign: cellAlign(r, c) || 'left' }"
                   @focus="focus(r, c, $event.target)" @input="grow($event.target)"
                   @keydown.enter.exact.prevent="move(r, c, 1)"
                   @keydown.ctrl.b.prevent="format('bold')" @keydown.meta.b.prevent="format('bold')"
@@ -245,7 +277,7 @@ export default {
       <div v-if="mode !== 'sheet'" class="flex-grow-1" :style="mode === 'split' ? 'flex-basis:0;min-width:0' : ''" data-table-preview>
         <div v-if="mode === 'total'" class="text-caption text-medium-emphasis mb-1">{{ words.preview || 'Preview' }}</div>
         <div ref="preview" class="pa-3" :class="[textClass, mode === 'split' ? 'htb-split' : 'border rounded']"
-          style="overflow:auto;max-height:60vh" @scroll="follow('preview')" v-html="previewHTML"></div>
+          style="overflow:auto;max-height:60vh" :style="boxHeight" @scroll="follow('preview')" v-html="previewHTML"></div>
       </div>
       </div>
       <div v-if="html" class="text-caption text-medium-emphasis mt-2" data-table-html>
@@ -259,6 +291,49 @@ export default {
       <v-btn color="primary" variant="flat" data-table-done @click="finish">{{ editing ? (words.update || 'Update') : (words.insert || 'Insert') }}</v-btn>
     </v-card-actions>
   </v-card>
+  <!-- a table pasted (a spreadsheet's cells, a page's table, a CSV) or a CSV file -->
+  <v-dialog v-model="pasting" max-width="720" scrollable data-table-paste>
+    <v-card>
+      <v-card-title class="d-flex align-center ga-2">
+        <v-icon icon="mdi-content-paste"></v-icon>{{ words.pasteTitle || 'Paste a table' }}
+      </v-card-title>
+      <v-card-text>
+        <div class="text-body-2 text-medium-emphasis mb-2">{{ words.pasteHint || 'Paste here (Ctrl+V) the cells copied from a spreadsheet (Excel, LibreOffice) or a page, or a CSV text; or open a CSV file.' }}</div>
+        <v-textarea v-model="pasteText" rows="6" variant="outlined" density="compact" hide-details autofocus
+          :placeholder="words.pastePlaceholder || 'Ctrl+V'" style="font-family:monospace"
+          @paste="pasteArea" @update:model-value="pasteHTML = ''" data-table-paste-text></v-textarea>
+        <div class="d-flex flex-wrap align-center ga-3 mt-3">
+          <v-btn size="small" variant="tonal" prepend-icon="mdi-file-delimited-outline" data-table-paste-file
+            @click="$refs.csvFile.click()">{{ words.pasteFile || 'Open a CSV file' }}</v-btn>
+          <input ref="csvFile" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" hidden @change="readCSV">
+          <v-select v-model="sep" :items="sepItems" item-title="title" item-value="value" density="compact" hide-details variant="outlined"
+            :label="words.separator || 'Column separator'" :disabled="!!pasteHTML" style="max-width:15rem" data-table-paste-sep></v-select>
+          <v-text-field v-if="sep === 'other'" v-model="sepOther" density="compact" hide-details variant="outlined"
+            :label="words.sepOtherChar || 'Separator'" style="max-width:8rem" data-table-paste-sep-other></v-text-field>
+        </div>
+        <div v-if="pasteHTML" class="text-caption text-medium-emphasis mt-1">{{ words.pasteHTML || 'A table of HTML: its cells as they are (no separator).' }}</div>
+        <v-radio-group v-model="pasteMode" inline hide-details density="compact" class="mt-2" data-table-paste-mode>
+          <v-radio value="replace" :label="words.pasteReplace || 'Replace the table'"></v-radio>
+          <v-radio value="at" :label="(words.pasteAt || 'From the chosen cell') + ' (' + letter(sel.c1) + (sel.r1 + 1) + ')'"></v-radio>
+        </v-radio-group>
+        <div v-if="pasted" class="mt-2" data-table-paste-found>
+          <div class="text-caption text-medium-emphasis mb-1">{{ (words.pasteFound || '{rows} × {cols} cells').replace('{rows}', pasted.rows).replace('{cols}', pasted.cols) }}</div>
+          <div class="htb-grid" style="max-height:12rem">
+            <table class="htb-mini">
+              <tr v-for="(row, i) in pasted.cells.slice(0, 6)" :key="i">
+                <td v-for="(cell, j) in row.slice(0, 8)" :key="j">{{ cell }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn variant="text" @click="pasting = false">{{ words.cancel || 'Cancel' }}</v-btn>
+        <v-btn color="primary" variant="flat" :disabled="!pasted" data-table-paste-do @click="doPaste">{{ words.pasteDo || 'Paste' }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </v-dialog>`,
   watch: {
     // the preview, a moment after the last change
@@ -499,6 +574,69 @@ export default {
     cellStyle(r, c) {
       const v = T.cellVAlign(this.t, r, c)
       return v ? { verticalAlign: v } : {}
+    },
+    // empty says no cell of the table has a text
+    empty() { return this.t.cells.every((row) => row.every((c) => !String(c || '').trim())) },
+    openPaste() {
+      this.pasteText = ''
+      this.pasteHTML = ''
+      this.pasteMode = this.empty() ? 'replace' : 'at'
+      this.pasting = true
+    },
+    // pasteArea keeps the HTML of a table copied (a spreadsheet's), its text
+    // shown
+    pasteArea(e) {
+      const html = e.clipboardData && e.clipboardData.getData('text/html')
+      if (html && /<table\b/i.test(html)) {
+        e.preventDefault()
+        this.pasteText = e.clipboardData.getData('text/plain')
+        this.$nextTick(() => { this.pasteHTML = html })
+      }
+    },
+    // readCSV reads the CSV file chosen
+    readCSV(e) {
+      const file = e.target.files && e.target.files[0]
+      e.target.value = ''
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        this.pasteText = String(reader.result || '').replace(/^\uFEFF/, '')
+        this.$nextTick(() => { this.pasteHTML = '' })
+      }
+      reader.readAsText(file)
+    },
+    // doPaste puts the table pasted in: the table's place (its layout kept),
+    // or from the chosen cell
+    doPaste() {
+      const src = this.pasted
+      if (!src) return
+      if (this.pasteMode === 'replace') {
+        const { fluid, position, header } = this.t
+        this.t = T.normalize({ ...src, fluid, position, header })
+        this.unit = 'px'
+        this.pick(0, 0, 0, 0)
+      } else {
+        T.paste(this.t, src, this.sel.r1, this.sel.c1)
+        this.pick(this.sel.r1, this.sel.c1, this.sel.r1 + src.rows - 1, this.sel.c1 + src.cols - 1)
+      }
+      this.pasting = false
+      setTimeout(() => document.querySelectorAll('[data-table-grid] textarea').forEach((el) => this.grow(el)), 50)
+    },
+    // pasteCells spreads cells copied (a spreadsheet's: its HTML, or a text
+    // of tabs) over the sheet from the cell (r, c); one cell's text, as text
+    pasteCells(e, r, c) {
+      const d = e.clipboardData
+      if (!d) return
+      const html = d.getData('text/html')
+      const text = d.getData('text/plain')
+      const table = html && /<table\b/i.test(html)
+      if (!table && !text.includes('\t')) return
+      const src = T.fromClipboard(table ? html : '', text, '\t')
+      if (!src || src.rows * src.cols < 2) return
+      e.preventDefault()
+      T.paste(this.t, src, r, c)
+      this.pick(r, c, r + src.rows - 1, c + src.cols - 1)
+      setTimeout(() => document.querySelectorAll('[data-table-grid] textarea').forEach((el) => this.grow(el)), 50)
     },
     finish() {
       const text = T.toMarkdown(this.t)

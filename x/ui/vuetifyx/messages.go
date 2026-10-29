@@ -219,6 +219,26 @@ type Messages struct {
 	MdkitTableValignMiddle      string `json:"mdkitTableValignMiddle" i18n:"hint='Editors of a text (mdkit), table: valignMiddle.'"`
 	MdkitTableValignBottom      string `json:"mdkitTableValignBottom" i18n:"hint='Editors of a text (mdkit), table: valignBottom.'"`
 	MdkitTableCellPlace         string `json:"mdkitTableCellPlace" i18n:"hint='Editors of a text (mdkit), table: cellPlace.'"`
+	MdkitTableExpand            string `json:"mdkitTableExpand" i18n:"hint='Editors of a text (mdkit), table: expand.'"`
+	MdkitTableShrink            string `json:"mdkitTableShrink" i18n:"hint='Editors of a text (mdkit), table: shrink.'"`
+	MdkitTablePaste             string `json:"mdkitTablePaste" i18n:"hint='Editors of a text (mdkit), table: paste.'"`
+	MdkitTablePasteTitle        string `json:"mdkitTablePasteTitle" i18n:"hint='Editors of a text (mdkit), table: pasteTitle.'"`
+	MdkitTablePasteHint         string `json:"mdkitTablePasteHint" i18n:"hint='Editors of a text (mdkit), table: pasteHint.'"`
+	MdkitTablePastePlaceholder  string `json:"mdkitTablePastePlaceholder" i18n:"hint='Editors of a text (mdkit), table: pastePlaceholder.'"`
+	MdkitTablePasteFile         string `json:"mdkitTablePasteFile" i18n:"hint='Editors of a text (mdkit), table: pasteFile.'"`
+	MdkitTableSeparator         string `json:"mdkitTableSeparator" i18n:"hint='Editors of a text (mdkit), table: separator.'"`
+	MdkitTableSepAuto           string `json:"mdkitTableSepAuto" i18n:"hint='Editors of a text (mdkit), table: sepAuto.'"`
+	MdkitTableSepTab            string `json:"mdkitTableSepTab" i18n:"hint='Editors of a text (mdkit), table: sepTab.'"`
+	MdkitTableSepComma          string `json:"mdkitTableSepComma" i18n:"hint='Editors of a text (mdkit), table: sepComma.'"`
+	MdkitTableSepSemicolon      string `json:"mdkitTableSepSemicolon" i18n:"hint='Editors of a text (mdkit), table: sepSemicolon.'"`
+	MdkitTableSepPipe           string `json:"mdkitTableSepPipe" i18n:"hint='Editors of a text (mdkit), table: sepPipe.'"`
+	MdkitTableSepOther          string `json:"mdkitTableSepOther" i18n:"hint='Editors of a text (mdkit), table: sepOther.'"`
+	MdkitTableSepOtherChar      string `json:"mdkitTableSepOtherChar" i18n:"hint='Editors of a text (mdkit), table: sepOtherChar.'"`
+	MdkitTablePasteHTML         string `json:"mdkitTablePasteHTML" i18n:"hint='Editors of a text (mdkit), table: pasteHTML.'"`
+	MdkitTablePasteReplace      string `json:"mdkitTablePasteReplace" i18n:"hint='Editors of a text (mdkit), table: pasteReplace.'"`
+	MdkitTablePasteAt           string `json:"mdkitTablePasteAt" i18n:"hint='Editors of a text (mdkit), table: pasteAt.'"`
+	MdkitTablePasteFound        string `json:"mdkitTablePasteFound" i18n:"hint='Editors of a text (mdkit), table: pasteFound.'"`
+	MdkitTablePasteDo           string `json:"mdkitTablePasteDo" i18n:"hint='Editors of a text (mdkit), table: pasteDo.'"`
 	MdkitTableModeSheet         string `json:"mdkitTableModeSheet" i18n:"hint='Editors of a text (mdkit), table: modeSheet.'"`
 	MdkitTableModeSplit         string `json:"mdkitTableModeSplit" i18n:"hint='Editors of a text (mdkit), table: modeSplit.'"`
 	MdkitTableModePreview       string `json:"mdkitTableModePreview" i18n:"hint='Editors of a text (mdkit), table: modePreview.'"`
@@ -466,6 +486,26 @@ var Messages_en_US = &Messages{
 	MdkitTableValignMiddle:      "Content in the middle",
 	MdkitTableValignBottom:      "Content at the bottom",
 	MdkitTableCellPlace:         "Place the content of the cells",
+	MdkitTableExpand:            "Expand to the whole screen",
+	MdkitTableShrink:            "Back to the dialog",
+	MdkitTablePaste:             "Paste CSV, Excel or HTML",
+	MdkitTablePasteTitle:        "Paste a table",
+	MdkitTablePasteHint:         "Paste here (Ctrl+V) the cells copied from a spreadsheet (Excel, LibreOffice) or a page, or a CSV text; or open a CSV file.",
+	MdkitTablePastePlaceholder:  "Ctrl+V",
+	MdkitTablePasteFile:         "Open a CSV file",
+	MdkitTableSeparator:         "Column separator",
+	MdkitTableSepAuto:           "Automatic",
+	MdkitTableSepTab:            "Tab",
+	MdkitTableSepComma:          "Comma ,",
+	MdkitTableSepSemicolon:      "Semicolon ;",
+	MdkitTableSepPipe:           "Vertical bar |",
+	MdkitTableSepOther:          "Other",
+	MdkitTableSepOtherChar:      "Separator",
+	MdkitTablePasteHTML:         "A table of HTML: its cells as they are (no separator).",
+	MdkitTablePasteReplace:      "Replace the table",
+	MdkitTablePasteAt:           "From the chosen cell",
+	MdkitTablePasteFound:        "{rows} × {cols} cells",
+	MdkitTablePasteDo:           "Paste",
 	MdkitTableModeSheet:         "Sheet",
 	MdkitTableModeSplit:         "Side by side",
 	MdkitTableModePreview:       "Preview only",
@@ -713,6 +753,26 @@ var Messages_pt_BR = &Messages{
 	MdkitTableValignMiddle:      "Conteúdo no meio",
 	MdkitTableValignBottom:      "Conteúdo embaixo",
 	MdkitTableCellPlace:         "Posição do conteúdo das células",
+	MdkitTableExpand:            "Expandir para a tela inteira",
+	MdkitTableShrink:            "Voltar ao diálogo",
+	MdkitTablePaste:             "Colar CSV, Excel ou HTML",
+	MdkitTablePasteTitle:        "Colar uma tabela",
+	MdkitTablePasteHint:         "Cole aqui (Ctrl+V) as células copiadas de uma planilha (Excel, LibreOffice) ou de uma página, ou um texto CSV; ou abra um arquivo CSV.",
+	MdkitTablePastePlaceholder:  "Ctrl+V",
+	MdkitTablePasteFile:         "Abrir um arquivo CSV",
+	MdkitTableSeparator:         "Separador de colunas",
+	MdkitTableSepAuto:           "Automático",
+	MdkitTableSepTab:            "Tabulação",
+	MdkitTableSepComma:          "Vírgula ,",
+	MdkitTableSepSemicolon:      "Ponto e vírgula ;",
+	MdkitTableSepPipe:           "Barra vertical |",
+	MdkitTableSepOther:          "Outro",
+	MdkitTableSepOtherChar:      "Separador",
+	MdkitTablePasteHTML:         "Uma tabela HTML: as células como estão (sem separador).",
+	MdkitTablePasteReplace:      "Substituir a tabela",
+	MdkitTablePasteAt:           "A partir da célula escolhida",
+	MdkitTablePasteFound:        "{rows} × {cols} células",
+	MdkitTablePasteDo:           "Colar",
 	MdkitTableModeSheet:         "Planilha",
 	MdkitTableModeSplit:         "Lado a lado",
 	MdkitTableModePreview:       "Só a prévia",

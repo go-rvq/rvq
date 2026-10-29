@@ -383,6 +383,46 @@ export interface VxMessages {
   mdkitTableValignBottom: string
   /** Editors of a text (mdkit), table: cellPlace. */
   mdkitTableCellPlace: string
+  /** Editors of a text (mdkit), table: expand. */
+  mdkitTableExpand: string
+  /** Editors of a text (mdkit), table: shrink. */
+  mdkitTableShrink: string
+  /** Editors of a text (mdkit), table: paste. */
+  mdkitTablePaste: string
+  /** Editors of a text (mdkit), table: pasteTitle. */
+  mdkitTablePasteTitle: string
+  /** Editors of a text (mdkit), table: pasteHint. */
+  mdkitTablePasteHint: string
+  /** Editors of a text (mdkit), table: pastePlaceholder. */
+  mdkitTablePastePlaceholder: string
+  /** Editors of a text (mdkit), table: pasteFile. */
+  mdkitTablePasteFile: string
+  /** Editors of a text (mdkit), table: separator. */
+  mdkitTableSeparator: string
+  /** Editors of a text (mdkit), table: sepAuto. */
+  mdkitTableSepAuto: string
+  /** Editors of a text (mdkit), table: sepTab. */
+  mdkitTableSepTab: string
+  /** Editors of a text (mdkit), table: sepComma. */
+  mdkitTableSepComma: string
+  /** Editors of a text (mdkit), table: sepSemicolon. */
+  mdkitTableSepSemicolon: string
+  /** Editors of a text (mdkit), table: sepPipe. */
+  mdkitTableSepPipe: string
+  /** Editors of a text (mdkit), table: sepOther. */
+  mdkitTableSepOther: string
+  /** Editors of a text (mdkit), table: sepOtherChar. */
+  mdkitTableSepOtherChar: string
+  /** Editors of a text (mdkit), table: pasteHTML. */
+  mdkitTablePasteHTML: string
+  /** Editors of a text (mdkit), table: pasteReplace. */
+  mdkitTablePasteReplace: string
+  /** Editors of a text (mdkit), table: pasteAt. */
+  mdkitTablePasteAt: string
+  /** Editors of a text (mdkit), table: pasteFound. */
+  mdkitTablePasteFound: string
+  /** Editors of a text (mdkit), table: pasteDo. */
+  mdkitTablePasteDo: string
   /** Editors of a text (mdkit), table: modeSheet. */
   mdkitTableModeSheet: string
   /** Editors of a text (mdkit), table: modeSplit. */

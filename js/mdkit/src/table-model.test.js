@@ -193,3 +193,36 @@ test('a cell placed on its own: across and up and down, HTML, read back', () => 
   expect(back.halign[1]).toEqual(['', ''])
   expect(back.valign[1]).toEqual(['bottom', ''])
 })
+
+test('CSV: its separator detected or chosen, quotes, line breaks', () => {
+  expect(T.detectSeparator('a;b;c\n1;2;3')).toBe(';')
+  expect(T.detectSeparator('a\tb\n1\t2')).toBe('\t')
+  expect(T.detectSeparator('a,b\n"1,5",2')).toBe(',')
+  expect(T.detectSeparator('a|b|c\n1|2|3')).toBe('|')
+  expect(T.parseCSV('a,"b, c","d ""e"""\n1,"two\nlines",3\n\n')).toEqual([['a', 'b, c', 'd "e"'], ['1', 'two\nlines', '3']])
+  expect(T.parseCSV('a;b,c\n1;2', ';')).toEqual([['a', 'b,c'], ['1', '2']])
+  expect(T.parseCSV('a::b\n1::2', '::')).toEqual([['a', 'b'], ['1', '2']])
+})
+
+test('clipboard: a spreadsheet\'s HTML (Excel) or its text; pasted from a cell, the table grown', () => {
+  const excel = '<html><body><!--StartFragment--><table><col width=64><tr height=20><td class=xl65 height=20>Nome</td><td>Valor&nbsp;1</td></tr>' +
+    '<tr><td>a</td><td align=right>10</td></tr></table><!--EndFragment--></body></html>'
+  const x = T.fromClipboard(excel, 'Nome\tValor 1\na\t10')
+  expect(x.cells).toEqual([['Nome', 'Valor 1'], ['a', '10']])
+  expect(x.halign[1][1]).toBe('right')
+  const csv = T.fromClipboard('', 'x;y;z\n1;2;3')
+  expect(csv.rows).toBe(2)
+  expect(csv.cols).toBe(3)
+  const t = T.create(2, 2)
+  t.cells[0][0] = 'keep'
+  T.merge(t, 1, 0, 1, 1)
+  T.paste(t, csv, 1, 1)
+  expect(t.rows).toBe(3)
+  expect(t.cols).toBe(4)
+  expect(t.cells[0][0]).toBe('keep')
+  expect(t.cells[1].slice(1)).toEqual(['x', 'y', 'z'])
+  expect(t.cells[2].slice(1)).toEqual(['1', '2', '3'])
+  expect(t.merges).toEqual([])
+  expect(t.halign.length).toBe(3)
+  expect(t.widths.length).toBe(4)
+})

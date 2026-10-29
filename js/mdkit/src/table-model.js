@@ -309,8 +309,8 @@ export function fromMarkdown(lines) {
 // made Markdown (strong, em, del, code, a, br, p), the others dropped.
 function inlineMarkdown(html) {
   const s = html.trim()
-  if (!/<[a-z!/]/i.test(s)) return s
-  return s
+  if (!/<[a-z!/]/i.test(s)) return decode(s)
+  return decode(s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
     .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**')
@@ -318,10 +318,12 @@ function inlineMarkdown(html) {
     .replace(/<(del|s|strike)\b[^>]*>([\s\S]*?)<\/\1>/gi, '~~$2~~')
     .replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
     .replace(/<a\b[^>]*href\s*=\s*"([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/<[^>]*>/g, ''))
     .trim()
 }
+
+// decode is text with its entities of HTML made characters.
+const decode = (s) => s.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
 
 // fromHTML is the table of the HTML of a table: its rows, its cells (th, td)
 // in place — their spans the merges —, its header (a first row of th), its
@@ -451,4 +453,112 @@ export function toRichHTML(t, inline) {
   }
   const cls = tableClass(t)
   return '<table' + (cls ? ` class="${cls}"` : '') + '><tbody>' + rows.join('') + '</tbody></table>'
+}
+
+// separators are the separators of columns of a CSV a paste may have, the
+// first the default.
+export const separators = ['\t', ';', ',', '|']
+
+// detectSeparator is the separator of the columns of text: the one of
+// separators (outside quotes) found the most times in its first line,
+// the same in every line; else a comma.
+export function detectSeparator(text) {
+  const lines = String(text).split(/\r?\n/).filter((l) => l.trim()).slice(0, 10)
+  let best = ','
+  let most = 0
+  for (const sep of separators) {
+    const counts = lines.map((l) => parseCSV(l, sep)[0]?.length - 1 || 0)
+    if (counts[0] > most && counts.every((n) => n === counts[0])) {
+      best = sep
+      most = counts[0]
+    }
+  }
+  if (most) return best
+  // lines of different lengths: the most found in the first
+  for (const sep of separators) {
+    const n = (parseCSV(lines[0] || '', sep)[0]?.length || 1) - 1
+    if (n > most) {
+      best = sep
+      most = n
+    }
+  }
+  return best
+}
+
+// parseCSV is the rows of the cells of text, its columns separated by sep
+// (none: detected): a cell between double quotes may hold sep, line breaks
+// and "" (a quote); the blank lines at the end dropped.
+export function parseCSV(text, sep) {
+  const s = String(text).replace(/\r\n?/g, '\n')
+  if (!sep) sep = detectSeparator(s)
+  const rows = []
+  let row = []
+  let cell = ''
+  let quoted = false
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (quoted) {
+      if (ch === '"' && s[i + 1] === '"') {
+        cell += '"'
+        i++
+      } else if (ch === '"') quoted = false
+      else cell += ch
+    } else if (ch === '"' && cell === '') quoted = true
+    else if (s.startsWith(sep, i)) {
+      row.push(cell)
+      cell = ''
+      i += sep.length - 1
+    } else if (ch === '\n') {
+      row.push(cell)
+      rows.push(row)
+      row = []
+      cell = ''
+    } else cell += ch
+  }
+  row.push(cell)
+  rows.push(row)
+  while (rows.length && rows[rows.length - 1].every((c) => !c.trim())) rows.pop()
+  return rows.map((r) => r.map((c) => c.trim()))
+}
+
+// fromGrid is the table of rows of texts: as many columns as its longest,
+// its first row the header.
+export function fromGrid(grid) {
+  const cols = Math.max(1, ...grid.map((r) => r.length))
+  const t = create(Math.max(1, grid.length), cols)
+  grid.forEach((r, i) => r.forEach((c, j) => { t.cells[i][j] = c }))
+  return t
+}
+
+// fromClipboard is the table of what was copied: the HTML of a table (a
+// spreadsheet's, as Excel's, a page's) when there is one, else the text as a
+// CSV of sep (none: detected); null, nothing.
+export function fromClipboard(html, text, sep) {
+  if (html && /<table\b/i.test(html)) {
+    const t = fromHTML(html.slice(html.search(/<table\b/i)))
+    if (t) return normalize(t)
+  }
+  const grid = parseCSV(text || '', sep)
+  return grid.length ? fromGrid(grid) : null
+}
+
+// paste puts the table src in t from the cell (r, c) — t grown to hold it —:
+// its texts, its cells' places, its merges (the merges of t it touches
+// undone); the rest of t as it was.
+export function paste(t, src, r = 0, c = 0) {
+  normalize(src)
+  while (t.rows < r + src.rows) insertRow(t, t.rows)
+  while (t.cols < c + src.cols) insertCol(t, t.cols)
+  const r2 = r + src.rows - 1
+  const c2 = c + src.cols - 1
+  t.merges = t.merges.filter((m) => m.r > r2 || m.r + m.rs - 1 < r || m.c > c2 || m.c + m.cs - 1 < c)
+  for (let i = 0; i < src.rows; i++) {
+    for (let j = 0; j < src.cols; j++) {
+      t.cells[r + i][c + j] = src.cells[i][j] || ''
+      t.halign[r + i][c + j] = src.halign[i][j] || ''
+      t.valign[r + i][c + j] = src.valign[i][j] || ''
+    }
+  }
+  for (const m of src.merges) t.merges.push({ r: m.r + r, c: m.c + c, rs: m.rs, cs: m.cs })
+  return t
 }
