@@ -64,6 +64,9 @@ type ModelBuilder struct {
 	notInMenu bool
 	// notInGlobalSearch: the search of the top bar does not look in it
 	notInGlobalSearch bool
+	// globalSearchParents: the ids of the parents of a record of a child the
+	// search of the top bar looks in (GlobalSearchParents)
+	globalSearchParents func(obj any) IDSlice
 	// noRecordStateStamp turns off the state-hash fallback of the optimistic
 	// lock for a model with no UpdatedAt (see SetRecordStateStamp).
 	noRecordStateStamp bool

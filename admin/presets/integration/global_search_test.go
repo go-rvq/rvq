@@ -27,6 +27,12 @@ type GSHidden struct {
 	Name string
 }
 
+type GSLine struct {
+	ID     uint
+	NoteID uint
+	Name   string
+}
+
 type GSOff struct {
 	ID   uint
 	Name string
@@ -34,23 +40,30 @@ type GSOff struct {
 
 // The search of the top bar (presets_GlobalSearch): the records whose words
 // match, by model, with the link of each; a model out of the menu is not
-// looked in; under 2 letters, nothing; and the bar is in the page.
+// looked in, nor a child unless it says its records' parents
+// (GlobalSearchParents: then its records, linked under them); under 2
+// letters, nothing; and the bar is in the page.
 func TestGlobalSearch(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:globalsearch_%d?mode=memory&cache=shared", atomic.AddInt64(&ftSeq, 1))), &gorm.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = db.AutoMigrate(&GSNote{}, &GSHidden{}, &GSOff{}); err != nil {
+	if err = db.AutoMigrate(&GSNote{}, &GSHidden{}, &GSOff{}, &GSLine{}); err != nil {
 		t.Fatal(err)
 	}
 	db.Create(&[]GSNote{{Name: "alpha zebra"}, {Name: "beta"}})
 	db.Create(&[]GSHidden{{Name: "zebra hidden"}})
 	db.Create(&[]GSOff{{Name: "zebra off"}})
+	db.Create(&[]GSLine{{NoteID: 2, Name: "kiwi line"}})
 
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	p.Permission(perm.New().AllowAll())
 	p.DataOperator(gorm2op.DataOperator(db))
-	p.Model(&GSNote{}).URIName("gs-notes").Listing("ID", "Name")
+	notes := p.Model(&GSNote{}).URIName("gs-notes")
+	notes.Listing("ID", "Name")
+	lines := presets.NewModelBuilder(p, &GSLine{}, presets.ModelConfig().SetId("gs-lines")).URIName("lines")
+	lines.Listing("ID", "Name").SearchColumns("name")
+	notes.AddChild(lines)
 	p.Model(&GSHidden{}).URIName("gs-hidden").InMenu(false).Listing("ID", "Name")
 	p.Model(&GSOff{}).URIName("gs-off").GlobalSearch(false).Listing("ID", "Name")
 
@@ -92,6 +105,18 @@ func TestGlobalSearch(t *testing.T) {
 	}
 	if groups := search("nothing-here"); len(groups) != 0 {
 		t.Errorf("no match: nothing, got %+v", groups)
+	}
+
+	// a child: not looked in, unless it says its records' parents
+	if groups := search("kiwi"); len(groups) != 0 {
+		t.Errorf("a child without its parents: nothing, got %+v", groups)
+	}
+	lines.GlobalSearchParents(func(obj any) presets.IDSlice {
+		return presets.IDSlice{notes.MustParseRecordID(fmt.Sprint(obj.(*GSLine).NoteID))}
+	})
+	if groups := search("kiwi"); len(groups) != 1 || len(groups[0].Items) != 1 ||
+		!strings.HasPrefix(groups[0].Items[0].Href, "/admin/gs-notes/2/lines/1") {
+		t.Errorf("a child with its parents: its record under them, got %+v", groups)
 	}
 
 	// the page: the bar of the search, Ctrl K, the menu's items for it

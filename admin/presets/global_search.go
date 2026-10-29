@@ -42,6 +42,16 @@ func (mb *ModelBuilder) GlobalSearch(v bool) *ModelBuilder {
 	return mb
 }
 
+// GlobalSearchParents makes the search of the top bar look in the records of
+// a child model too (it does not, by default): parents are the ids of the
+// parents of a record, root first — as ListingHref takes them —; its link
+// and whether the user may list it are under them. The model's listing must
+// find its records with no parent in the request (all of them).
+func (mb *ModelBuilder) GlobalSearchParents(parents func(obj any) IDSlice) *ModelBuilder {
+	mb.globalSearchParents = parents
+	return mb
+}
+
 // globalSearch is GlobalSearchEvent.
 func (b *Builder) globalSearch(ctx *web.EventContext) (r web.EventResponse, err error) {
 	q := strings.TrimSpace(ctx.R.FormValue("q"))
@@ -60,15 +70,24 @@ func (b *Builder) globalSearch(ctx *web.EventContext) (r web.EventResponse, err 
 		}
 	}
 	pos := map[*globalSearchGroup]int{}
-	for _, mb := range b.models {
+	// the models and their children, a child after its parent (in its place
+	// in the menu)
+	var look func(mb *ModelBuilder, p int)
+	look = func(mb *ModelBuilder, p int) {
 		if g := b.globalSearchModel(ctx, mb, q, n); g != nil {
-			p, ok := order[mb.Info().ListingHref()]
-			if !ok {
-				p = len(order)
-			}
 			pos[g] = p
 			groups = append(groups, g)
 		}
+		for _, c := range mb.children {
+			look(c, p)
+		}
+	}
+	for _, mb := range b.models {
+		p, ok := order[mb.Info().ListingHref()]
+		if !ok {
+			p = len(order)
+		}
+		look(mb, p)
 	}
 	sort.SliceStable(groups, func(i, j int) bool { return pos[groups[i]] < pos[groups[j]] })
 	r.Data = groups
@@ -77,12 +96,21 @@ func (b *Builder) globalSearch(ctx *web.EventContext) (r web.EventResponse, err 
 
 // globalSearchModel is the group of the records of mb matching q (nil: none,
 // or a model the search does not look in — out of the menu, a child of
-// another, a singleton, one the user may not list, one with no words).
+// another that does not say its records' parents (GlobalSearchParents), a
+// singleton, one the user may not list, one with no words).
 func (b *Builder) globalSearchModel(ctx *web.EventContext, mb *ModelBuilder, q string, n int) *globalSearchGroup {
 	l := mb.listing
-	if mb.notInMenu || mb.notInGlobalSearch || mb.parent != nil || mb.singleton || l == nil || l.Searcher == nil ||
-		len(l.searchColumns) == 0 || mb.CurrentDataOperator() == nil ||
-		mb.permissioner.ReqLister(ctx.R).Denied() {
+	child := mb.parent != nil
+	if child {
+		// a child: when it says its records' parents
+		if mb.globalSearchParents == nil {
+			return nil
+		}
+	} else if mb.notInMenu || mb.permissioner.ReqLister(ctx.R).Denied() {
+		return nil
+	}
+	if mb.notInGlobalSearch || mb.singleton || l == nil || l.Searcher == nil ||
+		len(l.searchColumns) == 0 || mb.CurrentDataOperator() == nil {
 		return nil
 	}
 	params := &SearchParams{
@@ -112,9 +140,16 @@ func (b *Builder) globalSearchModel(ctx *web.EventContext, mb *ModelBuilder, q s
 		if err != nil {
 			continue
 		}
-		href := mb.Info().EditingHref(id)
+		var parents IDSlice
+		if child {
+			// under its parents: listed there by the user
+			if parents = mb.globalSearchParents(obj); len(parents) == 0 || mb.permissioner.Lister(ctx.R, parents...).Denied() {
+				continue
+			}
+		}
+		href := mb.Info().EditingHref(id, parents...)
 		if mb.hasDetailing {
-			href = mb.Info().DetailingHref(id)
+			href = mb.Info().DetailingHref(id, parents...)
 		}
 		g.Items = append(g.Items, globalSearchItem{
 			Title: mb.RecordTitle(obj, ctx),
