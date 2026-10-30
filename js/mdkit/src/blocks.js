@@ -9,7 +9,7 @@
 // (rvq js/api/vendor) —. What is in an editor (contenteditable) is its own.
 
 import { drawCode, codeSel } from './code.js'
-import { drawButtons, drawTabs, buttonsSel, tabsSel } from './widgets.js'
+import { drawButtons, drawTabs, buttonsSel, tabsSel, printDetails, widgetStyle } from './widgets.js'
 
 const mathSel = '[data-type="inline-math"][data-latex],[data-type="block-math"][data-latex]'
 // a fence that shows a source (pre[data-fence]: a guide's) is not drawn
@@ -146,6 +146,10 @@ export function drawBlocks(root, assets = vendorOf()) {
 export function watchBlocks(root = (typeof document !== 'undefined' ? document.body : null), assets = vendorOf()) {
   if (!root || typeof window === 'undefined' || window.__mdkitBlocks || !Object.keys(assets).length) return
   window.__mdkitBlocks = true
+  // printed, the sections that fold open (their cards) and the look of
+  // the widgets there (its print rules)
+  printDetails(root)
+  widgetStyle()
   let timer = null
   const run = () => {
     clearTimeout(timer)

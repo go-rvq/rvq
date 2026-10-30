@@ -62,6 +62,12 @@ export function textStyle(cls = config.textClass) {
     '.' + cls + ' details>summary:hover{background:rgba(128,128,128,.12)}',
     '.' + cls + ' details>:not(summary){margin-left:.35em;padding-left:1em;border-left:3px solid #d1d5db}',
     '.' + cls + ' details>:not(summary)+:not(summary){margin-top:0;padding-top:.75em}',
+    // open, a card (as a tab printed): its title the header, its content in
+    '.' + cls + ' details[open]{border:1px solid rgba(128,128,128,.35);border-radius:6px;padding:0 1em .75em}',
+    '.' + cls + ' details[open]>summary{width:auto;max-width:none;margin:0 -1em .75em;padding:.5em 1em;border-radius:6px 6px 0 0;' +
+      'background:rgba(128,128,128,.06);border-bottom:1px solid rgba(128,128,128,.25)}',
+    '.' + cls + ' details[open]>:not(summary){margin-left:0;padding-left:0;border-left:0}',
+    '.' + cls + ' details[open]>:not(summary)+:not(summary){padding-top:0}',
     // the balloon of a note
     '.mdkit-fn-balloon{position:absolute;z-index:3000;max-width:22rem;background:#fff;color:#111827;border:1px solid #d1d5db;' +
       'border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:.5rem .75rem;font-size:.875rem;line-height:1.45}',

@@ -51,7 +51,15 @@ export function widgetStyle() {
     '[data-type="tab"]{padding:.75rem .25rem}' +
     '[data-type="tabs"][data-drawn] [data-type="tab"]:not(.mdkit-tab-shown){display:none}' +
     '.mdkit-tab-title{display:none}' +
-    '@media print{.mdkit-tabs-bar{display:none}' +
+    // printed: the browsers leave out the backgrounds — a button's text,
+    // white on its color, would be white on the paper —: dark text, its
+    // color in its border
+    // printed, a section that folds open (beforeprint opens them: this, where
+    // the browser has ::details-content, its content even so)
+    '@media print{.mdkit-tabs-bar{display:none}details::details-content{display:block;content-visibility:visible}' +
+    'a[data-type="button"],a[data-type="button"][data-color]{background:none!important;background-color:transparent!important;color:#111!important;' +
+    'border:1.5px solid rgb(var(--mdkit-c,90,90,90))!important;filter:none!important}' +
+    'a[data-type="button"] i.mdi{color:rgb(var(--mdkit-c,90,90,90))}' +
     '[data-type="tabs"][data-drawn] [data-type="tab"]:not(.mdkit-tab-shown){display:block}' +
     '[data-type="tab"]{display:block;border:1px solid rgba(127,127,127,.4);border-radius:6px;padding:0 .75rem .75rem;margin:.75rem 0;break-inside:avoid}' +
     '.mdkit-tab-title{display:flex;align-items:center;gap:.4em;font-weight:600;padding:.5rem 0;margin-bottom:.5rem;border-bottom:1px solid rgba(127,127,127,.3)}' +
@@ -181,4 +189,21 @@ export function drawTabs(root, assets, all = false) {
     set.prepend(bar)
     show(0)
   }
+}
+
+// printDetails opens, while the page prints, the sections that fold closed
+// under root (not an editor's) — printed, each its card, as the tabs —, and
+// closes them again after; once a page.
+export function printDetails(root) {
+  if (typeof window === 'undefined' || window.__mdkitPrintDetails) return
+  window.__mdkitPrintDetails = true
+  let opened = []
+  window.addEventListener('beforeprint', () => {
+    opened = [...root.querySelectorAll('details:not([open])')].filter((d) => own(d))
+    opened.forEach((d) => { d.open = true })
+  })
+  window.addEventListener('afterprint', () => {
+    opened.forEach((d) => { d.open = false })
+    opened = []
+  })
 }
