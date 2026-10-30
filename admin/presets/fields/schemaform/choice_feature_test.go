@@ -65,3 +65,46 @@ return Page`
 		}
 	}
 }
+
+// A field offered only with a feature on: its own (`[feature="…"] x? T`), or
+// the one of the class it is typed by; off, it is not in the schema.
+func TestFieldFeature(t *testing.T) {
+	const src = `
+[feature="schemaform.test.choice"]
+class IssuesOptions { perPage? int }
+class Default {
+	title? str
+	issues? IssuesOptions
+	[feature="schemaform.test.choice"]
+	beforeBody? bool
+	[feature="schemaform.test.nobody"]
+	ghost? str
+}
+return Default`
+	fields := func() []string {
+		t.Helper()
+		b := New()
+		vm, ret, err := b.runProgram(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := b.Class(vm, ret.(*gad.Class))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, f := range s.Fields {
+			out = append(out, f.Name)
+		}
+		return out
+	}
+	defer features.Set(choiceFeature.Name, false)
+	features.Set(choiceFeature.Name, false)
+	if got := fields(); !reflect.DeepEqual(got, []string{"title"}) {
+		t.Errorf("off: %v", got)
+	}
+	features.Set(choiceFeature.Name, true)
+	if got := fields(); !reflect.DeepEqual(got, []string{"title", "issues", "beforeBody"}) {
+		t.Errorf("on: %v", got)
+	}
+}

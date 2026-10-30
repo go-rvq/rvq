@@ -331,6 +331,9 @@ func (r *reader) class(c *gad.Class) (*Schema, error) {
 	}
 	s.Validations = append(s.Validations, own...)
 	for _, cf := range c.RawFields() {
+		if !fieldAvailable(cf) {
+			continue // its feature off: not offered
+		}
 		types := make(gad.Array, len(cf.Types))
 		for i, t := range cf.Types {
 			types[i] = t
@@ -458,6 +461,21 @@ func ClassFeature(c *gad.Class) string {
 	}
 	f, _ := metaOf(c.Meta)[MetaFeature].(string)
 	return strings.TrimSpace(f)
+}
+
+// fieldAvailable says the field f of a class is offered: its own feature
+// (`[feature="hermon.forms"] form? FormOptions`) and the one of the class it
+// is typed by, when one, are on — a field not offered is not in the schema.
+func fieldAvailable(f *gad.ClassField) bool {
+	if name, _ := metaOf(f.Meta)[MetaFeature].(string); name != "" && !features.Enabled(name) {
+		return false
+	}
+	if len(f.Types) == 1 {
+		if c, ok := f.Types[0].(*gad.Class); ok && !ClassAvailable(c) {
+			return false
+		}
+	}
+	return true
 }
 
 // ClassAvailable says c is offered: it needs no feature, or the one it
