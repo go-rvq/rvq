@@ -9,8 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Pref is what a user chose of the dashboard: the widgets hidden, their
-// order, the groups collapsed, the period it opens with.
+// Pref is what a user chose of the dashboard: its sections and the widgets
+// of each (layout.go), the widgets removed and disabled, the groups
+// collapsed, the period it opens with.
 type Pref struct {
 	UserID    uuid.UUID `gorm:"primaryKey;type:uuid"`
 	Data      string    `gorm:"type:text"`
@@ -20,15 +21,18 @@ type Pref struct {
 // TableName is the table of the preferences.
 func (Pref) TableName() string { return "dashboard_prefs" }
 
-// Prefs are a user's choices (Pref.Data).
+// Prefs are a user's choices (Pref.Data). Hidden and Order are of before
+// the sections: a widget hidden is removed, the order the first layout's.
 type Prefs struct {
-	Hidden    []string `json:"hidden,omitempty"`
-	Order     []string `json:"order,omitempty"`
-	Collapsed []string `json:"collapsed,omitempty"`
-	Period    string   `json:"period,omitempty"`
+	Sections  []Section `json:"sections,omitempty"`
+	Removed   []string  `json:"removed,omitempty"`
+	Disabled  []string  `json:"disabled,omitempty"`
+	Hidden    []string  `json:"hidden,omitempty"`
+	Order     []string  `json:"order,omitempty"`
+	Collapsed []string  `json:"collapsed,omitempty"`
+	Period    string    `json:"period,omitempty"`
 }
 
-func (p *Prefs) hidden(id string) bool    { return slices.Contains(p.Hidden, id) }
 func (p *Prefs) collapsed(id string) bool { return slices.Contains(p.Collapsed, id) }
 
 func toggle(list []string, id string, on bool) []string {
@@ -37,20 +41,6 @@ func toggle(list []string, id string, on bool) []string {
 		list = append(list, id)
 	}
 	return list
-}
-
-// move moves id by delta among ids (the widgets of its group, in their
-// order), and keeps the whole order in p.Order.
-func (p *Prefs) move(ids []string, id string, delta int) {
-	i := slices.Index(ids, id)
-	j := i + delta
-	if i < 0 || j < 0 || j >= len(ids) {
-		return
-	}
-	ids = slices.Clone(ids)
-	ids[i], ids[j] = ids[j], ids[i]
-	rest := slices.DeleteFunc(slices.Clone(p.Order), func(s string) bool { return slices.Contains(ids, s) })
-	p.Order = append(rest, ids...)
 }
 
 // LoadPrefs are the choices of user (none: empty).

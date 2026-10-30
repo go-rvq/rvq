@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"cmp"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -76,31 +77,17 @@ func (b *Builder) sortedGroups() []*Group {
 	return gs
 }
 
-// groupWidgets are the widgets of group g visible for r, in the user's order
-// (then their Order); hidden ones only with withHidden.
-func (b *Builder) groupWidgets(r *http.Request, g string, prefs *Prefs, withHidden bool) []*Widget {
+// sectionWidgets are the widgets of the section s visible for r, in its
+// order; the disabled ones only while customizing.
+func (b *Builder) sectionWidgets(r *http.Request, s Section, prefs *Prefs, customize bool) []*Widget {
 	var out []*Widget
-	for _, w := range b.widgets {
-		if w.Group != g || !w.visible(r) {
-			continue
-		}
-		if !withHidden && prefs.hidden(w.ID) {
+	for _, id := range s.Widgets {
+		w := b.widget(id)
+		if w == nil || !w.visible(r) || (!customize && prefs.disabled(id)) {
 			continue
 		}
 		out = append(out, w)
 	}
-	pos := func(id string) int {
-		if i := slices.Index(prefs.Order, id); i >= 0 {
-			return i
-		}
-		return len(prefs.Order)
-	}
-	slices.SortStableFunc(out, func(a, c *Widget) int {
-		if x := cmp.Compare(pos(a.ID), pos(c.ID)); x != 0 {
-			return x
-		}
-		return cmp.Compare(a.Order, c.Order)
-	})
 	return out
 }
 
@@ -128,36 +115,20 @@ func (b *Builder) Page(ctx *web.EventContext) (r web.PageResponse, err error) {
 		body.AppendChildren(b.intro(ctx))
 	}
 
-	any := false
-	var hidden []*Widget
-	for _, g := range b.sortedGroups() {
-		ws := b.groupWidgets(ctx.R, g.ID, &prefs, customize)
-		if len(ws) == 0 {
-			continue
-		}
-		any = true
-		body.AppendChildren(b.group(ctx, msgs, g, ws, &prefs, period, customize))
-		for _, w := range ws {
-			if prefs.hidden(w.ID) {
-				hidden = append(hidden, w)
-			}
-		}
+	layout := b.layout(&prefs)
+	sections, any := b.sections(ctx, msgs, layout, "", &prefs, period, customize)
+	if customize {
+		body.AppendChildren(b.customizeTools(ctx, msgs, &prefs, layout))
 	}
-	if !any {
+	body.AppendChildren(sections...)
+	if !any && !customize {
 		body.AppendChildren(v.VAlert(h.Text(msgs.NoWidgets)).Type("info").Variant(v.VariantTonal).Class("mt-4"))
 	}
-	if customize && len(hidden) > 0 {
-		var chips h.HTMLComponents
-		for _, w := range hidden {
-			chips = append(chips, v.VChip(h.Text(w.Title(ctx.Context()))).PrependIcon("mdi-eye-outline").Class("me-2 mb-2").
-				Attr("@click", prefEvent("show", w.ID)).Attr("data-dashboard-show", w.ID))
-		}
-		body.AppendChildren(h.Div(
-			h.Div(h.Text(msgs.HiddenWidgets)).Class("text-subtitle-2 mb-2"),
-			h.Div(chips...),
-		).Class("mt-6"))
-	}
 	r.Body = body
+	if customize {
+		// the dialogs' locals (customizeTools)
+		r.Body = web.Scope(body).Slot("{ locals }").LocalsInit(customizeLocals)
+	}
 	return
 }
 
@@ -247,37 +218,133 @@ func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, pe
 	).Slot("{ locals }").LocalsInit(fmt.Sprintf("{custom: %t, from: %q, to: %q}", period.Key == PeriodCustom, from, to))
 }
 
-func (b *Builder) group(ctx *web.EventContext, msgs *Messages, g *Group, ws []*Widget, prefs *Prefs, period Period, customize bool) h.HTMLComponent {
-	collapsed := prefs.collapsed(g.ID)
-	box := h.Div().Class("mt-6").Attr("data-dashboard-group", g.ID)
-	if g.Title != nil {
-		op, ic, tip := "collapse", "mdi-chevron-up", msgs.Collapse
-		if collapsed {
-			op, ic, tip = "expand", "mdi-chevron-down", msgs.Expand
+// sectionHead is the title and the icon of the section s: the user's, or
+// its group's (none: a group with no title).
+func (b *Builder) sectionHead(ctx *web.EventContext, s Section) (title, icon string) {
+	if s.Custom {
+		return s.Title, s.Icon
+	}
+	if g := b.groupOf(s.ID); g != nil {
+		if g.Title != nil {
+			title = g.Title(ctx.Context())
 		}
-		box.AppendChildren(h.Div(
-			h.If(g.Icon != "", v.VIcon(g.Icon).Size(v.SizeSmall).Class("me-2 text-medium-emphasis")),
-			h.Div(h.Text(g.Title(ctx.Context()))).Class("text-subtitle-1 font-weight-bold"),
+		return title, g.Icon
+	}
+	return "", ""
+}
+
+// sections are the sections in parent ("": the top) of the layout ss, each
+// with the sections in it; any: one has a widget. Out of the customize
+// mode, a section with no widget in it or under it is not drawn.
+func (b *Builder) sections(ctx *web.EventContext, msgs *Messages, ss []Section, parent string, prefs *Prefs, period Period, customize bool) (out h.HTMLComponents, any bool) {
+	kids := children(ss, parent)
+	for i, sec := range kids {
+		ws := b.sectionWidgets(ctx.R, sec, prefs, customize)
+		inner, innerAny := b.sections(ctx, msgs, ss, sec.ID, prefs, period, customize)
+		if len(ws) == 0 && !innerAny && !customize {
+			continue
+		}
+		any = any || len(ws) > 0 || innerAny
+		out = append(out, b.section(ctx, msgs, ss, sec, ws, inner, prefs, period, customize, i == 0, i == len(kids)-1))
+	}
+	return
+}
+
+// parentChoices are the sections the section id may be put in (all, but
+// itself and those under it), as the items of a select — "" the top first.
+func (b *Builder) parentChoices(ctx *web.EventContext, msgs *Messages, ss []Section, id string) []map[string]string {
+	out := []map[string]string{{"title": msgs.TopLevel, "value": ""}}
+	var walk func(parent, prefix string)
+	walk = func(parent, prefix string) {
+		for _, s := range children(ss, parent) {
+			if id != "" && isUnder(ss, s.ID, id) {
+				continue
+			}
+			title, _ := b.sectionHead(ctx, s)
+			out = append(out, map[string]string{"title": prefix + cmp.Or(title, msgs.Untitled), "value": s.ID})
+			walk(s.ID, prefix+"— ")
+		}
+	}
+	walk("", "")
+	return out
+}
+
+func (b *Builder) section(ctx *web.EventContext, msgs *Messages, ss []Section, s Section, ws []*Widget, inner h.HTMLComponents, prefs *Prefs, period Period, customize, first, last bool) h.HTMLComponent {
+	title, icon := b.sectionHead(ctx, s)
+	collapsed := prefs.collapsed(s.ID) && !customize
+	box := h.Div().Class("mt-6").Attr("data-dashboard-group", s.ID)
+	if title != "" || customize {
+		head := h.Div(
+			h.If(icon != "", v.VIcon(icon).Size(v.SizeSmall).Class("me-2 text-medium-emphasis")),
+			h.Div(h.Text(cmp.Or(title, msgs.Untitled))).Class("text-subtitle-1 font-weight-bold").
+				ClassIf("text-disabled", title == ""),
 			v.VSpacer(),
-			v.VBtn("").Icon(ic).Variant(v.VariantText).Size(v.SizeSmall).Attr("title", tip, "aria-label", tip).
-				Attr("@click", prefEvent(op, g.ID)).Attr("data-dashboard-collapse", g.ID),
-		).Class("d-flex align-center mb-2"))
-	} else {
-		collapsed = false
+		).Class("d-flex align-center mb-2")
+		if customize {
+			if !first {
+				head.AppendChildren(iconBtn("mdi-arrow-up", msgs.MoveUp, prefEvent("section-up", s.ID)).Attr("data-dashboard-section-up", s.ID))
+			}
+			if !last {
+				head.AppendChildren(iconBtn("mdi-arrow-down", msgs.MoveDown, prefEvent("section-down", s.ID)).Attr("data-dashboard-section-down", s.ID))
+			}
+			// its title and icon (its own), the section it is in (any)
+			head.AppendChildren(iconBtn("mdi-pencil-outline", msgs.EditSection, fmt.Sprintf(
+				"locals.secId = %s; locals.secCustom = %t; locals.secTitle = %s; locals.secIcon = %s; locals.secParent = %s; locals.secParents = %s; locals.secOpen = true",
+				h.JSONString(s.ID), s.Custom, h.JSONString(s.Title), h.JSONString(s.Icon), h.JSONString(s.Parent),
+				h.JSONString(b.parentChoices(ctx, msgs, ss, s.ID)))).
+				Attr("data-dashboard-section-edit", s.ID))
+			if s.Custom {
+				head.AppendChildren(iconBtn("mdi-delete-outline", msgs.DeleteSection, prefEvent("section-delete", s.ID)).
+					Attr("data-dashboard-section-delete", s.ID))
+			}
+		} else {
+			op, ic, tip := "collapse", "mdi-chevron-up", msgs.Collapse
+			if collapsed {
+				op, ic, tip = "expand", "mdi-chevron-down", msgs.Expand
+			}
+			head.AppendChildren(v.VBtn("").Icon(ic).Variant(v.VariantText).Size(v.SizeSmall).Attr("title", tip, "aria-label", tip).
+				Attr("@click", prefEvent(op, s.ID)).Attr("data-dashboard-collapse", s.ID))
+		}
+		box.AppendChildren(head)
 	}
 	if collapsed {
 		return box
 	}
-	ids := make([]string, len(ws))
-	for i, w := range ws {
-		ids[i] = w.ID
+	// the sections in it: after its widgets, indented, a line on their left
+	var sub h.HTMLComponent
+	if len(inner) > 0 {
+		sub = h.Div(inner...).Class("dashboard-children ps-4 ms-2").
+			Style("border-left: 2px solid rgba(var(--v-border-color), var(--v-border-opacity))").
+			Attr("data-dashboard-children", s.ID)
 	}
 	var cols h.HTMLComponents
 	for i, w := range ws {
-		cols = append(cols, v.VCol(b.card(ctx, msgs, w, prefs, period, customize, i == 0, i == len(ws)-1)).
-			Cols(12).Sm(min(12, int(w.Size)*2)).Md(int(w.Size)))
+		col := v.VCol(b.card(ctx, msgs, w, prefs, period, customize, i == 0, i == len(ws)-1)).
+			Cols(12).Sm(min(12, int(w.Size)*2)).Md(int(w.Size))
+		if customize {
+			// dragged to its place (the dashboard's script: dashScript)
+			col.Attr("draggable", "true").Attr("data-dashboard-col", w.ID).
+				Attr("@dragstart", dashCall("start")).Attr("@dragend", dashCall("end"))
+		}
+		cols = append(cols, col)
 	}
-	return box.AppendChildren(v.VRow(cols...).Dense(true))
+	row := v.VRow(cols...).Dense(true)
+	if customize {
+		row.Attr("data-dashboard-row", s.ID).Class("dashboard-row").
+			Attr("@dragover", dashCall("over")).Attr("@dragleave", dashCall("leave")).Attr("@drop", dashCall("drop"))
+	}
+	// a section with no widget of its own but sections in it: no empty row
+	// (but while customizing: a place to drop in)
+	if len(ws) > 0 || customize {
+		box.AppendChildren(row)
+	}
+	return box.AppendChildren(sub)
+}
+
+// dashCall is a call of the dashboard's script (dashScript) by an event of
+// the template — its window the element's: a template sees no window —.
+func dashCall(f string) string {
+	return "$event.target.ownerDocument.defaultView.__rvqDash && $event.target.ownerDocument.defaultView.__rvqDash." + f + "($event)"
 }
 
 func iconBtn(icon, tip, click string) *v.VBtnBuilder {
@@ -291,20 +358,23 @@ func (b *Builder) loadEvent(r *http.Request, w *Widget, p Period) *web.VueEventT
 
 func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *Prefs, period Period, customize, first, last bool) h.HTMLComponent {
 	title := w.Title(ctx.Context())
-	hidden := prefs.hidden(w.ID)
+	disabled := prefs.disabled(w.ID)
 	var tools h.HTMLComponents
 	if customize {
+		tools = append(tools, v.VIcon("mdi-drag").Size(v.SizeSmall).Class("me-1 text-medium-emphasis dashboard-handle").
+			Attr("title", msgs.Drag, "aria-label", msgs.Drag))
 		if !first {
 			tools = append(tools, iconBtn("mdi-arrow-up", msgs.MoveUp, prefEvent("up", w.ID)).Attr("data-dashboard-up", w.ID))
 		}
 		if !last {
 			tools = append(tools, iconBtn("mdi-arrow-down", msgs.MoveDown, prefEvent("down", w.ID)).Attr("data-dashboard-down", w.ID))
 		}
-		if hidden {
-			tools = append(tools, iconBtn("mdi-eye-outline", msgs.Show, prefEvent("show", w.ID)).Attr("data-dashboard-show", w.ID))
+		if disabled {
+			tools = append(tools, iconBtn("mdi-toggle-switch-off-outline", msgs.Enable, prefEvent("enable", w.ID)).Attr("data-dashboard-enable", w.ID))
 		} else {
-			tools = append(tools, iconBtn("mdi-eye-off-outline", msgs.Hide, prefEvent("hide", w.ID)).Attr("data-dashboard-hide", w.ID))
+			tools = append(tools, iconBtn("mdi-toggle-switch-outline", msgs.Disable, prefEvent("disable", w.ID)).Attr("data-dashboard-disable", w.ID))
 		}
+		tools = append(tools, iconBtn("mdi-close", msgs.Remove, prefEvent("remove", w.ID)).Attr("data-dashboard-remove", w.ID))
 	} else {
 		tools = append(tools, iconBtn("mdi-refresh", msgs.Refresh, b.loadEvent(ctx.R, w, period).Query("refresh", "1").Go()).Attr("data-dashboard-refresh", w.ID))
 		var items h.HTMLComponents
@@ -318,7 +388,7 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 				items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.Help))).PrependIcon("mdi-help-circle-outline").Href(href).Attr("target", "_blank"))
 			}
 		}
-		items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.Hide))).PrependIcon("mdi-eye-off-outline").Attr("@click", prefEvent("hide", w.ID)))
+		items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.Remove))).PrependIcon("mdi-close").Attr("@click", prefEvent("remove", w.ID)))
 		tools = append(tools, v.VMenu(
 			web.Slot(iconBtn("mdi-dots-vertical", title, "").Attr("v-bind", "props")).Name("activator").Scope("{ props }"),
 			v.VList(items...).Density(v.DensityCompact),
@@ -327,7 +397,11 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 
 	var body h.HTMLComponent
 	if customize {
-		body = h.Div(h.Text(msgs.PeriodLabel(period.Key))).Class("text-caption text-medium-emphasis py-4 text-center")
+		body = h.Div(
+			h.If(disabled, v.VChip(h.Text(msgs.Disabled)).Size(v.SizeSmall).Color("warning").Variant(v.VariantFlat).
+				PrependIcon("mdi-toggle-switch-off-outline").Class("mb-2")),
+			h.Div(h.Text(msgs.PeriodLabel(period.Key))),
+		).Class("text-caption text-medium-emphasis py-4 text-center")
 	} else {
 		// a portal with children draws them, never its Loader: it starts
 		// empty, the widget's body when its event answers
@@ -342,8 +416,10 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 		).Class("d-flex align-center px-4 pt-3"),
 		v.VCardText(body).Class("pt-2"),
 	).Variant(v.VariantOutlined).Class("h-100").Attr("data-dashboard-widget", w.ID)
-	if hidden {
-		card.Style("opacity:.45")
+	if disabled {
+		// disabled: in its place, only while customizing, in the color that
+		// says so
+		card.Class("dashboard-disabled").Attr("data-dashboard-disabled", w.ID)
 	}
 	return card
 }
@@ -470,29 +546,53 @@ func (b *Builder) eventPref(ctx *web.EventContext) (r web.EventResponse, err err
 	}
 	prefs := b.LoadPrefs(uid)
 	op, arg := ctx.R.FormValue("op"), ctx.R.FormValue("arg")
+	known := func(id string) bool { return b.widget(id) != nil }
 	switch op {
-	case "hide", "show":
-		if b.widget(arg) == nil {
+	case "remove", "hide":
+		if !known(arg) {
 			return r, presets.ErrRecordNotFound
 		}
-		prefs.Hidden = toggle(prefs.Hidden, arg, op == "hide")
+		b.remove(&prefs, arg)
+	case "add", "show":
+		var ids []string
+		for _, id := range strings.Split(arg, ",") {
+			if known(id) {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
+			return r, presets.ErrRecordNotFound
+		}
+		b.add(&prefs, ids...)
+	case "disable", "enable":
+		if !known(arg) {
+			return r, presets.ErrRecordNotFound
+		}
+		prefs.Disabled = toggle(prefs.Disabled, arg, op == "disable")
 	case "collapse", "expand":
 		prefs.Collapsed = toggle(prefs.Collapsed, arg, op == "collapse")
 	case "up", "down":
-		w := b.widget(arg)
-		if w == nil {
+		if !known(arg) {
 			return r, presets.ErrRecordNotFound
 		}
-		ws := b.groupWidgets(ctx.R, w.Group, &prefs, true)
-		ids := make([]string, len(ws))
-		for i, x := range ws {
-			ids[i] = x.ID
+		b.moveWidget(&prefs, arg, map[string]int{"up": -1, "down": 1}[op])
+	case "layout":
+		var given []Section
+		if json.Unmarshal([]byte(arg), &given) != nil {
+			return r, presets.ErrRecordNotFound
 		}
-		d := 1
-		if op == "up" {
-			d = -1
+		b.arrange(&prefs, given)
+	case "section":
+		// a new section, or one of the user's own: its title; a group's:
+		// its parent only
+		if s := section(b.layout(&prefs), arg); (s == nil || s.Custom) && strings.TrimSpace(ctx.R.FormValue("title")) == "" {
+			return r, presets.ErrRecordNotFound
 		}
-		prefs.move(ids, arg, d)
+		b.saveSection(&prefs, arg, ctx.R.FormValue("title"), ctx.R.FormValue("icon"), ctx.R.FormValue("parent"))
+	case "section-delete":
+		b.deleteSection(&prefs, arg)
+	case "section-up", "section-down":
+		b.moveSection(&prefs, arg, map[string]int{"section-up": -1, "section-down": 1}[op])
 	case "period":
 		if _, ok := periodSpans[arg]; !ok {
 			return r, presets.ErrRecordNotFound

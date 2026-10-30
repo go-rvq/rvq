@@ -28,8 +28,6 @@ type Messages struct {
 	Open              string `i18n:"hint='Link of a widget to the listing behind it.'"`
 	SeeAll            string `i18n:"hint='Link under a list of a widget to its whole listing.'"`
 	Help              string `i18n:"hint='Menu item of a widget that opens its documentation.'"`
-	Hide              string `i18n:"hint='Menu item that hides a widget from the dashboard of the user.'"`
-	Show              string `i18n:"hint='Button that shows a hidden widget again.'"`
 	Customize         string `i18n:"hint='Button that turns the customize mode on (hide, order, collapse).'"`
 	Done              string `i18n:"hint='Button that leaves the customize mode.'"`
 	Reset             string `i18n:"hint='Button that drops the customizations of the user.'"`
@@ -37,7 +35,6 @@ type Messages struct {
 	MoveDown          string `i18n:"hint='Button that moves a widget after the next one.'"`
 	Collapse          string `i18n:"hint='Button that collapses a group of widgets.'"`
 	Expand            string `i18n:"hint='Button that expands a collapsed group of widgets.'"`
-	HiddenWidgets     string `i18n:"hint='Title of the list of the widgets the user hid.'"`
 	DefaultPeriod     string `i18n:"hint='Label of the period the dashboard opens with, for the user.'"`
 	FollowsPeriod     string `i18n:"hint='Tooltip of a widget whose numbers follow the period chosen.'"`
 	NoData            string `i18n:"hint='Said by a widget with nothing in the period.'"`
@@ -49,6 +46,25 @@ type Messages struct {
 	UpdatedAt         string `i18n:"hint='Footer of a widget: the time its numbers were read. {time} is the time.'"`
 	ActionDone        string `i18n:"hint='Message after a button of a widget did its work.'"`
 	ActionFailed      string `i18n:"hint='Message after a button of a widget failed.'"`
+	Remove            string `i18n:"hint='Button that takes a widget out of the dashboard of the user (it may be added back).'"`
+	Disable           string `i18n:"hint='Button of the customize mode that disables a widget: it stays in its place, shown only while customizing.'"`
+	Enable            string `i18n:"hint='Button of the customize mode that enables a disabled widget again.'"`
+	Disabled          string `i18n:"hint='Badge of a disabled widget, while customizing.'"`
+	Drag              string `i18n:"hint='Tooltip of the handle that drags a widget to another place.'"`
+	DragHint          string `i18n:"hint='Hint of the customize mode on how to move the widgets.'"`
+	NewSection        string `i18n:"hint='Button and dialog title that makes a section of the user own.'"`
+	EditSection       string `i18n:"hint='Button and dialog title that changes a section of the user own.'"`
+	DeleteSection     string `i18n:"hint='Button that deletes a section of the user own (its widgets back to their sections).'"`
+	SectionTitle      string `i18n:"hint='Field of the title of a section.'"`
+	SectionIcon       string `i18n:"hint='Field of the icon of a section: a name of Material Design Icons.'"`
+	Untitled          string `i18n:"hint='Shown in the place of the title of a section with none, while customizing.'"`
+	AddWidgets        string `i18n:"hint='Button and dialog title that adds back the widgets removed.'"`
+	AddSelected       string `i18n:"hint='Button that adds the widgets chosen back to their sections.'"`
+	NoRemoved         string `i18n:"hint='Said by the dialog of the widgets to add when none was removed.'"`
+	Save              string `i18n:"hint='Button that saves a dialog.'"`
+	Cancel            string `i18n:"hint='Button that closes a dialog without saving.'"`
+	ParentSection     string `i18n:"hint='Field of the section another section is in (a tree).'"`
+	TopLevel          string `i18n:"hint='Choice of the field of the parent section: at the top, in no section.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -69,8 +85,6 @@ var Messages_en_US = &Messages{
 	Open:              "Open",
 	SeeAll:            "See all",
 	Help:              "About this widget",
-	Hide:              "Hide",
-	Show:              "Show",
 	Customize:         "Customize",
 	Done:              "Done",
 	Reset:             "Restore defaults",
@@ -78,7 +92,6 @@ var Messages_en_US = &Messages{
 	MoveDown:          "Move down",
 	Collapse:          "Collapse",
 	Expand:            "Expand",
-	HiddenWidgets:     "Hidden widgets",
 	DefaultPeriod:     "Default period",
 	FollowsPeriod:     "Follows the period chosen",
 	NoData:            "Nothing in this period.",
@@ -90,6 +103,25 @@ var Messages_en_US = &Messages{
 	UpdatedAt:         "Updated at {time}",
 	ActionDone:        "Done.",
 	ActionFailed:      "It could not be done: {error}",
+	Remove:            "Remove from the dashboard",
+	Disable:           "Disable",
+	Enable:            "Enable",
+	Disabled:          "Disabled",
+	Drag:              "Drag to move",
+	DragHint:          "Drag the widgets to place them, in a section or another.",
+	NewSection:        "New section",
+	EditSection:       "Edit the section",
+	DeleteSection:     "Delete the section (its widgets go back to their sections)",
+	SectionTitle:      "Title",
+	SectionIcon:       "Icon (mdi-…)",
+	Untitled:          "No title",
+	AddWidgets:        "Add widgets",
+	AddSelected:       "Add",
+	NoRemoved:         "No widget was removed.",
+	Save:              "Save",
+	Cancel:            "Cancel",
+	ParentSection:     "In the section",
+	TopLevel:          "At the top (in no section)",
 }
 
 var Messages_pt_BR = &Messages{
@@ -110,8 +142,6 @@ var Messages_pt_BR = &Messages{
 	Open:              "Abrir",
 	SeeAll:            "Ver tudo",
 	Help:              "Sobre este widget",
-	Hide:              "Ocultar",
-	Show:              "Mostrar",
 	Customize:         "Personalizar",
 	Done:              "Concluir",
 	Reset:             "Restaurar o padrão",
@@ -119,7 +149,6 @@ var Messages_pt_BR = &Messages{
 	MoveDown:          "Mover para baixo",
 	Collapse:          "Recolher",
 	Expand:            "Expandir",
-	HiddenWidgets:     "Widgets ocultos",
 	DefaultPeriod:     "Período padrão",
 	FollowsPeriod:     "Segue o período escolhido",
 	NoData:            "Nada neste período.",
@@ -131,6 +160,25 @@ var Messages_pt_BR = &Messages{
 	UpdatedAt:         "Atualizado às {time}",
 	ActionDone:        "Feito.",
 	ActionFailed:      "Não foi possível: {error}",
+	Remove:            "Remover do painel",
+	Disable:           "Desativar",
+	Enable:            "Ativar",
+	Disabled:          "Desativado",
+	Drag:              "Arraste para mover",
+	DragHint:          "Arraste os widgets para posicioná-los, na mesma seção ou em outra.",
+	NewSection:        "Nova seção",
+	EditSection:       "Editar a seção",
+	DeleteSection:     "Excluir a seção (os widgets voltam às suas seções)",
+	SectionTitle:      "Título",
+	SectionIcon:       "Ícone (mdi-…)",
+	Untitled:          "Sem título",
+	AddWidgets:        "Adicionar widgets",
+	AddSelected:       "Adicionar",
+	NoRemoved:         "Nenhum widget foi removido.",
+	Save:              "Salvar",
+	Cancel:            "Cancelar",
+	ParentSection:     "Dentro da seção",
+	TopLevel:          "No topo (em nenhuma seção)",
 }
 
 // MessagesOf are the dashboard's words of ctx's language.

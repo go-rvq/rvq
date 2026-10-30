@@ -53,24 +53,104 @@ func TestPeriods(t *testing.T) {
 	}
 }
 
-func TestPrefsMove(t *testing.T) {
-	p := Prefs{Order: []string{"x"}}
-	p.move([]string{"a", "b", "c"}, "c", -1)
-	if strings.Join(p.Order, ",") != "x,a,c,b" {
-		t.Errorf("order %v", p.Order)
+// The layout of a user: the groups' sections first (the old order and the
+// widgets hidden before, removed), every widget in one; removed and added
+// back to its group's; dragged — what is not known or repeated left out,
+// what the user did not send kept —; the sections of the user's own made,
+// changed, moved and deleted (their widgets back to their groups); a widget
+// registered later in its group's.
+func TestLayout(t *testing.T) {
+	b := &Builder{}
+	b.Group(&Group{ID: "g1", Order: 1}).Group(&Group{ID: "g2", Order: 2})
+	b.Widget(&Widget{ID: "a", Group: "g1", Order: 1}, &Widget{ID: "b", Group: "g1", Order: 2},
+		&Widget{ID: "c", Group: "g1", Order: 3}, &Widget{ID: "d", Group: "g2", Order: 1})
+	str := func(ss []Section) string {
+		var out []string
+		for _, s := range ss {
+			out = append(out, s.ID+":"+strings.Join(s.Widgets, ","))
+		}
+		return strings.Join(out, " ")
 	}
-	p.move([]string{"a", "c", "b"}, "a", -1)
-	if strings.Join(p.Order, ",") != "x,a,c,b" {
-		t.Errorf("first up must not move: %v", p.Order)
+
+	p := Prefs{Order: []string{"c"}, Hidden: []string{"b"}}
+	if got := str(b.layout(&p)); got != "g1:c,a g2:d" {
+		t.Fatalf("first layout %q", got)
 	}
-	p.Hidden = toggle(p.Hidden, "a", true)
-	p.Hidden = toggle(p.Hidden, "a", true)
-	if len(p.Hidden) != 1 || !p.hidden("a") {
-		t.Errorf("hidden %v", p.Hidden)
+	b.add(&p, "b")
+	if got := str(b.layout(&p)); got != "g1:c,a,b g2:d" || p.removed("b") {
+		t.Errorf("b added back %q", got)
 	}
-	p.Hidden = toggle(p.Hidden, "a", false)
-	if p.hidden("a") {
-		t.Errorf("hidden %v", p.Hidden)
+	b.remove(&p, "a")
+	if got := str(b.layout(&p)); got != "g1:c,b g2:d" || !p.removed("a") {
+		t.Errorf("a removed %q", got)
+	}
+
+	// dragged: b to g2 before d, a removed and x unknown left out, c twice
+	b.arrange(&p, []Section{{ID: "g2", Widgets: []string{"b", "d", "x", "a"}}, {ID: "g1", Widgets: []string{"c", "c"}}})
+	if got := str(b.layout(&p)); got != "g2:b,d g1:c" {
+		t.Errorf("arranged %q", got)
+	}
+	// a section not sent and its widgets: kept
+	b.arrange(&p, []Section{{ID: "g1", Widgets: []string{"c"}}})
+	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
+		t.Errorf("arranged, g2 not sent %q", got)
+	}
+
+	id := b.saveSection(&p, "", " Mine ", "mdi-star", "")
+	b.arrange(&p, []Section{{ID: id, Widgets: []string{"d"}}, {ID: "g1", Widgets: []string{"c"}}, {ID: "g2", Widgets: []string{"b"}}})
+	if got := str(b.layout(&p)); got != id+":d g1:c g2:b" {
+		t.Errorf("own section %q", got)
+	}
+	if s := section(p.Sections, id); s == nil || !s.Custom || s.Title != "Mine" || s.Icon != "mdi-star" {
+		t.Errorf("own section %+v", s)
+	}
+	b.saveSection(&p, id, "Ours", "not an icon", "")
+	if s := section(p.Sections, id); s.Title != "Ours" || s.Icon != "" {
+		t.Errorf("own section changed %+v", s)
+	}
+	b.moveSection(&p, id, 1)
+	if got := str(b.layout(&p)); got != "g1:c "+id+":d g2:b" {
+		t.Errorf("moved %q", got)
+	}
+	b.moveWidget(&p, "c", 1)
+	b.deleteSection(&p, "g1") // a group's: not deleted
+	b.deleteSection(&p, id)
+	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
+		t.Errorf("own deleted %q", got)
+	}
+
+	p.Disabled = toggle(p.Disabled, "c", true)
+	if !p.disabled("c") || str(b.layout(&p)) != "g1:c g2:b,d" {
+		t.Errorf("disabled stays in its place")
+	}
+
+	// a tree: g2 in a section of the user's own, in it another; no loop
+	top := b.saveSection(&p, "", "Top", "", "")
+	b.saveSection(&p, "g2", "ignored", "", top)
+	in := b.saveSection(&p, "", "In", "", top)
+	b.saveSection(&p, top, "Top", "", in) // under itself: not
+	ss := b.layout(&p)
+	if section(ss, "g2").Parent != top || section(ss, in).Parent != top || section(ss, top).Parent != "" || section(ss, "g2").Title != "" {
+		t.Fatalf("tree %+v", ss)
+	}
+	if kids := children(ss, top); len(kids) != 2 || kids[0].ID != "g2" || kids[1].ID != in {
+		t.Errorf("children of top %+v", kids)
+	}
+	b.moveSection(&p, in, -1) // among its siblings
+	if kids := children(b.layout(&p), top); kids[0].ID != in {
+		t.Errorf("moved among siblings %+v", kids)
+	}
+	b.deleteSection(&p, top) // its sections to its parent (the top)
+	ss = b.layout(&p)
+	if section(ss, top) != nil || section(ss, "g2").Parent != "" || section(ss, in).Parent != "" {
+		t.Errorf("deleted, children up %+v", ss)
+	}
+	b.deleteSection(&p, in)
+
+	// a widget registered later: last in its group's
+	b.Widget(&Widget{ID: "e", Group: "g1", Order: 0})
+	if got := str(b.layout(&p)); got != "g1:c,e g2:b,d" {
+		t.Errorf("new widget %q", got)
 	}
 }
 
