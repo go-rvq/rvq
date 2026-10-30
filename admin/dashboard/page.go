@@ -287,6 +287,11 @@ func (b *Builder) section(ctx *web.EventContext, msgs *Messages, ss []Section, s
 			if !last {
 				head.AppendChildren(iconBtn("mdi-arrow-down", msgs.MoveDown, prefEvent("section-down", s.ID)).Attr("data-dashboard-section-down", s.ID))
 			}
+			// widgets added into it (the dialog of adding, its target this)
+			head.AppendChildren(iconBtn("mdi-plus", msgs.AddHere, fmt.Sprintf(
+				"locals.add = []; locals.addTarget = %s; locals.addTitle = %s; locals.addOpen = true",
+				h.JSONString(s.ID), h.JSONString(b.sectionPath(ctx, msgs, ss, s.ID)))).
+				Attr("data-dashboard-section-add", s.ID))
 			// its title and icon (its own), the section it is in (any)
 			head.AppendChildren(iconBtn("mdi-pencil-outline", msgs.EditSection, fmt.Sprintf(
 				"locals.secId = %s; locals.secCustom = %t; locals.secTitle = %s; locals.secIcon = %s; locals.secParent = %s; locals.secParents = %s; locals.secOpen = true",
@@ -339,6 +344,22 @@ func (b *Builder) section(ctx *web.EventContext, msgs *Messages, ss []Section, s
 		box.AppendChildren(row)
 	}
 	return box.AppendChildren(sub)
+}
+
+// sectionPath is the title of the section id with the ones it is in,
+// "Top › In".
+func (b *Builder) sectionPath(ctx *web.EventContext, msgs *Messages, ss []Section, id string) string {
+	var parts []string
+	for seen := 0; id != "" && seen <= len(ss); seen++ {
+		s := section(ss, id)
+		if s == nil {
+			break
+		}
+		title, _ := b.sectionHead(ctx, *s)
+		parts = append([]string{cmp.Or(title, msgs.Untitled)}, parts...)
+		id = s.Parent
+	}
+	return strings.Join(parts, " › ")
 }
 
 // dashCall is a call of the dashboard's script (dashScript) by an event of
@@ -564,6 +585,16 @@ func (b *Builder) eventPref(ctx *web.EventContext) (r web.EventResponse, err err
 			return r, presets.ErrRecordNotFound
 		}
 		b.add(&prefs, ids...)
+	case "add-to":
+		var ids []string
+		for _, id := range strings.Split(arg, ",") {
+			if known(id) {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 || !b.moveTo(&prefs, ctx.R.FormValue("section"), ids...) {
+			return r, presets.ErrRecordNotFound
+		}
 	case "disable", "enable":
 		if !known(arg) {
 			return r, presets.ErrRecordNotFound

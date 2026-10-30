@@ -297,3 +297,39 @@ func (b *Builder) moveWidget(p *Prefs, id string, delta int) {
 	}
 	p.Sections = ss
 }
+
+// moveTo puts the widgets ids in the section target, last, enabled — those
+// removed back in the dashboard, the others out of the section they were
+// in.
+func (b *Builder) moveTo(p *Prefs, target string, ids ...string) bool {
+	ss := b.layout(p)
+	t := section(ss, target)
+	if t == nil {
+		return false
+	}
+	for _, id := range ids {
+		if b.widget(id) == nil {
+			continue
+		}
+		p.Removed = toggle(p.Removed, id, false)
+		p.Hidden = toggle(p.Hidden, id, false)
+		p.Disabled = toggle(p.Disabled, id, false)
+		for i := range ss {
+			ss[i].Widgets = slices.DeleteFunc(ss[i].Widgets, func(x string) bool { return x == id })
+		}
+		t = section(ss, target)
+		t.Widgets = append(t.Widgets, id)
+	}
+	p.Sections = ss
+	return true
+}
+
+// sectionOf is the section the widget id is in, or nil (removed).
+func sectionOf(ss []Section, id string) *Section {
+	for i := range ss {
+		if slices.Contains(ss[i].Widgets, id) {
+			return &ss[i]
+		}
+	}
+	return nil
+}

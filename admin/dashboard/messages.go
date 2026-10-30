@@ -65,6 +65,10 @@ type Messages struct {
 	Cancel            string `i18n:"hint='Button that closes a dialog without saving.'"`
 	ParentSection     string `i18n:"hint='Field of the section another section is in (a tree).'"`
 	TopLevel          string `i18n:"hint='Choice of the field of the parent section: at the top, in no section.'"`
+	AddHere           string `i18n:"hint='Button of a section, while customizing, that adds widgets into it.'"`
+	AddInto           string `i18n:"hint='Title of the dialog that adds widgets into a section (its name follows).'"`
+	Removed           string `i18n:"hint='Badge of a widget removed, in the dialog of adding.'"`
+	InSection         string `i18n:"hint='Under a widget in the dialog of adding: where it is and its original section. {section}, {original}.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -122,6 +126,10 @@ var Messages_en_US = &Messages{
 	Cancel:            "Cancel",
 	ParentSection:     "In the section",
 	TopLevel:          "At the top (in no section)",
+	AddHere:           "Add widgets here",
+	AddInto:           "Add widgets to",
+	Removed:           "Removed",
+	InSection:         "In: {section} · original: {original}",
 }
 
 var Messages_pt_BR = &Messages{
@@ -179,6 +187,10 @@ var Messages_pt_BR = &Messages{
 	Cancel:            "Cancelar",
 	ParentSection:     "Dentro da seção",
 	TopLevel:          "No topo (em nenhuma seção)",
+	AddHere:           "Adicionar widgets aqui",
+	AddInto:           "Adicionar widgets em",
+	Removed:           "Removido",
+	InSection:         "Em: {section} · original: {original}",
 }
 
 // MessagesOf are the dashboard's words of ctx's language.

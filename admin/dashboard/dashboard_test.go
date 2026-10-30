@@ -147,6 +147,23 @@ func TestLayout(t *testing.T) {
 	}
 	b.deleteSection(&p, in)
 
+	// into a section (its +): a removed one back there, another out of
+	// where it was, a disabled one enabled; no such section, nothing
+	b.remove(&p, "b")
+	if !b.moveTo(&p, "g1", "b", "d", "c") || b.moveTo(&p, "nope", "c") {
+		t.Fatal("moveTo")
+	}
+	if got := str(b.layout(&p)); got != "g1:b,d,c g2:" || p.removed("b") || p.disabled("c") {
+		t.Errorf("moved to g1 %q", got)
+	}
+	if s := sectionOf(b.layout(&p), "d"); s == nil || s.ID != "g1" {
+		t.Errorf("sectionOf d %+v", s)
+	}
+	b.moveTo(&p, "g2", "b", "d")
+	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
+		t.Errorf("moved back %q", got)
+	}
+
 	// a widget registered later: last in its group's
 	b.Widget(&Widget{ID: "e", Group: "g1", Order: 0})
 	if got := str(b.layout(&p)); got != "g1:c,e g2:b,d" {
