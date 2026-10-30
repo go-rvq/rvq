@@ -14,3 +14,6 @@ bun build src/bundle.js --minify --target=browser --format=iife --outfile=dist/m
 # a page that shows a text, no editor (its link cards, formulas, diagrams):
 # dist/page.js
 bun build src/page.js --minify --target=browser --format=iife --outfile=dist/page.js
+# the Prism of a page that shows a text, highlighting its code (code.js):
+# served as rvq's vendor (js/vendor/prism, vendor.Prism)
+bun build src/prism/bundle.js --minify --target=browser --format=iife --outfile=../vendor/prism/1.30.0/prism.min.js

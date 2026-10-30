@@ -1,11 +1,14 @@
 // The blocks of a text the page draws (x/markup): its formulas —
 // span[data-type=inline-math], div[data-type=block-math], their LaTeX in
 // data-latex — by KaTeX, its diagrams — pre > code.language-mermaid — by
-// Mermaid, at once and as more come (a preview, a comment drawn); KaTeX and
+// Mermaid, its code — pre > code.language-* — by Prism (code.js), at once
+// and as more come (a preview, a comment drawn); KaTeX and
 // Mermaid loaded only when there is one to draw, from where the page's meta
 // says — <meta name="mdkit-vendor" content='{"katex": {"src", "local",
 // "integrity"}, "katex-css": …, "mermaid": …}'>: the CDN, else the app's copy
 // (rvq js/api/vendor) —. What is in an editor (contenteditable) is its own.
+
+import { drawCode, codeSel } from './code.js'
 
 const mathSel = '[data-type="inline-math"][data-latex],[data-type="block-math"][data-latex]'
 const diagramSel = 'pre > code.language-mermaid'
@@ -52,8 +55,9 @@ export function load(name, global, assets = vendorOf()) {
   return loading[name]
 }
 
-// own says el is what a page draws: not in an editor
-const own = (el) => !el.closest('[contenteditable="true"]')
+// own says el is what a page draws: not in an editor (one read only too:
+// tiptap's, ProseMirror)
+export const own = (el) => !el.closest('[contenteditable="true"],.ProseMirror')
 
 // drawMath draws the formulas under root not drawn yet.
 export async function drawMath(root, assets = vendorOf()) {
@@ -117,9 +121,9 @@ export async function drawDiagrams(root, assets = vendorOf()) {
   }
 }
 
-// drawBlocks draws the formulas and the diagrams under root.
+// drawBlocks draws the formulas, the diagrams and the code under root.
 export function drawBlocks(root, assets = vendorOf()) {
-  return Promise.all([drawMath(root, assets), drawDiagrams(root, assets)])
+  return Promise.all([drawMath(root, assets), drawDiagrams(root, assets), drawCode(root, assets)])
 }
 
 // watchBlocks draws the blocks under root now and as they come (once per
@@ -135,6 +139,6 @@ export function watchBlocks(root = (typeof document !== 'undefined' ? document.b
   run()
   new MutationObserver((ms) => {
     if (ms.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1 && (n.matches?.(mathSel + ',' + diagramSel + ',pre') ||
-      n.querySelector?.(mathSel + ',' + diagramSel))))) run()
+      n.querySelector?.(mathSel + ',' + diagramSel + ',' + codeSel))))) run()
   }).observe(root, { childList: true, subtree: true })
 }

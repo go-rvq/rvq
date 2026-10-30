@@ -9,6 +9,7 @@
     "build": "sh build.sh"
   },
   "dependencies": {
+    "@gad-lang/prism-gad": "0.1.0-rc.2",
     "@tiptap/core": "^3.31.3",
     "@tiptap/extension-details": "3.31.3",
     "@tiptap/extension-image": "^3.31.3",
@@ -16,6 +17,10 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "easymde": "2.21.0",
-    "marked": "^4.3.0"
+    "marked": "^4.3.0",
+    "prismjs": "1.30.0"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4"
   }
 }

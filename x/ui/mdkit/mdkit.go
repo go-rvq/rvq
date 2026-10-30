@@ -28,12 +28,13 @@ func PagePack() web.ComponentsPack {
 	return web.ComponentsPackFromFile(FS, "page.js")
 }
 
-// VendorMeta is the meta of the assets the page's formulas and diagrams load
-// (mdkit-vendor: KaTeX, its styles, Mermaid — their CDN, their copy).
+// VendorMeta is the meta of the assets the page's formulas, diagrams and code
+// load (mdkit-vendor: KaTeX, its styles, Mermaid — their CDN, their copy —,
+// Prism — the app's).
 func VendorMeta() string {
 	m := map[string]map[string]string{}
-	for _, a := range []*vendor.Asset{vendor.KaTeX, vendor.KaTeXStyle, vendor.Mermaid} {
-		m[a.Name] = map[string]string{"src": a.CDN, "local": a.URL(), "integrity": a.Integrity}
+	for _, a := range []*vendor.Asset{vendor.KaTeX, vendor.KaTeXStyle, vendor.Mermaid, vendor.Prism} {
+		m[a.Name] = map[string]string{"src": a.Src(), "local": a.URL(), "integrity": a.Integrity}
 	}
 	b, _ := json.Marshal(m)
 	return `<meta name="mdkit-vendor" content="` + html.EscapeString(string(b)) + `">`

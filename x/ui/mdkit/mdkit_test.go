@@ -20,7 +20,7 @@ func TestPagePack(t *testing.T) {
 		t.Errorf("the pack of the page: %d bytes", len(js))
 	}
 	m := VendorMeta()
-	for _, want := range []string{`name="mdkit-vendor"`, "katex-css", "cdn.jsdelivr.net/npm/mermaid", "/_rvq/vendor/katex/0.16.47/katex.min.js", "sha384-"} {
+	for _, want := range []string{`name="mdkit-vendor"`, "katex-css", "cdn.jsdelivr.net/npm/mermaid", "/_rvq/vendor/katex/0.16.47/katex.min.js", "sha384-", "/_rvq/vendor/prism/1.30.0/prism.min.js?v="} {
 		if !strings.Contains(m, want) {
 			t.Errorf("the meta has no %s: %s", want, m)
 		}

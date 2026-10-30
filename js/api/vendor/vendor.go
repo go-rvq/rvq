@@ -1,6 +1,6 @@
 // Package vendor is what the pages of a site take from CDNs — Vue,
 // Tailwind's script, Font Awesome, the Inter font; KaTeX and Mermaid, for
-// the formulas and diagrams of a text — with a fallback to the
+// the formulas and diagrams of a text, and Prism, its code — with a fallback to the
 // app: each asset's tag asks its CDN first and, when the CDN does not
 // answer (an error: down, blocked), the copy the app serves (js.Vendor, at
 // Prefix), of the same version.
@@ -11,6 +11,8 @@
 package vendor
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"io/fs"
@@ -49,6 +51,8 @@ type Asset struct {
 	Global string
 	// Defer loads a script deferred.
 	Defer bool
+	// Version is the version of a copy whose path does not say it (?v=).
+	Version string
 }
 
 // The assets.
@@ -84,6 +88,12 @@ var (
 		CDN:       "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js",
 		Local:     "mermaid/11.17.2/mermaid.min.js",
 		Integrity: "sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2"}
+	// Prism: the code of a text highlighted (rvq mdkit's code.js), with the
+	// languages and plugins of the admin's code viewer — a bundle of its own
+	// (js/mdkit build.sh), no CDN: the app's only, its address the version of
+	// its content (?v=, cached a year)
+	Prism = &Asset{Name: "prism", Kind: Script, Defer: true, Global: "Prism",
+		Local: "prism/1.30.0/prism.min.js"}
 )
 
 // Assets are the assets by name.
@@ -97,7 +107,26 @@ func Register(a ...*Asset) {
 }
 
 func init() {
-	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid)
+	Prism.Version = version(Prism.Local)
+	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid, Prism)
+}
+
+// version is the version of the copy at local: its hash, short.
+func version(local string) string {
+	b, err := fs.ReadFile(js.Vendor, "vendor/"+local)
+	if err != nil {
+		panic(err)
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:6])
+}
+
+// Src is where a is loaded from first: its CDN, else (none) its copy.
+func (a *Asset) Src() string {
+	if a.CDN == "" {
+		return a.URL()
+	}
+	return a.CDN
 }
 
 // Bootstrap is the script before the assets' tags (once a page): the
@@ -111,7 +140,12 @@ const Bootstrap = `<script>(function(w){if(w.rvqVendor)return;var q={};var v=w.r
 	`s.onload=function(){v.done(g)};document.head.appendChild(s)}}})(window)</script>`
 
 // URL is the address of the copy of a.
-func (a *Asset) URL() string { return Prefix + a.Local }
+func (a *Asset) URL() string {
+	if a.Version != "" {
+		return Prefix + a.Local + "?v=" + a.Version
+	}
+	return Prefix + a.Local
+}
 
 // Tag is the tag of a: its CDN first; on error, its copy (Bootstrap before
 // it, in the page).
@@ -121,7 +155,7 @@ func (a *Asset) Tag() string {
 	switch a.Kind {
 	case Style:
 		b.WriteString(`<link rel="stylesheet"`)
-		b.WriteString(attr("href", a.CDN))
+		b.WriteString(attr("href", a.Src()))
 		if a.Integrity != "" {
 			b.WriteString(attr("integrity", a.Integrity))
 			b.WriteString(` crossorigin="anonymous"`)
@@ -135,7 +169,7 @@ func (a *Asset) Tag() string {
 		if a.Defer {
 			b.WriteString(" defer")
 		}
-		b.WriteString(attr("src", a.CDN))
+		b.WriteString(attr("src", a.Src()))
 		if a.Integrity != "" {
 			b.WriteString(attr("integrity", a.Integrity))
 			b.WriteString(` crossorigin="anonymous"`)
