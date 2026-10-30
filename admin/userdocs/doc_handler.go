@@ -41,10 +41,13 @@ func (b *Builder) PageHead(html string) *Builder {
 	return b
 }
 
-// DocPath is where the page of a guide is served (DocHandler).
-func (b *Builder) DocPath() string {
-	return strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/user-docs/_doc"
-}
+// DocPagePath is where the page of a guide is served (DocHandler): out of
+// the admin's address — whose every page asks for a login —, a visitor of
+// the site sees it too.
+const DocPagePath = "/_rvq/user-docs/doc"
+
+// DocPath is where the page of a guide is served (DocHandler, DocPagePath).
+func (b *Builder) DocPath() string { return DocPagePath }
 
 // DocDataHref is the address of the page of the guide of node for the
 // admin (its code the admin's code viewer, as its documentation page's).

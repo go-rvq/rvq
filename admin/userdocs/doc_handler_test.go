@@ -75,8 +75,8 @@ func TestDocHandler(t *testing.T) {
 	has("page", page, `<!DOCTYPE html><html lang="en">`, `<title>Editor</title>`, `<div class="user-doc" lang="en" v-pre>`,
 		`<pre data-fence><code class="language-go">x := {{ 1 }}`,
 		// the other guide open: its page; the languages, links to this one
-		`href="/admin/user-docs/_doc?locale=en&amp;node=guides%2Fother"`,
-		`href="/admin/user-docs/_doc?locale=pt-BR&amp;node=guides%2Feditor" data-locale="pt-BR">Português</a>`,
+		`href="/_rvq/user-docs/doc?locale=en&amp;node=guides%2Fother"`,
+		`href="/_rvq/user-docs/doc?locale=pt-BR&amp;node=guides%2Feditor" data-locale="pt-BR">Português</a>`,
 		`data-locale="en" aria-current="true">English</a>`)
 	has("page", page, "<style>:root{--v-border-color")
 	hasNot("page", page, "<vx-code", "data-user-doc-not-yours", "<component")
@@ -105,7 +105,7 @@ func TestDocHandler(t *testing.T) {
 	if got := DocDataHref("/admin/user-docs/_doc", "a&b"); got != "/admin/user-docs/_doc?node=a%26b" {
 		t.Errorf("DocDataHref %q", got)
 	}
-	if got := b.DocDataHref("guides/editor"); got != "/admin/user-docs/_doc?node=guides%2Feditor&view=admin" {
+	if got := b.DocDataHref("guides/editor"); got != "/_rvq/user-docs/doc?node=guides%2Feditor&view=admin" {
 		t.Errorf("Builder.DocDataHref %q", got)
 	}
 }
