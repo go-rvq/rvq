@@ -202,19 +202,26 @@ func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, pe
 		}
 		tools.AppendChildren(
 			v.VSelect().Items(items).ItemTitle("title").ItemValue("value").ModelValue(cmp.Or(prefs.Period, PeriodDefault)).
-				Label(msgs.DefaultPeriod).Density(v.DensityCompact).HideDetails(true).Style("max-width:200px").
+				Label(msgs.DefaultPeriod).Density(v.DensityCompact).HideDetails(true).Variant(v.VariantOutlined).
+				PrependInnerIcon("mdi-calendar-range").Style("min-width: 200px; max-width: 240px").Attr("data-dashboard-default-period", true).
 				Attr("@update:model-value", web.Plaid().EventFunc(EventPref).Query("op", "period").Query("arg", web.Var("$event")).Go()),
 			v.VBtn(msgs.Reset).PrependIcon("mdi-restore").Variant(v.VariantText).Size(v.SizeSmall).Attr("@click", prefEvent("reset", "")),
 		)
 	}
+	// customizing, one period: the one the dashboard opens with (its tools);
+	// the widgets show no numbers there
+	var chooser, dates h.HTMLComponent = selector, custom
+	if customize {
+		chooser, dates = nil, nil
+	}
 	return web.Scope(
 		h.Div(
 			// the title is the page's (its bar, PageTitle): not again here
-			selector,
+			chooser,
 			v.VSpacer(),
 			tools,
 		).Class("d-flex flex-wrap align-center ga-2"),
-		custom,
+		dates,
 	).Slot("{ locals }").LocalsInit(fmt.Sprintf("{custom: %t, from: %q, to: %q}", period.Key == PeriodCustom, from, to))
 }
 
