@@ -296,7 +296,7 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
           items: [CopyAndPasteContentItem()]
         }),
         // the plugins' (their buttons after the editor's own)
-        ...plugins.flatMap((p) => p.extensions?.({ t }) ?? [])
+        ...plugins.flatMap((p) => p.extensions?.({ t, plugins: props.plugins as string[] }) ?? [])
       ],
       messages = computed(() => {
         if (props.errorMessages?.length) {

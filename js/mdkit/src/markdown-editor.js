@@ -31,6 +31,8 @@ import { cardTarget } from './link-cards.js'
 import * as F from './footnote-model.js'
 import { config, wordsOf } from './config.js'
 import HelpDialog, { helpOf } from './help-dialog.js'
+import { ButtonsDialog, TabsDialog } from './widgets-dialog.js'
+import { blockAt, buttonsHTML, tabsMarkdown } from './widgets-model.js'
 
 // cursorMark is the place of the cursor in the copy of the text the
 // footnotes builder works on (a character of no use, taken out at the end).
@@ -118,7 +120,7 @@ const item = (name, action, icon, title) => button(name, (editor) => {
   editor.codemirror.focus()
 }, icon, title)
 
-export default {
+const MarkdownEditor = {
   name: 'MdkitMarkdownEditor',
   props: {
     modelValue: { type: String, default: '' },
@@ -154,10 +156,19 @@ export default {
     helpDoc: { type: String, default: '' },
     helpWords: { type: Object, default: () => wordsOf('help') },
     helpHref: { type: String, default: '' },
+    // the words of the buttons and the tabs; tabs: their button (none in
+    // the editor of a tab's content)
+    widgetWords: { type: Object, default: () => wordsOf('widgets') },
+    tabs: { type: Boolean, default: true },
   },
   emits: ['update:modelValue', 'input', 'file'],
   data: () => ({ notice: '', helping: false }),
   computed: {
+    // the editor of a tab's content: this one, as it is, without tabs
+    selfEditor: () => MarkdownEditor,
+    tabEditorProps() {
+      return { preview: this.preview, upload: this.upload, token: this.token, images: this.images, rows: 10, tabs: false }
+    },
     canImage() { return !!this.upload || this.images },
     // the shortcuts of the help, in the user's words and keyboard (the
     // picture's only where pictures go in)
@@ -179,7 +190,7 @@ export default {
       ]
     },
   },
-  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitHelpDialog: HelpDialog },
+  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitHelpDialog: HelpDialog, MdkitButtonsDialog: ButtonsDialog, MdkitTabsDialog: TabsDialog },
   template: `
 <div class="mdkit-markdown-editor" :class="{ invalid, disabled }" data-markdown-editor>
   <textarea ref="area" :id="inputId || undefined" :data-path="path || undefined"></textarea>
@@ -189,6 +200,8 @@ export default {
   <mdkit-link-picker ref="links" :words="linkWords" :targets="false"></mdkit-link-picker>
   <mdkit-footnote-builder ref="footnotes" :render="preview ? renderHTML : null"></mdkit-footnote-builder>
   <mdkit-help-dialog ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
+  <mdkit-buttons-dialog ref="buttons" :words="widgetWords" :link-words="linkWords"></mdkit-buttons-dialog>
+  <mdkit-tabs-dialog v-if="tabs" ref="tabs" :words="widgetWords" :editor="selfEditor" :editor-props="tabEditorProps"></mdkit-tabs-dialog>
   <v-dialog v-model="helping" max-width="620" scrollable data-markdown-help>
     <v-card>
       <v-card-title class="d-flex align-center">
@@ -260,6 +273,8 @@ export default {
       button('math', () => this.insertBlock('math'), 'mdi-sigma', this.blockWords.formula || 'Formula'),
       button('diagram', () => this.insertBlock('diagram'), 'mdi-sitemap-outline', this.blockWords.diagram || 'Diagram'),
       button('details', () => this.insertBlock('details'), 'mdi-arrow-collapse-vertical', this.blockWords.details || 'Section that folds'),
+      button('buttons', () => this.openWidget('buttons'), 'mdi-gesture-tap-button', this.widgetWords.buttons || 'Buttons'),
+      ...(this.tabs ? [button('tabs', () => this.openWidget('tabs'), 'mdi-tab', this.widgetWords.tabs || 'Tabs')] : []),
       button('horizontal-rule', EasyMDE.drawHorizontalRule, 'mdi-minus', t('rule', 'Horizontal line')),
       '|',
       // the history of changes
@@ -577,6 +592,26 @@ export default {
       this.pending.forEach((url, name) => { html = html.split(inlineURL(name)).join(url) })
       return html
     },
+    // openWidget makes buttons or tabs (kind: their dialog): those under the
+    // cursor changed (or taken out), else new ones at it, on lines of their
+    // own
+    openWidget(kind) {
+      const cm = this.mde.codemirror
+      const text = cm.getValue()
+      const at = blockAt(text, cm.indexFromPos(cm.getCursor('from')))
+      const there = at && at.kind === kind ? at : null
+      this.$refs[kind].open(there ? there.value : null, (v) => {
+        const md = v ? (kind === 'tabs' ? tabsMarkdown(v) : buttonsHTML(v)) : ''
+        if (there) {
+          cm.replaceRange(md, cm.posFromIndex(there.from), cm.posFromIndex(there.to))
+        } else if (v) {
+          const from = cm.getCursor('from')
+          const line = cm.getLine(from.line) || ''
+          cm.replaceRange((line.slice(0, from.ch).trim() ? '\n\n' : '') + md + (line.slice(from.ch).trim() ? '\n\n' : '\n'), from, cm.getCursor('to'))
+        }
+        cm.focus()
+      })
+    },
     // insertBlock puts a formula, a diagram or a section that folds at the
     // cursor — around the text chosen: a formula in a line ($…$) of a line
     // of text, else a block of its own ($$) —, the text in it chosen
@@ -721,3 +756,5 @@ export default {
     },
   },
 }
+
+export default MarkdownEditor

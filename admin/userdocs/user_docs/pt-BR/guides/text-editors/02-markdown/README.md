@@ -111,6 +111,52 @@ Os materiais, a **mão de obra** e a limpeza depois da obra.
 Os botões **Σ**, **diagrama** e **seção** escrevem cada um deles no cursor
 (em volta do texto escolhido).
 
+## Botões
+
+```markdown
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="O que desenha as fórmulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+```
+
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="O que desenha as fórmulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+
+## Abas
+
+O conteúdo de cada aba é Markdown, entre linhas em branco:
+
+```markdown
+<div data-type="tabs" data-align="start">
+<div data-type="tab" data-title="Cozinha" data-color="primary" data-icon-left="mdi-silverware-fork-knife">
+
+Armários e bancadas em **10 dias**.
+
+</div>
+<div data-type="tab" data-title="Banheiro" data-icon-left="mdi-shower">
+
+Azulejos e louças em 7 dias.
+
+</div>
+</div>
+```
+
+<div data-type="tabs" data-align="start">
+<div data-type="tab" data-title="Cozinha" data-color="primary" data-icon-left="mdi-silverware-fork-knife">
+
+Armários e bancadas em **10 dias**.
+
+</div>
+<div data-type="tab" data-title="Banheiro" data-icon-left="mdi-shower">
+
+Azulejos e louças em 7 dias.
+
+</div>
+</div>
+
+Os botões **botões** e **abas** da barra abrem os diálogos deles — sobre o
+bloco onde está o cursor, ou um novo: o link de cada botão (uma página do site
+ou um registro do admin), título (vazio, o da página), descrição, cor e
+ícones; o título, a cor, os ícones e o conteúdo de cada aba, escrito no mesmo
+editor. Impressas, as abas aparecem todas, cada uma num quadro.
+
 ## Teclas de atalho
 
 No Mac, **⌘** no lugar de **Ctrl** e **⌥** no lugar de **Alt**.

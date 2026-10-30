@@ -108,6 +108,52 @@ The materials, the **labor** and the cleaning after the work.
 The buttons **Σ**, **diagram** and **section** write each of them at the
 cursor (around the text chosen).
 
+## Buttons
+
+```markdown
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="What draws the formulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+```
+
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="What draws the formulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+
+## Tabs
+
+The content of each tab is Markdown, between blank lines:
+
+```markdown
+<div data-type="tabs" data-align="start">
+<div data-type="tab" data-title="Kitchen" data-color="primary" data-icon-left="mdi-silverware-fork-knife">
+
+Cabinets and countertops in **10 days**.
+
+</div>
+<div data-type="tab" data-title="Bathroom" data-icon-left="mdi-shower">
+
+Tiles and fixtures in 7 days.
+
+</div>
+</div>
+```
+
+<div data-type="tabs" data-align="start">
+<div data-type="tab" data-title="Kitchen" data-color="primary" data-icon-left="mdi-silverware-fork-knife">
+
+Cabinets and countertops in **10 days**.
+
+</div>
+<div data-type="tab" data-title="Bathroom" data-icon-left="mdi-shower">
+
+Tiles and fixtures in 7 days.
+
+</div>
+</div>
+
+The **buttons** and **tabs** buttons of the bar open their dialogs — on the
+block where the cursor is, or a new one: each button's link (a page of the
+site or a record of the admin), title (empty, the page's), description, color
+and icons; each tab's title, color, icons and content, written in the same
+editor. Printed, the tabs all show, each in a frame.
+
 ## Keyboard shortcuts
 
 On a Mac, **⌘** instead of **Ctrl** and **⌥** instead of **Alt**.

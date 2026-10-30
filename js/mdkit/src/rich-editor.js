@@ -36,6 +36,8 @@ import { BlockMath, InlineMath, MathCommands } from './math-tiptap.js'
 import { Diagram } from './diagram-tiptap.js'
 import BlockDialog from './block-dialog.js'
 import HelpDialog, { helpOf } from './help-dialog.js'
+import { Buttons, Tabs } from './widgets-tiptap.js'
+import { ButtonsDialog, TabsDialog } from './widgets-dialog.js'
 import LinkCardPicker from './link-card-picker.js'
 import LinkPicker from './link-picker.js'
 import { finalize } from './footnote-rich.js'
@@ -168,9 +170,13 @@ const RichEditor = {
     helpDoc: { type: String, default: '' },
     helpWords: { type: Object, default: () => wordsOf('help') },
     helpHref: { type: String, default: '' },
+    // the words of the buttons and the tabs; tabs: their button (none in
+    // the editor of a tab's content)
+    widgetWords: { type: Object, default: () => wordsOf('widgets') },
+    tabs: { type: Boolean, default: true },
   },
   emits: ['update:modelValue', 'file'],
-  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitBlockDialog: BlockDialog, MdkitHelpDialog: HelpDialog },
+  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitBlockDialog: BlockDialog, MdkitHelpDialog: HelpDialog, MdkitButtonsDialog: ButtonsDialog, MdkitTabsDialog: TabsDialog },
   data: () => ({
     active: {}, notice: '',
     sizes: { show: false, target: null, width: null, small: false },
@@ -181,6 +187,10 @@ const RichEditor = {
     buttons: () => bar.map(([key, icon]) => ({ key, icon })),
     widths: () => sizes.map(([key, width]) => ({ key, width })),
     canImage() { return !!this.upload || this.images },
+    // the editor of a tab's content: this one, as it is, without tabs
+    tabEditorProps() {
+      return { upload: this.upload, token: this.token, images: this.images, original: this.original, footnotes: this.footnotes, tabs: false }
+    },
     // where its guide is asked; '' none
     helpSrc() { return this.helpDoc || helpOf('rich') },
     // the buttons of a formula, a diagram, a section that folds
@@ -190,6 +200,8 @@ const RichEditor = {
         { key: 'math', icon: 'mdi-sigma', title: w.formula || 'Formula', run: () => this.openBlock('math') },
         { key: 'diagram', icon: 'mdi-sitemap-outline', title: w.diagram || 'Diagram', run: () => this.openBlock('diagram') },
         { key: 'details', icon: 'mdi-arrow-collapse-vertical', title: w.details || 'Section that folds', run: () => this.toggleDetails() },
+        { key: 'buttons', icon: 'mdi-gesture-tap-button', title: this.widgetWords.buttons || 'Buttons', run: () => this.openWidget('buttons') },
+        ...(this.tabs ? [{ key: 'tabs', icon: 'mdi-tab', title: this.widgetWords.tabs || 'Tabs', run: () => this.openWidget('tabs') }] : []),
       ]
     },
   },
@@ -199,6 +211,8 @@ const RichEditor = {
   <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>
   <mdkit-block-dialog ref="blocks" :words="blockWords"></mdkit-block-dialog>
   <mdkit-help-dialog v-if="helpSrc" ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
+  <mdkit-buttons-dialog ref="buttons" :words="widgetWords" :link-words="linkWords"></mdkit-buttons-dialog>
+  <mdkit-tabs-dialog v-if="tabs" ref="tabs" :words="widgetWords" :editor="noteEditor" :editor-props="tabEditorProps"></mdkit-tabs-dialog>
   <mdkit-footnote-builder v-if="footnotes" ref="footnoteBuilder" :note-editor="noteEditor"></mdkit-footnote-builder>
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
@@ -274,6 +288,8 @@ const RichEditor = {
         // formulas (KaTeX, the page's), diagrams (Mermaid), sections that fold
         InlineMath, BlockMath, MathCommands, Diagram,
         Details.configure({ persist: true }), DetailsSummary, DetailsContent,
+        // buttons, tabs (their dialogs)
+        Buttons, Tabs,
         // an empty paragraph: its hint; the editor empty, its placeholder
         Placeholder.configure({
           showOnlyCurrent: false,
@@ -317,6 +333,9 @@ const RichEditor = {
     // a formula, a diagram clicked: its dialog on it
     this.editor.storage.mdkitMath.open = (latex, pos, block) => this.openBlock('math', { text: latex, block }, pos)
     this.editor.storage.mdkitDiagram.open = (source, pos) => this.openBlock('diagram', { text: source }, pos)
+    // buttons, tabs clicked: their dialog on them
+    this.editor.storage.mdkitButtons.open = (value, pos) => this.openWidget('buttons', value, pos)
+    this.editor.storage.mdkitTabs.open = (value, pos) => this.tabs && this.openWidget('tabs', value, pos)
   },
   beforeUnmount() {
     if (this.editor) this.editor.destroy()
@@ -349,6 +368,16 @@ const RichEditor = {
         if (!v) return
         if (kind === 'math') (pos !== null ? c.updateMath(pos, v.text, v.block) : c.insertMath(v.text, v.block)).run()
         else (pos !== null ? c.updateDiagram(pos, v.text) : c.insertDiagram(v.text)).run()
+      })
+    },
+    // openWidget makes buttons or tabs (kind: their dialog): new ones at the
+    // cursor, or those at pos changed (or taken out)
+    openWidget(kind, value = null, pos = null) {
+      const name = kind === 'tabs' ? 'MdkitTabs' : 'MdkitButtons'
+      this.$refs[kind].open(value, (v) => {
+        const c = this.editor.chain().focus()
+        if (pos !== null) c['update' + name](pos, v).run()
+        else if (v) c['insert' + name](v).run()
       })
     },
     // openCard picks a page (the picker); its card at the cursor

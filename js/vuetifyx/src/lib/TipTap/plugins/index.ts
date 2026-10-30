@@ -3,12 +3,14 @@
 // extensions — with their buttons on the bar — and what it makes of the HTML
 // the field keeps (output). Registered here: footnotes, tables (rvq mdkit's
 // builders), cards (its link cards), math (formulas), diagrams (Mermaid),
-// details (sections that fold); an application registers its own (registerTiptapPlugin).
+// details (sections that fold), buttons, tabs (their dialogs); an application registers its own (registerTiptapPlugin).
 import type {AnyExtension} from '@tiptap/core'
 
 export interface TiptapPluginContext {
   /** t is the words of the namespace vx (useI18n) */
   t: (key: string) => string
+  /** plugins are the names of the editor's plugins (the tabs' editor: the same) */
+  plugins?: readonly string[]
 }
 
 export interface TiptapPlugin {
@@ -37,6 +39,8 @@ import cards from './cards'
 import math from './math'
 import diagrams from './diagrams'
 import details from './details'
+import buttons from './buttons'
+import tabs from './tabs'
 
 registerTiptapPlugin('footnotes', footnotes)
 registerTiptapPlugin('tables', tablesPlugin)
@@ -44,3 +48,5 @@ registerTiptapPlugin('cards', cards)
 registerTiptapPlugin('math', math)
 registerTiptapPlugin('diagrams', diagrams)
 registerTiptapPlugin('details', details)
+registerTiptapPlugin('buttons', buttons)
+registerTiptapPlugin('tabs', tabs)

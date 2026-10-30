@@ -339,6 +339,45 @@ type Messages struct {
 	MdkitHelpClose              string `json:"mdkitHelpClose" i18n:"hint='Editors of a text (mdkit), help dialog: close.'"`
 	MdkitHelpFailed             string `json:"mdkitHelpFailed" i18n:"hint='Editors of a text (mdkit), help dialog: failed.'"`
 	MdkitHelpBack               string `json:"mdkitHelpBack" i18n:"hint='Editors of a text (mdkit), help dialog: back.'"`
+	MdkitWidgetsButtons         string `json:"mdkitWidgetsButtons" i18n:"hint='Editors of a text (mdkit), buttons and tabs: buttons.'"`
+	MdkitWidgetsTabs            string `json:"mdkitWidgetsTabs" i18n:"hint='Editors of a text (mdkit), buttons and tabs: tabs.'"`
+	MdkitWidgetsAlign           string `json:"mdkitWidgetsAlign" i18n:"hint='Editors of a text (mdkit), buttons and tabs: align.'"`
+	MdkitWidgetsStart           string `json:"mdkitWidgetsStart" i18n:"hint='Editors of a text (mdkit), buttons and tabs: start.'"`
+	MdkitWidgetsCenter          string `json:"mdkitWidgetsCenter" i18n:"hint='Editors of a text (mdkit), buttons and tabs: center.'"`
+	MdkitWidgetsEnd             string `json:"mdkitWidgetsEnd" i18n:"hint='Editors of a text (mdkit), buttons and tabs: end.'"`
+	MdkitWidgetsStretch         string `json:"mdkitWidgetsStretch" i18n:"hint='Editors of a text (mdkit), buttons and tabs: stretch.'"`
+	MdkitWidgetsAdd             string `json:"mdkitWidgetsAdd" i18n:"hint='Editors of a text (mdkit), buttons and tabs: add.'"`
+	MdkitWidgetsAddTab          string `json:"mdkitWidgetsAddTab" i18n:"hint='Editors of a text (mdkit), buttons and tabs: addTab.'"`
+	MdkitWidgetsLink            string `json:"mdkitWidgetsLink" i18n:"hint='Editors of a text (mdkit), buttons and tabs: link.'"`
+	MdkitWidgetsChoose          string `json:"mdkitWidgetsChoose" i18n:"hint='Editors of a text (mdkit), buttons and tabs: choose.'"`
+	MdkitWidgetsTitle           string `json:"mdkitWidgetsTitle" i18n:"hint='Editors of a text (mdkit), buttons and tabs: title.'"`
+	MdkitWidgetsTitleHint       string `json:"mdkitWidgetsTitleHint" i18n:"hint='Editors of a text (mdkit), buttons and tabs: titleHint.'"`
+	MdkitWidgetsDescription     string `json:"mdkitWidgetsDescription" i18n:"hint='Editors of a text (mdkit), buttons and tabs: description.'"`
+	MdkitWidgetsColor           string `json:"mdkitWidgetsColor" i18n:"hint='Editors of a text (mdkit), buttons and tabs: color.'"`
+	MdkitWidgetsIconLeft        string `json:"mdkitWidgetsIconLeft" i18n:"hint='Editors of a text (mdkit), buttons and tabs: iconLeft.'"`
+	MdkitWidgetsIconRight       string `json:"mdkitWidgetsIconRight" i18n:"hint='Editors of a text (mdkit), buttons and tabs: iconRight.'"`
+	MdkitWidgetsIcons           string `json:"mdkitWidgetsIcons" i18n:"hint='Editors of a text (mdkit), buttons and tabs: icons.'"`
+	MdkitWidgetsUp              string `json:"mdkitWidgetsUp" i18n:"hint='Editors of a text (mdkit), buttons and tabs: up.'"`
+	MdkitWidgetsDown            string `json:"mdkitWidgetsDown" i18n:"hint='Editors of a text (mdkit), buttons and tabs: down.'"`
+	MdkitWidgetsLeft            string `json:"mdkitWidgetsLeft" i18n:"hint='Editors of a text (mdkit), buttons and tabs: left.'"`
+	MdkitWidgetsRight           string `json:"mdkitWidgetsRight" i18n:"hint='Editors of a text (mdkit), buttons and tabs: right.'"`
+	MdkitWidgetsRemove          string `json:"mdkitWidgetsRemove" i18n:"hint='Editors of a text (mdkit), buttons and tabs: remove.'"`
+	MdkitWidgetsRemoveAll       string `json:"mdkitWidgetsRemoveAll" i18n:"hint='Editors of a text (mdkit), buttons and tabs: removeAll.'"`
+	MdkitWidgetsCancel          string `json:"mdkitWidgetsCancel" i18n:"hint='Editors of a text (mdkit), buttons and tabs: cancel.'"`
+	MdkitWidgetsInsert          string `json:"mdkitWidgetsInsert" i18n:"hint='Editors of a text (mdkit), buttons and tabs: insert.'"`
+	MdkitWidgetsUpdate          string `json:"mdkitWidgetsUpdate" i18n:"hint='Editors of a text (mdkit), buttons and tabs: update.'"`
+	MdkitWidgetsPreview         string `json:"mdkitWidgetsPreview" i18n:"hint='Editors of a text (mdkit), buttons and tabs: preview.'"`
+	MdkitWidgetsNewTab          string `json:"mdkitWidgetsNewTab" i18n:"hint='Editors of a text (mdkit), buttons and tabs: newTab.'"`
+	MdkitWidgetsTab             string `json:"mdkitWidgetsTab" i18n:"hint='Editors of a text (mdkit), buttons and tabs: tab.'"`
+	MdkitWidgetsContent         string `json:"mdkitWidgetsContent" i18n:"hint='Editors of a text (mdkit), buttons and tabs: content.'"`
+	MdkitWidgetsNoLink          string `json:"mdkitWidgetsNoLink" i18n:"hint='Editors of a text (mdkit), buttons and tabs: noLink.'"`
+	MdkitWidgetsDefault         string `json:"mdkitWidgetsDefault" i18n:"hint='Editors of a text (mdkit), buttons and tabs: default.'"`
+	MdkitWidgetsPrimary         string `json:"mdkitWidgetsPrimary" i18n:"hint='Editors of a text (mdkit), buttons and tabs: primary.'"`
+	MdkitWidgetsSecondary       string `json:"mdkitWidgetsSecondary" i18n:"hint='Editors of a text (mdkit), buttons and tabs: secondary.'"`
+	MdkitWidgetsSuccess         string `json:"mdkitWidgetsSuccess" i18n:"hint='Editors of a text (mdkit), buttons and tabs: success.'"`
+	MdkitWidgetsInfo            string `json:"mdkitWidgetsInfo" i18n:"hint='Editors of a text (mdkit), buttons and tabs: info.'"`
+	MdkitWidgetsWarning         string `json:"mdkitWidgetsWarning" i18n:"hint='Editors of a text (mdkit), buttons and tabs: warning.'"`
+	MdkitWidgetsError           string `json:"mdkitWidgetsError" i18n:"hint='Editors of a text (mdkit), buttons and tabs: error.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -648,6 +687,45 @@ var Messages_en_US = &Messages{
 	MdkitHelpClose:              "Close",
 	MdkitHelpFailed:             "The guide could not be loaded.",
 	MdkitHelpBack:               "Back",
+	MdkitWidgetsButtons:         "Buttons",
+	MdkitWidgetsTabs:            "Tabs",
+	MdkitWidgetsAlign:           "Alignment",
+	MdkitWidgetsStart:           "Left",
+	MdkitWidgetsCenter:          "Center",
+	MdkitWidgetsEnd:             "Right",
+	MdkitWidgetsStretch:         "Fill the line",
+	MdkitWidgetsAdd:             "Add",
+	MdkitWidgetsAddTab:          "Add a tab",
+	MdkitWidgetsLink:            "Link",
+	MdkitWidgetsChoose:          "Choose…",
+	MdkitWidgetsTitle:           "Title",
+	MdkitWidgetsTitleHint:       "Empty: the title of the page",
+	MdkitWidgetsDescription:     "Description (tooltip)",
+	MdkitWidgetsColor:           "Color",
+	MdkitWidgetsIconLeft:        "Icon on the left",
+	MdkitWidgetsIconRight:       "Icon on the right",
+	MdkitWidgetsIcons:           "The icons",
+	MdkitWidgetsUp:              "Up",
+	MdkitWidgetsDown:            "Down",
+	MdkitWidgetsLeft:            "To the left",
+	MdkitWidgetsRight:           "To the right",
+	MdkitWidgetsRemove:          "Remove",
+	MdkitWidgetsRemoveAll:       "Remove",
+	MdkitWidgetsCancel:          "Cancel",
+	MdkitWidgetsInsert:          "Insert",
+	MdkitWidgetsUpdate:          "Update",
+	MdkitWidgetsPreview:         "Preview",
+	MdkitWidgetsNewTab:          "In a new tab",
+	MdkitWidgetsTab:             "Tab",
+	MdkitWidgetsContent:         "Content",
+	MdkitWidgetsNoLink:          "No link chosen",
+	MdkitWidgetsDefault:         "Default",
+	MdkitWidgetsPrimary:         "Primary",
+	MdkitWidgetsSecondary:       "Secondary",
+	MdkitWidgetsSuccess:         "Success",
+	MdkitWidgetsInfo:            "Information",
+	MdkitWidgetsWarning:         "Warning",
+	MdkitWidgetsError:           "Error",
 }
 
 var Messages_pt_BR = &Messages{
@@ -957,6 +1035,45 @@ var Messages_pt_BR = &Messages{
 	MdkitHelpClose:              "Fechar",
 	MdkitHelpFailed:             "Não foi possível carregar o guia.",
 	MdkitHelpBack:               "Voltar",
+	MdkitWidgetsButtons:         "Botões",
+	MdkitWidgetsTabs:            "Abas",
+	MdkitWidgetsAlign:           "Alinhamento",
+	MdkitWidgetsStart:           "À esquerda",
+	MdkitWidgetsCenter:          "Ao centro",
+	MdkitWidgetsEnd:             "À direita",
+	MdkitWidgetsStretch:         "Ocupar a linha",
+	MdkitWidgetsAdd:             "Adicionar",
+	MdkitWidgetsAddTab:          "Adicionar aba",
+	MdkitWidgetsLink:            "Link",
+	MdkitWidgetsChoose:          "Escolher…",
+	MdkitWidgetsTitle:           "Título",
+	MdkitWidgetsTitleHint:       "Vazio: o título da página",
+	MdkitWidgetsDescription:     "Descrição (dica)",
+	MdkitWidgetsColor:           "Cor",
+	MdkitWidgetsIconLeft:        "Ícone à esquerda",
+	MdkitWidgetsIconRight:       "Ícone à direita",
+	MdkitWidgetsIcons:           "Os ícones",
+	MdkitWidgetsUp:              "Para cima",
+	MdkitWidgetsDown:            "Para baixo",
+	MdkitWidgetsLeft:            "Para a esquerda",
+	MdkitWidgetsRight:           "Para a direita",
+	MdkitWidgetsRemove:          "Remover",
+	MdkitWidgetsRemoveAll:       "Remover",
+	MdkitWidgetsCancel:          "Cancelar",
+	MdkitWidgetsInsert:          "Inserir",
+	MdkitWidgetsUpdate:          "Atualizar",
+	MdkitWidgetsPreview:         "Prévia",
+	MdkitWidgetsNewTab:          "Em nova aba",
+	MdkitWidgetsTab:             "Aba",
+	MdkitWidgetsContent:         "Conteúdo",
+	MdkitWidgetsNoLink:          "Nenhum link escolhido",
+	MdkitWidgetsDefault:         "Padrão",
+	MdkitWidgetsPrimary:         "Primária",
+	MdkitWidgetsSecondary:       "Secundária",
+	MdkitWidgetsSuccess:         "Sucesso",
+	MdkitWidgetsInfo:            "Informação",
+	MdkitWidgetsWarning:         "Aviso",
+	MdkitWidgetsError:           "Erro",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

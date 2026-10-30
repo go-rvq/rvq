@@ -623,4 +623,82 @@ export interface VxMessages {
   mdkitHelpFailed: string
   /** Editors of a text (mdkit), help dialog: back. */
   mdkitHelpBack: string
+  /** Editors of a text (mdkit), buttons and tabs: buttons. */
+  mdkitWidgetsButtons: string
+  /** Editors of a text (mdkit), buttons and tabs: tabs. */
+  mdkitWidgetsTabs: string
+  /** Editors of a text (mdkit), buttons and tabs: align. */
+  mdkitWidgetsAlign: string
+  /** Editors of a text (mdkit), buttons and tabs: start. */
+  mdkitWidgetsStart: string
+  /** Editors of a text (mdkit), buttons and tabs: center. */
+  mdkitWidgetsCenter: string
+  /** Editors of a text (mdkit), buttons and tabs: end. */
+  mdkitWidgetsEnd: string
+  /** Editors of a text (mdkit), buttons and tabs: stretch. */
+  mdkitWidgetsStretch: string
+  /** Editors of a text (mdkit), buttons and tabs: add. */
+  mdkitWidgetsAdd: string
+  /** Editors of a text (mdkit), buttons and tabs: addTab. */
+  mdkitWidgetsAddTab: string
+  /** Editors of a text (mdkit), buttons and tabs: link. */
+  mdkitWidgetsLink: string
+  /** Editors of a text (mdkit), buttons and tabs: choose. */
+  mdkitWidgetsChoose: string
+  /** Editors of a text (mdkit), buttons and tabs: title. */
+  mdkitWidgetsTitle: string
+  /** Editors of a text (mdkit), buttons and tabs: titleHint. */
+  mdkitWidgetsTitleHint: string
+  /** Editors of a text (mdkit), buttons and tabs: description. */
+  mdkitWidgetsDescription: string
+  /** Editors of a text (mdkit), buttons and tabs: color. */
+  mdkitWidgetsColor: string
+  /** Editors of a text (mdkit), buttons and tabs: iconLeft. */
+  mdkitWidgetsIconLeft: string
+  /** Editors of a text (mdkit), buttons and tabs: iconRight. */
+  mdkitWidgetsIconRight: string
+  /** Editors of a text (mdkit), buttons and tabs: icons. */
+  mdkitWidgetsIcons: string
+  /** Editors of a text (mdkit), buttons and tabs: up. */
+  mdkitWidgetsUp: string
+  /** Editors of a text (mdkit), buttons and tabs: down. */
+  mdkitWidgetsDown: string
+  /** Editors of a text (mdkit), buttons and tabs: left. */
+  mdkitWidgetsLeft: string
+  /** Editors of a text (mdkit), buttons and tabs: right. */
+  mdkitWidgetsRight: string
+  /** Editors of a text (mdkit), buttons and tabs: remove. */
+  mdkitWidgetsRemove: string
+  /** Editors of a text (mdkit), buttons and tabs: removeAll. */
+  mdkitWidgetsRemoveAll: string
+  /** Editors of a text (mdkit), buttons and tabs: cancel. */
+  mdkitWidgetsCancel: string
+  /** Editors of a text (mdkit), buttons and tabs: insert. */
+  mdkitWidgetsInsert: string
+  /** Editors of a text (mdkit), buttons and tabs: update. */
+  mdkitWidgetsUpdate: string
+  /** Editors of a text (mdkit), buttons and tabs: preview. */
+  mdkitWidgetsPreview: string
+  /** Editors of a text (mdkit), buttons and tabs: newTab. */
+  mdkitWidgetsNewTab: string
+  /** Editors of a text (mdkit), buttons and tabs: tab. */
+  mdkitWidgetsTab: string
+  /** Editors of a text (mdkit), buttons and tabs: content. */
+  mdkitWidgetsContent: string
+  /** Editors of a text (mdkit), buttons and tabs: noLink. */
+  mdkitWidgetsNoLink: string
+  /** Editors of a text (mdkit), buttons and tabs: default. */
+  mdkitWidgetsDefault: string
+  /** Editors of a text (mdkit), buttons and tabs: primary. */
+  mdkitWidgetsPrimary: string
+  /** Editors of a text (mdkit), buttons and tabs: secondary. */
+  mdkitWidgetsSecondary: string
+  /** Editors of a text (mdkit), buttons and tabs: success. */
+  mdkitWidgetsSuccess: string
+  /** Editors of a text (mdkit), buttons and tabs: info. */
+  mdkitWidgetsInfo: string
+  /** Editors of a text (mdkit), buttons and tabs: warning. */
+  mdkitWidgetsWarning: string
+  /** Editors of a text (mdkit), buttons and tabs: error. */
+  mdkitWidgetsError: string
 }

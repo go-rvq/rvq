@@ -9,6 +9,7 @@
 // (rvq js/api/vendor) —. What is in an editor (contenteditable) is its own.
 
 import { drawCode, codeSel } from './code.js'
+import { drawButtons, drawTabs, buttonsSel, tabsSel } from './widgets.js'
 
 const mathSel = '[data-type="inline-math"][data-latex],[data-type="block-math"][data-latex]'
 // a fence that shows a source (pre[data-fence]: a guide's) is not drawn
@@ -133,9 +134,11 @@ export async function drawDiagrams(root, assets = vendorOf()) {
   }
 }
 
-// drawBlocks draws the formulas, the diagrams and the code under root.
+// drawBlocks draws the formulas, the diagrams, the code, the buttons and
+// the tabs under root.
 export function drawBlocks(root, assets = vendorOf()) {
-  return Promise.all([drawMath(root, assets), drawDiagrams(root, assets), drawCode(root, assets)])
+  drawTabs(root, assets)
+  return Promise.all([drawMath(root, assets), drawDiagrams(root, assets), drawCode(root, assets), drawButtons(root, assets)])
 }
 
 // watchBlocks draws the blocks under root now and as they come (once per
@@ -150,7 +153,7 @@ export function watchBlocks(root = (typeof document !== 'undefined' ? document.b
   }
   run()
   new MutationObserver((ms) => {
-    if (ms.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1 && (n.matches?.(mathSel + ',' + diagramSel + ',pre') ||
-      n.querySelector?.(mathSel + ',' + diagramSel + ',' + codeSel))))) run()
+    if (ms.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1 && (n.matches?.(mathSel + ',' + diagramSel + ',pre,' + buttonsSel + ',' + tabsSel) ||
+      n.querySelector?.(mathSel + ',' + diagramSel + ',' + codeSel + ',' + buttonsSel + ',' + tabsSel))))) run()
   }).observe(root, { childList: true, subtree: true })
 }

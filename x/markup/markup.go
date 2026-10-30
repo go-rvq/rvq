@@ -50,6 +50,8 @@ var policy = func() *bluemonday.Policy {
 	// a formula (math.go): its kind, its LaTeX
 	p.AllowAttrs("data-type").Matching(mathTypeRe).OnElements("span", "div")
 	p.AllowAttrs("data-latex").Matching(regexp.MustCompile(`^[^\x00]*$`)).OnElements("span", "div")
+	// the buttons and the tabs (widgets.go)
+	allowWidgets(p)
 	return p
 }()
 
@@ -220,6 +222,9 @@ func (w *mdWriter) block(n *html.Node, prefix string) {
 	}
 	switch n.Data {
 	case "div", "section":
+		if w.widgetMarkdown(n, prefix) {
+			return
+		}
 		if t := attr(n, "data-type"); t == BlockMath || t == InlineMath {
 			// a formula of its own
 			w.b.WriteString(prefix + "$$\n" + prefix + attr(n, "data-latex") + "\n" + prefix + "$$\n\n")

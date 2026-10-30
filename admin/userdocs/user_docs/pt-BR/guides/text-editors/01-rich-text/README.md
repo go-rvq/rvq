@@ -93,6 +93,31 @@ uma seção a desfaz em blocos.
 <p>Os materiais, a mão de obra e a limpeza depois da obra.</p>
 </details>
 
+## Botões
+
+O botão **botões** abre um diálogo com a lista de botões do bloco. Cada um
+tem o **link** — um endereço digitado, ou uma página do site ou um registro
+do admin, buscados como no link —, o **título** (vazio, a página mostra o
+título da página ou do registro), a **descrição** (aparece ao passar o mouse),
+a **cor** do tema (primária, secundária, sucesso, informação, aviso, erro) e
+um **ícone** à esquerda e à direita (um nome do
+[Material Design Icons](https://pictogrammers.com/library/mdi/): `mdi-…`). O
+**alinhamento** põe os botões à esquerda, ao centro, à direita ou ocupando a
+linha. Botões clicados abrem o diálogo de novo.
+
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="O que desenha as fórmulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+
+## Abas
+
+O botão **abas** abre um diálogo com as abas do bloco: cada aba tem título,
+cor, ícones e o **conteúdo**, escrito no mesmo editor do texto (formatos,
+tabelas, fórmulas, botões…). As setas mudam a ordem; o **alinhamento** põe a
+barra das abas à esquerda, ao centro, à direita ou ocupando a linha. Na página,
+uma aba aparece por vez; **impressas**, todas aparecem, cada uma num quadro
+com o seu título.
+
+<div data-type="tabs" data-align="start"><div data-type="tab" data-title="Cozinha" data-color="primary" data-icon-left="mdi-silverware-fork-knife"><p>Armários e bancadas em <strong>10 dias</strong>.</p></div><div data-type="tab" data-title="Banheiro" data-icon-left="mdi-shower"><p>Azulejos e louças em 7 dias.</p></div></div>
+
 ## Teclas de atalho
 
 No Mac, **⌘** no lugar de **Ctrl** e **⌥** no lugar de **Alt**. Algumas só valem

@@ -90,6 +90,31 @@ on a section makes it its blocks again.
 <p>The materials, the labor and the cleaning after the work.</p>
 </details>
 
+## Buttons
+
+The **buttons** button opens a dialog with the list of the block's buttons.
+Each has its **link** — an address typed, or a page of the site or a record of
+the admin, searched as for a link —, its **title** (empty, the page shows the
+title of the page or the record), its **description** (shown on hover), a
+**color** of the theme (primary, secondary, success, information, warning,
+error) and an **icon** on the left and on the right (a name of the
+[Material Design Icons](https://pictogrammers.com/library/mdi/): `mdi-…`).
+The **alignment** puts the buttons on the left, the center, the right or
+filling the line. Buttons clicked open the dialog again.
+
+<div data-type="buttons" data-align="center"><a data-type="button" href="https://katex.org/" title="What draws the formulas" data-color="primary" data-icon-left="mdi-sigma" target="_blank" rel="noopener">KaTeX</a><a data-type="button" href="https://mermaid.js.org/" data-color="success" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Mermaid</a></div>
+
+## Tabs
+
+The **tabs** button opens a dialog with the block's tabs: each tab has a
+title, a color, icons and its **content**, written in the same editor as the
+text (formats, tables, formulas, buttons…). The arrows change their order;
+the **alignment** puts the bar of the tabs on the left, the center, the right
+or filling the line. On the page one tab shows at a time; **printed**, all
+show, each in a frame with its title.
+
+<div data-type="tabs" data-align="start"><div data-type="tab" data-title="Kitchen" data-color="primary" data-icon-left="mdi-silverware-fork-knife"><p>Cabinets and countertops in <strong>10 days</strong>.</p></div><div data-type="tab" data-title="Bathroom" data-icon-left="mdi-shower"><p>Tiles and fixtures in 7 days.</p></div></div>
+
 ## Keyboard shortcuts
 
 On a Mac, **⌘** instead of **Ctrl** and **⌥** instead of **Alt**. Some work only

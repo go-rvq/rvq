@@ -88,6 +88,12 @@ var (
 		CDN:       "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js",
 		Local:     "mermaid/11.17.2/mermaid.min.js",
 		Integrity: "sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2"}
+	// Material Design Icons: the icons of the buttons and the tabs of a text
+	// (rvq mdkit's widgets.js); the copy has the woff2 and woff fonts
+	MDIStyle = &Asset{Name: "mdi-css", Kind: Style,
+		CDN:       "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css",
+		Local:     "mdi/7.4.47/css/materialdesignicons.min.css",
+		Integrity: "sha384-HphS8cQyN+eYiJ5PMbzShG6qZdRtvHPVLPkYb8JwMkmNgaIxrFVDhQe3jIbq3EZ2"}
 	// Prism: the code of a text highlighted (rvq mdkit's code.js), with the
 	// languages and plugins of the admin's code viewer — a bundle of its own
 	// (js/mdkit build.sh), no CDN: the app's only, its address the version of
@@ -114,7 +120,7 @@ func Register(a ...*Asset) {
 func init() {
 	Prism.Version = version(Prism.Local)
 	CodeMirror.Version = version(CodeMirror.Local)
-	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid, Prism, CodeMirror)
+	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid, MDIStyle, Prism, CodeMirror)
 }
 
 // version is the version of the copy at local: its hash, short.
