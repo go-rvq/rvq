@@ -8,7 +8,7 @@ import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/densi
 import {makeThemeProps} from 'vuetify/lib/composables/theme'
 import {useI18n} from '@/lib/locale'
 import {mdkitWords} from '@/lib/locale/mdkit'
-import {HelpDialog} from '@rvq/mdkit'
+import {HelpDialog, withCodeMirror} from '@rvq/mdkit'
 import {tiptapPlugins} from './plugins'
 
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
@@ -240,7 +240,9 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
           TemplateCodeValue.configure({ divider: true })
         ] : []),
         TiptapHeading,
-        CodeBlock.configure({ template: props.template }),
+        // its code blocks edited by CodeMirror, their language chosen (rvq
+        // mdkit) — not a template's, whose blocks hold its script nodes
+        props.template ? CodeBlock.configure({ template: true }) : withCodeMirror(CodeBlock).configure({ template: false }),
         TiptapBlockquote,
         ScriptBlock,
         TextAlign,

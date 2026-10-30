@@ -25,6 +25,8 @@
 // Its words: `words` (bold, italic, …, sizeSmall, …, footnote).
 import { Editor, Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import CodeBlock from '@tiptap/extension-code-block'
+import { withCodeMirror } from './code-block-tiptap.js'
 import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
 import { FootnoteRef, Footnotes, numbers } from './footnote-tiptap.js'
@@ -260,7 +262,9 @@ const RichEditor = {
       element: this.$refs.area,
       editable: !this.disabled,
       extensions: [
-        StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
+        StarterKit.configure({ link: { openOnClick: false, autolink: true }, codeBlock: false }),
+        // its code blocks edited by CodeMirror, their language chosen
+        withCodeMirror(CodeBlock),
         SizedImage,
         Hints,
         FootnoteRef,

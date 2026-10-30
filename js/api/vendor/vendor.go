@@ -94,6 +94,11 @@ var (
 	// its content (?v=, cached a year)
 	Prism = &Asset{Name: "prism", Kind: Script, Defer: true, Global: "Prism",
 		Local: "prism/1.30.0/prism.min.js"}
+	// CodeMirror: the code blocks of the rich text editor edited (rvq mdkit's
+	// code-block-tiptap.js), with its languages — a bundle of its own (js/mdkit
+	// build.sh), no CDN, its address the version of its content
+	CodeMirror = &Asset{Name: "codemirror", Kind: Script, Defer: true, Global: "RvqCodeMirror",
+		Local: "codemirror/6/codemirror.min.js"}
 )
 
 // Assets are the assets by name.
@@ -108,7 +113,8 @@ func Register(a ...*Asset) {
 
 func init() {
 	Prism.Version = version(Prism.Local)
-	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid, Prism)
+	CodeMirror.Version = version(CodeMirror.Local)
+	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid, Prism, CodeMirror)
 }
 
 // version is the version of the copy at local: its hash, short.

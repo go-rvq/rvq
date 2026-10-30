@@ -28,6 +28,8 @@ declare module '@rvq/mdkit' {
   export function drawDiagramInto(el: Element, source: string): Promise<boolean>
   export const LinkCardPicker: any
   export const HelpDialog: any
+  export function withCodeMirror<T>(codeBlock: T): T
+  export const CODE_LANGUAGES: [string, string][]
   export const LinkPicker: any
   export const LinkForm: any
   export function hrefOf(target: string): Promise<string>
