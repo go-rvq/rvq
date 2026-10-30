@@ -121,13 +121,15 @@
     border-radius: 4px;
     cursor: pointer;
 
-    // its arrow: a triangle (a character may be drawn as an emoji)
+    // its arrow: a chevron that turns (a character may be drawn as an emoji)
     &::before {
       content: '';
       display: inline-block;
-      border-left: 0.4rem solid currentColor;
-      border-top: 0.3rem solid transparent;
-      border-bottom: 0.3rem solid transparent;
+      width: 0.45em;
+      height: 0.45em;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(-45deg);
       transition: transform 0.15s;
     }
 
@@ -137,7 +139,7 @@
   }
 
   &.is-open > button::before {
-    transform: rotate(90deg);
+    transform: rotate(45deg);
   }
 
   > div {
@@ -160,7 +162,59 @@
     }
   }
 
+  // its content in, a line on its left
   [data-type='detailsContent'] {
     margin-top: 0.35rem;
+    padding-left: 1em;
+    border-left: 3px solid rgba(128, 128, 128, 0.35);
+  }
+}
+
+// a section that folds shown (the detail, the readonly): its title a button
+// — a chevron that turns, a hover —; its content in, a line on its left
+.std-content details {
+  margin: 0.75em 0;
+
+  > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    width: fit-content;
+    max-width: 100%;
+    margin-left: -0.5em;
+    padding: 0.3em 0.5em;
+    border-radius: 6px;
+    font-weight: 600;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: '';
+      flex: 0 0 auto;
+      width: 0.45em;
+      height: 0.45em;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(-45deg);
+      transition: transform 0.15s;
+    }
+
+    &:hover {
+      background: rgba(128, 128, 128, 0.12);
+    }
+  }
+
+  &[open] > summary::before {
+    transform: rotate(45deg);
+  }
+
+  > :not(summary) {
+    margin-left: 0.35em;
+    padding-left: 1em;
+    border-left: 3px solid rgba(128, 128, 128, 0.35);
   }
 }

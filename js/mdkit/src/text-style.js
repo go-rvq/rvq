@@ -3,7 +3,7 @@ import { config } from './config.js'
 // textStyle is the look of a text written in the editors, once for the page
 // and the class cls (config textClass) — the editors' own, and where the text
 // is shown —: headings of every level, lists, quotes, code, rules, tables,
-// footnotes (and their balloon); a page with no typography of its own (a
+// footnotes (and their balloon), sections that fold; a page with no typography of its own (a
 // site's Tailwind) has it so.
 export function textStyle(cls = config.textClass) {
   const id = 'mdkit-text-style-' + cls
@@ -50,6 +50,18 @@ export function textStyle(cls = config.textClass) {
     '.' + cls + ' .footnotes li p{margin:0}',
     '.' + cls + ' a.footnote-backref{text-decoration:none;margin-left:.25em}',
     '.' + cls + ' li:target,.' + cls + ' sup:target{background:#fef9c3;transition:background 1s}',
+    // a section that folds: its title a button — a chevron that turns, a
+    // hover —; its content in, a line on its left
+    '.' + cls + ' details{margin:.75em 0}',
+    '.' + cls + ' details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5em;font-weight:600;' +
+      'padding:.3em .5em;margin-left:-.5em;border-radius:6px;width:fit-content;max-width:100%}',
+    '.' + cls + ' details>summary::-webkit-details-marker{display:none}',
+    '.' + cls + ' details>summary::before{content:"";flex:0 0 auto;width:.45em;height:.45em;border-right:2px solid currentColor;' +
+      'border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}',
+    '.' + cls + ' details[open]>summary::before{transform:rotate(45deg)}',
+    '.' + cls + ' details>summary:hover{background:rgba(128,128,128,.12)}',
+    '.' + cls + ' details>:not(summary){margin-left:.35em;padding-left:1em;border-left:3px solid #d1d5db}',
+    '.' + cls + ' details>:not(summary)+:not(summary){margin-top:0;padding-top:.75em}',
     // the balloon of a note
     '.mdkit-fn-balloon{position:absolute;z-index:3000;max-width:22rem;background:#fff;color:#111827;border:1px solid #d1d5db;' +
       'border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:.5rem .75rem;font-size:.875rem;line-height:1.45}',
