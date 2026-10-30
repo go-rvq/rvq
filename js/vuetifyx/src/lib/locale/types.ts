@@ -579,4 +579,36 @@ export interface VxMessages {
   mdkitLinkPages: string
   /** Editors of a text (mdkit), link: posts. */
   mdkitLinkPosts: string
+  /** Editors of a text (mdkit), blocks: formula. */
+  mdkitBlocksFormula: string
+  /** Editors of a text (mdkit), blocks: formulaTitle. */
+  mdkitBlocksFormulaTitle: string
+  /** Editors of a text (mdkit), blocks: latex. */
+  mdkitBlocksLatex: string
+  /** Editors of a text (mdkit), blocks: inline. */
+  mdkitBlocksInline: string
+  /** Editors of a text (mdkit), blocks: block. */
+  mdkitBlocksBlock: string
+  /** Editors of a text (mdkit), blocks: preview. */
+  mdkitBlocksPreview: string
+  /** Editors of a text (mdkit), blocks: diagram. */
+  mdkitBlocksDiagram: string
+  /** Editors of a text (mdkit), blocks: diagramTitle. */
+  mdkitBlocksDiagramTitle: string
+  /** Editors of a text (mdkit), blocks: source. */
+  mdkitBlocksSource: string
+  /** Editors of a text (mdkit), blocks: details. */
+  mdkitBlocksDetails: string
+  /** Editors of a text (mdkit), blocks: insert. */
+  mdkitBlocksInsert: string
+  /** Editors of a text (mdkit), blocks: update. */
+  mdkitBlocksUpdate: string
+  /** Editors of a text (mdkit), blocks: remove. */
+  mdkitBlocksRemove: string
+  /** Editors of a text (mdkit), blocks: cancel. */
+  mdkitBlocksCancel: string
+  /** Editors of a text (mdkit), blocks: invalid. */
+  mdkitBlocksInvalid: string
+  /** Editors of a text (mdkit), blocks: guide. */
+  mdkitBlocksGuide: string
 }

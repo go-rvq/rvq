@@ -102,3 +102,65 @@
     }
   }
 }
+
+// a section that folds in the editor (the plugin details: tiptap's view of
+// it — its button, its summary, its content —)
+.ProseMirror [data-type='details'] {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.75em 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 6px;
+
+  > button {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.1rem;
+    border-radius: 4px;
+    cursor: pointer;
+
+    // its arrow: a triangle (a character may be drawn as an emoji)
+    &::before {
+      content: '';
+      display: inline-block;
+      border-left: 0.4rem solid currentColor;
+      border-top: 0.3rem solid transparent;
+      border-bottom: 0.3rem solid transparent;
+      transition: transform 0.15s;
+    }
+
+    &:hover {
+      background: rgba(128, 128, 128, 0.15);
+    }
+  }
+
+  &.is-open > button::before {
+    transform: rotate(90deg);
+  }
+
+  > div {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  summary {
+    font-weight: 600;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // no summary yet: its place shown
+    &:has(> br:only-child)::before {
+      content: '…';
+      opacity: 0.5;
+    }
+  }
+
+  [data-type='detailsContent'] {
+    margin-top: 0.35rem;
+  }
+}

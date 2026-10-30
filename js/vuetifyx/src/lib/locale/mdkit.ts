@@ -165,6 +165,24 @@ export const mdkitKeys: Record<string, Record<string, string>> = {
     pages: 'mdkitLinkPages',
     posts: 'mdkitLinkPosts',
   },
+  blocks: {
+    formula: 'mdkitBlocksFormula',
+    formulaTitle: 'mdkitBlocksFormulaTitle',
+    latex: 'mdkitBlocksLatex',
+    inline: 'mdkitBlocksInline',
+    block: 'mdkitBlocksBlock',
+    preview: 'mdkitBlocksPreview',
+    diagram: 'mdkitBlocksDiagram',
+    diagramTitle: 'mdkitBlocksDiagramTitle',
+    source: 'mdkitBlocksSource',
+    details: 'mdkitBlocksDetails',
+    insert: 'mdkitBlocksInsert',
+    update: 'mdkitBlocksUpdate',
+    remove: 'mdkitBlocksRemove',
+    cancel: 'mdkitBlocksCancel',
+    invalid: 'mdkitBlocksInvalid',
+    guide: 'mdkitBlocksGuide',
+  },
 }
 
 export function mdkitWords(t: (key: string) => string): Record<string, Record<string, string>> {

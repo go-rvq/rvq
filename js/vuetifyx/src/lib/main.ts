@@ -26,7 +26,7 @@ import Card from '@/lib/Card.vue'
 import VXTipTapEditor from '@/lib/TipTap/VXTipTapEditor'
 import VXMarkdownEditor from '@/lib/MarkdownEditor/VXMarkdownEditor.vue'
 import {registerTiptapPlugin} from '@/lib/TipTap/plugins'
-import {install as installMdKit, watchLinkCards} from '@rvq/mdkit'
+import {install as installMdKit, watchLinkCards, watchBlocks} from '@rvq/mdkit'
 import {VuetifyViewer} from 'vuetify-pro-tiptap'
 import {VXBtn} from '@/lib/VXBtn'
 import VXArraySorter from '@/lib/VXArraySorter'
@@ -101,7 +101,11 @@ const vuetifyx = {
     // the link cards of the texts of the page, where its meta says
     // (mdkit-link-cards: the admin's presets_LinkCards)
     if (typeof document !== 'undefined') {
-      const start = () => watchLinkCards()
+      const start = () => {
+        watchLinkCards()
+        // its formulas and diagrams (mdkit-vendor: KaTeX, Mermaid)
+        watchBlocks()
+      }
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start)
       else start()
     }

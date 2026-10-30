@@ -41,6 +41,15 @@ var policy = func() *bluemonday.Policy {
 	// a link card: its class, its target (a path of the site, a record's)
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^` + LinkCardClass + `$`)).OnElements("div")
 	p.AllowAttrs("data-href").Matching(cardTargetRe).OnElements("div")
+	// the language of a block of code: a diagram (```mermaid) is drawn by
+	// the page
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[A-Za-z0-9_+-]+$`)).OnElements("code")
+	// a section that folds, as the rich text editor's (tiptap's details):
+	// its parts
+	p.AllowAttrs("data-type").Matching(regexp.MustCompile(`^(details|detailsSummary|detailsContent)$`)).OnElements("details", "summary", "div")
+	// a formula (math.go): its kind, its LaTeX
+	p.AllowAttrs("data-type").Matching(mathTypeRe).OnElements("span", "div")
+	p.AllowAttrs("data-latex").Matching(regexp.MustCompile(`^[^\x00]*$`)).OnElements("span", "div")
 	return p
 }()
 
@@ -73,7 +82,7 @@ func Render(format, body string) string {
 		return policy.Sanitize(body)
 	}
 	var buf bytes.Buffer
-	if err := md.Convert([]byte(linkCards(body)), &buf); err != nil {
+	if err := md.Convert([]byte(linkCards(inlineMath(mathBlocks(body)))), &buf); err != nil {
 		return policy.Sanitize("<p>" + stdhtml.EscapeString(body) + "</p>")
 	}
 	return policy.Sanitize(buf.String())
@@ -186,6 +195,17 @@ func attr(n *html.Node, name string) string {
 	return ""
 }
 
+// attrOK is the attribute name of n, and whether it has it (one with no
+// value: details open).
+func attrOK(n *html.Node, name string) (string, bool) {
+	for _, a := range n.Attr {
+		if a.Key == name {
+			return a.Val, true
+		}
+	}
+	return "", false
+}
+
 // block writes n, a block (or text at the top), each line with prefix (a
 // quote's "> ").
 func (w *mdWriter) block(n *html.Node, prefix string) {
@@ -200,6 +220,11 @@ func (w *mdWriter) block(n *html.Node, prefix string) {
 	}
 	switch n.Data {
 	case "div", "section":
+		if t := attr(n, "data-type"); t == BlockMath || t == InlineMath {
+			// a formula of its own
+			w.b.WriteString(prefix + "$$\n" + prefix + attr(n, "data-latex") + "\n" + prefix + "$$\n\n")
+			return
+		}
 		if attr(n, "class") == LinkCardClass && LinkCardTarget(attr(n, "data-href")) {
 			// a link card: its line
 			w.b.WriteString(prefix + "[[" + attr(n, "data-href") + "]]\n\n")
@@ -235,7 +260,39 @@ func (w *mdWriter) block(n *html.Node, prefix string) {
 		}
 	case "pre":
 		code := textOf(n)
-		w.b.WriteString(prefix + "```\n" + strings.TrimRight(code, "\n") + "\n" + prefix + "```\n\n")
+		// its language (a diagram: mermaid), the code's class
+		lang := ""
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.ElementNode && c.Data == "code" {
+				lang = strings.TrimPrefix(attr(c, "class"), "language-")
+			}
+		}
+		if strings.ContainsAny(lang, " \t") {
+			lang = ""
+		}
+		w.b.WriteString(prefix + "```" + lang + "\n" + strings.TrimRight(code, "\n") + "\n" + prefix + "```\n\n")
+	case "details":
+		// a section that folds: as HTML, its summary, its content Markdown
+		// (between blank lines)
+		open := ""
+		if _, ok := attrOK(n, "open"); ok {
+			open = " open"
+		}
+		w.b.WriteString(prefix + "<details" + open + ">\n")
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.ElementNode && c.Data == "summary" {
+				w.b.WriteString(prefix + "<summary>" + stdhtml.EscapeString(strings.TrimSpace(textOf(c))) + "</summary>\n\n")
+				continue
+			}
+			if c.Type == html.ElementNode && c.Data == "div" && attr(c, "data-type") == "detailsContent" {
+				for cc := c.FirstChild; cc != nil; cc = cc.NextSibling {
+					w.block(cc, prefix)
+				}
+				continue
+			}
+			w.block(c, prefix)
+		}
+		w.b.WriteString(prefix + "</details>\n\n")
 	case "hr":
 		w.b.WriteString(prefix + "---\n\n")
 	default:
@@ -257,6 +314,9 @@ func (w *mdWriter) inline(n *html.Node) string {
 			b.WriteString("*" + w.inline(c) + "*")
 		case c.Data == "s" || c.Data == "del":
 			b.WriteString("~~" + w.inline(c) + "~~")
+		case attr(c, "data-type") == InlineMath:
+			// a formula in the line
+			b.WriteString("$" + attr(c, "data-latex") + "$")
 		case c.Data == "code":
 			b.WriteString("`" + textOf(c) + "`")
 		case c.Data == "a" && attr(c, "class") == "footnote-backref":

@@ -1,5 +1,6 @@
 // Package vendor is what the pages of a site take from CDNs — Vue,
-// Tailwind's script, Font Awesome, the Inter font — with a fallback to the
+// Tailwind's script, Font Awesome, the Inter font; KaTeX and Mermaid, for
+// the formulas and diagrams of a text — with a fallback to the
 // app: each asset's tag asks its CDN first and, when the CDN does not
 // answer (an error: down, blocked), the copy the app serves (js.Vendor, at
 // Prefix), of the same version.
@@ -68,6 +69,21 @@ var (
 	Inter = &Asset{Name: "inter", Kind: Style,
 		CDN:   "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
 		Local: "inter/inter.css"}
+	// KaTeX: the formulas of a text (rvq mdkit's blocks: $…$, $$…$$); its
+	// fonts beside its css (fonts/, woff2 in the copy)
+	KaTeX = &Asset{Name: "katex", Kind: Script, Defer: true, Global: "katex",
+		CDN:       "https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.js",
+		Local:     "katex/0.16.47/katex.min.js",
+		Integrity: "sha384-CwjPRVHTvLiMBFjEoij+QZViMV5rhTOIp7CJzl24JEqpRDA1sJFHVXXLURktbYYp"}
+	KaTeXStyle = &Asset{Name: "katex-css", Kind: Style,
+		CDN:       "https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css",
+		Local:     "katex/0.16.47/katex.min.css",
+		Integrity: "sha384-nH0MfJ44wi1dd7w6jinlyBgljjS8EJAh2JBoRad8a3VDw2K69vfaaqm4WnR+gXtA"}
+	// Mermaid: the diagrams of a text (```mermaid)
+	Mermaid = &Asset{Name: "mermaid", Kind: Script, Defer: true, Global: "mermaid",
+		CDN:       "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js",
+		Local:     "mermaid/11.17.2/mermaid.min.js",
+		Integrity: "sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2"}
 )
 
 // Assets are the assets by name.
@@ -81,7 +97,7 @@ func Register(a ...*Asset) {
 }
 
 func init() {
-	Register(Vue, Tailwind, FontAwesome, Inter)
+	Register(Vue, Tailwind, FontAwesome, Inter, KaTeX, KaTeXStyle, Mermaid)
 }
 
 // Bootstrap is the script before the assets' tags (once a page): the

@@ -16,6 +16,7 @@ import (
 	"github.com/go-rvq/rvq/web/datafield"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
+	"github.com/go-rvq/rvq/x/ui/mdkit"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/iancoleman/strcase"
 	"go.uber.org/zap"
@@ -1290,6 +1291,8 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 	prefix := b.URIPrefixCtx(ctx.R.Context())
 	ctx.Injector.HeadHTML(`<meta name="mdkit-link-cards" content="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardsEvent) +
 		`" data-search="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardSearchEvent) + `">`)
+	// where the formulas and diagrams of the texts load KaTeX and Mermaid
+	ctx.Injector.HeadHTML(mdkit.VendorMeta())
 
 	b.InjectExtraAssets(ctx)
 

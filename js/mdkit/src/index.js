@@ -25,6 +25,9 @@ export { tiptapFootnoteAdapter } from './footnote-adapter.js'
 // the link cards of a text (a page, a record linked on a line of its own)
 export { linkCards, watchLinkCards, metaResolver, drawCard, safeHref, cardClass, cardTarget } from './link-cards.js'
 export { LinkCard } from './link-card-tiptap.js'
+// the formulas and diagrams of a text (KaTeX, Mermaid)
+export { watchBlocks, drawBlocks, vendorOf, load as loadVendor } from './blocks.js'
+export { Diagram, drawInto as drawDiagramInto } from './diagram-tiptap.js'
 export { default as LinkCardPicker, metaSearch } from './link-card-picker.js'
 export { default as LinkPicker, LinkForm, hrefOf } from './link-picker.js'
 

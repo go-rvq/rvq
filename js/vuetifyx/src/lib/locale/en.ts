@@ -289,6 +289,22 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitLinkNone: "Nothing found.",
   mdkitLinkPages: "Pages of the site",
   mdkitLinkPosts: "Posts of the site",
+  mdkitBlocksFormula: "Formula",
+  mdkitBlocksFormulaTitle: "Formula (LaTeX)",
+  mdkitBlocksLatex: "LaTeX",
+  mdkitBlocksInline: "In the line",
+  mdkitBlocksBlock: "On a line of its own",
+  mdkitBlocksPreview: "Preview",
+  mdkitBlocksDiagram: "Diagram",
+  mdkitBlocksDiagramTitle: "Diagram (Mermaid)",
+  mdkitBlocksSource: "Source (Mermaid)",
+  mdkitBlocksDetails: "Section that folds",
+  mdkitBlocksInsert: "Insert",
+  mdkitBlocksUpdate: "Update",
+  mdkitBlocksRemove: "Remove",
+  mdkitBlocksCancel: "Cancel",
+  mdkitBlocksInvalid: "It does not draw: check the source.",
+  mdkitBlocksGuide: "Guide",
 }
 
 export default messages

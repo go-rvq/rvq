@@ -137,6 +137,8 @@ export default {
     cardWords: { type: Object, default: () => wordsOf('card') },
     // the words of the link (its picker)
     linkWords: { type: Object, default: () => wordsOf('link') },
+    // the words of the formulas, diagrams and sections that fold
+    blockWords: { type: Object, default: () => wordsOf('blocks') },
     inputId: { type: String, default: '' },
     path: { type: String, default: '' },
     // its pictures: sent at once (an address, or a function of the FormData
@@ -245,6 +247,11 @@ export default {
       button('footnote', (editor) => this.openFootnotes(editor), 'mdi-format-superscript', t('footnote', 'Footnote')),
       // files of Markdown put at the cursor, their footnotes their own
       button('include', (editor) => this.includeFiles(editor), 'mdi-file-document-plus-outline', t('include', 'Include Markdown files')),
+      // a formula ($…$, $$…$$), a diagram (```mermaid), a section that folds
+      // (<details>): GitHub's
+      button('math', () => this.insertBlock('math'), 'mdi-sigma', this.blockWords.formula || 'Formula'),
+      button('diagram', () => this.insertBlock('diagram'), 'mdi-sitemap-outline', this.blockWords.diagram || 'Diagram'),
+      button('details', () => this.insertBlock('details'), 'mdi-arrow-collapse-vertical', this.blockWords.details || 'Section that folds'),
       button('horizontal-rule', EasyMDE.drawHorizontalRule, 'mdi-minus', t('rule', 'Horizontal line')),
       '|',
       // the history of changes
@@ -554,6 +561,39 @@ export default {
       }
       this.pending.forEach((url, name) => { html = html.split(inlineURL(name)).join(url) })
       return html
+    },
+    // insertBlock puts a formula, a diagram or a section that folds at the
+    // cursor — around the text chosen: a formula in a line ($…$) of a line
+    // of text, else a block of its own ($$) —, the text in it chosen
+    insertBlock(kind) {
+      const cm = this.mde.codemirror
+      const from = cm.getCursor('from')
+      const to = cm.getCursor('to')
+      const sel = cm.getRange(from, to)
+      const own = (text) => {
+        const line = cm.getLine(from.line) || ''
+        return (line.slice(0, from.ch).trim() ? '\n\n' : '') + text + (cm.getLine(to.line).slice(to.ch).trim() ? '\n\n' : '\n')
+      }
+      let text
+      let inner
+      if (kind === 'math' && sel && !sel.includes('\n')) {
+        text = '$' + sel + '$'
+        inner = sel
+      } else if (kind === 'math') {
+        inner = sel || 'x^2'
+        text = own('$$\n' + inner + '\n$$')
+      } else if (kind === 'diagram') {
+        inner = sel || 'graph TD\n  A[Start] --> B[End]'
+        text = own('```mermaid\n' + inner + '\n```')
+      } else {
+        inner = sel || '…'
+        text = own('<details>\n<summary>' + (this.blockWords.details || 'Section that folds') + '</summary>\n\n' + inner + '\n\n</details>')
+      }
+      cm.replaceRange(text, from, to)
+      // the text in it chosen
+      const at = cm.indexFromPos(from) + text.indexOf(inner)
+      cm.setSelection(cm.posFromIndex(at), cm.posFromIndex(at + inner.length))
+      cm.focus()
     },
     // cardLine is the text of the card of target at pos: [[target]] on a line
     // of its own (a line break before and after it when the line has more)

@@ -18,6 +18,11 @@ declare module '@rvq/mdkit' {
   export function install(app: any, options?: { prefix?: string }): void
   export const components: Record<string, any>
   export const LinkCard: any
+  export function watchBlocks(root?: Element, assets?: Record<string, any>): void
+  export function drawBlocks(root: Element, assets?: Record<string, any>): Promise<any>
+  export function loadVendor(name: string, global: string, assets?: Record<string, any>): Promise<any>
+  export const Diagram: any
+  export function drawDiagramInto(el: Element, source: string): Promise<boolean>
   export const LinkCardPicker: any
   export const LinkPicker: any
   export const LinkForm: any

@@ -289,6 +289,22 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitLinkNone: "Nada encontrado.",
   mdkitLinkPages: "Páginas do site",
   mdkitLinkPosts: "Posts do site",
+  mdkitBlocksFormula: "Fórmula",
+  mdkitBlocksFormulaTitle: "Fórmula (LaTeX)",
+  mdkitBlocksLatex: "LaTeX",
+  mdkitBlocksInline: "Na linha",
+  mdkitBlocksBlock: "Em linha própria",
+  mdkitBlocksPreview: "Prévia",
+  mdkitBlocksDiagram: "Diagrama",
+  mdkitBlocksDiagramTitle: "Diagrama (Mermaid)",
+  mdkitBlocksSource: "Fonte (Mermaid)",
+  mdkitBlocksDetails: "Seção recolhível",
+  mdkitBlocksInsert: "Inserir",
+  mdkitBlocksUpdate: "Atualizar",
+  mdkitBlocksRemove: "Remover",
+  mdkitBlocksCancel: "Cancelar",
+  mdkitBlocksInvalid: "Não desenha: confira a fonte.",
+  mdkitBlocksGuide: "Guia",
 }
 
 export default messages

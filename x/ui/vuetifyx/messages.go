@@ -317,6 +317,22 @@ type Messages struct {
 	MdkitLinkNone               string `json:"mdkitLinkNone" i18n:"hint='Editors of a text (mdkit), link: none.'"`
 	MdkitLinkPages              string `json:"mdkitLinkPages" i18n:"hint='Editors of a text (mdkit), link: pages.'"`
 	MdkitLinkPosts              string `json:"mdkitLinkPosts" i18n:"hint='Editors of a text (mdkit), link: posts.'"`
+	MdkitBlocksFormula          string `json:"mdkitBlocksFormula" i18n:"hint='Editors of a text (mdkit), blocks: formula.'"`
+	MdkitBlocksFormulaTitle     string `json:"mdkitBlocksFormulaTitle" i18n:"hint='Editors of a text (mdkit), blocks: formulaTitle.'"`
+	MdkitBlocksLatex            string `json:"mdkitBlocksLatex" i18n:"hint='Editors of a text (mdkit), blocks: latex.'"`
+	MdkitBlocksInline           string `json:"mdkitBlocksInline" i18n:"hint='Editors of a text (mdkit), blocks: inline.'"`
+	MdkitBlocksBlock            string `json:"mdkitBlocksBlock" i18n:"hint='Editors of a text (mdkit), blocks: block.'"`
+	MdkitBlocksPreview          string `json:"mdkitBlocksPreview" i18n:"hint='Editors of a text (mdkit), blocks: preview.'"`
+	MdkitBlocksDiagram          string `json:"mdkitBlocksDiagram" i18n:"hint='Editors of a text (mdkit), blocks: diagram.'"`
+	MdkitBlocksDiagramTitle     string `json:"mdkitBlocksDiagramTitle" i18n:"hint='Editors of a text (mdkit), blocks: diagramTitle.'"`
+	MdkitBlocksSource           string `json:"mdkitBlocksSource" i18n:"hint='Editors of a text (mdkit), blocks: source.'"`
+	MdkitBlocksDetails          string `json:"mdkitBlocksDetails" i18n:"hint='Editors of a text (mdkit), blocks: details.'"`
+	MdkitBlocksInsert           string `json:"mdkitBlocksInsert" i18n:"hint='Editors of a text (mdkit), blocks: insert.'"`
+	MdkitBlocksUpdate           string `json:"mdkitBlocksUpdate" i18n:"hint='Editors of a text (mdkit), blocks: update.'"`
+	MdkitBlocksRemove           string `json:"mdkitBlocksRemove" i18n:"hint='Editors of a text (mdkit), blocks: remove.'"`
+	MdkitBlocksCancel           string `json:"mdkitBlocksCancel" i18n:"hint='Editors of a text (mdkit), blocks: cancel.'"`
+	MdkitBlocksInvalid          string `json:"mdkitBlocksInvalid" i18n:"hint='Editors of a text (mdkit), blocks: invalid.'"`
+	MdkitBlocksGuide            string `json:"mdkitBlocksGuide" i18n:"hint='Editors of a text (mdkit), blocks: guide.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -604,6 +620,22 @@ var Messages_en_US = &Messages{
 	MdkitLinkNone:               "Nothing found.",
 	MdkitLinkPages:              "Pages of the site",
 	MdkitLinkPosts:              "Posts of the site",
+	MdkitBlocksFormula:          "Formula",
+	MdkitBlocksFormulaTitle:     "Formula (LaTeX)",
+	MdkitBlocksLatex:            "LaTeX",
+	MdkitBlocksInline:           "In the line",
+	MdkitBlocksBlock:            "On a line of its own",
+	MdkitBlocksPreview:          "Preview",
+	MdkitBlocksDiagram:          "Diagram",
+	MdkitBlocksDiagramTitle:     "Diagram (Mermaid)",
+	MdkitBlocksSource:           "Source (Mermaid)",
+	MdkitBlocksDetails:          "Section that folds",
+	MdkitBlocksInsert:           "Insert",
+	MdkitBlocksUpdate:           "Update",
+	MdkitBlocksRemove:           "Remove",
+	MdkitBlocksCancel:           "Cancel",
+	MdkitBlocksInvalid:          "It does not draw: check the source.",
+	MdkitBlocksGuide:            "Guide",
 }
 
 var Messages_pt_BR = &Messages{
@@ -891,6 +923,22 @@ var Messages_pt_BR = &Messages{
 	MdkitLinkNone:               "Nada encontrado.",
 	MdkitLinkPages:              "Páginas do site",
 	MdkitLinkPosts:              "Posts do site",
+	MdkitBlocksFormula:          "Fórmula",
+	MdkitBlocksFormulaTitle:     "Fórmula (LaTeX)",
+	MdkitBlocksLatex:            "LaTeX",
+	MdkitBlocksInline:           "Na linha",
+	MdkitBlocksBlock:            "Em linha própria",
+	MdkitBlocksPreview:          "Prévia",
+	MdkitBlocksDiagram:          "Diagrama",
+	MdkitBlocksDiagramTitle:     "Diagrama (Mermaid)",
+	MdkitBlocksSource:           "Fonte (Mermaid)",
+	MdkitBlocksDetails:          "Seção recolhível",
+	MdkitBlocksInsert:           "Inserir",
+	MdkitBlocksUpdate:           "Atualizar",
+	MdkitBlocksRemove:           "Remover",
+	MdkitBlocksCancel:           "Cancelar",
+	MdkitBlocksInvalid:          "Não desenha: confira a fonte.",
+	MdkitBlocksGuide:            "Guia",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

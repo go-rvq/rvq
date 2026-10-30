@@ -12,10 +12,17 @@ func TestJSComponentsPack(t *testing.T) {
 	}
 }
 
-// TestLinkCardsPack: the script of the link cards is in the binary, small,
-// reading the page's meta.
-func TestLinkCardsPack(t *testing.T) {
-	if js := string(LinkCardsPack()); !strings.Contains(js, "mdkit-link-cards") || len(js) > 20000 {
-		t.Errorf("the pack of the link cards: %d bytes", len(js))
+// TestPagePack: the script of a page that shows a text is in the binary,
+// small, reading the page's metas; the meta of the assets says KaTeX and
+// Mermaid, their CDN and their copies.
+func TestPagePack(t *testing.T) {
+	if js := string(PagePack()); !strings.Contains(js, "mdkit-link-cards") || !strings.Contains(js, "mdkit-vendor") || len(js) > 20000 {
+		t.Errorf("the pack of the page: %d bytes", len(js))
+	}
+	m := VendorMeta()
+	for _, want := range []string{`name="mdkit-vendor"`, "katex-css", "cdn.jsdelivr.net/npm/mermaid", "/_rvq/vendor/katex/0.16.47/katex.min.js", "sha384-"} {
+		if !strings.Contains(m, want) {
+			t.Errorf("the meta has no %s: %s", want, m)
+		}
 	}
 }
