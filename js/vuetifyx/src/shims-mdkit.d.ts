@@ -22,6 +22,9 @@ declare module '@rvq/mdkit' {
   export function drawBlocks(root: Element, assets?: Record<string, any>): Promise<any>
   export function loadVendor(name: string, global: string, assets?: Record<string, any>): Promise<any>
   export const Diagram: any
+  export const InlineMath: any
+  export const BlockMath: any
+  export const MathCommands: any
   export function drawDiagramInto(el: Element, source: string): Promise<boolean>
   export const LinkCardPicker: any
   export const LinkPicker: any

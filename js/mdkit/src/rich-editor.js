@@ -29,6 +29,10 @@ import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
 import { FootnoteRef, Footnotes, numbers } from './footnote-tiptap.js'
 import { LinkCard } from './link-card-tiptap.js'
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
+import { BlockMath, InlineMath, MathCommands } from './math-tiptap.js'
+import { Diagram } from './diagram-tiptap.js'
+import BlockDialog from './block-dialog.js'
 import LinkCardPicker from './link-card-picker.js'
 import LinkPicker from './link-picker.js'
 import { finalize } from './footnote-rich.js'
@@ -106,7 +110,18 @@ function style() {
     '.mdkit-rich-editor .ProseMirror img{max-width:100%;height:auto}' +
     '.mdkit-rich-editor .ProseMirror img.ProseMirror-selectednode{outline:2px solid #3b82f6}' +
     '.mdkit-rich-editor .ProseMirror{min-height:10rem;padding:.25rem 0}' +
-    '.mdkit-rich-editor .ProseMirror:focus{outline:none}'
+    '.mdkit-rich-editor .ProseMirror:focus{outline:none}' +
+    // a section that folds (tiptap's view of it: its button, its summary, its
+    // content): a chevron that turns; its content in, a line on its left
+    '.mdkit-rich-editor [data-type="details"]{display:flex;gap:.35rem;margin:.75em 0;padding:.5rem .75rem;border:1px solid rgba(128,128,128,.35);border-radius:6px}' +
+    '.mdkit-rich-editor [data-type="details"]>button{flex:0 0 auto;width:1.25rem;height:1.25rem;margin-top:.1rem;border-radius:4px;cursor:pointer}' +
+    '.mdkit-rich-editor [data-type="details"]>button::before{content:"";display:inline-block;width:.45em;height:.45em;' +
+      'border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}' +
+    '.mdkit-rich-editor [data-type="details"].is-open>button::before{transform:rotate(45deg)}' +
+    '.mdkit-rich-editor [data-type="details"]>div{flex:1 1 auto;min-width:0}' +
+    '.mdkit-rich-editor [data-type="details"] summary{font-weight:600;list-style:none}' +
+    '.mdkit-rich-editor [data-type="details"] summary:has(>br:only-child)::before{content:"…";opacity:.5}' +
+    '.mdkit-rich-editor [data-type="detailsContent"]{margin-top:.35rem;padding-left:1em;border-left:3px solid rgba(128,128,128,.35)}'
   document.head.append(st)
 }
 
@@ -142,9 +157,11 @@ const RichEditor = {
     cardWords: { type: Object, default: () => wordsOf('card') },
     // the words of the link (its picker)
     linkWords: { type: Object, default: () => wordsOf('link') },
+    // the words of the formulas, diagrams and sections that fold
+    blockWords: { type: Object, default: () => wordsOf('blocks') },
   },
   emits: ['update:modelValue', 'file'],
-  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker },
+  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitBlockDialog: BlockDialog },
   data: () => ({
     active: {}, notice: '',
     sizes: { show: false, target: null, width: null, small: false },
@@ -155,11 +172,21 @@ const RichEditor = {
     buttons: () => bar.map(([key, icon]) => ({ key, icon })),
     widths: () => sizes.map(([key, width]) => ({ key, width })),
     canImage() { return !!this.upload || this.images },
+    // the buttons of a formula, a diagram, a section that folds
+    blockButtons() {
+      const w = this.blockWords
+      return [
+        { key: 'math', icon: 'mdi-sigma', title: w.formula || 'Formula', run: () => this.openBlock('math') },
+        { key: 'diagram', icon: 'mdi-sitemap-outline', title: w.diagram || 'Diagram', run: () => this.openBlock('diagram') },
+        { key: 'details', icon: 'mdi-arrow-collapse-vertical', title: w.details || 'Section that folds', run: () => this.toggleDetails() },
+      ]
+    },
   },
   template: `
 <v-theme-provider theme="light" with-background class="mdkit-rich-editor" data-rich-editor>
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
   <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>
+  <mdkit-block-dialog ref="blocks" :words="blockWords"></mdkit-block-dialog>
   <mdkit-footnote-builder v-if="footnotes" ref="footnoteBuilder" :note-editor="noteEditor"></mdkit-footnote-builder>
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
@@ -171,6 +198,9 @@ const RichEditor = {
       <v-btn icon="mdi-card-text-outline" size="small" variant="text" density="comfortable"
         data-rich-editor-button="card" :disabled="disabled"
         @mousedown.prevent @click="openCard"><v-icon icon="mdi-card-text-outline"></v-icon><v-tooltip activator="parent" location="top" :text="cardWords.button || 'Link card'"></v-tooltip></v-btn>
+      <v-btn v-for="b in blockButtons" :key="b.key" :icon="b.icon" size="small" variant="text" density="comfortable"
+        :active="b.key === 'details' && !!active.details" :data-rich-editor-button="b.key" :disabled="disabled"
+        @mousedown.prevent @click="b.run"><v-icon :icon="b.icon"></v-icon><v-tooltip activator="parent" location="top" :text="b.title"></v-tooltip></v-btn>
       <v-btn v-if="footnotes" icon="mdi-format-superscript" size="small" variant="text" density="comfortable"
         data-rich-editor-button="footnote" :disabled="disabled"
         @mousedown.prevent @click="openFootnotes()"><v-icon icon="mdi-format-superscript"></v-icon><v-tooltip activator="parent" location="top" :text="words.footnote || 'Footnote'"></v-tooltip></v-btn>
@@ -225,6 +255,9 @@ const RichEditor = {
         Footnotes,
         // a page of the site, as its card (a bin; an address pasted alone)
         LinkCard.configure({ removeTitle: this.cardWords.remove || 'Remove the card' }),
+        // formulas (KaTeX, the page's), diagrams (Mermaid), sections that fold
+        InlineMath, BlockMath, MathCommands, Diagram,
+        Details.configure({ persist: true }), DetailsSummary, DetailsContent,
         // an empty paragraph: its hint; the editor empty, its placeholder
         Placeholder.configure({
           showOnlyCurrent: false,
@@ -265,6 +298,9 @@ const RichEditor = {
     })
     // a picture still loading: placed again once it has its size
     this.$refs.area.addEventListener('load', () => this.mark(), true)
+    // a formula, a diagram clicked: its dialog on it
+    this.editor.storage.mdkitMath.open = (latex, pos, block) => this.openBlock('math', { text: latex, block }, pos)
+    this.editor.storage.mdkitDiagram.open = (source, pos) => this.openBlock('diagram', { text: source }, pos)
   },
   beforeUnmount() {
     if (this.editor) this.editor.destroy()
@@ -278,6 +314,27 @@ const RichEditor = {
     },
   },
   methods: {
+    // toggleDetails makes the blocks chosen a section that folds, or the one
+    // under the cursor its blocks again
+    toggleDetails() {
+      const c = this.editor.chain().focus()
+      ;(this.editor.isActive('details') ? c.unsetDetails() : c.setDetails()).run()
+    },
+    // openBlock writes a formula or a diagram (the dialog): a new one at the
+    // cursor, or the one at pos changed (or taken out)
+    openBlock(kind, value = {}, pos = null) {
+      this.$refs.blocks.open(kind, { ...value, there: pos !== null }, (v) => {
+        const c = this.editor.chain().focus()
+        if (pos !== null && !v) {
+          const node = this.editor.state.doc.nodeAt(pos)
+          if (node) c.deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+          return
+        }
+        if (!v) return
+        if (kind === 'math') (pos !== null ? c.updateMath(pos, v.text, v.block) : c.insertMath(v.text, v.block)).run()
+        else (pos !== null ? c.updateDiagram(pos, v.text) : c.insertDiagram(v.text)).run()
+      })
+    },
     // openCard picks a page (the picker); its card at the cursor
     openCard() {
       this.$refs.cards.open((target) => this.editor && this.editor.chain().focus().insertLinkCard(target).run())
@@ -329,6 +386,7 @@ const RichEditor = {
       const active = {}
       bar.forEach(([key, , , on]) => { active[key] = on(e) })
       active.link = e.isActive('link')
+      active.details = e.isActive('details')
       this.active = active
       const img = e.isActive('image') ? e.view.nodeDOM(e.state.selection.from) : null
       if (!img || !img.getBoundingClientRect) {
