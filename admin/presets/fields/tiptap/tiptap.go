@@ -19,6 +19,10 @@ func (f StoreFunc) Store(ctx context.Context, format string, data []byte, alt st
 	return f(ctx, format, data, alt)
 }
 
+// DocNode is the document of the guide of the editor (rvq userdocs): the
+// help of its fields (presets DocHref).
+const DocNode = "guides/text-editors/01-rich-text"
+
 type Builder struct {
 	store             Storer
 	mb                *presets.ModelBuilder
@@ -197,6 +201,10 @@ func (b *Builder) AutoComponentFunc(field *presets.FieldContext, _ *web.EventCon
 		}
 	} else if b.maxEditHeight > 0 {
 		comp.MaxHeight(b.maxEditHeight)
+	}
+	// written: the guide of the editor (the documentation's, when there is one)
+	if href := b.mb.Builder().DocHref(DocNode); !ro && href != "" {
+		comp.HelpHref(href)
 	}
 
 	if b.wrapEditor != nil {

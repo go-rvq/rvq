@@ -18,6 +18,12 @@ func (b *VXTipTapEditorBuilder) Label(v string) *VXTipTapEditorBuilder {
 	return b.Attr("label", v)
 }
 
+// HelpHref is the address of the guide of the editor: a ? beside its label
+// (none: no ?).
+func (b *VXTipTapEditorBuilder) HelpHref(v string) *VXTipTapEditorBuilder {
+	return b.Attr("help-href", v)
+}
+
 func (b *VXTipTapEditorBuilder) Hint(v string) *VXTipTapEditorBuilder {
 	return b.Attr("hint", v)
 }

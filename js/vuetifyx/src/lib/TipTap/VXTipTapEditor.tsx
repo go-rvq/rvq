@@ -1,12 +1,13 @@
 import {genericComponent, type GenericProps, propsFactory, useRender} from 'vuetify/lib/util/index'
 
 import {computed, markRaw, ModelRef, PropType, ref, Ref, toValue, useId, useModel, useTemplateRef, watch} from 'vue'
-import {VAlert, VCard, VCardText, VDivider, VMessages, VToolbar, VToolbarTitle} from 'vuetify/components'
+import {VAlert, VBtn, VCard, VCardText, VDivider, VIcon, VMessages, VToolbar, VToolbarTitle, VTooltip} from 'vuetify/components'
 
 import {makeComponentProps} from 'vuetify/lib/composables/component'
 import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/density'
 import {makeThemeProps} from 'vuetify/lib/composables/theme'
 import {useI18n} from '@/lib/locale'
+import {mdkitWords} from '@/lib/locale/mdkit'
 import {tiptapPlugins} from './plugins'
 
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
@@ -91,6 +92,8 @@ export type VXTipTapEditorSlotProps<T> = {
 
 export const makeProps = propsFactory({
   label: { type: String, default: '' },
+  // helpHref: the address of the guide of the editor (a ? beside the label)
+  helpHref: { type: String, default: '' },
   placeHolder: { type: String, default: '' },
   modelValue: { default: () => '' },
   readonly: { type: Boolean, default: false },
@@ -388,6 +391,13 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
             {props.label && <>
               <VToolbar color={color} density={props.density} height="36">
                 <VToolbarTitle style="margin-inline-start: 0" class="px-3">{props.label}</VToolbarTitle>
+                {props.helpHref && !ro && (
+                  <VBtn icon="mdi-help-circle-outline" size="small" variant="text" density="comfortable" class="me-1"
+                        href={props.helpHref} {...({target: '_blank', rel: 'noopener', 'data-tiptap-help': ''} as any)}>
+                    <VIcon icon="mdi-help-circle-outline"/>
+                    <VTooltip activator="parent" location="top" text={mdkitWords(t).blocks.editorGuide}/>
+                  </VBtn>
+                )}
               </VToolbar>
               {detailComp && (
                 <div class={['v-toolbar', { 'd-block': isError }]}>{detailComp}</div>

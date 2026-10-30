@@ -20,6 +20,12 @@ func (b *VXMarkdownEditorBuilder) Label(v string) *VXMarkdownEditorBuilder {
 	return b.Attr("label", v)
 }
 
+// HelpHref is the address of the guide of the editor: a ? beside its label
+// (none: no ?).
+func (b *VXMarkdownEditorBuilder) HelpHref(v string) *VXMarkdownEditorBuilder {
+	return b.Attr("help-href", v)
+}
+
 func (b *VXMarkdownEditorBuilder) Hint(v string) *VXMarkdownEditorBuilder {
 	return b.Attr("hint", v)
 }

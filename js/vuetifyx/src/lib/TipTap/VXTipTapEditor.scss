@@ -170,9 +170,11 @@
   }
 }
 
-// a section that folds shown (the detail, the readonly): its title a button
+// a section that folds shown (the detail, the readonly, the documentation):
+// its title a button
 // — a chevron that turns, a hover —; its content in, a line on its left
-.std-content details {
+.std-content details,
+.user-doc details {
   margin: 0.75em 0;
 
   > summary {

@@ -333,6 +333,7 @@ type Messages struct {
 	MdkitBlocksCancel           string `json:"mdkitBlocksCancel" i18n:"hint='Editors of a text (mdkit), blocks: cancel.'"`
 	MdkitBlocksInvalid          string `json:"mdkitBlocksInvalid" i18n:"hint='Editors of a text (mdkit), blocks: invalid.'"`
 	MdkitBlocksGuide            string `json:"mdkitBlocksGuide" i18n:"hint='Editors of a text (mdkit), blocks: guide.'"`
+	MdkitBlocksEditorGuide      string `json:"mdkitBlocksEditorGuide" i18n:"hint='Editors of a text (mdkit), blocks: editorGuide.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -636,6 +637,7 @@ var Messages_en_US = &Messages{
 	MdkitBlocksCancel:           "Cancel",
 	MdkitBlocksInvalid:          "It does not draw: check the source.",
 	MdkitBlocksGuide:            "Guide",
+	MdkitBlocksEditorGuide:      "Guide of the editor",
 }
 
 var Messages_pt_BR = &Messages{
@@ -939,6 +941,7 @@ var Messages_pt_BR = &Messages{
 	MdkitBlocksCancel:           "Cancelar",
 	MdkitBlocksInvalid:          "Não desenha: confira a fonte.",
 	MdkitBlocksGuide:            "Guia",
+	MdkitBlocksEditorGuide:      "Guia do editor",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

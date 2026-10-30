@@ -40,6 +40,10 @@ type Storer = tiptap.Storer
 // StoreFunc is a Storer of a function.
 type StoreFunc = tiptap.StoreFunc
 
+// DocNode is the document of the guide of the editor (rvq userdocs): the
+// help of its fields (presets DocHref).
+const DocNode = "guides/text-editors/02-markdown"
+
 // MaxPicture is the most bytes of a picture sent.
 const MaxPicture = 10 << 20
 
@@ -235,6 +239,10 @@ func (b *Builder) Editor(field *presets.FieldContext, ctx *web.EventContext) h.H
 	}
 	if b.rows > 0 {
 		comp.Rows(b.rows)
+	}
+	// the guide of the editor (the documentation's, when there is one)
+	if href := b.mb.Builder().DocHref(DocNode); href != "" {
+		comp.HelpHref(href)
 	}
 	if b.wrapEditor != nil {
 		b.wrapEditor(field, comp)

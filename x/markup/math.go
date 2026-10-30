@@ -25,7 +25,7 @@ var (
 	mathTypeRe = regexp.MustCompile(`^(` + InlineMath + `|` + BlockMath + `)$`)
 	// inlineMathRe: $`…`$, or $…$ — not $ $ (a space after the first or
 	// before the last), the last not before a digit nor a $
-	inlineMathRe = regexp.MustCompile("\\$`([^`\\n]+)`\\$|\\$([^\\s$](?:[^$\\n]*[^\\s$\\\\])?)\\$")
+	inlineMathRe    = regexp.MustCompile("\\$`([^`\\n]+)`\\$|\\$([^\\s$](?:[^$\\n]*[^\\s$\\\\])?)\\$")
 	blockMathLineRe = regexp.MustCompile(`^[ ]{0,3}\$\$(.*\S.*)\$\$[ \t]*$`)
 	mathFenceRe     = regexp.MustCompile("^[ ]{0,3}(`{3,}|~{3,})[ \\t]*math[ \\t]*$")
 )

@@ -80,7 +80,9 @@ type Builder struct {
 	// linkCardResolvers: the application's (link_cards.go)
 	linkCardResolvers []LinkCardResolver
 	linkCardSearchers []LinkCardSearcher
-	recordUserFinder  RecordUserFinder
+	// docHref: the address of a document of the documentation (doc_href.go)
+	docHref          func(node string) string
+	recordUserFinder RecordUserFinder
 
 	datafield.DataField[*Builder]
 }

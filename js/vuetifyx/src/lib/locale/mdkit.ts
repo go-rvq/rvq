@@ -182,6 +182,7 @@ export const mdkitKeys: Record<string, Record<string, string>> = {
     cancel: 'mdkitBlocksCancel',
     invalid: 'mdkitBlocksInvalid',
     guide: 'mdkitBlocksGuide',
+    editorGuide: 'mdkitBlocksEditorGuide',
   },
 }
 

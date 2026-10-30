@@ -305,6 +305,7 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitBlocksCancel: "Cancelar",
   mdkitBlocksInvalid: "Não desenha: confira a fonte.",
   mdkitBlocksGuide: "Guia",
+  mdkitBlocksEditorGuide: "Guia do editor",
 }
 
 export default messages

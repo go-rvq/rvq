@@ -196,6 +196,9 @@ func (b *Builder) packagesLocale(ctx *web.EventContext) string {
 // each package, edited.
 func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	b.mb, b.pkg = mb, pkg
+	// the address of a document, for the help of the fields (presets
+	// DocHref: the guide of an editor)
+	b.p.DocHrefFunc(func(node string) string { return DocPath(mb.Info().ListingHref(), node) })
 
 	fetch := func(obj interface{}, _ presets.ID, ctx *web.EventContext) error {
 		d := obj.(*UserDoc)

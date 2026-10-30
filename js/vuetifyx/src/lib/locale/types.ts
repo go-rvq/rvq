@@ -611,4 +611,6 @@ export interface VxMessages {
   mdkitBlocksInvalid: string
   /** Editors of a text (mdkit), blocks: guide. */
   mdkitBlocksGuide: string
+  /** Editors of a text (mdkit), blocks: editorGuide. */
+  mdkitBlocksEditorGuide: string
 }
