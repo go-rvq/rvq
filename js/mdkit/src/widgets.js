@@ -49,6 +49,10 @@ export function widgetStyle() {
     '.mdkit-tabs-bar>button[aria-selected="true"]{opacity:1;border-bottom-color:rgb(var(--mdkit-c,var(--v-theme-primary,25,118,210)))}' +
     '.mdkit-tabs-bar>button:hover{background:rgba(127,127,127,.08)}' +
     '[data-type="tab"]{padding:.75rem .25rem}' +
+    // the content of the tab shown in a frame under the bar: apart from the
+    // text after it
+    '[data-type="tabs"][data-drawn]>[data-type="tab"]{border:1px solid rgba(127,127,127,.3);border-top:0;' +
+    'border-radius:0 0 6px 6px;padding:.75rem 1rem}' +
     '[data-type="tabs"][data-drawn] [data-type="tab"]:not(.mdkit-tab-shown){display:none}' +
     '.mdkit-tab-title{display:none}' +
     // printed: the browsers leave out the backgrounds — a button's text,
@@ -61,7 +65,7 @@ export function widgetStyle() {
     'border:1.5px solid rgb(var(--mdkit-c,90,90,90))!important;filter:none!important}' +
     'a[data-type="button"] i.mdi{color:rgb(var(--mdkit-c,90,90,90))}' +
     '[data-type="tabs"][data-drawn] [data-type="tab"]:not(.mdkit-tab-shown){display:block}' +
-    '[data-type="tab"]{display:block;border:1px solid rgba(127,127,127,.4);border-radius:6px;padding:0 .75rem .75rem;margin:.75rem 0;break-inside:avoid}' +
+    '[data-type="tab"],[data-type="tabs"][data-drawn]>[data-type="tab"]{display:block;border:1px solid rgba(127,127,127,.4);border-radius:6px;padding:0 .75rem .75rem;margin:.75rem 0;break-inside:avoid}' +
     '.mdkit-tab-title{display:flex;align-items:center;gap:.4em;font-weight:600;padding:.5rem 0;margin-bottom:.5rem;border-bottom:1px solid rgba(127,127,127,.3)}' +
     '.mdkit-tab-title[data-color]{color:rgb(var(--mdkit-c))}}'
   document.head.append(st)

@@ -13,10 +13,11 @@ func TestJSComponentsPack(t *testing.T) {
 }
 
 // TestPagePack: the script of a page that shows a text is in the binary,
-// small, reading the page's metas; the meta of the assets says KaTeX and
+// small (its cards, blocks, buttons and tabs: under 24 KB), reading the
+// page's metas; the meta of the assets says KaTeX and
 // Mermaid, their CDN and their copies.
 func TestPagePack(t *testing.T) {
-	if js := string(PagePack()); !strings.Contains(js, "mdkit-link-cards") || !strings.Contains(js, "mdkit-vendor") || len(js) > 20000 {
+	if js := string(PagePack()); !strings.Contains(js, "mdkit-link-cards") || !strings.Contains(js, "mdkit-vendor") || len(js) > 24000 {
 		t.Errorf("the pack of the page: %d bytes", len(js))
 	}
 	m := VendorMeta()
