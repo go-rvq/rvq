@@ -11,7 +11,8 @@
 import { drawCode, codeSel } from './code.js'
 
 const mathSel = '[data-type="inline-math"][data-latex],[data-type="block-math"][data-latex]'
-const diagramSel = 'pre > code.language-mermaid'
+// a fence that shows a source (pre[data-fence]: a guide's) is not drawn
+const diagramSel = 'pre:not([data-fence]) > code.language-mermaid'
 
 // vendorOf is the assets of the page's meta (mdkit-vendor); {} none.
 export function vendorOf(doc = (typeof document !== 'undefined' ? document : null)) {
@@ -86,6 +87,16 @@ export async function drawMath(root, assets = vendorOf()) {
 
 let diagrams = 0
 
+// diagramStyle: a diagram drawn takes no letter spacing of where it is (a
+// card's text has some): Mermaid sized its labels without it.
+function diagramStyle() {
+  if (typeof document === 'undefined' || document.getElementById('mdkit-diagram-style')) return
+  const st = document.createElement('style')
+  st.id = 'mdkit-diagram-style'
+  st.textContent = '.mdkit-diagram,.mdkit-diagram-edit{letter-spacing:normal}'
+  document.head.append(st)
+}
+
 // drawDiagrams draws the diagrams under root not drawn yet: each code made
 // its picture (an svg in div.mdkit-diagram, its source kept); one that does
 // not draw stays code.
@@ -93,6 +104,7 @@ export async function drawDiagrams(root, assets = vendorOf()) {
   const codes = [...root.querySelectorAll(diagramSel)].filter((c) => !c.hasAttribute('data-drawn') && own(c))
   if (!codes.length) return
   codes.forEach((c) => c.setAttribute('data-drawn', 'asked'))
+  diagramStyle()
   let mermaid
   try {
     mermaid = await load('mermaid', 'mermaid', assets)

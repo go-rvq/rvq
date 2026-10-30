@@ -24,6 +24,12 @@ func (b *VXTipTapEditorBuilder) HelpHref(v string) *VXTipTapEditorBuilder {
 	return b.Attr("help-href", v)
 }
 
+// HelpDoc is where the guide of the editor is asked as data (rvq userdocs
+// DocHandler): the ? opens it in a dialog (none: the ? links HelpHref).
+func (b *VXTipTapEditorBuilder) HelpDoc(v string) *VXTipTapEditorBuilder {
+	return b.Attr("help-doc", v)
+}
+
 func (b *VXTipTapEditorBuilder) Hint(v string) *VXTipTapEditorBuilder {
 	return b.Attr("hint", v)
 }

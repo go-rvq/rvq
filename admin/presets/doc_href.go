@@ -19,3 +19,19 @@ func (b *Builder) DocHref(node string) string {
 	}
 	return b.docHref(node)
 }
+
+// DocDataFunc sets what makes the address where the document of a node is
+// asked as data — what the help dialog of a field shows (userdocs
+// DocHandler) —; userdocs Configure sets it.
+func (b *Builder) DocDataFunc(f func(node string) string) *Builder {
+	b.docData = f
+	return b
+}
+
+// DocData is the address of the document of node as data; "", none.
+func (b *Builder) DocData(node string) string {
+	if b.docData == nil {
+		return ""
+	}
+	return b.docData(node)
+}

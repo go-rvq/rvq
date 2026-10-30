@@ -8,6 +8,7 @@ import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/densi
 import {makeThemeProps} from 'vuetify/lib/composables/theme'
 import {useI18n} from '@/lib/locale'
 import {mdkitWords} from '@/lib/locale/mdkit'
+import {HelpDialog} from '@rvq/mdkit'
 import {tiptapPlugins} from './plugins'
 
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
@@ -94,6 +95,9 @@ export const makeProps = propsFactory({
   label: { type: String, default: '' },
   // helpHref: the address of the guide of the editor (a ? beside the label)
   helpHref: { type: String, default: '' },
+  // helpDoc: where the guide is asked as data (rvq userdocs DocHandler):
+  // the ? opens it in a dialog (mdkit's help dialog), helpHref its page
+  helpDoc: { type: String, default: '' },
   placeHolder: { type: String, default: '' },
   modelValue: { default: () => '' },
   readonly: { type: Boolean, default: false },
@@ -201,6 +205,8 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
       // emitted (lastOut: made by the plugins' output) — its echo, no change
       inner = () => (lastOut !== undefined && model.value === lastOut ? lastRaw : model.value),
       helpVisible = ref(false),
+      // the dialog of the guide (helpDoc)
+      helpDialog = ref<any>(null),
       helpExpanded = ref(false),
       extensions = [
         BaseKit.configure({
@@ -391,7 +397,15 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
             {props.label && <>
               <VToolbar color={color} density={props.density} height="36">
                 <VToolbarTitle style="margin-inline-start: 0" class="px-3">{props.label}</VToolbarTitle>
-                {props.helpHref && !ro && (
+                {props.helpDoc && !ro && (
+                  <VBtn icon="mdi-help-circle-outline" size="small" variant="text" density="comfortable" class="me-1"
+                        {...({'data-tiptap-help': ''} as any)} onClick={() => helpDialog.value?.open(props.helpDoc)}>
+                    <VIcon icon="mdi-help-circle-outline"/>
+                    <VTooltip activator="parent" location="top" text={mdkitWords(t).blocks.editorGuide}/>
+                    <HelpDialog ref={helpDialog} href={props.helpHref} words={mdkitWords(t).help}/>
+                  </VBtn>
+                )}
+                {props.helpHref && !props.helpDoc && !ro && (
                   <VBtn icon="mdi-help-circle-outline" size="small" variant="text" density="comfortable" class="me-1"
                         href={props.helpHref} {...({target: '_blank', rel: 'noopener', 'data-tiptap-help': ''} as any)}>
                     <VIcon icon="mdi-help-circle-outline"/>

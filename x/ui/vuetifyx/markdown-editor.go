@@ -26,6 +26,12 @@ func (b *VXMarkdownEditorBuilder) HelpHref(v string) *VXMarkdownEditorBuilder {
 	return b.Attr("help-href", v)
 }
 
+// HelpDoc is where the guide of the editor is asked as data (rvq userdocs
+// DocHandler): the ? opens it in a dialog (none: the ? links HelpHref).
+func (b *VXMarkdownEditorBuilder) HelpDoc(v string) *VXMarkdownEditorBuilder {
+	return b.Attr("help-doc", v)
+}
+
 func (b *VXMarkdownEditorBuilder) Hint(v string) *VXMarkdownEditorBuilder {
 	return b.Attr("hint", v)
 }

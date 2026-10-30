@@ -306,6 +306,11 @@ const messages: Omit<VxMessages, 'monthNames' | 'abbrMonthNames'> = {
   mdkitBlocksInvalid: "Não desenha: confira a fonte.",
   mdkitBlocksGuide: "Guia",
   mdkitBlocksEditorGuide: "Guia do editor",
+  mdkitHelpTitle: "Guia",
+  mdkitHelpOpen: "Abrir em nova aba",
+  mdkitHelpClose: "Fechar",
+  mdkitHelpFailed: "Não foi possível carregar o guia.",
+  mdkitHelpBack: "Voltar",
 }
 
 export default messages

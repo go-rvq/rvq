@@ -19,6 +19,9 @@ export async function drawInto(el, source) {
       mermaid.__mdkit = true
     }
     const { svg } = await mermaid.render('mdkit-diagram-edit-' + (++drawn), source)
+    // no letter spacing of where it is (a card's text): Mermaid sized its
+    // labels without it
+    el.style.letterSpacing = 'normal'
     el.innerHTML = svg
     return true
   } catch (e) {
@@ -35,7 +38,7 @@ function style() {
   if (typeof document === 'undefined' || document.getElementById('mdkit-diagram-edit-style')) return
   const st = document.createElement('style')
   st.id = 'mdkit-diagram-edit-style'
-  st.textContent = '.mdkit-diagram-edit{margin:.75em 0;padding:.5rem;border:1px dashed rgba(128,128,128,.4);border-radius:6px;cursor:pointer;text-align:center}' +
+  st.textContent = '.mdkit-diagram-edit{letter-spacing:normal;margin:.75em 0;padding:.5rem;border:1px dashed rgba(128,128,128,.4);border-radius:6px;cursor:pointer;text-align:center}' +
     '.mdkit-diagram-edit:hover{border-color:#3b82f6}' +
     '.mdkit-diagram-edit.ProseMirror-selectednode{outline:2px solid #3b82f6}' +
     '.mdkit-diagram-edit svg{max-width:100%;height:auto}' +

@@ -334,6 +334,11 @@ type Messages struct {
 	MdkitBlocksInvalid          string `json:"mdkitBlocksInvalid" i18n:"hint='Editors of a text (mdkit), blocks: invalid.'"`
 	MdkitBlocksGuide            string `json:"mdkitBlocksGuide" i18n:"hint='Editors of a text (mdkit), blocks: guide.'"`
 	MdkitBlocksEditorGuide      string `json:"mdkitBlocksEditorGuide" i18n:"hint='Editors of a text (mdkit), blocks: editorGuide.'"`
+	MdkitHelpTitle              string `json:"mdkitHelpTitle" i18n:"hint='Editors of a text (mdkit), help dialog: title.'"`
+	MdkitHelpOpen               string `json:"mdkitHelpOpen" i18n:"hint='Editors of a text (mdkit), help dialog: open.'"`
+	MdkitHelpClose              string `json:"mdkitHelpClose" i18n:"hint='Editors of a text (mdkit), help dialog: close.'"`
+	MdkitHelpFailed             string `json:"mdkitHelpFailed" i18n:"hint='Editors of a text (mdkit), help dialog: failed.'"`
+	MdkitHelpBack               string `json:"mdkitHelpBack" i18n:"hint='Editors of a text (mdkit), help dialog: back.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -638,6 +643,11 @@ var Messages_en_US = &Messages{
 	MdkitBlocksInvalid:          "It does not draw: check the source.",
 	MdkitBlocksGuide:            "Guide",
 	MdkitBlocksEditorGuide:      "Guide of the editor",
+	MdkitHelpTitle:              "Guide",
+	MdkitHelpOpen:               "Open in a new tab",
+	MdkitHelpClose:              "Close",
+	MdkitHelpFailed:             "The guide could not be loaded.",
+	MdkitHelpBack:               "Back",
 }
 
 var Messages_pt_BR = &Messages{
@@ -942,6 +952,11 @@ var Messages_pt_BR = &Messages{
 	MdkitBlocksInvalid:          "Não desenha: confira a fonte.",
 	MdkitBlocksGuide:            "Guia",
 	MdkitBlocksEditorGuide:      "Guia do editor",
+	MdkitHelpTitle:              "Guia",
+	MdkitHelpOpen:               "Abrir em nova aba",
+	MdkitHelpClose:              "Fechar",
+	MdkitHelpFailed:             "Não foi possível carregar o guia.",
+	MdkitHelpBack:               "Voltar",
 }
 
 // VueMessages are the words of the vue-i18n's namespace vx in ctx's

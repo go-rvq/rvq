@@ -240,9 +240,10 @@ func (b *Builder) Editor(field *presets.FieldContext, ctx *web.EventContext) h.H
 	if b.rows > 0 {
 		comp.Rows(b.rows)
 	}
-	// the guide of the editor (the documentation's, when there is one)
+	// the guide of the editor (the documentation's, when there is one), in
+	// a dialog (its data) and its page
 	if href := b.mb.Builder().DocHref(DocNode); href != "" {
-		comp.HelpHref(href)
+		comp.HelpHref(href).HelpDoc(b.mb.Builder().DocData(DocNode))
 	}
 	if b.wrapEditor != nil {
 		b.wrapEditor(field, comp)

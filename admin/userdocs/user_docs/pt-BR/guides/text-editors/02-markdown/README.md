@@ -110,3 +110,31 @@ Os materiais, a **mão de obra** e a limpeza depois da obra.
 
 Os botões **Σ**, **diagrama** e **seção** escrevem cada um deles no cursor
 (em volta do texto escolhido).
+
+## Teclas de atalho
+
+No Mac, **⌘** no lugar de **Ctrl** e **⌥** no lugar de **Alt**.
+
+| Ação | Teclas |
+|---|---|
+| Negrito | <kbd>Ctrl</kbd>+<kbd>B</kbd> |
+| Itálico | <kbd>Ctrl</kbd>+<kbd>I</kbd> |
+| Link | <kbd>Ctrl</kbd>+<kbd>K</kbd> |
+| Título menor, maior | <kbd>Ctrl</kbd>+<kbd>H</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Título 1 … 6 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>6</kbd> |
+| Limpar o bloco | <kbd>Ctrl</kbd>+<kbd>E</kbd> |
+| Citação | <kbd>Ctrl</kbd>+<kbd>'</kbd> |
+| Lista | <kbd>Ctrl</kbd>+<kbd>L</kbd> |
+| Lista numerada | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd> |
+| Lista de tarefas | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> |
+| Código | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> |
+| Imagem (onde se pode pôr imagens) | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>I</kbd> |
+| Desfazer | <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
+| Refazer | <kbd>Ctrl</kbd>+<kbd>Y</kbd> ou <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> |
+| Pré-visualizar | <kbd>Ctrl</kbd>+<kbd>P</kbd> |
+| Lado a lado | <kbd>F9</kbd> |
+| Tela cheia, sair dela | <kbd>F11</kbd>, <kbd>Esc</kbd> |
+
+Numa lista, <kbd>Enter</kbd> continua a lista; <kbd>Tab</kbd> e
+<kbd>Shift</kbd>+<kbd>Tab</kbd> mudam o recuo. <kbd>Ctrl</kbd>+clique numa
+referência `[^…]` abre a nota.

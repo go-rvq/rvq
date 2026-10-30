@@ -613,4 +613,14 @@ export interface VxMessages {
   mdkitBlocksGuide: string
   /** Editors of a text (mdkit), blocks: editorGuide. */
   mdkitBlocksEditorGuide: string
+  /** Editors of a text (mdkit), help dialog: title. */
+  mdkitHelpTitle: string
+  /** Editors of a text (mdkit), help dialog: open. */
+  mdkitHelpOpen: string
+  /** Editors of a text (mdkit), help dialog: close. */
+  mdkitHelpClose: string
+  /** Editors of a text (mdkit), help dialog: failed. */
+  mdkitHelpFailed: string
+  /** Editors of a text (mdkit), help dialog: back. */
+  mdkitHelpBack: string
 }

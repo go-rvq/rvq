@@ -28,10 +28,13 @@ import (
 // typographer, definition lists, footnotes; auto heading ids; HTML kept, the
 // documents being the code's and the administrators'). Its fences are the
 // admin's code viewer (<vx-code>), its copy button saying labels.
-func newMarkdown(rewrite func(dest string) string, labels codeLabels) goldmark.Markdown {
+// With plain, its fences are HTML's (pre[data-fence] > code.language-*: a
+// page out of the admin, rvq mdkit highlighting them — a diagram's source
+// shown, not drawn).
+func newMarkdown(rewrite func(dest string) string, labels codeLabels, plain bool) goldmark.Markdown {
 	md := gadx.NewMarkdown()
 	md.Parser().AddOptions(gparser.WithASTTransformers(util.Prioritized(linkRewriter(rewrite), 100)))
-	md.Renderer().AddOptions(grenderer.WithNodeRenderers(util.Prioritized(fenceRenderer{labels}, 100)))
+	md.Renderer().AddOptions(grenderer.WithNodeRenderers(util.Prioritized(fenceRenderer{labels, plain}, 100)))
 	return md
 }
 
@@ -42,7 +45,11 @@ type codeLabels struct{ Copy, Copied, Failed string }
 // admin's code viewer, <vx-code>: highlighted by Prism in its language, with
 // its line numbers, its braces matched, its language and a copy button. The
 // code is an attribute, so nothing in it is read as markup, nor by Vue.
-type fenceRenderer struct{ labels codeLabels }
+type fenceRenderer struct {
+	labels codeLabels
+	// plain: HTML's (pre[data-fence] > code.language-*)
+	plain bool
+}
 
 func (r fenceRenderer) RegisterFuncs(reg grenderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindFencedCodeBlock, r.render)
@@ -60,6 +67,14 @@ func (r fenceRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 	}
 	attr := func(name, value string) {
 		_, _ = w.WriteString(" " + name + `="` + html.EscapeString(value) + `"`)
+	}
+	if r.plain {
+		_, _ = w.WriteString("<pre data-fence><code")
+		if lang := string(n.Language(source)); lang != "" {
+			attr("class", "language-"+lang)
+		}
+		_, _ = w.WriteString(">" + html.EscapeString(code.String()) + "</code></pre>\n")
+		return ast.WalkSkipChildren, nil
 	}
 	_, _ = w.WriteString("<vx-code")
 	attr("code", strings.TrimSuffix(code.String(), "\n"))
@@ -171,6 +186,21 @@ type renderer struct {
 	node string
 	// tree is the request's tree, made once
 	tree []*Node
+	// locale is the language rendered ("" the request's)
+	locale string
+	// plain renders the fences as HTML's, not the admin's code viewer
+	plain bool
+	// href is the address of a link to the document of a node ("" the
+	// documentation page's)
+	href func(node string) string
+}
+
+// lang is the language rendered.
+func (r *renderer) lang() string {
+	if r.locale != "" {
+		return r.locale
+	}
+	return r.b.locale(r.ctx)
 }
 
 // globals are the template's: admin.model, admin.action, admin.page and
@@ -362,17 +392,23 @@ func (r *renderer) Render(src *Source, file, content string) (string, error) {
 		rel, frag, _ := strings.Cut(target, "#")
 		rel = path.Join(dir, rel)
 		if strings.HasSuffix(rel, ".md") {
-			href := r.b.DocHref(r.ctx, docNode(rel))
+			href := ""
+			if r.href != nil {
+				href = r.href(docNode(rel))
+			}
+			if href == "" {
+				href = r.b.DocHref(r.ctx, docNode(rel))
+			}
 			if frag != "" {
 				href += "#" + frag
 			}
 			return href
 		}
-		return r.b.AssetHref(src, rel, r.b.locale(r.ctx))
+		return r.b.AssetHref(src, rel, r.lang())
 	}
 	msgs := GetMessages(r.ctx.Context())
 	var out bytes.Buffer
-	if err := newMarkdown(rewrite, codeLabels{msgs.CopyCode, msgs.CodeCopied, msgs.CopyCodeError}).Convert([]byte(md), &out); err != nil {
+	if err := newMarkdown(rewrite, codeLabels{msgs.CopyCode, msgs.CodeCopied, msgs.CopyCodeError}, r.plain).Convert([]byte(md), &out); err != nil {
 		return "", fmt.Errorf("%s: %w", file, err)
 	}
 	return out.String(), nil

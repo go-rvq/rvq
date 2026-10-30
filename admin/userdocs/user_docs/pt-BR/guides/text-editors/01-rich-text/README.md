@@ -92,3 +92,43 @@ uma seção a desfaz em blocos.
 <details><summary>O que um orçamento inclui?</summary>
 <p>Os materiais, a mão de obra e a limpeza depois da obra.</p>
 </details>
+
+## Teclas de atalho
+
+No Mac, **⌘** no lugar de **Ctrl** e **⌥** no lugar de **Alt**. Algumas só valem
+onde o editor tem o botão correspondente (sublinhado, destaque, alinhamento,
+lista de tarefas).
+
+| Ação | Teclas |
+|---|---|
+| Negrito | <kbd>Ctrl</kbd>+<kbd>B</kbd> |
+| Itálico | <kbd>Ctrl</kbd>+<kbd>I</kbd> |
+| Sublinhado | <kbd>Ctrl</kbd>+<kbd>U</kbd> |
+| Riscado | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> |
+| Código na linha | <kbd>Ctrl</kbd>+<kbd>E</kbd> |
+| Destaque | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Título 1 … 6 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>6</kbd> |
+| Parágrafo | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>0</kbd> |
+| Lista | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>8</kbd> |
+| Lista numerada | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>7</kbd> |
+| Lista de tarefas | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>9</kbd> |
+| Citação | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> |
+| Bloco de código | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> |
+| Alinhar à esquerda, ao centro, à direita, justificar | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>, <kbd>E</kbd>, <kbd>R</kbd>, <kbd>J</kbd> |
+| Quebra de linha (sem novo parágrafo) | <kbd>Shift</kbd>+<kbd>Enter</kbd> |
+| Item da lista para dentro, para fora | <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd> |
+| Desfazer | <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
+| Refazer | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> ou <kbd>Ctrl</kbd>+<kbd>Y</kbd> |
+
+Ao digitar no começo de uma linha, o editor também entende as marcas do
+Markdown:
+
+| Digite | Para |
+|---|---|
+| `# `, `## `, … `###### ` | um título |
+| `- ` ou `* ` | uma lista |
+| `1. ` | uma lista numerada |
+| `> ` | uma citação |
+| ` ``` ` | um bloco de código |
+| `---` | uma linha horizontal |
+| `**texto**`, `*texto*`, `~~texto~~`, `` `código` `` | negrito, itálico, riscado, código |

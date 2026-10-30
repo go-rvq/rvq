@@ -107,3 +107,31 @@ The materials, the **labor** and the cleaning after the work.
 
 The buttons **Σ**, **diagram** and **section** write each of them at the
 cursor (around the text chosen).
+
+## Keyboard shortcuts
+
+On a Mac, **⌘** instead of **Ctrl** and **⌥** instead of **Alt**.
+
+| Action | Keys |
+|---|---|
+| Bold | <kbd>Ctrl</kbd>+<kbd>B</kbd> |
+| Italic | <kbd>Ctrl</kbd>+<kbd>I</kbd> |
+| Link | <kbd>Ctrl</kbd>+<kbd>K</kbd> |
+| Smaller, bigger heading | <kbd>Ctrl</kbd>+<kbd>H</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Heading 1 … 6 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>6</kbd> |
+| Clear the block | <kbd>Ctrl</kbd>+<kbd>E</kbd> |
+| Quote | <kbd>Ctrl</kbd>+<kbd>'</kbd> |
+| List | <kbd>Ctrl</kbd>+<kbd>L</kbd> |
+| Numbered list | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd> |
+| Task list | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> |
+| Code | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> |
+| Picture (where pictures go in) | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>I</kbd> |
+| Undo | <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
+| Redo | <kbd>Ctrl</kbd>+<kbd>Y</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> |
+| Preview | <kbd>Ctrl</kbd>+<kbd>P</kbd> |
+| Side by side | <kbd>F9</kbd> |
+| Full screen, leave it | <kbd>F11</kbd>, <kbd>Esc</kbd> |
+
+In a list, <kbd>Enter</kbd> goes on with it; <kbd>Tab</kbd> and
+<kbd>Shift</kbd>+<kbd>Tab</kbd> indent it. <kbd>Ctrl</kbd>+click on a
+reference `[^…]` opens its note.

@@ -58,6 +58,10 @@ type Builder struct {
 	funcs map[string]Func
 	// parsed are the files of the packages' values last read (content)
 	parsed parsedFiles
+	// public are the nodes whose documents are open to anyone (Public);
+	// pageHead, what the page of one has in its head (PageHead)
+	public   []string
+	pageHead string
 }
 
 // Func is a function of the templates of the documents, admin.<name>(args…),
@@ -199,6 +203,13 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 	// the address of a document, for the help of the fields (presets
 	// DocHref: the guide of an editor)
 	b.p.DocHrefFunc(func(node string) string { return DocPath(mb.Info().ListingHref(), node) })
+	// and as data, for their dialog (DocHandler): the open ones (Public)
+	b.p.DocDataFunc(func(node string) string {
+		if !slices.Contains(b.public, node) {
+			return ""
+		}
+		return b.DocDataHref(node)
+	})
 
 	fetch := func(obj interface{}, _ presets.ID, ctx *web.EventContext) error {
 		d := obj.(*UserDoc)
@@ -281,7 +292,13 @@ func (b *Builder) openScript() string {
 // (web.StdContentCSS) — a body of a page or a post looks the same, read or
 // edited. A block of code is the admin's code viewer (<vx-code>), with its
 // look.
-var docStyle = web.StdContentCSS(".user-doc")
+// Its keys (<kbd>) look like keys; its headings bold where the page's
+// styles reset them (a site's: Tailwind's).
+var docStyle = web.StdContentCSS(".user-doc") +
+	`.user-doc kbd{display:inline-block;padding:0 .4em;border:1px solid rgba(127,127,127,.45);border-bottom-width:2px;` +
+	`border-radius:4px;background:rgba(127,127,127,.08);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;` +
+	`font-size:.8em;line-height:1.6;white-space:nowrap}` +
+	`.user-doc :is(h1,h2,h3,h4,h5,h6){font-weight:600}.user-doc summary{cursor:pointer;font-weight:600}`
 
 // Document is the document of node in the language of ctx, as the
 // documentation page shows it, without the page around it (its tree, the

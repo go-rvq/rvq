@@ -89,3 +89,42 @@ on a section makes it its blocks again.
 <details><summary>What does a quote include?</summary>
 <p>The materials, the labor and the cleaning after the work.</p>
 </details>
+
+## Keyboard shortcuts
+
+On a Mac, **⌘** instead of **Ctrl** and **⌥** instead of **Alt**. Some work only
+where the editor has their button (underline, highlight, alignment, task
+list).
+
+| Action | Keys |
+|---|---|
+| Bold | <kbd>Ctrl</kbd>+<kbd>B</kbd> |
+| Italic | <kbd>Ctrl</kbd>+<kbd>I</kbd> |
+| Underline | <kbd>Ctrl</kbd>+<kbd>U</kbd> |
+| Strikethrough | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> |
+| Inline code | <kbd>Ctrl</kbd>+<kbd>E</kbd> |
+| Highlight | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Heading 1 … 6 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>6</kbd> |
+| Paragraph | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>0</kbd> |
+| List | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>8</kbd> |
+| Numbered list | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>7</kbd> |
+| Task list | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>9</kbd> |
+| Quote | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> |
+| Code block | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> |
+| Align left, center, right, justify | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>, <kbd>E</kbd>, <kbd>R</kbd>, <kbd>J</kbd> |
+| Line break (no new paragraph) | <kbd>Shift</kbd>+<kbd>Enter</kbd> |
+| List item in, out | <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd> |
+| Undo | <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
+| Redo | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>Ctrl</kbd>+<kbd>Y</kbd> |
+
+Typed at the start of a line, Markdown's marks work too:
+
+| Type | For |
+|---|---|
+| `# `, `## `, … `###### ` | a heading |
+| `- ` or `* ` | a list |
+| `1. ` | a numbered list |
+| `> ` | a quote |
+| ` ``` ` | a code block |
+| `---` | a horizontal rule |
+| `**text**`, `*text*`, `~~text~~`, `` `code` `` | bold, italic, strikethrough, code |

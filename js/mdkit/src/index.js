@@ -12,6 +12,7 @@ import TableBuilder from './table-builder.js'
 import FootnoteBuilder from './footnote-builder.js'
 import LinkCardPicker from './link-card-picker.js'
 import LinkPicker, { LinkForm } from './link-picker.js'
+import HelpDialogC from './help-dialog.js'
 import { config, configure, wordsOf } from './config.js'
 import { textStyle } from './text-style.js'
 import { footnoteBalloons } from './balloons.js'
@@ -30,6 +31,7 @@ export { watchBlocks, drawBlocks, vendorOf, load as loadVendor } from './blocks.
 export { Diagram, drawInto as drawDiagramInto } from './diagram-tiptap.js'
 export { InlineMath, BlockMath, MathCommands, drawMath } from './math-tiptap.js'
 export { default as BlockDialog } from './block-dialog.js'
+export { default as HelpDialog, helpOf } from './help-dialog.js'
 export { default as LinkCardPicker, metaSearch } from './link-card-picker.js'
 export { default as LinkPicker, LinkForm, hrefOf } from './link-picker.js'
 
@@ -42,6 +44,7 @@ export const components = {
   'link-card-picker': LinkCardPicker,
   'link-picker': LinkPicker,
   'link-form': LinkForm,
+  'help-dialog': HelpDialogC,
 }
 
 // install gives app the components, named prefix-… (mdkit-rich-editor, …)

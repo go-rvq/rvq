@@ -202,9 +202,10 @@ func (b *Builder) AutoComponentFunc(field *presets.FieldContext, _ *web.EventCon
 	} else if b.maxEditHeight > 0 {
 		comp.MaxHeight(b.maxEditHeight)
 	}
-	// written: the guide of the editor (the documentation's, when there is one)
+	// written: the guide of the editor (the documentation's, when there is
+	// one), in a dialog (its data) and its page
 	if href := b.mb.Builder().DocHref(DocNode); !ro && href != "" {
-		comp.HelpHref(href)
+		comp.HelpHref(href).HelpDoc(b.mb.Builder().DocData(DocNode))
 	}
 
 	if b.wrapEditor != nil {

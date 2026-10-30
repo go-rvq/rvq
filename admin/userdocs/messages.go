@@ -24,6 +24,8 @@ type Messages struct {
 	CodeCopied            string `i18n:"hint='Said by the button of a block of code once it copied it.'"`
 	CopyCodeError         string `i18n:"hint='Said by the button of a block of code when it could not copy it: how to copy it by hand.'"`
 	EditDocuments         string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
+	DocLanguage           string `i18n:"hint='The page of a guide (the help of an editor): label of the languages it can be read in.'"`
+	DocNotInYours         string `i18n:"hint='The page of a guide: said when it is not in the language of who reads it, above the languages to choose.'"`
 	RenderError           string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
 	NoDocument            string `i18n:"hint='Shown for a document there is not, or of a part the user does not see.'"`
 	ResetDocuments        string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
@@ -121,6 +123,8 @@ var Messages_en_US = &Messages{
 	CodeCopied:            "Copied!",
 	CopyCodeError:         "Press Ctrl+C to copy",
 	EditDocuments:         "Edit the documents",
+	DocLanguage:           "Language",
+	DocNotInYours:         "This guide is not in your language: choose one.",
 	RenderError:           "This document could not be shown: %s",
 	NoDocument:            "There is no such document.",
 	ResetDocuments:        "Reset to the initial documents",
@@ -218,6 +222,8 @@ var Messages_pt_BR = &Messages{
 	CodeCopied:            "Copiado!",
 	CopyCodeError:         "Use Ctrl+C para copiar",
 	EditDocuments:         "Editar os documentos",
+	DocLanguage:           "Idioma",
+	DocNotInYours:         "Este guia não está no seu idioma: escolha um.",
 	RenderError:           "Este documento não pôde ser mostrado: %s",
 	NoDocument:            "Não há este documento.",
 	ResetDocuments:        "Restaurar os documentos iniciais",

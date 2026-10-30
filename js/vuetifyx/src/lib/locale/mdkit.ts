@@ -184,6 +184,13 @@ export const mdkitKeys: Record<string, Record<string, string>> = {
     guide: 'mdkitBlocksGuide',
     editorGuide: 'mdkitBlocksEditorGuide',
   },
+  help: {
+    title: 'mdkitHelpTitle',
+    open: 'mdkitHelpOpen',
+    close: 'mdkitHelpClose',
+    failed: 'mdkitHelpFailed',
+    back: 'mdkitHelpBack',
+  },
 }
 
 export function mdkitWords(t: (key: string) => string): Record<string, Record<string, string>> {

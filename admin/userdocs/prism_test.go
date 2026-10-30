@@ -13,7 +13,7 @@ import (
 func TestFencesAsCodeViewer(t *testing.T) {
 	src := "```gad\nx := {a: 1} // <b>{{ v }}</b> & \"q\"\n```\n\n```yaml\nk: v\n```\n\n```\nplain\n```\n"
 	var out bytes.Buffer
-	md := newMarkdown(func(d string) string { return d }, codeLabels{"Copiar", "Copiado!", "Ctrl+C"})
+	md := newMarkdown(func(d string) string { return d }, codeLabels{"Copiar", "Copiado!", "Ctrl+C"}, false)
 	if err := md.Convert([]byte(src), &out); err != nil {
 		t.Fatal(err)
 	}

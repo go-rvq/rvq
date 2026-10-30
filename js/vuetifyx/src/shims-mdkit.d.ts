@@ -27,6 +27,7 @@ declare module '@rvq/mdkit' {
   export const MathCommands: any
   export function drawDiagramInto(el: Element, source: string): Promise<boolean>
   export const LinkCardPicker: any
+  export const HelpDialog: any
   export const LinkPicker: any
   export const LinkForm: any
   export function hrefOf(target: string): Promise<string>

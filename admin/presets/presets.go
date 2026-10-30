@@ -82,6 +82,7 @@ type Builder struct {
 	linkCardSearchers []LinkCardSearcher
 	// docHref: the address of a document of the documentation (doc_href.go)
 	docHref          func(node string) string
+	docData          func(node string) string
 	recordUserFinder RecordUserFinder
 
 	datafield.DataField[*Builder]

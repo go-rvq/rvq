@@ -33,6 +33,7 @@ import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-detai
 import { BlockMath, InlineMath, MathCommands } from './math-tiptap.js'
 import { Diagram } from './diagram-tiptap.js'
 import BlockDialog from './block-dialog.js'
+import HelpDialog, { helpOf } from './help-dialog.js'
 import LinkCardPicker from './link-card-picker.js'
 import LinkPicker from './link-picker.js'
 import { finalize } from './footnote-rich.js'
@@ -159,9 +160,15 @@ const RichEditor = {
     linkWords: { type: Object, default: () => wordsOf('link') },
     // the words of the formulas, diagrams and sections that fold
     blockWords: { type: Object, default: () => wordsOf('blocks') },
+    // its guide in a dialog (help-dialog): where it is asked (rvq userdocs
+    // DocHandler; none, the page's meta mdkit-help — none, no ?), the words
+    // of the dialog, its page
+    helpDoc: { type: String, default: '' },
+    helpWords: { type: Object, default: () => wordsOf('help') },
+    helpHref: { type: String, default: '' },
   },
   emits: ['update:modelValue', 'file'],
-  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitBlockDialog: BlockDialog },
+  components: { MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitBlockDialog: BlockDialog, MdkitHelpDialog: HelpDialog },
   data: () => ({
     active: {}, notice: '',
     sizes: { show: false, target: null, width: null, small: false },
@@ -172,6 +179,8 @@ const RichEditor = {
     buttons: () => bar.map(([key, icon]) => ({ key, icon })),
     widths: () => sizes.map(([key, width]) => ({ key, width })),
     canImage() { return !!this.upload || this.images },
+    // where its guide is asked; '' none
+    helpSrc() { return this.helpDoc || helpOf('rich') },
     // the buttons of a formula, a diagram, a section that folds
     blockButtons() {
       const w = this.blockWords
@@ -187,6 +196,7 @@ const RichEditor = {
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
   <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>
   <mdkit-block-dialog ref="blocks" :words="blockWords"></mdkit-block-dialog>
+  <mdkit-help-dialog v-if="helpSrc" ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
   <mdkit-footnote-builder v-if="footnotes" ref="footnoteBuilder" :note-editor="noteEditor"></mdkit-footnote-builder>
   <v-sheet border rounded>
     <v-toolbar density="compact" color="grey-lighten-4" class="flex-wrap px-1" style="height:auto">
@@ -212,6 +222,8 @@ const RichEditor = {
         :disabled="disabled" @mousedown.prevent @click="run('undo')"><v-icon icon="mdi-undo"></v-icon><v-tooltip activator="parent" location="top" :text="words.undo || 'undo'"></v-tooltip></v-btn>
       <v-btn icon="mdi-redo" size="small" variant="text" density="comfortable"
         :disabled="disabled" @mousedown.prevent @click="run('redo')"><v-icon icon="mdi-redo"></v-icon><v-tooltip activator="parent" location="top" :text="words.redo || 'redo'"></v-tooltip></v-btn>
+      <v-btn v-if="helpSrc" icon="mdi-help-circle-outline" size="small" variant="text" density="comfortable"
+        data-rich-editor-button="help" @mousedown.prevent @click="$refs.help.open(helpSrc)"><v-icon icon="mdi-help-circle-outline"></v-icon><v-tooltip activator="parent" location="top" :text="blockWords.editorGuide || words.help || 'Guide'"></v-tooltip></v-btn>
     </v-toolbar>
     <v-divider></v-divider>
     <div ref="area" class="px-3 py-2" :class="{ 'opacity-60': disabled }"></div>

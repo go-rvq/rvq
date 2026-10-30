@@ -30,6 +30,7 @@ import LinkPicker from './link-picker.js'
 import { cardTarget } from './link-cards.js'
 import * as F from './footnote-model.js'
 import { config, wordsOf } from './config.js'
+import HelpDialog, { helpOf } from './help-dialog.js'
 
 // cursorMark is the place of the cursor in the copy of the text the
 // footnotes builder works on (a character of no use, taken out at the end).
@@ -147,6 +148,12 @@ export default {
     upload: { type: [String, Function], default: '' },
     token: { type: String, default: '' },
     images: { type: Boolean, default: false },
+    // its guide in a dialog (help-dialog): where it is asked (rvq userdocs
+    // DocHandler; none, the page's meta mdkit-help), the words of the
+    // dialog, its page; no guide, the ? shows the shortcuts
+    helpDoc: { type: String, default: '' },
+    helpWords: { type: Object, default: () => wordsOf('help') },
+    helpHref: { type: String, default: '' },
   },
   emits: ['update:modelValue', 'input', 'file'],
   data: () => ({ notice: '', helping: false }),
@@ -172,7 +179,7 @@ export default {
       ]
     },
   },
-  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker },
+  components: { MdkitTableBuilder: TableBuilder, MdkitFootnoteBuilder: FootnoteBuilder, MdkitLinkCardPicker: LinkCardPicker, MdkitLinkPicker: LinkPicker, MdkitHelpDialog: HelpDialog },
   template: `
 <div class="mdkit-markdown-editor" :class="{ invalid, disabled }" data-markdown-editor>
   <textarea ref="area" :id="inputId || undefined" :data-path="path || undefined"></textarea>
@@ -181,6 +188,7 @@ export default {
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
   <mdkit-link-picker ref="links" :words="linkWords" :targets="false"></mdkit-link-picker>
   <mdkit-footnote-builder ref="footnotes" :render="preview ? renderHTML : null"></mdkit-footnote-builder>
+  <mdkit-help-dialog ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
   <v-dialog v-model="helping" max-width="620" scrollable data-markdown-help>
     <v-card>
       <v-card-title class="d-flex align-center">
@@ -277,7 +285,7 @@ export default {
     toolbar.push({ ...button('fullscreen', EasyMDE.toggleFullScreen, 'mdi-fullscreen', t('fullscreen', 'Full screen')), noDisable: true, noMobile: true })
     // the help: the shortcuts, the tips, the guide of Markdown
     toolbar.push('|', {
-      ...button('guide', () => { this.helping = true }, 'mdi-help-circle-outline', t('help', 'Markdown help')),
+      ...button('guide', () => this.openHelp(), 'mdi-help-circle-outline', t('help', 'Markdown help')),
       noDisable: true,
     })
     const max = Number(this.maxlength) || 0
@@ -388,6 +396,13 @@ export default {
     },
   },
   methods: {
+    // openHelp shows the guide of the editor in its dialog; none, the
+    // shortcuts
+    openHelp() {
+      const src = this.helpDoc || helpOf('markdown')
+      if (src) this.$refs.help.open(src)
+      else this.helping = true
+    },
     // openTable opens the table builder: with the table selected, or under
     // the cursor — of GFM or HTML, made the sheet; then put back in its
     // place —, or a new one put at the cursor, a line

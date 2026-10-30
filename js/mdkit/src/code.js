@@ -102,11 +102,13 @@ function style() {
   document.head.append(st)
 }
 
-// ours says code is a block of a text to highlight: not a diagram, not
-// highlighted yet, not in an editor nor the code viewer's.
+// ours says code is a block of a text to highlight: not a diagram (but its
+// source shown: pre[data-fence]), not highlighted yet, not in an editor nor
+// the code viewer's.
 const ours = (code) => {
   const lang = languageOf(code)
-  return lang !== 'mermaid' && lang !== 'math' && !code.hasAttribute('data-drawn') && own(code) &&
+  const source = code.parentElement && code.parentElement.hasAttribute('data-fence')
+  return (source || (lang !== 'mermaid' && lang !== 'math')) && !code.hasAttribute('data-drawn') && own(code) &&
     !code.closest('.vx-code-host,.code-toolbar,.mdkit-code-host')
 }
 
