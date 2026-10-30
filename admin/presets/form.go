@@ -278,6 +278,13 @@ func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 			Respond(f.b.ctx, r, comp)
 	default:
 		if f.Portal != "" && f.b.overlayMode.IsDrawer() {
+			// where the form was opened (respondFormEdit, editing_new.go): the
+			// layout's portal whenever the caller's closer is reachable from
+			// there — a form sent back (its errors) into the caller's portal
+			// would be a second drawer, behind the open one
+			if CloserIsGlobal(f.b.ctx) {
+				portal = f.b.overlayMode.PortalName()
+			}
 			d := f.MB.p.Drawer(f.b.overlayMode).
 				SetHelpURI(HelpURI(f.b.ctx)).
 				SetPortalName(portal).

@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"regexp"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
 	"github.com/go-rvq/rvq/x/i18n"
 )
@@ -132,6 +134,64 @@ func TestPageListingNewOpensInTheLayoutDrawer(t *testing.T) {
 	if !strings.Contains(w.Body.String(), `"name":"hostPortal"`) {
 		t.Errorf("sem referência, a resposta deveria ficar no portal de quem pediu:\n%s",
 			firstMatch(w.Body.String(), `"name":"[^"]*"`))
+	}
+}
+
+// O formulário devolvido com os erros da validação volta para onde foi aberto:
+// o portal do layout, quando o host manda o endereço do closer — no portal de
+// quem pediu ele seria um segundo drawer, atrás do aberto, e os erros não
+// apareceriam.
+func TestEditErrorsInTheLayoutDrawer(t *testing.T) {
+	db := TestDB
+	if err := db.AutoMigrate(&PageHostProduct{}); err != nil {
+		t.Fatal(err)
+	}
+	p := &PageHostProduct{Name: "zz-edit-errors"}
+	if err := db.Create(p).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Delete(p) })
+
+	b := presets.New(i18n.New()).URIPrefix("/admin")
+	b.DataOperator(gorm2op.DataOperator(db))
+	m := b.Model(&PageHostProduct{}).URIName("produtos")
+	m.Editing("Name").Validators.AppendFunc(func(obj any, _ presets.FieldModeStack, _ *web.EventContext) (errs web.ValidationErrors) {
+		if obj.(*PageHostProduct).Name == "" {
+			errs.FieldError("Name", "zz-name-required")
+		}
+		return
+	})
+
+	update := func(ref string) string {
+		mb := multipartestutils.NewMultipartBuilder().
+			PageURL("/admin/produtos").
+			EventFunc("presets_Update").
+			Query(presets.ParamID, fmt.Sprint(p.ID)).
+			Query(presets.ParamTargetPortal, "hostPortal").
+			Query(presets.ParamOverlay, "RightDrawer").
+			Query(presets.ParamCloserProvided, "true").
+			AddField("Name", "")
+		if ref != "" {
+			mb = mb.Query(presets.ParamCloserRef, ref)
+		}
+		// the stamp of the record is not what this is about
+		r := mb.BuildEventFuncRequest()
+		r = r.WithContext(web.WithSkipFormSign(r.Context()))
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, r)
+		return w.Body.String()
+	}
+
+	body := update("vars." + presets.DetailingEditScope)
+	if !strings.Contains(body, "zz-name-required") {
+		t.Fatalf("sem o erro da validação:\n%s", firstMatch(body, `(?i)error[^"]{0,300}`))
+	}
+	if !strings.Contains(body, `"name":"`+actions.RightDrawer.PortalName()+`"`) {
+		t.Errorf("os erros não voltaram ao portal do layout:\n%s", firstMatch(body, `"name":"[^"]*"`))
+	}
+	// sem a referência, no portal de quem pediu
+	if body = update(""); !strings.Contains(body, `"name":"hostPortal"`) {
+		t.Errorf("sem referência, os erros deveriam ficar no portal de quem pediu:\n%s", firstMatch(body, `"name":"[^"]*"`))
 	}
 }
 
