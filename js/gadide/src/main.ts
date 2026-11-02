@@ -28,11 +28,12 @@ const save = (key: string, v: unknown) => {
   }
 };
 
-// a layout saved that shows neither the explorer nor the editor — closed, or
-// of an older version — would open a blank IDE: the default one instead
-const usableLayout = (l: SerializedDockview | null): SerializedDockview | null => {
+// a layout saved that shows none of the panels of the mode (the IDE: the
+// explorer, the editor; git: Changes, Git) — closed, or of an older version
+// — would open a blank IDE: the default one instead
+const usableLayout = (l: SerializedDockview | null, want: string[]): SerializedDockview | null => {
   const panels = (l as { panels?: Record<string, unknown> } | null)?.panels;
-  return panels && ("explorer" in panels || "editor" in panels) ? l : null;
+  return panels && want.some((id) => id in panels) ? l : null;
 };
 
 // HostPanel is a panel of the page in the IDE (extraPanels): a component of
@@ -81,6 +82,9 @@ const GadIdeHost = defineComponent({
     headerActions: { type: Array as PropType<HeaderAction[]>, default: () => [] },
     // panels of the page (HostPanel): a component of the app each
     extraPanels: { type: Array as PropType<HostPanel[]>, default: () => [] },
+    // "git": the IDE of a repository — its Changes and Git panels alone,
+    // open side by side, its layout kept apart from the IDE's
+    mode: { type: String as PropType<"ide" | "git">, default: "ide" },
   },
   setup(props) {
     const api = createHttpIdeApi(props.base);
@@ -125,10 +129,14 @@ const GadIdeHost = defineComponent({
     const hostPanels = props.extraPanels.map(hostPanel);
     const workspace = ref<Workspace>();
     const error = ref("");
-    const layout = ref<SerializedDockview | null>(usableLayout(load("gadide.layout")));
-    const config = ref<Record<string, unknown>>(load("gadide.config") ?? {});
-    watch(layout, (v) => save("gadide.layout", v));
-    watch(config, (v) => save("gadide.config", v), { deep: true });
+    const git = props.mode === "git";
+    const key = git ? "gadide.git." : "gadide.";
+    const layout = ref<SerializedDockview | null>(
+      usableLayout(load(key + "layout"), git ? ["changes", "git"] : ["explorer", "editor"]),
+    );
+    const config = ref<Record<string, unknown>>(load(key + "config") ?? {});
+    watch(layout, (v) => save(key + "layout", v));
+    watch(config, (v) => save(key + "config", v), { deep: true });
     onMounted(async () => {
       try {
         workspace.value = await api.workspace();
@@ -146,7 +154,8 @@ const GadIdeHost = defineComponent({
               workspace: workspace.value,
               dark: dark.value,
               runMode: "none",
-              panels: props.panels,
+              panels: git ? [] : props.panels,
+              openPanels: git ? ["changes", "git"] : [],
               messages: viaI18n ? undefined : props.messages,
               headerActions: props.headerActions,
               extraPanels: hostPanels,
