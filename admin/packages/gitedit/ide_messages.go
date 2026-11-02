@@ -198,7 +198,7 @@ type IdeMessages struct {
 	HelpCommit          string `json:"helpCommit" i18n:"hint='Help of the detail of what was chosen in the Git panel.'"`
 	HelpCompare         string `json:"helpCompare" i18n:"hint='Help of the compare of two refs.'"`
 	Commit              string `json:"commit" i18n:"hint='Button of the Changes panel that commits the files chosen.'"`
-	Tree                string `json:"tree" i18n:"hint='Box of the files' panel: a tree of folders (else a list of the folders by their path).'"`
+	Tree                string `json:"tree" i18n:"hint='Box of the panel of the files: a tree of folders (else a list of the folders by their path).'"`
 	CommitAll           string `json:"commitAll" i18n:"hint='Box of the Changes panel that chooses all the files to commit.'"`
 	Committed           string `json:"committed" i18n:"hint='Said after a commit (its hash follows).'"`
 	CommitNone          string `json:"commitNone" i18n:"hint='Said when no file is chosen to commit.'"`
@@ -226,7 +226,7 @@ type IdeMessages struct {
 	StashKind           string `json:"stashKind" i18n:"hint='Label of what a stash is compared with.'"`
 	StashOf             string `json:"stashOf" i18n:"hint='Choice of the compare of a stash: another stash.'"`
 	CommitOfBranch      string `json:"commitOfBranch" i18n:"hint='Label of the commit of the branch a stash is compared with.'"`
-	BranchTip           string `json:"branchTip" i18n:"hint='Choice of the commit: the branch's tip.'"`
+	BranchTip           string `json:"branchTip" i18n:"hint='Choice of the commit: the tip of the branch.'"`
 	HelpStashes         string `json:"helpStashes" i18n:"hint='Help of the stashes (lines: \\n).'"`
 }
 
