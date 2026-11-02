@@ -103,14 +103,39 @@ func lineSVG(c *Chart) string {
 		}
 		b.f(`<polyline points="%s" style="fill:none;stroke:%s;stroke-width:2;vector-effect:non-scaling-stroke"/>`, strings.Join(pts, " "), col)
 	}
-	for i, l := range c.Labels {
-		if l == "" || len(c.Labels) < 2 {
-			continue
-		}
-		b.text(float64(i)*w/float64(len(c.Labels)-1), h+14, l, 10, "middle")
+	if len(c.Labels) > 1 {
+		b.axisLabels(c.Labels, w, h+14, func(i int) float64 { return float64(i) * w / float64(len(c.Labels)-1) })
 	}
 	b.f(`</svg>`)
 	return b.String()
+}
+
+// axisLabels draws the labels under the axis at x(i), those that fit: one
+// that would touch the one drawn before it is left out, and the first and the
+// last are kept inside the chart (anchored at their start, their end).
+func (b *svgBuf) axisLabels(labels []string, w, y float64, x func(int) float64) {
+	const size, gap = 10, 8.0
+	// the width of a label: about 0.6 of the size a character
+	width := func(l string) float64 { return float64(len([]rune(l))) * size * 0.6 }
+	right := -1e9
+	for i, l := range labels {
+		if l == "" {
+			continue
+		}
+		lw, cx := width(l), x(i)
+		left, anchor := cx-lw/2, "middle"
+		switch {
+		case left < 0:
+			left, cx, anchor = 0, 0, "start"
+		case cx+lw/2 > w:
+			left, cx, anchor = w-lw, w, "end"
+		}
+		if left < right+gap {
+			continue
+		}
+		b.text(cx, y, l, size, anchor)
+		right = left + lw
+	}
 }
 
 // barsSVG draws series as bars, side by side or stacked ((c.Kind == ChartStacked)).
@@ -152,12 +177,7 @@ func barsSVG(c *Chart) string {
 			}
 		}
 	}
-	for i, l := range c.Labels {
-		if l == "" {
-			continue
-		}
-		b.text(float64(i)*slot+slot/2, h+14, l, 10, "middle")
-	}
+	b.axisLabels(c.Labels, w, h+14, func(i int) float64 { return float64(i)*slot + slot/2 })
 	b.f(`</svg>`)
 	return b.String()
 }

@@ -70,11 +70,23 @@ type Widget struct {
 	TTL time.Duration
 	// Load is what it shows.
 	Load func(ctx *web.EventContext, p Period) ([]Block, error)
+	// OptIn: not on a user's dashboard until they add it (the dialog "add"
+	// lists it) — the widgets of a record, many (Dynamic).
+	OptIn bool
 	// Actions are what its blocks' buttons do (Action.Name), the argument
 	// the button's (an id): after one, the widget is loaded again.
 	Actions map[string]func(ctx *web.EventContext, arg string) error
 	// Link, when given, is where its "open" menu item goes (its listing).
 	Link func(ctx *web.EventContext) string
+	// Doc, when given, is the document of the widget in place of its ID's
+	// (Docs): the one of its kind, for the widgets of the records (Dynamic),
+	// whose IDs are made of the record's.
+	Doc string
+	// Live, when given, are the intervals it reloads itself at, the first
+	// by default: its header has a selector of them (the choice kept in the
+	// browser), and it reloads while the page is shown. Its blocks are kept
+	// (TTL) at most the shortest.
+	Live []time.Duration
 }
 
 // ListAllowed is Allowed by the permission to list the model mb.
@@ -113,6 +125,7 @@ type Builder struct {
 	cache   sync.Map // cacheKey → cached
 	docs    func(ctx *web.EventContext, widgetID string) string
 	intro   func(ctx *web.EventContext) h.HTMLComponent
+	dynamic func() []*Widget
 	// Now is the clock (tests set it).
 	Now func() time.Time
 }
@@ -150,12 +163,36 @@ func (b *Builder) Widget(ws ...*Widget) *Builder {
 // Widgets are the widgets registered.
 func (b *Builder) Widgets() []*Widget { return b.widgets }
 
+// Dynamic gives the widgets known at run time besides the registered ones —
+// those of the records of an app (a process's), as many as they are now: f is
+// asked each time the dashboard needs them. Their groups are registered
+// (Group); they are usually OptIn.
+func (b *Builder) Dynamic(f func() []*Widget) *Builder {
+	b.dynamic = f
+	return b
+}
+
+// all are the widgets registered and the dynamic ones.
+func (b *Builder) all() []*Widget {
+	if b.dynamic == nil {
+		return b.widgets
+	}
+	out := slices.Clone(b.widgets)
+	for _, w := range b.dynamic() {
+		if w.Size == 0 {
+			w.Size = SizeDefault
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
 // Groups are the groups registered.
 func (b *Builder) Groups() []*Group { return b.groups }
 
 // widget is the widget of id.
 func (b *Builder) widget(id string) *Widget {
-	for _, w := range b.widgets {
+	for _, w := range b.all() {
 		if w.ID == id {
 			return w
 		}

@@ -30,7 +30,9 @@ type Prefs struct {
 	Hidden    []string  `json:"hidden,omitempty"`
 	Order     []string  `json:"order,omitempty"`
 	Collapsed []string  `json:"collapsed,omitempty"`
-	Period    string    `json:"period,omitempty"`
+	// Added are the opt-in widgets the user added (Widget.OptIn).
+	Added  []string `json:"added,omitempty"`
+	Period string   `json:"period,omitempty"`
 }
 
 func (p *Prefs) collapsed(id string) bool { return slices.Contains(p.Collapsed, id) }

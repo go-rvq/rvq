@@ -358,6 +358,12 @@ type Bar struct {
 	Label       string
 	Done, Total float64
 	Link        string
+	// Text, when set, is shown in place of "done/total" (a size: "81 MB of
+	// 438 GB").
+	Text string
+	// Color, when set, is the bar's, in place of the one of the share done
+	// (success when whole, warning under 80%): a usage, where less is better.
+	Color string
 }
 
 // Progress is bars, one under the other.
@@ -381,10 +387,17 @@ func (p *Progress) render(rc *renderCtx) h.HTMLComponent {
 		case pct < 80:
 			color = "warning"
 		}
+		if b.Color != "" {
+			color = b.Color
+		}
+		text, width := fmt.Sprintf("%s/%s", formatNumber(b.Done), formatNumber(b.Total)), "width:80px"
+		if b.Text != "" {
+			text, width = b.Text, "white-space:nowrap"
+		}
 		rows = append(rows, h.Div(
 			h.Div(h.Text(b.Label)).Class("text-body-2 text-truncate").Style("width:30%"),
 			v.VProgressLinear().ModelValue(pct).Color(color).Height(10).Rounded(true).Style("flex:1"),
-			h.Div(h.Text(fmt.Sprintf("%s/%s", formatNumber(b.Done), formatNumber(b.Total)))).Class("text-caption text-medium-emphasis text-end").Style("width:80px"),
+			h.Div(h.Text(text)).Class("text-caption text-medium-emphasis text-end").Style(width),
 		).Class("d-flex align-center ga-2 mb-2").Attr("data-dashboard-progress", b.Label))
 	}
 	lt := p.LinkText

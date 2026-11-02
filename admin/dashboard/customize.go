@@ -86,7 +86,7 @@ func (b *Builder) addDialog(ctx *web.EventContext, msgs *Messages, prefs *Prefs,
 		var shows []string
 		original, _ := b.sectionHead(ctx, Section{ID: g.ID})
 		original = cmp.Or(original, msgs.Untitled)
-		for _, w := range b.widgets {
+		for _, w := range b.all() {
 			if w.Group != g.ID || !w.visible(ctx.R) {
 				continue
 			}

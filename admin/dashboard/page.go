@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ func (b *Builder) Install() error {
 	wb.RegisterEventFunc(EventAction, b.eventAction)
 	wb.RegisterEventFunc(EventPref, b.eventPref)
 	b.p.HomePageFunc(b.Page)
+	b.installWidgetPage()
 	return nil
 }
 
@@ -404,7 +406,11 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 		}
 		tools = append(tools, iconBtn("mdi-close", msgs.Remove, prefEvent("remove", w.ID)).Attr("data-dashboard-remove", w.ID))
 	} else {
-		tools = append(tools, iconBtn("mdi-refresh", msgs.Refresh, b.loadEvent(ctx.R, w, period).Query("refresh", "1").Go()).Attr("data-dashboard-refresh", w.ID))
+		if len(w.Live) > 0 {
+			tools = append(tools, liveSelector(msgs, w))
+		}
+		tools = append(tools, b.pageBtn(ctx, msgs, w),
+			iconBtn("mdi-refresh", msgs.Refresh, b.loadEvent(ctx.R, w, period).Query("refresh", "1").Go()).Attr("data-dashboard-refresh", w.ID))
 		var items h.HTMLComponents
 		if w.Link != nil {
 			if href := w.Link(ctx); href != "" {
@@ -412,7 +418,7 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 			}
 		}
 		if b.docs != nil {
-			if href := b.docs(ctx, w.ID); href != "" {
+			if href := b.docs(ctx, cmp.Or(w.Doc, w.ID)); href != "" {
 				items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.Help))).PrependIcon("mdi-help-circle-outline").Href(href).Attr("target", "_blank"))
 			}
 		}
@@ -453,8 +459,8 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 }
 
 // cacheKey is a user's widget over a period.
-func cacheKey(u uuid.UUID, w string, p Period) string {
-	return strings.Join([]string{w, u.String(), p.Key, p.From.Format(time.RFC3339), p.To.Format(time.RFC3339)}, "|")
+func cacheKey(u uuid.UUID, w string, p Period, full bool) string {
+	return strings.Join([]string{w, u.String(), p.Key, p.From.Format(time.RFC3339), p.To.Format(time.RFC3339), strconv.FormatBool(full)}, "|")
 }
 
 type cached struct {
@@ -465,8 +471,12 @@ type cached struct {
 // blocks are w's blocks over p for the request's user: the cache's while its
 // TTL lasts, unless refresh.
 func (b *Builder) blocks(ctx *web.EventContext, w *Widget, p Period, refresh bool) ([]Block, time.Time, error) {
-	key := cacheKey(userID(ctx.R), w.ID, p)
+	key := cacheKey(userID(ctx.R), w.ID, p, IsFull(ctx))
 	ttl := cmp.Or(w.TTL, time.Minute)
+	for _, d := range w.Live {
+		// reloaded every d: new blocks each time
+		ttl = min(ttl, d/2)
+	}
 	now := b.Now()
 	if !refresh {
 		if c, ok := b.cache.Load(key); ok && now.Sub(c.(*cached).at) < ttl {
@@ -510,7 +520,11 @@ func (b *Builder) Render(ctx *web.EventContext, w *Widget, p Period, refresh boo
 			out.AppendChildren(bl.render(rc))
 		}
 	}
-	out.AppendChildren(h.Div(h.Text(strings.ReplaceAll(msgs.UpdatedAt, "{time}", at.Format("15:04")))).
+	clock := "15:04"
+	if len(w.Live) > 0 {
+		clock = "15:04:05"
+	}
+	out.AppendChildren(h.Div(h.Text(strings.ReplaceAll(msgs.UpdatedAt, "{time}", at.Format(clock)))).
 		Class("text-caption text-disabled mt-2 text-end"))
 	return out
 }
@@ -651,4 +665,63 @@ func (b *Builder) eventPref(ctx *web.EventContext) (r web.EventResponse, err err
 	// the page again as it is (its period, its mode: the URL's)
 	r.RunScript = "window.location.reload()"
 	return
+}
+
+// liveSelector is the selector of how often w reloads itself (w.Live, the
+// first by default): the choice kept in the browser (localStorage), the
+// body of w reloaded every one while the page is shown.
+func liveSelector(msgs *Messages, w *Widget) h.HTMLComponent {
+	ms := make([]int64, len(w.Live))
+	for i, d := range w.Live {
+		ms[i] = d.Milliseconds()
+	}
+	fmtD := func(d int64) string {
+		if d%1000 == 0 {
+			return strconv.FormatInt(d/1000, 10) + " s"
+		}
+		return strconv.FormatInt(d, 10) + " ms"
+	}
+	var items h.HTMLComponents
+	for _, d := range ms {
+		items = append(items, v.VListItem(v.VListItemTitle(h.Text(fmtD(d)))).
+			Attr(":active", fmt.Sprintf("live.every === %d", d)).
+			Attr("@click", fmt.Sprintf("live.every = %d", d)).
+			Attr("data-dashboard-live-choice", strconv.FormatInt(d, 10)))
+	}
+	labels := map[string]string{}
+	for _, d := range ms {
+		labels[strconv.FormatInt(d, 10)] = fmtD(d)
+	}
+	setup := fmt.Sprintf(`({watch, $scope, window}) => {
+	const live = $scope.value.live, key = "rvq-dash-live:" + %s, allowed = %s;
+	try { const v = +window.localStorage.getItem(key); if (allowed.includes(v)) live.every = v; } catch (e) {}
+	let id = 0;
+	const start = () => {
+		window.clearInterval(id);
+		id = window.setInterval(() => {
+			// the page not shown, or a login up (the session gone): not now —
+			// a reload would only wait for the login (corejs Builder.login)
+			if (window.document.hidden || (window.__goplaid && window.__goplaid.loginPending)) return;
+			const p = window.__goplaid.portals[%s];
+			if (p) p.reload();
+		}, live.every);
+	};
+	live.stop = () => window.clearInterval(id);
+	watch(() => live.every, (v) => { try { window.localStorage.setItem(key, String(v)); } catch (e) {} start(); });
+	start();
+}`, h.JSONString(w.ID), h.JSONString(ms), h.JSONString(PortalName(w.ID)))
+	return h.Tag("user-component").
+		Attr(":scope", fmt.Sprintf(`{live: {every: %d, labels: %s}}`, ms[0], h.JSONString(labels))).
+		Attr(":setup", "[("+setup+")]").
+		Attr("@before-unmount", "(a) => a.$scope.value.live.stop && a.$scope.value.live.stop()").
+		Children(web.Slot(
+			v.VMenu(
+				web.Slot(
+					v.VChip(h.Text("{{ live.labels[String(live.every)] }}")).Size(v.SizeXSmall).Variant(v.VariantTonal).
+						PrependIcon("mdi-timer-sync-outline").Class("me-1").
+						Attr("v-bind", "props", "title", msgs.LiveEvery, "aria-label", msgs.LiveEvery, "data-dashboard-live", w.ID),
+				).Name("activator").Scope("{ props }"),
+				v.VList(append(h.HTMLComponents{v.VListSubheader(h.Text(msgs.LiveEvery))}, items...)...).Density(v.DensityCompact),
+			),
+		).Name("default").Scope("{ live }"))
 }

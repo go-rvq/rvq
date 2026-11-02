@@ -25,6 +25,9 @@ type Messages struct {
 	To                string `i18n:"hint='Last day of a custom period.'"`
 	Apply             string `i18n:"hint='Button that applies a custom period.'"`
 	Refresh           string `i18n:"hint='Button that loads a widget again, skipping its cache.'"`
+	LiveEvery         string `i18n:"hint='Title of the selector of how often a widget reloads itself (every 2 s, 5 s, 10 s).'"`
+	OpenPage          string `i18n:"hint='Button of a widget that opens its own page, the widget the whole width.'"`
+	BackToDashboard   string `i18n:"hint='Button of the page of a widget back to the dashboard.'"`
 	Open              string `i18n:"hint='Link of a widget to the listing behind it.'"`
 	SeeAll            string `i18n:"hint='Link under a list of a widget to its whole listing.'"`
 	Help              string `i18n:"hint='Menu item of a widget that opens its documentation.'"`
@@ -59,6 +62,8 @@ type Messages struct {
 	SectionIcon       string `i18n:"hint='Field of the icon of a section: a name of Material Design Icons.'"`
 	Untitled          string `i18n:"hint='Shown in the place of the title of a section with none, while customizing.'"`
 	AddWidgets        string `i18n:"hint='Button and dialog title that adds back the widgets removed.'"`
+	AddToDashboard    string `i18n:"hint='Item of the menu of a widget on a page of its own (the dashboard of a record) that puts it on the dashboard of the user.'"`
+	OnDashboard       string `i18n:"hint='Item (disabled) of the menu of a widget on a page of its own that is already on the dashboard of the user.'"`
 	AddSelected       string `i18n:"hint='Button that adds the widgets chosen back to their sections.'"`
 	NoRemoved         string `i18n:"hint='Said by the dialog of the widgets to add when none was removed.'"`
 	Save              string `i18n:"hint='Button that saves a dialog.'"`
@@ -86,6 +91,9 @@ var Messages_en_US = &Messages{
 	To:                "To",
 	Apply:             "Apply",
 	Refresh:           "Refresh",
+	LiveEvery:         "Reload every",
+	OpenPage:          "Open in its page",
+	BackToDashboard:   "Dashboard",
 	Open:              "Open",
 	SeeAll:            "See all",
 	Help:              "About this widget",
@@ -120,6 +128,8 @@ var Messages_en_US = &Messages{
 	SectionIcon:       "Icon (mdi-…)",
 	Untitled:          "No title",
 	AddWidgets:        "Add widgets",
+	AddToDashboard:    "Add to my dashboard",
+	OnDashboard:       "On my dashboard",
 	AddSelected:       "Add",
 	NoRemoved:         "No widget was removed.",
 	Save:              "Save",
@@ -147,6 +157,9 @@ var Messages_pt_BR = &Messages{
 	To:                "Até",
 	Apply:             "Aplicar",
 	Refresh:           "Atualizar",
+	LiveEvery:         "Atualizar a cada",
+	OpenPage:          "Abrir na página dele",
+	BackToDashboard:   "Painel",
 	Open:              "Abrir",
 	SeeAll:            "Ver tudo",
 	Help:              "Sobre este widget",
@@ -181,6 +194,8 @@ var Messages_pt_BR = &Messages{
 	SectionIcon:       "Ícone (mdi-…)",
 	Untitled:          "Sem título",
 	AddWidgets:        "Adicionar widgets",
+	AddToDashboard:    "Adicionar ao meu painel",
+	OnDashboard:       "No meu painel",
 	AddSelected:       "Adicionar",
 	NoRemoved:         "Nenhum widget foi removido.",
 	Save:              "Salvar",

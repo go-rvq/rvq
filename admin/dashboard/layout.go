@@ -58,7 +58,8 @@ func section(ss []Section, id string) *Section {
 // removed; the ids no longer known out.
 func (b *Builder) layout(p *Prefs) []Section {
 	known := map[string]*Widget{}
-	for _, w := range b.widgets {
+	all := b.all()
+	for _, w := range all {
 		known[w.ID] = w
 	}
 	var out []Section
@@ -94,7 +95,10 @@ func (b *Builder) layout(p *Prefs) []Section {
 		}
 		return len(p.Order)
 	}
-	rest := slices.DeleteFunc(slices.Clone(b.widgets), func(w *Widget) bool { return placed[w.ID] || p.removed(w.ID) })
+	// an opt-in widget only when added
+	rest := slices.DeleteFunc(slices.Clone(all), func(w *Widget) bool {
+		return placed[w.ID] || p.removed(w.ID) || (w.OptIn && !slices.Contains(p.Added, w.ID))
+	})
 	slices.SortStableFunc(rest, func(a, c *Widget) int {
 		return cmp.Or(cmp.Compare(pos(a.ID), pos(c.ID)), cmp.Compare(a.Order, c.Order))
 	})
@@ -156,6 +160,11 @@ func (b *Builder) remove(p *Prefs, ids ...string) {
 	}
 	p.Sections = ss
 	for _, id := range ids {
+		if w := b.widget(id); w != nil && w.OptIn {
+			// an opt-in one leaves: added no more
+			p.Added = toggle(p.Added, id, false)
+			continue
+		}
 		p.Removed = toggle(p.Removed, id, true)
 	}
 }
@@ -166,6 +175,9 @@ func (b *Builder) add(p *Prefs, ids ...string) {
 	for _, id := range ids {
 		p.Removed = toggle(p.Removed, id, false)
 		p.Hidden = toggle(p.Hidden, id, false)
+		if w := b.widget(id); w != nil && w.OptIn {
+			p.Added = toggle(p.Added, id, true)
+		}
 	}
 	p.Sections = b.layout(p)
 }
@@ -314,6 +326,9 @@ func (b *Builder) moveTo(p *Prefs, target string, ids ...string) bool {
 		p.Removed = toggle(p.Removed, id, false)
 		p.Hidden = toggle(p.Hidden, id, false)
 		p.Disabled = toggle(p.Disabled, id, false)
+		if w := b.widget(id); w.OptIn {
+			p.Added = toggle(p.Added, id, true)
+		}
 		for i := range ss {
 			ss[i].Widgets = slices.DeleteFunc(ss[i].Widgets, func(x string) bool { return x == id })
 		}

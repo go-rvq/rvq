@@ -215,6 +215,11 @@ func TestBlocks(t *testing.T) {
 	if !strings.Contains(s, "data-dashboard-status='error'") || !strings.Contains(s, "5/10") {
 		t.Errorf("status/progress: %s", s)
 	}
+	// a usage: its text in place of done/total, its color in place of the share's
+	s = render(t, &Progress{Bars: []Bar{{Label: "disk", Done: 5, Total: 10, Text: "5 B of 10 B", Color: "error"}}})
+	if !strings.Contains(s, "5 B of 10 B") || strings.Contains(s, "5/10") || !strings.Contains(s, "error") || strings.Contains(s, "warning") {
+		t.Errorf("progress with text and color: %s", s)
+	}
 }
 
 func TestFormat(t *testing.T) {
