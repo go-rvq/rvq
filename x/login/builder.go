@@ -542,6 +542,10 @@ func (b *Builder) URIPrefix(v string) (r *Builder) {
 	b.sendResetPasswordLinkURL = prefix + b.sendResetPasswordLinkURL
 	b.resetPasswordLinkSentPageURL = prefix + b.resetPasswordLinkSentPageURL
 
+	// the login's own files under the prefix too: an app served under a base
+	// path (behind another on the same host) has nothing of its own at /auth
+	setAssetsPrefix(prefix)
+
 	return b
 }
 
