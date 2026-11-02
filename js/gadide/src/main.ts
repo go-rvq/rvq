@@ -4,7 +4,7 @@
 // (base + "api/ide/…"). Loaded on demand by the admin's <vx-gad-ide>, which
 // renders window.GadIde.component; it runs no code: the files and the
 // language's operations only.
-import { computed, defineComponent, h, onMounted, ref, watch, type PropType } from "vue";
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from "vue";
 import { useTheme } from "vuetify";
 import { useI18n } from "vue-i18n";
 import { createHttpIdeApi, GadIde, type HeaderAction, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
@@ -40,7 +40,9 @@ const GadIdeHost = defineComponent({
   props: {
     // where the API is: base + "api/ide/…" ("/admin/site/site-files/ide/")
     base: { type: String, required: true },
-    // the height it takes ("calc(100vh - 64px)"); its box's by default
+    // the height it takes ("calc(100vh - 64px)"); its box's by default;
+    // "fit": from where it is to the bottom of the window (the page above it
+    // whatever it is), again when the window or the page changes
     height: { type: String, default: "100%" },
     // the panels it has: no Output, no debugger — it runs no code
     panels: { type: Array as PropType<string[]>, default: () => ["explorer", "editor", "structure", "docs"] },
@@ -66,6 +68,29 @@ const GadIdeHost = defineComponent({
     // dark as the admin's theme is, and follows it when it changes
     const theme = useTheme();
     const dark = computed(() => theme.global.current.value.dark);
+    // "fit": the window's height less the IDE's top in the page
+    const host = ref<HTMLElement>();
+    const fitted = ref("");
+    const fit = () => {
+      const el = host.value;
+      if (!el || props.height !== "fit") return;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      fitted.value = Math.max(320, window.innerHeight - top - 8) + "px";
+    };
+    let ro: ResizeObserver | undefined;
+    onMounted(() => {
+      if (props.height !== "fit") return;
+      fit();
+      window.addEventListener("resize", fit);
+      // what is above it may grow or shrink (a bar, a message)
+      ro = new ResizeObserver(fit);
+      ro.observe(document.body);
+    });
+    onBeforeUnmount(() => {
+      window.removeEventListener("resize", fit);
+      ro?.disconnect();
+    });
+    const height = computed(() => (props.height === "fit" ? fitted.value || "calc(100vh - 64px)" : props.height));
     const workspace = ref<Workspace>();
     const error = ref("");
     const layout = ref<SerializedDockview | null>(usableLayout(load("gadide.layout")));
@@ -80,7 +105,7 @@ const GadIdeHost = defineComponent({
       }
     });
     return () =>
-      h("div", { class: "gadide-host", style: { height: props.height } }, [
+      h("div", { ref: host, class: "gadide-host", style: { height: height.value } }, [
         error.value
           ? h("pre", { class: "gadide-error" }, error.value)
           : workspace.value &&

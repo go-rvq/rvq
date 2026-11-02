@@ -20,7 +20,7 @@ require (
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.25.0
 	github.com/fatih/color v1.17.0
-	github.com/gad-lang/gad v0.1.0-rc.33.0.20261102084159-e31d67e3259d
+	github.com/gad-lang/gad v0.1.0-rc.33.0.20261102115335-5746368b3de3
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-playground/form/v4 v4.2.1
