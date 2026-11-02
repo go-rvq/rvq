@@ -45,7 +45,9 @@ export default defineComponent({
     // props?, placement?} — tag a component of the app
     extraPanels: { type: Array, default: () => [] },
     // "git": the IDE of a repository, its Changes and Git panels alone
-    mode: { type: String, default: 'ide' }
+    mode: { type: String, default: 'ide' },
+    // the Settings' tabs shown (panels, formatter, transpile, template); none: all
+    settingsTabs: { type: Array, default: () => [] }
   },
   setup(props) {
     const comp = shallowRef<Component>()
@@ -68,7 +70,8 @@ export default defineComponent({
         messages: props.messages,
         headerActions: props.headerActions,
         extraPanels: props.extraPanels,
-        mode: props.mode
+        mode: props.mode,
+        settingsTabs: props.settingsTabs
       })
     }
   }

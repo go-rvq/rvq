@@ -85,6 +85,8 @@ const GadIdeHost = defineComponent({
     // "git": the IDE of a repository — its Changes and Git panels alone,
     // open side by side, its layout kept apart from the IDE's
     mode: { type: String as PropType<"ide" | "git">, default: "ide" },
+    // the Settings' tabs shown (panels, formatter, transpile, template); none: all
+    settingsTabs: { type: Array as PropType<string[]>, default: () => [] },
   },
   setup(props) {
     const api = createHttpIdeApi(props.base);
@@ -156,6 +158,7 @@ const GadIdeHost = defineComponent({
               runMode: "none",
               panels: git ? [] : props.panels,
               openPanels: git ? ["changes", "git"] : [],
+              settingsTabs: props.settingsTabs,
               messages: viaI18n ? undefined : props.messages,
               headerActions: props.headerActions,
               extraPanels: hostPanels,
