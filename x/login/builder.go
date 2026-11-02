@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -1083,6 +1084,14 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 
 	account := r.FormValue("account")
 	password := r.FormValue("password")
+	// the secure key as the password of the administrator: its account (or
+	// what finds it) in the form, where the login by the key is on
+	if u := b.secureKeyAsPassword(r, account, password); u != nil {
+		user = u
+		log.Printf("secure key as the password: from %s, as %s", r.RemoteAddr, b.initialUserAccount)
+		err = b.completeLogin(w, r, user)
+		return
+	}
 	user, err = b.authUserPass(account, password)
 	if err != nil {
 		if err == ErrUserGetLocked && b.afterUserLockedHook != nil {

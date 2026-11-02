@@ -19,6 +19,10 @@ import (
 // key; POST, the key in the form (`key`) or in the X-Secure-Key header. Only
 // over HTTPS (or from the machine itself), with the key right; else, refused
 // — logged, never said why to the browser beyond "refused".
+//
+// On the login page too: the secure key as the password, the account the
+// administrator's (secureKeyAsPassword) — the form protection as for any
+// login.
 
 // SecureKeyLoginURL is the address of the login by the secure key.
 func (b *Builder) SecureKeyLoginURL() string { return b.secureKeyLoginURL }
@@ -81,4 +85,29 @@ func (b *Builder) secureKeyLogin(w http.ResponseWriter, r *http.Request) {
 	if err = b.completeLogin(w, r, user); err != nil {
 		http.Redirect(w, r, b.loginPageURL, http.StatusFound)
 	}
+}
+
+// secureKeyAsPassword is the administrator when, on the login page, the
+// password is the secure key and the account is the administrator's (the
+// initial account, or what the form's account finds of it): where the login
+// by the key is on (security.SecureKeyLogin), over HTTPS (or from the
+// machine itself), the administrator not locked. Else nil — the password
+// goes as any other (authUserPass), the key never counted as a wrong one.
+func (b *Builder) secureKeyAsPassword(r *http.Request, account, password string) any {
+	if account == "" || !security.SecureKeyLogin() || !secureTransport(r) || !b.isSecureKey(password) {
+		return nil
+	}
+	admin, err := b.secureKeyUser()
+	if err != nil {
+		log.Printf("secure key as the password refused: from %s: %v", r.RemoteAddr, err)
+		return nil
+	}
+	if account != b.initialUserAccount {
+		u, err := b.userModel.(UserPasser).FindUser(b.db, b.newUserObject(), account)
+		if err != nil || objectID(u) != objectID(admin) {
+			log.Printf("secure key as the password refused: from %s: the account is not the administrator's", r.RemoteAddr)
+			return nil
+		}
+	}
+	return admin
 }

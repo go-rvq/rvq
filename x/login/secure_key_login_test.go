@@ -111,3 +111,71 @@ func TestSecureKeyLogin(t *testing.T) {
 		t.Errorf("locked: %d %v", w.Code, session(w))
 	}
 }
+
+// The secure key as the password on the login page: the administrator's
+// account in the form (or what finds it), the login by the key on, from the
+// machine — a session; another account, the key off, from outside: as any
+// wrong password.
+func TestSecureKeyAsPassword(t *testing.T) {
+	defer security.Load(security.Get())
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:skp_%d?mode=memory&cache=shared", atomic.AddInt64(&skSeq, 1))), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&skUser{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range []string{"admin", "ana"} {
+		u := &skUser{UserPass: UserPass{Account: a, Password: "right-" + a}}
+		u.EncryptPassword()
+		db.Create(u)
+	}
+	b := newSecureKeyBuilder(t)
+	b.DB(db).UserModel(&skUser{}).InitialUserAccount("admin").TOTP(false)
+	b.HomeURLFunc(func(*http.Request, any) string { return "/admin" })
+	// the form is filled instantly in a test
+	b.ChallengeAges(time.Nanosecond, time.Minute)
+	key, err := b.RenewSecureKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	b.MountAPI(mux)
+	// a login by the page's form (its challenge)
+	login := func(remote, account, password string) bool {
+		r := httptest.NewRequest("POST", "/auth/userpass/login", strings.NewReader(url.Values{"account": {account}, "password": {password}, ChallengeFormKey: {b.NewChallenge()}}.Encode()))
+		r.RemoteAddr = remote
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		for _, c := range w.Result().Cookies() {
+			if c.Name == b.authCookieName && c.Value != "" {
+				return true
+			}
+		}
+		return false
+	}
+	const local, outside = "127.0.0.1:5000", "203.0.113.9:5000"
+
+	security.Load(security.Config{SecureKeyLogin: true})
+	if !login(local, "admin", key) {
+		t.Error("the key as the administrator's password: no session")
+	}
+	if !login(local, "admin", "right-admin") || !login(local, "ana", "right-ana") {
+		t.Error("the passwords: no session")
+	}
+	for name, ok := range map[string]bool{
+		"another account": login(local, "ana", key),
+		"no account":      login(local, "", key),
+		"a wrong key":     login(local, "admin", key+"x"),
+		"from outside":    login(outside, "admin", key),
+	} {
+		if ok {
+			t.Errorf("%s: a session", name)
+		}
+	}
+	security.Load(security.Config{})
+	if login(local, "admin", key) {
+		t.Error("the key login off: a session")
+	}
+}
