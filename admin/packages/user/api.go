@@ -12,10 +12,11 @@ type User interface {
 	login.UserPasser
 	GetID() uuid.UUID
 	SetID(v uuid.UUID)
-	// Anonymous reports whether this is the static anonymous user — its ID is
-	// the immutable AnonymousID. There is always a user on a request (a save or
-	// an activity log never has a nil author): when the session carries none,
-	// GetCurrentUser returns the anonymous user instead of nil.
+	// Anonymous reports whether this is the anonymous user — no id
+	// (AnonymousID: uuid.Nil), never a row of the users. There is always a
+	// user on a request: when the session carries none, GetCurrentUser
+	// returns the anonymous user (in memory) instead of nil; what it does is
+	// recorded with no author (NULL).
 	Anonymous() bool
 	GetName() string
 	SetName(v string)

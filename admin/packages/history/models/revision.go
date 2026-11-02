@@ -48,8 +48,9 @@ type Revision struct {
 
 	CreatedAt time.Time
 
-	// CreatorID is the author's user id (FK users.id) — never nil: the logged-in
-	// user, or the static AnonymousID. Creator is the display name at the time.
+	// CreatorID is the author's user id (FK users.id): the logged-in user, or
+	// none (NULL) for the anonymous one. Creator is the display name at the
+	// time.
 	CreatorID model.UUID `gorm:"type:uuid;index"`
 	Creator   string
 
