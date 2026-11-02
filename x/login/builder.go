@@ -260,11 +260,20 @@ func (b *Builder) GetProviders() []*Provider {
 }
 
 func (b *Builder) GetAuthSecureCookieName() string {
-	return b.authSecureCookieName
+	return cookieName(b.authSecureCookieName)
 }
 
 func (b *Builder) GetContinueUrlCookieName() string {
-	return b.continueUrlCookieName
+	return cookieName(b.continueUrlCookieName)
+}
+
+// CookieNamespace sets the namespace of the login's cookies (their names
+// prefixed with it): two applications on one host — one under the other's
+// path — never read each other's. URIPrefix sets one of its own when none
+// was set. Of the process: one login a process.
+func (b *Builder) CookieNamespace(ns string) *Builder {
+	setCookieNamespace(ns)
+	return b
 }
 
 func (b *Builder) GetTotpEnabled() bool {
@@ -464,7 +473,7 @@ func (b *Builder) WhiteListed(pth string) bool {
 // SetContinueURL makes the login send the browser to url once it succeeds.
 func (b *Builder) SetContinueURL(w http.ResponseWriter, url string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.continueUrlCookieName,
+		Name:     cookieName(b.continueUrlCookieName),
 		Value:    url,
 		Path:     "/",
 		HttpOnly: true,
@@ -552,6 +561,11 @@ func (b *Builder) URIPrefix(v string) (r *Builder) {
 	// its own (the same names, another table of users)
 	if prefix != "" && b.cookieConfig.Path == "/" {
 		b.cookieConfig.Path = prefix + "/"
+	}
+	// and named its own (unless a namespace was set): the other app's
+	// cookies of the same names, sent to both, never taken for its own
+	if prefix != "" && cookieNS == "" {
+		setCookieNamespace(nsOfPrefix(prefix))
 	}
 
 	return b
@@ -1291,7 +1305,7 @@ func (b *Builder) setContinueURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.continueUrlCookieName,
+		Name:     cookieName(b.continueUrlCookieName),
 		Value:    continueURL,
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -1300,13 +1314,13 @@ func (b *Builder) setContinueURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *Builder) getContinueURL(w http.ResponseWriter, r *http.Request) string {
-	c, err := r.Cookie(b.continueUrlCookieName)
+	c, err := r.Cookie(cookieName(b.continueUrlCookieName))
 	if err != nil || c.Value == "" {
 		return ""
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.continueUrlCookieName,
+		Name:     cookieName(b.continueUrlCookieName),
 		Value:    "",
 		MaxAge:   -1,
 		Expires:  time.Unix(1, 0),
@@ -1434,7 +1448,7 @@ func (b *Builder) logoutAll(w http.ResponseWriter, r *http.Request) {
 	list[account.IndexOf(r)] = ""
 	// those the list lost too: by their cookies
 	for n := 0; n < b.GetMaxAccounts(); n++ {
-		if _, err := r.Cookie(account.CookieName(b.authCookieName, n)); err == nil {
+		if _, err := r.Cookie(account.CookieName(cookieName(b.authCookieName), n)); err == nil {
 			list[n] = ""
 		}
 	}

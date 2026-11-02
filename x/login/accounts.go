@@ -78,11 +78,11 @@ func (b *Builder) AccountPrefixes(p ...string) *Builder {
 func (b *Builder) GetAccountPrefixes() []string { return b.accountPrefixes }
 
 func (b *Builder) authCookieOf(r *http.Request) string {
-	return account.CookieName(b.authCookieName, account.IndexOf(r))
+	return account.CookieName(cookieName(b.authCookieName), account.IndexOf(r))
 }
 
 func (b *Builder) authSecureCookieOf(r *http.Request) string {
-	return account.CookieName(b.authSecureCookieName, account.IndexOf(r))
+	return account.CookieName(cookieName(b.authSecureCookieName), account.IndexOf(r))
 }
 
 // withAccount is r of the account n.
@@ -163,12 +163,12 @@ func (b *Builder) AccountsMiddleware(next http.Handler) http.Handler {
 				}
 			case (p == b.loginPageURL || p == b.secureKeyLoginURL) && r.Method == http.MethodGet:
 				// the plain login page: the account 0
-				if _, err := r.Cookie(loginAccountCookieName); err == nil {
+				if _, err := r.Cookie(cookieName(loginAccountCookieName)); err == nil {
 					b.clearLoginAccount(w)
 				}
 			case login:
 				// the steps of a login: the account it began with
-				if c, err := r.Cookie(loginAccountCookieName); err == nil {
+				if c, err := r.Cookie(cookieName(loginAccountCookieName)); err == nil {
 					n = parseAccount(c.Value, max)
 				}
 			case p != b.logoutURL:
@@ -251,7 +251,7 @@ func (b *Builder) siteAccount(w http.ResponseWriter, r *http.Request, max int) i
 		b.setSiteAccount(w, r, n)
 		return n
 	}
-	if c, err := r.Cookie(siteAccountCookieName); err == nil {
+	if c, err := r.Cookie(cookieName(siteAccountCookieName)); err == nil {
 		return parseAccount(c.Value, max)
 	}
 	return 0
@@ -259,11 +259,11 @@ func (b *Builder) siteAccount(w http.ResponseWriter, r *http.Request, max int) i
 
 func (b *Builder) setSiteAccount(w http.ResponseWriter, r *http.Request, n int) {
 	v := strconv.Itoa(n)
-	if c, err := r.Cookie(siteAccountCookieName); err == nil && c.Value == v {
+	if c, err := r.Cookie(cookieName(siteAccountCookieName)); err == nil && c.Value == v {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     siteAccountCookieName,
+		Name:     cookieName(siteAccountCookieName),
 		Value:    v,
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -296,7 +296,7 @@ func parseAccount(s string, max int) int {
 
 func (b *Builder) setLoginAccount(w http.ResponseWriter, n int) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     loginAccountCookieName,
+		Name:     cookieName(loginAccountCookieName),
 		Value:    strconv.Itoa(n),
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -333,7 +333,7 @@ func (b *Builder) setAddAccountContinue(w http.ResponseWriter, to string, n int)
 		to = SiteAccountURL(to, n)
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     b.continueUrlCookieName,
+		Name:     cookieName(b.continueUrlCookieName),
 		Value:    to,
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -343,7 +343,7 @@ func (b *Builder) setAddAccountContinue(w http.ResponseWriter, to string, n int)
 
 func (b *Builder) clearLoginAccount(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     loginAccountCookieName,
+		Name:     cookieName(loginAccountCookieName),
 		Value:    "",
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
@@ -476,7 +476,7 @@ func (b *Builder) accountsSig(payload string) string {
 // readAccounts is the list of the browser: index → user id.
 func (b *Builder) readAccounts(r *http.Request) map[int]string {
 	out := map[int]string{}
-	c, err := r.Cookie(accountsCookieName)
+	c, err := r.Cookie(cookieName(accountsCookieName))
 	if err != nil || c.Value == "" {
 		return out
 	}
@@ -513,7 +513,7 @@ func (b *Builder) writeAccounts(w http.ResponseWriter, r *http.Request, list map
 	}
 	payload := strings.Join(parts, ",")
 	c := &http.Cookie{
-		Name:     accountsCookieName,
+		Name:     cookieName(accountsCookieName),
 		Path:     b.cookieConfig.Path,
 		Domain:   b.cookieConfig.Domain,
 		HttpOnly: true,
@@ -528,7 +528,7 @@ func (b *Builder) writeAccounts(w http.ResponseWriter, r *http.Request, list map
 	}
 	http.SetCookie(w, c)
 	// the rest of the request sees it
-	setCookieForRequest(r, &http.Cookie{Name: accountsCookieName, Value: c.Value})
+	setCookieForRequest(r, &http.Cookie{Name: cookieName(accountsCookieName), Value: c.Value})
 }
 
 // rememberAccount puts the account of r — userID — in the list.
@@ -584,7 +584,7 @@ func (b *Builder) freeAccount(r *http.Request) int {
 		if _, ok := list[n]; ok {
 			continue
 		}
-		if _, err := r.Cookie(account.CookieName(b.authCookieName, n)); err == nil {
+		if _, err := r.Cookie(account.CookieName(cookieName(b.authCookieName), n)); err == nil {
 			continue
 		}
 		return n
@@ -617,7 +617,7 @@ func (b *Builder) Accounts(r *http.Request) []*Account {
 		if _, ok := list[n]; ok {
 			continue
 		}
-		if _, err := r.Cookie(account.CookieName(b.authCookieName, n)); err != nil {
+		if _, err := r.Cookie(account.CookieName(cookieName(b.authCookieName), n)); err != nil {
 			continue
 		}
 		if c, err := b.ParseClaims(r.WithContext(account.WithIndex(r.Context(), n))); err == nil {

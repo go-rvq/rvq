@@ -332,7 +332,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 						setFailCodeFlash(w, FailCodeUserLocked)
 					case ErrPasswordChanged:
 						isSelfChange := false
-						if c, err := r.Cookie(infoCodeFlashCookieName); err == nil {
+						if c, err := r.Cookie(cookieName(infoCodeFlashCookieName)); err == nil {
 							v, _ := strconv.Atoi(c.Value)
 							if InfoCode(v) == InfoCodePasswordSuccessfullyChanged {
 								isSelfChange = true

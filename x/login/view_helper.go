@@ -99,12 +99,12 @@ func (vh *ViewHelper) FindUserByID(id string) (user interface{}, err error) {
 }
 
 func (vh *ViewHelper) GetFailCodeFlash(w http.ResponseWriter, r *http.Request) FailCode {
-	c, err := r.Cookie(failCodeFlashCookieName)
+	c, err := r.Cookie(cookieName(failCodeFlashCookieName))
 	if err != nil {
 		return 0
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     failCodeFlashCookieName,
+		Name:     cookieName(failCodeFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -114,12 +114,12 @@ func (vh *ViewHelper) GetFailCodeFlash(w http.ResponseWriter, r *http.Request) F
 }
 
 func (vh *ViewHelper) GetWarnCodeFlash(w http.ResponseWriter, r *http.Request) WarnCode {
-	c, err := r.Cookie(warnCodeFlashCookieName)
+	c, err := r.Cookie(cookieName(warnCodeFlashCookieName))
 	if err != nil {
 		return 0
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     warnCodeFlashCookieName,
+		Name:     cookieName(warnCodeFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -129,12 +129,12 @@ func (vh *ViewHelper) GetWarnCodeFlash(w http.ResponseWriter, r *http.Request) W
 }
 
 func (vh *ViewHelper) GetInfoCodeFlash(w http.ResponseWriter, r *http.Request) InfoCode {
-	c, err := r.Cookie(infoCodeFlashCookieName)
+	c, err := r.Cookie(cookieName(infoCodeFlashCookieName))
 	if err != nil {
 		return 0
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     infoCodeFlashCookieName,
+		Name:     cookieName(infoCodeFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -144,7 +144,7 @@ func (vh *ViewHelper) GetInfoCodeFlash(w http.ResponseWriter, r *http.Request) I
 }
 
 func (vh *ViewHelper) GetNoticeFlash(w http.ResponseWriter, r *http.Request) *NoticeError {
-	c, err := r.Cookie(noticeFlashCookieName)
+	c, err := r.Cookie(cookieName(noticeFlashCookieName))
 	if err != nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (vh *ViewHelper) GetNoticeFlash(w http.ResponseWriter, r *http.Request) *No
 		message = vs[1]
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     noticeFlashCookieName,
+		Name:     cookieName(noticeFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -175,12 +175,12 @@ func (vh *ViewHelper) GetNoticeFlash(w http.ResponseWriter, r *http.Request) *No
 }
 
 func (vh *ViewHelper) GetWrongLoginInputFlash(w http.ResponseWriter, r *http.Request) WrongLoginInputFlash {
-	c, err := r.Cookie(wrongLoginInputFlashCookieName)
+	c, err := r.Cookie(cookieName(wrongLoginInputFlashCookieName))
 	if err != nil {
 		return WrongLoginInputFlash{}
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     wrongLoginInputFlashCookieName,
+		Name:     cookieName(wrongLoginInputFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -193,12 +193,12 @@ func (vh *ViewHelper) GetWrongLoginInputFlash(w http.ResponseWriter, r *http.Req
 }
 
 func (vh *ViewHelper) GetWrongForgetPasswordInputFlash(w http.ResponseWriter, r *http.Request) WrongForgetPasswordInputFlash {
-	c, err := r.Cookie(wrongForgetPasswordInputFlashCookieName)
+	c, err := r.Cookie(cookieName(wrongForgetPasswordInputFlashCookieName))
 	if err != nil {
 		return WrongForgetPasswordInputFlash{}
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     wrongForgetPasswordInputFlashCookieName,
+		Name:     cookieName(wrongForgetPasswordInputFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -211,12 +211,12 @@ func (vh *ViewHelper) GetWrongForgetPasswordInputFlash(w http.ResponseWriter, r 
 }
 
 func (vh *ViewHelper) GetWrongResetPasswordInputFlash(w http.ResponseWriter, r *http.Request) WrongResetPasswordInputFlash {
-	c, err := r.Cookie(wrongResetPasswordInputFlashCookieName)
+	c, err := r.Cookie(cookieName(wrongResetPasswordInputFlashCookieName))
 	if err != nil {
 		return WrongResetPasswordInputFlash{}
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     wrongResetPasswordInputFlashCookieName,
+		Name:     cookieName(wrongResetPasswordInputFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -229,12 +229,12 @@ func (vh *ViewHelper) GetWrongResetPasswordInputFlash(w http.ResponseWriter, r *
 }
 
 func (vh *ViewHelper) GetWrongChangePasswordInputFlash(w http.ResponseWriter, r *http.Request) WrongChangePasswordInputFlash {
-	c, err := r.Cookie(wrongChangePasswordInputFlashCookieName)
+	c, err := r.Cookie(cookieName(wrongChangePasswordInputFlashCookieName))
 	if err != nil {
 		return WrongChangePasswordInputFlash{}
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     wrongChangePasswordInputFlashCookieName,
+		Name:     cookieName(wrongChangePasswordInputFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -247,12 +247,12 @@ func (vh *ViewHelper) GetWrongChangePasswordInputFlash(w http.ResponseWriter, r 
 }
 
 func (vh *ViewHelper) GetSecondsToRedoFlash(w http.ResponseWriter, r *http.Request) int {
-	c, err := r.Cookie(secondsToRedoFlashCookieName)
+	c, err := r.Cookie(cookieName(secondsToRedoFlashCookieName))
 	if err != nil {
 		return 0
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     secondsToRedoFlashCookieName,
+		Name:     cookieName(secondsToRedoFlashCookieName),
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,

@@ -235,9 +235,11 @@ func TestSessionUserUnreadable(t *testing.T) {
 }
 
 // Under a prefix (an app behind another on the host), the session's cookie
-// is under it: not sent to the other app.
+// is under it — not sent to the other app — and named its own: the other
+// app's of the same name, sent to both, not taken.
 func TestURIPrefixCookiePath(t *testing.T) {
 	defer security.Load(security.Get())
+	defer setCookieNamespace("")
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:skc_%d?mode=memory&cache=shared", atomic.AddInt64(&skSeq, 1))), &gorm.Config{})
 	if err != nil {
 		t.Fatal(err)
@@ -267,6 +269,9 @@ func TestURIPrefixCookiePath(t *testing.T) {
 	n := 0
 	for _, c := range w.Result().Cookies() {
 		if c.Name == b.authCookieName {
+			t.Errorf("a cookie of the other app's name: %s", c.Name)
+		}
+		if c.Name == "x21_"+b.authCookieName {
 			n++
 			if c.Path != "/!/" {
 				t.Errorf("the session's cookie at %q", c.Path)
@@ -275,5 +280,22 @@ func TestURIPrefixCookiePath(t *testing.T) {
 	}
 	if n == 0 {
 		t.Fatalf("no session: %d %s", w.Code, w.Body)
+	}
+	// the other app's session (its name, another secret): not taken
+	h := b.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
+	r = httptest.NewRequest("GET", "/!/admin", nil)
+	r.AddCookie(&http.Cookie{Name: b.authCookieName, Value: "the-other-app"})
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusFound || w.Header().Get("Location") != b.loginPageURL {
+		t.Fatalf("the other app's cookie: %d %q", w.Code, w.Header().Get("Location"))
+	}
+}
+
+func TestNsOfPrefix(t *testing.T) {
+	for in, want := range map[string]string{"/!": "x21", "/admin/": "admin", "/a-b": "ax2db", "": ""} {
+		if got := nsOfPrefix(in); got != want {
+			t.Errorf("nsOfPrefix(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
