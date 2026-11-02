@@ -197,6 +197,37 @@ type IdeMessages struct {
 	HelpFileHistory     string `json:"helpFileHistory" i18n:"hint='Help of the history of a file.'"`
 	HelpCommit          string `json:"helpCommit" i18n:"hint='Help of the detail of what was chosen in the Git panel.'"`
 	HelpCompare         string `json:"helpCompare" i18n:"hint='Help of the compare of two refs.'"`
+	Commit              string `json:"commit" i18n:"hint='Button of the Changes panel that commits the files chosen.'"`
+	Tree                string `json:"tree" i18n:"hint='Box of the files' panel: a tree of folders (else a list of the folders by their path).'"`
+	CommitAll           string `json:"commitAll" i18n:"hint='Box of the Changes panel that chooses all the files to commit.'"`
+	Committed           string `json:"committed" i18n:"hint='Said after a commit (its hash follows).'"`
+	CommitNone          string `json:"commitNone" i18n:"hint='Said when no file is chosen to commit.'"`
+	DropMoveTitle       string `json:"dropMoveTitle" i18n:"hint='Title of the confirm of a move by dragging in the Explorer.'"`
+	FromDir             string `json:"fromDir" i18n:"hint='Label of the folder a file is moved from.'"`
+	ToDir               string `json:"toDir" i18n:"hint='Label of the folder a file is moved to.'"`
+	Stashes             string `json:"stashes" i18n:"hint='Mode of the Git panel: the stashes.'"`
+	StashChanges        string `json:"stashChanges" i18n:"hint='Button and dialog that stash the changes.'"`
+	StashMessage        string `json:"stashMessage" i18n:"hint='Label of the message of a stash.'"`
+	IncludeUntracked    string `json:"includeUntracked" i18n:"hint='Option of a stash: the new files too.'"`
+	KeepIndex           string `json:"keepIndex" i18n:"hint='Option of a stash: the index kept.'"`
+	Unstash             string `json:"unstash" i18n:"hint='Button and dialog that put a stash back.'"`
+	PopStash            string `json:"popStash" i18n:"hint='Option of the unstash: the stash dropped after.'"`
+	ReinstateIndex      string `json:"reinstateIndex" i18n:"hint='Option of the unstash: the index too.'"`
+	AsNewBranch         string `json:"asNewBranch" i18n:"hint='Label of the branch an unstash makes.'"`
+	ApplyStash          string `json:"applyStash" i18n:"hint='Button that applies a stash.'"`
+	DropStash           string `json:"dropStash" i18n:"hint='Button that drops a stash.'"`
+	DropStashConfirm    string `json:"dropStashConfirm" i18n:"hint='Confirm of the drop of a stash.'"`
+	ClearStashes        string `json:"clearStashes" i18n:"hint='Button that drops all the stashes.'"`
+	ClearStashesConfirm string `json:"clearStashesConfirm" i18n:"hint='Confirm of the drop of all the stashes.'"`
+	NoStashes           string `json:"noStashes" i18n:"hint='Shown with no stashes.'"`
+	ChooseStash         string `json:"chooseStash" i18n:"hint='Shown with no stash chosen.'"`
+	Stashed             string `json:"stashed" i18n:"hint='Said after a stash.'"`
+	StashChangesOf      string `json:"stashChangesOf" i18n:"hint='Choice of the compare of a stash: its own changes.'"`
+	StashKind           string `json:"stashKind" i18n:"hint='Label of what a stash is compared with.'"`
+	StashOf             string `json:"stashOf" i18n:"hint='Choice of the compare of a stash: another stash.'"`
+	CommitOfBranch      string `json:"commitOfBranch" i18n:"hint='Label of the commit of the branch a stash is compared with.'"`
+	BranchTip           string `json:"branchTip" i18n:"hint='Choice of the commit: the branch's tip.'"`
+	HelpStashes         string `json:"helpStashes" i18n:"hint='Help of the stashes (lines: \\n).'"`
 }
 
 var IdeMessages_en_US = &IdeMessages{
@@ -370,6 +401,37 @@ var IdeMessages_en_US = &IdeMessages{
 	HelpFileHistory:     "The commits of the branch that changed the file — the one open in the editor, or typed in the bar —, renames followed (R: the commit renamed it).\n- Click a commit to see the file's change in it.\n- Ctrl+click (⌘+click) another commit to compare the file in the two.\n- \"Compare with\" compares the file, as the commit has it, with another branch's or the working one.\n- The filter icon chooses the commits shown.",
 	HelpCommit:          "What was chosen: a commit's message and files, or a compare. Each file in the tree opens its diff — old at the left, new at the right —, scrolled together.\n- F7 / Shift+F7 go to the next / previous change.\n- A commit's file can be downloaded, as the commit has it, and its patch.\n- The blame button of a file shows who changed each line last (as IntelliJ's annotate): a click on a line's commit shows it.\n- The edge above the files resizes the message.",
 	HelpCompare:         "What changed from a ref to another, file by file: \"From\" and \"To\" take a branch, a commit's hash or the working files (\"To\" only).\n- Type or choose the two refs; the swap button exchanges them.\n- Click a file in the tree to see its diff.",
+	Commit:              "Commit",
+	Tree:                "Tree",
+	CommitAll:           "All files",
+	Committed:           "Committed",
+	CommitNone:          "Choose the files to commit.",
+	DropMoveTitle:       "Move?",
+	FromDir:             "From",
+	ToDir:               "To",
+	Stashes:             "Stashes",
+	StashChanges:        "Stash changes",
+	StashMessage:        "Message (optional)",
+	IncludeUntracked:    "Include untracked files",
+	KeepIndex:           "Keep the index (what is staged stays)",
+	Unstash:             "Unstash",
+	PopStash:            "Pop the stash (drop it after applying)",
+	ReinstateIndex:      "Reinstate the index",
+	AsNewBranch:         "As a new branch (optional)",
+	ApplyStash:          "Apply",
+	DropStash:           "Drop",
+	DropStashConfirm:    "Drop this stash? It cannot be undone.",
+	ClearStashes:        "Clear all",
+	ClearStashesConfirm: "Drop all the stashes? It cannot be undone.",
+	NoStashes:           "No stashes.",
+	ChooseStash:         "Choose a stash.",
+	Stashed:             "Stashed",
+	StashChangesOf:      "Its changes",
+	StashKind:           "Compare with",
+	StashOf:             "Stash",
+	CommitOfBranch:      "Commit",
+	BranchTip:           "the branch's tip",
+	HelpStashes:         "The changes put aside (stashed), the newest first.\n- The + button stashes the changes of the workspace (a message, the untracked files too, the index kept).\n- Click a stash to see its changes, file by file; \"Compare with\" compares it with the working files, a branch (its tip or a commit of its log) or another stash.\n- Unstash puts it back: applied or popped (dropped after), the index reinstated, or as a new branch.\n- Drop removes one; Clear all, every one.",
 }
 
 var IdeMessages_pt_BR = &IdeMessages{
@@ -543,4 +605,35 @@ var IdeMessages_pt_BR = &IdeMessages{
 	HelpFileHistory:     "Os commits da branch que alteraram o arquivo — o aberto no editor, ou digitado na barra —, seguindo renomeações (R: o commit o renomeou).\n- Clique num commit para ver a alteração do arquivo nele.\n- Ctrl+clique (⌘+clique) em outro commit para comparar o arquivo nos dois.\n- \"Comparar com\" compara o arquivo, como o commit o tem, com o de outra branch ou com o de trabalho.\n- O ícone de filtro escolhe os commits mostrados.",
 	HelpCommit:          "O que foi escolhido: a mensagem e os arquivos de um commit, ou uma comparação. Cada arquivo da árvore abre o seu diff — o antigo à esquerda, o novo à direita —, com rolagem sincronizada.\n- F7 / Shift+F7 vão para a próxima / anterior alteração.\n- O arquivo de um commit pode ser baixado, como o commit o tem, e também o seu patch.\n- O botão de blame de um arquivo mostra quem alterou cada linha por último (como o annotate do IntelliJ): um clique no commit de uma linha o mostra.\n- A borda acima dos arquivos redimensiona a mensagem.",
 	HelpCompare:         "O que mudou de uma ref para outra, arquivo por arquivo: \"De\" e \"Para\" aceitam uma branch, o hash de um commit ou os arquivos de trabalho (só \"Para\").\n- Digite ou escolha as duas refs; o botão de inverter troca os lados.\n- Clique num arquivo da árvore para ver o diff.",
+	Commit:              "Commit",
+	Tree:                "Árvore",
+	CommitAll:           "Todos os arquivos",
+	Committed:           "Commit feito",
+	CommitNone:          "Escolha os arquivos do commit.",
+	DropMoveTitle:       "Mover?",
+	FromDir:             "De",
+	ToDir:               "Para",
+	Stashes:             "Stashes",
+	StashChanges:        "Guardar as alterações (stash)",
+	StashMessage:        "Mensagem (opcional)",
+	IncludeUntracked:    "Incluir os arquivos novos (não rastreados)",
+	KeepIndex:           "Manter o índice (o que está no stage fica)",
+	Unstash:             "Recuperar (unstash)",
+	PopStash:            "Retirar a stash (excluí-la depois de aplicar)",
+	ReinstateIndex:      "Restaurar o índice",
+	AsNewBranch:         "Como uma branch nova (opcional)",
+	ApplyStash:          "Aplicar",
+	DropStash:           "Excluir",
+	DropStashConfirm:    "Excluir esta stash? Não dá para desfazer.",
+	ClearStashes:        "Excluir todas",
+	ClearStashesConfirm: "Excluir todas as stashes? Não dá para desfazer.",
+	NoStashes:           "Nenhuma stash.",
+	ChooseStash:         "Escolha uma stash.",
+	Stashed:             "Guardado em",
+	StashChangesOf:      "As alterações dela",
+	StashKind:           "Comparar com",
+	StashOf:             "Stash",
+	CommitOfBranch:      "Commit",
+	BranchTip:           "a ponta da branch",
+	HelpStashes:         "As alterações guardadas à parte (stash), as mais novas primeiro.\n- O botão + guarda as alterações da pasta (uma mensagem, os arquivos novos também, o índice mantido).\n- Clique numa stash para ver as alterações dela, arquivo por arquivo; \"Comparar com\" a compara com os arquivos locais, uma branch (a ponta ou um commit do log dela) ou outra stash.\n- Recuperar a põe de volta: aplicada ou retirada (excluída depois), o índice restaurado, ou como uma branch nova.\n- Excluir remove uma; Excluir todas, todas.",
 }
