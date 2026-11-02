@@ -207,6 +207,7 @@ type IdeMessages struct {
 	ToDir               string `json:"toDir" i18n:"hint='Label of the folder a file is moved to.'"`
 	Stashes             string `json:"stashes" i18n:"hint='Mode of the Git panel: the stashes.'"`
 	StashChanges        string `json:"stashChanges" i18n:"hint='Button and dialog that stash the changes.'"`
+	NewStash            string `json:"newStash" i18n:"hint='Button of the stashes that stashes the changes.'"`
 	StashMessage        string `json:"stashMessage" i18n:"hint='Label of the message of a stash.'"`
 	IncludeUntracked    string `json:"includeUntracked" i18n:"hint='Option of a stash: the new files too.'"`
 	KeepIndex           string `json:"keepIndex" i18n:"hint='Option of a stash: the index kept.'"`
@@ -411,6 +412,7 @@ var IdeMessages_en_US = &IdeMessages{
 	ToDir:               "To",
 	Stashes:             "Stashes",
 	StashChanges:        "Stash changes",
+	NewStash:            "New stash",
 	StashMessage:        "Message (optional)",
 	IncludeUntracked:    "Include untracked files",
 	KeepIndex:           "Keep the index (what is staged stays)",
@@ -615,6 +617,7 @@ var IdeMessages_pt_BR = &IdeMessages{
 	ToDir:               "Para",
 	Stashes:             "Stashes",
 	StashChanges:        "Guardar as alterações (stash)",
+	NewStash:            "Nova stash",
 	StashMessage:        "Mensagem (opcional)",
 	IncludeUntracked:    "Incluir os arquivos novos (não rastreados)",
 	KeepIndex:           "Manter o índice (o que está no stage fica)",
