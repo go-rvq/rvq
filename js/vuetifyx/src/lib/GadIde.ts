@@ -40,7 +40,10 @@ export default defineComponent({
     messages: { type: Object, default: undefined },
     // buttons of the page in the IDE's header, at its right: {id, icon,
     // title, label?, onClick}
-    headerActions: { type: Array, default: () => [] }
+    headerActions: { type: Array, default: () => [] },
+    // panels of the page (the IDE's HostPanel): {id, label, icon?, tag,
+    // props?, placement?} — tag a component of the app
+    extraPanels: { type: Array, default: () => [] }
   },
   setup(props) {
     const comp = shallowRef<Component>()
@@ -61,7 +64,8 @@ export default defineComponent({
         base: props.base,
         height: props.height,
         messages: props.messages,
-        headerActions: props.headerActions
+        headerActions: props.headerActions,
+        extraPanels: props.extraPanels
       })
     }
   }

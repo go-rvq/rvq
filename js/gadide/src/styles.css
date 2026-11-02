@@ -1,2 +1,10 @@
 .gadide-host { position: relative; width: 100%; min-height: 320px; overflow: hidden; }
 .gadide-error { margin: 0; padding: 12px 16px; background: #fff3f3; color: #b00020; white-space: pre-wrap; font-size: 12px; max-height: 50%; overflow: auto; }
+/* a panel of the page (HostPanel): its component the whole panel */
+.gadide-host-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}

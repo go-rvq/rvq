@@ -4,10 +4,10 @@
 // (base + "api/ide/…"). Loaded on demand by the admin's <vx-gad-ide>, which
 // renders window.GadIde.component; it runs no code: the files and the
 // language's operations only.
-import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from "vue";
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, resolveComponent, watch, type PropType } from "vue";
 import { useTheme } from "vuetify";
 import { useI18n } from "vue-i18n";
-import { createHttpIdeApi, GadIde, type HeaderAction, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
+import { createHttpIdeApi, GadIde, type ExtraPanel, type HeaderAction, type IdeMessages, type SerializedDockview, type Workspace } from "@gad-lang/ide-vuetify";
 
 import "dockview-core/dist/styles/dockview.css";
 import "./styles.css";
@@ -35,6 +35,34 @@ const usableLayout = (l: SerializedDockview | null): SerializedDockview | null =
   return panels && ("explorer" in panels || "editor" in panels) ? l : null;
 };
 
+// HostPanel is a panel of the page in the IDE (extraPanels): a component of
+// the admin's Vue app, by its name (tag), given props — placed below by
+// default, its button in the IDE's bottom strip, its expand in its tab.
+export interface HostPanel {
+  id: string;
+  label: string;
+  icon?: string;
+  tag: string;
+  props?: Record<string, unknown>;
+  placement?: "bottom" | "right" | "left";
+}
+
+// hostPanel is the IDE's ExtraPanel of p: its component the app's tag.
+const hostPanel = (p: HostPanel): ExtraPanel => ({
+  id: p.id,
+  label: p.label,
+  icon: p.icon,
+  placement: p.placement,
+  toolbarButton: true,
+  tabExpand: true,
+  component: defineComponent({
+    name: "HostPanel_" + p.id.replace(/\W/g, "_"),
+    setup() {
+      return () => h("div", { class: "gadide-host-panel" }, [h(resolveComponent(p.tag) as never, p.props)]);
+    },
+  }),
+});
+
 const GadIdeHost = defineComponent({
   name: "GadIdeHost",
   props: {
@@ -51,6 +79,8 @@ const GadIdeHost = defineComponent({
     messages: { type: Object as PropType<Partial<IdeMessages>>, default: undefined },
     // buttons of the page in the IDE's header, at its right (HeaderAction)
     headerActions: { type: Array as PropType<HeaderAction[]>, default: () => [] },
+    // panels of the page (HostPanel): a component of the app each
+    extraPanels: { type: Array as PropType<HostPanel[]>, default: () => [] },
   },
   setup(props) {
     const api = createHttpIdeApi(props.base);
@@ -91,6 +121,8 @@ const GadIdeHost = defineComponent({
       ro?.disconnect();
     });
     const height = computed(() => (props.height === "fit" ? fitted.value || "calc(100vh - 64px)" : props.height));
+    // the page's panels, made once (the IDE takes them when it starts)
+    const hostPanels = props.extraPanels.map(hostPanel);
     const workspace = ref<Workspace>();
     const error = ref("");
     const layout = ref<SerializedDockview | null>(usableLayout(load("gadide.layout")));
@@ -117,6 +149,7 @@ const GadIdeHost = defineComponent({
               panels: props.panels,
               messages: viaI18n ? undefined : props.messages,
               headerActions: props.headerActions,
+              extraPanels: hostPanels,
               layoutConfig: layout.value,
               "onUpdate:layoutConfig": (v: SerializedDockview) => (layout.value = v),
               config: config.value,
