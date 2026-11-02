@@ -10,6 +10,10 @@ export interface PreFetchData {
   url: string
 }
 
+// pendingLogin: the requests waiting for the login that is up (Builder.login),
+// null when none is.
+let pendingLogin: Array<() => void> | null = null
+
 export class Builder {
   _eventFuncID: EventFuncID = { id: '__reload__' }
   _url?: string
@@ -83,13 +87,32 @@ export class Builder {
   // is back, and THIS request runs again, so the click the user made goes
   // through as if nothing had happened.
   login = (r: EventResponse): EventResponse => {
+    // one login at a time: the requests that find the session gone while it
+    // is up (several widgets reloading, say) wait for it and run again once
+    // it is back — never a login each
+    const retry = () => {
+      this.go()
+    }
+    if (pendingLogin) {
+      pendingLogin.push(retry)
+      return r
+    }
+    pendingLogin = [retry]
+    if (window.__goplaid) {
+      window.__goplaid.loginPending = true
+    }
     plaid()
       .vars(this._vars)
       .updateRootTemplate(this._updateRootTemplate)
       .parseUrl(r.loginURI!)
       .scope({
         onLoginSuccess: () => {
-          this.go()
+          const waiting = pendingLogin || []
+          pendingLogin = null
+          if (window.__goplaid) {
+            window.__goplaid.loginPending = false
+          }
+          waiting.forEach((f) => f())
         }
       })
       .go()
@@ -390,8 +413,16 @@ export class Builder {
       const r = await fetch(fetchURL, fetchOpts).catch((error) => {
         console.error(error)
         Promise.reject(error)
-        if (!this.isIgnoreError(error)) {
-          alert('Fetch Unknown Error: ' + error)
+        // the server out of reach (restarting, the network down): said in
+        // the page's message bar — never alert(), whose dialog stops the
+        // page (and what reloads by itself, every few seconds, would raise
+        // one after another)
+        if (!this.isIgnoreError(error) && this._vars) {
+          this._vars.presetsMessage = {
+            show: true,
+            message: 'O servidor não respondeu (' + error + '). Tente de novo em instantes.',
+            color: 'error'
+          }
         }
         // document.location.reload();
       })
