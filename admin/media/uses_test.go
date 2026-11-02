@@ -30,6 +30,12 @@ type usesPost struct {
 	Thumb *media_library.MediaBox `gorm:"type:text"`
 }
 
+// usesNoTable is a model with a media box and no table.
+type usesNoTable struct {
+	ID     uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Avatar media_library.MediaBox
+}
+
 // usesDB is a database of the test's own — of one connection, its foreign
 // keys on —, the uses tracked, with two files.
 func usesTestDB(t *testing.T) (*gorm.DB, media_library.MediaLibrary, media_library.MediaLibrary) {
@@ -198,7 +204,9 @@ func TestBackfillUses(t *testing.T) {
 	db.Session(&gorm.Session{SkipHooks: true}).Create(&p2)
 	// a stale use of a record gone
 	db.Create(&MediaLibraryUse{RecordTable: "uses_posts", RecordID: uuid.NewString(), Field: "Cover", MediaLibraryID: model.UUID(a.ID)})
-	n, err := BackfillUses(db, &usesPost{}, &media_library.MediaLibrary{})
+	// a model with a media box and no table (a view of another's, as the
+	// profile of the users): passed by, not an error
+	n, err := BackfillUses(db, &usesPost{}, &media_library.MediaLibrary{}, &usesNoTable{})
 	if err != nil || n != 2 {
 		t.Fatalf("BackfillUses: %d %v", n, err)
 	}

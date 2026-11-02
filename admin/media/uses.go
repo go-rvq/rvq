@@ -303,8 +303,8 @@ func UsesOf(db *gorm.DB, id uuid.UUID) ([]MediaLibraryUse, error) {
 
 // BackfillUses makes the uses again from the records of models — what
 // TrackUses does not see (a delete by a condition, a raw query, what was
-// written before it) —: of each model with media boxes, each record's. It
-// answers how many uses it wrote.
+// written before it) —: of each model with media boxes and a table of its
+// own, each record's. It answers how many uses it wrote.
 func BackfillUses(db *gorm.DB, models ...any) (n int, err error) {
 	for _, m := range models {
 		stmt := &gorm.Statement{DB: db}
@@ -316,6 +316,11 @@ func BackfillUses(db *gorm.DB, models ...any) (n int, err error) {
 			continue
 		}
 		table := stmt.Schema.Table
+		// a model of no table of its own — a view of another's (the profile,
+		// of the users) —: its records are the other model's
+		if !db.Migrator().HasTable(table) {
+			continue
+		}
 		// what the table knew of the uses is made again: what is gone, gone
 		if err = usesDB(db).Where("record_table = ?", table).Delete(&MediaLibraryUse{}).Error; err != nil {
 			return n, err
