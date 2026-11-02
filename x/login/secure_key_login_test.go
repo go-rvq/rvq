@@ -179,3 +179,101 @@ func TestSecureKeyAsPassword(t *testing.T) {
 		t.Error("the key login off: a session")
 	}
 }
+
+// A session whose user cannot be read (its id of another type, the database
+// down): no panic — signed out, as a user gone.
+func TestSessionUserUnreadable(t *testing.T) {
+	defer security.Load(security.Get())
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:sku_%d?mode=memory&cache=shared", atomic.AddInt64(&skSeq, 1))), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&skUser{}); err != nil {
+		t.Fatal(err)
+	}
+	admin := &skUser{UserPass: UserPass{Account: "admin", Password: "right"}}
+	admin.EncryptPassword()
+	db.Create(admin)
+	b := newSecureKeyBuilder(t)
+	b.DB(db).UserModel(&skUser{}).InitialUserAccount("admin").TOTP(false)
+	b.HomeURLFunc(func(*http.Request, any) string { return "/admin" })
+	key, err := b.RenewSecureKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	security.Load(security.Config{SecureKeyLogin: true})
+	mux := http.NewServeMux()
+	b.MountAPI(mux)
+	r := httptest.NewRequest("POST", "/auth/secure-key", strings.NewReader(url.Values{"key": {key}}.Encode()))
+	r.RemoteAddr = "127.0.0.1:5000"
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	cookies := w.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("no session")
+	}
+	// the user's read fails
+	b.PostUserFindHook(func(any) error { return fmt.Errorf("invalid input syntax for type bigint") })
+	h := b.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
+	r = httptest.NewRequest("GET", "/admin", nil)
+	for _, c := range cookies {
+		r.AddCookie(c)
+	}
+	w = httptest.NewRecorder()
+	func() {
+		defer func() {
+			if p := recover(); p != nil {
+				t.Fatalf("panic: %v", p)
+			}
+		}()
+		h.ServeHTTP(w, r)
+	}()
+	if w.Code != http.StatusFound || w.Header().Get("Location") != b.logoutURL {
+		t.Fatalf("got %d %q", w.Code, w.Header().Get("Location"))
+	}
+}
+
+// Under a prefix (an app behind another on the host), the session's cookie
+// is under it: not sent to the other app.
+func TestURIPrefixCookiePath(t *testing.T) {
+	defer security.Load(security.Get())
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:skc_%d?mode=memory&cache=shared", atomic.AddInt64(&skSeq, 1))), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&skUser{}); err != nil {
+		t.Fatal(err)
+	}
+	admin := &skUser{UserPass: UserPass{Account: "admin", Password: "right"}}
+	admin.EncryptPassword()
+	db.Create(admin)
+	b := newSecureKeyBuilder(t)
+	b.URIPrefix("/!")
+	b.DB(db).UserModel(&skUser{}).InitialUserAccount("admin").TOTP(false)
+	b.HomeURLFunc(func(*http.Request, any) string { return "/!/admin" })
+	key, err := b.RenewSecureKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	security.Load(security.Config{SecureKeyLogin: true})
+	mux := http.NewServeMux()
+	b.MountAPI(mux)
+	r := httptest.NewRequest("POST", "/!/auth/secure-key", strings.NewReader(url.Values{"key": {key}}.Encode()))
+	r.RemoteAddr = "127.0.0.1:5000"
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	n := 0
+	for _, c := range w.Result().Cookies() {
+		if c.Name == b.authCookieName {
+			n++
+			if c.Path != "/!/" {
+				t.Errorf("the session's cookie at %q", c.Path)
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatalf("no session: %d %s", w.Code, w.Body)
+	}
+}

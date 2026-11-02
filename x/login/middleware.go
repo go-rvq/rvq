@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -341,7 +342,12 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 							setWarnCodeFlash(w, WarnCodePasswordHasBeenChanged)
 						}
 					default:
-						panic(err)
+						// the session's user could not be read (a cookie of
+						// another application of the host — its ids of
+						// another type —, the database down): the session
+						// not taken, logged; signed out as a user gone
+						log.Printf("login: the user of the session (%q) could not be read: %v", claims.UserID, err)
+						setFailCodeFlash(w, FailCodeUserNotFound)
 					}
 					if path == b.logoutURL {
 						next.ServeHTTP(w, r)

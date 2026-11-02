@@ -547,6 +547,13 @@ func (b *Builder) URIPrefix(v string) (r *Builder) {
 	// path (behind another on the same host) has nothing of its own at /auth
 	setAssetsPrefix(prefix)
 
+	// and its cookies (the session's, the accounts'): under the prefix — not
+	// sent to the other application of the host, which would read them as
+	// its own (the same names, another table of users)
+	if prefix != "" && b.cookieConfig.Path == "/" {
+		b.cookieConfig.Path = prefix + "/"
+	}
+
 	return b
 }
 
