@@ -531,7 +531,8 @@ func (b *DetailingBuilder) detailingEvent(ctx *web.EventContext) (r web.EventRes
 			SetCloserRef(CloserRef(ctx)).
 			Respond(&r, f)
 	} else {
-		b.mb.p.Dialog().
+		// the model's width, when it has one (RightDrawerWidth), as its form's
+		b.mb.p.Dialog(b.mb.rightDrawerWidth).
 			SetScrollable(true).
 			SetTargetPortal(targetPortal).
 			Respond(ctx, &r, f)
