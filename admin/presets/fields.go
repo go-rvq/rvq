@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"reflect"
 	"slices"
@@ -152,6 +153,15 @@ func (b *FieldsBuilder) SetSkipFieldVerifier(skipFieldVerifier func(name string)
 //   - *FieldsSection — a titled group ({Name, Title, Rows}) whose Rows are
 //     flattened into the group's fields.
 //   - *FieldsGroup — a (possibly nested) named/titled group of entries.
+//   - *FieldsSwitch — alternatives: of its cases, the one whose value an
+//     expression has (form.Provider), else its Default.
+//
+// A *FieldsSection and a *FieldsGroup may be shown on a condition: VIf /
+// VShow, a JavaScript expression of the form (form.Provider === "deepl") —
+// drawn in a form only (new, edit): the detail and the listing have no
+// form —, and Condition, the same on the server (of the record): the detail
+// draws, and the save validates, only what it accepts. A field the form does
+// not send (under a v-if false) keeps its value (an update is a merge).
 //
 // Any other element type makes [FieldsLayout.ToGroup] panic. Groups nest,
 // producing multi-row / column-spanning headers in the listing and in the list
@@ -179,7 +189,10 @@ const (
 	FieldLayoutEntryTypeNames
 	FieldLayoutEntryTypeSection
 	FieldLayoutEntryTypeGroup
+	FieldLayoutEntryTypeSwitch
 )
+
+const layoutTypesError = "unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup/*FieldsSwitch"
 
 type FieldLayoutEntry struct {
 	Entry  any
@@ -213,8 +226,12 @@ func (g FieldsLayout) WalkNames(cb func(name string) error) (err error) {
 			if err = t.Items.WalkNames(cb); err != nil {
 				return
 			}
+		case *FieldsSwitch:
+			if err = t.Layout().WalkNames(cb); err != nil {
+				return
+			}
 		default:
-			return errors.New("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+			return errors.New(layoutTypesError)
 		}
 	}
 	return
@@ -270,8 +287,20 @@ func (g FieldsLayout) walkNamesPath(pth []*FieldLayoutEntry, cb func(pth []*Fiel
 			if err = t.Items.walkNamesPath(pth, cb); err != nil {
 				return
 			}
+		case *FieldsSwitch:
+			e := &FieldLayoutEntry{
+				Entry: t,
+				Type:  FieldLayoutEntryTypeSwitch,
+			}
+			pth := append(pth, e)
+			for i, items := range t.layouts() {
+				e.IndexI = i
+				if err = items.walkNamesPath(pth, cb); err != nil {
+					return
+				}
+			}
 		default:
-			panic("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+			panic(layoutTypesError)
 		}
 	}
 	return
@@ -297,8 +326,11 @@ func (g FieldsLayout) Filter(accept func(typ FieldLayoutEntryType, name string) 
 		case *FieldsSection:
 			if accept(FieldLayoutEntryTypeSection, t.Name) {
 				s := &FieldsSection{
-					Name:  t.Name,
-					Title: t.Title,
+					Name:      t.Name,
+					Title:     t.Title,
+					VIf:       t.VIf,
+					VShow:     t.VShow,
+					Condition: t.Condition,
 				}
 				for _, row := range t.Rows {
 					var names []string
@@ -317,19 +349,34 @@ func (g FieldsLayout) Filter(accept func(typ FieldLayoutEntryType, name string) 
 			}
 		case *FieldsGroup:
 			if accept(FieldLayoutEntryTypeGroup, t.Name) {
-				g := &FieldsGroup{
-					Name:  t.Name,
-					Title: t.Title,
-				}
+				g := *t
 				if g.Items, err = t.Items.Filter(accept); err != nil {
 					return nil, err
 				}
 				if len(g.Items) > 0 {
-					l = append(l, g)
+					l = append(l, &g)
+				}
+			}
+		case *FieldsSwitch:
+			if accept(FieldLayoutEntryTypeSwitch, t.Name) {
+				sw := *t
+				sw.Cases = nil
+				for _, c := range t.Cases {
+					items, err := c.Items.Filter(accept)
+					if err != nil {
+						return nil, err
+					}
+					sw.Cases = append(sw.Cases, &FieldsCase{Value: c.Value, Items: items})
+				}
+				if sw.Default, err = t.Default.Filter(accept); err != nil {
+					return nil, err
+				}
+				if len(sw.Layout()) > 0 {
+					l = append(l, &sw)
 				}
 			}
 		default:
-			return nil, errors.New("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+			return nil, errors.New(layoutTypesError)
 		}
 	}
 	return
@@ -373,7 +420,10 @@ func (g FieldsLayout) ToGroup() (tree FieldsLayout) {
 			}
 		case *FieldsSection:
 			g := &FieldsGroup{
-				Name: t.Name,
+				Name:      t.Name,
+				VIf:       t.VIf,
+				VShow:     t.VShow,
+				Condition: t.Condition,
 			}
 
 			if t.Title != "" {
@@ -390,13 +440,17 @@ func (g FieldsLayout) ToGroup() (tree FieldsLayout) {
 				}
 			}
 		case *FieldsGroup:
+			g := *t
+			g.Items = t.Items.ToGroup()
+			tree[i] = &g
+		case *FieldsSwitch:
+			// the listing's columns: those of every case
 			tree[i] = &FieldsGroup{
 				Name:  t.Name,
-				Title: t.Title,
-				Items: t.Items.ToGroup(),
+				Items: t.Layout().ToGroup(),
 			}
 		default:
-			panic("unknown fields layout, must be string/[]string/*FieldsSection/*FieldsGroup")
+			panic(layoutTypesError)
 		}
 	}
 	return
@@ -414,6 +468,120 @@ type FieldsGroup struct {
 	// it; what is not a group goes in a tab of its own, untitled. A tab with
 	// a field in error is marked.
 	Tabs bool
+	// VIf, VShow: in a form, the group drawn under v-if (its fields not
+	// mounted, so not sent: they keep their values) or v-show — JavaScript
+	// of the form: form.Provider === "deepl". In tabs, of the tab.
+	VIf, VShow string
+	// Condition: the group drawn (and its fields validated) only when it
+	// accepts the record — the detail, which has no form, and the save.
+	Condition FieldsCondition
+}
+
+// FieldsCondition says, on the server, whether a group of fields is of the
+// record obj.
+type FieldsCondition func(obj any, ctx *web.EventContext) bool
+
+// accepts says whether c accepts obj (nil: always).
+func (c FieldsCondition) accepts(obj any, ctx *web.EventContext) bool {
+	return c == nil || c(obj, ctx)
+}
+
+// FieldsSwitch is a choice of fields: of its Cases, the one whose Value the
+// JavaScript expression Expr has (form.Provider); none, Default. In a form
+// the cases are a v-if / v-else-if / v-else chain (Show: v-show, all
+// mounted); elsewhere — the detail, the save's validation — the case is the
+// one of the record's Value (nil: all drawn). The listing has the columns
+// of every case.
+type FieldsSwitch struct {
+	Name    string
+	Expr    string
+	Value   func(obj any, ctx *web.EventContext) string
+	Show    bool
+	Cases   []*FieldsCase
+	Default FieldsLayout
+}
+
+// FieldsCase is a case of a FieldsSwitch: its fields, of the value Value.
+type FieldsCase struct {
+	Value string
+	Items FieldsLayout
+}
+
+// NewFieldsSwitch is a switch of the expression expr, its server value
+// value.
+func NewFieldsSwitch(name, expr string, value func(obj any, ctx *web.EventContext) string) *FieldsSwitch {
+	return &FieldsSwitch{Name: name, Expr: expr, Value: value}
+}
+
+// Case adds the case of value, its fields items.
+func (s *FieldsSwitch) Case(value string, items ...any) *FieldsSwitch {
+	s.Cases = append(s.Cases, &FieldsCase{Value: value, Items: items})
+	return s
+}
+
+// Else sets the fields of none of the cases.
+func (s *FieldsSwitch) Else(items ...any) *FieldsSwitch {
+	s.Default = items
+	return s
+}
+
+// layouts are the layouts of its cases, then the default's.
+func (s *FieldsSwitch) layouts() (l []FieldsLayout) {
+	for _, c := range s.Cases {
+		l = append(l, c.Items)
+	}
+	return append(l, s.Default)
+}
+
+// Layout is every field of it: its cases', then the default's.
+func (s *FieldsSwitch) Layout() (l FieldsLayout) {
+	for _, items := range s.layouts() {
+		l = append(l, items...)
+	}
+	return
+}
+
+// chosen is the layout of the case of obj (server side); all, without Value.
+func (s *FieldsSwitch) chosen(obj any, ctx *web.EventContext) FieldsLayout {
+	if s.Value == nil {
+		return s.Layout()
+	}
+	v := s.Value(obj, ctx)
+	for _, c := range s.Cases {
+		if c.Value == v {
+			return c.Items
+		}
+	}
+	return s.Default
+}
+
+// ActiveNames are the names of the fields of l that are of obj: those of a
+// group or a section whose Condition refuses it, and of the cases of a
+// switch not its, out.
+func (l FieldsLayout) ActiveNames(obj any, ctx *web.EventContext) (names []string) {
+	for _, iv := range l {
+		switch t := iv.(type) {
+		case string:
+			names = append(names, t)
+		case []string:
+			names = append(names, t...)
+		case *FieldsSection:
+			if t.Condition.accepts(obj, ctx) {
+				for _, row := range t.Rows {
+					names = append(names, row...)
+				}
+			}
+		case *FieldsGroup:
+			if t.Condition.accepts(obj, ctx) {
+				names = append(names, t.Items.ActiveNames(obj, ctx)...)
+			}
+		case *FieldsSwitch:
+			names = append(names, t.chosen(obj, ctx).ActiveNames(obj, ctx)...)
+		default:
+			panic(layoutTypesError)
+		}
+	}
+	return
 }
 
 // NewFieldsTabs is a group drawn as tabs (FieldsGroup.Tabs): each of tabs a
@@ -459,6 +627,9 @@ type FieldsSection struct {
 	Name  string
 	Title string
 	Rows  [][]string
+	// VIf, VShow, Condition: as of a FieldsGroup.
+	VIf, VShow string
+	Condition  FieldsCondition
 }
 
 func NewFieldsBuilder(builder *Builder) *FieldsBuilder {
@@ -1205,6 +1376,12 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 		vErr = &web.ValidationErrors{}
 	}
 
+	// a form (new, edit) has the form of the JavaScript of the conditions
+	// (VIf, VShow, FieldsSwitch.Expr); the detail and the listing, only the
+	// server's (Condition, FieldsSwitch.Value) — by the mode asked, before
+	// the one of an embedded record is pushed below
+	inForm := len(mode) == 0 || !mode.Dot().HasAny(LIST, DETAIL)
+
 	// changes mode if not is embedded
 	if s := info.Schema(); s != nil && model.HasPrimaryFields(s) {
 		if !mode.Dot().HasAny(LIST, DETAIL) {
@@ -1225,6 +1402,19 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 		if fComp != nil {
 			comps = append(comps, fComp)
 		}
+	}
+
+	onCondition := func(comp h.HTMLComponent, vIf, vShow string) h.HTMLComponent {
+		if comp == nil || !inForm {
+			return comp
+		}
+		if vShow != "" {
+			comp = h.Div(comp).Attr("v-show", vShow)
+		}
+		if vIf != "" {
+			comp = h.Template(comp).Attr("v-if", vIf)
+		}
+		return comp
 	}
 
 	var doLayout func(layout FieldsLayout) (comps []h.HTMLComponent)
@@ -1256,6 +1446,9 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 					comp = v.VRow(colsComp...).NoGutters(true)
 				}
 			case *FieldsSection:
+				if !t.Condition.accepts(obj, ctx) {
+					continue
+				}
 				rowsComp := make([]h.HTMLComponent, 0, len(t.Rows))
 				for _, row := range t.Rows {
 					colsComp := make([]h.HTMLComponent, 0, len(row))
@@ -1280,14 +1473,17 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 					if t.Title != "" {
 						titleComp = h.Label(t.Title).Class("v-label theme--light text-caption")
 					}
-					comp = h.Div(
+					comp = onCondition(h.Div(
 						titleComp,
 						v.VCard(rowsComp...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
-					)
+					), t.VIf, t.VShow)
 				}
 			case *FieldsGroup:
+				if !t.Condition.accepts(obj, ctx) {
+					continue
+				}
 				if t.Tabs {
-					comp = b.tabsComponent(t, info, parentKey, vErr, ctx, doLayout)
+					comp = onCondition(b.tabsComponent(t, info, obj, parentKey, vErr, inForm, ctx, doLayout), t.VIf, t.VShow)
 					break
 				}
 				if g := doLayout(t.Items); len(g) > 0 {
@@ -1321,13 +1517,15 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 						g = append(h.HTMLComponents{hintComp}, g...)
 					}
 
-					comp = h.Div(
+					comp = onCondition(h.Div(
 						titleComp,
 						v.VCard(g...).Variant(v.VariantOutlined).Class("mx-0 mt-1 mb-4 px-4 pb-0 pt-4"),
-					)
+					), t.VIf, t.VShow)
 				}
+			case *FieldsSwitch:
+				comp = b.switchComponent(t, inForm, obj, ctx, okNames, doLayout)
 			default:
-				panic("unknown fields layout, must be string/[]string/*FieldsSection")
+				panic(layoutTypesError)
 			}
 			if comp == nil {
 				continue
@@ -1345,11 +1543,12 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 // of its groups, its fields drawn by doLayout — all of them, eager: a field
 // of a tab not shown is still in the form —; a tab with a field in error
 // (vErr) is marked, and the first of them is the one open.
-func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey string, vErr *web.ValidationErrors, ctx *web.EventContext,
-	doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
+func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, parentKey string, vErr *web.ValidationErrors, inForm bool,
+	ctx *web.EventContext, doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
 	type tab struct {
-		title  string
-		layout FieldsLayout
+		title      string
+		layout     FieldsLayout
+		vIf, vShow string
 	}
 	var tabs []tab
 	var loose FieldsLayout
@@ -1357,6 +1556,9 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey
 		sub, ok := it.(*FieldsGroup)
 		if !ok {
 			loose = append(loose, it)
+			continue
+		}
+		if !sub.Condition.accepts(obj, ctx) {
 			continue
 		}
 		title := ""
@@ -1369,7 +1571,11 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey
 		if sub.Tabs {
 			layout = FieldsLayout{sub}
 		}
-		tabs = append(tabs, tab{title: title, layout: layout})
+		tab := tab{title: title, layout: layout}
+		if inForm {
+			tab.vIf, tab.vShow = sub.VIf, sub.VShow
+		}
+		tabs = append(tabs, tab)
 	}
 	if len(loose) > 0 {
 		tabs = append([]tab{{layout: loose}}, tabs...)
@@ -1407,9 +1613,17 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey
 				open = i
 			}
 		}
+		window := v.VWindowItem(content...).Value(i).Eager(true).Class("pt-4")
+		// a tab on a condition: its head and its window
+		for _, c := range []struct{ attr, expr string }{{"v-if", t.vIf}, {"v-show", t.vShow}} {
+			if c.expr != "" {
+				head.Attr(c.attr, c.expr)
+				window.Attr(c.attr, c.expr)
+			}
+		}
 		drawn = append(drawn, i)
 		heads = append(heads, head)
-		windows = append(windows, v.VWindowItem(content...).Value(i).Eager(true).Class("pt-4"))
+		windows = append(windows, window)
 	}
 	if len(heads) == 0 {
 		return nil
@@ -1423,6 +1637,61 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, parentKey
 		v.VWindow(windows...).Attr("v-model", "locals.tab"),
 	).Class("mb-4").Attr("data-fields-tabs", g.Name)).
 		LocalsInit(fmt.Sprintf(`{tab: %d}`, open)).Slot("{ locals }")
+}
+
+// switchComponent draws the switch s: in a form, every case under its
+// condition — a v-if / v-else-if / v-else chain, or v-show (s.Show) —; else
+// the case of the record. A field may be in several cases: each case is
+// drawn from the fields drawn before the switch (okNames).
+func (b *FieldsBuilder) switchComponent(s *FieldsSwitch, inForm bool, obj any, ctx *web.EventContext, okNames map[string]any,
+	doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
+	if !inForm || s.Expr == "" {
+		if comps := doLayout(s.chosen(obj, ctx)); len(comps) > 0 {
+			return h.Div(comps...).Attr("data-fields-switch", s.Name)
+		}
+		return nil
+	}
+	before := maps.Clone(okNames)
+	drawn := maps.Clone(okNames)
+	draw := func(items FieldsLayout) []h.HTMLComponent {
+		clear(okNames)
+		maps.Copy(okNames, before)
+		comps := doLayout(items)
+		maps.Copy(drawn, okNames)
+		return comps
+	}
+	var (
+		parts  []h.HTMLComponent
+		values []string
+	)
+	for i, c := range s.Cases {
+		value := string(h.JSONString(c.Value))
+		values = append(values, value)
+		expr := fmt.Sprintf("(%s) === %s", s.Expr, value)
+		comps := draw(c.Items)
+		switch {
+		case s.Show:
+			parts = append(parts, h.Div(comps...).Attr("v-show", expr))
+		case i == 0:
+			parts = append(parts, h.Template(comps...).Attr("v-if", expr))
+		default:
+			parts = append(parts, h.Template(comps...).Attr("v-else-if", expr))
+		}
+	}
+	if len(s.Default) > 0 {
+		comps := draw(s.Default)
+		switch {
+		case s.Show:
+			parts = append(parts, h.Div(comps...).Attr("v-show", fmt.Sprintf("![%s].includes(%s)", strings.Join(values, ", "), s.Expr)))
+		case len(s.Cases) == 0:
+			parts = append(parts, h.Components(comps...))
+		default:
+			parts = append(parts, h.Template(comps...).Attr("v-else", true))
+		}
+	}
+	clear(okNames)
+	maps.Copy(okNames, drawn)
+	return h.Div(parts...).Attr("data-fields-switch", s.Name)
 }
 
 func (b *FieldsBuilder) GroupTitle(info *ModelInfo, ctx context.Context, name string) (r string) {

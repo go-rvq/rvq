@@ -120,6 +120,7 @@ func (b *EditingBuilder) doCreate(
 		b.FieldsBuilder.WalkOptions(b.mb.modelInfo, obj, FieldModeStack{NEW}, ctx, &FieldWalkHandleOptions{
 			SkipNestedNil:         true,
 			SkipListEditorDeleted: true,
+			ActiveOnly:            true,
 			Handler: func(field *FieldContext) (s FieldWalkState) {
 				vErr.Merge(field.Field.Validate(field))
 				return s

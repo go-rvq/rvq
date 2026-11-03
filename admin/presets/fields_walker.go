@@ -19,7 +19,12 @@ type (
 		// fields are not walked (e.g. not validated) — a removed row is about to be
 		// discarded and must not fail required/format checks.
 		SkipListEditorDeleted bool
-		Handler               FieldWalkHandle
+		// ActiveOnly walks only the fields of the layout that are of the
+		// record (FieldsLayout.ActiveNames): not those of a group whose
+		// Condition refuses it, nor of the cases of a switch not its — they
+		// are not validated.
+		ActiveOnly bool
+		Handler    FieldWalkHandle
 	}
 
 	FieldWalkHandle func(field *FieldContext) (s FieldWalkState)
@@ -66,9 +71,13 @@ func (b *FieldsBuilder) walk(info *ModelInfo, obj interface{}, mode FieldModeSta
 		}
 	}
 
+	names := layout.Names
+	if opts.ActiveOnly {
+		names = func() []string { return layout.ActiveNames(obj, ctx) }
+	}
 	go func() {
 		defer close(fieldsChan)
-		for _, iv := range layout.Names() {
+		for _, iv := range names() {
 			fieldsChan <- iv
 		}
 	}()
