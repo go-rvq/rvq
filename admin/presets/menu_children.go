@@ -19,6 +19,29 @@ type MenuNode struct {
 	lazy bool
 }
 
+// MenuChip is a chip at the right of an item of the side menu: its text, its
+// icon, its color, its hint, and the event its click runs at URL, with Query
+// (a query string); an action of a model, say: the listing's URL,
+// action=…&overlay=dialog, OpenActionDialog.
+type MenuChip struct {
+	Title string `json:"title"`
+	Icon  string `json:"icon,omitempty"`
+	Color string `json:"color,omitempty"`
+	Hint  string `json:"hint,omitempty"`
+	Event string `json:"event"`
+	URL   string `json:"url"`
+	Query string `json:"query,omitempty"`
+}
+
+// SetChip gives the node the chip c (in its Props: the menu draws it).
+func (n *MenuNode) SetChip(c *MenuChip) *MenuNode {
+	if n.Props == nil {
+		n.Props = map[string]any{}
+	}
+	n.Props["chip"] = c
+	return n
+}
+
 func (n *MenuNode) MarshalJSON() ([]byte, error) {
 	type node MenuNode
 	if n.lazy && len(n.Children) == 0 {

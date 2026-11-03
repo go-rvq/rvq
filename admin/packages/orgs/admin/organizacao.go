@@ -27,11 +27,11 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
 		MenuIcon("mdi-domain")
 	mb.SetUriName(OrganizacaoURIName)
 
-	mb.Listing("Nome", "Descricao").
+	mb.Listing("Nome", "Descricao", "Padrao").
 		SearchColumns("nome", "descricao").
 		OrderBy("nome")
 
-	ed := mb.Editing("Nome", "Descricao")
+	ed := mb.Editing("Nome", "Descricao", "Padrao")
 	ed.Field("Nome").Required(true)
 	ed.SetterFunc(func(obj interface{}, ctx *web.EventContext) {
 		o := obj.(*models.Organizacao)
@@ -42,7 +42,7 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
 		}
 	})
 
-	mb.Detailing("Nome", "Descricao")
+	mb.Detailing("Nome", "Descricao", "Padrao")
 
 	// the owner can share the organization with other users (SPEC: sharing is
 	// mounted on Organization and Project). Verbs come from the sharing

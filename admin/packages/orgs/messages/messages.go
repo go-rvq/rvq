@@ -10,6 +10,7 @@ type Messages struct {
 	OrganizacaoNome      string `i18n:"label='Name', hint='Label of an organization\\'s name field.'"`
 	OrganizacaoDescricao string `i18n:"label='Description', hint='Label of an organization\\'s description field.'"`
 	OrganizacaoOwner     string `i18n:"label='Owner', hint='Label of the user who owns an organization.'"`
+	OrganizacaoPadrao    string `i18n:"label='Default', hint='Label of the field that makes an organization the default of its owner (opened in the menu when none was chosen).'"`
 
 	// sharing
 	Compartilhar        string `i18n:"label='Share', hint='Action that shares an organization with other users.'"`
@@ -18,6 +19,12 @@ type Messages struct {
 
 	// selector
 	SelecioneOrganizacao string `i18n:"label='Select the organization', hint='Shown when an organization must be chosen and none was.'"`
+	// SelecionarOrganizacao is the chip of the menu with none chosen;
+	// TrocarOrganizacao, its hint.
+	SelecionarOrganizacao string `i18n:"label='Select (chip)', hint='Chip of the organization menu item when none is chosen.'"`
+	TrocarOrganizacao     string `i18n:"label='Change the organization', hint='Hint of the chip of the organization menu item; title of its dialog.'"`
+	PesquisarOrganizacao  string `i18n:"label='Search organizations', hint='Placeholder of the search of the dialog that chooses the organization.'"`
+	NenhumaOrganizacao    string `i18n:"label='No organization', hint='Shown in the dialog that chooses the organization when none is found.'"`
 }
 
 // Messages_pt_BR is the Brazilian Portuguese translation (module default).
@@ -29,12 +36,17 @@ var Messages_pt_BR = &Messages{
 	OrganizacaoNome:      "Nome",
 	OrganizacaoDescricao: "Descrição",
 	OrganizacaoOwner:     "Proprietário",
+	OrganizacaoPadrao:    "Padrão",
 
 	Compartilhar:        "Compartilhar",
 	Compartilhamento:    "Compartilhamento",
 	CompartilharComDica: "Selecione os usuários com quem compartilhar esta organização.",
 
-	SelecioneOrganizacao: "Selecione a organização",
+	SelecioneOrganizacao:  "Selecione a organização",
+	SelecionarOrganizacao: "Selecionar",
+	TrocarOrganizacao:     "Trocar de organização",
+	PesquisarOrganizacao:  "Pesquisar organizações",
+	NenhumaOrganizacao:    "Nenhuma organização encontrada.",
 }
 
 // Messages_en_US is the American English translation.
@@ -46,10 +58,15 @@ var Messages_en_US = &Messages{
 	OrganizacaoNome:      "Name",
 	OrganizacaoDescricao: "Description",
 	OrganizacaoOwner:     "Owner",
+	OrganizacaoPadrao:    "Default",
 
 	Compartilhar:        "Share",
 	Compartilhamento:    "Sharing",
 	CompartilharComDica: "Select the users to share this organization with.",
 
-	SelecioneOrganizacao: "Select the organization",
+	SelecioneOrganizacao:  "Select the organization",
+	SelecionarOrganizacao: "Select",
+	TrocarOrganizacao:     "Change the organization",
+	PesquisarOrganizacao:  "Search organizations",
+	NenhumaOrganizacao:    "No organization found.",
 }

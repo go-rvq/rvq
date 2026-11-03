@@ -95,7 +95,9 @@ func configureNestedMenu(b *presets.Builder, db *gorm.DB) {
 		})
 		return
 	})
-	b.AddMenuTopItemFunc("orgs_nested_menu", NestedMenuPortal(b))
+	// the portal (NestedMenuPortal) is no longer in the side menu: the root
+	// item of the organization (menu_root.go) is; its event stays, for who
+	// draws the portal themselves
 }
 
 // capitalize upper-cases the first rune of the menu-group segment for its header.

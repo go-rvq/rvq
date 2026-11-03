@@ -47,6 +47,7 @@ type Builder struct {
 	switchLanguageFunc                    ComponentFunc
 	brandProfileSwitchLanguageDisplayFunc func(brand, profile, switchLanguage h.HTMLComponent) h.HTMLComponent
 	menuTopItems                          map[string]ComponentFunc
+	menuRootFuncs                         []MenuRootFunc
 	preMenuItems                          []*SideMenuItem
 	userMenuItems                         []*UserMenuItem
 	topBarItems                           []ComponentFunc
@@ -613,6 +614,16 @@ func (b *Builder) menuGroupOf(ref MenuRef) *MenuGroupBuilder {
 	return nil
 }
 
+// GetMenuGroup is the group of that name, nil when none was registered (it
+// registers nothing, unlike MenuGroup).
+func (b *Builder) GetMenuGroup(name string) *MenuGroupBuilder {
+	b.MenuTree()
+	if it := b.menuItems[menuKey(MenuItemGroup, name)]; it != nil {
+		return it.Group()
+	}
+	return nil
+}
+
 // MenuGroup finds or registers the group of that name. A group named by another
 // group before this call already exists as a reservation, and this fills it.
 func (b *Builder) MenuGroup(name string) *MenuGroupBuilder {
@@ -863,7 +874,40 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 	// The root's items, in order. Anything never moved sits here in the order it
 	// was registered, so a model or page nobody placed still shows up.
 	nodes, _ = itemNodes(b.MenuTree().items)
+
+	// the root nodes made at each request (AddMenuRootFunc), first: what
+	// depends on the request — the organization selected, say
+	var roots []*MenuNode
+	for _, f := range b.menuRootFuncs {
+		rn, opened, active := f(ctx)
+		roots = append(roots, rn...)
+		openedGroups = append(openedGroups, opened...)
+		if active != "" {
+			activated = []string{active}
+		}
+	}
+	nodes = append(roots, nodes...)
 	return
+}
+
+// menuChipClick runs the event of the chip of an item (MenuChip) at its URL,
+// with its query.
+var menuChipClick = web.Plaid().
+	URL(web.Var("item.props.chip.url")).
+	EventFunc(web.Var("item.props.chip.event")).
+	StringQuery(web.Var("item.props.chip.query || ''")).
+	Go()
+
+// MenuRootFunc makes, at a request, root nodes of the side menu: the nodes,
+// the values of those to open, and the value of the active one ("" none).
+type MenuRootFunc func(ctx *web.EventContext) (nodes []*MenuNode, opened []string, active string)
+
+// AddMenuRootFunc adds root nodes made at each request at the top of the
+// side menu (MenuRootFunc): a menu of what the request chose — the
+// resources of the organization selected, say.
+func (b *Builder) AddMenuRootFunc(f MenuRootFunc) *Builder {
+	b.menuRootFuncs = append(b.menuRootFuncs, f)
+	return b
 }
 
 func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
@@ -884,6 +928,19 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				Attr("v-else-if", "item.props && item.props.prependIcon").
 				Size(SizeSmall),
 		).Attr("v-slot:prepend", "{ item }"),
+		// a chip at the right of the item, when it has one (MenuNode.Chip):
+		// its click runs its event, the node neither opened nor activated
+		h.Template(
+			VChip(h.Text("{{ item.props.chip.title }}")).
+				Attr("v-if", "item.props && item.props.chip").
+				Attr(":prepend-icon", "item.props.chip.icon || undefined").
+				Attr(":color", "item.props.chip.color || 'primary'").
+				Attr(":title", "item.props.chip.hint || undefined").
+				Size(SizeSmall).
+				Variant(VariantTonal).
+				Class("rvq-menu-chip").
+				Attr("@click.stop", menuChipClick),
+		).Attr("v-slot:append", "{ item }"),
 	).
 		// in locals: the children loaded on opening a node stay with it
 		Attr(":items", "locals.items").

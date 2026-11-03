@@ -49,7 +49,8 @@ func OrgSelectorComponent(b *presets.Builder, db *gorm.DB) presets.ComponentFunc
 	}
 }
 
-// configureSelector installs the organization selector at the top of the menu.
-func configureSelector(b *presets.Builder, db *gorm.DB) {
-	b.AddMenuTopItemFunc("orgs_selector", OrgSelectorComponent(b, db))
-}
+// PreMenuItemSelector is the name of the pre-menu item of the selector, for
+// who adds it to the side menu themselves (AddPreMenuItem with
+// OrgSelectorComponent): the menu has the root item of the organization
+// instead (menu_root.go).
+const PreMenuItemSelector = "orgs_selector"

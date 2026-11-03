@@ -146,6 +146,9 @@ func (b *MenuGroupBuilder) TDescription(ctx context.Context) string {
 	return b.description(ctx)
 }
 
+// GetIcon is the icon of the group ("" none).
+func (b *MenuGroupBuilder) GetIcon() string { return b.icon }
+
 func (b *MenuGroupBuilder) Icon(v string) (r *MenuGroupBuilder) {
 	b.icon = v
 	return b

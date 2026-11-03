@@ -46,7 +46,9 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	messages.Register(pb.I18n())
 
 	configureOrganizacao(pb, b.db)
-	configureSelector(pb, b.db)
+	// the organization in the side menu: a root item, its chip opens the
+	// choice; the one chosen, its resources under it
+	configureMenuRoot(pb, b.db)
 	configureNestedMenu(pb, b.db)
 	shared.InstallInvites(pb, b.db)
 	return nil
