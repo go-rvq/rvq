@@ -3,7 +3,8 @@
 Totals of **all** the records of the filter of a listing (the search, the
 filters, the tab, the organization of the page), not only those of the page.
 They are shown as chips above the table, and they go with the records when
-the listing is asked serialized (the `presets_ListData` event).
+the listing is asked serialized (the `presets_ListData` event). The data
+operator computes them in the select of the count.
 
 ```go
 lb := mb.Listing()
@@ -50,38 +51,31 @@ lb.AggregatesGroupBy("t.currency_id", func(ctx *web.EventContext, key string) st
 - **`?aggregates=0`** leaves the aggregates out of a request.
   `ParamMustResult` (the records alone) leaves them out too.
 
-## The query: one, the one of the page
+## The query: the select of the count
 
-The gorm data operator (`gorm2op`) computes the page, the count and the
-aggregates in the same query:
+A search makes two selects: the count of the filter, then the records of the
+page. The aggregates go into the **select of the count**, the one that exists
+only to aggregate. The select of the records of the page stays as it is.
 
 ```sql
 WITH __agg_base AS (
 	SELECT DISTINCT t.id, <base> AS valor, <group> AS __agg_group FROM … <the filter> …
 )
-SELECT (SELECT COUNT(*) FROM __agg_base) AS __count,
+SELECT (SELECT COUNT(*) FROM __agg_base),
 	(SELECT json_agg(json_build_object('total', __agg."total", …))
-		FROM (SELECT SUM(valor) AS "total", … FROM __agg_base [GROUP BY __agg_group]) __agg) AS __aggs,
-	<the columns of the page>
-FROM … <the filter> … ORDER BY … LIMIT … OFFSET …
+		FROM (SELECT SUM(valor) AS "total", … FROM __agg_base [GROUP BY __agg_group]) __agg)
 ```
 
-- **The base** is the filtered query of the search, before the page, put in
-  the WITH (`gormutils.WithClause.DB`). A join that repeats a record counts it
-  once.
-- **`__count` and `__aggs`** are columns the model has no field for. gorm
-  discards them, so the capture of columns (`gormutils.CaptureColumns`) reads
-  them. The model keeps its hooks (`AfterFind`) and its preloads. PostgreSQL
-  runs each subquery once (an `InitPlan`), not once per row.
+- **The base** is the filtered query of the search, the one of the count (no
+  page, no order), put in the WITH (`gormutils.WithClause.DB`). The count is
+  of the records: a join that repeats a record counts it once.
+- **Always one row:** the count and the aggregates, whatever the page. On an
+  empty filter the count is 0 and there is no value. With the count 0, the
+  select of the records does not run, as before.
 - **The JSON** is `json_build_object` / `json_agg` in PostgreSQL, `json_object`
-  / `json_group_array` in SQLite and `JSON_OBJECT` / `JSON_ARRAYAGG` in MySQL.
-- **A page with no row:**
-  - on the first page, the filter is empty: the count is 0 and there is no
-    value, so no other query runs;
-  - past the end, a query of the aggregates alone runs, in named rows
-    (`name`, group, value).
-- **Without aggregates** the search is the same as before: a count, then the
-  page.
+  / `json_group_array` in SQLite and `JSON_OBJECT` / `JSON_ARRAYAGG` in MySQL:
+  one row of totals, or one per group.
+- **Without aggregates** the count is the same as before (gorm's `Count`).
 
 The values come back in `SearchParams.AggregateRows`, and the listing turns
 them into `SearchResult.Aggregates`. Another data operator has no aggregates.
@@ -109,8 +103,8 @@ them into `SearchResult.Aggregates`. Another data operator has no aggregates.
   - the totals of the whole filter, and a record repeated by a join counted
     once;
   - by group, including a group out of the page;
+  - the aggregates in the select of the count, and the select of the records
+    of the page as it was;
   - an empty filter;
   - past the end;
   - without aggregates.
-- `thirdpart/gorm/utils/capture_test.go`: the capture, in SQLite and in
-  PostgreSQL (`RVQ_TEST_POSTGRES`).

@@ -19,6 +19,14 @@ decisões no fim). A convenção está em `aggregates.md`. 2026-11-03.
   - presets: `AggregateBuilder`, os ajudantes, `SearchResult.Aggregates` e
     os chips no portal da tabela;
   - gorm2op: a consulta única (`aggregate.go`).
+- **Depois: as agregações foram para o SELECT de count.** O SELECT de
+  count existe só para agregar, e o dos registros da página volta a ser o de
+  sempre. A consulta de count passa a ser
+  `WITH __agg_base AS (…) SELECT (SELECT COUNT(*) …), (<json>)`, sempre uma
+  linha. Com isso saem a captura de colunas no gorm2op (ela continua no
+  `gorm/utils`, como ferramenta), as colunas `__count` e `__aggs` na página e
+  a consulta extra da página além do fim. As seções "A consulta: uma só" e
+  "A página vazia", abaixo, descrevem a versão anterior.
 - **A contagem mudou:** em vez de `COUNT(*) OVER ()`, é
   `(SELECT COUNT(*) FROM __agg_base)`. Assim ela conta os registros uma vez
   cada, mesmo com uma junção que os repete, e sai da mesma base dos totais.

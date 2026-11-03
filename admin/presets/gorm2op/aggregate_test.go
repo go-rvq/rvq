@@ -2,6 +2,7 @@ package gorm2op
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/model"
@@ -115,6 +116,30 @@ func TestSearchAggregates(t *testing.T) {
 		}
 	})
 
+	t.Run("the aggregates in the select of the count, the select of the records as it was", func(t *testing.T) {
+		op, db := newAggOperator(t, false)
+		var queries, rows []string
+		db.Callback().Query().After("gorm:query").Register("test:queries", func(db *gorm.DB) {
+			// the base, written into the WITH, is built (dry run), not run
+			if !db.DryRun {
+				queries = append(queries, db.Statement.SQL.String())
+			}
+		})
+		db.Callback().Row().After("gorm:row").Register("test:rows", func(db *gorm.DB) {
+			rows = append(rows, db.Statement.SQL.String())
+		})
+		var movs []*aggMov
+		if _, _, err := op.Search(&movs, aggParams(1), ctx); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 1 || !strings.Contains(rows[0], "WITH __agg_base AS") || !strings.Contains(rows[0], "SUM(valor)") {
+			t.Fatalf("the select of the count: %q", rows)
+		}
+		if len(queries) != 1 || strings.Contains(queries[0], "__agg") || !strings.Contains(queries[0], "LIMIT 2") {
+			t.Fatalf("the select of the records: %q", queries)
+		}
+	})
+
 	t.Run("grouped: a value of each group, a group out of the page too", func(t *testing.T) {
 		op, _ := newAggOperator(t, false)
 		params := aggParams(1)
@@ -140,7 +165,7 @@ func TestSearchAggregates(t *testing.T) {
 		}
 	})
 
-	t.Run("past the end: the totals by the query of them alone", func(t *testing.T) {
+	t.Run("past the end: the count and the totals all the same", func(t *testing.T) {
 		op, _ := newAggOperator(t, false)
 		params := aggParams(9)
 		var movs []*aggMov

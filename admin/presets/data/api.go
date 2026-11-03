@@ -43,17 +43,13 @@ type SearchParams struct {
 	Context        context.Context
 	MustCount      bool
 	// Aggregates asks the operator for aggregates of all the records of the
-	// filter — not only those of the page —, in the same query (none: no
-	// aggregate). The operator answers in AggregateRows.
+	// filter — not only those of the page —, in the select of the count
+	// (none: no aggregate). The operator answers in AggregateRows.
 	Aggregates *AggregateQuery
 	// AggregateRows are the values the operator found: one per aggregate (and
-	// group), and the count of the filter (AggregateCountName).
+	// group).
 	AggregateRows []*AggregateRow
 }
-
-// AggregateCountName is the name of the row of AggregateRows with the count
-// of the records of the filter.
-const AggregateCountName = "__count"
 
 // NamedExpr is an SQL expression and the name of its value.
 type NamedExpr struct {

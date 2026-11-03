@@ -15,8 +15,9 @@ import (
 // The aggregates of a listing: totals of all the records of its filter — not
 // only those of the page —, shown as chips above the table and sent with the
 // records when the listing is asked serialized (SearchResult.Aggregates). The
-// data operator computes them in the same query as the page (gorm2op: a WITH
-// of the filter, see docs/aggregates.md).
+// data operator computes them in the select of the count (gorm2op: a WITH of
+// the filter, see docs/aggregates.md); the select of the records stays as it
+// is.
 //
 //	lb.AggregateBase("valor", "<an expression of a record>")
 //	lb.Aggregate("total").Expr(presets.Sum("valor"))

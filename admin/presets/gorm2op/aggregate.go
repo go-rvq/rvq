@@ -3,96 +3,50 @@ package gorm2op
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/go-rvq/rvq/admin/presets/data"
-	gormutils "github.com/go-rvq/rvq/thirdpart/gorm/utils"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // AggregatingConfigKey marks (gorm's Set) the session of the base of the
-// aggregates of a search, as CountingConfigKey marks the one of the count: a
-// callback may leave out what the base needs not.
+// aggregates of a search — made from the one of the count (CountingConfigKey,
+// kept) —: a callback may leave out what the base needs not.
 const AggregatingConfigKey = "gorm2op:aggregating"
 
 const (
 	aggBaseTable  = "__agg_base"
 	aggGroupCol   = "__agg_group"
-	aggCountCol   = data.AggregateCountName
-	aggValuesCol  = "__aggs"
 	aggGroupKey   = "__group"
 	aggSubqueryAs = "__agg"
 )
 
-var captureRegistered sync.Map // *gorm.Config → true
-
-// registerCapture puts the capture of columns (utils.RegisterColumnCapture)
-// on the callbacks of db, once.
-func registerCapture(db *gorm.DB) error {
-	if _, ok := captureRegistered.Load(db.Config); ok {
-		return nil
-	}
-	if err := gormutils.RegisterColumnCapture(db); err != nil {
-		return err
-	}
-	captureRegistered.Store(db.Config, true)
-	return nil
-}
-
-// aggregateSearch is the page of the search with the count and the
-// aggregates of all the records of the filter, in the same query:
+// countWithAggregates is the select of the count of a search that asks for
+// aggregates — the count and the aggregates of all the records of the
+// filter, always one row:
 //
 //	WITH __agg_base AS (SELECT DISTINCT <pk>, <base>, <group> FROM … <the filter> …)
-//	SELECT (SELECT COUNT(*) FROM __agg_base) AS __count,
-//		(SELECT <json of the aggregates> FROM (SELECT … FROM __agg_base [GROUP BY]) __agg) AS __aggs,
-//		<the columns of the page> FROM … <the filter> … ORDER BY … LIMIT …
+//	SELECT (SELECT COUNT(*) FROM __agg_base),
+//		(SELECT <json of the aggregates> FROM (SELECT … FROM __agg_base [GROUP BY]) __agg)
 //
-// Both columns are read by the capture (the model has no field for them).
-// A page with no row: on the first page the filter is empty (count 0, no
-// value); past the end, a query of the aggregates alone, in named rows.
-func (b *DataOperatorBuilder) aggregateSearch(filtered, base, page *gorm.DB, params *data.SearchParams, find func(db *gorm.DB) (*gorm.DB, error)) (totalCount int, err error) {
-	q := params.Aggregates
-	if err = registerCapture(filtered); err != nil {
-		return
-	}
-
-	with := gormutils.WithClauses{{Name: aggBaseTable, DB: base}}
-	page = page.Clauses(with.DbClause(), prependColumns{
-		"(SELECT COUNT(*) FROM " + aggBaseTable + ") AS " + aggCountCol,
-		"(" + aggregatesJSON(filtered, q) + ") AS " + aggValuesCol,
-	})
-	page, capt := gormutils.CaptureColumns(page, aggCountCol, aggValuesCol)
-
-	if _, err = find(page); err != nil {
-		return
-	}
-
-	if raw, ok := capt.Values[aggCountCol]; ok {
-		if totalCount, err = strconv.Atoi(fmt.Sprint(raw)); err != nil {
-			return 0, fmt.Errorf("the count of the aggregates %q: %w", raw, err)
-		}
-		params.AggregateRows, err = parseAggregatesJSON(capt.Values[aggValuesCol], q)
-		return
-	}
-
-	if params.Page <= 1 {
-		// the filter is empty
-		return 0, nil
-	}
-	// past the end: the aggregates alone
-	rows, err := aggregateRows(filtered, base, q)
+// The count is of the records (DISTINCT by the primary key: a join that
+// repeats a record counts it once). The select of the records of the page
+// stays as it is.
+func countWithAggregates(counting *gorm.DB, obj any, q *data.AggregateQuery) (count int64, rows []*data.AggregateRow, err error) {
+	base, err := aggregateBase(counting, obj, q)
 	if err != nil {
 		return
 	}
-	for _, r := range rows {
-		if r.Name == aggCountCol {
-			totalCount, _ = strconv.Atoi(r.Value)
-			continue
-		}
-		params.AggregateRows = append(params.AggregateRows, r)
+	var aggs *string
+	err = counting.Session(&gorm.Session{NewDB: true}).
+		Raw("WITH "+aggBaseTable+" AS (?) SELECT (SELECT COUNT(*) FROM "+aggBaseTable+"), ("+aggregatesJSON(counting, q)+")", base).
+		Row().Scan(&count, &aggs)
+	if err != nil {
+		return 0, nil, fmt.Errorf("the count and the aggregates: %w", err)
+	}
+	// an empty filter has no value (not a null of each)
+	if aggs != nil && count > 0 {
+		rows, err = parseAggregatesJSON(*aggs, q)
 	}
 	return
 }
@@ -199,63 +153,7 @@ func parseAggregatesJSON(raw any, q *data.AggregateQuery) (rows []*data.Aggregat
 	return
 }
 
-// aggregateRows are the aggregates of the base alone, in named rows — name,
-// group, value (as text) —, and the row of the count.
-func aggregateRows(db, base *gorm.DB, q *data.AggregateQuery) (rows []*data.AggregateRow, err error) {
-	group, groupBy := "NULL", ""
-	if q.GroupBy != "" {
-		group, groupBy = "CAST("+aggGroupCol+" AS TEXT)", " GROUP BY "+aggGroupCol
-	}
-	var parts []string
-	for _, it := range q.Items {
-		parts = append(parts, "SELECT "+sqlString(it.Name)+" AS name, "+group+" AS grp, CAST("+it.Expr+" AS TEXT) AS value FROM "+aggBaseTable+groupBy)
-	}
-	parts = append(parts, "SELECT "+sqlString(aggCountCol)+", NULL, CAST(COUNT(*) AS TEXT) FROM "+aggBaseTable)
-
-	var found []struct {
-		Name  string
-		Grp   *string
-		Value *string
-	}
-	err = db.Session(&gorm.Session{NewDB: true}).
-		Raw("WITH "+aggBaseTable+" AS (?) "+strings.Join(parts, " UNION ALL "), base).
-		Scan(&found).Error
-	if err != nil {
-		return nil, fmt.Errorf("the aggregates: %w", err)
-	}
-	for _, f := range found {
-		r := &data.AggregateRow{Name: f.Name, HasGroup: q.GroupBy != "" && f.Name != aggCountCol}
-		if f.Grp != nil {
-			r.Group = *f.Grp
-		}
-		if f.Value == nil {
-			r.Null = true
-		} else {
-			r.Value = *f.Value
-		}
-		rows = append(rows, r)
-	}
-	return
-}
-
 // sqlString is s as an SQL string literal.
 func sqlString(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
-}
-
-// prependColumns are columns (SQL expressions with their aliases) written
-// before the columns of the SELECT (its AfterNameExpression).
-type prependColumns []string
-
-func (p prependColumns) ModifyStatement(stmt *gorm.Statement) {
-	c := stmt.Clauses["SELECT"]
-	c.AfterNameExpression = p
-	stmt.Clauses["SELECT"] = c
-}
-
-func (p prependColumns) Build(builder clause.Builder) {
-	for _, col := range p {
-		builder.WriteString(col)
-		builder.WriteString(", ")
-	}
 }

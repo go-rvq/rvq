@@ -96,8 +96,7 @@ capt.Values["__count"] // the count of the whole filter
   preloads.
 - **Values:** a value comes as the driver gives it. Bytes (a JSON in
   PostgreSQL) come as a copied string.
-- **No row, nothing captured:** the aggregates of the presets listings use it
-  that way (`admin/presets/docs/aggregates.md`).
+- **No row, nothing captured.**
 
 ## Raw SELECT columns (`select_column.go`)
 
