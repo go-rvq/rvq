@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"reflect"
+	"sync"
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -35,7 +36,26 @@ type TrashOptions struct {
 // gorm's soft delete, so they are hidden from the default listing. The tab is
 // added when the listing renders (presets.FilterTabsWrapper): the model's
 // FilterTabsFunc, set before or after, keeps it.
+//
+// Once per model: a second call (the model's own, after AutoTrash's, say)
+// only completes the options of the first — its OnRestore, a TableName the
+// first lacked —, no second tab nor action.
 func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
+	trashSetupsMu.Lock()
+	if prev := trashSetups[mb]; prev != nil {
+		if opts.OnRestore != nil {
+			prev.OnRestore = opts.OnRestore
+		}
+		if prev.TableName == "" {
+			prev.TableName = opts.TableName
+		}
+		trashSetupsMu.Unlock()
+		return
+	}
+	// the closures below read opts: what a second call sets reaches them
+	trashSetups[mb] = &opts
+	trashSetupsMu.Unlock()
+
 	registerMessages(mb.Builder())
 	lb := mb.Listing()
 
@@ -123,6 +143,12 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 			return nil
 		})
 }
+
+// trashSetups are the options of the models whose trash SetupTrash set up.
+var (
+	trashSetupsMu sync.Mutex
+	trashSetups   = map[*presets.ModelBuilder]*TrashOptions{}
+)
 
 // AutoTrash sets up the trash (SetupTrash) of every model of b made from now
 // on whose records are soft-deleted — a gorm.DeletedAt field —, listed by

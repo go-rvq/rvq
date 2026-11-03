@@ -50,7 +50,7 @@ func InstallManager(mb *presets.ModelBuilder, db *gorm.DB) {
 		return "perms:" + res, res + "*", true
 	}
 
-	mb.Detailing().Action(PermManage).
+	mb.Detailing().Action(PermManageAction).
 		Icon("mdi-shield-key").
 		SetI18nLabel(func(ctx context.Context) string { return msgs(ctx).ManageTitle }).
 		SetVerifier(func(ctx *web.EventContext) *perm.Verifier {

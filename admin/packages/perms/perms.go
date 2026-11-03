@@ -27,9 +27,14 @@ var (
 // restore action.
 const PermTrash = "@trash"
 
-// PermManage is the perm verb (and action name) that guards the permission
-// manager itself.
-const PermManage = "!manage_permissions"
+// PermManageAction is the name of the detail action of the permission
+// manager; PermManage, the perm verb that guards it — the action's own
+// (presets.ActionPerm of its name), so the permission tree grants the verb
+// that is checked.
+const PermManageAction = "manage_permissions"
+
+// PermManage is the perm verb that guards the permission manager itself.
+var PermManage = presets.ActionPerm(PermManageAction)
 
 // RecordResource returns the exact permission resource string of a record, as
 // computed by the presets permissioner (the module "presets" is already seeded
