@@ -8,12 +8,22 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+// AssociationDB is the *gorm.DB of the records of assoc: its condition —
+// gorm's (*Association).buildCondition, by go:linkname.
+//
 //go:linkname AssociationDB gorm.io/gorm.(*Association).buildCondition
 func AssociationDB(assoc *Association) *DB
 
+// Instance is the statement instance of db — gorm's (*DB).getInstance, by
+// go:linkname.
+//
 //go:linkname Instance gorm.io/gorm.(*DB).getInstance
 func Instance(*DB) *DB
 
+// AssociationManager holds the SQL that filters, links and unlinks the
+// records of a many-to-many association through its join table. Its queries
+// assume integer ids (BIGINT casts, a related table's "id" column): to link
+// and unlink records of any key, prefer gorm's Association API (README).
 type AssociationManager struct {
 	assoc *Association
 	relatedTable,
@@ -21,6 +31,8 @@ type AssociationManager struct {
 	deleteQuery, linkQuery string
 }
 
+// NewAssociationManager is the manager of assoc: its queries made for a
+// many-to-many relationship (none for the others).
 func NewAssociationManager(assoc *Association) *AssociationManager {
 	a := &AssociationManager{assoc: assoc}
 	relation := assoc.Relationship

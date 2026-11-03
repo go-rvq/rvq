@@ -12,8 +12,8 @@ Import path: `github.com/go-rvq/rvq/thirdpart/gorm/utils`.
 | File | What |
 |------|------|
 | `relationship.go` | Key & relationship helpers: parent filters, foreign-key resolution, primary-key matching. Composite- and any-type-aware. |
-| `select_column.go` | `RawColumn` / `SetRawColumn` — inject a raw SQL expression as a named SELECT column. |
-| `with.go` | `WithClause` / `WithClauses` / `WithDbClause` — build and attach SQL `WITH` (CTE) clauses to a gorm statement. |
+| `select_column.go` | `RawColumn` / `SetRawColumn` — a SELECT column made of a raw SQL expression. |
+| `with.go` | `WithClause` / `WithClauses` / `WithDbClause` — a `WITH [RECURSIVE]` (common table expressions) before a gorm query: the `clause.With` gorm lacks. |
 | `association.go` | `AssociationDB` / `Instance` — `//go:linkname` accessors into gorm internals (`(*Association).buildCondition`, `(*DB).getInstance`). |
 
 ## Keys & relationships (`relationship.go`)
@@ -45,3 +45,47 @@ provide only the read/filter side that the Association API does not.
 
 See `docs/keys.md` for the rationale and worked examples, and
 `relationship_test.go` for composite has-many / many-to-many / belongs-to tests.
+
+## WITH clauses (`with.go`)
+
+gorm's `clause.With` is an empty type. `WithClauses` builds the WITH, and
+`DbClause()` puts it before the SELECT (or, named, before the UPDATE or
+DELETE) of a query:
+
+```go
+with := gormutils.WithClauses{{
+	Name:      "tree",
+	Recursive: true, // any recursive table: WITH RECURSIVE
+	Query: `SELECT n.* FROM nodes n WHERE n.id = ?
+UNION
+SELECT c.* FROM nodes c JOIN tree t ON c.parent_id = t.id`,
+	Args: []any{rootID},
+}}
+err := db.Clauses(with.DbClause()).Table("tree").Find(&nodes).Error
+// WITH RECURSIVE tree AS (…) SELECT * FROM `tree`
+```
+
+The main query refers to the tables by name (`Table`, `Joins`, a subquery),
+and two `DbClause` on one query make a single WITH. More examples, and how it
+works: `docs/with.md`.
+
+## Raw SELECT columns (`select_column.go`)
+
+`SetRawColumn(table, name, query)` selects `query AS name` in place of the
+column `table.name` of the model. That column can be selected by `Select`,
+or by the model itself (`QueryFields`, a `Joins`). When nothing is selected,
+the expression goes before the `*`:
+
+```go
+db.Clauses(gormutils.SetRawColumn("nodes", "double", "value * 2")).
+	Table("nodes").Select("id", "double").Find(&rows)
+// SELECT `id`,value * 2 AS double FROM `nodes`
+```
+
+The query is written as it is: `Args` are not bound.
+
+## Examples
+
+`example_test.go` has runnable examples of the WITH clauses and the raw
+columns. `go test` checks the SQL they build, using a dry-run SQLite
+database (`go doc -all` shows them).
