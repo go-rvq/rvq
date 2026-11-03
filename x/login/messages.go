@@ -177,7 +177,7 @@ var Messages_en_US = &Messages{
 	BackToAccount:                       "Back to %s",
 	SignOutBtn:                          "Sign Out",
 	LoginAgainTitle:                     "Please sign in again",
-	ForgetPasswordLink:                  "Forget your password?",
+	ForgetPasswordLink:                  "Forgot your password?",
 	KeepSignedInLabel:                   "Keep me signed in on this device",
 	ForgetPasswordPageTitle:             "Forget Your Password?",
 	ForgotMyPasswordTitle:               "I forgot my password",

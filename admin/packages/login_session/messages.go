@@ -48,7 +48,7 @@ type Messages struct {
 var (
 	Messages_en_US = &Messages{
 		ModuleDescription:          "The login sessions of the users: where and when they signed in.",
-		SignOutAllOtherSessions:    "Signout all other sessions",
+		SignOutAllOtherSessions:    "Sign out all other sessions",
 		SignOutAllSuccessfullyTips: "Sign out all successfully",
 		ChangePassword:             "Change password",
 		LoginSessions:              "Login Sessions",

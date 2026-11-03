@@ -18,8 +18,7 @@ loginBuilder.KeepSignedIn(30 * 24 * 60 * 60) // 30 days
 - **The claims:** `UserClaims.KeepSignedIn`. The renewal of the middleware
   keeps it, and so does the second factor (TOTP).
 - **The cookies of the session:** their max age is the time left until the
-  claims expire (`cookieMaxAge`). A session that stays signed in keeps its
-  cookies across a restart of the browser.
+  claims expire (`cookieMaxAge`), across restarts of the browser.
 - **The max age of a request:** `Builder.SessionMaxAgeOf(r)` is the one of the
   session of `r`. The log of the sessions
   (`admin/packages/login_session`) uses it for `expired_at`, so that check does
