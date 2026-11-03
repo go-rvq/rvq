@@ -9,13 +9,13 @@ import (
 )
 
 // AssociationDB is the *gorm.DB of the records of assoc: its condition —
-// gorm's (*Association).buildCondition, by go:linkname.
+// gorm's (*Association).buildCondition, linked by name.
 //
 //go:linkname AssociationDB gorm.io/gorm.(*Association).buildCondition
 func AssociationDB(assoc *Association) *DB
 
-// Instance is the statement instance of db — gorm's (*DB).getInstance, by
-// go:linkname.
+// Instance is the statement instance of db — gorm's (*DB).getInstance,
+// linked by name.
 //
 //go:linkname Instance gorm.io/gorm.(*DB).getInstance
 func Instance(*DB) *DB
