@@ -104,7 +104,19 @@ type ModelSelectorBuilder struct {
 	configureSelector   func(fctx *presets.FieldContext, input *vx.VXAdvancedSelectBuilder)
 	recordEncodeFactory *RecordEncodeFactory
 	many                bool
+	selectMode          SelectMode
 }
+
+// SelectMode is how a ModelSelectorBuilder chooses the record.
+type SelectMode uint8
+
+const (
+	// SelectDialog: a dialog with the search, the list and the pages (the
+	// default).
+	SelectDialog SelectMode = iota
+	// SelectAutocomplete: an autocomplete under the field.
+	SelectAutocomplete
+)
 
 // NewModelSelectorBuilder starts a selector for the belongs-to field on model.
 // Call Build (or the ModelSelect shortcut) once configured.
@@ -193,6 +205,16 @@ func (b *ModelSelectorBuilder) Many() bool {
 	return b.many
 }
 
+// SetSelectMode sets how the record is chosen: SelectDialog (the default) or
+// SelectAutocomplete.
+func (b *ModelSelectorBuilder) SetSelectMode(m SelectMode) *ModelSelectorBuilder {
+	b.selectMode = m
+	return b
+}
+
+// SelectMode is how the record is chosen.
+func (b *ModelSelectorBuilder) SelectMode() SelectMode { return b.selectMode }
+
 // Build wires the selector into the owner model: it resolves the foreign model
 // and foreign-key columns, registers the edit/detail/list components and the
 // setter, and installs the data operator that joins the association on reads and
@@ -203,6 +225,7 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		field, _ := b.Model.ModelType().Elem().FieldByName(b.Field)
 		b.foreignModel = b.Model.Builder().GetModel(field.Type)
 	}
+	ensureMessages(b.Model.Builder().I18n())
 
 	b.Model.UpdateDataOperator(func(dataOperator presets.DataOperator) presets.DataOperator {
 		return dataOperator.(*gorm2op.DataOperatorBuilder).WrapPrepare(func(old gorm2op.Preparer) gorm2op.Preparer {
@@ -366,8 +389,12 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			}
 		}
 
+		// the listing of the foreign model at the parents of the request (a
+		// model mounted under another — an organization, say — has them in
+		// its URL: {parent_0_id})
+		parents, _ := presets.ResolveParentsModelID(b.parents, ctx.R)
 		searcher := searcher.Clone().
-			URL(b.foreignModel.Info().ListingHref())
+			URL(b.foreignModel.Info().ListingHref(parents...))
 
 		val := field.Value()
 		var (
@@ -441,6 +468,12 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			// rather than an invalid bare literal.
 			Attr(":model-value", h.JSONString(assign)).
 			Many(b.many)
+
+		if b.selectMode == SelectDialog {
+			msgs := GetMessages(ctx.Context())
+			selector.Dialog(true).DialogTexts(field.Label, msgs.SelectorSelect, msgs.SelectorChange,
+				msgs.SelectorSearch, msgs.SelectorNoItems, msgs.SelectorClose)
+		}
 
 		configureSelector(field, selector)
 

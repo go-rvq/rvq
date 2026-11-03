@@ -148,7 +148,40 @@ const (
 	// are flat paths (e.g. "PageOptions.Layout", "Tags[0].Name"); the component
 	// builds the tree from them. The selected values are the chosen paths.
 	ItemTypeTreeSelect FilterItemType = "TreeSelectItem"
+	// ItemTypeRecordPicker filters by records of a model chosen in a dialog
+	// (the AdvancedSelect's): the search is the records event of the model's
+	// listing (RecordPickerConfig, its Config). The value goes as a list —
+	// key.in=a,b —, one record or many; Options are the records chosen
+	// (their labels).
+	ItemTypeRecordPicker FilterItemType = "RecordPickerItem"
 )
+
+// the Config of a record picker survives a FilterData.Clone (gob)
+func init() { gob.Register(&RecordPickerConfig{}) }
+
+// RecordPickerConfig is the Config of an ItemTypeRecordPicker filter item.
+type RecordPickerConfig struct {
+	// URL of the model's listing: its records event (Event, none:
+	// presets_ListData) answers the search, with keyword and page.
+	URL   string `json:"url"`
+	Event string `json:"event,omitempty"`
+	// Query is more of the query of the search (the encoder of the titles).
+	Query     map[string]string `json:"query,omitempty"`
+	ItemValue string            `json:"itemValue,omitempty"`
+	ItemText  string            `json:"itemText,omitempty"`
+	// Many: more than one record may be chosen.
+	Many  bool              `json:"many,omitempty"`
+	Texts RecordPickerTexts `json:"texts,omitempty"`
+}
+
+// RecordPickerTexts are the texts of the dialog of a record picker.
+type RecordPickerTexts struct {
+	Select  string `json:"select,omitempty"`
+	Change  string `json:"change,omitempty"`
+	Search  string `json:"search,omitempty"`
+	NoItems string `json:"noItems,omitempty"`
+	Close   string `json:"close,omitempty"`
+}
 
 type FilterItemModifier string
 
@@ -426,7 +459,7 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 						it.Modifier = ModifierEquals
 					}
 
-					if it.ItemType == ItemTypeMultipleSelect || it.ItemType == ItemTypeTreeSelect {
+					if it.ItemType == ItemTypeMultipleSelect || it.ItemType == ItemTypeTreeSelect || it.ItemType == ItemTypeRecordPicker {
 						switch mod {
 						case "in":
 							it.Modifier = ModifierIn

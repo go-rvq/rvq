@@ -459,3 +459,23 @@ func TestSetByQueryString(t *testing.T) {
 		})
 	}
 }
+
+// A record picker goes as key.in: one record or many, an IN of the keys; the
+// item is selected with them.
+func TestSetByQueryStringRecordPicker(t *testing.T) {
+	fd := FilterData{{Key: "moeda", ItemType: ItemTypeRecordPicker, SQLCondition: "moeda_id {op} ?"}}
+	cond, args := fd.SetByQueryString("moeda.in=a,b")
+	if cond != "moeda_id IN ?" {
+		t.Fatalf("cond %q", cond)
+	}
+	if len(args) != 1 || len(args[0].([]string)) != 2 || args[0].([]string)[1] != "b" {
+		t.Fatalf("args %#v", args)
+	}
+	if !fd[0].Selected || fd[0].Modifier != ModifierIn || len(fd[0].ValuesAre) != 2 {
+		t.Fatalf("item %+v", fd[0])
+	}
+	cond, args = fd.SetByQueryString("moeda.in=a")
+	if cond != "moeda_id IN ?" || len(args[0].([]string)) != 1 {
+		t.Fatalf("one: %q %#v", cond, args)
+	}
+}

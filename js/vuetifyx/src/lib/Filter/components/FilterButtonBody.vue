@@ -112,6 +112,15 @@ const showValueComputed = computed(() => {
         }
         break
       }
+      case 'RecordPickerItem': {
+        // the labels of the records chosen (the options), else their keys
+        if (props.op.valuesAre && props.op.valuesAre.length > 0) {
+          showValue = props.op.valuesAre
+            .map((v) => props.op.options?.find((o) => o.value === v)?.text ?? v)
+            .join(', ')
+        }
+        break
+      }
       case 'TreeSelectItem': {
         // valuesAre are the selected paths themselves ("PageOptions.Layout", …).
         const mod = props.op.modifier || 'in'

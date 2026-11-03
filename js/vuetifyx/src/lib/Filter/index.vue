@@ -15,6 +15,7 @@ import SelectItem from '@/lib/Filter/components/SelectItem.vue'
 import TreeSelectItem from '@/lib/Filter/components/TreeSelectItem.vue'
 import MonthRangeItem from '@/lib/Filter/components/MonthRangeItem.vue'
 import MonthItem from '@/lib/Filter/components/MonthItem.vue'
+import RecordPickerItem from '@/lib/Filter/components/RecordPickerItem.vue'
 
 const props = defineProps({
   internalValue: { type: Array<any>, required: true },
@@ -62,7 +63,8 @@ const itemTypes: any = {
   LinkageSelectItem,
   MultipleSelectItem,
   SelectItem,
-  TreeSelectItem
+  TreeSelectItem,
+  RecordPickerItem
 }
 
 const trans = computed<any>(() => {
@@ -78,7 +80,8 @@ const trans = computed<any>(() => {
     SelectItem: {},
     MultipleSelectItem: t.multipleSelect,
     TreeSelectItem: t.multipleSelect,
-    LinkageSelectItem: {}
+    LinkageSelectItem: {},
+    RecordPickerItem: {}
   }
 })
 

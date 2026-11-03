@@ -15,6 +15,7 @@ type VXAdvancedSelectBuilder struct {
 	itemsSearcher   *web.VueEventTagBuilder
 	many            bool
 	chips           bool
+	dialog          bool
 }
 
 func VXAdvancedSelect(children ...h.HTMLComponent) *VXAdvancedSelectBuilder {
@@ -43,6 +44,26 @@ func (b *VXAdvancedSelectBuilder) ItemsSearcher(eb *web.VueEventTagBuilder) *VXA
 func (b *VXAdvancedSelectBuilder) Many(v bool) *VXAdvancedSelectBuilder {
 	b.many = v
 	return b
+}
+
+// Dialog makes the selector open in a dialog — the search, the list of a page
+// of the records, the pages — in place of the autocomplete. The items, the
+// value and the cache of the chosen ones stay the same; with an ItemsSearcher,
+// the search asks for the page too.
+func (b *VXAdvancedSelectBuilder) Dialog(v bool) *VXAdvancedSelectBuilder {
+	b.dialog = v
+	return b
+}
+
+// IsDialog says the selector opens in a dialog.
+func (b *VXAdvancedSelectBuilder) IsDialog() bool { return b.dialog }
+
+// DialogTexts are the texts of the dialog: its title (none: the label), the
+// chip that opens it (to choose, to change the one chosen), the search, the
+// empty list and the button that closes it.
+func (b *VXAdvancedSelectBuilder) DialogTexts(title, sel, change, search, noItems, close string) *VXAdvancedSelectBuilder {
+	return b.Attr("dialog-title", title, "select-text", sel, "change-text", change,
+		"search-text", search, "no-items-text", noItems, "close-text", close)
 }
 
 func (b *VXAdvancedSelectBuilder) Chips(v bool) *VXAdvancedSelectBuilder {
@@ -78,6 +99,10 @@ func (b *VXAdvancedSelectBuilder) Write(ctx *h.Context) (err error) {
 	if b.itemsSearcher != nil {
 		s := b.itemsSearcher.String()
 		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return %s.query("keyword", val).json().then(v => v.Records)}`, s))
+		if b.dialog {
+			// a page of the search: the records, the total, the size of a page
+			b.Attr(":search-page-func", fmt.Sprintf(`function(val, page){return %s.query("keyword", val).query("page", String(page)).json()}`, s))
+		}
 	} else if b.searchItemsFunc != "" {
 		b.Attr(":search-items-func", fmt.Sprintf(`function(val){return $plaid().eventFunc("%s").query("keyword", val).json().then(v => v.Records)}`, b.searchItemsFunc))
 	}
@@ -92,6 +117,10 @@ func (b *VXAdvancedSelectBuilder) Write(ctx *h.Context) (err error) {
 
 	if b.chips {
 		b.Attr("chips", true)
+	}
+
+	if b.dialog {
+		b.Attr("dialog", true)
 	}
 
 	return b.GetHTMLTagBuilder().Write(ctx)

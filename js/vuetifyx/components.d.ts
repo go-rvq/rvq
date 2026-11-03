@@ -62,6 +62,7 @@ declare module 'vue' {
     NumberItem: typeof import('./src/lib/Filter/components/NumberItem.vue')['default']
     PortalExample: typeof import('./src/demo/components/PortalExample.vue')['default']
     PreviewActionButton: typeof import('./src/lib/TipTap/components/PreviewActionButton.vue')['default']
+    RecordPickerItem: typeof import('./src/lib/Filter/components/RecordPickerItem.vue')['default']
     RestoreScrollListener: typeof import('./src/lib/RestoreScrollListener.vue')['default']
     ScrollIframe: typeof import('./src/lib/ScrollIframe.vue')['default']
     ScrollIframeExample: typeof import('./src/demo/components/ScrollIframeExample.vue')['default']

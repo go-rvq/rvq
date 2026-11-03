@@ -12,6 +12,22 @@ func (b *ListingBuilder) WrapFilterDataFunc(f func(old FilterDataFunc) FilterDat
 	return b
 }
 
+// FilterKeyPrefix is the prefix of the keys of the filter items in the query
+// of the listing (FilterDataFunc): the item "tipo" is the parameter
+// "f_tipo".
+const FilterKeyPrefix = "f_"
+
+// FilterQueryValue is the value of the filter item key (as FilterDataFunc
+// declared it, no prefix) in the query of the request — "f_<key>" —, with
+// its modifier (".in", ".gte"…) when given.
+func FilterQueryValue(ctx *web.EventContext, key string, mod ...string) string {
+	k := FilterKeyPrefix + key
+	if len(mod) > 0 && mod[0] != "" {
+		k += "." + mod[0]
+	}
+	return ctx.R.URL.Query().Get(k)
+}
+
 func (b *ListingBuilder) FilterDataFunc(v FilterDataFunc) *ListingBuilder {
 	if v == nil {
 		b.filterDataFunc = nil
@@ -24,7 +40,7 @@ func (b *ListingBuilder) FilterDataFunc(v FilterDataFunc) *ListingBuilder {
 			if k == nil {
 				continue
 			}
-			k.Key = "f_" + k.Key
+			k.Key = FilterKeyPrefix + k.Key
 			r = append(r, k)
 		}
 		return
@@ -48,7 +64,7 @@ func (b *ListingBuilder) FilterTabsFunc(v FilterTabsFunc) *ListingBuilder {
 		for _, ft := range fts {
 			newQuery := make(url.Values)
 			for k := range ft.Query {
-				newQuery["f_"+k] = ft.Query[k]
+				newQuery[FilterKeyPrefix+k] = ft.Query[k]
 			}
 			ft.Query = newQuery
 		}

@@ -9,7 +9,8 @@ parent form.
 | File | Purpose |
 |------|---------|
 | `nestedslice.go` | `NestedSlice` / `NestedSliceBuilder` — edit a parent's **has-many** or **many-to-many** field as a list of related records (with a model selector for m2m). |
-| `model_select.go` | `ModelSelectorBuilder` — a **belongs-to** (foreign-key) single/multi select bound to the owner's foreign-key column(s). |
+| `model_select.go` | `ModelSelectorBuilder` — a **belongs-to** (foreign-key) single/multi select bound to the owner's foreign-key column(s), chosen in a dialog. |
+| `model_filter.go` | `ModelFilterItem` — a filter item of a listing by records of a model, chosen in the same dialog. |
 | `association.go` | `AssociationManagerBuilder` — wires a data operator for an association field. |
 | `inline_edit.go` | `InlineEdit` / `InlineEditModel` — edit a child record inline in the parent form. |
 | `fields.go` | field / admin-tag helpers (`AdminTag`, `KeyValueArray`). |
@@ -47,6 +48,20 @@ types** all work, and **composite keys (two or more columns)** are supported.
   zeroes them all. So a composite foreign key is persisted in full.
 - Selected values are exchanged as `model.ID` strings (composite keys join their
   parts with `_`; see `presets.ParseRecordID`).
+- **The record is chosen in a dialog** by default (`SelectDialog`): the
+  `VXAdvancedSelect` with `Dialog(true)`.
+  - The dialog is a `VXDialog` (it expands and closes) with the search, a page
+    of the records and the pages, all from the `presets_ListData` event of the
+    listing of the foreign model, at the parents of the request.
+  - The chosen record shows with its change as an icon on its right.
+  - `SetSelectMode(SelectAutocomplete)` goes back to the autocomplete.
+- **`ModelFilterItem(mb, ctx, key, label, column, many)`** is the filter item of
+  a listing by records of `mb`, chosen in the same dialog
+  (`vx.ItemTypeRecordPicker`).
+  - The condition is `column IN (?)`, and the value goes in the query as
+    `f_<key>.in=a,b`.
+  - The records chosen in the request come as its options, so the filter
+    shows their titles.
 
 ## Related
 

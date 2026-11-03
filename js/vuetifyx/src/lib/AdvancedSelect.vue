@@ -19,6 +19,14 @@
             {{ item[itemText] }}
             <template v-slot:append>
               <v-btn
+                v-if="dialog && !many"
+                density="compact"
+                variant="text"
+                icon="mdi-swap-horizontal"
+                :title="changeText"
+                @click="openDialog"
+              ></v-btn>
+              <v-btn
                 density="compact"
                 variant="text"
                 icon="mdi-delete"
@@ -43,6 +51,17 @@
               :title="element[itemText]"
               animation="300"
             >
+              <template v-if="dialog && !many" v-slot:append>
+                <!-- the change of the one chosen: on its right -->
+                <v-btn
+                  variant="text"
+                  icon="mdi-swap-horizontal"
+                  density="compact"
+                  :title="changeText"
+                  class="vx-advanced-select__change"
+                  @click="openDialog"
+                ></v-btn>
+              </template>
               <template v-slot:prepend>
                 <v-icon
                   v-if="many"
@@ -63,8 +82,75 @@
       </v-list>
     </v-card>
 
+    <template v-if="dialog">
+      <!-- the selector in a dialog: the search, the list, the pages -->
+      <v-chip
+        v-if="many || !internalSelectedItems.length"
+        class="vx-advanced-select__open mb-2"
+        prepend-icon="mdi-magnify"
+        variant="outlined"
+        size="small"
+        :color="errorMessages.length ? 'error' : undefined"
+        @click="openDialog"
+        >{{ selectText }}</v-chip
+      >
+      <div v-if="errorMessages.length" class="v-messages" style="opacity: 1; color: rgb(var(--v-theme-error))">
+        <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">{{ item }}</div>
+      </div>
+      <vx-dialog
+        v-model="dialogOpen"
+        :title="dialogTitle || label"
+        :container-props="{ maxWidth: 600 }"
+        density="compact"
+        expandable
+        closable
+        :class="['vx-advanced-select__dialog', { 'vx-advanced-select__dialog--top': dialogOnTop }]"
+      >
+        <template v-slot:body>
+          <v-text-field
+            v-model="dialogKeyword"
+            prepend-inner-icon="mdi-magnify"
+            :label="searchText"
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+            autofocus
+            autocomplete="off"
+            class="mb-2"
+            @update:model-value="dialogSearch"
+          />
+          <v-progress-linear v-if="isLoading" indeterminate />
+          <v-list density="compact">
+            <v-list-item
+              v-for="item in dialogItems"
+              :key="item[itemValue]"
+              :title="item[itemText]"
+              :prepend-avatar="item[itemImage]"
+              :active="isSelected(item)"
+              color="primary"
+              @click="pick(item)"
+            >
+              <template v-if="many" v-slot:prepend>
+                <v-checkbox-btn :model-value="isSelected(item)" density="compact" />
+              </template>
+            </v-list-item>
+            <v-list-item v-if="!isLoading && !dialogItems.length" :title="noItemsText" disabled />
+          </v-list>
+          <v-pagination
+            v-if="dialogPages > 1"
+            v-model="dialogPage"
+            :length="dialogPages"
+            :total-visible="7"
+            density="compact"
+            @update:model-value="loadDialog"
+          />
+        </template>
+      </vx-dialog>
+    </template>
+
     <v-autocomplete
-      v-if="selecting"
+      v-else-if="selecting"
       :item-value="itemValue"
       :item-title="itemText"
       :items="internalItems"
@@ -110,6 +196,7 @@
 </template>
 <script setup lang="ts">
 import draggable from 'vuedraggable'
+import VxDialog from '@/lib/Dialog.vue'
 
 import {isReactive, onMounted, ref, toRaw, watch} from 'vue'
 
@@ -166,7 +253,29 @@ const props = defineProps({
   autoComplete: {
     type: Object,
     default: {}
-  }
+  },
+  // dialog: the selector opens in a dialog — the search, the list, the pages
+  // — in place of the autocomplete; the items, the value and the cache of the
+  // chosen ones are the same
+  dialog: {
+    type: Boolean,
+    default: false
+  },
+  // searchPageFunc(keyword, page) is a page of the search: {Records,
+  // TotalCount, PerPage}; none, searchItemsFunc(keyword), a page alone
+  searchPageFunc: {
+    type: Function,
+    default: null
+  },
+  dialogTitle: { type: String, default: '' },
+  // dialogOnTop: the dialog above the overlay it opens from (the menu of a
+  // filter, whose z-index is high)
+  dialogOnTop: { type: Boolean, default: false },
+  selectText: { type: String, default: 'Select' },
+  changeText: { type: String, default: 'Change' },
+  searchText: { type: String, default: 'Search' },
+  noItemsText: { type: String, default: 'No items' },
+  closeText: { type: String, default: 'Close' }
 })
 
 const modelValue = defineModel()
@@ -302,6 +411,8 @@ const setValue = (oldItems: any[]) => {
   selecting.value = many || internalSelectedItems.value.length == 0
   updating.v = true
   emit('update:modelValue', val)
+  // the records chosen, whole: their labels for who shows them (a filter)
+  emit('update:selectedItems', internalSelectedItems.value)
 }
 
 let search: any,
@@ -349,4 +460,90 @@ if (props.searchItemsFunc) {
     doSearch(searchTerm.value)
   }
 }
+
+// the dialog of the selector
+const dialogOpen = ref(false)
+const dialogKeyword = ref<string>('')
+const dialogItems = ref<any[]>([])
+const dialogPage = ref(1)
+const dialogPages = ref(0)
+
+const isSelected = (item: any) =>
+  internalSelectedItems.value.some(
+    (s: any) => s && item && String(s[props.itemValue]) === String(item[props.itemValue])
+  )
+
+const loadDialog = () => {
+  const keyword = dialogKeyword.value || ''
+  let p: Promise<any>
+  if (props.searchPageFunc) {
+    p = props.searchPageFunc(keyword, dialogPage.value)
+  } else if (props.searchItemsFunc) {
+    p = props.searchItemsFunc(keyword).then((records: any[]) => ({ Records: records }))
+  } else {
+    // no search: the items given, filtered here
+    const k = keyword.toLowerCase()
+    p = Promise.resolve({
+      Records: (props.items as any[]).filter(
+        (i: any) => !k || String(i[props.itemText] ?? '').toLowerCase().includes(k)
+      )
+    })
+  }
+  isLoading.value = true
+  p.then((r: any) => {
+    const records = r?.Records || []
+    dialogItems.value = records
+    // the items known: the labels of the chosen ones
+    internalItems.value = records
+    const perPage = r?.PerPage || records.length
+    dialogPages.value = perPage && r?.TotalCount ? Math.ceil(r.TotalCount / perPage) : 0
+  }).finally(() => {
+    isLoading.value = false
+  })
+}
+
+let dialogSearchTimeout: any
+const dialogSearch = () => {
+  clearTimeout(dialogSearchTimeout)
+  dialogSearchTimeout = setTimeout(() => {
+    dialogPage.value = 1
+    loadDialog()
+  }, 400)
+}
+
+const openDialog = () => {
+  dialogOpen.value = true
+  dialogPage.value = 1
+  loadDialog()
+}
+
+// pick chooses item: one, the dialog closes; many, it is marked or unmarked
+const pick = (item: any) => {
+  const oldItems = internalSelectedItems.value
+  if (isSelected(item)) {
+    if (!many) {
+      dialogOpen.value = false
+      return
+    }
+    internalSelectedItems.value = oldItems.filter(
+      (s: any) => String(s[props.itemValue]) !== String(item[props.itemValue])
+    )
+  } else if (many) {
+    internalSelectedItems.value = [...oldItems, item]
+  } else {
+    internalSelectedItems.value = [item]
+  }
+  setValue(oldItems)
+  if (!many) {
+    dialogOpen.value = false
+  }
+}
+
+defineExpose({ openDialog, pick })
 </script>
+
+<style>
+.vx-advanced-select__dialog--top {
+  z-index: 100010 !important;
+}
+</style>
