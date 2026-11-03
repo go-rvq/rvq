@@ -7,6 +7,9 @@
 //     WithDbClause put a WITH [RECURSIVE] before a query — the clause.With
 //     gorm lacks (an empty type there) — (docs/with.md);
 //   - a raw SELECT column (select_column.go): RawColumn, SetRawColumn;
+//   - the capture of the columns a model has no field for (capture.go):
+//     RegisterColumnCapture, CaptureColumns — a total of the whole filter
+//     read in the query of a page, say;
 //   - gorm internals (association.go): AssociationDB and Instance, linked by
 //     name to gorm's, and AssociationManager.
 package utils

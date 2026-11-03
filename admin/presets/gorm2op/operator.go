@@ -232,6 +232,10 @@ func (b *DataOperatorBuilder) Search(obj interface{}, params *presets.SearchPara
 	var (
 		db = b.Prepare(Search, obj, model.ID{}, params, ctx)
 		do = func(state *CallbackState) (err error) {
+			if q := params.Aggregates; q != nil && len(q.Items) > 0 && !params.MustCount {
+				return b.searchWithAggregates(state, db, obj, params, ctx, &r, &totalCount)
+			}
+
 			var (
 				c   int64
 				cdb = state.DB.Session(&gorm.Session{}).Set(CountingConfigKey, true)
@@ -465,4 +469,56 @@ func (s *CallbackState) GetOk(key any) (v any, ok bool) {
 
 func (s *CallbackState) Get(key any) any {
 	return s.data[key]
+}
+
+// searchWithAggregates is the do of a Search that asks for aggregates: the
+// page, the count and the aggregates in one query (aggregateSearch).
+func (b *DataOperatorBuilder) searchWithAggregates(state *CallbackState, db *gorm.DB, obj interface{}, params *presets.SearchParams, ctx *web.EventContext, r *interface{}, totalCount *int) (err error) {
+	// the base of the aggregates, from the filter before the page: the page
+	// (its LIMIT) goes on the same instance of gorm
+	filtered := state.DB
+	base, err := aggregateBase(filtered, obj, params.Aggregates)
+	if err != nil {
+		return
+	}
+
+	page := db
+	if params.PerPage > 0 {
+		p := params.Page
+		if p == 0 {
+			p = 1
+		}
+		page = page.Limit(int(params.PerPage)).Offset(int((p - 1) * params.PerPage))
+	}
+	if params.OrderBy != "" {
+		page = page.Order(params.OrderBy)
+	}
+
+	find := func(page *gorm.DB) (*gorm.DB, error) {
+		if b.finder != nil {
+			var err error
+			state.Obj, err = b.finder(page, obj, ctx)
+			return page, err
+		}
+		page = page.Find(state.Obj)
+		return page, page.Error
+	}
+
+	if *totalCount, err = b.aggregateSearch(filtered, base, page, params, find); err != nil {
+		return
+	}
+	state.DB = page
+
+	if *totalCount == 0 {
+		rv := reflect.ValueOf(obj)
+		rv.Elem().Set(reflect.MakeSlice(rv.Elem().Type(), 0, 0))
+		*r = rv.Elem().Interface()
+		return
+	}
+	if state.Return != nil {
+		*r = state.Obj
+	} else {
+		*r = reflect.ValueOf(obj).Elem().Interface()
+	}
+	return
 }

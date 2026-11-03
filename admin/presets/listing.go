@@ -48,6 +48,8 @@ type ListingBuilder struct {
 	appendListButtons                     []func(ctx *web.EventContext) h.HTMLComponents
 	// inTrashFunc says the listing of a request is of the trash (SetInTrashFunc)
 	inTrashFunc func(ctx *web.EventContext) bool
+	// aggregates are the totals of the filter (Aggregate, AggregateBase)
+	aggregates *listingAggregates
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -429,11 +431,13 @@ func (b *ListingBuilder) records(ctx *web.EventContext) (r web.EventResponse, er
 }
 
 type SearchResult struct {
-	Records           any               `json:"Records,omitempty"`
-	TotalCount        int               `json:"TotalCount,omitempty"`
-	Page              int64             `json:"Page,omitempty"`
-	PerPage           int64             `json:"PerPage,omitempty"`
-	OrderBys          []*ColOrderBy     `json:"OrderBys,omitempty"`
+	Records    any           `json:"Records,omitempty"`
+	TotalCount int           `json:"TotalCount,omitempty"`
+	Page       int64         `json:"Page,omitempty"`
+	PerPage    int64         `json:"PerPage,omitempty"`
+	OrderBys   []*ColOrderBy `json:"OrderBys,omitempty"`
+	// Aggregates are the values of the aggregates of the filter (Aggregate)
+	Aggregates        AggregateValues   `json:"Aggregates,omitempty"`
 	orderableFieldMap map[string]string // map[FieldName]DBColumn
 }
 
@@ -538,7 +542,13 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 
 	r.PerPage = searchParams.PerPage
 	r.Page = searchParams.Page
-	r.Records, r.TotalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx)
+	if ctx.R.FormValue(ParamMustResult) != "true" {
+		searchParams.Aggregates = b.aggregateQuery(ctx, ctx.R.Form)
+	}
+	if r.Records, r.TotalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx); err != nil {
+		return
+	}
+	r.Aggregates = b.aggregateValues(ctx, searchParams.AggregateRows)
 	return
 }
 

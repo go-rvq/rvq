@@ -48,6 +48,11 @@ Reference notes for the `presets` admin package. See the package
   making one (`RecordPath`, `PagePath`, `ActionPath`), reading it back
   (`ParseRecordPath`, `RecordPathHref`), the page of an action
   (`/action:<name>`) and the actions of the menu of a detail page.
+- [Aggregates](aggregates.md) — totals of all the records of the filter of a
+  listing as chips above the table, sent with the serialized records
+  (`Aggregate`, `AggregateBase`, `AggregatesGroupBy`, `When`); the page, the
+  count and the aggregates in one query (a WITH of the filter, the capture of
+  columns), the empty page.
 - [Record IDs](record-id.md) — how a model's primary key is encoded into a
   record id, parsed back (`ParseRecordID` / `ParseRecordIDTo`), the supported
   key types (basic kinds, `uuid.UUID`, a `Parse` method, `sql.Scanner`) and the

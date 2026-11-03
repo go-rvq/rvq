@@ -70,6 +70,11 @@ func (lcb *ListingComponentBuilder) GetTableComponents(ctx *web.EventContext) (
 	}
 
 	datatableAdditions = lcb.BuildTableAdditions(ctx, &sr, inDialog)
+	// the totals of the filter, above the table (the same portal: a reload
+	// of the list redoes them)
+	if aggs := lcb.b.aggregatesComponent(ctx, sr.Aggregates); aggs != nil && sr.TotalCount > 0 {
+		dataTable = h.Components(aggs, dataTable)
+	}
 	return
 }
 

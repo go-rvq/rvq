@@ -14,6 +14,7 @@ Import path: `github.com/go-rvq/rvq/thirdpart/gorm/utils`.
 | `relationship.go` | Key & relationship helpers: parent filters, foreign-key resolution, primary-key matching. Composite- and any-type-aware. |
 | `select_column.go` | `RawColumn` / `SetRawColumn` — a SELECT column made of a raw SQL expression. |
 | `with.go` | `WithClause` / `WithClauses` / `WithDbClause` — a `WITH [RECURSIVE]` (common table expressions) before a gorm query: the `clause.With` gorm lacks. |
+| `capture.go` | `RegisterColumnCapture` / `CaptureColumns` — read the columns a model has no field for (gorm discards them). |
 | `association.go` | `AssociationDB` / `Instance` — `//go:linkname` accessors into gorm internals (`(*Association).buildCondition`, `(*DB).getInstance`). |
 
 ## Keys & relationships (`relationship.go`)
@@ -66,8 +67,37 @@ err := db.Clauses(with.DbClause()).Table("tree").Find(&nodes).Error
 ```
 
 The main query refers to the tables by name (`Table`, `Joins`, a subquery),
-and two `DbClause` on one query make a single WITH. More examples, and how it
+and two `DbClause` on one query make a single WITH. A table can also be a query of gorm (`WithClause.DB`), with its own values:
+
+```go
+with := gormutils.WithClauses{{Name: "big", DB: db.Model(&Node{}).Select("id", "value").Where("value > ?", 100)}}
+db.Clauses(with.DbClause()).Table("big").Find(&nodes)
+// WITH big AS (SELECT `id`,`value` FROM `nodes` WHERE value > 100) SELECT * FROM `big`
+``` More examples, and how it
 works: `docs/with.md`.
+
+## Capturing columns (`capture.go`)
+
+When gorm scans into a model, it reads a column the model has no field for
+into a local variable and discards it. There is no option or hook to get it
+back (gorm v1.31.2). `RegisterColumnCapture(db)` puts a query callback in
+place of `gorm:query`, once at the start of the app. A query marked with
+`CaptureColumns` gets its rows wrapped, and the values of the named columns of
+the first row are kept. A query that is not marked runs gorm's own callback.
+
+```go
+q, capt := gormutils.CaptureColumns(db.Model(&Node{}), "__count")
+q.Select("nodes.*", "COUNT(*) OVER () AS __count").Limit(10).Find(&page)
+capt.Values["__count"] // the count of the whole filter
+```
+
+- **Hooks and preloads:** the model keeps its hooks (`AfterFind`) and its
+  preloads. The mark is only for that query (`InstanceSet`), not for the
+  preloads.
+- **Values:** a value comes as the driver gives it. Bytes (a JSON in
+  PostgreSQL) come as a copied string.
+- **No row, nothing captured:** the aggregates of the presets listings use it
+  that way (`admin/presets/docs/aggregates.md`).
 
 ## Raw SELECT columns (`select_column.go`)
 

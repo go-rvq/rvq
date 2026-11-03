@@ -42,6 +42,46 @@ type SearchParams struct {
 	Query          web.Query
 	Context        context.Context
 	MustCount      bool
+	// Aggregates asks the operator for aggregates of all the records of the
+	// filter — not only those of the page —, in the same query (none: no
+	// aggregate). The operator answers in AggregateRows.
+	Aggregates *AggregateQuery
+	// AggregateRows are the values the operator found: one per aggregate (and
+	// group), and the count of the filter (AggregateCountName).
+	AggregateRows []*AggregateRow
+}
+
+// AggregateCountName is the name of the row of AggregateRows with the count
+// of the records of the filter.
+const AggregateCountName = "__count"
+
+// NamedExpr is an SQL expression and the name of its value.
+type NamedExpr struct {
+	Name string
+	Expr string
+}
+
+// AggregateQuery are the aggregates a search asks for.
+type AggregateQuery struct {
+	// Base are columns computed for each record of the filter (the base the
+	// aggregates read: Expr AS Name), besides its primary key.
+	Base []NamedExpr
+	// Items are the aggregates: an aggregate function on the columns of the
+	// base (SUM(valor), COUNT(*)…) and its name.
+	Items []NamedExpr
+	// GroupBy is an expression of a record (a column): a value of each
+	// aggregate for each of its values. None: one value of each.
+	GroupBy string
+}
+
+// AggregateRow is a value of an aggregate: of its group, when grouped. Value
+// is its text as the database writes it (a number), empty when Null.
+type AggregateRow struct {
+	Name     string
+	Group    string
+	HasGroup bool
+	Value    string
+	Null     bool
 }
 
 func (p *SearchParams) ContextValue(key interface{}) (value any) {

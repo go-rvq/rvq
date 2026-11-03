@@ -102,3 +102,17 @@ func ExampleSetRawColumn() {
 	// SELECT  `nodes`.`id`,`nodes`.`parent_id`,`nodes`.`value`,value * 2 AS double FROM `nodes` JOIN x ON x.id = nodes.id
 	// SELECT value * 2 AS double, * FROM `nodes`
 }
+
+// A query of gorm as the table of the WITH (WithClause.DB): its values go
+// with it.
+func ExampleWithClause_DB() {
+	db := dryRun()
+	big := db.Model(&Node{}).Select("id", "value").Where("value > ?", 100)
+	with := gormutils.WithClauses{{Name: "big", DB: big}}
+	var nodes []*Node
+	fmt.Println(sql(db.Clauses(with.DbClause()).Table("big").Where("value < ?", 500).Find(&nodes)))
+	// Output:
+	// WITH big AS (
+	// 	SELECT `id`,`value` FROM `nodes` WHERE value > 100
+	// ) SELECT * FROM `big` WHERE value < 500
+}

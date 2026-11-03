@@ -22,12 +22,17 @@ type WithClause struct {
 	Query string
 	// Args are the values of the placeholders of Query, in order.
 	Args []any
+	// DB is the query as a query of gorm (its values its own), in place of
+	// Query and Args: a query built by gorm — the filtered query of a
+	// listing, say — goes into the WITH as it is.
+	DB *gorm.DB
 	// Recursive says Query refers to Name (a tree, say): any of the clauses
 	// recursive makes the WITH a WITH RECURSIVE (PostgreSQL, SQLite, MySQL 8).
 	Recursive bool
 }
 
-// WriteTo writes c to b: Name[(Fields)] AS (Query), Query indented.
+// WriteTo writes c to b: Name[(Fields)] AS (Query), Query indented; with
+// DB, a placeholder (?) in place of the query, DB its value (BuildQuery).
 func (c *WithClause) WriteTo(b *strings.Builder) {
 	b.WriteString(c.Name)
 	if len(c.Fields) > 0 {
@@ -36,12 +41,24 @@ func (c *WithClause) WriteTo(b *strings.Builder) {
 		b.WriteString(")")
 	}
 	b.WriteString(" AS (\n")
+	if c.DB != nil {
+		b.WriteString("\t?\n)")
+		return
+	}
 	for _, line := range strings.Split(strings.TrimSpace(c.Query), "\n") {
 		b.WriteString("\t")
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
 	b.WriteString(")")
+}
+
+// values are the values of the placeholders of c: Args, or DB alone.
+func (c *WithClause) values() []any {
+	if c.DB != nil {
+		return []any{c.DB}
+	}
+	return c.Args
 }
 
 // String is c as WriteTo writes it.
@@ -56,8 +73,8 @@ func (c *WithClause) String() string {
 type WithClauses []*WithClause
 
 // BuildQuery is the WITH of c — WITH [RECURSIVE] a AS (…), b AS (…) — and the
-// values of its placeholders, those of each clause in order. None: "" and no
-// values.
+// values of its placeholders, those of each clause in order (the DB of a
+// clause, its value: gorm writes it as its query). None: "" and no values.
 func (c WithClauses) BuildQuery() (q string, args []any) {
 	if len(c) == 0 {
 		return "", nil
@@ -77,12 +94,12 @@ func (c WithClauses) BuildQuery() (q string, args []any) {
 	for _, wc := range c[:len(c)-1] {
 		wc.WriteTo(&b)
 		b.WriteString("\n, ")
-		args = append(args, wc.Args...)
+		args = append(args, wc.values()...)
 	}
 
 	last := c[len(c)-1]
 	last.WriteTo(&b)
-	args = append(args, last.Args...)
+	args = append(args, last.values()...)
 	return b.String(), args
 }
 
