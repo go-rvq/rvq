@@ -123,6 +123,14 @@ func defaultLoginPage(vh *login.ViewHelper, pb *presets.Builder) web.PageFunc {
 						Label(msgr.PasswordLabel).Class(DefaultViewCommon.LabelClass).For("password"),
 						DefaultViewCommon.PasswordInput("password", msgr.PasswordPlaceholder, wIn.Password, true),
 					).Class("mt-6"),
+					// stay signed in on this device (login.Builder.KeepSignedIn)
+					If(vh.KeepSignedInEnabled(),
+						Div(
+							VCheckbox().Attr("name", login.KeepSignedInParam).Value("1").
+								Label(msgr.KeepSignedInLabel).
+								HideDetails(true).Density(DensityCompact),
+						).Class("mt-2"),
+					),
 					If(isRecaptchaEnabled,
 						// recaptcha response token
 						Input("token").ID("token").Type("hidden"),

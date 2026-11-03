@@ -180,7 +180,7 @@ func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uui
 		Device:    device(r),
 		IP:        GetIP(r),
 		TokenHash: GetStringHash(token, LoginTokenHashLen),
-		ExpiredAt: time.Now().Add(time.Duration(m.lb.GetSessionMaxAge()) * time.Second),
+		ExpiredAt: time.Now().Add(time.Duration(m.lb.SessionMaxAgeOf(r)) * time.Second),
 		Kind:      KindLogin,
 		Auth:      login.AuthPassword,
 		UserAgent: r.UserAgent(),
@@ -200,7 +200,7 @@ func (m *Manager) UpdateCurrentSessionLog(db *gorm.DB, r *http.Request, userID u
 		Where("user_id = ? and token_hash = ?", userID, oldTokenHash).
 		Updates(map[string]interface{}{
 			"token_hash": tokenHash,
-			"expired_at": time.Now().Add(time.Duration(m.lb.GetSessionMaxAge()) * time.Second),
+			"expired_at": time.Now().Add(time.Duration(m.lb.SessionMaxAgeOf(r)) * time.Second),
 		}).Error; err != nil {
 		return err
 	}

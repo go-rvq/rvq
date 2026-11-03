@@ -25,6 +25,9 @@ type UserClaims struct {
 	IDToken       string
 	PassUpdatedAt string
 	TOTPValidated bool
+	// KeepSignedIn: the session was asked to stay signed in on this device
+	// (Builder.KeepSignedIn): it lasts the long max age, renewed while used.
+	KeepSignedIn bool `json:",omitempty"`
 	jwt.RegisteredClaims
 }
 

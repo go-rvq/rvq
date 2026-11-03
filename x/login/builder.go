@@ -79,12 +79,15 @@ type Builder struct {
 	continueUrlCookieName string
 	unauthorizedResponder UnauthorizedResponder
 	// seconds
-	sessionMaxAge    int
-	cookieConfig     CookieConfig
-	totpEnabled      bool
-	totpConfig       TOTPConfig
-	recaptchaEnabled bool
-	recaptchaConfig  RecaptchaConfig
+	sessionMaxAge int
+	// keepSignedInMaxAge is the max age of a session asked to stay signed in
+	// (KeepSignedIn); 0: the option is off
+	keepSignedInMaxAge int
+	cookieConfig       CookieConfig
+	totpEnabled        bool
+	totpConfig         TOTPConfig
+	recaptchaEnabled   bool
+	recaptchaConfig    RecaptchaConfig
 	// built-in protection used when there is no reCAPTCHA (see challenge.go)
 	challengeDisabled  bool
 	challengeMinAge    time.Duration
@@ -739,6 +742,40 @@ func (b *Builder) SessionMaxAge(v int) (r *Builder) {
 
 // extend the session if successfully authenticated
 // default true
+// KeepSignedInParam is the field of the login form that asks the session to
+// stay signed in on the device.
+const KeepSignedInParam = "keep_signed_in"
+
+// KeepSignedIn turns on the option of the login form to stay signed in on
+// the device: such a session lasts maxAge seconds, renewed while used (with
+// AutoExtendSession), in place of the SessionMaxAge. 0 turns it off.
+func (b *Builder) KeepSignedIn(maxAge int) (r *Builder) {
+	b.keepSignedInMaxAge = maxAge
+	return b
+}
+
+// KeepSignedInEnabled says the login form offers to stay signed in.
+func (b *Builder) KeepSignedInEnabled() bool { return b.keepSignedInMaxAge > 0 }
+
+// GetKeepSignedInMaxAge is the max age, in seconds, of a session that stays
+// signed in.
+func (b *Builder) GetKeepSignedInMaxAge() int { return b.keepSignedInMaxAge }
+
+// SessionMaxAgeOf is the max age, in seconds, of the session of r: the one
+// of a session that stays signed in, or the SessionMaxAge.
+func (b *Builder) SessionMaxAgeOf(r *http.Request) int {
+	if b.keepSignedInMaxAge > 0 {
+		if c, err := r.Cookie(b.authCookieOf(r)); err == nil {
+			if rc, err := parseClaims(&UserClaims{}, c.Value, b.secret); err == nil {
+				if uc, ok := rc.(*UserClaims); ok && uc.KeepSignedIn {
+					return b.keepSignedInMaxAge
+				}
+			}
+		}
+	}
+	return b.sessionMaxAge
+}
+
 func (b *Builder) AutoExtendSession(v bool) (r *Builder) {
 	b.autoExtendSession = v
 	return b
@@ -1151,10 +1188,13 @@ func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any
 	userID := objectID(user)
 	// an account already logged in this browser is logged in its own index
 	r = b.accountOfUser(w, r, userID)
+	// stay signed in on this device: the box of the login form
+	keep := b.keepSignedInMaxAge > 0 && isTrue(r.FormValue(KeepSignedInParam))
 	claims := UserClaims{
 		UserID:           userID,
 		PassUpdatedAt:    u.GetPasswordUpdatedAt(),
-		RegisteredClaims: b.genBaseSessionClaim(userID, u.GetAccountName() == b.initialUserAccount),
+		KeepSignedIn:     keep,
+		RegisteredClaims: b.genBaseSessionClaim(userID, u.GetAccountName() == b.initialUserAccount, keep),
 	}
 
 	if !b.totpEnabled {
@@ -1205,8 +1245,15 @@ func (b *Builder) completeLogin(w http.ResponseWriter, r *http.Request, user any
 	return nil
 }
 
-func (b *Builder) genBaseSessionClaim(id string, initialUser bool) jwt.RegisteredClaims {
+// genBaseSessionClaim is the base of the claims of a session of id: the
+// SessionMaxAge, the max age of KeepSignedIn when keep (and it is on); the
+// initial user, when logged (initialUserLogged), until the end of the day
+// whatever keep says.
+func (b *Builder) genBaseSessionClaim(id string, initialUser bool, keep ...bool) jwt.RegisteredClaims {
 	var d = b.sessionMaxAge
+	if len(keep) > 0 && keep[0] && b.keepSignedInMaxAge > 0 {
+		d = b.keepSignedInMaxAge
+	}
 	if b.initialUserLogged && initialUser {
 		n := time.Now()
 		s := n.Second() + n.Hour()*60*60 + n.Minute()*60
@@ -1216,6 +1263,35 @@ func (b *Builder) genBaseSessionClaim(id string, initialUser bool) jwt.Registere
 		d = int(n2.Sub(n)/time.Second) - s
 	}
 	return genBaseClaims(id, d)
+}
+
+// renewedSessionClaims are the base claims of a session renewed while used
+// (AutoExtendSession): of claims, of the user of the account.
+func (b *Builder) renewedSessionClaims(claims *UserClaims, account string) jwt.RegisteredClaims {
+	// the initial user as at the login (completeLogin): the end of the day
+	// when it is logged (SetInitialUserLoggerd)
+	return b.genBaseSessionClaim(claims.UserID, account == b.initialUserAccount, claims.KeepSignedIn)
+}
+
+// cookieMaxAge is the max age of the cookies of the session of claims: until
+// the claims expire (a session that stays signed in lasts more).
+func cookieMaxAge(claims *UserClaims) int {
+	if claims.ExpiresAt == nil {
+		return 0
+	}
+	if s := int(time.Until(claims.ExpiresAt.Time) / time.Second); s > 0 {
+		return s
+	}
+	return -1
+}
+
+// isTrue says the value of a checkbox of a form is checked.
+func isTrue(v string) bool {
+	switch v {
+	case "1", "true", "on", "yes":
+		return true
+	}
+	return false
 }
 
 func (b *Builder) mustGetSessionToken(claims UserClaims) string {
@@ -1229,7 +1305,7 @@ func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, r *http.Re
 		Value:   b.mustGetSessionToken(*claims),
 		Path:    b.cookieConfig.Path,
 		Domain:  b.cookieConfig.Domain,
-		MaxAge:  b.sessionMaxAge,
+		MaxAge:  cookieMaxAge(claims),
 		Expires: claims.ExpiresAt.Time,
 		// Expires:  time.Now().Add(time.Duration(b.sessionMaxAge) * time.Second),
 		HttpOnly: true,
@@ -1243,7 +1319,7 @@ func (b *Builder) setAuthCookiesFromUserClaims(w http.ResponseWriter, r *http.Re
 			Value:  mustSignClaims(&claims.RegisteredClaims, b.secret+secureSalt),
 			Path:   b.cookieConfig.Path,
 			Domain: b.cookieConfig.Domain,
-			MaxAge: b.sessionMaxAge,
+			MaxAge: cookieMaxAge(claims),
 			// Expires:  time.Now().Add(time.Duration(b.sessionMaxAge) * time.Second),
 			Expires:  claims.ExpiresAt.Time,
 			HttpOnly: true,

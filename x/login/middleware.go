@@ -198,7 +198,7 @@ func (b *Builder) BasichAuthMiddleware(next http.Handler) http.Handler {
 		if b.autoExtendSession && time.Since(claims.IssuedAt.Time).Seconds() > float64(b.sessionMaxAge)/10 {
 			oldSessionToken := b.mustGetSessionToken(*claims)
 
-			claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
+			claims.RegisteredClaims = b.renewedSessionClaims(claims, user.(UserPasser).GetAccountName())
 			b.setAuthCookiesFromUserClaims(w, r, claims, secureSalt)
 
 			if b.afterExtendSessionHook != nil {
@@ -380,7 +380,7 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 			if b.autoExtendSession && time.Since(claims.IssuedAt.Time).Seconds() > float64(b.sessionMaxAge)/10 {
 				oldSessionToken := b.mustGetSessionToken(*claims)
 
-				claims.RegisteredClaims = b.genBaseSessionClaim(claims.UserID, user.(UserPasser).GetAccountName() != b.initialUserAccount)
+				claims.RegisteredClaims = b.renewedSessionClaims(claims, user.(UserPasser).GetAccountName())
 				b.setAuthCookiesFromUserClaims(w, r, claims, secureSalt)
 
 				if b.afterExtendSessionHook != nil {

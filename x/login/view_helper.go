@@ -50,6 +50,12 @@ func (vh *ViewHelper) TOTPEnabled() bool {
 	return vh.b.totpEnabled
 }
 
+// KeepSignedInEnabled says the login form offers to stay signed in on the
+// device (Builder.KeepSignedIn).
+func (vh *ViewHelper) KeepSignedInEnabled() bool {
+	return vh.b.KeepSignedInEnabled()
+}
+
 func (vh *ViewHelper) NoForgetPasswordLink() bool {
 	return vh.b.noForgetPasswordLink
 }

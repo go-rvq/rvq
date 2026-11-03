@@ -84,6 +84,7 @@ type Messages struct {
 	BackToAccount       string `i18n:"hint='Link of the login of another account back to the account logged in; %s is its name.'"`
 	SignOutBtn          string `i18n:"label='Sign out button', hint='Button that signs out.'"`
 	ForgetPasswordLink  string `i18n:"label='Forgot password link', hint='Link to the recovery of a forgotten password.'"`
+	KeepSignedInLabel   string `i18n:"label='Keep signed in', hint='Box of the login form: the session does not end after a while unused, on this device.'"`
 	// login dialog: the session ended under a page the user was working on, so
 	// the login opens over it (see docs/session-lost.md)
 	LoginAgainTitle string `i18n:"hint='Title shown when the session ended and the user must sign in again.'"`
@@ -177,6 +178,7 @@ var Messages_en_US = &Messages{
 	SignOutBtn:                          "Sign Out",
 	LoginAgainTitle:                     "Please sign in again",
 	ForgetPasswordLink:                  "Forget your password?",
+	KeepSignedInLabel:                   "Keep me signed in on this device",
 	ForgetPasswordPageTitle:             "Forget Your Password?",
 	ForgotMyPasswordTitle:               "I forgot my password",
 	ForgetPasswordEmailLabel:            "Enter your email",
@@ -257,6 +259,7 @@ var Messages_zh_CN = &Messages{
 	LoginAgainHint:                      "The session of %s expired.",
 	BackToAccount:                       "Back to %s",
 	ForgetPasswordLink:                  "忘记密码？",
+	KeepSignedInLabel:                   "在此设备上保持登录",
 	ForgetPasswordPageTitle:             "忘记密码？",
 	ForgotMyPasswordTitle:               "我忘记密码了",
 	ForgetPasswordEmailLabel:            "输入您的电子邮箱",
@@ -337,6 +340,7 @@ var Messages_ja_JP = &Messages{
 	LoginAgainHint:                      "The session of %s expired.",
 	BackToAccount:                       "Back to %s",
 	ForgetPasswordLink:                  "パスワードをお忘れですか？",
+	KeepSignedInLabel:                   "このデバイスでログインしたままにする",
 	ForgetPasswordPageTitle:             "パスワードをお忘れですか？",
 	ForgotMyPasswordTitle:               "パスワードを忘れました",
 	ForgetPasswordEmailLabel:            "メールアドレスを入力してください",
@@ -418,6 +422,7 @@ var Messages_pt_BR = &Messages{
 	SignOutBtn:                          "Sair",
 	LoginAgainTitle:                     "Faça login novamente",
 	ForgetPasswordLink:                  "Esqueceu sua senha?",
+	KeepSignedInLabel:                   "Manter conectado neste dispositivo",
 	ForgetPasswordPageTitle:             "Esqueceu sua senha?",
 	ForgotMyPasswordTitle:               "Esqueci minha senha",
 	ForgetPasswordEmailLabel:            "Informe seu e-mail",
