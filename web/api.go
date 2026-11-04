@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -426,6 +427,29 @@ var FormTypeDecoders = []CustoFormTypeDecoder{
 	// a UUID whose zero is none (model.UUID): "" is the zero, NULL in the
 	// database
 	{Decoder: decodeModelUUID, Types: []any{model.UUID{}}},
+	// a decimal is its text ("" zero): without it the decoder cannot set its
+	// unexported fields and leaves it zero, with no error
+	{Decoder: decodeDecimal, Types: []any{decimal.Decimal{}}},
+	// a nullable decimal: "" is NULL
+	{Decoder: decodeNullDecimal, Types: []any{decimal.NullDecimal{}}},
+}
+
+func decodeDecimal(vals []string) (any, error) {
+	if len(vals) == 0 || strings.TrimSpace(vals[0]) == "" {
+		return decimal.Zero, nil
+	}
+	return decimal.NewFromString(strings.TrimSpace(vals[0]))
+}
+
+func decodeNullDecimal(vals []string) (any, error) {
+	if len(vals) == 0 || strings.TrimSpace(vals[0]) == "" {
+		return decimal.NullDecimal{}, nil
+	}
+	d, err := decimal.NewFromString(strings.TrimSpace(vals[0]))
+	if err != nil {
+		return nil, err
+	}
+	return decimal.NullDecimal{Decimal: d, Valid: true}, nil
 }
 
 func decodeModelUUID(vals []string) (any, error) {
