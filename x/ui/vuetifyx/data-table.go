@@ -56,6 +56,9 @@ type DataTableBuilder struct {
 	onSelectFunc         OnSelectFunc
 	onSelectAllFunc      OnSelectAllFunc
 	density              string
+	// disabledIDs are the records whose selection is fixed: checked and
+	// disabled (already chosen, say)
+	disabledIDs []string
 }
 
 func DataTable(data interface{}) (r *DataTableBuilder) {
@@ -86,6 +89,12 @@ func (b *DataTableBuilder) Tfoot(children ...h.HTMLComponent) (r *DataTableBuild
 
 func (b *DataTableBuilder) Selectable(v bool) (r *DataTableBuilder) {
 	b.selectable = v
+	return b
+}
+
+// DisabledIDs fixes the selection of the records ids: checked, disabled.
+func (b *DataTableBuilder) DisabledIDs(ids ...string) (r *DataTableBuilder) {
+	b.disabledIDs = ids
 	return b
 }
 
@@ -259,7 +268,17 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 			).Class("pr-0").Style("width: 40px; min-width: 40px;"))
 		}
 
-		if b.selectable {
+		if b.selectable && slices.Contains(b.disabledIDs, id) {
+			tds = append(tds, h.Td(
+				v.VCheckbox().
+					Density(v.DensityCompact).
+					Class("mt-0").
+					HideDetails(true).
+					Attr("style", "min-height: auto").
+					Attr(":model-value", "true").
+					Disabled(true),
+			).Class("pr-0 item-selector").Style("width: 48px; min-width: 48px;"))
+		} else if b.selectable {
 			onChange := web.Plaid().
 				PushState(true).
 				MergeQuery(true).

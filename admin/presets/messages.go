@@ -112,6 +112,9 @@ type Messages struct {
 	ListingNoRecordToShow                      string                 `i18n:"label='No records', hint='Shown when a listing is empty.'"`
 	ListingSelectedCountNotice                 string                 `i18n:"label='Selected count', hint='How many records are selected.', fields=(;'{count}'='the number')"`
 	ListingClearSelection                      string                 `i18n:"label='Clear selection', hint='Link that unselects every record.'"`
+	ListingSelectionAdd                        string                 `i18n:"label='Add the selected', hint='Button of a listing opened to choose several records: gives the chosen to who opened it.'"`
+	ListingSelectionSelected                   string                 `i18n:"label='Selected', hint='Button of a listing opened to choose several records: shows only the chosen ones; {count} is how many.', fields=(;'{count}'='the number')"`
+	ListingSelectionAll                        string                 `i18n:"label='All', hint='Button of a listing opened to choose several records: shows all of them again.'"`
 	BulkActionNoAvailableRecords               string                 `i18n:"label='Bulk action: none possible', hint='Shown when no selected record can take the action.'"`
 	BulkActionSelectedIdsProcessNoticeTemplate string                 `i18n:"label='Bulk action: some impossible', hint='Shown when some selected records cannot take the action.', fields=(;'{ids}'='those records')"`
 	ConfirmDialogPromptTitle                   string                 `i18n:"label='Confirmation title', hint='Title of a confirmation dialog.'"`
@@ -288,6 +291,9 @@ var Messages_en_US = &Messages{
 	ListingNoRecordToShow:              "No records to show",
 	ListingSelectedCountNotice:         "{count} records are selected. ",
 	ListingClearSelection:              "clear selection",
+	ListingSelectionAdd:                "Add",
+	ListingSelectionSelected:           "Selected ({count})",
+	ListingSelectionAll:                "All",
 	BulkActionNoAvailableRecords:       "None of the selected records can be executed with this action.",
 	BulkActionSelectedIdsProcessNoticeTemplate: "Partially selected records cannot be executed with this action: {ids}.",
 	ConfirmDialogPromptText:                    "Are you sure?",
@@ -390,6 +396,9 @@ var Messages_pt_BR = &Messages{
 	ListingNoRecordToShow:                      "Nenhum registro a ser mostrado",
 	ListingSelectedCountNotice:                 "{count} registros selecionados. ",
 	ListingClearSelection:                      "limpar seleção",
+	ListingSelectionAdd:                        "Adicionar",
+	ListingSelectionSelected:                   "Selecionadas ({count})",
+	ListingSelectionAll:                        "Todas",
 	BulkActionNoAvailableRecords:               "Nenhum dos registros selecionados podem ser executados com esta ação.",
 	BulkActionSelectedIdsProcessNoticeTemplate: "Registros parcialmente selecionados não podem ser executados com esta ação Pesquisar isso no Goo: {ids}.",
 	BulkActionConfirmationTextTemplate:         "Tem certeza que deseja executar a ação <b>{Action}</b> nos {count} registros?",

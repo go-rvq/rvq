@@ -89,7 +89,11 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		inDialog = overlayMode.IsDialog()
 	)
 
-	haveCheckboxes := !lcb.selection && len(b.availableBulkActions(ctx)) > 0
+	// opened to choose (the flag, or the request's event: a page of the
+	// dialog), one record by a click on it, several by marking them
+	selection := lcb.selection || IsListingSelection(ctx)
+	many := IsListingSelectMany(ctx)
+	haveCheckboxes := (!selection && len(b.availableBulkActions(ctx)) > 0) || many
 
 	tempPortal := lcb.portals.Temp()
 
@@ -97,17 +101,22 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 
 	if b.cellWrapperFunc != nil {
 		cellWrapperFunc = b.cellWrapperFunc
-	} else if lcb.selection {
+	} else if many {
+		// marking chooses: the click on a row does nothing
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, _, _ string, _ interface{}, _ string, _ *web.EventContext) h.HTMLComponent {
+			return cell
+		}
+	} else if selection {
 		selectedEventName := ctx.R.URL.Query().Get(SelectedEventParamName)
 		selectedEventConfig := ctx.R.URL.Query().Get(SelectedEventConfigParamName)
-		portalID := ctx.R.FormValue(ParamPortalID)
 		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, _, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
 			onclick := web.Plaid().
 				EventFunc(selectedEventName).
 				Query(ParamSelectedID, id).
 				Query(SelectedEventConfigParamName, selectedEventConfig)
 			cell.SetAttr("@click.self",
-				onclick.Go()+`;vars.presetsListingDialog`+portalID+` = false`)
+				// the dialog of the listing closes by its closer
+				onclick.Go()+`;closer.show = false`)
 			return cell
 		}
 	} else {
@@ -280,6 +289,7 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 			}
 		}).
 		Selectable(haveCheckboxes).
+		DisabledIDs(queryIDs(ctx, ParamSelectedDisabledIds)...).
 		SelectionParamName(ParamSelectedIds).
 		SelectedCountLabel(msgr.ListingSelectedCountNotice).
 		SelectableColumnsBtn(selectColumnsBtn).
@@ -573,6 +583,11 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		b          = lcb.b
 		actionBtns h.HTMLComponents
 	)
+
+	// opened to choose several: the marked only (or all), add
+	if IsListingSelectMany(ctx) {
+		return lcb.selectionActions(ctx, msgr)
+	}
 
 	// in the trash (LIST | TRASH) the bar has only the actions available
 	// there: none of the buttons added to it, its pages, its new button

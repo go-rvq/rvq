@@ -50,6 +50,10 @@ type ListingBuilder struct {
 	inTrashFunc func(ctx *web.EventContext) bool
 	// aggregates are the totals of the filter (Aggregate, AggregateBase)
 	aggregates *listingAggregates
+	// the listing opened to choose: its conditions and the filters it hides
+	// (SelectionConditionFunc, SelectionHiddenFilters)
+	selectionConditionFunc func(ctx *web.EventContext) []*SQLCondition
+	selectionHiddenFilters []string
 
 	// title is the title of the listing page.
 	// its default value is "Listing ${modelName}".
@@ -526,6 +530,10 @@ func (b *ListingBuilder) NewSearchParams(ctx *web.EventContext, qs url.Values, p
 		})
 	}
 
+	// opened to choose: its conditions, and the marked ones when it shows
+	// only them
+	params.SQLConditions = append(params.SQLConditions, b.selectionConditions(ctx)...)
+
 	if b.Searcher == nil || b.mb.CurrentDataOperator() == nil {
 		err = errors.New("presets.New().DataOperator(...) required")
 		return
@@ -542,7 +550,8 @@ func (b *ListingBuilder) search(ctx *web.EventContext) (r SearchResult, err erro
 
 	r.PerPage = searchParams.PerPage
 	r.Page = searchParams.Page
-	if ctx.R.FormValue(ParamMustResult) != "true" {
+	// no aggregate for the records alone, nor in the listing opened to choose
+	if ctx.R.FormValue(ParamMustResult) != "true" && !IsListingSelection(ctx) {
 		searchParams.Aggregates = b.aggregateQuery(ctx, ctx.R.Form)
 	}
 	if r.Records, r.TotalCount, err = b.Searcher(b.mb.NewModelSlice(), searchParams, ctx); err != nil {
@@ -1384,11 +1393,15 @@ func (b *ListingBuilder) openListingDialogForSelection(ctx *web.EventContext) (r
 		return
 	}
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
+	// the scope of a listing in a dialog (wrapComp): its loader keeps the
+	// address of the dialog — the marks of a selection of several, its page,
+	// its filters — for the next update (updateListingDialog)
 	b.mb.p.DialogPortal(targetPortal).
 		SetValidWidth(b.dialogWidth).
 		SetValidHeight(b.dialogHeight).
 		SetContentPortalName(lcb.portals.Main()).
-		Respond(ctx, &r, web.Scope(body).Slot("{ form }"))
+		SetScrollable(true).
+		Respond(ctx, &r, b.wrapComp(ctx, body))
 	return
 }
 
