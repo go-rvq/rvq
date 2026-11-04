@@ -91,7 +91,14 @@ func (b *EditingBuilder) respondFormEdit(ctx *web.EventContext, obj any) (r web.
 		}
 		r.UpdatePortal(portal, comp)
 	} else {
-		r.Body = comp
+		// no overlay: the form on its own page (/new, /{id}/edit), in the
+		// portal of the page (DefaultPageFuncMode) — the body would be the
+		// whole page, its header and its actions gone
+		portal := targetPortal
+		if portal == "" {
+			portal = actions.Edit
+		}
+		r.UpdatePortal(portal, comp)
 	}
 	return
 }

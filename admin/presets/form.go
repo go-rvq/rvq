@@ -295,10 +295,13 @@ func (f *Form) RespondToPortal(portal string, r *web.EventResponse) {
 				RootWrap(f.Wrap)
 
 			d.Respond(r, comp)
-		} else if portal != "" {
-			r.UpdatePortal(portal, comp)
 		} else {
-			r.Body = comp
+			// no overlay and no portal: the form on its own page, in the
+			// portal of the page (DefaultPageFuncMode), not the whole body
+			if portal == "" {
+				portal = actions.Edit
+			}
+			r.UpdatePortal(portal, comp)
 		}
 	}
 }

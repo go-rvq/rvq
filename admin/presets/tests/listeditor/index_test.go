@@ -44,14 +44,14 @@ func TestIndexStable_FormKeysFollowIndexNotPosition(t *testing.T) {
 				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			bodyContainsAll(t, er.Body,
+			bodyContainsAll(t, formHTML(er),
 				// each item keeps the form key derived from its __index
 				`v-model='form["Items[1].Label"]' v-assign='[form, {"Items[1].Label": "B"}]`,
 				`v-model='form["Items[0].Label"]' v-assign='[form, {"Items[0].Label": "A"}]`,
 			)
 			// B (Items[1]) is rendered before A (Items[0]) — display follows __pos,
 			// so the stable-key item Items[1] appears first in the Setup seed list.
-			bodyContainsInOrder(t, er.Body,
+			bodyContainsInOrder(t, formHTML(er),
 				`const keys = ["Items[1]`,
 				`"Items[0]"`,
 			)

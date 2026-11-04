@@ -13,7 +13,7 @@ import (
 )
 
 // The tests below drive the list editor through the exact browser flow and
-// assert on the RENDERED HTML (er.Body), not only on the persisted rows. Each
+// assert on the RENDERED HTML (formHTML(er)), not only on the persisted rows. Each
 // case documents the corresponding user interaction inline.
 //
 // Reactive-form recap (what a real browser posts on save). The bracket index is
@@ -129,7 +129,7 @@ func TestSaveFail_PersistedItemRemoved_KeepsDeletedInUI(t *testing.T) {
 				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			bodyContainsAll(t, er.Body,
+			bodyContainsAll(t, formHTML(er),
 				// (1) the Name required error renders on the re-rendered form
 				`v-model='form["Name"]'`,
 				`:error-messages='["This field is required"]'`,
@@ -140,7 +140,7 @@ func TestSaveFail_PersistedItemRemoved_KeepsDeletedInUI(t *testing.T) {
 				`v-show='form["Items[1].__deleted"] && !form["Items[1].__purged"]'`,
 			)
 			// item #0 was NOT removed, so it must not be re-seeded as deleted
-			bodyContainsNone(t, er.Body, `const deletedKeys = ["Items[0]`)
+			bodyContainsNone(t, formHTML(er), `const deletedKeys = ["Items[0]`)
 		},
 	}, app)
 }
@@ -189,18 +189,18 @@ func TestSaveFail_NewItemRemoved_VanishesFromUI(t *testing.T) {
 				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			bodyContainsAll(t, er.Body,
+			bodyContainsAll(t, formHTML(er),
 				// the Name required error still renders
 				`:error-messages='["This field is required"]'`,
 			)
 			// the removed new item is gone: not rendered, not re-seeded
-			bodyContainsNone(t, er.Body,
+			bodyContainsNone(t, formHTML(er),
 				`form["Items[2].Label"]`,
 				`Items[2].__deleted`,
 				`const deletedKeys = [`, // nothing is deleted (the only removal vanished)
 			)
 			// the two persisted items are still rendered and not removed
-			bodyContainsAll(t, er.Body,
+			bodyContainsAll(t, formHTML(er),
 				`form["Items[0].Label"]`,
 				`form["Items[1].Label"]`,
 			)
@@ -248,8 +248,8 @@ func TestSaveOK_DeletedItemSkipsValidation(t *testing.T) {
 		// save succeeds -> the dialog closes; no validation error rendered
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			if strings.Contains(er.Body, "This field is required") {
-				t.Errorf("deleted item's empty required field should not be validated; body: %s", er.Body)
+			if strings.Contains(formHTML(er), "This field is required") {
+				t.Errorf("deleted item's empty required field should not be validated; body: %s", formHTML(er))
 			}
 			var items []Item
 			if err := db.Order("id").Find(&items).Error; err != nil {
@@ -342,4 +342,15 @@ func signed(t *testing.T, app *presets.Builder, r *http.Request) *http.Request {
 		t.Fatal(err)
 	}
 	return out
+}
+
+// formHTML is the form an event rendered: the body, or the portal it went in
+// (the form on its own page answers into actions.Edit).
+func formHTML(er *TestEventResponse) string {
+	var b strings.Builder
+	b.WriteString(er.Body)
+	for _, p := range er.UpdatePortals {
+		b.WriteString(p.Body)
+	}
+	return b.String()
 }

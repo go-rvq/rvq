@@ -45,7 +45,7 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			bodyContainsAll(t, er.Body,
+			bodyContainsAll(t, formHTML(er),
 				`const newKeys = ["Items[2]"]`,
 				`newKeys && newKeys.forEach((k) => { form[k + ".__new"] = true })`,
 			)
@@ -89,8 +89,8 @@ func TestAddRow_FlagsNewItemAndPersists(t *testing.T) {
 		},
 		ExpectRunScriptContainsInOrder: []string{"closer.show = false"},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			if er.Body != "" && containsAny(er.Body, "WHERE conditions required") {
-				t.Fatalf("save failed: %s", er.Body)
+			if formHTML(er) != "" && containsAny(formHTML(er), "WHERE conditions required") {
+				t.Fatalf("save failed: %s", formHTML(er))
 			}
 			var items []Item
 			if err := db.Order("id").Find(&items).Error; err != nil {
@@ -141,8 +141,8 @@ func TestSaveOK_ZeroPKItemWithoutNewDoesNotCrash(t *testing.T) {
 				BuildEventFuncRequest())
 		},
 		EventResponseMatch: func(t *testing.T, er *TestEventResponse) {
-			if containsAny(er.Body, "WHERE conditions required") {
-				t.Fatalf("save crashed: %s", er.Body)
+			if containsAny(formHTML(er), "WHERE conditions required") {
+				t.Fatalf("save crashed: %s", formHTML(er))
 			}
 			var items []Item
 			if err := db.Order("id").Find(&items).Error; err != nil {
