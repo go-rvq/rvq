@@ -34,8 +34,12 @@ func TestFieldsTabs(t *testing.T) {
 			Items: FieldsLayout{"Server", "Mailbox"}},
 	))
 
-	render := func(vErr *web.ValidationErrors) string {
-		ctx := &web.EventContext{R: httptest.NewRequest("POST", "/", nil)}
+	render := func(vErr *web.ValidationErrors, target ...string) string {
+		url := "/"
+		if len(target) > 0 {
+			url += "?" + target[0]
+		}
+		ctx := &web.EventContext{R: httptest.NewRequest("POST", url, nil)}
 		if vErr != nil {
 			ctx.Flash = vErr
 		}
@@ -68,5 +72,15 @@ func TestFieldsTabs(t *testing.T) {
 	got = render(vErr)
 	if !strings.Contains(got, "mdi-alert-circle") || !strings.Contains(got, "{tab: 1}") {
 		t.Errorf("the tab in error is not marked and open:\n%s", got)
+	}
+
+	// the address opens a tab (FieldsTabParam); a tab in error before it
+	if got = render(nil, FieldsTabParam("Settings")+"=Answers"); !strings.Contains(got, "{tab: 1}") {
+		t.Errorf("the tab of the address is not open:\n%s", got)
+	}
+	vErr = &web.ValidationErrors{}
+	vErr.FieldError("Sender", "required")
+	if got = render(vErr, FieldsTabParam("Settings")+"=Answers"); !strings.Contains(got, "{tab: 0}") {
+		t.Errorf("the tab in error is not the one open:\n%s", got)
 	}
 }

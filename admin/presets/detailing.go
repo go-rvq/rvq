@@ -614,7 +614,7 @@ func (b *DetailingBuilder) configureForm(f *Form) *Form {
 		host := GetDetailingEditHost(ctx)
 		editBtn := h.HTMLComponents{
 			// the edit: the action in evidence of the bar
-			PageBarPrimaryButton(MustGetMessages(ctx.Context()).Edit, "mdi-pencil").
+			PageBarIconButton("mdi-pencil", MustGetMessages(ctx.Context()).Edit, true).
 				Attr(":disabled", "isFetching").
 				Attr(":loading", "isFetching").
 				Attr("data-event", "edit").

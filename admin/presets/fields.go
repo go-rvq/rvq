@@ -584,6 +584,11 @@ func (l FieldsLayout) ActiveNames(obj any, ctx *web.EventContext) (names []strin
 	return
 }
 
+// FieldsTabParam is the query parameter that opens a tab of the group of tabs
+// name: its value the name of the tab's group — a link to a record with a
+// tab of its detail open.
+func FieldsTabParam(name string) string { return "fields_tab." + name }
+
 // NewFieldsTabs is a group drawn as tabs (FieldsGroup.Tabs): each of tabs a
 // tab.
 func NewFieldsTabs(name string, tabs ...*FieldsGroup) *FieldsGroup {
@@ -1546,9 +1551,9 @@ func (b *FieldsBuilder) toComponentWithFormValueKey(opts *ToComponentOptions, in
 func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, parentKey string, vErr *web.ValidationErrors, inForm bool,
 	ctx *web.EventContext, doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
 	type tab struct {
-		title      string
-		layout     FieldsLayout
-		vIf, vShow string
+		name, title string
+		layout      FieldsLayout
+		vIf, vShow  string
 	}
 	var tabs []tab
 	var loose FieldsLayout
@@ -1571,7 +1576,7 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, 
 		if sub.Tabs {
 			layout = FieldsLayout{sub}
 		}
-		tab := tab{title: title, layout: layout}
+		tab := tab{name: sub.Name, title: title, layout: layout}
 		if inForm {
 			tab.vIf, tab.vShow = sub.VIf, sub.VShow
 		}
@@ -1627,6 +1632,17 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, 
 	}
 	if len(heads) == 0 {
 		return nil
+	}
+	if open < 0 {
+		// the tab the address asks for (FieldsTabParam), else the first
+		if want := ctx.R.URL.Query().Get(FieldsTabParam(g.Name)); want != "" {
+			for _, i := range drawn {
+				if tabs[i].name == want {
+					open = i
+					break
+				}
+			}
+		}
 	}
 	if open < 0 {
 		open = drawn[0]

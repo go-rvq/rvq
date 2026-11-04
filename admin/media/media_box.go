@@ -490,7 +490,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 		if len(value) == 0 {
 			value = mediaBox.Description
 		}
-		if !(len(value) == 0 && readonly) {
+		if !(len(value) == 0 && readonly) && !cfg.DisableDescription {
 			c.AppendChild(
 				VRow(
 					VCol(

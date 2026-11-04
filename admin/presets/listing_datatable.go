@@ -198,6 +198,20 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		displayFields, headers = b.layoutFields(ctx)
 	}
 
+	// opened to choose: a link to the detail of each record before its first
+	// column — copied as an address, opened in a dialog over this one
+	if selection && len(displayFields) > 0 && b.mb.hasDetailing && !b.mb.detailingDisabled {
+		first, old := displayFields[0].name, cellWrapperFunc
+		parents := ParentsModelID(ctx.R)
+		cellWrapperFunc = func(cell h.MutableAttrHTMLComponent, fieldName, id string, obj interface{}, dataTableID string, ctx *web.EventContext) h.HTMLComponent {
+			comp := old(cell, fieldName, id, obj, dataTableID, ctx)
+			if tag, ok := comp.(*h.HTMLTagBuilder); ok && fieldName == first {
+				tag.PrependChildren(b.mb.DetailingLink(ctx, id, parents, tempPortal, nil).Class("mr-1 rvq-listing-selection__open"))
+			}
+			return comp
+		}
+	}
+
 	var (
 		recordPortals = make(map[int][]string)
 		density       = b.dataTableDensity
@@ -681,8 +695,9 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 			if openNew == "" {
 				openNew = ListingNewScope + ".show = true"
 			}
-			// the new record: the action in evidence of the bar
-			actionBtns = append(actionBtns, PageBarPrimaryButton(MustGetMessages(ctx.Context()).New, "mdi-plus").
+			// the new record: the action in evidence of the bar, its icon alone
+			// (its title the tooltip)
+			actionBtns = append(actionBtns, PageBarIconButton("mdi-plus", MustGetMessages(ctx.Context()).New, true).
 				Attr("data-event", "new").
 				Attr("@click", openNew))
 

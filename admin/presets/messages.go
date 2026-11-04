@@ -113,6 +113,7 @@ type Messages struct {
 	ListingSelectedCountNotice                 string                 `i18n:"label='Selected count', hint='How many records are selected.', fields=(;'{count}'='the number')"`
 	ListingClearSelection                      string                 `i18n:"label='Clear selection', hint='Link that unselects every record.'"`
 	ListingSelectionAdd                        string                 `i18n:"label='Add the selected', hint='Button of a listing opened to choose several records: gives the chosen to who opened it.'"`
+	DetailingOpenLink                          string                 `i18n:"label='Open', hint='A link to the detail of a record: opens it in a dialog; its address may be copied.'"`
 	ListingSelectionSelected                   string                 `i18n:"label='Selected', hint='Button of a listing opened to choose several records: shows only the chosen ones; {count} is how many.', fields=(;'{count}'='the number')"`
 	ListingSelectionAll                        string                 `i18n:"label='All', hint='Button of a listing opened to choose several records: shows all of them again.'"`
 	BulkActionNoAvailableRecords               string                 `i18n:"label='Bulk action: none possible', hint='Shown when no selected record can take the action.'"`
@@ -292,6 +293,7 @@ var Messages_en_US = &Messages{
 	ListingSelectedCountNotice:         "{count} records are selected. ",
 	ListingClearSelection:              "clear selection",
 	ListingSelectionAdd:                "Add",
+	DetailingOpenLink:                  "Open",
 	ListingSelectionSelected:           "Selected ({count})",
 	ListingSelectionAll:                "All",
 	BulkActionNoAvailableRecords:       "None of the selected records can be executed with this action.",
@@ -397,6 +399,7 @@ var Messages_pt_BR = &Messages{
 	ListingSelectedCountNotice:                 "{count} registros selecionados. ",
 	ListingClearSelection:                      "limpar seleção",
 	ListingSelectionAdd:                        "Adicionar",
+	DetailingOpenLink:                          "Abrir",
 	ListingSelectionSelected:                   "Selecionadas ({count})",
 	ListingSelectionAll:                        "Todas",
 	BulkActionNoAvailableRecords:               "Nenhum dos registros selecionados podem ser executados com esta ação.",

@@ -37,6 +37,9 @@ type MediaBoxConfig struct {
 	BackgroundColor string
 	// disable crop
 	DisableCrop bool
+	// DisableDescription hides the description for accessibility of the
+	// field (a photo of a document, say, which has no other reader)
+	DisableDescription bool
 	// Usage is the use of the field — "<table>.<Field>", a MediaBoxUsage —
 	// whose sizes (the admin's, else the code's) the server reads: the
 	// sizes the browser sends back are not the ones it trusts.

@@ -309,15 +309,20 @@ func (lcb *ListingComponentBuilder) Build(ctx *web.EventContext) (comp h.HTMLCom
 						).Attr("style", "flex-grow: 0;padding-left:0"),
 					),
 				).Slot("{ locals }").LocalsInit(`{isFocus: false}`),
-			).Width(100)
+			).Width("100%")
 		}
 
 		if searchBoxDefault != nil || filterBar != nil {
 			cb.TopBar = h.HTMLComponents{
 				VDivider(),
+				// the search and the filters wrap: in a narrow dialog the filters
+				// go below the search, which keeps a width to be typed in
 				VToolbar(
-					searchBoxDefault,
-					filterBar,
+					h.Div(
+						h.If(searchBoxDefault != nil, h.Div(searchBoxDefault).
+							Class("rvq-listing-dialog-search").Style("flex: 1 1 260px; min-width: 260px")),
+						h.If(filterBar != nil, h.Div(filterBar).Style("flex: 1 1 auto; min-width: 0")),
+					).Class("d-flex flex-wrap align-center ga-2 w-100"),
 				).Flat(true).Color("surface").AutoHeight(true).Class("pa-2"),
 			}
 		}

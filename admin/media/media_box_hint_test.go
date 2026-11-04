@@ -105,3 +105,25 @@ func TestAspectRatio(t *testing.T) {
 		}
 	}
 }
+
+// The description for accessibility of a media box, unless its config
+// disables it (DisableDescription).
+func TestMediaBoxDisableDescription(t *testing.T) {
+	ectx := &web.EventContext{R: httptest.NewRequest(http.MethodGet, "/", nil)}
+	ctx := web.ContextWithEventContext(context.Background(), ectx)
+	ectx.R = ectx.R.WithContext(ctx)
+	box := &media_library.MediaBox{ID: "1", Url: "/system/1/file.png", FileName: "file.png"}
+	render := func(cfg *media_library.MediaBoxConfig) string {
+		out, err := h.MarshallString(mediaBoxThumbnails(ectx, box, "Foto", cfg, false, false), ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	if out := render(&media_library.MediaBoxConfig{}); !strings.Contains(out, `form["Foto.Description"]`) {
+		t.Error("the description is not offered")
+	}
+	if out := render(&media_library.MediaBoxConfig{DisableDescription: true}); strings.Contains(out, `form["Foto.Description"]`) {
+		t.Error("the description is offered, disabled")
+	}
+}

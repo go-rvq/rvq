@@ -51,7 +51,9 @@ func TestListingSelectMany(t *testing.T) {
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	p.Permission(perm.New().AllowAll())
 	p.DataOperator(gorm2op.DataOperator(db))
-	l := p.Model(&SelNote{}).URIName("notes").Listing("ID", "Name")
+	nm := p.Model(&SelNote{}).URIName("notes")
+	nm.Detailing("ID", "Name")
+	l := nm.Listing("ID", "Name")
 	l.FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
 		return []*vx.FilterItem{{Key: "kind", Label: "Kind-filter", ItemType: vx.ItemTypeSelect, SQLCondition: `kind %s ?`,
 			Options: []*vx.SelectItem{{Text: "A", Value: "a"}, {Text: "B", Value: "b"}}}}
@@ -100,6 +102,10 @@ func TestListingSelectMany(t *testing.T) {
 	}
 	if !strings.Contains(body, "item-selector") || !strings.Contains(body, "disabled") {
 		t.Fatal("opened to choose several: the column to mark, the chosen one fixed")
+	}
+	// a link to the detail of each record: its address, opened in a dialog
+	if !strings.Contains(body, "rvq-listing-selection__open") || !strings.Contains(body, "href='/admin/notes/1'") {
+		t.Fatal("opened to choose: no link to the detail of the records")
 	}
 	if !strings.Contains(body, "rvq-listing-selection__add") || !strings.Contains(body, "pickNotes") ||
 		!strings.Contains(body, "1,2") || !strings.Contains(body, "Selected (2)") {
