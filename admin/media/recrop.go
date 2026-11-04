@@ -107,7 +107,11 @@ func (b *Builder) recropFile(u *MediaBoxUsage, id uuid.UUID, sizes []UsageSize) 
 	for name, s := range sizesOf(sizes, opt.Sizes) {
 		opt.Sizes[name] = s
 		if c := opt.CropOptions[name]; !sameRatio(c, s.Width, s.Height) {
-			if cc := centeredCrop(m.File.Width, m.File.Height, s.Width, s.Height); cc != nil {
+			if cc := cropOfRatio(opt.CropOptions, s.Width, s.Height); cc != nil {
+				// a size it had not: the area a size of its ratio has (who
+				// framed the file framed it for that ratio)
+				opt.CropOptions[name] = cc
+			} else if cc := centeredCrop(m.File.Width, m.File.Height, s.Width, s.Height); cc != nil {
 				opt.CropOptions[name] = cc
 			} else {
 				delete(opt.CropOptions, name)

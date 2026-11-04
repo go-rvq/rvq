@@ -273,6 +273,23 @@ func centeredCrop(width, height, w, h int) *base.CropOption {
 	}
 }
 
+// cropOfRatio is a copy of the area of crops whose ratio is w:h — of the one
+// first by name, so the choice is always the same —; nil when none is.
+func cropOfRatio(crops map[string]*base.CropOption, w, h int) *base.CropOption {
+	names := make([]string, 0, len(crops))
+	for name, c := range crops {
+		if sameRatio(c, w, h) {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	sort.Strings(names)
+	c := *crops[names[0]]
+	return &c
+}
+
 // sameRatio says the area keeps the ratio w:h (to 1%).
 func sameRatio(c *base.CropOption, w, h int) bool {
 	if c == nil || c.Height == 0 || h == 0 {

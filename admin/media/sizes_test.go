@@ -44,6 +44,28 @@ func TestCenteredCrop(t *testing.T) {
 	}
 }
 
+// A size a file had not takes the area of a size of its ratio — the one first
+// by name —, a copy; none of its ratio, nothing (then it is centered).
+func TestCropOfRatio(t *testing.T) {
+	crops := map[string]*base.CropOption{
+		"slider":  {X: 10, Y: 40, Width: 400, Height: 100},
+		"a.4to1":  {X: 0, Y: 0, Width: 800, Height: 200},
+		"thumb":   {X: 5, Y: 5, Width: 100, Height: 100},
+		"nothing": nil,
+	}
+	c := cropOfRatio(crops, 2400, 600)
+	if c == nil || *c != *crops["a.4to1"] {
+		t.Fatalf("4:1: %+v", c)
+	}
+	c.X = 99
+	if crops["a.4to1"].X != 0 {
+		t.Error("the area is not a copy")
+	}
+	if c := cropOfRatio(crops, 1200, 480); c != nil {
+		t.Errorf("2.5:1, none of it: %+v", c)
+	}
+}
+
 // The sizes of a field: the admin's when it has some, else the code's — what
 // the code gave besides the measures kept —; the server reads them by the
 // use, not as the browser sends them.
