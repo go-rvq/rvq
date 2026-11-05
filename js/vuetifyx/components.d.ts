@@ -81,6 +81,7 @@ declare module 'vue' {
     TipTapEditorExample: typeof import('./src/demo/components/TipTapEditorExample.vue')['default']
     TreeDataTable: typeof import('./src/lib/TreeDataTable.vue')['default']
     TreeDataTableExample: typeof import('./src/demo/components/TreeDataTableExample.vue')['default']
+    TreeDraggable: typeof import('./src/lib/TreeDraggable.vue')['default']
     TreeRows: typeof import('./src/lib/TreeRows.vue')['default']
     TreeSelectItem: typeof import('./src/lib/Filter/components/TreeSelectItem.vue')['default']
     Videojs: typeof import('./src/lib/EditorJS/Videojs.vue')['default']
