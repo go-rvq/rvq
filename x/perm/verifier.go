@@ -290,6 +290,10 @@ func (b *Verifier) IsAllowed() error {
 		b.builder.onAsk(a)
 	}
 
+	// the user's stack, when there are stacks (Stacks): its subject alone
+	if s := b.builder.stackSubject(b.vr.r); s != "" {
+		b.vr.subjects = []string{s}
+	}
 	if len(b.vr.subjects) == 0 && b.builder.subjectsFunc != nil {
 		b.vr.subjects = b.builder.subjectsFunc(b.vr.r)
 	}
@@ -315,7 +319,9 @@ func (b *Verifier) IsAllowed() error {
 	// only when the restriction's allow it too — an intersection
 	if b.mode == VerifierModeDefault && b.vr.r != nil {
 		if rs := RestrictionOf(b.vr.r.Context()); len(rs) > 0 {
-			return b.decide(rs)
+			if err := b.decide(rs); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -340,7 +346,7 @@ func (b *Verifier) decide(subjects []string) error {
 		case VerifierModeDeny:
 			err = ErrIsDanied
 		case VerifierModeDefault:
-			err = b.builder.ladon.IsAllowed(context.TODO(), b.vr.req)
+			err = b.builder.ladonOf(subjects).IsAllowed(context.TODO(), b.vr.req)
 		}
 
 		if Verbose {
@@ -365,7 +371,7 @@ func (b *Verifier) preferredDecision(subjects []string) (decided bool, err error
 	allowed := false
 	for _, sub := range subjects {
 		req.Subject = sub
-		e := b.builder.ladon.IsAllowed(context.TODO(), &req)
+		e := b.builder.ladonOf(subjects).IsAllowed(context.TODO(), &req)
 		if Verbose {
 			fmt.Printf("by the unique name: %v, req: {%s}\n", e, RequestToString(&req))
 		}

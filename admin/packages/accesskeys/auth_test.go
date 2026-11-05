@@ -79,7 +79,7 @@ func TestAuthenticator(t *testing.T) {
 	ana := uuid.New()
 	now := time.Now()
 	var told []string
-	a := &Authenticator{DB: db,
+	a := &Authenticator{DB: db, Perm: perm.New(),
 		FindUser: func(_ context.Context, id uuid.UUID) (any, error) {
 			if id != ana {
 				return nil, errors.New("no user")
@@ -99,8 +99,9 @@ func TestAuthenticator(t *testing.T) {
 	if err != nil || user.(*testUser).ID != ana {
 		t.Fatalf("the key: %v %v", user, err)
 	}
-	if got := perm.RestrictionOf(ctx); len(got) != 1 || got[0] != k.Subject() {
-		t.Errorf("the restriction: %v", got)
+	// restricted to its stack — registered —, and to what no key may reach
+	if got := perm.RestrictionOf(ctx); len(got) != 1 || got[0] != k.Subject() || !a.Perm.Registered(k.Subject()) {
+		t.Errorf("the restriction: %v, registered %v", got, a.Perm.Registered(k.Subject()))
 	}
 	if KeyOf(ctx) == nil || KeyOf(ctx).ID != k.ID {
 		t.Error("the key not told")

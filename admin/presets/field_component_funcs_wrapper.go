@@ -112,7 +112,8 @@ func SliceFieldComponentFuncWraper(draggable bool, itemComponentFunc func(field 
 
 	return FieldComponentWrapper(
 		func(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
-			v := field.RawValue()
+			// the value told (ValueOverride), else the field's
+			v := field.Value()
 			if v == nil {
 				v = []string{}
 			}

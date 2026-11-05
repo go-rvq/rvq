@@ -38,23 +38,28 @@ func TestSystemRoleOriginalsFollowTheCode(t *testing.T) {
 		if err := db.First(&r, "system_key = ?", key).Error; err != nil {
 			t.Fatal(err)
 		}
-		return resourcesOf(db, r)
+		return linesOf(db, r)
 	}
-	add := func(key, resource string) {
+	add := func(key, line string) {
 		var r Role
 		db.First(&r, "system_key = ?", key)
-		db.Create(&perm.DefaultDBPolicy{ReferID: r.ID.String(), Subject: r.Name, Effect: perm.Allowed,
-			Actions: pq.StringArray{"*"}, Resources: pq.StringArray{resource}})
+		db.Model(&r).Update("permissions", append(r.Permissions, line))
 	}
-	drop := func(key, resource string) {
+	drop := func(key, line string) {
 		var r Role
 		db.First(&r, "system_key = ?", key)
-		db.Where("refer_id = ? AND resources = ?", r.ID.String(), pq.StringArray{resource}).Delete(&perm.DefaultDBPolicy{})
+		var kept pq.StringArray
+		for _, l := range r.Permissions {
+			if l != line {
+				kept = append(kept, l)
+			}
+		}
+		db.Model(&r).Update("permissions", kept)
 	}
 
 	v1 := SystemRole{Key: "fe", Name: "Front", Policies: []SystemPolicy{Allow("admin:a:*"), Allow("admin:b:*")}}
 	ensure(v1)
-	if got := res("fe"); got != "admin:a:*=allow/Front;admin:b:*=allow/Front" {
+	if got := res("fe"); got != "admin:a:*;admin:b:*" {
 		t.Fatalf("made: %s", got)
 	}
 	// by hand: c added, a taken
@@ -64,25 +69,22 @@ func TestSystemRoleOriginalsFollowTheCode(t *testing.T) {
 	v2 := SystemRole{Key: "fe", Name: "Front", Policies: []SystemPolicy{Allow("admin:a:*"), Allow("admin:d:*"),
 		{Effect: perm.Denied, Actions: []string{"*"}, Resources: []string{"admin:d:*:secret*"}}}}
 	ensure(v2)
-	if got := res("fe"); got != "admin:c:*=allow/Front;admin:d:*:secret*=deny/Front;admin:d:*=allow/Front" {
+	if got := res("fe"); got != "admin:c:*;admin:d:*;deny admin:d:*:secret*" {
 		t.Errorf("v2: %s", got)
 	}
 	ensure(v2)
-	if got := res("fe"); !strings.Contains(got, "admin:d:*=allow") || strings.Contains(got, "admin:a:*") {
+	if got := res("fe"); !strings.Contains(got, "admin:d:*;") || strings.Contains(got, "admin:a:*") {
 		t.Errorf("v2 again: %s", got)
 	}
 
 	// a role made before the originals were kept: an old version of one
 	// (Formerly) and some of them
-	old := Role{ID: uuid.New(), Name: "Old", SystemKey: "old"}
+	old := Role{ID: uuid.New(), Name: "Old", SystemKey: "old",
+		Permissions: pq.StringArray{"admin:x:*", "admin:keep:*", "admin:mine:*"}}
 	db.Create(&old)
-	for _, r := range []string{"admin:x:*", "admin:keep:*", "admin:mine:*"} {
-		db.Create(&perm.DefaultDBPolicy{ReferID: old.ID.String(), Subject: "Old", Effect: perm.Allowed,
-			Actions: pq.StringArray{"*"}, Resources: pq.StringArray{r}})
-	}
 	ensure(SystemRole{Key: "old", Name: "Old", Policies: []SystemPolicy{Allow("admin:keep:*"), Allow("admin:new:*")},
 		Formerly: []SystemPolicy{Allow("admin:x:*")}})
-	if got := res("old"); got != "admin:keep:*=allow/Old;admin:mine:*=allow/Old;admin:new:*=allow/Old" {
+	if got := res("old"); got != "admin:keep:*;admin:mine:*;admin:new:*" {
 		t.Errorf("an old role: %s", got)
 	}
 }

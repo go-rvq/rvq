@@ -40,6 +40,24 @@ type Messages struct {
 	SendResetPasswordEmail string `i18n:"label='Send password reset email', hint='Action that emails a user a link to reset their password.'"`
 	Unlock                 string `i18n:"hint='Action that unlocks a user locked out by failed logins.'"`
 	RevokeTOTP             string `i18n:"label='Revoke TOTP', hint='Action that removes a user\\'s two-factor (TOTP) authentication.'"`
+
+	// the page of the permissions of a user: the stack
+	Permissions        string `i18n:"hint='Page of the detail of a user: the stack of their permissions.'"`
+	PermissionsAll     string `i18n:"hint='Tab of the permissions page: every line of the stack.'"`
+	PermissionsActive  string `i18n:"hint='Tab of the permissions page: the lines that count.'"`
+	PermissionsIndex   string `i18n:"hint='Column: the place of a line in the stack.'"`
+	PermissionsLine    string `i18n:"hint='Column: the permission, as written.'"`
+	PermissionsOrigin  string `i18n:"hint='Column: where the line comes from (a role, the code).'"`
+	PermissionsState   string `i18n:"hint='Column: whether the line counts, or which one replaced it.'"`
+	PermissionsActiveS string `i18n:"hint='State of a line that counts.'"`
+	// %d: the index of the line that replaced it
+	PermissionsReplaced string `i18n:"hint='State of a line replaced by a later one (%d: its index).'"`
+	PermissionsReset    string `i18n:"hint='State of a reset line: it removes, counts as nothing.'"`
+	PermissionsExcept   string `i18n:"hint='State of an active line that no longer counts for what later lines match (%s: their indexes, \"#3, #5\").'"`
+	PermissionsExceptOf string `i18n:"hint='After an active line, in the list of the active ones: what it no longer counts for (%s: the patterns).'"`
+	PermissionsTree     string `i18n:"hint='Switch of the active tab: the lines as a tree.'"`
+	PermissionsNone     string `i18n:"hint='Said of a user of no permission.'"`
+	PermissionsFixed    string `i18n:"hint='Said of the initial user: all, by the code.'"`
 }
 
 var (
@@ -64,6 +82,21 @@ var (
 		SendResetPasswordEmail:            "Send password reset email",
 		Unlock:                            "Unlock",
 		RevokeTOTP:                        "Revoke TOTP",
+		Permissions:                       "Permissions",
+		PermissionsAll:                    "All",
+		PermissionsActive:                 "Active",
+		PermissionsIndex:                  "Index",
+		PermissionsLine:                   "Permission",
+		PermissionsOrigin:                 "Origin",
+		PermissionsState:                  "State",
+		PermissionsActiveS:                "active",
+		PermissionsReplaced:               "replaced by #%d",
+		PermissionsReset:                  "removal",
+		PermissionsExcept:                 "active, but what %s matches",
+		PermissionsExceptOf:               "but %s",
+		PermissionsTree:                   "As a tree",
+		PermissionsNone:                   "No permission.",
+		PermissionsFixed:                  "The initial user may do everything (by the code).",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -87,6 +120,21 @@ var (
 		SendResetPasswordEmail:            "Enviar email para alterar a senha",
 		Unlock:                            "Desbloquear",
 		RevokeTOTP:                        "Revogar TOTP",
+		Permissions:                       "Permissões",
+		PermissionsAll:                    "Tudo",
+		PermissionsActive:                 "Ativas",
+		PermissionsIndex:                  "Índice",
+		PermissionsLine:                   "Permissão",
+		PermissionsOrigin:                 "Origem",
+		PermissionsState:                  "Situação",
+		PermissionsActiveS:                "ativa",
+		PermissionsReplaced:               "substituída pela #%d",
+		PermissionsReset:                  "remoção",
+		PermissionsExcept:                 "ativa, menos o que %s casa",
+		PermissionsExceptOf:               "menos %s",
+		PermissionsTree:                   "Em árvore",
+		PermissionsNone:                   "Nenhuma permissão.",
+		PermissionsFixed:                  "O usuário inicial pode tudo (pelo código).",
 	}
 )
 

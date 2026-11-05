@@ -9,6 +9,21 @@ A user has one or more roles (see {%= admin.model("users").link %}).
 - Make a role for each kind of work — editing the site, answering the
   contact form… — and give it only what that work needs.
 
+## The permissions
+
+A role's permissions are an **ordered list**, one a line (drag to change the
+order): a resource, which **allows**, or with a prefix — `deny ` **denies**,
+`allow ` forces the allow of what matches it, over the earlier denies,
+`reset ` takes from the earlier lines what matches it. A group is several lines:
+`admin:users:{*, deny @delete}`. All of it, with examples, in
+{%= admin.doc("guides/policies/01-permissions").link %}.
+
+A user's roles have an **order** too: a role's lines come after the earlier
+one's, so it may deny what the earlier allows, or allow (`allow`) what it
+denies. The user's page **Permissions** shows the result.
+
+A change to a role counts at once for all its users.
+
 ## System roles
 
 Some roles are the **system**'s: the application needs them, and makes them

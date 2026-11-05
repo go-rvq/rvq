@@ -1,8 +1,8 @@
 # 1. Permissões
 
-O que um usuário pode fazer vem dos **papéis** dele: cada papel permite ou
-nega, parte por parte do admin, listar, ver, criar, editar e excluir
-registros, e executar ações.
+O que um usuário pode fazer vem dos **papéis** dele, em ordem: cada papel
+permite ou nega, parte por parte do admin, listar, ver, criar, editar e
+excluir registros, e executar ações (veja *A pilha de permissões*, abaixo).
 
 - **O que não é permitido não aparece**: um item do menu lateral, um botão,
   uma ação, uma aba, uma coluna. Um grupo sem nada permitido não está no
@@ -82,6 +82,78 @@ grupo negado com uma parte dele permitida pelo nome. Uma permissão declarada
 junto com o grupo (`admin:site/:/site-files:!edit`): com as duas, decide a de
 fora do grupo. E ela continua valendo quando o menu muda a parte de grupo — a
 declarada com o grupo deixa de casar.
+
+## A pilha de permissões
+
+As permissões de um papel são uma **lista em ordem**, uma por linha. As de um
+usuário são uma **pilha**: as do sistema primeiro, depois as dadas a ele num
+registro (um compartilhamento), depois as de **cada papel dele, na ordem dos
+papéis** — a ordem em que estão no cadastro do usuário (arraste para mudar).
+
+Cada linha é um recurso, e pode começar com um **prefixo** — a palavra **e
+um espaço**:
+
+| Linha | O que faz |
+| --- | --- |
+| `admin:pages:*` | **permite** o que casa com ela, se nenhuma negação casar |
+| `deny admin:users:*` | **nega** o que casa com ela |
+| `allow admin:users:@list` | as negações **anteriores** deixam de valer para o que casa com ela — mesmo uma mais larga —, e ela permite: **força** a permissão só do que casa com ela |
+| `reset admin:users:*` | as linhas **anteriores** deixam de valer para o que casa com ela — mesmo uma mais larga —; ela não permite nem nega nada |
+
+Uma linha **cobre** outra quando o recurso dela casa com o da outra:
+`admin:*` cobre `admin:users:@list`; `admin:users:@list` não cobre
+`admin:users:*`. Uma linha depois de outra que ela cobre a **substitui**:
+
+- `deny` e `allow` substituem as anteriores sem prefixo, `allow` e `deny`;
+- `reset` substitui qualquer uma;
+- uma sem prefixo substitui as anteriores sem prefixo (e `allow`).
+
+Um `allow` ou um `reset` **mais estreito** que uma linha anterior — que ela
+cobre — não a substitui: tira dela só o que ele casa. Depois de
+`deny admin:users:*`, um `allow admin:users:@list` libera só a lista; a
+negação continua valendo para o resto dos usuários. Uma linha sem prefixo
+mais estreita não tira nada: a negação ganha dela.
+
+O que sobra são as permissões **ativas**: as sem prefixo (um `allow` vira
+uma) e as `deny`. Elas decidem como sempre: um recurso é permitido quando
+uma ativa sem prefixo casa com ele e nenhuma `deny` ativa casa.
+
+**Grupos** são várias linhas, na ordem deles: `admin:users:{@list,@create}`
+é `admin:users:@list` e `admin:users:@create`. Uma alternativa pode ter o
+seu prefixo — `admin:users:{*, deny @delete}` é `admin:users:*` e depois
+`deny admin:users:@delete`; `admin:users:{*, deny {@edit,@delete}}` nega
+só as duas —, e isso vale em qualquer parte do recurso: partes, campos,
+ações. Uma quebra de linha dentro de um grupo separa como a vírgula.
+
+Exemplos (a pilha de um usuário, de cima para baixo):
+
+| Pilha | Pode | Não pode |
+| --- | --- | --- |
+| `admin:*`<br>`deny admin:users:*` | tudo, menos os usuários | os usuários |
+| `admin:*`<br>`deny admin:users:*`<br>`allow admin:users:*` | tudo: o `allow` desfaz o `deny` | — |
+| `admin:*`<br>`deny admin:users:*`<br>`reset admin:users:*` | tudo: o `reset` tira o `deny`, e o `admin:*` vale | — |
+| `admin:users:*`<br>`reset admin:*`<br>`admin:pages:*` | só as páginas: o `reset` tirou os usuários | o resto |
+| `admin:*`<br>`deny admin:users:*`<br>`allow admin:users:@list` | tudo, e a lista dos usuários: o `allow` força só ela | os usuários, fora a lista |
+| `admin:*`<br>`deny admin:users:*`<br>`admin:users:@list` | tudo, menos os usuários: sem o `allow`, a negação ganha | os usuários, a lista também |
+| `admin:*`<br>`reset admin:users:@delete` | tudo, menos excluir usuários: o `reset` tirou isso do `admin:*` | excluir usuários |
+| `admin:users:{*, deny @delete}` | os usuários, menos excluir | excluir usuários |
+
+Assim, um papel que vem depois pode negar o que um anterior permite (`deny`)
+ou permitir o que um anterior nega (`allow`).
+
+A página **Permissões** do detalhe de cada usuário mostra a pilha dele: na
+aba **Tudo**, cada linha com o seu índice, de onde veio (o sistema, um papel)
+e se está ativa — ou ativa menos o que uma linha depois casa —, ou foi
+substituída — e por qual —; na aba **Ativas**, só as que valem, cada uma
+com o que ela não cobre mais ("menos …"), em lista ou em árvore.
+
+## As chaves de acesso
+
+As permissões de uma **chave de acesso** só aceitam **negações**
+(`deny admin:users:*`), aplicadas por cima do que o usuário dela pode: a
+chave pode tudo o que o usuário pode, menos o que ela nega. Sem nenhuma, tudo
+o que o usuário pode. Os exemplos estão em
+{%= admin.model("my_access_keys").link %}.
 
 ## As permissões do admin
 

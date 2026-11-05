@@ -14,7 +14,6 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/web"
-	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -192,6 +191,8 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		return
 	}))
 
+	// the roles, in order — the order of the user's stack —: a list of
+	// selects, dragged into place
 	ed.Field("Roles").
 		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			u := field.Obj.(User)
@@ -199,33 +200,28 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 				return nil
 			}
 			values := []string{}
-			var roles []*role.Role
-			db.Model(u).Association("Roles").Find(&roles)
-			for _, r := range roles {
-				values = append(values, fmt.Sprint(r.ID))
+			if u.GetID() != uuid.Nil {
+				roles, _ := OrderedRoles(db, u.GetID())
+				for _, r := range roles {
+					values = append(values, r.ID.String())
+				}
 			}
-
-			roles = nil
-			db.Find(&roles)
-			allRoleItems := []DefaultOptionItem{}
-			for _, r := range roles {
-				allRoleItems = append(allRoleItems, DefaultOptionItem{
-					Text:  r.Name,
-					Value: fmt.Sprint(r.ID),
-				})
+			var all []*role.Role
+			db.Order("name").Find(&all)
+			items := []DefaultOptionItem{}
+			for _, r := range all {
+				items = append(items, DefaultOptionItem{Text: r.Name, Value: r.ID.String()})
 			}
-
-			return vue.FormField(
-				vx.VXSelectMany().
-					Label(field.Label).
-					ItemText("text").ItemValue("value").
-					Many(true).
-					Chips(true).
-					Items(allRoleItems).
-					ErrorMessages(field.Errors...),
-			).
-				Value(field.Name, values).
-				Bind()
+			field.ValueOverride = values
+			return presets.WriteSortableSliceFieldComponentFuncWraper(func(field *presets.FieldContext, itemsModel, deleteFunc string) h.HTMLComponent {
+				return VSelect(
+					web.Slot(
+						VIcon("mdi-delete").Color("error").Attr("@click", fmt.Sprintf(deleteFunc, "index")),
+					).Name("append-inner"),
+				).Items(items).ItemTitle("text").ItemValue("value").
+					Density(DensityCompact).HideDetails(true).Class("mb-2").
+					Attr("v-model", "element.__value").Attr("data-role-select", true)
+			})(field, ctx)
 		}).
 		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 			u := obj.(User)
@@ -234,7 +230,12 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			}
 			rids := ctx.FormSliceValues(field.FormKey)
 			var roles []*role.Role
+			seen := map[string]bool{}
 			for _, id := range rids {
+				if seen[id] {
+					continue
+				}
+				seen[id] = true
 				rid, err1 := uuid.Parse(id)
 				if err1 != nil {
 					continue
@@ -279,7 +280,18 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 				return perm.PermissionDenied
 			}
 			u.SetRegistrationDate(time.Now())
-			return in(obj, id, ctx)
+			if err = in(obj, id, ctx); err != nil {
+				return
+			}
+			// the order of its roles: the order of its stack
+			var ids []uuid.UUID
+			for _, r := range u.GetRoles() {
+				ids = append(ids, r.ID)
+			}
+			if err = SetRolePositions(db, u.GetID(), ids); err == nil {
+				role.Changed(c.mb.Builder().GetPermission())
+			}
+			return
 		}
 	})
 
@@ -291,11 +303,18 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 			u     = field.Obj.(User)
 			roles []*role.Role
 		)
-		db.Model(u).Association("Roles").Find(&roles)
+		roles, _ = OrderedRoles(db, u.GetID())
 		u.SetRoles(roles)
 		return h.Text(strings.Join(c.UserRoles(u), ", "))
 	}))
 	d.Only("Name", "Status", "Account", "Roles", "CreatedAt", "UpdatedAt")
+
+	// the order of the roles of the users (their stacks), and the page of the
+	// permissions of a user
+	if err := EnsureRolePositions(db); err != nil {
+		panic(err)
+	}
+	c.installPermissionsPage()
 
 	ConfigureChangePasswordAction(c.lb, false, d, func(ctx *web.EventContext) (u User, err error) {
 		fctx := presets.GetActionFormContext[*ChangePassword](ctx)

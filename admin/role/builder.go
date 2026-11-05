@@ -1,9 +1,11 @@
 package role
 
 import (
+	"fmt"
+	"github.com/lib/pq"
 	"net/http"
-	"reflect"
-	"time"
+	"strings"
+	"sync/atomic"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
@@ -11,11 +13,8 @@ import (
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
-	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
-	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
-	"github.com/google/uuid"
 	"github.com/ory/ladon"
 	"gorm.io/gorm"
 )
@@ -127,9 +126,8 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 		"Permissions",
 	)
 
-	policeModel := presets.NewModelBuilder(pb, &perm.DefaultDBPolicy{}, presets.ModelConfig().SetModuleKey(MessagesKey))
-	permFb := &policeModel.Editing("Effect", "Actions", "Resources").FieldsBuilder
-	ed.Field("Permissions").AutoNested(policeModel, permFb)
+	// its lines: a list of texts, in order (perm.Stack)
+	ed.Field("Permissions").AsSlice()
 	// the help of the permissions: a ? that opens their documentation
 	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
 		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -152,59 +150,38 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 		}
 	})
 
-	permFb.Field("Effect").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		p := field.Obj.(*perm.DefaultDBPolicy)
-		msgr := GetMessages(ctx.Context())
-
-		return vue.FormField(vx.VXSelectOne().
-			Label(field.Label).
-			ItemText("text").ItemValue("value").
-			Chips(true).
-			Items([]DefaultOptionItem{
-				{Value: perm.Allowed, Text: msgr.Allowed},
-				{Value: perm.Denied, Text: msgr.Denied},
-			}).ErrorMessages(field.Errors...)).Value(field.FormKey, p.Effect).Bind()
-	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-		p := obj.(*perm.DefaultDBPolicy)
-		p.Effect = ctx.R.FormValue(field.FormKey)
-		return
-	})
-
-	permFb.Field("Actions").AsSlice()
-	permFb.Field("Resources").AsSlice()
-
-	ed.FetchFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
-		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
-	})
-
-	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
-		u := obj.(*Role)
-		for _, p := range u.Permissions {
-			p.Subject = u.Name
+	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (errs web.ValidationErrors) {
+		r := obj.(*Role)
+		var lines pq.StringArray
+		for _, l := range r.Permissions {
+			if l = strings.TrimSpace(l); l == "" {
+				continue
+			}
+			if perm.CheckLine(l) != nil {
+				errs.FieldError("Permissions", fmt.Sprintf(GetMessages(ctx.Context()).ErrLine, l))
+			}
+			lines = append(lines, l)
 		}
+		r.Permissions = lines
 		return
 	})
 
 	ed.SaveFunc(func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
-		r := obj.(*Role)
-		// the permissions the form removed — the list editor posts each with its
-		// ID and __deleted — are not saved again: deleted with the others below,
-		// a save of them by their ID would bring them back
-		if part := presets.PartitionListEditorItems(presets.ListEditorFormValues(ctx), "Permissions",
-			reflect.ValueOf(r.Permissions)); part != nil {
-			r.Permissions = part.KeptSlice(reflect.TypeOf(r.Permissions)).Interface().([]*perm.DefaultDBPolicy)
+		if err = gorm2op.DataOperator(b.db.Omit("Policies")).Save(obj, id, ctx); err == nil {
+			b.changed()
 		}
-		if r.ID != uuid.Nil {
-			if err = b.db.Delete(&perm.DefaultDBPolicy{}, "refer_id = ?", r.ID).Error; err != nil {
-				return
-			}
-		}
-		if err = gorm2op.DataOperator(b.db.Session(&gorm.Session{FullSaveAssociations: true})).Save(obj, id, ctx); err != nil {
-			return
-		}
-		startFrom := time.Now().Add(-1 * time.Second)
-		pb.GetPermission().LoadDBPoliciesToMemory(b.db, &startFrom)
 		return
+	})
+
+	// the lines in the detail, one a line, as written
+	b.roleMb.Detailing().Field("Permissions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		r := field.Obj.(*Role)
+		var items []h.HTMLComponent
+		for _, l := range r.Permissions {
+			items = append(items, h.Div(h.Code(l)).Class("text-body-2"))
+		}
+		return h.Div(h.Div(h.Text(field.Label)).Class("text-caption text-medium-emphasis"),
+			h.Div(items...).Attr("data-role-lines", true)).Class("mb-4")
 	})
 
 	b.roleMb.Listing().DeleteFunc(func(obj interface{}, id model.ID, cascade bool, ctx *web.EventContext) (err error) {
@@ -219,18 +196,24 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 
 			return nil
 		})
-
+		if err == nil {
+			b.changed()
+		}
 		return
 	})
 
 	b.roleMb.Listing("Name", "SystemKey")
 	b.roleMb.Detailing("Name", "SystemKey", "Permissions")
 	b.installSystem(b.roleMb)
+	// the roles of before the lines: their policies made lines, once
+	if err = MigrateLines(b.db); err != nil {
+		return err
+	}
 	if len(b.systemRoles) > 0 {
 		if err = b.EnsureSystemRoles(); err != nil {
 			return err
 		}
-		b.reloadPolicies()
+		b.changed()
 	}
 
 	if b.AfterInstallFunc != nil {
@@ -238,4 +221,97 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	}
 
 	return nil
+}
+
+// generation is the version of the roles — of their lines —: changed by each
+// change of a role, it is part of the version of the stacks of the users
+// (user.StackSource), which are made again.
+var generation atomic.Int64
+
+// Generation is the version of the roles in this process.
+func Generation() int64 { return generation.Load() }
+
+// Changed tells the roles changed — by this process, or by another one (a
+// listener): the stacks of the users are made again at their next request.
+func Changed(pb *perm.Builder) {
+	generation.Add(1)
+	if pb != nil {
+		pb.Forget()
+	}
+}
+
+func (b *Builder) changed() {
+	var pb *perm.Builder
+	if b.pb != nil {
+		pb = b.pb.GetPermission()
+	}
+	Changed(pb)
+}
+
+// MigrateLines makes the permissions of the roles of before the lines —
+// policies whose ReferID is the role's key — their lines, once: a role of no
+// lines and of policies gets theirs (perm.PolicyLines), in the order they
+// were made, and its policies go; the originals of a system role kept in the
+// form of before ("effect|actions|resources" a line) are made lines too.
+func MigrateLines(db *gorm.DB) error {
+	if err := db.AutoMigrate(&Role{}); err != nil {
+		return err
+	}
+	if !db.Migrator().HasTable(&perm.DefaultDBPolicy{}) {
+		return nil
+	}
+	var roles []*Role
+	if err := db.Preload("Policies", func(db *gorm.DB) *gorm.DB { return db.Order("created_at, id") }).
+		Find(&roles).Error; err != nil {
+		return err
+	}
+	for _, r := range roles {
+		if len(r.Permissions) > 0 || len(r.Policies) == 0 && !strings.Contains(r.SystemPolicies, "|") {
+			continue
+		}
+		var lines pq.StringArray
+		for _, p := range r.Policies {
+			lines = append(lines, perm.PolicyLines(p.Effect, p.Actions, p.Resources)...)
+		}
+		originals := r.SystemPolicies
+		if strings.Contains(originals, "|") {
+			var ls []string
+			for _, k := range strings.Split(originals, "\n") {
+				parts := strings.SplitN(k, "|", 3)
+				if len(parts) != 3 {
+					continue
+				}
+				ls = append(ls, perm.PolicyLines(parts[0], strings.Split(parts[1], ","), []string{parts[2]})...)
+			}
+			originals = strings.Join(ls, "\n")
+		}
+		err := db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(r).UpdateColumns(map[string]any{"permissions": lines, "system_policies": originals}).Error; err != nil {
+				return err
+			}
+			return tx.Where("refer_id = ?", r.ID.String()).Delete(&perm.DefaultDBPolicy{}).Error
+		})
+		if err != nil {
+			return fmt.Errorf("role %s: its lines: %w", r.Name, err)
+		}
+	}
+	return nil
+}
+
+// Stack is the stack of a user of roles, in their order: the policies of the
+// code whose subjects match subjects (perm.Builder.CodeLines) — the code —,
+// then the database's (perm.Builder.DBLines: what is granted a record, a
+// share), then the lines of each role, of the origin "role: <name>". Not
+// resolved.
+func Stack(pb *perm.Builder, subjects []string, roles []*Role) *perm.Stack {
+	s := &perm.Stack{}
+	if pb != nil {
+		for _, l := range append(pb.CodeLines(subjects), pb.DBLines(subjects)...) {
+			s.AddLine(l)
+		}
+	}
+	for _, r := range roles {
+		s.Add("role: "+r.Name, r.Permissions...)
+	}
+	return s
 }

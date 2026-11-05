@@ -3,7 +3,6 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -54,8 +53,9 @@ func (b *Middlewares) WithRoles(next http.Handler) http.Handler {
 			return
 		}
 
-		var roles []*role.Role
-		if err := b.db.Where("id IN (SELECT role_id FROM user_role_join WHERE user_id = ?)", u.GetID()).Find(&roles).Error; err != nil {
+		// its roles, in its order: the order of its stack
+		roles, err := OrderedRoles(b.db, u.GetID())
+		if err != nil {
 			panic(err)
 		}
 		if len(roles) > 0 {

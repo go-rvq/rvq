@@ -2,6 +2,7 @@ package accesskeys
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -66,7 +67,7 @@ func createKey(href string, form ...[2]string) *http.Request {
 }
 
 // My keys: a user makes their own key — its code shown once, only its hash
-// kept, its permissions allows of its subject —, sees only their own; the
+// kept, its permissions its denies —, sees only their own; the
 // keys of a user under the users; a key lasts at most MaxValidity; no request
 // by a key reaches any key.
 func TestMyKeys(t *testing.T) {
@@ -77,12 +78,13 @@ func TestMyKeys(t *testing.T) {
 	my := p.GetModelByID(MyKeysModelID).Info().ListingHref()
 
 	w := do(ana, createKey(my, [2]string{"Name", "deploy"}, [2]string{"Enabled", "true"},
-		[2]string{"Permissions[0].Actions[0]", "*"}, [2]string{"Permissions[0].Resources[0]", "admin:/site-files:*"}))
+		[2]string{"Permissions.__present", "1"},
+		[2]string{"Permissions[0].__value", "deny admin:users:*"}, [2]string{"Permissions[0].$id", "1"}))
 	if w.Code != http.StatusOK {
 		t.Fatalf("creating: %d %.300s", w.Code, w.Body.String())
 	}
 	var keys []AccessKey
-	db.Preload("Permissions").Find(&keys)
+	db.Find(&keys)
 	if len(keys) != 1 {
 		t.Fatalf("keys: %+v\n%.500s", keys, w.Body.String())
 	}
@@ -97,9 +99,8 @@ func TestMyKeys(t *testing.T) {
 	if d := time.Until(k.ExpiresAt); d < 89*24*time.Hour || d > 91*24*time.Hour {
 		t.Errorf("the default validity: %v", d)
 	}
-	if len(k.Permissions) != 1 || k.Permissions[0].Subject != k.Subject() || k.Permissions[0].Effect != perm.Allowed ||
-		k.Permissions[0].ReferID != k.ID.String() || strings.Join(k.Permissions[0].Resources, ",") != "admin:/site-files:*" {
-		t.Errorf("its permissions: %+v", k.Permissions)
+	if strings.Join(k.Permissions, " ") != "deny admin:users:*" {
+		t.Errorf("its permissions: %q", k.Permissions)
 	}
 
 	// made disabled: kept so
@@ -127,39 +128,148 @@ func TestMyKeys(t *testing.T) {
 	}
 
 	// a request by a key: no key reached
+	all := &AccessKey{ID: uuid.New(), Name: "all"}
+	if err := p.GetPermission().Register(all.Subject(), "1", func() (*perm.Stack, error) { return all.Stack(), nil }); err != nil {
+		t.Fatal(err)
+	}
 	r := httptest.NewRequest("GET", my, nil)
-	r = r.WithContext(perm.WithRestriction(r.Context(), k.Subject()))
+	r = r.WithContext(perm.WithRestriction(r.Context(), all.Subject()))
 	if w := do(ana, r); w.Code == http.StatusOK && strings.Contains(w.Body.String(), "deploy") {
 		t.Errorf("a key reached the keys: %d", w.Code)
 	}
 }
 
-// The permissions as the form posts them — each list item its __value, the
-// editor's flags, no plain field of the item —: saved; with no actions, any
-// (*): the resource says all.
+// The permissions as the form posts them — a list of texts, each item its
+// __value —: kept as written, in their order, the blank ones out; only
+// denies — a line that allows, resets, or a group of one that does not deny,
+// refused.
 func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
 	db, p, _, do := keysApp(t)
 	ana := uuid.New()
 	db.Create(&keyUser{ID: ana, Name: "Ana"})
 	my := p.GetModelByID(MyKeysModelID).Info().ListingHref()
-	for _, c := range []struct {
-		name, actions string
-		form          [][2]string
-	}{
-		{"only-resources", "*", [][2]string{
-			{"Permissions[0].Resources[0].__value", "admin:/site-files:{@get,!git}"}, {"Permissions[0].Resources[0].$id", "1"}}},
-		{"both", "@get", [][2]string{
-			{"Permissions[0].Actions[0].__value", "@get"}, {"Permissions[0].Actions[0].$id", "1"},
-			{"Permissions[0].Resources[0].__value", "admin:/site-files:{@get,!git}"}, {"Permissions[0].Resources[0].$id", "2"}}},
-	} {
-		form := append([][2]string{{"Name", c.name}, {"Enabled", "true"}, {"Permissions.__present", "1"},
-			{"Permissions[0].__pos", "0"}, {"Permissions[0].__index", "0"}, {"Permissions[0].__new", "true"}}, c.form...)
-		do(ana, createKey(my, form...))
-		var k AccessKey
-		db.Preload("Permissions").First(&k, "name = ?", c.name)
-		if len(k.Permissions) != 1 || strings.Join(k.Permissions[0].Resources, ",") != "admin:/site-files:{@get,!git}" ||
-			strings.Join(k.Permissions[0].Actions, ",") != c.actions {
-			t.Errorf("%s: %+v", c.name, k.Permissions)
+	post := func(name string, lines ...string) {
+		form := [][2]string{{"Name", name}, {"Enabled", "true"}, {"Permissions.__present", "1"}}
+		for i, v := range lines {
+			form = append(form, [2]string{fmt.Sprintf("Permissions[%d].__value", i), v},
+				[2]string{fmt.Sprintf("Permissions[%d].$id", i), fmt.Sprint(i + 1)})
 		}
+		do(ana, createKey(my, form...))
+	}
+	post("denies", "deny admin:users:*", " ", " deny admin:pages:{@edit,@delete} ")
+	var k AccessKey
+	if err := db.First(&k, "name = ?", "denies").Error; err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(k.Permissions, "|"); got != "deny admin:users:*|deny admin:pages:{@edit,@delete}" {
+		t.Errorf("the denies: %q", got)
+	}
+	for i, bad := range []string{"admin:*", "allow admin:*", "reset admin:users:*", "deny", "denyadmin:users:*",
+		"admin:users:{deny @edit, @list}"} {
+		name := fmt.Sprint("bad", i)
+		post(name, "deny admin:users:*", bad)
+		if db.First(&AccessKey{}, "name = ?", name).Error == nil {
+			t.Errorf("a key of a line %q made", bad)
+		}
+	}
+}
+
+// userSource is the stack of the user of a request: its header X-User.
+type userSource map[string][]string
+
+func (s userSource) StackOf(r *http.Request) (string, string, func() (*perm.Stack, error)) {
+	u := r.Header.Get("X-User")
+	if u == "" {
+		return "", "", nil
+	}
+	return "user:" + u, "1", func() (*perm.Stack, error) { return (&perm.Stack{}).Add("role: R", s[u]...), nil }
+}
+
+// A request by a key: allowed what its user may, but what the key denies;
+// never a key, whatever the user may (ProtectedLines); a key of before the
+// denies, what its lines of no prefix reach, and its user may.
+func TestKeyStackOfARequest(t *testing.T) {
+	pb := perm.New().Stacks(userSource{"all": {"*"}, "pages": {"admin:pages:*"}})
+	n := 0
+	allowed := func(user, resource string, lines ...string) bool {
+		t.Helper()
+		n++
+		k := &AccessKey{ID: uuid.New(), Name: fmt.Sprint("k", n), Permissions: lines}
+		if err := pb.Register(k.Subject(), "1", func() (*perm.Stack, error) { return k.Stack(), nil }); err != nil {
+			t.Fatal(err)
+		}
+		parts := strings.Split(resource, ":")
+		r := httptest.NewRequest("GET", "/admin", nil)
+		r.Header.Set("X-User", user)
+		r = r.WithContext(perm.WithRestriction(r.Context(), k.Subject()))
+		v := perm.NewVerifier("admin", pb).Spawn().Do(parts[len(parts)-1]).On(parts[:len(parts)-1]...).WithReq(r)
+		return v.IsAllowed() == nil
+	}
+	for _, c := range []struct {
+		user, resource string
+		lines          []string
+		want           bool
+	}{
+		{"all", "users:@list", nil, true},
+		{"all", "users:@list", []string{"deny admin:users:*"}, false},
+		{"all", "pages:@list", []string{"deny admin:users:*"}, true},
+		{"all", "users:@edit", []string{"deny admin:users:{@edit,@delete}"}, false},
+		{"all", "users:@list", []string{"deny admin:users:{@edit,@delete}"}, true},
+		{"pages", "users:@list", nil, false},
+		{"pages", "pages:@list", nil, true},
+		{"all", MyKeysModelID + ":@list", nil, false},
+		{"all", "users:" + UserKeysModelID + ":@list", nil, false},
+		{"all", UsesModelID + ":@list", nil, false},
+		// of before the denies: its lines are what it reaches
+		{"all", "users:@list", []string{"admin:pages:*"}, false},
+		{"all", "pages:@list", []string{"admin:pages:*"}, true},
+		{"pages", "users:@list", []string{"admin:*"}, false},
+	} {
+		if got := allowed(c.user, c.resource, c.lines...); got != c.want {
+			t.Errorf("%s, %s by %q: %v, want %v", c.user, c.resource, c.lines, got, c.want)
+		}
+	}
+}
+
+// The keys of before the lines: their policies made lines ("deny " before a
+// deny's), once — the policies gone; a key of lines left as it is.
+func TestMigrateLines(t *testing.T) {
+	db := testDB(t)
+	if err := db.AutoMigrate(&perm.DefaultDBPolicy{}); err != nil {
+		t.Fatal(err)
+	}
+	old, _ := newKey(t, db, uuid.New(), nil)
+	for _, pol := range []*perm.DefaultDBPolicy{
+		{ReferID: old.ID.String(), Subject: old.Subject(), Effect: perm.Allowed, Resources: []string{"admin:*"}},
+		{ReferID: old.ID.String(), Subject: old.Subject(), Effect: perm.Denied, Resources: []string{"admin:users:*"}},
+	} {
+		pol.ID = uuid.New()
+		if err := db.Create(pol).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	lined, _ := newKey(t, db, uuid.New(), func(k *AccessKey) { k.Permissions = []string{"deny admin:pages:*"} })
+	for range 2 {
+		if err := MigrateLines(db); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var k AccessKey
+	db.First(&k, "id = ?", old.ID)
+	if got := strings.Join(k.Permissions, "|"); got != "admin:*|deny admin:users:*" && got != "deny admin:users:*|admin:*" {
+		t.Errorf("the lines of the key of before: %q", got)
+	}
+	if !k.legacy() {
+		t.Error("the key of before not of before")
+	}
+	var n int64
+	db.Model(&perm.DefaultDBPolicy{}).Where("refer_id = ?", old.ID.String()).Count(&n)
+	if n != 0 {
+		t.Errorf("its policies left: %d", n)
+	}
+	var r AccessKey
+	db.First(&r, "id = ?", lined.ID)
+	if strings.Join(r.Permissions, " ") != "deny admin:pages:*" {
+		t.Errorf("a key of lines changed: %q", r.Permissions)
 	}
 }

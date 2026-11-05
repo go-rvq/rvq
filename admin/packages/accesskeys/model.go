@@ -1,7 +1,8 @@
 // Package accesskeys is the access keys of the users: codes an automation —
 // git, WebDAV, a script — authenticates with in a user's name, each request
 // alone (no session). A key's permissions only restrict: a request by it is
-// allowed what the user is allowed AND the key allows (perm.WithRestriction).
+// allowed what the user is allowed but what the key denies (its lines,
+// perm.WithRestriction of the subject of its stack).
 // Each request by a key is in its history (AccessKeyUse), and in the user's
 // access log.
 package accesskeys
@@ -19,6 +20,7 @@ import (
 
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -50,9 +52,16 @@ type AccessKey struct {
 	// CreatedByID is who made it: the user, or an administrator.
 	CreatedByID model.UUID `gorm:"type:uuid"`
 
-	// Permissions restrict it: the policies whose ReferID is its id, its
-	// subject Subject(); allows only.
-	Permissions []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
+	// Permissions restrict it: lines of denies (perm.Stack), "deny " and a
+	// resource each — "deny admin:users:*", "deny admin:users:{@edit,
+	// @delete}" —, on top of what its user may: a request by the key is
+	// allowed what the user may, but what they deny. No key reaches the keys
+	// (ProtectedLines). A key of before the denies keeps its lines of no
+	// prefix — what it may reach, alone —, until it is saved again.
+	Permissions pq.StringArray `gorm:"type:text[]"`
+	// Policies are the permissions of the keys of before the lines: the
+	// policies whose ReferID is its id — made lines once (MigrateLines).
+	Policies []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
 
 	// Code is the code of a key just made — shown once —, never stored.
 	Code string `gorm:"-"`
@@ -148,4 +157,64 @@ func CodeHash(code string) string {
 // Matches says whether code is the key's (in constant time).
 func (k *AccessKey) Matches(code string) bool {
 	return subtle.ConstantTimeCompare([]byte(CodeHash(code)), []byte(k.CodeHash)) == 1
+}
+
+// ProtectedLines are what no key may reach, whatever its permissions: the
+// keys, theirs and their uses.
+var ProtectedLines = []string{
+	perm.PrefixDeny + "admin:*" + UserKeysModelID + "*",
+	perm.PrefixDeny + "admin:*" + MyKeysModelID + "*",
+	perm.PrefixDeny + "admin:*" + UsesModelID + "*",
+}
+
+// Stack is the stack a request by k is restricted to (perm.WithRestriction
+// of its subject): all ("*"), its denies, and ProtectedLines — of a key of
+// before the denies, its lines of no prefix in the place of all.
+func (k *AccessKey) Stack() *perm.Stack {
+	s := &perm.Stack{}
+	if !k.legacy() {
+		s.Add("key", "*")
+	}
+	s.Add("key: "+k.Name, k.Permissions...)
+	return s.Add("key: protected", ProtectedLines...)
+}
+
+// legacy says whether k is a key of before the denies: a line of no prefix
+// (what it may reach).
+func (k *AccessKey) legacy() bool {
+	for _, l := range k.Permissions {
+		for _, e := range perm.ExpandLine(l) {
+			if kind, _ := perm.ParseLine(e); kind != perm.LineDeny {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// CheckLine says what is wrong with a line of a key: nil when nothing is —
+// a deny (each line it is, its groups broken), or blank.
+func CheckLine(l string) error {
+	if err := perm.CheckLine(l); err != nil {
+		return err
+	}
+	for _, e := range perm.ExpandLine(l) {
+		if kind, _ := perm.ParseLine(e); kind != perm.LineDeny {
+			return ErrNotDeny
+		}
+	}
+	return nil
+}
+
+// ErrNotDeny is a line of a key that does not deny.
+var ErrNotDeny = errors.New(`a key's permissions are denies: "deny admin:users:*"`)
+
+// cleanLines are lines without the blank ones, trimmed.
+func cleanLines(lines []string) (out pq.StringArray) {
+	for _, l := range lines {
+		if l = strings.TrimSpace(l); l != "" {
+			out = append(out, l)
+		}
+	}
+	return
 }

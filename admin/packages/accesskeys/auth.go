@@ -49,6 +49,9 @@ type Authenticator struct {
 	OnUse func(r *http.Request, k *AccessKey, use *AccessKeyUse)
 	// Now is the time (time.Now when nil).
 	Now func() time.Time
+	// Perm is where the stacks of the keys are registered (Install sets it):
+	// a request by a key is restricted to its stack.
+	Perm *perm.Builder
 
 	mu       sync.Mutex
 	failures map[string][]time.Time
@@ -104,6 +107,14 @@ func (a *Authenticator) AuthKey(r *http.Request, code string) (any, context.Cont
 	user, err := a.FindUser(r.Context(), k.UserID.UUID())
 	if err != nil || user == nil {
 		return nil, nil, ErrKeyNoUser
+	}
+	// restricted to its stack: what the user may, but its denies and what no
+	// key may reach
+	if a.Perm != nil {
+		if err := a.Perm.Register(k.Subject(), k.UpdatedAt.String()+"|"+strings.Join(k.Permissions, "\n"),
+			func() (*perm.Stack, error) { return k.Stack(), nil }); err != nil {
+			return nil, nil, err
+		}
 	}
 	ctx := perm.WithRestriction(r.Context(), k.Subject())
 	return user, context.WithValue(ctx, keyCtxKey{}, &k), nil

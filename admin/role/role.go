@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type Role struct {
@@ -16,15 +17,21 @@ type Role struct {
 	// SystemKey, when set, marks a role the application needs (SystemRole):
 	// not deleted nor renamed, its permissions reset to its originals.
 	SystemKey string `gorm:"index"`
-	// SystemPolicies are the originals of a system role it was last given
-	// (policyKey, one a line): what the next version of them changes —
-	// the originals it gained added, those it lost taken — leaving what was
+	// SystemPolicies are the originals of a system role it was last given —
+	// its lines, one a line —: what the next version of them changes — the
+	// originals it gained added, those it lost taken — leaving what was
 	// changed by hand.
 	SystemPolicies string `gorm:"type:text" admin:"-"`
-	// Permissions are the policies whose ReferID is this role's key. The column
-	// is text — it also holds free-form references — so the relation is read
-	// but creates no foreign key (-:migration).
-	Permissions []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
+	// Permissions are its lines, in order: a resource each, maybe after a
+	// prefix — "deny ", "allow ", "reset " — (perm.Stack). In the stack of a
+	// user they come after the code's and after those of the user's roles
+	// before it.
+	Permissions pq.StringArray `gorm:"type:text[]"`
+	// Policies are the permissions of the roles of before the lines: the
+	// policies whose ReferID is its key — made lines once (MigrateLines).
+	// The column is text — it also holds free-form references — so the
+	// relation is read but creates no foreign key (-:migration).
+	Policies []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
 }
 
 func (r *Role) String() string {

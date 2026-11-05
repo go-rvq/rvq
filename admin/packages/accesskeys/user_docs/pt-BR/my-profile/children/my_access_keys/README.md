@@ -22,19 +22,34 @@ sessão: cada requisição traz a chave.
 
 ## As permissões
 
-As permissões de uma chave **só restringem**: um pedido feito pela chave é
-permitido quando **você pode** e **a chave permite**. Uma chave nunca dá
-mais do que você tem — e, sem nenhuma permissão, não faz nada.
+As permissões de uma chave **só negam**: um pedido feito pela chave pode
+**tudo o que você pode**, **menos o que a chave nega**. Uma chave nunca dá
+mais do que você tem — e, **sem nenhuma permissão, pode tudo o que você
+pode**.
 
-Elas se escrevem como as dos papéis (veja
-{%= admin.doc("guides/policies/01-permissions").link %}), só que só
-permitem:
+São uma **lista**, uma negação por linha: `deny` **e um espaço**, e um
+recurso, escrito como os dos papéis (veja
+{%= admin.doc("guides/policies/01-permissions").link %}: `*` casa com
+qualquer coisa, `{a,b}` com uma das alternativas). Uma linha sem o `deny`,
+ou com `allow` ou `reset`, não é aceita — nem um grupo com uma alternativa
+que não negue (`admin:users:{deny @edit, @list}`).
 
-| Recursos | A chave pode |
-| --- | --- |
-| `admin:*` | tudo o que você pode |
-| `admin:/site-files:!git`, `admin:/site-files:@get` e as ações dos arquivos | usar os arquivos do site pelo git |
-| `admin:/site-files:<static/*>:!edit` | só mudar os arquivos de `static/` |
+Exemplos:
+
+| Permissões | Pode | Não pode |
+| --- | --- | --- |
+| (nenhuma) | tudo o que você pode | — |
+| `deny admin:users:*` | tudo, menos os usuários | os usuários |
+| `deny admin:users:{@edit,@delete}` | tudo, e ver os usuários | editar e excluir usuários |
+| `deny admin:/site-files:!publish` | tudo, e mudar o rascunho dos arquivos do site | publicar os arquivos do site |
+| `deny admin:{users,roles}:*`<br>`deny admin:/site-files:!publish` | tudo, menos usuários, papéis e publicar | usuários, papéis, publicar |
+
+O `!` de uma ação dentro do recurso (`admin:/site-files:!publish`) é do
+recurso: o prefixo é só o `deny ` do começo da linha.
+
+Uma chave de antes das negações (com linhas sem prefixo — o que ela
+alcançava) continua alcançando só elas até ser salva de novo, então só com
+negações.
 
 ![Uma chave e as permissões dela](images/detail.png)
 

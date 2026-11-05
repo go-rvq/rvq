@@ -70,6 +70,9 @@ type Builder struct {
 	// dbIDs are the ids of the policies loaded from the database
 	// (ReloadDBPolicies): those gone from it are removed from memory
 	dbIDs map[string]bool
+	// stackSource and stacks: the stacks of the users (Stacks)
+	stackSource StackSource
+	stacks      *stacks
 }
 
 // Asked is a permission asked: the resource with its verb at the end, by
@@ -116,6 +119,7 @@ func (b *Builder) createPolicy(p *PolicyBuilder) {
 		panic(err)
 	}
 	b.policies = append(b.policies, p)
+	b.policiesChanged()
 }
 
 func (b *Builder) updatePolicy(p *PolicyBuilder) {
@@ -129,6 +133,7 @@ func (b *Builder) updatePolicy(p *PolicyBuilder) {
 		panic(err)
 	}
 	b.policies[i] = p
+	b.policiesChanged()
 }
 
 func (b *Builder) findPolicyIndex(id string) int {
@@ -157,6 +162,7 @@ func (b *Builder) deletePolicy(p *PolicyBuilder) {
 				panic(err)
 			}
 			b.policies = append(b.policies[:i], b.policies[i+1:]...)
+			b.policiesChanged()
 			break
 		}
 	}

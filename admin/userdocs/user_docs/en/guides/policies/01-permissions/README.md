@@ -1,8 +1,8 @@
 # 1. Permissions
 
-What a user may do comes from their **roles**: each role allows or denies,
-part by part of the admin, to list, see, create, edit and delete records, and
-to run actions.
+What a user may do comes from their **roles**, in order: each role allows or
+denies, part by part of the admin, to list, see, create, edit and delete
+records, and to run actions (see *The stack of permissions*, below).
 
 - **What is not allowed is not shown**: an item of the side menu, a button, an
   action, a tab, a column. A group with nothing allowed is not in the menu.
@@ -82,6 +82,77 @@ declared **out of the group** (`admin:/site-files:!edit`) has priority over
 the one declared with the group (`admin:site/:/site-files:!edit`): with both,
 the one out of the group decides. And it keeps holding when the menu moves the
 part to another group — the one with the group no longer matches.
+
+## The stack of permissions
+
+The permissions of a role are an **ordered list**, one a line. A user's are a
+**stack**: the system's first, then those granted them on a record (a share),
+then those of **each of their roles, in the order of the roles** — the order
+they have in the user's form (drag to change it).
+
+Each line is a resource, and may begin with a **prefix** — the word **and a
+space**:
+
+| Line | What it does |
+| --- | --- |
+| `admin:pages:*` | **allows** what matches it, if no deny matches |
+| `deny admin:users:*` | **denies** what matches it |
+| `allow admin:users:@list` | the **earlier** denies stop counting for what matches it — a wider one too —, and it allows: it **forces** the allow of just what matches it |
+| `reset admin:users:*` | the **earlier** lines stop counting for what matches it — a wider one too —; it allows nor denies anything |
+
+A line **covers** another when its resource matches the other's: `admin:*`
+covers `admin:users:@list`; `admin:users:@list` does not cover
+`admin:users:*`. A line after one it covers **replaces** it:
+
+- `deny` and `allow` replace the earlier ones of no prefix, `allow` and `deny`;
+- `reset` replaces any;
+- one of no prefix replaces the earlier ones of no prefix (and `allow`).
+
+An `allow` or a `reset` **narrower** than an earlier line — which covers it —
+does not replace it: it takes from it just what it matches. After
+`deny admin:users:*`, an `allow admin:users:@list` frees just the list; the
+deny still counts for the rest of the users. A narrower line of no prefix
+takes nothing: the deny wins over it.
+
+What is left are the **active** permissions: those of no prefix (an `allow`
+becomes one) and the `deny` ones. They decide as always: a resource is
+allowed when an active one of no prefix matches it and no active `deny` does.
+
+**Groups** are several lines, in their order: `admin:users:{@list,@create}` is
+`admin:users:@list` and `admin:users:@create`. An alternative may have its own
+prefix — `admin:users:{*, deny @delete}` is `admin:users:*` and then
+`deny admin:users:@delete`; `admin:users:{*, deny {@edit,@delete}}` denies
+just those two —, anywhere in the resource: parts, fields, actions. A new line
+inside a group separates as a comma does.
+
+Examples (a user's stack, from top to bottom):
+
+| Stack | May | May not |
+| --- | --- | --- |
+| `admin:*`<br>`deny admin:users:*` | all but the users | the users |
+| `admin:*`<br>`deny admin:users:*`<br>`allow admin:users:*` | all: the `allow` undoes the `deny` | — |
+| `admin:*`<br>`deny admin:users:*`<br>`reset admin:users:*` | all: the `reset` takes the `deny` out, and `admin:*` counts | — |
+| `admin:users:*`<br>`reset admin:*`<br>`admin:pages:*` | only the pages: the `reset` took the users out | the rest |
+| `admin:*`<br>`deny admin:users:*`<br>`allow admin:users:@list` | all, and the list of the users: the `allow` forces just it | the users, but the list |
+| `admin:*`<br>`deny admin:users:*`<br>`admin:users:@list` | all but the users: without the `allow`, the deny wins | the users, their list too |
+| `admin:*`<br>`reset admin:users:@delete` | all but deleting users: the `reset` took it from `admin:*` | deleting users |
+| `admin:users:{*, deny @delete}` | the users, but deleting | deleting users |
+
+So a later role may deny what an earlier one allows (`deny`), or allow what an
+earlier one denies (`allow`).
+
+The page **Permissions** of each user's detail shows their stack: in the tab
+**All**, each line with its index, where it comes from (the system, a role)
+and whether it is active — or active but what a later line matches —, or was
+replaced — and by which —; in the tab **Active**, only the ones that count,
+each with what it no longer covers ("but …"), as a list or as a tree.
+
+## The access keys
+
+The permissions of an **access key** accept only **denies**
+(`deny admin:users:*`), applied on top of what its user may: the key may all
+its user may, but what it denies. With none, all its user may. The examples
+are in {%= admin.model("my_access_keys").link %}.
 
 ## The permissions of the admin
 

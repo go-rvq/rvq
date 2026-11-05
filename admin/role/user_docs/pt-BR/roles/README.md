@@ -10,6 +10,23 @@ no admin. Um usuário tem um ou mais papéis (veja
 - Crie um papel para cada tipo de trabalho — editar o site, responder ao
   formulário de contato… — e dê a ele só o que esse trabalho precisa.
 
+## As permissões
+
+As permissões de um papel são uma **lista em ordem**, uma por linha
+(arraste para mudar a ordem): um recurso, que **permite**, ou com um prefixo
+— `deny ` **nega**, `allow ` força a permissão do que casa com ela, por
+cima das negações anteriores, `reset ` tira das linhas anteriores o que casa
+com ela. Um grupo é várias
+linhas: `admin:users:{*, deny @delete}`. Tudo isso, com exemplos, em
+{%= admin.doc("guides/policies/01-permissions").link %}.
+
+Os papéis de um usuário também têm **ordem**: as linhas de um papel vêm
+depois das do anterior, então ele pode negar o que o anterior permite, ou
+permitir (`allow`) o que ele nega. A página **Permissões** do usuário mostra
+o resultado.
+
+Uma mudança num papel vale na hora para todos os usuários dele.
+
 ## Papéis do sistema
 
 Alguns papéis são do **sistema**: a aplicação precisa deles, e os cria

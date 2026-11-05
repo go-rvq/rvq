@@ -18,6 +18,7 @@ import (
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/sunfmin/reflectutils"
 	"gorm.io/gorm"
 )
@@ -63,7 +64,10 @@ func (b *Builder) Authenticator() *Authenticator { return b.auth }
 
 // AutoMigrate makes the tables of the keys.
 func (b *Builder) AutoMigrate() error {
-	return b.db.AutoMigrate(&AccessKey{}, &AccessKeyUse{})
+	if err := b.db.AutoMigrate(&AccessKey{}, &AccessKeyUse{}); err != nil {
+		return err
+	}
+	return MigrateLines(b.db)
 }
 
 // currentUserID is the id of the user of r: its login's.
@@ -108,6 +112,8 @@ func parentID(r *http.Request) (uuid.UUID, bool) {
 func (b *Builder) Install(p *presets.Builder, users *presets.ModelBuilder) error {
 	b.p = p
 	ConfigureMessages(p.I18n())
+	// the stacks of the keys: registered where the requests are decided
+	b.auth.Perm = p.GetPermission()
 	if b.auth.FindUser == nil {
 		return errors.New("accesskeys: the Authenticator's FindUser is not set")
 	}
@@ -157,10 +163,9 @@ func (b *Builder) Install(p *presets.Builder, users *presets.ModelBuilder) error
 	}
 
 	// any user may keep their own keys; no key may reach any key
+	// (ProtectedLines)
 	p.GetPermission().CreatePolicies(
-		perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On("admin:"+MyKeysModelID+":*"),
-		perm.PolicyFor("key:*").WhoAre(perm.Denied).ToDo(perm.Anything).
-			On("admin:*"+UserKeysModelID+"*", "admin:*"+MyKeysModelID+"*", "admin:*"+UsesModelID+"*"),
+		perm.PolicyFor(perm.Anybody).WhoAre(perm.Allowed).ToDo(perm.Anything).On("admin:" + MyKeysModelID + ":*"),
 	)
 	return nil
 }
@@ -194,13 +199,8 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		"Permissions")
 	ed := mb.Editing("Name", "Description", "ExpiresAt", "Enabled", "Permissions")
 
-	policyModel := presets.NewModelBuilder(b.p, &perm.DefaultDBPolicy{}, presets.ModelConfig().SetModuleKey(MessagesKey))
-	permFb := &policyModel.Editing("Actions", "Resources").FieldsBuilder
-	ed.Field("Permissions").AutoNested(policyModel, permFb)
-	// lists of text — after AutoNested, which would set them otherwise: the
-	// form posts each item as its __value
-	permFb.Field("Actions").AsSlice()
-	permFb.Field("Resources").AsSlice()
+	// a list of texts: a resource each, "!" before one it denies
+	ed.Field("Permissions").AsSlice()
 	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
 		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			comp := old(field, ctx)
@@ -231,21 +231,17 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		}
 	})
 
-	ed.FetchFunc(func(obj any, id model.ID, ctx *web.EventContext) error {
-		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
-	})
-	mb.Detailing().FetchFunc(func(obj any, id model.ID, ctx *web.EventContext) error {
-		return gorm2op.DataOperator(b.db.Preload("Permissions")).Fetch(obj, id, ctx)
-	})
-	// the permissions in the detail: each resource and its actions
+	// the permissions in the detail: one a line, the denials marked
 	mb.Detailing().Field("Permissions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		k := field.Obj.(*AccessKey)
 		m := GetMessages(ctx.Context())
 		var items []h.HTMLComponent
-		for _, pol := range k.Permissions {
-			for _, res := range pol.Resources {
-				items = append(items, h.Li(h.Code(res), h.Text(" — "+strings.Join(pol.Actions, ", "))))
+		for _, p := range k.Permissions {
+			li := h.Li(h.Code(p))
+			if strings.HasPrefix(p, perm.PrefixDeny) {
+				li.Class("text-error").Attr("data-deny", true)
 			}
+			items = append(items, li)
 		}
 		body := h.HTMLComponent(h.P(h.Text(m.NoPermissions)).Class("text-medium-emphasis"))
 		if len(items) > 0 {
@@ -260,6 +256,12 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		m := GetMessages(ctx.Context())
 		if k.Name == "" {
 			errs.FieldError("Name", m.ErrNameRequired)
+		}
+		// denies only: "deny " and a resource
+		for _, l := range k.Permissions {
+			if CheckLine(l) != nil {
+				errs.FieldError("Permissions", fmt.Sprintf(m.ErrNotDeny, strings.TrimSpace(l)))
+			}
 		}
 		now := time.Now()
 		if k.ExpiresAt.IsZero() {
@@ -291,29 +293,13 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		} else if k.UserID != model.UUID(owner) {
 			return errors.New("accesskeys: not a key of this user")
 		}
-		// its permissions: allows, of its subject
-		for _, pol := range k.Permissions {
-			pol.ID = uuid.Nil
-			pol.ReferID = k.ID.String()
-			pol.Subject = k.Subject()
-			pol.Effect = perm.Allowed
-		}
+		// its permissions: its rules, as written, the blank ones out
+		k.Permissions = cleanLines(k.Permissions)
 		err := b.db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Where("refer_id = ?", k.ID.String()).Delete(&perm.DefaultDBPolicy{}).Error; err != nil {
-				return err
-			}
 			if isNew {
-				return tx.Session(&gorm.Session{FullSaveAssociations: true}).Create(k).Error
+				return tx.Omit("Policies").Create(k).Error
 			}
-			if err := tx.Model(k).Select("Name", "Description", "ExpiresAt", "Enabled").Updates(k).Error; err != nil {
-				return err
-			}
-			for _, pol := range k.Permissions {
-				if err := tx.Create(pol).Error; err != nil {
-					return err
-				}
-			}
-			return nil
+			return tx.Model(k).Select("Name", "Description", "ExpiresAt", "Enabled", "Permissions").Updates(k).Error
 		})
 		if err != nil {
 			return err
@@ -394,4 +380,38 @@ func posted(r *http.Request) bool {
 	_ = r.ParseMultipartForm(32 << 20)
 	_, ok := r.Form["Name"]
 	return ok
+}
+
+// MigrateLines makes the permissions of the keys of before the lines —
+// policies of the key's subject — its lines, once: a key of no lines and of
+// policies gets theirs (perm.PolicyLines: "deny " before a deny's; the
+// others of no prefix, what the key may reach — kept so, the key a key of
+// before the denies), and its policies go.
+func MigrateLines(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&perm.DefaultDBPolicy{}) {
+		return nil
+	}
+	var all []*AccessKey
+	if err := db.Preload("Policies").Find(&all).Error; err != nil {
+		return err
+	}
+	for _, k := range all {
+		if len(k.Permissions) > 0 || len(k.Policies) == 0 {
+			continue
+		}
+		var lines pq.StringArray
+		for _, p := range k.Policies {
+			lines = append(lines, perm.PolicyLines(p.Effect, p.Actions, p.Resources)...)
+		}
+		err := db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(k).UpdateColumn("permissions", lines).Error; err != nil {
+				return err
+			}
+			return tx.Where("refer_id = ?", k.ID.String()).Delete(&perm.DefaultDBPolicy{}).Error
+		})
+		if err != nil {
+			return fmt.Errorf("accesskeys: the lines of %s: %w", k.ID, err)
+		}
+	}
+	return nil
 }

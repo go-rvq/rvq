@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
@@ -29,14 +28,27 @@ type SystemRole struct {
 	Name string
 	// Description is what the role is for, in the language of ctx.
 	Description func(ctx context.Context) string
-	// Policies are its original permissions.
+	// Policies are its original permissions (made lines: SystemPolicy.Lines).
 	Policies []SystemPolicy
+	// Lines are original permissions too, as lines (perm.Stack), after the
+	// Policies'.
+	Lines []string
 	// Fixed says its permissions are the code's: none editable.
 	Fixed bool
 	// Formerly are originals of its former versions: a role that still has
 	// one as it was loses it on boot (an original changed — narrowed, say —
 	// reaches the roles made before).
 	Formerly []SystemPolicy
+}
+
+// Lines are the lines of a policy: a resource each, "deny " before a
+// deny's (perm.PolicyLines).
+func (p SystemPolicy) Lines() []string {
+	effect := p.Effect
+	if effect == "" {
+		effect = perm.Allowed
+	}
+	return perm.PolicyLines(effect, p.Actions, p.Resources)
 }
 
 // SystemPolicy is a permission of a SystemRole: allows (Effect "allow",
@@ -84,22 +96,16 @@ func (b *Builder) systemRole(key string) *SystemRole {
 	return nil
 }
 
-// policies are the originals of sr, of the role r.
-func (sr *SystemRole) policies(r *Role) []*perm.DefaultDBPolicy {
-	var out []*perm.DefaultDBPolicy
-	for _, p := range sr.Policies {
-		effect := p.Effect
-		if effect == "" {
-			effect = perm.Allowed
-		}
-		actions := p.Actions
-		if len(actions) == 0 {
-			actions = []string{"*"}
-		}
-		out = append(out, &perm.DefaultDBPolicy{ReferID: r.ID.String(), Subject: r.Name, Effect: effect,
-			Actions: pq.StringArray(actions), Resources: pq.StringArray(p.Resources)})
+// lines are the originals of sr: its policies' lines, then its lines.
+func (sr *SystemRole) lines() []string {
+	return append(policiesLines(sr.Policies), sr.Lines...)
+}
+
+func policiesLines(ps []SystemPolicy) (out []string) {
+	for _, p := range ps {
+		out = append(out, p.Lines()...)
 	}
-	return out
+	return
 }
 
 // EnsureSystemRoles makes the roles the application needs: a role of its key
@@ -130,15 +136,10 @@ func (b *Builder) EnsureSystemRoles() error {
 			}
 			r = Role{ID: uuid.New(), Name: sr.Name, SystemKey: sr.Key}
 			if !sr.Fixed {
-				r.SystemPolicies = originalsText(sr.policies(&r))
+				r.SystemPolicies = originalsText(sr.lines())
+				r.Permissions = sr.lines()
 			}
-			if err := tx.Create(&r).Error; err != nil {
-				return err
-			}
-			if sr.Fixed {
-				return nil
-			}
-			return createPolicies(tx, sr.policies(&r))
+			return tx.Omit("Policies").Create(&r).Error
 		})
 		if err != nil {
 			return fmt.Errorf("role %s: %w", sr.Name, err)
@@ -149,27 +150,23 @@ func (b *Builder) EnsureSystemRoles() error {
 
 // syncOriginals brings r to the originals of sr as they are now, by what
 // changed since it was last given them (Role.SystemPolicies): an original
-// gained is added — unless it has it —; one lost is taken, when r has it as
-// it was; what was changed by hand stays. A role given none yet (made before
-// the originals were kept) loses those of its former versions (Formerly) it
-// has as they were, and is given the originals it lacks. The originals are
-// kept as given.
+// gained is added at the end — unless it has it —; one lost is taken, when r
+// has it as it was; what was changed by hand stays, in its place. A role
+// given none yet (made before the originals were kept) loses those of its
+// former versions (Formerly) it has as they were, and is given the originals
+// it lacks. The originals are kept as given.
 func (b *Builder) syncOriginals(tx *gorm.DB, r *Role, sr *SystemRole) error {
 	if sr.Fixed {
 		return nil
 	}
-	now := sr.policies(r)
+	now := sr.lines()
 	nowText := originalsText(now)
 	if r.SystemPolicies == nowText {
 		return nil
 	}
-	var has []perm.DefaultDBPolicy
-	if err := tx.Where("refer_id = ?", r.ID.String()).Find(&has).Error; err != nil {
-		return err
-	}
 	current := map[string]bool{}
-	for _, p := range now {
-		current[policyKey(p)] = true
+	for _, l := range now {
+		current[l] = true
 	}
 	// what it was given — else, its former versions
 	gone := map[string]bool{}
@@ -180,8 +177,8 @@ func (b *Builder) syncOriginals(tx *gorm.DB, r *Role, sr *SystemRole) error {
 			}
 		}
 	} else {
-		for _, p := range (&SystemRole{Policies: sr.Formerly}).policies(r) {
-			if k := policyKey(p); !current[k] {
+		for _, k := range policiesLines(sr.Formerly) {
+			if !current[k] {
 				gone[k] = true
 			}
 		}
@@ -190,53 +187,31 @@ func (b *Builder) syncOriginals(tx *gorm.DB, r *Role, sr *SystemRole) error {
 	for _, k := range strings.Split(r.SystemPolicies, "\n") {
 		given[k] = true
 	}
+	var lines pq.StringArray
 	seen := map[string]bool{}
-	for i := range has {
-		k := policyKey(&has[i])
-		if gone[k] {
-			if err := tx.Delete(&has[i]).Error; err != nil {
-				return err
-			}
+	for _, l := range r.Permissions {
+		if gone[l] {
 			continue
 		}
-		seen[k] = true
+		lines = append(lines, l)
+		seen[l] = true
 	}
-	for _, p := range now {
-		k := policyKey(p)
+	for _, l := range now {
 		// an original it was given and has not: taken by hand — not again
-		if seen[k] || r.SystemPolicies != "" && given[k] {
+		if seen[l] || r.SystemPolicies != "" && given[l] {
 			continue
 		}
-		if err := tx.Create(p).Error; err != nil {
-			return err
-		}
-		seen[k] = true
+		lines = append(lines, l)
+		seen[l] = true
 	}
+	r.Permissions = lines
 	r.SystemPolicies = nowText
-	return tx.Model(r).Update("system_policies", nowText).Error
+	return tx.Model(r).Select("Permissions", "SystemPolicies").Updates(r).Error
 }
 
-// originalsText is the originals ps as Role.SystemPolicies keeps them.
-func originalsText(ps []*perm.DefaultDBPolicy) string {
-	keys := make([]string, 0, len(ps))
-	for _, p := range ps {
-		keys = append(keys, policyKey(p))
-	}
-	return strings.Join(keys, "\n")
-}
-
-// policyKey is what tells two policies the same: effect, actions, resources.
-func policyKey(p *perm.DefaultDBPolicy) string {
-	return p.Effect + "|" + strings.Join(p.Actions, ",") + "|" + strings.Join(p.Resources, ",")
-}
-
-func createPolicies(tx *gorm.DB, ps []*perm.DefaultDBPolicy) error {
-	for _, p := range ps {
-		if err := tx.Create(p).Error; err != nil {
-			return err
-		}
-	}
-	return nil
+// originalsText is the originals of a role as Role.SystemPolicies keeps them.
+func originalsText(lines []string) string {
+	return strings.Join(lines, "\n")
 }
 
 // ResetPermissions sets the permissions of the system role r to its
@@ -246,26 +221,13 @@ func (b *Builder) ResetPermissions(r *Role) error {
 	if sr == nil || sr.Fixed {
 		return ErrSystemRoleFixed
 	}
-	err := b.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("refer_id = ?", r.ID.String()).Delete(&perm.DefaultDBPolicy{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(r).Update("system_policies", originalsText(sr.policies(r))).Error; err != nil {
-			return err
-		}
-		return createPolicies(tx, sr.policies(r))
-	})
+	r.Permissions = sr.lines()
+	r.SystemPolicies = originalsText(r.Permissions)
+	err := b.db.Model(r).Select("Permissions", "SystemPolicies").Updates(r).Error
 	if err == nil {
-		b.reloadPolicies()
+		b.changed()
 	}
 	return err
-}
-
-func (b *Builder) reloadPolicies() {
-	if b.pb != nil && b.pb.GetPermission() != nil {
-		startFrom := time.Now().Add(-time.Second)
-		b.pb.GetPermission().LoadDBPoliciesToMemory(b.db, &startFrom)
-	}
 }
 
 // installSystem guards the system roles on the model: not deleted, not

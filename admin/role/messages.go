@@ -21,13 +21,15 @@ type Messages struct {
 	DefaultDbpolicy          string `i18n:"hint='Name of a permission of a role.'"`
 	DefaultDbpolicyActions   string `i18n:"hint='Label of the actions a permission of a role applies to.'"`
 	PermissionsHelp          string `i18n:"hint='Title of the help button of the permissions of a role: it opens the documentation of policies and permissions.'"`
-	RoleSystemKey            string `i18n:"label='System', hint='Label of the mark of a role of the system.'"`
-	SystemRole               string `i18n:"hint='Said of a role of the system: made by the application, not deleted.'"`
-	ResetPermissions         string `i18n:"hint='Action that resets the permissions of a role of the system to its originals.'"`
-	PermissionsReset         string `i18n:"hint='Shown once the permissions of a role were reset.'"`
-	ErrSystemRoleDelete      string `i18n:"hint='Error: a role of the system is not deleted.'"`
-	ErrSystemRoleRename      string `i18n:"hint='Error: a role of the system is not renamed.'"`
-	ErrSystemRoleFixed       string `i18n:"hint='Error: the permissions of a fixed role of the system are not changed.'"`
+	// %s: the line
+	ErrLine             string `i18n:"hint='Error: a line of the permissions of a role whose prefix (deny, allow, reset) has no resource after it.'"`
+	RoleSystemKey       string `i18n:"label='System', hint='Label of the mark of a role of the system.'"`
+	SystemRole          string `i18n:"hint='Said of a role of the system: made by the application, not deleted.'"`
+	ResetPermissions    string `i18n:"hint='Action that resets the permissions of a role of the system to its originals.'"`
+	PermissionsReset    string `i18n:"hint='Shown once the permissions of a role were reset.'"`
+	ErrSystemRoleDelete string `i18n:"hint='Error: a role of the system is not deleted.'"`
+	ErrSystemRoleRename string `i18n:"hint='Error: a role of the system is not renamed.'"`
+	ErrSystemRoleFixed  string `i18n:"hint='Error: the permissions of a fixed role of the system are not changed.'"`
 }
 
 var (
@@ -43,6 +45,7 @@ var (
 		DefaultDbpolicy:          "Permission",
 		DefaultDbpolicyActions:   "Actions",
 		PermissionsHelp:          "Help: policies and permissions",
+		ErrLine:                  "%q: a prefix (deny, allow, reset) is its word and a space, before a resource (\"deny admin:users:*\").",
 		RoleSystemKey:            "System",
 		SystemRole:               "System role",
 		ResetPermissions:         "Reset the permissions",
@@ -63,6 +66,7 @@ var (
 		DefaultDbpolicy:          "Permissão",
 		DefaultDbpolicyActions:   "Ações",
 		PermissionsHelp:          "Ajuda: políticas e permissões",
+		ErrLine:                  "%q: um prefixo (deny, allow, reset) é a palavra e um espaço, antes de um recurso (\"deny admin:users:*\").",
 		RoleSystemKey:            "Sistema",
 		SystemRole:               "Papel do sistema",
 		ResetPermissions:         "Restaurar as permissões",

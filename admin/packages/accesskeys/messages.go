@@ -88,8 +88,10 @@ type Messages struct {
 	CodeOnce        string `i18n:"hint='Says the code is shown only now.'"`
 	Code            string `i18n:"hint='Label of the code of a key just made.'"`
 	ErrNameRequired string `i18n:"hint='Error: the key has no name.'"`
-	NoPermissions   string `i18n:"hint='Said of a key with no permission: it does nothing.'"`
-	ErrTooLong      string `i18n:"hint='Error: the key expires too far ahead.', fields=(;'%d'='the most days')"`
+	// %s: the permission written
+	ErrNotDeny    string `i18n:"hint='Error: a permission of a key that is not a deny (%s: the line).'"`
+	NoPermissions string `i18n:"hint='Said of a key with no permission: it does nothing.'"`
+	ErrTooLong    string `i18n:"hint='Error: the key expires too far ahead.', fields=(;'%d'='the most days')"`
 }
 
 var Messages_en_US = &Messages{
@@ -122,7 +124,7 @@ var Messages_en_US = &Messages{
 	AccessKeyLastUsedIP:         "Last address",
 	AccessKeyCreatedAt:          "Created at",
 	AccessKeyPermissions:        "Permissions",
-	AccessKeyPermissions_Desc:   "What the key may do — only of what the user may. With none, it does nothing.",
+	AccessKeyPermissions_Desc:   "Denies — \"deny \" and a resource each: the key may what its user may, but them. With none, all the user may.",
 	MyAccessKeyName:             "Name",
 	MyAccessKeyName_Desc:        "What the key is for.",
 	MyAccessKeyName_Hint:        "",
@@ -141,7 +143,7 @@ var Messages_en_US = &Messages{
 	MyAccessKeyLastUsedIP:       "Last address",
 	MyAccessKeyCreatedAt:        "Created at",
 	MyAccessKeyPermissions:      "Permissions",
-	MyAccessKeyPermissions_Desc: "What the key may do — only of what the user may. With none, it does nothing.",
+	MyAccessKeyPermissions_Desc: "Denies — \"deny \" and a resource each: the key may what its user may, but them. With none, all the user may.",
 
 	AccessKeyUseCreatedAt: "When",
 	AccessKeyUseKind:      "Kind",
@@ -160,6 +162,7 @@ var Messages_en_US = &Messages{
 	CodeOnce:        "This is the only time the code is shown. Copy it and keep it safe: it acts in your name.",
 	Code:            "Code",
 	ErrNameRequired: "Give the key a name.",
+	ErrNotDeny:      "%q: a key's permissions are denies — \"deny \" and a resource (\"deny admin:users:*\"); it may what its user may, but them.",
 	NoPermissions:   "None: the key does nothing.",
 	ErrTooLong:      "A key lasts at most %d days.",
 }
@@ -194,7 +197,7 @@ var Messages_pt_BR = &Messages{
 	AccessKeyLastUsedIP:         "Último endereço",
 	AccessKeyCreatedAt:          "Criada em",
 	AccessKeyPermissions:        "Permissões",
-	AccessKeyPermissions_Desc:   "O que a chave pode fazer — só do que o usuário pode. Sem nenhuma, ela não faz nada.",
+	AccessKeyPermissions_Desc:   "Negações — \"deny \" e um recurso cada: a chave pode o que o usuário pode, menos elas. Sem nenhuma, tudo o que o usuário pode.",
 	MyAccessKeyName:             "Nome",
 	MyAccessKeyName_Desc:        "Para que a chave serve.",
 	MyAccessKeyName_Hint:        "",
@@ -213,7 +216,7 @@ var Messages_pt_BR = &Messages{
 	MyAccessKeyLastUsedIP:       "Último endereço",
 	MyAccessKeyCreatedAt:        "Criada em",
 	MyAccessKeyPermissions:      "Permissões",
-	MyAccessKeyPermissions_Desc: "O que a chave pode fazer — só do que o usuário pode. Sem nenhuma, ela não faz nada.",
+	MyAccessKeyPermissions_Desc: "Negações — \"deny \" e um recurso cada: a chave pode o que o usuário pode, menos elas. Sem nenhuma, tudo o que o usuário pode.",
 
 	AccessKeyUseCreatedAt: "Quando",
 	AccessKeyUseKind:      "Tipo",
@@ -232,6 +235,7 @@ var Messages_pt_BR = &Messages{
 	CodeOnce:        "É a única vez que o código aparece. Copie e guarde num lugar seguro: ele age em seu nome.",
 	Code:            "Código",
 	ErrNameRequired: "Dê um nome à chave.",
+	ErrNotDeny:      "%q: as permissões de uma chave são negações — \"deny \" e um recurso (\"deny admin:users:*\"); ela pode o que o usuário pode, menos elas.",
 	NoPermissions:   "Nenhuma: a chave não faz nada.",
 	ErrTooLong:      "Uma chave dura no máximo %d dias.",
 }
