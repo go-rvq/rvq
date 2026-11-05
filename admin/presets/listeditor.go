@@ -144,6 +144,13 @@ type ListEditorContainerContext struct {
 	FieldContext *FieldContext
 }
 
+// ListEditorAfterBuilder is a ListEditorComponentBuilder that renders
+// something after the items — in the list editor's scope ($listEditorAddItems,
+// form), even with no item: a place to drop files, say.
+type ListEditorAfterBuilder interface {
+	After(ctx *ListEditorContainerContext) h.HTMLComponent
+}
+
 type ListEditorComponentBuilder interface {
 	Container(ctx *ListEditorContainerContext, items h.HTMLComponents) h.HTMLComponent
 	Item(ctx *ListEditorItemContext) h.HTMLComponent
@@ -481,6 +488,11 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 			}, items)
 		}
 	}
+	if ab, ok := b.ComponentBuilder.(ListEditorAfterBuilder); ok {
+		if after := ab.After(&ListEditorContainerContext{FieldContext: b.fieldContext}); after != nil {
+			form = h.Components(form, after)
+		}
+	}
 
 	var (
 		sorter         h.HTMLComponent
@@ -578,15 +590,22 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 		"."+ListEditorNewField,
 	)
 
-	if len(b.addItemEvent) > 0 {
-		addItemClick = "openItemsSelector"
-		fmt.Fprintf(&scopeSetup, `
+	// $listEditorAddItems(items) adds rows made of items (objects of the item's
+	// fields, or their JSON): always there — the selector of items calls it, and
+	// so may a component in the list (a drop of files, a row each).
+	fmt.Fprintf(&scopeSetup, `
 			scope.$listEditorAddItems = (items) => {
 				if (!items) return;
 				((typeof items) !== "string" && (items = JSON.stringify(items)))
 				%s.formData({%s: items}).go()
-			} 
+			}`,
+		addItemTb,
+		ListEditorAddRowParamJsonItems,
+	)
 
+	if len(b.addItemEvent) > 0 {
+		addItemClick = "openItemsSelector"
+		fmt.Fprintf(&scopeSetup, `
 			scope.openItemsSelector = () => {
 				const items = {},
 					prefix = formKey + "["
@@ -597,8 +616,6 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 
 				%s.form(items).scope({$listEditorAddItems: scope.$listEditorAddItems}).go()
 			}`,
-			addItemTb,
-			ListEditorAddRowParamJsonItems,
 			web.Plaid().
 				EventFunc(b.addItemEvent).
 				URL(url).
@@ -621,12 +638,28 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 				h.Div(
 					h.Label(b.fieldContext.Label).Class("v-label theme--light text-caption"),
 					VSpacer(),
+					// add: a plus at the label's right (left of the sorter's icon),
+					// white on the primary color, as the theme's add buttons
+					h.If(!isSortStart,
+						// small, the plus filling it
+						VBtn("").
+							Children(VIcon("mdi-plus").Size("22")).
+							Attr(":icon", "true").
+							Variant(VariantFlat).
+							Color("primary").
+							Size(SizeXSmall).
+							Class("mr-1").
+							Attr("title", msgr.AddRow).
+							Attr("aria-label", msgr.AddRow).
+							Attr("data-list-editor-add", formKey).
+							Attr("@click", addItemClick),
+					),
 					h.If(haveSorterIcon,
 						h.If(!isSortStart,
 							VBtn("").
 								Variant(VariantText).
 								Icon("mdi-sort-variant").
-								Class("mt-n4").
+								Size(SizeSmall).
 								Attr("@click",
 									web.Plaid().
 										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
@@ -642,7 +675,7 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 							VBtn("").
 								Variant(VariantText).
 								Icon("mdi-check").
-								Class("mt-n4").
+								Size(SizeSmall).
 								Attr("@click",
 									web.Plaid().
 										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
@@ -657,21 +690,17 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 								),
 						),
 					),
-				).Class("d-flex align-end"),
+				// the label and its buttons on one line, centered
+				).Class("d-flex align-center mb-1"),
 			),
 			sorter,
 			h.Div(
 				form,
-				h.If(!b.fieldContext.ReadOnly,
-					VBtn(msgr.AddRow).
-						Variant(VariantText).
-						Color("primary").
-						Attr("data-list-editor-add", formKey).
-						Attr("@click", addItemClick),
-				),
 			).Attr("v-show", h.JSONString(!isSortStart)).
 				Class("mt-1 mb-4"),
-		).Scope("items", jsonOrEmptyArray(itemsState)).
+		// the sorter's list: an expression (an array), not a string — Scope
+		// writes a plain value as JSON, a string as a JS string
+		).Scope("items", vue.Var(jsonOrEmptyArray(itemsState))).
 			Scope("$listEditorAddItems").
 			Scope("openItemsSelector").
 			Scope("form").

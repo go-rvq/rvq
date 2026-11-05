@@ -45,10 +45,44 @@ type ListEditorTableBuilder struct {
 	viewLayoutFunc ListEditorTableLayoutFunc
 	editLayoutFunc ListEditorTableLayoutFunc
 	newLayoutFunc  ListEditorTableLayoutFunc
+	// footer gives the rows of the table's tfoot (Footer)
+	footer ListEditorTableFooterFunc
+	// after follows the table (AfterFunc)
+	after ListEditorAfterFunc
 }
+
+// ListEditorAfterFunc gives what follows the items of a list editor, even
+// with none — in its scope ($listEditorAddItems, form) —: a place to drop
+// files, say. Nil, nothing (ListEditorAfterBuilder).
+type ListEditorAfterFunc func(ctx *ListEditorContainerContext) h.HTMLComponent
+
+// AfterFunc sets what follows the table, even with no row (ListEditorAfterFunc).
+func (b *ListEditorTableBuilder) AfterFunc(f ListEditorAfterFunc) *ListEditorTableBuilder {
+	b.after = f
+	return b
+}
+
+func (b *ListEditorTableBuilder) After(ctx *ListEditorContainerContext) h.HTMLComponent {
+	if b.after == nil {
+		return nil
+	}
+	return b.after(ctx)
+}
+
+// ListEditorTableFooterFunc gives the rows (<tr>) of the foot of the table —
+// a total, say —; columns is how many the table has (the fields' and, in
+// edit mode, the actions'). Nil: no foot.
+type ListEditorTableFooterFunc func(ctx *ListEditorContainerContext, columns int) h.HTMLComponent
 
 func NewListEditorTableBuilder() *ListEditorTableBuilder {
 	return &ListEditorTableBuilder{density: DensityCompact}
+}
+
+// Footer sets the rows of the foot of the table (a tfoot): a total under its
+// column, say.
+func (b *ListEditorTableBuilder) Footer(f ListEditorTableFooterFunc) *ListEditorTableBuilder {
+	b.footer = f
+	return b
 }
 
 // ViewLayoutFunc sets the columns layout used in read-only (view) mode.
@@ -225,9 +259,21 @@ func (b *ListEditorTableBuilder) Container(ctx *ListEditorContainerContext, item
 		headRows = append(headRows, h.Tr(r...))
 	}
 
+	var foot h.HTMLComponent
+	if b.footer != nil {
+		columns := listEditorTreeLeafCount(nodes)
+		if !readOnly {
+			columns++
+		}
+		if rows := b.footer(ctx, columns); rows != nil {
+			foot = h.Tfoot(rows)
+		}
+	}
+
 	return VTable(
 		h.Thead(headRows...),
 		h.Tbody(items...),
+		foot,
 	).Attr("density", b.density)
 }
 
