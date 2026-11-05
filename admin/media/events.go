@@ -20,6 +20,11 @@ const (
 	doDeleteEvent           = "mediaLibrary_DoDelete"
 )
 
+// UploadMediaBoxesEvent uploads the files posted (NewFiles) to the media
+// library — as the field (cfg) says: its sizes — and answers their media boxes
+// (r.Data, an array): a drop of files on a form, each made a value.
+const UploadMediaBoxesEvent = "mediaLibrary_UploadMediaBoxes"
+
 func registerEventFuncs(hub web.EventHandlerHub, p *presets.Builder, b *Builder) {
 	mb := presets.NewModelBuilder(p, &media_library.MediaLibrary{})
 	hub.RegisterEventHandler(openFileChooserEvent, fileChooser(p, b))
@@ -29,6 +34,7 @@ func registerEventFuncs(hub web.EventHandlerHub, p *presets.Builder, b *Builder)
 	hub.RegisterEventHandler(imageSearchEvent, searchFile(b))
 	hub.RegisterEventHandler(imageJumpPageEvent, jumpPage(b))
 	hub.RegisterEventHandler(uploadFileEvent, uploadFile(b))
+	hub.RegisterEventHandler(UploadMediaBoxesEvent, uploadMediaBoxes(b))
 	hub.RegisterEventHandler(chooseFileEvent, chooseFile(b))
 	hub.RegisterEventHandler(updateDescriptionEvent, updateDescription(b))
 	hub.RegisterEventHandler(deleteConfirmationEvent, deleteConfirmation(mb))

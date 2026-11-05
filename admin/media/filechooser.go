@@ -603,6 +603,55 @@ func uploadFile(b *Builder) web.EventFunc {
 	}
 }
 
+// uploadMediaBoxes uploads the files posted (NewFiles) to the media library,
+// as the field's configuration (cfg) says — its sizes —, and answers their
+// media boxes (r.Data), in the order posted.
+func uploadMediaBoxes(b *Builder) web.EventFunc {
+	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		cfg := b.cfgOf(ctx.R.FormValue("cfg"))
+		if err = b.uploadIsAllowed(ctx.R); err != nil {
+			return
+		}
+		var uf uploadFiles
+		ctx.MustUnmarshalForm(&uf)
+		boxes := make([]media_library.MediaBox, 0, len(uf.NewFiles))
+		for _, fh := range uf.NewFiles {
+			m := media_library.MediaLibrary{}
+			switch {
+			case base.IsImageFormat(fh.Filename):
+				m.SelectedType = media_library.ALLOW_TYPE_IMAGE
+			case base.IsVideoFormat(fh.Filename):
+				m.SelectedType = media_library.ALLOW_TYPE_VIDEO
+			default:
+				m.SelectedType = media_library.ALLOW_TYPE_FILE
+			}
+			if cfg != nil && cfg.AllowType != "" && cfg.AllowType != m.SelectedType {
+				continue // not of the field's type (an image field, a pdf dropped)
+			}
+			if err = m.File.Scan(fh); err != nil {
+				return
+			}
+			if cfg != nil && len(cfg.Sizes) > 0 && m.SelectedType == media_library.ALLOW_TYPE_IMAGE {
+				m.File.Sizes = cfg.Sizes
+			}
+			if err = base.SaveUploadAndCropImage(&b.Config, b.db, &m); err != nil {
+				presets.ShowMessage(&r, err.Error(), "error")
+				return r, nil
+			}
+			boxes = append(boxes, media_library.MediaBox{
+				ID:        media_library.MediaID(m.ID.String()),
+				Url:       m.File.Url,
+				FileName:  m.File.FileName,
+				FileSizes: m.File.FileSizes,
+				Width:     m.File.Width,
+				Height:    m.File.Height,
+			})
+		}
+		r.Data = boxes
+		return
+	}
+}
+
 // mergeNewSizes are the sizes the file m is cropped in for the field (cfg):
 // the field's — a size the file has in other measures (the field's sizes
 // changed) made again —, and whether there is any to make.

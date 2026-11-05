@@ -127,3 +127,19 @@ func TestMediaBoxDisableDescription(t *testing.T) {
 		t.Error("the description is offered, disabled")
 	}
 }
+
+// What a media box holds: an image's dimensions and the file's size (the
+// original's for the file itself), a file's size only.
+func TestMediaBoxInfo(t *testing.T) {
+	img := &media_library.MediaBox{FileName: "a.png", Width: 800, Height: 600, FileSizes: map[string]int{"original": 120500}}
+	if got := MediaBoxInfo(img, ""); got != "800 × 600 · 120kB" {
+		t.Errorf("image: %q", got)
+	}
+	pdf := &media_library.MediaBox{FileName: "a.pdf", FileSizes: map[string]int{"original": 2048}}
+	if got := MediaBoxInfo(pdf, ""); got != "2kB" {
+		t.Errorf("file: %q", got)
+	}
+	if got := MediaBoxInfo(&media_library.MediaBox{FileName: "b.txt"}, ""); got != "" {
+		t.Errorf("unknown: %q", got)
+	}
+}

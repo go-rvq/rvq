@@ -40,6 +40,11 @@ type MediaBoxConfig struct {
 	// DisableDescription hides the description for accessibility of the
 	// field (a photo of a document, say, which has no other reader)
 	DisableDescription bool
+	// DescriptionField is the field of the record — beside the media box, by
+	// its name — that holds the description, out of the media box: the box
+	// shows it, and saves it there (its Description left empty). Empty, the
+	// box's own Description.
+	DescriptionField string `json:",omitempty"`
 	// Usage is the use of the field — "<table>.<Field>", a MediaBoxUsage —
 	// whose sizes (the admin's, else the code's) the server reads: the
 	// sizes the browser sends back are not the ones it trusts.

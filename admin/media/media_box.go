@@ -85,6 +85,10 @@ func mediaBoxComponentFunc(db *gorm.DB, mb *Builder, readonly bool) presets.Fiel
 			cfg = mb.fieldUsage(field, cfg)
 		}
 		mediaBox := field.Value().(media_library.MediaBox)
+		if cfg.DescriptionField != "" {
+			// shown as the box's, kept in the record's field
+			mediaBox.Description = MediaBoxDescription(field, cfg)
+		}
 
 		// On a read-only view (the detail), an empty media box has nothing to
 		// show: omit the field entirely (a nil component drops its row), like an
@@ -179,21 +183,59 @@ func gcd(a, b int) int {
 
 func MediaBoxSetterFunc(db *gorm.DB) presets.FieldSetterFunc {
 	return func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
+		// the values as decoded: in a list editor, reindexed by the order of
+		// its items (__pos) — r.Form keeps the indexes as posted
+		values := presets.ListEditorFormValues(ctx)
 		jsonValuesField := fmt.Sprintf("%s.Values", field.FormKey)
 		mediaBox := media_library.MediaBox{}
-		err = mediaBox.Scan(ctx.R.FormValue(jsonValuesField))
+		err = mediaBox.Scan(values.Get(jsonValuesField))
 		if err != nil {
 			return
 		}
-		descriptionField := fmt.Sprintf("%s.Description", field.FormKey)
-		mediaBox.Description = ctx.R.FormValue(descriptionField)
-		err = reflectutils.Set(obj, field.Name, mediaBox)
-		if err != nil {
-			return
+		cfg, _ := field.ContextValue(MediaBoxConfig).(*media_library.MediaBoxConfig)
+		description := values.Get(MediaBoxDescriptionKey(field.FormKey, cfg))
+		if cfg != nil && cfg.DescriptionField != "" {
+			// the record's field, not the box's
+			if err = reflectutils.Set(obj, cfg.DescriptionField, description); err != nil {
+				return
+			}
+		} else {
+			mediaBox.Description = description
 		}
-
-		return
+		return reflectutils.Set(obj, field.Name, mediaBox)
 	}
+}
+
+// MediaBoxDescriptionKey is the form key of the description of the media box
+// of form key formKey: its own (formKey.Description), or the record's field
+// beside it (cfg.DescriptionField: "Items[0].Media" → "Items[0].Caption").
+func MediaBoxDescriptionKey(formKey string, cfg *media_library.MediaBoxConfig) string {
+	if cfg == nil || cfg.DescriptionField == "" {
+		return formKey + ".Description"
+	}
+	if i := strings.LastIndexByte(formKey, '.'); i >= 0 {
+		return formKey[:i+1] + cfg.DescriptionField
+	}
+	return cfg.DescriptionField
+}
+
+// MediaBoxDescription is the description of the media box of field: the
+// record's field cfg.DescriptionField, or the box's own.
+func MediaBoxDescription(field *presets.FieldContext, cfg *media_library.MediaBoxConfig) string {
+	if cfg == nil || cfg.DescriptionField == "" {
+		if mb, ok := field.Value().(media_library.MediaBox); ok {
+			return mb.Description
+		}
+		return ""
+	}
+	if field.Obj == nil {
+		return ""
+	}
+	v, err := reflectutils.Get(field.Obj, cfg.DescriptionField)
+	if err != nil || v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
 }
 
 type QMediaBoxBuilder struct {
@@ -485,7 +527,7 @@ func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox,
 
 		c.AppendChild(row)
 
-		fieldName := fmt.Sprintf("%s.Description", field)
+		fieldName := MediaBoxDescriptionKey(field, cfg)
 		value := ctx.R.FormValue(fieldName)
 		if len(value) == 0 {
 			value = mediaBox.Description
@@ -564,24 +606,66 @@ func thumbName(name string, size *base.Size, fileSize int, f *media_library.Medi
 	text := ""
 	if name == base.DefaultSizeKey {
 		title = name
-		text = fmt.Sprintf("%d X %d", f.Width, f.Height)
+		text = fmt.Sprintf("%d × %d", f.Width, f.Height)
 	}
 	if size != nil {
 		title = name
 		if size.Width != 0 && size.Height != 0 {
-			text = fmt.Sprintf("%d X %d", size.Width, size.Height)
+			text = fmt.Sprintf("%d × %d", size.Width, size.Height)
 		}
 	}
-	// if fileSize != 0 {
-	//	text = fmt.Sprintf("%s %s", text, media.ByteCountSI(fileSize))
-	// }
 	if title != "" {
 		div.AppendChildren(h.Span(name))
 	}
+	if fileSize == 0 && name == base.DefaultSizeKey {
+		fileSize = f.FileSizes["original"]
+	}
+	if fileSize > 0 {
+		if text != "" {
+			text += " · "
+		}
+		text += base.ByteCountSI(fileSize)
+	}
 	if text != "" {
-		div.AppendChildren(h.Br(), h.Span(text).Style("color:#757575;"))
+		div.AppendChildren(h.Br(), infoChip(text).Class("mt-1"))
 	}
 	return div
+}
+
+// MediaBoxInfo is the text of what a media box holds in its size thumb
+// (base.DefaultSizeKey or "", the file itself): an image's dimensions and the
+// size of the file — "800 × 600 · 120kB" —, a file's size; "" when it
+// knows neither.
+func MediaBoxInfo(f *media_library.MediaBox, thumb string) string {
+	if f == nil {
+		return ""
+	}
+	if thumb == "" {
+		thumb = base.DefaultSizeKey
+	}
+	var parts []string
+	if base.IsImageFormat(f.FileName) && f.Width > 0 && f.Height > 0 && thumb == base.DefaultSizeKey {
+		parts = append(parts, fmt.Sprintf("%d × %d", f.Width, f.Height))
+	}
+	n := f.FileSizes[thumb]
+	if n == 0 && thumb == base.DefaultSizeKey {
+		n = f.FileSizes["original"]
+	}
+	if n > 0 {
+		parts = append(parts, base.ByteCountSI(n))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// MediaBoxInfoChip is MediaBoxInfo in a small chip (the media box's
+// thumbnails show it): an image's dimensions and the file's size.
+func MediaBoxInfoChip(f *media_library.MediaBox, thumb string) *VChipBuilder {
+	return infoChip(MediaBoxInfo(f, thumb))
+}
+
+func infoChip(text string) *VChipBuilder {
+	return VChip(h.Text(text)).Size(SizeXSmall).Variant(VariantTonal).Label(true).
+		Attr("data-media-info", true)
 }
 
 func updateDescription(mb *Builder) web.EventFunc {
