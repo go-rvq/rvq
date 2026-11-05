@@ -34,6 +34,11 @@ func (d *DetailingBuilder) setupPagesRegistrator() {
 		}),
 	).
 		Model(d.mb).
+		// the record of a page (RecordLayout's fetch): the detail's fetch,
+		// read when asked — it is set after
+		FetchFunc(func(obj interface{}, id ID, ctx *web.EventContext) error {
+			return d.GetFetchFunc()(obj, id, ctx)
+		}).
 		LayoutFunc(func(config *LayoutConfig, f func(ctx *web.EventContext) (r web.PageResponse, err error)) web.PageFunc {
 			return d.mb.p.detailLayoutFunc(d.mb.BindPageFunc(f), config)
 		}).
