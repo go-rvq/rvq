@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest'
 import {flushPromises} from '@vue/test-utils'
 import Lightbox from '../Lightbox/Lightbox.vue'
-import {imagesOf} from '../Lightbox/lightbox'
+import {imagesOf, lightboxOf} from '../Lightbox/lightbox'
 import {mountTemplate} from '@/lib/__tests__/testutils'
 
 it('the images of a group, in the order of the page; alone without one', () => {
@@ -35,4 +35,18 @@ it('goes through the images, round', async () => {
   vm.go(-1)
   expect(vm.i).toBe(2)
   w.unmount()
+})
+
+it('a control over the image keeps its click', () => {
+  const root = document.createElement('div')
+  root.innerHTML = `
+    <div data-lightbox-src="/1.jpg" id="img"><img id="pic"><button id="edit"><i id="icon"></i></button></div>
+    <button data-lightbox-src="/2.jpg" id="btn"><span id="inner"></span></button>`
+  const $ = (id: string) => root.querySelector('#' + id)
+  expect(lightboxOf($('pic'))).toBe($('img'))
+  expect(lightboxOf($('icon'))).toBeNull()
+  expect(lightboxOf($('edit'))).toBeNull()
+  // the element of the image a button itself: it opens
+  expect(lightboxOf($('inner'))).toBe($('btn'))
+  expect(lightboxOf(root)).toBeNull()
 })

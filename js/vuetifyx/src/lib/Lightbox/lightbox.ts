@@ -56,9 +56,22 @@ export function close() {
   mounted = null
 }
 
+// CONTROLS are what, inside an image of the lightbox, keeps its own click.
+const CONTROLS = 'button, a[href], input, textarea, select, label, [role="button"], [data-lightbox-ignore]'
+
+// lightboxOf: the image of the lightbox a click on target opens; null, none —
+// out of one, or on a control over it (its edit, its delete: the control's).
+export function lightboxOf(target: Element | null): Element | null {
+  const el = target?.closest?.('[data-lightbox-src]')
+  if (!el) return null
+  const control = target!.closest(CONTROLS)
+  if (control && control !== el && el.contains(control)) return null
+  return el
+}
+
 function onClick(ev: MouseEvent) {
   if (ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey) return
-  const el = (ev.target as Element | null)?.closest?.('[data-lightbox-src]')
+  const el = lightboxOf(ev.target as Element | null)
   if (!el) return
   ev.preventDefault()
   ev.stopPropagation()
