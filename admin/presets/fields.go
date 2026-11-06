@@ -1657,8 +1657,10 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, 
 
 // switchComponent draws the switch s: in a form, every case under its
 // condition — a v-if / v-else-if / v-else chain, or v-show (s.Show) —; else
-// the case of the record. A field may be in several cases: each case is
-// drawn from the fields drawn before the switch (okNames).
+// the case of the record. A case (or the default) with nothing to draw is not
+// drawn — its value still its, never the default's —; nothing drawn, nil. A
+// field may be in several cases: each case is drawn from the fields drawn
+// before the switch (okNames).
 func (b *FieldsBuilder) switchComponent(s *FieldsSwitch, inForm bool, obj any, ctx *web.EventContext, okNames map[string]any,
 	doLayout func(FieldsLayout) []h.HTMLComponent) h.HTMLComponent {
 	if !inForm || s.Expr == "" {
@@ -1677,33 +1679,46 @@ func (b *FieldsBuilder) switchComponent(s *FieldsSwitch, inForm bool, obj any, c
 		return comps
 	}
 	var (
-		parts  []h.HTMLComponent
-		values []string
+		parts   []h.HTMLComponent
+		values  []string
+		skipped bool
 	)
-	for i, c := range s.Cases {
+	for _, c := range s.Cases {
 		value := string(h.JSONString(c.Value))
+		// its value is the case's even when nothing of it is drawn: the
+		// default is not shown for it
 		values = append(values, value)
 		expr := fmt.Sprintf("(%s) === %s", s.Expr, value)
 		comps := draw(c.Items)
 		switch {
+		case len(comps) == 0:
+			skipped = true
 		case s.Show:
 			parts = append(parts, h.Div(comps...).Attr("v-show", expr))
-		case i == 0:
+		case len(parts) == 0:
 			parts = append(parts, h.Template(comps...).Attr("v-if", expr))
 		default:
 			parts = append(parts, h.Template(comps...).Attr("v-else-if", expr))
 		}
 	}
-	if len(s.Default) > 0 {
-		comps := draw(s.Default)
+	if comps := draw(s.Default); len(comps) > 0 {
+		not := fmt.Sprintf("![%s].includes(%s)", strings.Join(values, ", "), s.Expr)
 		switch {
 		case s.Show:
-			parts = append(parts, h.Div(comps...).Attr("v-show", fmt.Sprintf("![%s].includes(%s)", strings.Join(values, ", "), s.Expr)))
+			parts = append(parts, h.Div(comps...).Attr("v-show", not))
 		case len(s.Cases) == 0:
 			parts = append(parts, h.Components(comps...))
+		case skipped:
+			// a case not drawn: the chain does not tell its value apart
+			parts = append(parts, h.Template(comps...).Attr("v-if", not))
 		default:
 			parts = append(parts, h.Template(comps...).Attr("v-else", true))
 		}
+	}
+	if len(parts) == 0 {
+		clear(okNames)
+		maps.Copy(okNames, drawn)
+		return nil
 	}
 	clear(okNames)
 	maps.Copy(okNames, drawn)

@@ -164,3 +164,24 @@ func TestFieldsGroupCondition(t *testing.T) {
 		t.Errorf("tab on a condition:\n%s", got)
 	}
 }
+
+// A case with nothing to draw is not drawn, and its value is not the
+// default's: in a form, the default on none of the values (not a v-else); in
+// the detail, nothing. Nothing in any case, no switch.
+func TestFieldsSwitchEmptyCase(t *testing.T) {
+	sw := kindSwitch().Case("c")
+	fb := switchBuilder("Kind", sw)
+	got := renderFields(fb, &switchRecord{Kind: "c"}, WRITE)
+	if strings.Contains(got, `=== "c"`) || strings.Contains(got, "v-else>") ||
+		!strings.Contains(got, `v-if='![&#34;a&#34;, &#34;b&#34;, &#34;c&#34;].includes(form.Kind)'`) && !strings.Contains(got, `v-if='!["a", "b", "c"].includes(form.Kind)'`) {
+		t.Errorf("form, an empty case:\n%s", got)
+	}
+	if got := renderFields(fb, &switchRecord{Kind: "c"}, DETAIL); strings.Contains(got, "Note") || strings.Contains(got, "data-fields-switch") {
+		t.Errorf("detail of the empty case:\n%s", got)
+	}
+
+	empty := NewFieldsSwitch("none", "form.Kind", func(obj any, _ *web.EventContext) string { return obj.(*switchRecord).Kind }).Case("a")
+	if got := renderFields(switchBuilder("Kind", empty), &switchRecord{Kind: "a"}, WRITE); strings.Contains(got, "data-fields-switch") {
+		t.Errorf("an empty switch drawn:\n%s", got)
+	}
+}
