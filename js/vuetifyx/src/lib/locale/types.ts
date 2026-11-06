@@ -161,6 +161,52 @@ export interface VxMessages {
   cameraNotFound: string
   /** Said when the camera failed ({error}: why). */
   cameraError: string
+  /** Panel of the controls of the camera itself. */
+  cameraControls: string
+  /** Button that puts the controls of the camera back as they were. */
+  cameraReset: string
+  /** Said when the camera offers no control. */
+  cameraNoControls: string
+  /** Switch of a control of the camera: automatic. */
+  cameraAuto: string
+  /** Group of the controls of the camera: exposure. */
+  cameraExposure: string
+  /** Control of the camera. */
+  cameraExposureCompensation: string
+  /** Control of the camera. */
+  cameraExposureTime: string
+  /** Control of the camera. */
+  cameraIso: string
+  /** Group of the controls of the camera: white balance. */
+  cameraWhiteBalance: string
+  /** Control of the camera. */
+  cameraColorTemperature: string
+  /** Group of the controls of the camera: focus. */
+  cameraFocus: string
+  /** Control of the camera. */
+  cameraFocusDistance: string
+  /** Group of the controls of the camera: the image. */
+  cameraImage: string
+  /** Control of the camera. */
+  cameraBrightness: string
+  /** Control of the camera. */
+  cameraContrast: string
+  /** Control of the camera. */
+  cameraSaturation: string
+  /** Control of the camera. */
+  cameraSharpness: string
+  /** Group of the controls of the camera: zoom, pan, tilt. */
+  cameraPosition: string
+  /** Control of the camera. */
+  cameraZoom: string
+  /** Control of the camera. */
+  cameraPan: string
+  /** Control of the camera. */
+  cameraTilt: string
+  /** Group of the controls of the camera: the light. */
+  cameraLight: string
+  /** Control of the camera: its light. */
+  cameraTorch: string
   /** Button of the lightbox: the image in a tab of its own. */
   lightboxOpen: string
   /** Button that closes the lightbox. */

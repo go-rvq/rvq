@@ -13,6 +13,7 @@ declare module 'vue' {
     AutoCompleteExample: typeof import('./src/demo/components/AutoCompleteExample.vue')['default']
     Button: typeof import('./src/lib/TipTap/extensions/codeblock-script-value/Button.vue')['default']
     ButtonsAction: typeof import('./src/lib/TipTap/components/ButtonsAction.vue')['default']
+    CameraControls: typeof import('./src/lib/ImageTools/webcam/CameraControls.vue')['default']
     Card: typeof import('./src/lib/Card.vue')['default']
     CellPlaceAction: typeof import('./src/lib/TipTap/components/CellPlaceAction.vue')['default']
     CodeView: typeof import('./src/lib/CodeView.vue')['default']

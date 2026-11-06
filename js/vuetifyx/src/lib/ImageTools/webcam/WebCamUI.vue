@@ -31,10 +31,19 @@
         <v-btn disabled />
       </template>
       <template v-slot:append>
+        <IconButton
+          v-if="track"
+          :title="vx.cameraControls"
+          icon="mdi-tune-variant"
+          :color="showControls ? 'primary' : undefined"
+          data-camera-controls-toggle
+          @click="showControls = !showControls"
+        />
         <IconButton :title="tr.close" icon="mdi-close" @click="closeHandler" />
       </template>
     </v-toolbar>
     <v-divider />
+    <div style="display: flex; flex: 1; min-height: 0; position: relative">
     <v-card-text
       style="
         overflow: hidden;
@@ -42,6 +51,7 @@
         align-items: center;
         justify-content: center;
         padding: 0;
+        min-width: 0;
       "
       class="webcam"
     >
@@ -60,9 +70,23 @@
         @error="error"
         @unsupported="unsupported"
         @photoTaken="photoTakenEvent"
+        @track="track = $event"
         :shutterEffect="fullscreen"
       />
     </v-card-text>
+    <!-- the camera's own controls (exposure, white balance, focus…) -->
+    <!-- a phone's: over the image, from the right, closed until its icon -->
+    <template v-if="track && showControls">
+      <v-divider v-if="!mobile" vertical />
+      <v-sheet
+        class="webcam-controls"
+        :class="{overlay: mobile}"
+        data-camera-controls-panel
+      >
+        <CameraControls :track="track" />
+      </v-sheet>
+    </template>
+    </div>
     <v-divider />
     <v-card-actions style="justify-content: center">
       <template v-if="picture.url">
@@ -100,11 +124,13 @@
 
 <script lang="ts" setup>
 import {fmt, useVxMessages} from '@/lib/locale'
-import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef} from 'vue'
 import {Translator} from './translator'
 import IconButton from '../IconButton.vue'
 import {Picture} from './types.js'
 import WebCam from './WebCam.vue'
+import CameraControls from './CameraControls.vue'
+import {useDisplay} from 'vuetify'
 
 class interval {
   value:unknown = 0
@@ -133,6 +159,12 @@ const props = defineProps({
     return (webcam.value?.cameras || []) as InputDeviceInfo[]
   }),
   deviceId = ref(''),
+  // the track of the camera open: its controls, in the side panel (shown on
+  // a wide screen; a button toggles it)
+  track = shallowRef<MediaStreamTrack | null>(null),
+  display = useDisplay(),
+  mobile = computed(() => display.smAndDown.value),
+  showControls = ref(!mobile.value),
   fullscreen = ref(false),
   photoTaken = ref(false),
   photoFailed = ref(false),
@@ -281,3 +313,21 @@ const tr = computed<Translator>(() => {
   }
 })
 </script>
+
+<style scoped>
+.webcam-controls {
+  width: 280px;
+  flex: none;
+  overflow-y: auto;
+}
+.webcam-controls.overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(300px, 85%);
+  z-index: 2;
+  opacity: 0.94;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.4);
+}
+</style>

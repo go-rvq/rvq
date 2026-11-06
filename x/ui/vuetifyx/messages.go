@@ -31,144 +31,167 @@ func ConfigureMessages(b *i18n.Builder) {
 // namespace MessagesNamespace of the vue-i18n (the same keys as the
 // components' VxMessages).
 type Messages struct {
-	ModuleDescription        string `json:"-" i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	Back                     string `json:"back" i18n:"hint='Button that goes back.'"`
-	Save                     string `json:"save" i18n:"hint='Button that saves.'"`
-	Apply                    string `json:"apply" i18n:"hint='Button that applies.'"`
-	Cancel                   string `json:"cancel" i18n:"hint='Button that cancels.'"`
-	Ok                       string `json:"ok" i18n:"hint='Button that confirms.'"`
-	Close                    string `json:"close" i18n:"hint='Button that closes.'"`
-	Clear                    string `json:"clear" i18n:"hint='Button that clears a value or a filter.'"`
-	Undo                     string `json:"undo" i18n:"hint='Button that undoes the last edit.'"`
-	Redo                     string `json:"redo" i18n:"hint='Button that redoes the edit undone.'"`
-	Move                     string `json:"move" i18n:"hint='Button that moves.'"`
-	ChangeOrder              string `json:"changeOrder" i18n:"hint='Button that changes the order of items.'"`
-	Select                   string `json:"select" i18n:"hint='Button that selects.'"`
-	Home                     string `json:"home" i18n:"hint='The first page.'"`
-	Preview                  string `json:"preview" i18n:"hint='Button that previews.'"`
-	Help                     string `json:"help" i18n:"hint='Button and title of a help.'"`
-	Expand                   string `json:"expand" i18n:"hint='Button that expands.'"`
-	Collapse                 string `json:"collapse" i18n:"hint='Button that collapses.'"`
-	Settings                 string `json:"settings" i18n:"hint='Title of the settings of a table.'"`
-	Columns                  string `json:"columns" i18n:"hint='Title of the columns of a table.'"`
-	ThemeLight               string `json:"themeLight" i18n:"hint='Title of the button that turns the theme light.'"`
-	ThemeDark                string `json:"themeDark" i18n:"hint='Title of the button that turns the theme dark.'"`
-	Year                     string `json:"year" i18n:"hint='Label of a year (a month picker).'"`
-	Month                    string `json:"month" i18n:"hint='Label of a month (a month picker).'"`
-	FilterClearAll           string `json:"filterClearAll" i18n:"hint='Button that removes every filter.'"`
-	FilterAdd                string `json:"filterAdd" i18n:"hint='Button that adds a filter.'"`
-	FilterBy                 string `json:"filterBy" i18n:"hint='Title of a filter ({filter}: its name).'"`
-	FilterTo                 string `json:"filterTo" i18n:"hint='Between the two values of a range of a filter.'"`
-	FilterNumberEquals       string `json:"filterNumberEquals" i18n:"hint='Modifier of a number filter.'"`
-	FilterNumberBetween      string `json:"filterNumberBetween" i18n:"hint='Modifier of a number filter.'"`
-	FilterNumberGreaterThan  string `json:"filterNumberGreaterThan" i18n:"hint='Modifier of a number filter.'"`
-	FilterNumberLessThan     string `json:"filterNumberLessThan" i18n:"hint='Modifier of a number filter.'"`
-	FilterNumberAnd          string `json:"filterNumberAnd" i18n:"hint='Between the two numbers of a number filter.'"`
-	FilterStringEquals       string `json:"filterStringEquals" i18n:"hint='Modifier of a text filter.'"`
-	FilterStringContains     string `json:"filterStringContains" i18n:"hint='Modifier of a text filter.'"`
-	FilterIn                 string `json:"filterIn" i18n:"hint='Modifier of a choice filter: one of them.'"`
-	FilterNotIn              string `json:"filterNotIn" i18n:"hint='Modifier of a choice filter: none of them.'"`
-	Copy                     string `json:"copy" i18n:"hint='Button that copies.'"`
-	Copied                   string `json:"copied" i18n:"hint='Said once copied.'"`
-	CopyError                string `json:"copyError" i18n:"hint='Said when the copy failed.'"`
-	Paste                    string `json:"paste" i18n:"hint='Button that pastes.'"`
-	CopyOrPasteContent       string `json:"copyOrPasteContent" i18n:"hint='Menu of the copy and paste of a content.'"`
-	CopyContent              string `json:"copyContent" i18n:"hint='Item that copies the content.'"`
-	PasteContent             string `json:"pasteContent" i18n:"hint='Item that pastes the content.'"`
-	CopiedToClipboard        string `json:"copiedToClipboard" i18n:"hint='Said once copied.'"`
-	PastedFromClipboard      string `json:"pastedFromClipboard" i18n:"hint='Said once pasted.'"`
-	InvalidContent           string `json:"invalidContent" i18n:"hint='Said when what was pasted is not valid.'"`
-	PastedIsEmpty            string `json:"pastedIsEmpty" i18n:"hint='Said when the clipboard is empty.'"`
-	Tools                    string `json:"tools" i18n:"hint='Menu of tools.'"`
-	PleaseEnterTheCode       string `json:"pleaseEnterTheCode" i18n:"hint='Asks for a code.'"`
-	Script                   string `json:"script" i18n:"hint='A script.'"`
-	ScriptResult             string `json:"scriptResult" i18n:"hint='The result of a script.'"`
-	ShowDetail               string `json:"showDetail" i18n:"hint='Button that shows the detail.'"`
-	InsertTextBlockBefore    string `json:"insertTextBlockBefore" i18n:"hint='Button of the editor.'"`
-	InsertTextBlockAfter     string `json:"insertTextBlockAfter" i18n:"hint='Button of the editor.'"`
-	PreFormattedText         string `json:"preFormattedText" i18n:"hint='A pre formatted text.'"`
-	SourceCodeHtml           string `json:"sourceCodeHtml" i18n:"hint='Title of the dialog of the HTML of a content.'"`
-	SelectImage              string `json:"selectImage" i18n:"hint='Label of the choice of an image.'"`
-	ImageAlt                 string `json:"imageAlt" i18n:"hint='Label of the alternative text of an image.'"`
-	LockAspectRatio          string `json:"lockAspectRatio" i18n:"hint='Option of an image.'"`
-	HeaderPlaceholder        string `json:"headerPlaceholder" i18n:"hint='Placeholder of a header of the block editor.'"`
-	ImageLoadError           string `json:"imageLoadError" i18n:"hint='Said when an image could not be loaded.'"`
-	ImageReleaseHere         string `json:"imageReleaseHere" i18n:"hint='Said while a file is dragged over.'"`
-	ImageUnsupported         string `json:"imageUnsupported" i18n:"hint='Said of a file not supported.'"`
-	ImageAddFromLink         string `json:"imageAddFromLink" i18n:"hint='Button that adds an image of a link.'"`
-	ImageTakePicture         string `json:"imageTakePicture" i18n:"hint='Button that takes a picture.'"`
-	ImageEdit                string `json:"imageEdit" i18n:"hint='Button that edits the picture.'"`
-	ImageAddFromFile         string `json:"imageAddFromFile" i18n:"hint='Button that adds an image of a file.'"`
-	ImageFullView            string `json:"imageFullView" i18n:"hint='Button that shows the image whole.'"`
-	TakePicture              string `json:"takePicture" i18n:"hint='Button of the camera.'"`
-	FlipCamera               string `json:"flipCamera" i18n:"hint='Button of the camera.'"`
-	LoadCameras              string `json:"loadCameras" i18n:"hint='Button of the camera.'"`
-	CameraDenied             string `json:"cameraDenied" i18n:"hint='Said when the browser denied the camera.'"`
-	CameraNotFound           string `json:"cameraNotFound" i18n:"hint='Said when there is no camera.'"`
-	CameraError              string `json:"cameraError" i18n:"hint='Said when the camera failed ({error}: why).'"`
-	MapLoadError             string `json:"mapLoadError" i18n:"hint='Said when the map could not be loaded.'"`
-	MapsLoadError            string `json:"mapsLoadError" i18n:"hint='Said when Google Maps could not be loaded.'"`
-	MapsNoKey                string `json:"mapsNoKey" i18n:"hint='Said when there is no key of Google Maps.'"`
-	SeoName                  string `json:"seoName" i18n:"hint='Column of the name of a SEO variable.'"`
-	SeoValue                 string `json:"seoValue" i18n:"hint='Column of the value of a SEO variable.'"`
-	SeoAdd                   string `json:"seoAdd" i18n:"hint='Button that adds a SEO variable.'"`
-	SeoText                  string `json:"seoText" i18n:"hint='A SEO variable of text.'"`
-	SeoOneLine               string `json:"seoOneLine" i18n:"hint='Title of the button that makes a value one line.'"`
-	SeoMultiline             string `json:"seoMultiline" i18n:"hint='Title of the button that makes a value several lines.'"`
-	SeoMap                   string `json:"seoMap" i18n:"hint='Button that opens the map.'"`
-	SeoPickPlaces            string `json:"seoPickPlaces" i18n:"hint='Placeholder of the places of a ZIP variable.'"`
-	SeoZipcodesTitle         string `json:"seoZipcodesTitle" i18n:"hint='Title of the map of the ZIP codes.'"`
-	MapsTest                 string `json:"mapsTest" i18n:"hint='Button that tests the key of Google Maps.'"`
-	MapsTestTitle            string `json:"mapsTestTitle" i18n:"hint='Title of the test of the key.'"`
-	MapsTestNoKey            string `json:"mapsTestNoKey" i18n:"hint='Said with no key.'"`
-	MapsTestMaps             string `json:"mapsTestMaps" i18n:"hint='An API of Google.'"`
-	MapsTestPlaces           string `json:"mapsTestPlaces" i18n:"hint='An API of Google.'"`
-	MapsTestGeocoding        string `json:"mapsTestGeocoding" i18n:"hint='An API of Google.'"`
-	MapsTestWaiting          string `json:"mapsTestWaiting" i18n:"hint='Said while testing.'"`
-	MapsTestOk               string `json:"mapsTestOk" i18n:"hint='Said of an API that works.'"`
-	MapsTestFailed           string `json:"mapsTestFailed" i18n:"hint='Said of an API that failed.'"`
-	MapsTestTryIt            string `json:"mapsTestTryIt" i18n:"hint='Hint of the test.'"`
-	MapsTestReload           string `json:"mapsTestReload" i18n:"hint='Said when another key is loaded.'"`
-	MapsTestRejected         string `json:"mapsTestRejected" i18n:"hint='Said when Google refused the key ({code}: its error).'"`
-	MapsErrRefererNotAllowed string `json:"mapsErrRefererNotAllowed" i18n:"hint='An error of Google Maps.'"`
-	MapsErrApiNotActivated   string `json:"mapsErrApiNotActivated" i18n:"hint='An error of Google Maps.'"`
-	MapsErrInvalidKey        string `json:"mapsErrInvalidKey" i18n:"hint='An error of Google Maps.'"`
-	MapsErrBillingNotEnabled string `json:"mapsErrBillingNotEnabled" i18n:"hint='An error of Google Maps.'"`
-	MapsErrExpiredKey        string `json:"mapsErrExpiredKey" i18n:"hint='An error of Google Maps.'"`
-	MapsErrZeroResults       string `json:"mapsErrZeroResults" i18n:"hint='An error of Google Maps.'"`
-	MapsErrRequestDenied     string `json:"mapsErrRequestDenied" i18n:"hint='An error of Google Maps.'"`
-	MapsErrOverQueryLimit    string `json:"mapsErrOverQueryLimit" i18n:"hint='An error of Google Maps.'"`
-	Format                   string `json:"format" i18n:"hint='Button that formats the code (gad fmt).'"`
-	Structure                string `json:"structure" i18n:"hint='Title of the panel of the declarations of the code.'"`
-	Doc                      string `json:"doc" i18n:"hint='Title of the panel of the documentation of the code.'"`
-	Refresh                  string `json:"refresh" i18n:"hint='Button that reads again.'"`
-	NoStructure              string `json:"noStructure" i18n:"hint='Said when the code declares nothing.'"`
-	NoDoc                    string `json:"noDoc" i18n:"hint='Said when the code has no documentation.'"`
-	NotFormatted             string `json:"notFormatted" i18n:"hint='Said when the code does not parse.'"`
-	Compare                  string `json:"compare" i18n:"hint='Button that compares the code with its initial value.'"`
-	Edit                     string `json:"edit" i18n:"hint='Button that leaves the compare.'"`
-	PrevChange               string `json:"prevChange" i18n:"hint='Button of the compare.'"`
-	NextChange               string `json:"nextChange" i18n:"hint='Button of the compare.'"`
-	Revert                   string `json:"revert" i18n:"hint='Button of a change of the compare: takes the old part back.'"`
-	DiffFiles                string `json:"diffFiles" i18n:"hint='Title of the tree of the files of a diff.'"`
-	DiffOld                  string `json:"diffOld" i18n:"hint='Title of the old side of a diff.'"`
-	DiffCurrent              string `json:"diffCurrent" i18n:"hint='Title of the current side of a diff.'"`
-	DiffBinary               string `json:"diffBinary" i18n:"hint='Said of a binary file.'"`
-	DiffNoChanges            string `json:"diffNoChanges" i18n:"hint='Said with no changes.'"`
-	DiffRenamedTo            string `json:"diffRenamedTo" i18n:"hint='Before the new path of a renamed file.'"`
-	DiffUnchanged            string `json:"diffUnchanged" i18n:"hint='Said of a renamed file of the same content.'"`
-	Loading                  string `json:"loading" i18n:"hint='Said while loading.'"`
-	DiffLoadError            string `json:"diffLoadError" i18n:"hint='Said when a diff could not be loaded.'"`
-	Saving                   string `json:"saving" i18n:"hint='Said while saving.'"`
-	Saved                    string `json:"saved" i18n:"hint='Said once saved.'"`
-	Unsaved                  string `json:"unsaved" i18n:"hint='Said of a change not saved.'"`
-	DiffRevert               string `json:"diffRevert" i18n:"hint='Title of the button of a change of a diff.'"`
-	DiffPrev                 string `json:"diffPrev" i18n:"hint='Title of the button of a diff.'"`
-	DiffNext                 string `json:"diffNext" i18n:"hint='Title of the button of a diff.'"`
-	LightboxOpen             string `json:"lightboxOpen" i18n:"hint='Button of the lightbox: the image in a tab of its own.'"`
-	LightboxClose            string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
-	LightboxPrev             string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
-	LightboxNext             string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
+	ModuleDescription          string `json:"-" i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	Back                       string `json:"back" i18n:"hint='Button that goes back.'"`
+	Save                       string `json:"save" i18n:"hint='Button that saves.'"`
+	Apply                      string `json:"apply" i18n:"hint='Button that applies.'"`
+	Cancel                     string `json:"cancel" i18n:"hint='Button that cancels.'"`
+	Ok                         string `json:"ok" i18n:"hint='Button that confirms.'"`
+	Close                      string `json:"close" i18n:"hint='Button that closes.'"`
+	Clear                      string `json:"clear" i18n:"hint='Button that clears a value or a filter.'"`
+	Undo                       string `json:"undo" i18n:"hint='Button that undoes the last edit.'"`
+	Redo                       string `json:"redo" i18n:"hint='Button that redoes the edit undone.'"`
+	Move                       string `json:"move" i18n:"hint='Button that moves.'"`
+	ChangeOrder                string `json:"changeOrder" i18n:"hint='Button that changes the order of items.'"`
+	Select                     string `json:"select" i18n:"hint='Button that selects.'"`
+	Home                       string `json:"home" i18n:"hint='The first page.'"`
+	Preview                    string `json:"preview" i18n:"hint='Button that previews.'"`
+	Help                       string `json:"help" i18n:"hint='Button and title of a help.'"`
+	Expand                     string `json:"expand" i18n:"hint='Button that expands.'"`
+	Collapse                   string `json:"collapse" i18n:"hint='Button that collapses.'"`
+	Settings                   string `json:"settings" i18n:"hint='Title of the settings of a table.'"`
+	Columns                    string `json:"columns" i18n:"hint='Title of the columns of a table.'"`
+	ThemeLight                 string `json:"themeLight" i18n:"hint='Title of the button that turns the theme light.'"`
+	ThemeDark                  string `json:"themeDark" i18n:"hint='Title of the button that turns the theme dark.'"`
+	Year                       string `json:"year" i18n:"hint='Label of a year (a month picker).'"`
+	Month                      string `json:"month" i18n:"hint='Label of a month (a month picker).'"`
+	FilterClearAll             string `json:"filterClearAll" i18n:"hint='Button that removes every filter.'"`
+	FilterAdd                  string `json:"filterAdd" i18n:"hint='Button that adds a filter.'"`
+	FilterBy                   string `json:"filterBy" i18n:"hint='Title of a filter ({filter}: its name).'"`
+	FilterTo                   string `json:"filterTo" i18n:"hint='Between the two values of a range of a filter.'"`
+	FilterNumberEquals         string `json:"filterNumberEquals" i18n:"hint='Modifier of a number filter.'"`
+	FilterNumberBetween        string `json:"filterNumberBetween" i18n:"hint='Modifier of a number filter.'"`
+	FilterNumberGreaterThan    string `json:"filterNumberGreaterThan" i18n:"hint='Modifier of a number filter.'"`
+	FilterNumberLessThan       string `json:"filterNumberLessThan" i18n:"hint='Modifier of a number filter.'"`
+	FilterNumberAnd            string `json:"filterNumberAnd" i18n:"hint='Between the two numbers of a number filter.'"`
+	FilterStringEquals         string `json:"filterStringEquals" i18n:"hint='Modifier of a text filter.'"`
+	FilterStringContains       string `json:"filterStringContains" i18n:"hint='Modifier of a text filter.'"`
+	FilterIn                   string `json:"filterIn" i18n:"hint='Modifier of a choice filter: one of them.'"`
+	FilterNotIn                string `json:"filterNotIn" i18n:"hint='Modifier of a choice filter: none of them.'"`
+	Copy                       string `json:"copy" i18n:"hint='Button that copies.'"`
+	Copied                     string `json:"copied" i18n:"hint='Said once copied.'"`
+	CopyError                  string `json:"copyError" i18n:"hint='Said when the copy failed.'"`
+	Paste                      string `json:"paste" i18n:"hint='Button that pastes.'"`
+	CopyOrPasteContent         string `json:"copyOrPasteContent" i18n:"hint='Menu of the copy and paste of a content.'"`
+	CopyContent                string `json:"copyContent" i18n:"hint='Item that copies the content.'"`
+	PasteContent               string `json:"pasteContent" i18n:"hint='Item that pastes the content.'"`
+	CopiedToClipboard          string `json:"copiedToClipboard" i18n:"hint='Said once copied.'"`
+	PastedFromClipboard        string `json:"pastedFromClipboard" i18n:"hint='Said once pasted.'"`
+	InvalidContent             string `json:"invalidContent" i18n:"hint='Said when what was pasted is not valid.'"`
+	PastedIsEmpty              string `json:"pastedIsEmpty" i18n:"hint='Said when the clipboard is empty.'"`
+	Tools                      string `json:"tools" i18n:"hint='Menu of tools.'"`
+	PleaseEnterTheCode         string `json:"pleaseEnterTheCode" i18n:"hint='Asks for a code.'"`
+	Script                     string `json:"script" i18n:"hint='A script.'"`
+	ScriptResult               string `json:"scriptResult" i18n:"hint='The result of a script.'"`
+	ShowDetail                 string `json:"showDetail" i18n:"hint='Button that shows the detail.'"`
+	InsertTextBlockBefore      string `json:"insertTextBlockBefore" i18n:"hint='Button of the editor.'"`
+	InsertTextBlockAfter       string `json:"insertTextBlockAfter" i18n:"hint='Button of the editor.'"`
+	PreFormattedText           string `json:"preFormattedText" i18n:"hint='A pre formatted text.'"`
+	SourceCodeHtml             string `json:"sourceCodeHtml" i18n:"hint='Title of the dialog of the HTML of a content.'"`
+	SelectImage                string `json:"selectImage" i18n:"hint='Label of the choice of an image.'"`
+	ImageAlt                   string `json:"imageAlt" i18n:"hint='Label of the alternative text of an image.'"`
+	LockAspectRatio            string `json:"lockAspectRatio" i18n:"hint='Option of an image.'"`
+	HeaderPlaceholder          string `json:"headerPlaceholder" i18n:"hint='Placeholder of a header of the block editor.'"`
+	ImageLoadError             string `json:"imageLoadError" i18n:"hint='Said when an image could not be loaded.'"`
+	ImageReleaseHere           string `json:"imageReleaseHere" i18n:"hint='Said while a file is dragged over.'"`
+	ImageUnsupported           string `json:"imageUnsupported" i18n:"hint='Said of a file not supported.'"`
+	ImageAddFromLink           string `json:"imageAddFromLink" i18n:"hint='Button that adds an image of a link.'"`
+	ImageTakePicture           string `json:"imageTakePicture" i18n:"hint='Button that takes a picture.'"`
+	ImageEdit                  string `json:"imageEdit" i18n:"hint='Button that edits the picture.'"`
+	ImageAddFromFile           string `json:"imageAddFromFile" i18n:"hint='Button that adds an image of a file.'"`
+	ImageFullView              string `json:"imageFullView" i18n:"hint='Button that shows the image whole.'"`
+	MapLoadError               string `json:"mapLoadError" i18n:"hint='Said when the map could not be loaded.'"`
+	MapsLoadError              string `json:"mapsLoadError" i18n:"hint='Said when Google Maps could not be loaded.'"`
+	MapsNoKey                  string `json:"mapsNoKey" i18n:"hint='Said when there is no key of Google Maps.'"`
+	SeoName                    string `json:"seoName" i18n:"hint='Column of the name of a SEO variable.'"`
+	SeoValue                   string `json:"seoValue" i18n:"hint='Column of the value of a SEO variable.'"`
+	SeoAdd                     string `json:"seoAdd" i18n:"hint='Button that adds a SEO variable.'"`
+	SeoText                    string `json:"seoText" i18n:"hint='A SEO variable of text.'"`
+	SeoOneLine                 string `json:"seoOneLine" i18n:"hint='Title of the button that makes a value one line.'"`
+	SeoMultiline               string `json:"seoMultiline" i18n:"hint='Title of the button that makes a value several lines.'"`
+	SeoMap                     string `json:"seoMap" i18n:"hint='Button that opens the map.'"`
+	SeoPickPlaces              string `json:"seoPickPlaces" i18n:"hint='Placeholder of the places of a ZIP variable.'"`
+	SeoZipcodesTitle           string `json:"seoZipcodesTitle" i18n:"hint='Title of the map of the ZIP codes.'"`
+	MapsTest                   string `json:"mapsTest" i18n:"hint='Button that tests the key of Google Maps.'"`
+	MapsTestTitle              string `json:"mapsTestTitle" i18n:"hint='Title of the test of the key.'"`
+	MapsTestNoKey              string `json:"mapsTestNoKey" i18n:"hint='Said with no key.'"`
+	MapsTestMaps               string `json:"mapsTestMaps" i18n:"hint='An API of Google.'"`
+	MapsTestPlaces             string `json:"mapsTestPlaces" i18n:"hint='An API of Google.'"`
+	MapsTestGeocoding          string `json:"mapsTestGeocoding" i18n:"hint='An API of Google.'"`
+	MapsTestWaiting            string `json:"mapsTestWaiting" i18n:"hint='Said while testing.'"`
+	MapsTestOk                 string `json:"mapsTestOk" i18n:"hint='Said of an API that works.'"`
+	MapsTestFailed             string `json:"mapsTestFailed" i18n:"hint='Said of an API that failed.'"`
+	MapsTestTryIt              string `json:"mapsTestTryIt" i18n:"hint='Hint of the test.'"`
+	MapsTestReload             string `json:"mapsTestReload" i18n:"hint='Said when another key is loaded.'"`
+	MapsTestRejected           string `json:"mapsTestRejected" i18n:"hint='Said when Google refused the key ({code}: its error).'"`
+	MapsErrRefererNotAllowed   string `json:"mapsErrRefererNotAllowed" i18n:"hint='An error of Google Maps.'"`
+	MapsErrApiNotActivated     string `json:"mapsErrApiNotActivated" i18n:"hint='An error of Google Maps.'"`
+	MapsErrInvalidKey          string `json:"mapsErrInvalidKey" i18n:"hint='An error of Google Maps.'"`
+	MapsErrBillingNotEnabled   string `json:"mapsErrBillingNotEnabled" i18n:"hint='An error of Google Maps.'"`
+	MapsErrExpiredKey          string `json:"mapsErrExpiredKey" i18n:"hint='An error of Google Maps.'"`
+	MapsErrZeroResults         string `json:"mapsErrZeroResults" i18n:"hint='An error of Google Maps.'"`
+	MapsErrRequestDenied       string `json:"mapsErrRequestDenied" i18n:"hint='An error of Google Maps.'"`
+	MapsErrOverQueryLimit      string `json:"mapsErrOverQueryLimit" i18n:"hint='An error of Google Maps.'"`
+	Format                     string `json:"format" i18n:"hint='Button that formats the code (gad fmt).'"`
+	Structure                  string `json:"structure" i18n:"hint='Title of the panel of the declarations of the code.'"`
+	Doc                        string `json:"doc" i18n:"hint='Title of the panel of the documentation of the code.'"`
+	Refresh                    string `json:"refresh" i18n:"hint='Button that reads again.'"`
+	NoStructure                string `json:"noStructure" i18n:"hint='Said when the code declares nothing.'"`
+	NoDoc                      string `json:"noDoc" i18n:"hint='Said when the code has no documentation.'"`
+	NotFormatted               string `json:"notFormatted" i18n:"hint='Said when the code does not parse.'"`
+	Compare                    string `json:"compare" i18n:"hint='Button that compares the code with its initial value.'"`
+	Edit                       string `json:"edit" i18n:"hint='Button that leaves the compare.'"`
+	PrevChange                 string `json:"prevChange" i18n:"hint='Button of the compare.'"`
+	NextChange                 string `json:"nextChange" i18n:"hint='Button of the compare.'"`
+	Revert                     string `json:"revert" i18n:"hint='Button of a change of the compare: takes the old part back.'"`
+	DiffFiles                  string `json:"diffFiles" i18n:"hint='Title of the tree of the files of a diff.'"`
+	DiffOld                    string `json:"diffOld" i18n:"hint='Title of the old side of a diff.'"`
+	DiffCurrent                string `json:"diffCurrent" i18n:"hint='Title of the current side of a diff.'"`
+	DiffBinary                 string `json:"diffBinary" i18n:"hint='Said of a binary file.'"`
+	DiffNoChanges              string `json:"diffNoChanges" i18n:"hint='Said with no changes.'"`
+	DiffRenamedTo              string `json:"diffRenamedTo" i18n:"hint='Before the new path of a renamed file.'"`
+	DiffUnchanged              string `json:"diffUnchanged" i18n:"hint='Said of a renamed file of the same content.'"`
+	Loading                    string `json:"loading" i18n:"hint='Said while loading.'"`
+	DiffLoadError              string `json:"diffLoadError" i18n:"hint='Said when a diff could not be loaded.'"`
+	Saving                     string `json:"saving" i18n:"hint='Said while saving.'"`
+	Saved                      string `json:"saved" i18n:"hint='Said once saved.'"`
+	Unsaved                    string `json:"unsaved" i18n:"hint='Said of a change not saved.'"`
+	DiffRevert                 string `json:"diffRevert" i18n:"hint='Title of the button of a change of a diff.'"`
+	DiffPrev                   string `json:"diffPrev" i18n:"hint='Title of the button of a diff.'"`
+	DiffNext                   string `json:"diffNext" i18n:"hint='Title of the button of a diff.'"`
+	LightboxOpen               string `json:"lightboxOpen" i18n:"hint='Button of the lightbox: the image in a tab of its own.'"`
+	LightboxClose              string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
+	LightboxPrev               string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
+	LightboxNext               string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
+	TakePicture                string `json:"takePicture" i18n:"hint='Button of the camera.'"`
+	FlipCamera                 string `json:"flipCamera" i18n:"hint='Button of the camera.'"`
+	LoadCameras                string `json:"loadCameras" i18n:"hint='Button of the camera.'"`
+	CameraDenied               string `json:"cameraDenied" i18n:"hint='Said when the browser denied the camera.'"`
+	CameraNotFound             string `json:"cameraNotFound" i18n:"hint='Said when there is no camera.'"`
+	CameraError                string `json:"cameraError" i18n:"hint='Said when the camera failed ({error}: why).'"`
+	CameraControls             string `json:"cameraControls" i18n:"hint='Panel of the controls of the camera itself.'"`
+	CameraReset                string `json:"cameraReset" i18n:"hint='Button that puts the controls of the camera back as they were.'"`
+	CameraNoControls           string `json:"cameraNoControls" i18n:"hint='Said when the camera offers no control.'"`
+	CameraAuto                 string `json:"cameraAuto" i18n:"hint='Switch of a control of the camera: automatic.'"`
+	CameraExposure             string `json:"cameraExposure" i18n:"hint='Group of the controls of the camera: exposure.'"`
+	CameraExposureCompensation string `json:"cameraExposureCompensation" i18n:"hint='Control of the camera.'"`
+	CameraExposureTime         string `json:"cameraExposureTime" i18n:"hint='Control of the camera.'"`
+	CameraIso                  string `json:"cameraIso" i18n:"hint='Control of the camera.'"`
+	CameraWhiteBalance         string `json:"cameraWhiteBalance" i18n:"hint='Group of the controls of the camera: white balance.'"`
+	CameraColorTemperature     string `json:"cameraColorTemperature" i18n:"hint='Control of the camera.'"`
+	CameraFocus                string `json:"cameraFocus" i18n:"hint='Group of the controls of the camera: focus.'"`
+	CameraFocusDistance        string `json:"cameraFocusDistance" i18n:"hint='Control of the camera.'"`
+	CameraImage                string `json:"cameraImage" i18n:"hint='Group of the controls of the camera: the image.'"`
+	CameraBrightness           string `json:"cameraBrightness" i18n:"hint='Control of the camera.'"`
+	CameraContrast             string `json:"cameraContrast" i18n:"hint='Control of the camera.'"`
+	CameraSaturation           string `json:"cameraSaturation" i18n:"hint='Control of the camera.'"`
+	CameraSharpness            string `json:"cameraSharpness" i18n:"hint='Control of the camera.'"`
+	CameraPosition             string `json:"cameraPosition" i18n:"hint='Group of the controls of the camera: zoom, pan, tilt.'"`
+	CameraZoom                 string `json:"cameraZoom" i18n:"hint='Control of the camera.'"`
+	CameraPan                  string `json:"cameraPan" i18n:"hint='Control of the camera.'"`
+	CameraTilt                 string `json:"cameraTilt" i18n:"hint='Control of the camera.'"`
+	CameraLight                string `json:"cameraLight" i18n:"hint='Group of the controls of the camera: the light.'"`
+	CameraTorch                string `json:"cameraTorch" i18n:"hint='Control of the camera: its light.'"`
 
 	// the words of the editors of a text (mdkit: js/mdkit), by editor
 	MdkitRichBold               string `json:"mdkitRichBold" i18n:"hint='Editors of a text (mdkit), rich: bold.'"`
@@ -460,6 +483,29 @@ var Messages_en_US = &Messages{
 	CameraDenied:                "Permission to use the camera was denied: allow it in the browser.",
 	CameraNotFound:              "No camera found.",
 	CameraError:                 "The camera could not be opened: {error}",
+	CameraControls:              "Camera controls",
+	CameraReset:                 "Reset",
+	CameraNoControls:            "This camera offers no controls.",
+	CameraAuto:                  "Automatic",
+	CameraExposure:              "Exposure",
+	CameraExposureCompensation:  "Exposure compensation",
+	CameraExposureTime:          "Exposure time",
+	CameraIso:                   "ISO",
+	CameraWhiteBalance:          "White balance",
+	CameraColorTemperature:      "Color temperature",
+	CameraFocus:                 "Focus",
+	CameraFocusDistance:         "Focus distance",
+	CameraImage:                 "Image",
+	CameraBrightness:            "Brightness",
+	CameraContrast:              "Contrast",
+	CameraSaturation:            "Saturation",
+	CameraSharpness:             "Sharpness",
+	CameraPosition:              "Zoom and position",
+	CameraZoom:                  "Zoom",
+	CameraPan:                   "Pan",
+	CameraTilt:                  "Tilt",
+	CameraLight:                 "Light",
+	CameraTorch:                 "Torch",
 	LightboxOpen:                "Open in a new tab",
 	LightboxClose:               "Close",
 	LightboxPrev:                "Previous",
@@ -812,6 +858,29 @@ var Messages_pt_BR = &Messages{
 	CameraDenied:                "A permissão para usar a câmera foi negada: libere-a no navegador.",
 	CameraNotFound:              "Nenhuma câmera encontrada.",
 	CameraError:                 "A câmera não pôde ser aberta: {error}",
+	CameraControls:              "Controles da câmera",
+	CameraReset:                 "Restaurar",
+	CameraNoControls:            "Esta câmera não oferece controles.",
+	CameraAuto:                  "Automático",
+	CameraExposure:              "Exposição",
+	CameraExposureCompensation:  "Compensação de exposição",
+	CameraExposureTime:          "Tempo de exposição",
+	CameraIso:                   "ISO",
+	CameraWhiteBalance:          "Balanço de branco",
+	CameraColorTemperature:      "Temperatura de cor",
+	CameraFocus:                 "Foco",
+	CameraFocusDistance:         "Distância do foco",
+	CameraImage:                 "Imagem",
+	CameraBrightness:            "Brilho",
+	CameraContrast:              "Contraste",
+	CameraSaturation:            "Saturação",
+	CameraSharpness:             "Nitidez",
+	CameraPosition:              "Zoom e posição",
+	CameraZoom:                  "Zoom",
+	CameraPan:                   "Giro horizontal",
+	CameraTilt:                  "Inclinação",
+	CameraLight:                 "Luz",
+	CameraTorch:                 "Lanterna",
 	LightboxOpen:                "Abrir em nova aba",
 	LightboxClose:               "Fechar",
 	LightboxPrev:                "Anterior",

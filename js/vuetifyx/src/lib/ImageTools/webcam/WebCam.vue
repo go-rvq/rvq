@@ -118,7 +118,9 @@ const $emit = defineEmits([
   'error',
   'unsupported',
   'init',
-  'photoTaken'
+  'photoTaken',
+  // the video track of the camera open (its controls), null when closed
+  'track'
 ]),
   local = new Local()
 
@@ -224,6 +226,7 @@ function loadCamera(deviceId: string) {
     .getUserMedia(buildConstraints(deviceId))
     .then((stream:any) => {
       (video.value as any).srcObject = stream
+      $emit('track', stream.getVideoTracks?.()[0] ?? null)
 
       if (props.rememberDevice) {
         try {
@@ -295,6 +298,7 @@ function clear() {
   const stream = v?.srcObject as MediaStream | null | undefined
   stream?.getTracks().forEach((track) => track.stop())
   if (v) v.srcObject = null
+  $emit('track', null)
   $emit('clear')
 }
 
