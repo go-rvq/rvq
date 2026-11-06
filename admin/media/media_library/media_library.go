@@ -73,6 +73,22 @@ type MediaLibraryStorage struct {
 	Video        string
 	SelectedType string
 	Description  string
+	// Edit: the image was made in the editor — its original kept, and the
+	// edit to open again. Nil: the file is as it was uploaded.
+	Edit *ImageEdit `json:",omitempty"`
+}
+
+// ImageEdit is the edit of an image made in the editor (vx-image-editor):
+// the file is the result; the original never changes, kept apart (Source),
+// and the edit (State: the editor's, JSON — the crop, the colors, the
+// annotations) opens again on it.
+type ImageEdit struct {
+	// Source is the URL of the original in the storage
+	Source string
+	// SourceName is the name of the original file
+	SourceName string `json:",omitempty"`
+	// State is the editor's edit
+	State json.RawMessage `json:",omitempty"`
 }
 
 func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*base.Size {

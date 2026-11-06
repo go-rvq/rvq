@@ -224,14 +224,23 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 							Type("file").
 							Attr("multiple", true).
 							Style("display:none").
+							// the images through the editor first (EditOnUpload,
+							// or the switch "Edit before uploading")
 							Attr("@change",
-								"form.NewFiles = [...$event.target.files];"+
-									web.Plaid().
-										BeforeScript("locals.fileChooserUploadingFiles = $event.target.files").
-										EventFunc(uploadFileEvent).
-										Query("field", field).
-										FieldValue("cfg", h.JSONString(cfg)).
-										Go()),
+								"const files = [...$event.target.files]; $event.target.value = ''; "+
+									uploadThroughEditor(cfg, "files", uploadSend(field, cfg), false, "locals.fileChooserEdit")),
+						// the editor on the images chosen, before they are sent
+						h.If(!cfg.EditOnUpload && (cfg.AllowType == "" || cfg.AllowType == media_library.ALLOW_TYPE_IMAGE),
+							h.Div(
+								VSwitch().
+									Attr("v-model", "locals.fileChooserEdit").
+									Label(msgr.EditBeforeUpload).
+									Density(DensityCompact).
+									HideDetails(true).
+									Color(ColorPrimary).
+									Attr("data-media-edit-before-upload", true),
+							).Attr("@click.stop", "void 0").Class("mt-1"),
+						),
 					).
 						Height(200).
 						Class("d-flex flex-column align-center justify-center pa-4").
@@ -263,20 +272,22 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 								Attr("v-if", "locals.fileChooserCamera").
 								Attr("closable", true).
 								Attr("@close", "locals.fileChooserCamera = false").
+								// the photo in the editor before it is sent ("Take
+								// another": the camera again)
 								Attr("@photo-taken",
-									"form.NewFiles = [new File([$event.data], 'photo-' + Date.now() + '.jpg', {type: $event.data.type || 'image/jpeg'})];"+
-										"locals.fileChooserCamera = false;"+
-										web.Plaid().
-											BeforeScript("locals.fileChooserUploadingFiles = form.NewFiles").
-											EventFunc(uploadFileEvent).
-											Query("field", field).
-											FieldValue("cfg", h.JSONString(cfg)).
-											Go()),
-						).Style("height: min(80vh, 720px)"),
+									"locals.fileChooserCamera = false; "+
+										uploadThroughEditor(cfg,
+											"[new window.File([$event.data], 'photo-' + Date.now() + '.jpg', {type: $event.data.type || 'image/jpeg'})]",
+											uploadSend(field, cfg), true, "")),
+						).Attr(":style", "$vuetify.display.smAndDown ? {height: '100%'} : {height: 'min(80vh, 720px)'}"),
 					).
 						Attr("v-model", "locals.fileChooserCamera").
 						MaxWidth("960px").
-						Attr(":fullscreen", "$vuetify.display.smAndDown"),
+						// over every dialog it is opened from (the chooser, the
+						// dialog of a record); a phone's: the whole screen
+						ZIndex(CameraZIndex).
+						Attr(":fullscreen", "$vuetify.display.smAndDown").
+						Attr("data-media-camera-dialog", true),
 				).
 					Class("pa-0"),
 			),
@@ -520,7 +531,7 @@ func fileChooserDialogContent(mb *Builder, field string, ctx *web.EventContext,
 					),
 					VCol().Cols(1),
 				).Fluid(true),
-			).LocalsInit(fmt.Sprintf(`{fileChooserUploadingFiles: [], %s}`, strings.Join(initCroppingVars, ", "))).Slot("{ locals }"),
+			).LocalsInit(fmt.Sprintf(`{fileChooserUploadingFiles: [], fileChooserEdit: false, %s}`, strings.Join(initCroppingVars, ", "))).Slot("{ locals }"),
 			VOverlay(
 				h.Img("").Attr(":src", "vars.isImage? vars.mediaShow: ''").
 					Style("max-height: 80vh; max-width: 80vw; background: rgba(0, 0, 0, 0.5)"),
@@ -565,6 +576,17 @@ type uploadFiles struct {
 	NewFiles []*multipart.FileHeader
 }
 
+// uploadSend is the script that posts list (the editor's: [{file, original,
+// edit, cropOption}]) to the upload of the file chooser of field.
+func uploadSend(field string, cfg *media_library.MediaBoxConfig) string {
+	return uploadFormScript(cfg, "form") + "\n" + web.Plaid().
+		BeforeScript("locals.fileChooserUploadingFiles = form.NewFiles").
+		EventFunc(uploadFileEvent).
+		Query("field", field).
+		FieldValue("cfg", h.JSONString(cfg)).
+		Go()
+}
+
 func uploadFile(b *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		field := ctx.R.FormValue("field")
@@ -576,7 +598,7 @@ func uploadFile(b *Builder) web.EventFunc {
 
 		var uf uploadFiles
 		ctx.MustUnmarshalForm(&uf)
-		for _, fh := range uf.NewFiles {
+		for i, fh := range uf.NewFiles {
 			m := media_library.MediaLibrary{}
 
 			if base.IsImageFormat(fh.Filename) {
@@ -592,6 +614,9 @@ func uploadFile(b *Builder) web.EventFunc {
 			}
 
 			err = base.SaveUploadAndCropImage(&b.Config, b.db, &m)
+			if err == nil {
+				err = b.afterUpload(ctx, i, &m, cfg)
+			}
 			if err != nil {
 				presets.ShowMessage(&r, err.Error(), "error")
 				return r, nil
@@ -615,7 +640,7 @@ func uploadMediaBoxes(b *Builder) web.EventFunc {
 		var uf uploadFiles
 		ctx.MustUnmarshalForm(&uf)
 		boxes := make([]media_library.MediaBox, 0, len(uf.NewFiles))
-		for _, fh := range uf.NewFiles {
+		for i, fh := range uf.NewFiles {
 			m := media_library.MediaLibrary{}
 			switch {
 			case base.IsImageFormat(fh.Filename):
@@ -634,7 +659,10 @@ func uploadMediaBoxes(b *Builder) web.EventFunc {
 			if cfg != nil && len(cfg.Sizes) > 0 && m.SelectedType == media_library.ALLOW_TYPE_IMAGE {
 				m.File.Sizes = cfg.Sizes
 			}
-			if err = base.SaveUploadAndCropImage(&b.Config, b.db, &m); err != nil {
+			if err = base.SaveUploadAndCropImage(&b.Config, b.db, &m); err == nil {
+				err = b.afterUpload(ctx, i, &m, cfg)
+			}
+			if err != nil {
 				presets.ShowMessage(&r, err.Error(), "error")
 				return r, nil
 			}

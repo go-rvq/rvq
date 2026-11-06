@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"math"
 	"path"
-	"sort"
 	"strings"
-	"time"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/media/base"
@@ -43,6 +41,9 @@ func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
 
 	b.ExtraAsset("/cropper.js", "text/javascript", cropper.JSComponentsPack())
 	b.ExtraAsset("/cropper.css", "text/css", cropper.CSSComponentsPack())
+	// the image editor (the thumbnails' "Edit image", the upload's)
+	b.ExtraAsset("/image-editor.js", "text/javascript", imageEditorPack("image-editor.umd.js"))
+	b.ExtraAsset("/image-editor.css", "text/css", imageEditorPack("image-editor.css"))
 
 	b.FieldDefaults(presets.WRITE).
 		FieldType(media_library.MediaBox{}).
@@ -305,58 +306,24 @@ func (b *QMediaBoxBuilder) Write(c *h.Context) (err error) {
 
 	portalName := mainPortalName(b.fieldName)
 
+	// a card of a list of images: no label (the list's is), no sheet's pad
+	card := b.config != nil && b.config.Card
 	return h.Components(
 		VSheet(
-			h.If(len(b.label) > 0,
+			h.If(len(b.label) > 0 && !card,
 				h.Label(b.label).Class("v-label theme--light"),
 			),
-			h.If(len(b.hint) > 0,
+			h.If(len(b.hint) > 0 && !card,
 				h.Div(h.Text(b.hint)).Class("text-caption text-medium-emphasis mb-2"),
 			),
 			web.Portal(
 				mediaBoxThumbnails(ctx, b.value, b.fieldName, b.config, b.disabled, b.readonly),
 			).Name(mediaBoxThumbnailsPortalName(b.fieldName)),
 			web.Portal().Name(portalName),
-		).Class("pb-4").
+		).Class(map[bool]string{true: "", false: "pb-4"}[card]).
 			Rounded(true).
 			Attr(web.VAssign("vars", `{showFileChooser: false}`)...),
 	).Write(c)
-}
-
-func mediaBoxThumb(msgr *Messages, cfg *media_library.MediaBoxConfig,
-	f *media_library.MediaBox, field string, thumb string, disabled bool,
-) h.HTMLComponent {
-	size := cfg.Sizes[thumb]
-	fileSize := f.FileSizes[thumb]
-	url := f.URL(thumb)
-	if thumb == base.DefaultSizeKey {
-		url = f.URL()
-	}
-	card := VCard(
-		h.If(base.IsImageFormat(f.FileName),
-			VImg().Src(fmt.Sprintf("%s?%d", url, time.Now().UnixNano())).Height(150),
-		).Else(
-			h.Div(
-				fileThumb(f.FileName),
-				h.A().Text(f.FileName).Href(f.Url).Target("_blank"),
-			).Style("text-align:center"),
-		),
-		h.If(base.IsImageFormat(f.FileName) && (size != nil || thumb == base.DefaultSizeKey),
-			VCardActions(
-				thumbName(thumb, size, fileSize, f),
-			),
-		),
-	)
-	if base.IsImageFormat(f.FileName) && (size != nil || thumb == base.DefaultSizeKey) && !disabled && !cfg.DisableCrop {
-		card.Attr("@click", web.Plaid().
-			EventFunc(loadImageCropperEvent).
-			Query("field", field).
-			Query("id", fmt.Sprint(f.ID)).
-			Query("thumb", thumb).
-			FieldValue("cfg", h.JSONString(cfg)).
-			Go())
-	}
-	return card
 }
 
 // fileThumb is the icon of the file's type (its extension: none, the
@@ -458,113 +425,34 @@ func doDelete(mb *Builder) web.EventFunc {
 	}
 }
 
+// mediaBoxDrop is an empty media box's place: a card that takes a file
+// dropped on it — uploaded and chosen for field at once — and, clicked, opens
+// the file chooser (the library, the upload, the camera).
+func mediaBoxDrop(ctx *web.EventContext, field string, cfg *media_library.MediaBoxConfig, minHeight string) h.HTMLComponent {
+	msgr := GetMessages(ctx.Context())
+	placeholder, icon := msgr.DropFile, "mdi-file-upload-outline"
+	if cfg != nil && cfg.AllowType == media_library.ALLOW_TYPE_IMAGE {
+		placeholder, icon = msgr.DropImage, "mdi-image-plus-outline"
+	}
+	choose := web.Plaid().
+		EventFunc(chooseFileEvent).
+		Query("field", field).
+		Query("id", web.Var("boxes[0].ID")).
+		FieldValue("cfg", h.JSONString(cfg)).
+		Go()
+	open := web.Plaid().EventFunc(openFileChooserEvent).
+		Query("field", field).
+		FieldValue("cfg", h.JSONString(cfg)).
+		Go()
+	return h.Div(
+		fileDrop(cfg, placeholder, "if (boxes.length) "+choose, fileDropOptions{click: open, minHeight: minHeight, icon: icon}),
+	).Attr("data-media-box-drop", field)
+}
+
+// mediaBoxThumbnails is the media box of field: a card (imageCard) — a list
+// of images' (MediaBoxConfig.Card), else a field's own.
 func mediaBoxThumbnails(ctx *web.EventContext, mediaBox *media_library.MediaBox, field string, cfg *media_library.MediaBoxConfig, disabled, readonly bool) h.HTMLComponent {
-	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nMediaLibraryKey, Messages_en_US).(*Messages)
-	c := VContainer().Fluid(true)
-	if cfg.BackgroundColor != "" {
-		c.Attr("style", fmt.Sprintf("background-color: %s;", cfg.BackgroundColor))
-	}
-	// button
-	btnRow := VRow(
-		VBtn(msgr.ChooseFile).
-			Variant(VariantTonal).Color(ColorPrimary).Size(SizeXSmall).PrependIcon("mdi-upload-outline").
-			Class("rounded-sm").
-			Attr("style", "text-transform: none;").
-			Attr("@click", web.Plaid().EventFunc(openFileChooserEvent).
-				Query("field", field).
-				FieldValue("cfg", h.JSONString(cfg)).
-				Go(),
-			).Disabled(disabled),
-	)
-	if mediaBox != nil && !mediaBox.ID.IsZero() {
-		btnRow.AppendChild(
-			VBtn(msgr.Delete).
-				Variant(VariantTonal).Color(ColorError).Size(SizeXSmall).PrependIcon("mdi-delete-outline").
-				Class("rounded-sm ml-2").
-				Attr("style", "text-transform: none").
-				Attr("@click", web.Plaid().EventFunc(deleteFileEvent).
-					Query("field", field).
-					FieldValue("cfg", h.JSONString(cfg)).
-					Go(),
-				).Disabled(disabled),
-		)
-	}
-	if !readonly {
-		c.AppendChild(btnRow.Class())
-	}
-	if !mediaBox.ID.IsZero() {
-		row := VRow()
-		if len(cfg.Sizes) == 0 {
-			row.AppendChild(
-				VCol(
-					mediaBoxThumb(msgr, cfg, mediaBox, field, base.DefaultSizeKey, disabled),
-				).Cols(6).Sm(4).Class("pl-0"),
-			)
-		} else {
-			var keys []string
-			for k := range cfg.Sizes {
-				keys = append(keys, k)
-			}
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				sm := cfg.Sizes[k].Sm
-				if sm == 0 {
-					sm = 4
-				}
-				cols := cfg.Sizes[k].Cols
-				if cols == 0 {
-					cols = 6
-				}
-				row.AppendChild(
-					VCol(
-						mediaBoxThumb(msgr, cfg, mediaBox, field, k, disabled),
-					).Cols(cols).Sm(sm).Class("pl-0"),
-				)
-			}
-		}
-
-		c.AppendChild(row)
-
-		fieldName := MediaBoxDescriptionKey(field, cfg)
-		value := ctx.R.FormValue(fieldName)
-		if len(value) == 0 {
-			value = mediaBox.Description
-		}
-		if !(len(value) == 0 && readonly) && !cfg.DisableDescription {
-			c.AppendChild(
-				VRow(
-					VCol(
-						h.If(
-							readonly,
-							h.Span(value),
-						).Else(
-							VTextField().
-								Attr(web.VField(fieldName, value)...).
-								Placeholder(msgr.DescriptionForAccessibility).
-								Density(DensityCompact).
-								HideDetails(true).
-								Variant(VariantOutlined).
-								Disabled(disabled),
-						),
-					).Cols(12).Class("pl-0 pt-0"),
-				),
-			)
-		}
-	}
-
-	mediaBoxValue := ""
-	if !mediaBox.ID.IsZero() {
-		mediaBoxValue = h.JSONString(mediaBox)
-	}
-
-	return h.Components(
-		c,
-		web.Portal().Name(cropperPortalName(field)),
-		h.Input("").Type("hidden").
-			Attr(web.VField(fmt.Sprintf("%s.Values", field), mediaBoxValue)...),
-	)
+	return imageCard(ctx, mediaBox, field, cfg, disabled, readonly, cfg == nil || !cfg.Card)
 }
 
 func MediaBoxListFunc() presets.FieldComponentFunc {
@@ -598,38 +486,6 @@ func stringToCfg(v string) *media_library.MediaBoxConfig {
 	}
 
 	return &cfg
-}
-
-func thumbName(name string, size *base.Size, fileSize int, f *media_library.MediaBox) h.HTMLComponent {
-	div := h.Div().Class("pl-1")
-	title := ""
-	text := ""
-	if name == base.DefaultSizeKey {
-		title = name
-		text = fmt.Sprintf("%d × %d", f.Width, f.Height)
-	}
-	if size != nil {
-		title = name
-		if size.Width != 0 && size.Height != 0 {
-			text = fmt.Sprintf("%d × %d", size.Width, size.Height)
-		}
-	}
-	if title != "" {
-		div.AppendChildren(h.Span(name))
-	}
-	if fileSize == 0 && name == base.DefaultSizeKey {
-		fileSize = f.FileSizes["original"]
-	}
-	if fileSize > 0 {
-		if text != "" {
-			text += " · "
-		}
-		text += base.ByteCountSI(fileSize)
-	}
-	if text != "" {
-		div.AppendChildren(h.Br(), infoChip(text).Class("mt-1"))
-	}
-	return div
 }
 
 // MediaBoxInfo is the text of what a media box holds in its size thumb

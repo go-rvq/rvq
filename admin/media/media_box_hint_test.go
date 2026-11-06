@@ -143,3 +143,82 @@ func TestMediaBoxInfo(t *testing.T) {
 		t.Errorf("unknown: %q", got)
 	}
 }
+
+// A box of a list of images (Card) is drawn as a card in every event —
+// the image in the lightbox of the list, its description beside it; none,
+// only the button that chooses it.
+func TestMediaBoxCard(t *testing.T) {
+	ectx := &web.EventContext{R: httptest.NewRequest(http.MethodGet, "/", nil)}
+	ctx := web.ContextWithEventContext(context.Background(), ectx)
+	ectx.R = ectx.R.WithContext(ctx)
+	cfg := &media_library.MediaBoxConfig{Card: true, DescriptionField: "Legenda"}
+	render := func(box *media_library.MediaBox) string {
+		out, err := h.MarshallString(mediaBoxThumbnails(ectx, box, "Itens[1].Imagens[2].Midia", cfg, false, false), ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	out := render(&media_library.MediaBox{ID: "1", Url: "/system/1/file.png", FileName: "file.png", Width: 80, Height: 60})
+	for _, want := range []string{`data-image-card`, `data-lightbox='Itens[1].Imagens'`, `data-lightbox-src='/system/1/file.png'`,
+		`form["Itens[1].Imagens[2].Legenda"]`, `form["Itens[1].Imagens[2].Midia.Values"]`, `80 × 60`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("no %s in %s", want, out)
+		}
+	}
+	if strings.Contains(out, "mdi-upload-outline") {
+		t.Error("the box's own buttons in a card")
+	}
+	if out := render(&media_library.MediaBox{}); !strings.Contains(out, "data-image-card-empty") || strings.Contains(out, "data-lightbox") {
+		t.Errorf("an empty card: %s", out)
+	}
+}
+
+// An empty media box is a card to drop a file on — uploaded and chosen at
+// once (UploadMediaBoxesEvent, then chooseFileEvent) —, its click the chooser;
+// one with a file, its buttons.
+func TestMediaBoxEmptyIsADrop(t *testing.T) {
+	ectx := &web.EventContext{R: httptest.NewRequest(http.MethodGet, "/", nil)}
+	ctx := web.ContextWithEventContext(context.Background(), ectx)
+	ectx.R = ectx.R.WithContext(ctx)
+	render := func(box *media_library.MediaBox, cfg *media_library.MediaBoxConfig) string {
+		out, err := h.MarshallString(mediaBoxThumbnails(ectx, box, "Foto", cfg, false, false), ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	out := render(&media_library.MediaBox{}, &media_library.MediaBoxConfig{AllowType: "image"})
+	for _, want := range []string{`data-media-box-drop='Foto'`, `data-file-drop`, `@drop.prevent`, UploadMediaBoxesEvent, chooseFileEvent, openFileChooserEvent, "Drop the image here", `accept='image/*'`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("an empty box: no %s", want)
+		}
+	}
+	if strings.Contains(out, `multiple`) {
+		t.Error("an empty box takes one file")
+	}
+	// with a file: a card as an image's of a list — the image alone in the
+	// lightbox, its actions over it (edit, replace, delete), the crops of its
+	// sizes —, no drop
+	out = render(&media_library.MediaBox{ID: "1", Url: "/system/1/file.png", FileName: "file.png", Width: 80, Height: 60},
+		&media_library.MediaBoxConfig{Sizes: map[string]*base.Size{"thumb": {Width: 40, Height: 30}}})
+	for _, want := range []string{`data-media-card='Foto'`, `data-image-card`, `data-lightbox-src='/system/1/file.png'`, `data-media-edit`, `data-media-replace`,
+		`data-media-delete`, `data-image-card-size='thumb'`, `80 × 60`, editImageEvent, deleteFileEvent} {
+		if !strings.Contains(out, want) {
+			t.Errorf("a box with a file: no %s", want)
+		}
+	}
+	if strings.Contains(out, "data-media-box-drop") || strings.Contains(out, "data-lightbox='") {
+		t.Error("a box with a file: a drop, or a group of the lightbox")
+	}
+	// read only: no actions
+	out2, _ := h.MarshallString(mediaBoxThumbnails(ectx, &media_library.MediaBox{ID: "1", Url: "/system/1/file.png", FileName: "file.png"}, "Foto", &media_library.MediaBoxConfig{}, false, true), ctx)
+	if strings.Contains(out2, "data-image-card-actions") {
+		t.Error("read only: actions")
+	}
+	// a file not an image: its icon, no lightbox nor editor
+	out3, _ := h.MarshallString(mediaBoxThumbnails(ectx, &media_library.MediaBox{ID: "2", Url: "/system/2/nota.pdf", FileName: "nota.pdf"}, "Foto", &media_library.MediaBoxConfig{}, false, false), ctx)
+	if strings.Contains(out3, "data-lightbox-src") || strings.Contains(out3, "data-media-edit") || !strings.Contains(out3, "data-media-delete") {
+		t.Error("a file: no lightbox, no editor, its delete")
+	}
+}

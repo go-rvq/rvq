@@ -45,6 +45,28 @@ type MediaBoxConfig struct {
 	// shows it, and saves it there (its Description left empty). Empty, the
 	// box's own Description.
 	DescriptionField string `json:",omitempty"`
+	// Card draws the box as a card of a list of images (media.ImagesCards):
+	// the image itself — a click opens it in the lightbox, among the list's
+	// images —, its dimensions and size over it, its name and description
+	// under it; none yet, only the button that chooses it. Every event of the
+	// box (choose, delete, edit) draws it so again.
+	Card bool `json:",omitempty"`
+	// EditOnUpload opens the image editor on the images chosen to upload,
+	// in the browser, before they are sent (else only by the "Edit" of the
+	// upload); a photo of the camera always opens it.
+	EditOnUpload bool `json:",omitempty"`
+	// UploadEdit sends, with the result of an image edited on the upload,
+	// its original and the edit: the edit stays undoable (reopened on the
+	// original). Else only the result.
+	UploadEdit bool `json:",omitempty"`
+	// EditTab and EditMode are where the editor opens: "recortar", "cores",
+	// "anotar"; "fixo", "perspectiva", "livre" (a check's photo:
+	// recortar, perspectiva).
+	EditTab  string `json:",omitempty"`
+	EditMode string `json:",omitempty"`
+	// EditMaxPixels: a photo larger is made smaller before it is edited and
+	// sent (a camera's of 48 MP); 0, never.
+	EditMaxPixels int `json:",omitempty"`
 	// Usage is the use of the field — "<table>.<Field>", a MediaBoxUsage —
 	// whose sizes (the admin's, else the code's) the server reads: the
 	// sizes the browser sends back are not the ones it trusts.

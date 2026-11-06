@@ -14,6 +14,12 @@ type Messages struct {
 	ModuleDescription           string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
 	Crop                        string `i18n:"hint='Button that crops an image.'"`
 	CropImage                   string `i18n:"hint='Title of the dialog that crops an image.'"`
+	EditImage                   string `i18n:"hint='Title of the editor of an image (crop, colors, annotations), and of the click on a thumbnail that opens it.'"`
+	EditBeforeUpload            string `i18n:"hint='Switch of the upload: the images chosen open in the editor before they are sent.'"`
+	DropImages                  string `i18n:"hint='Placeholder of the place to drop the images of a list on.'"`
+	DropFile                    string `i18n:"hint='Placeholder of an empty field of a file: drop it here, or click to choose it.'"`
+	DropImage                   string `i18n:"hint='Placeholder of an empty field of an image: drop it here, or click to choose it.'"`
+	ImageDescription            string `i18n:"hint='Placeholder of the description of an image of a list.'"`
 	ChooseFile                  string `i18n:"hint='Button that opens the choice of a file of the media library.'"`
 	Delete                      string `i18n:"hint='Button that removes a file from a field.'"`
 	CopyLink                    string `i18n:"hint='Button that copies the address of a file.'"`
@@ -71,6 +77,12 @@ var Messages_en_US = &Messages{
 	ModuleDescription:           "The media library: uploading, choosing and cropping files and images.",
 	Crop:                        "Crop",
 	CropImage:                   "Crop Image",
+	EditImage:                   "Edit image",
+	EditBeforeUpload:            "Edit before uploading",
+	DropImages:                  "Drop the images here or click to choose",
+	DropFile:                    "Drop the file here or click to choose",
+	DropImage:                   "Drop the image here or click to choose",
+	ImageDescription:            "Description",
 	ChooseFile:                  "Choose File",
 	Delete:                      "Delete",
 	ChooseAFile:                 "Choose a File",
@@ -126,6 +138,12 @@ var Messages_zh_CN = &Messages{
 	ModuleDescription:           "媒体库：上传、选择和裁剪文件与图片。",
 	Crop:                        "剪裁",
 	CropImage:                   "剪裁图片",
+	EditImage:                   "编辑图片",
+	EditBeforeUpload:            "上传前编辑",
+	DropImages:                  "将图片拖放到此处或点击选择",
+	DropFile:                    "将文件拖放到此处或点击选择",
+	DropImage:                   "将图片拖放到此处或点击选择",
+	ImageDescription:            "描述",
 	ChooseFile:                  "选择文件",
 	Delete:                      "删除",
 	ChooseAFile:                 "选择一个文件",
@@ -170,6 +188,12 @@ var Messages_ja_JP = &Messages{
 	ModuleDescription:           "メディアライブラリ：ファイルと画像のアップロード、選択、トリミング。",
 	Crop:                        "トリミング",
 	CropImage:                   "画像をトリミング",
+	EditImage:                   "画像を編集",
+	EditBeforeUpload:            "アップロード前に編集",
+	DropImages:                  "ここに画像をドロップするか、クリックして選択",
+	DropFile:                    "ここにファイルをドロップするか、クリックして選択",
+	DropImage:                   "ここに画像をドロップするか、クリックして選択",
+	ImageDescription:            "説明",
 	ChooseFile:                  "ファイルを選択",
 	Delete:                      "削除",
 	ChooseAFile:                 "ファイルを選択",
@@ -214,6 +238,12 @@ var Messages_pt_BR = &Messages{
 	ModuleDescription:           "A biblioteca de mídia: envio, escolha e recorte de arquivos e imagens.",
 	Crop:                        "Recortar",
 	CropImage:                   "Recortar imagem",
+	EditImage:                   "Editar imagem",
+	EditBeforeUpload:            "Editar antes de enviar",
+	DropImages:                  "Solte as imagens aqui ou clique para escolher",
+	DropFile:                    "Solte o arquivo aqui ou clique para escolher",
+	DropImage:                   "Solte a imagem aqui ou clique para escolher",
+	ImageDescription:            "Descrição",
 	ChooseFile:                  "Escolher arquivo",
 	Delete:                      "Excluir",
 	ChooseAFile:                 "Escolha um arquivo",
