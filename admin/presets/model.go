@@ -72,6 +72,9 @@ type ModelBuilder struct {
 	noRecordStateStamp bool
 	menuIcon           string
 	menuChildren       MenuChildrenFunc
+	// menuRecordSelector: a record of it chosen in the side menu, its
+	// resources under it (MenuRecordSelector)
+	menuRecordSelector *MenuRecordSelectorConfig
 	// deletedFunc says a record is deleted: in the trash (SetDeletedFunc)
 	deletedFunc func(obj any) bool
 	// listPermActions are actions of its listing no builder knows, for the

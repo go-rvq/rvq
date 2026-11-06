@@ -141,6 +141,12 @@ type Messages struct {
 	ListEditorRemoveItem                       string                 `i18n:"label='List: remove', hint='Button that removes an item from a list.'"`
 	ListEditorActions                          string                 `i18n:"label='List: actions', hint='Title of the actions column of a list.'"`
 	PleaseSelectRecord                         string                 `i18n:"hint='Shown when an action needs a record and none was selected.'"`
+	MenuRecordSelect                           string                 `i18n:"hint='Chip of the item of a model in the side menu with no record chosen (MenuRecordSelector).'"`
+	MenuRecordChange                           string                 `i18n:"hint='Hint of the chip of a record chosen in the side menu; title of its dialog.', fields=(;'%s'='the name of the model, in the singular, lower case')"`
+	MenuRecordSearch                           string                 `i18n:"hint='Placeholder of the search of the dialog that chooses the record of the side menu.'"`
+	MenuRecordNone                             string                 `i18n:"hint='Shown in the dialog that chooses the record of the side menu when none is found.'"`
+	MenuRecordRequired                         string                 `i18n:"hint='Error: the dialog that chooses the record of the side menu was confirmed with none.'"`
+	MenuRecordList                             string                 `i18n:"hint='Item of the side menu that lists the records of a model whose record is chosen in the menu.', fields=(;'%s'='the name of the model, in the plural, lower case')"`
 	PrinterOptions                             PrinterOptionsMessages `i18n:"hint='The words of the print options.'"`
 	BulkActionConfirmationTextTemplate         string                 `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the selected records (HTML).', fields=(;'{Action}'='the action', '{count}'='how many records')"`
 
@@ -329,6 +335,13 @@ var Messages_en_US = &Messages{
 		DateTime: "2006-01-02 15:04:05 Z07:00",
 	},
 
+	MenuRecordSelect:   "Select",
+	MenuRecordChange:   "Change the %s",
+	MenuRecordSearch:   "Search",
+	MenuRecordNone:     "Nothing found.",
+	MenuRecordRequired: "Select one.",
+	MenuRecordList:     "List %s",
+
 	Error:           "ERROR",
 	ErrEmptyParamID: "Empty param ID",
 	ErrRecordChanged: "This record was changed by someone else at %s, after you opened this form. " +
@@ -428,6 +441,12 @@ var Messages_pt_BR = &Messages{
 	ListEditorRevertDeletion:                   "Desfazer",
 	ListEditorRemoveItem:                       "Remover",
 	ListEditorActions:                          "Ações",
+	MenuRecordSelect:                           "Selecionar",
+	MenuRecordChange:                           "Trocar de %s",
+	MenuRecordSearch:                           "Pesquisar",
+	MenuRecordNone:                             "Nada encontrado.",
+	MenuRecordRequired:                         "Selecione um item.",
+	MenuRecordList:                             "Listar %s",
 	Error:                                      "Erro",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",

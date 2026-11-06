@@ -769,6 +769,16 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 			return nil
 		}
 		inOrderMap[m.id] = struct{}{}
+		// its record chosen in the menu: the group of its selector and of
+		// its listing (MenuNodeOf)
+		if m.HasMenuRecordSelector() && !m.MenuRecordSelectorConfig().External {
+			node, active, opened := m.MenuNodeOf(ctx, nil)
+			openedGroups = append(openedGroups, opened...)
+			if active != "" {
+				activated = []string{active}
+			}
+			return node
+		}
 		href := m.Info().ListingHref(ParentsModelID(ctx.R)...)
 		if m.link != "" {
 			href = m.link

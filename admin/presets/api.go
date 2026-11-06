@@ -69,9 +69,10 @@ type MessagesFunc func(r *http.Request) *Messages
 
 // Data Layer
 type (
-	DataOperator = data.DataOperator
-	SQLCondition = data.SQLCondition
-	SearchParams = data.SearchParams
+	DataOperator  = data.DataOperator
+	SQLCondition  = data.SQLCondition
+	SQLConditions = data.SQLConditions
+	SearchParams  = data.SearchParams
 )
 
 type (
