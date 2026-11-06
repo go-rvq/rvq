@@ -96,13 +96,20 @@ func (b *PageBuilder) Raw(pf web.PageFunc) *PageBuilder {
 }
 
 func (b *PageBuilder) Layout(pf web.PageFunc, layout ...*LayoutConfig) *PageBuilder {
+	return b.layoutWith(b.r.layoutFunc, pf, layout...)
+}
+
+// layoutWith is Layout in the layout lf (the registrator's, or the one of a
+// record: its trail through the record).
+func (b *PageBuilder) layoutWith(lf func(config *LayoutConfig, f func(ctx *web.EventContext) (r web.PageResponse, err error)) web.PageFunc,
+	pf web.PageFunc, layout ...*LayoutConfig) *PageBuilder {
 	var lc *LayoutConfig
 	if len(layout) > 0 {
 		lc = layout[0]
 	}
 	b.pf = pf
 	b.handler = func(f web.PageFunc) http.Handler {
-		return b.r.Wrap(b.r.layoutFunc(lc, func(ctx *web.EventContext) (r web.PageResponse, err error) {
+		return b.r.Wrap(lf(lc, func(ctx *web.EventContext) (r web.PageResponse, err error) {
 			// where the page is: its groups and the pages it is under
 			b.page.trail(ctx, GetOrInitBreadcrumbs(ctx.R))
 			if r, err = f(ctx); err == nil {
@@ -142,7 +149,13 @@ func (b *PageBuilder) RecordIDLayout(pf func(ctx *web.EventContext, mid model.ID
 	return b
 }
 
+// RecordLayout is the page of a record (of a detail: its pages), in the
+// layout of a record when the registrator has one — the trail through the
+// record (its title, the link to its detail) —, else in its layout.
 func (b *PageBuilder) RecordLayout(f func(ctx *web.EventContext, mid model.ID, parents []model.ID, fetch func() (any, error)) (r web.PageResponse, err error), layout ...*LayoutConfig) *PageBuilder {
+	if b.r.recordIdLayoutFunc != nil {
+		return b.layoutWith(b.r.recordIdLayoutFunc, b.r.Record(f), layout...)
+	}
 	return b.Layout(b.r.Record(f), layout...)
 }
 

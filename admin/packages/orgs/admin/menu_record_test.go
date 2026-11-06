@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -242,5 +243,45 @@ func TestScopeToParent(t *testing.T) {
 	}
 	if got.ProjetoID != a.p2.ID || got.OrganizacaoID != a.org.ID {
 		t.Errorf("saved of %v / %v, want the project 2 of Alpha", got.ProjetoID, got.OrganizacaoID)
+	}
+}
+
+// The trail of a page of a resource of a project: every step — the
+// organization, its record, the menu group of the projects (finance), the
+// projects, the project — and, of a page of the project's detail, the
+// project too.
+func TestTrailOfAProject(t *testing.T) {
+	a := newChoiceApp(t)
+	orgMID := a.mid(t, OrganizacaoModel(a.b), a.org.ID)
+	// the text of the trail of the page path
+	crumbs := func(path string) string {
+		t.Helper()
+		r := httptest.NewRequest("GET", path, nil)
+		r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+		w := httptest.NewRecorder()
+		a.b.ServeHTTP(w, r)
+		body := w.Body.String()
+		i := strings.Index(body, "rvq-presets-breadcrumbs")
+		if i < 0 {
+			t.Fatalf("%s: no trail (%d): %.300s", path, w.Code, body)
+		}
+		nav := body[i:]
+		if e := strings.Index(nav, "</nav>"); e > 0 {
+			nav = nav[:e]
+		}
+		return regexp.MustCompile(`<[^>]*>|\s+`).ReplaceAllString(nav, " ")
+	}
+	trail := crumbs(a.itemsHref(t, a.p1))
+	for _, want := range []string{"Alpha", "Finance", "Obra 1"} {
+		if !strings.Contains(trail, want) {
+			t.Errorf("the trail of the items: no %q: %s", want, trail)
+		}
+	}
+	if strings.Index(trail, "Alpha") > strings.Index(trail, "Finance") || strings.Index(trail, "Finance") > strings.Index(trail, "Obra 1") {
+		t.Errorf("the trail out of order: %s", trail)
+	}
+	trail = crumbs(a.proj.Info().DetailingHref(a.p1.ID.String(), orgMID) + "/relatorios")
+	if !strings.Contains(trail, "Finance") || !strings.Contains(trail, "Obra 1") {
+		t.Errorf("the trail of a page of the project: %s", trail)
 	}
 }

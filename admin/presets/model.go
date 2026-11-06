@@ -815,6 +815,8 @@ func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, e
 		if records, err = AddModelsTreeToBreadcrumb(true, ctx, parents, parentsID, bc); err != nil {
 			return
 		}
+		// its own menu groups, the ones its parent has not
+		appendMenuGroups(ctx, bc, mb.parent, mb)
 	}
 
 	if !mb.singleton {

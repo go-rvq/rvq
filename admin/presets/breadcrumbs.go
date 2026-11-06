@@ -103,6 +103,33 @@ func (b *BreadcrumbsBuilder) Component(youAreHere string) h.HTMLComponent {
 	return h.Nav(crumbs).Class("rvq-presets-breadcrumbs-wraper")
 }
 
+// menuGroupsOf are the menu groups of mb — its group and the ones above it
+// —, from the outer.
+func menuGroupsOf(mb *ModelBuilder) []*MenuGroupBuilder {
+	if mb == nil {
+		return nil
+	}
+	if g := mb.MenuGroup(); g != nil {
+		return append(g.Ancestors(), g)
+	}
+	return nil
+}
+
+// appendMenuGroups appends to bc the menu groups of mb that its parent has
+// not (a child of the organization in Financeiro: Financeiro, between the
+// organization and it).
+func appendMenuGroups(ctx *web.EventContext, bc *BreadcrumbsBuilder, parent, mb *ModelBuilder) {
+	have := map[*MenuGroupBuilder]bool{}
+	for _, g := range menuGroupsOf(parent) {
+		have[g] = true
+	}
+	for _, g := range menuGroupsOf(mb) {
+		if !have[g] {
+			bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
+		}
+	}
+}
+
 func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*ModelBuilder, parentsID IDSlice, bc *BreadcrumbsBuilder) (records []any, err error) {
 	parentsIDPtr := web.GetContextValuer(context.WithValue(ctx.R.Context(), ParentsModelIDKey, parentsID), ParentsModelIDKey)
 	records = make([]any, len(parentsID))
@@ -116,6 +143,9 @@ func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*Mo
 	}
 
 	for i, id := range parentsID {
+		if i > 0 {
+			appendMenuGroups(ctx, bc, parents[i-1], parents[i])
+		}
 		if parents[i].singleton {
 			bc.Append(&Breadcrumb{
 				Label: parents[i].TTitle(ctx.Context()),
