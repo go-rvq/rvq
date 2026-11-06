@@ -19,7 +19,6 @@ import TreeRows from '@/lib/TreeRows.vue'
 import TreeDraggable from '@/lib/TreeDraggable.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
-import {default as ImageField} from '@/lib/ImageTools/Input.vue'
 import WebCamUI from '@/lib/ImageTools/webcam/WebCamUI.vue'
 import {install as installLightbox} from '@/lib/Lightbox/lightbox'
 import LayoutWatch from '@/lib/LayoutWatch.vue'
@@ -72,7 +71,6 @@ const vuetifyx = {
     // another node (a child): the folders of a file system
     app.component('vx-tree-draggable', TreeDraggable)
     app.component('vx-editorjs', EditorJS)
-    app.component('vx-image-field', ImageField)
     // the webcam: a camera chosen, a photo taken (photo-taken: its Picture, data the blob)
     app.component('vx-webcam', WebCamUI)
     // the lightbox: a click on [data-lightbox-src] (a group: data-lightbox)

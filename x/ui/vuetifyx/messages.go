@@ -90,16 +90,43 @@ type Messages struct {
 	SourceCodeHtml             string `json:"sourceCodeHtml" i18n:"hint='Title of the dialog of the HTML of a content.'"`
 	SelectImage                string `json:"selectImage" i18n:"hint='Label of the choice of an image.'"`
 	ImageAlt                   string `json:"imageAlt" i18n:"hint='Label of the alternative text of an image.'"`
+	ImageEdit                  string `json:"imageEdit" i18n:"hint='Button that edits the image (the image editor).'"`
+	ImageDrop                  string `json:"imageDrop" i18n:"hint='Placeholder of the place to drop, paste or choose an image.'"`
 	LockAspectRatio            string `json:"lockAspectRatio" i18n:"hint='Option of an image.'"`
 	HeaderPlaceholder          string `json:"headerPlaceholder" i18n:"hint='Placeholder of a header of the block editor.'"`
-	ImageLoadError             string `json:"imageLoadError" i18n:"hint='Said when an image could not be loaded.'"`
-	ImageReleaseHere           string `json:"imageReleaseHere" i18n:"hint='Said while a file is dragged over.'"`
-	ImageUnsupported           string `json:"imageUnsupported" i18n:"hint='Said of a file not supported.'"`
-	ImageAddFromLink           string `json:"imageAddFromLink" i18n:"hint='Button that adds an image of a link.'"`
-	ImageTakePicture           string `json:"imageTakePicture" i18n:"hint='Button that takes a picture.'"`
-	ImageEdit                  string `json:"imageEdit" i18n:"hint='Button that edits the picture.'"`
-	ImageAddFromFile           string `json:"imageAddFromFile" i18n:"hint='Button that adds an image of a file.'"`
-	ImageFullView              string `json:"imageFullView" i18n:"hint='Button that shows the image whole.'"`
+	TakePicture                string `json:"takePicture" i18n:"hint='Button of the camera.'"`
+	FlipCamera                 string `json:"flipCamera" i18n:"hint='Button of the camera.'"`
+	LoadCameras                string `json:"loadCameras" i18n:"hint='Button of the camera.'"`
+	CameraDenied               string `json:"cameraDenied" i18n:"hint='Said when the browser denied the camera.'"`
+	CameraNotFound             string `json:"cameraNotFound" i18n:"hint='Said when there is no camera.'"`
+	CameraError                string `json:"cameraError" i18n:"hint='Said when the camera failed ({error}: why).'"`
+	CameraControls             string `json:"cameraControls" i18n:"hint='Panel of the controls of the camera itself.'"`
+	CameraReset                string `json:"cameraReset" i18n:"hint='Button that puts the controls of the camera back as they were.'"`
+	CameraNoControls           string `json:"cameraNoControls" i18n:"hint='Said when the camera offers no control.'"`
+	CameraAuto                 string `json:"cameraAuto" i18n:"hint='Switch of a control of the camera: automatic.'"`
+	CameraExposure             string `json:"cameraExposure" i18n:"hint='Group of the controls of the camera: exposure.'"`
+	CameraExposureCompensation string `json:"cameraExposureCompensation" i18n:"hint='Control of the camera.'"`
+	CameraExposureTime         string `json:"cameraExposureTime" i18n:"hint='Control of the camera.'"`
+	CameraIso                  string `json:"cameraIso" i18n:"hint='Control of the camera.'"`
+	CameraWhiteBalance         string `json:"cameraWhiteBalance" i18n:"hint='Group of the controls of the camera: white balance.'"`
+	CameraColorTemperature     string `json:"cameraColorTemperature" i18n:"hint='Control of the camera.'"`
+	CameraFocus                string `json:"cameraFocus" i18n:"hint='Group of the controls of the camera: focus.'"`
+	CameraFocusDistance        string `json:"cameraFocusDistance" i18n:"hint='Control of the camera.'"`
+	CameraImage                string `json:"cameraImage" i18n:"hint='Group of the controls of the camera: the image.'"`
+	CameraBrightness           string `json:"cameraBrightness" i18n:"hint='Control of the camera.'"`
+	CameraContrast             string `json:"cameraContrast" i18n:"hint='Control of the camera.'"`
+	CameraSaturation           string `json:"cameraSaturation" i18n:"hint='Control of the camera.'"`
+	CameraSharpness            string `json:"cameraSharpness" i18n:"hint='Control of the camera.'"`
+	CameraPosition             string `json:"cameraPosition" i18n:"hint='Group of the controls of the camera: zoom, pan, tilt.'"`
+	CameraZoom                 string `json:"cameraZoom" i18n:"hint='Control of the camera.'"`
+	CameraPan                  string `json:"cameraPan" i18n:"hint='Control of the camera.'"`
+	CameraTilt                 string `json:"cameraTilt" i18n:"hint='Control of the camera.'"`
+	CameraLight                string `json:"cameraLight" i18n:"hint='Group of the controls of the camera: the light.'"`
+	CameraTorch                string `json:"cameraTorch" i18n:"hint='Control of the camera: its light.'"`
+	LightboxOpen               string `json:"lightboxOpen" i18n:"hint='Button of the lightbox: the image in a tab of its own.'"`
+	LightboxClose              string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
+	LightboxPrev               string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
+	LightboxNext               string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
 	MapLoadError               string `json:"mapLoadError" i18n:"hint='Said when the map could not be loaded.'"`
 	MapsLoadError              string `json:"mapsLoadError" i18n:"hint='Said when Google Maps could not be loaded.'"`
 	MapsNoKey                  string `json:"mapsNoKey" i18n:"hint='Said when there is no key of Google Maps.'"`
@@ -159,39 +186,6 @@ type Messages struct {
 	DiffRevert                 string `json:"diffRevert" i18n:"hint='Title of the button of a change of a diff.'"`
 	DiffPrev                   string `json:"diffPrev" i18n:"hint='Title of the button of a diff.'"`
 	DiffNext                   string `json:"diffNext" i18n:"hint='Title of the button of a diff.'"`
-	LightboxOpen               string `json:"lightboxOpen" i18n:"hint='Button of the lightbox: the image in a tab of its own.'"`
-	LightboxClose              string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
-	LightboxPrev               string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
-	LightboxNext               string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
-	TakePicture                string `json:"takePicture" i18n:"hint='Button of the camera.'"`
-	FlipCamera                 string `json:"flipCamera" i18n:"hint='Button of the camera.'"`
-	LoadCameras                string `json:"loadCameras" i18n:"hint='Button of the camera.'"`
-	CameraDenied               string `json:"cameraDenied" i18n:"hint='Said when the browser denied the camera.'"`
-	CameraNotFound             string `json:"cameraNotFound" i18n:"hint='Said when there is no camera.'"`
-	CameraError                string `json:"cameraError" i18n:"hint='Said when the camera failed ({error}: why).'"`
-	CameraControls             string `json:"cameraControls" i18n:"hint='Panel of the controls of the camera itself.'"`
-	CameraReset                string `json:"cameraReset" i18n:"hint='Button that puts the controls of the camera back as they were.'"`
-	CameraNoControls           string `json:"cameraNoControls" i18n:"hint='Said when the camera offers no control.'"`
-	CameraAuto                 string `json:"cameraAuto" i18n:"hint='Switch of a control of the camera: automatic.'"`
-	CameraExposure             string `json:"cameraExposure" i18n:"hint='Group of the controls of the camera: exposure.'"`
-	CameraExposureCompensation string `json:"cameraExposureCompensation" i18n:"hint='Control of the camera.'"`
-	CameraExposureTime         string `json:"cameraExposureTime" i18n:"hint='Control of the camera.'"`
-	CameraIso                  string `json:"cameraIso" i18n:"hint='Control of the camera.'"`
-	CameraWhiteBalance         string `json:"cameraWhiteBalance" i18n:"hint='Group of the controls of the camera: white balance.'"`
-	CameraColorTemperature     string `json:"cameraColorTemperature" i18n:"hint='Control of the camera.'"`
-	CameraFocus                string `json:"cameraFocus" i18n:"hint='Group of the controls of the camera: focus.'"`
-	CameraFocusDistance        string `json:"cameraFocusDistance" i18n:"hint='Control of the camera.'"`
-	CameraImage                string `json:"cameraImage" i18n:"hint='Group of the controls of the camera: the image.'"`
-	CameraBrightness           string `json:"cameraBrightness" i18n:"hint='Control of the camera.'"`
-	CameraContrast             string `json:"cameraContrast" i18n:"hint='Control of the camera.'"`
-	CameraSaturation           string `json:"cameraSaturation" i18n:"hint='Control of the camera.'"`
-	CameraSharpness            string `json:"cameraSharpness" i18n:"hint='Control of the camera.'"`
-	CameraPosition             string `json:"cameraPosition" i18n:"hint='Group of the controls of the camera: zoom, pan, tilt.'"`
-	CameraZoom                 string `json:"cameraZoom" i18n:"hint='Control of the camera.'"`
-	CameraPan                  string `json:"cameraPan" i18n:"hint='Control of the camera.'"`
-	CameraTilt                 string `json:"cameraTilt" i18n:"hint='Control of the camera.'"`
-	CameraLight                string `json:"cameraLight" i18n:"hint='Group of the controls of the camera: the light.'"`
-	CameraTorch                string `json:"cameraTorch" i18n:"hint='Control of the camera: its light.'"`
 
 	// the words of the editors of a text (mdkit: js/mdkit), by editor
 	MdkitRichBold               string `json:"mdkitRichBold" i18n:"hint='Editors of a text (mdkit), rich: bold.'"`
@@ -467,16 +461,10 @@ var Messages_en_US = &Messages{
 	SourceCodeHtml:              "Code (HTML)",
 	SelectImage:                 "Select Image",
 	ImageAlt:                    "Alternative text",
+	ImageEdit:                   "Edit image",
+	ImageDrop:                   "Drop, paste or click to choose an image",
 	LockAspectRatio:             "Lock original aspect ratio",
 	HeaderPlaceholder:           "Enter a header",
-	ImageLoadError:              "An error occurred on load image.",
-	ImageReleaseHere:            "Release here...",
-	ImageUnsupported:            "Unsupported file type.",
-	ImageAddFromLink:            "Add from link",
-	ImageTakePicture:            "Take picture from camera",
-	ImageEdit:                   "Edit Picture",
-	ImageAddFromFile:            "Add from local file",
-	ImageFullView:               "Full view",
 	TakePicture:                 "Take picture",
 	FlipCamera:                  "Flip camera",
 	LoadCameras:                 "Load cameras",
@@ -842,16 +830,10 @@ var Messages_pt_BR = &Messages{
 	SourceCodeHtml:              "Código (HTML)",
 	SelectImage:                 "Selecionar imagem",
 	ImageAlt:                    "Texto alternativo",
+	ImageEdit:                   "Editar imagem",
+	ImageDrop:                   "Solte, cole ou clique para escolher uma imagem",
 	LockAspectRatio:             "Manter a proporção original",
 	HeaderPlaceholder:           "Digite um título",
-	ImageLoadError:              "Ocorreu um erro ao carregar a imagem.",
-	ImageReleaseHere:            "Solte aqui...",
-	ImageUnsupported:            "Tipo de arquivo não suportado.",
-	ImageAddFromLink:            "Adicionar de um link",
-	ImageTakePicture:            "Tirar foto pela câmera",
-	ImageEdit:                   "Editar imagem",
-	ImageAddFromFile:            "Adicionar de um arquivo local",
-	ImageFullView:               "Ver inteira",
 	TakePicture:                 "Tirar foto",
 	FlipCamera:                  "Virar a câmera",
 	LoadCameras:                 "Carregar câmeras",

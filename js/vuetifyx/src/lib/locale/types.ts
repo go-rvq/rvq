@@ -129,26 +129,14 @@ export interface VxMessages {
   selectImage: string
   /** Label of the alternative text of an image. */
   imageAlt: string
+  /** Button that edits the image (the image editor). */
+  imageEdit: string
+  /** Placeholder of the place to drop, paste or choose an image. */
+  imageDrop: string
   /** Option of an image. */
   lockAspectRatio: string
   /** Placeholder of a header of the block editor. */
   headerPlaceholder: string
-  /** Said when an image could not be loaded. */
-  imageLoadError: string
-  /** Said while a file is dragged over. */
-  imageReleaseHere: string
-  /** Said of a file not supported. */
-  imageUnsupported: string
-  /** Button that adds an image of a link. */
-  imageAddFromLink: string
-  /** Button that takes a picture. */
-  imageTakePicture: string
-  /** Button that edits the picture. */
-  imageEdit: string
-  /** Button that adds an image of a file. */
-  imageAddFromFile: string
-  /** Button that shows the image whole. */
-  imageFullView: string
   /** Button of the camera. */
   takePicture: string
   /** Button of the camera. */

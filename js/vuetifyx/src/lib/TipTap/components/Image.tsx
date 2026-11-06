@@ -1,6 +1,6 @@
 import {computed, defineComponent, ExtractPublicPropTypes, PropType, useModel} from 'vue'
 import {ImageProperties} from 'vuetify-pro-tiptap'
-import Input from '../../ImageTools/Input.vue'
+import ImageSource from './ImageSource.vue'
 import {VTextField} from 'vuetify/components'
 
 const propsOptions = {
@@ -47,19 +47,7 @@ export default defineComponent({
 
     return () => <>
       <div>
-        <Input
-          class="mb-3 mx-auto"
-          link
-          upload
-          paste
-          hint="Teste"
-          initial-value={form.value.src}
-          v-model={form.value.src}
-          style="width:fit-content"
-          field={{
-            width: '310px',
-            height: '200px'
-          }} />
+        <ImageSource v-model={form.value.src} upload={props.upload} />
       </div>
 
       {isBinary.value ?
