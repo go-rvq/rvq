@@ -57,10 +57,10 @@ func overview(b *Builder, templateM *presets.ModelBuilder, pm *presets.ModelBuil
 
 		if schedule, ok := obj.(publish.ScheduleInterface); ok {
 			if em := schedule.EmbedSchedule().ScheduledStartAt; em != nil {
-				start = em.Format("2006-01-02 15:04")
+				start = presets.InTimeLocation(ctx, *em).Format("2006-01-02 15:04")
 			}
 			if em := schedule.EmbedSchedule().ScheduledEndAt; em != nil {
-				end = em.Format("2006-01-02 15:04")
+				end = presets.InTimeLocation(ctx, *em).Format("2006-01-02 15:04")
 			}
 			if start != "" || end != "" {
 				se = "Scheduled at: " + start + " ~ " + end

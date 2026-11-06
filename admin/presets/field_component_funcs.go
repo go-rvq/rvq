@@ -63,22 +63,32 @@ func NumberComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompone
 		Disabled(field.ReadOnly))
 }
 
+// timeFieldValue is the instant of a time field, nil when zero.
+func timeFieldValue(field *FieldContext) *time.Time {
+	switch vt := field.Value().(type) {
+	case nil:
+		return nil
+	case time.Time:
+		if !vt.IsZero() {
+			return &vt
+		}
+	case *time.Time:
+		if vt != nil && !vt.IsZero() {
+			return vt
+		}
+	default:
+		panic(fmt.Sprintf("unknown time type: %T\n", vt))
+	}
+	return nil
+}
+
+// DateTimeComponentFunc is the input of an instant, in the time zone of the
+// admin (TimeLocationOf).
 func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
 	val := ""
-	if v := field.Value(); v != nil {
-		switch vt := v.(type) {
-		case time.Time:
-			if !vt.IsZero() {
-				val = vt.Format("2006-01-02 15:04")
-			}
-		case *time.Time:
-			if vt != nil && !vt.IsZero() {
-				val = vt.Format("2006-01-02 15:04")
-			}
-		default:
-			panic(fmt.Sprintf("unknown time type: %T\n", v))
-		}
+	if t := timeFieldValue(field); t != nil {
+		val = t.In(TimeLocationOf(ctx)).Format("2006-01-02 15:04")
 	}
 	return vx.VXDateTimePicker().
 		Label(field.InputLabel()).
@@ -95,40 +105,86 @@ func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCom
 		OkText(msgr.OK)
 }
 
+// DateTimeReadonlyComponentFunc shows an instant in the time zone of the
+// admin.
 func DateTimeReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
-	var t *time.Time
-	if v := field.Value(); v != nil {
-		switch vt := v.(type) {
-		case time.Time:
-			if !vt.IsZero() {
-				t = &vt
-			}
-		case *time.Time:
-			if !vt.IsZero() {
-				t = vt
-			}
-		default:
-			panic(fmt.Sprintf("unknown time type: %T\n", v))
-		}
-	}
-
+	t := timeFieldValue(field)
 	if t == nil {
 		return nil
 	}
-
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
-	val := t.Format(msgr.TimeFormats.DateTime)
 	return vx.VXReadonlyField().
 		Label(field.InputLabel()).
-		Value(val)
+		Value(t.In(TimeLocationOf(ctx)).Format(msgr.TimeFormats.DateTime))
 }
 
+// DateTimeComponentFuncSetter reads an instant typed in the time zone of the
+// admin, stored in UTC.
 func DateTimeComponentFuncSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
 	v := ctx.R.Form.Get(field.FormKey)
 	if v == "" {
 		return reflectutils.Set(obj, field.Name, nil)
 	}
-	t, err := time.ParseInLocation("2006-01-02 15:04", v, time.Local)
+	t, err := time.ParseInLocation("2006-01-02 15:04", v, TimeLocationOf(ctx))
+	if err != nil {
+		return err
+	}
+	return reflectutils.Set(obj, field.Name, t.UTC())
+}
+
+// DateComponentFunc is the input of a day (a date with no time of day — a
+// due date): no time zone, the day as stored.
+func DateComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	val := ""
+	if t := timeFieldValue(field); t != nil {
+		val = t.UTC().Format("2006-01-02")
+	}
+	return FieldWithHint(field, VTextField().
+		Type("date").
+		Variant(FieldVariantUnderlined).
+		Attr(web.VField(field.FormKey, val)...).
+		Label(field.InputLabel()).
+		ErrorMessages(field.Errors...).
+		Disabled(field.ReadOnly))
+}
+
+// DateReadonlyComponentFunc shows a day: no time zone.
+func DateReadonlyComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	t := timeFieldValue(field)
+	if t == nil {
+		return nil
+	}
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
+	layout := msgr.TimeFormats.Date
+	if layout == "" {
+		layout = "2006-01-02"
+	}
+	return vx.VXReadonlyField().
+		Label(field.InputLabel()).
+		Value(t.UTC().Format(layout))
+}
+
+// TDDateComponentFunc is the cell of a day: no time zone.
+func TDDateComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	t := timeFieldValue(field)
+	if t == nil {
+		return h.Td()
+	}
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
+	layout := msgr.TimeFormats.Date
+	if layout == "" {
+		layout = "2006-01-02"
+	}
+	return h.Td(h.Text(t.UTC().Format(layout)))
+}
+
+// DateComponentFuncSetter reads a day, stored at midnight UTC.
+func DateComponentFuncSetter(obj interface{}, field *FieldContext, ctx *web.EventContext) (err error) {
+	v := ctx.R.Form.Get(field.FormKey)
+	if v == "" {
+		return reflectutils.Set(obj, field.Name, nil)
+	}
+	t, err := time.ParseInLocation("2006-01-02", v, time.UTC)
 	if err != nil {
 		return err
 	}

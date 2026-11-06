@@ -522,7 +522,7 @@ func (b *ListingBuilder) NewSearchParams(ctx *web.EventContext, qs url.Values, p
 
 	if b.filterDataFunc != nil {
 		fd := b.filterDataFunc(ctx)
-		cond, args := fd.SetByQueryString(b.filterQuery(ctx))
+		cond, args := fd.SetByQueryStringIn(b.filterQuery(ctx), TimeLocationOf(ctx))
 
 		params.SQLConditions = append(params.SQLConditions, &SQLCondition{
 			Query: cond,

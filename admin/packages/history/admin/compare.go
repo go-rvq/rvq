@@ -150,9 +150,9 @@ func (mh *ModelHistory) compareInner(recordKey string, aHash, bHash histmodels.H
 
 	head := h.Div(
 		h.Div(
-			revInfoHeader(revA, msgr),
+			revInfoHeader(ctx, revA, msgr),
 			h.Span(" → ").Class("mx-2 text-medium-emphasis"),
-			revInfoHeader(revB, msgr),
+			revInfoHeader(ctx, revB, msgr),
 		).Class("d-flex align-center flex-wrap"),
 		h.Div(revertAllBtn, mergedBtn, invertBtn).Class("ms-auto d-flex align-center"),
 	).Class("d-flex align-center justify-space-between mb-3")
@@ -312,10 +312,10 @@ func prettyJSON(raw json.RawMessage) string {
 }
 
 // revInfoHeader shows a revision's hash, time, author and status badges.
-func revInfoHeader(rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
+func revInfoHeader(ctx *web.EventContext, rev *histmodels.Revision, msgr *Messages) h.HTMLComponent {
 	meta := h.HTMLComponents{
 		h.Code(shortHash(rev.Hash)),
-		h.Span(" · " + rev.CreatedAt.Format("2006-01-02 15:04")).Class("text-medium-emphasis"),
+		h.Span(" · " + presets.InTimeLocation(ctx, rev.CreatedAt).Format("2006-01-02 15:04")).Class("text-medium-emphasis"),
 		h.Span(" · " + rev.Creator).Class("text-medium-emphasis"),
 	}
 	if rev.Published {

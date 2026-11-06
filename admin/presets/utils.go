@@ -134,12 +134,12 @@ func ToStringContext(ctx *web.EventContext, v any) string {
 	case []byte:
 		return string(t)
 	case time.Time:
-		return t.Format("2006-01-02 15:04:05")
+		return t.In(TimeLocationOf(ctx)).Format("2006-01-02 15:04:05")
 	case *time.Time:
 		if t == nil {
 			return ""
 		}
-		return t.Format("2006-01-02 15:04:05")
+		return t.In(TimeLocationOf(ctx)).Format("2006-01-02 15:04:05")
 	case sql.NullInt32:
 		return fmt.Sprint(t.Int32)
 	case sql.NullInt64:

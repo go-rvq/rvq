@@ -72,7 +72,7 @@ func (ab *Builder) defaultLogModelInstall(mb *presets.ModelBuilder) error {
 	ab.lmb = mb
 	listing.Field("CreatedAt").Label(Messages_en_US.ModelCreatedAt).ComponentFunc(
 		func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			return h.Td(h.Text(field.Obj.(*ActivityLog).CreatedAt.Format("2006-01-02 15:04:05 MST")))
+			return h.Td(h.Text(presets.InTimeLocation(ctx, field.Obj.(*ActivityLog).CreatedAt).Format("2006-01-02 15:04:05 MST")))
 		},
 	)
 	listing.Field("ModelKeys").Label(Messages_en_US.ModelKeys)
@@ -202,7 +202,7 @@ func (ab *Builder) defaultLogModelInstall(mb *presets.ModelBuilder) error {
 						h.Tr(h.Td(h.Text(msgr.ModelLabel)), h.Td(h.Text(record.GetModelLabel()))),
 						h.Tr(h.Td(h.Text(msgr.ModelKeys)), h.Td(h.Text(record.GetModelKeys()))),
 						h.If(record.GetModelLink() != "", h.Tr(h.Td(h.Text(msgr.ModelLink)), h.Td(h.Text(record.GetModelLink())))),
-						h.Tr(h.Td(h.Text(msgr.ModelCreatedAt)), h.Td(h.Text(record.GetCreatedAt().Format("2006-01-02 15:04:05 MST")))),
+						h.Tr(h.Td(h.Text(msgr.ModelCreatedAt)), h.Td(h.Text(presets.InTimeLocation(ctx, record.GetCreatedAt()).Format("2006-01-02 15:04:05 MST")))),
 					),
 				),
 			).Attr("style", "margin-top:15px;margin-bottom:15px;"))

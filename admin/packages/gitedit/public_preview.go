@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/timezone"
 	"net/http"
 	"strings"
 	"time"
@@ -192,7 +193,7 @@ func (b *Builder) setupPublicPreviewActions(p *presets.Builder, pg *presets.Page
 		}
 		var expires *time.Time
 		if c.Form.ExpiresAt != "" {
-			day, err := time.ParseInLocation("2006-01-02", c.Form.ExpiresAt, time.Local)
+			day, err := time.ParseInLocation("2006-01-02", c.Form.ExpiresAt, timezone.Location(r.Context()))
 			if err != nil {
 				return web.NewValidationErrors().FieldError("ExpiresAt", err.Error())
 			}
@@ -255,7 +256,7 @@ func (b *Builder) publicPreviewView(ctx *web.EventContext, m *Messages, portal, 
 	link := b.publicPreviewURL(r, p)
 	until := m.ShareForever
 	if p.ExpiresAt != nil {
-		until = fmt.Sprintf(m.ShareUntil, p.ExpiresAt.Local().Format(dateFormat))
+		until = fmt.Sprintf(m.ShareUntil, p.ExpiresAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat))
 	}
 	var end h.HTMLComponent
 	if canEnd {

@@ -65,7 +65,7 @@ func getNotesTab(ctx *web.EventContext, db *gorm.DB, resourceType string, resour
 	for _, note := range notes {
 		panels = append(panels, vuetify.VCard(
 			vuetify.VCardText(
-				h.Div(h.Text(fmt.Sprintf("%v - %v", note.Creator, note.CreatedAt.Format("2006-01-02 15:04:05 MST")))).
+				h.Div(h.Text(fmt.Sprintf("%v - %v", note.Creator, presets.InTimeLocation(ctx, note.CreatedAt).Format("2006-01-02 15:04:05 MST")))).
 					Class("text-h6"),
 				h.Text(note.Content)),
 		))

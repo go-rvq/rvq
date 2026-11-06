@@ -305,13 +305,13 @@ func configureVersionListDialog(db *gorm.DB, b *presets.Builder, pm *presets.Mod
 		p := field.Obj.(ScheduleInterface)
 
 		return h.Td(
-			h.Text(ScheduleTimeString(p.EmbedSchedule().ScheduledStartAt)),
+			h.Text(ScheduleTimeString(ctx, p.EmbedSchedule().ScheduledStartAt)),
 		)
 	}).Label("Start at")
 	lb.Field("EndAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		p := field.Obj.(ScheduleInterface)
 		return h.Td(
-			h.Text(ScheduleTimeString(p.EmbedSchedule().ScheduledEndAt)),
+			h.Text(ScheduleTimeString(ctx, p.EmbedSchedule().ScheduledEndAt)),
 		)
 	}).Label("End at")
 

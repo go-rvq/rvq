@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/timezone"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -668,7 +669,7 @@ func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 		}
 		var expires *time.Time
 		if c.Form.ExpiresAt != "" {
-			day, err := time.ParseInLocation("2006-01-02", c.Form.ExpiresAt, time.Local)
+			day, err := time.ParseInLocation("2006-01-02", c.Form.ExpiresAt, timezone.Location(r.Context()))
 			if err != nil {
 				return web.NewValidationErrors().FieldError("ExpiresAt", err.Error())
 			}
@@ -984,7 +985,7 @@ func (b *Builder) draftView(ctx *web.EventContext, d *Draft, m *Messages, owner 
 	for _, cm := range log {
 		logItems = append(logItems, v.VListItem(
 			v.VListItemTitle(h.Text(cm.Subject)),
-			v.VListItemSubtitle(h.Text(cm.Short+" · "+cm.Author+" · "+cm.Date.Format("2006-01-02 15:04"))),
+			v.VListItemSubtitle(h.Text(cm.Short+" · "+cm.Author+" · "+presets.InTimeLocation(ctx, cm.Date).Format("2006-01-02 15:04"))),
 		).Density(v.DensityCompact))
 	}
 

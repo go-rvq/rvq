@@ -219,7 +219,7 @@ func TestSchedule(t *testing.T) {
 	reset(t)
 	p := create(t, "zz-sched", 40)
 	at := func(d time.Duration) string {
-		return publish.ScheduleTimeString(ptr(DB.NowFunc().Add(d)))
+		return publish.ScheduleTimeString(nil, ptr(DB.NowFunc().Add(d)))
 	}
 	schedule := func(start, end string) *response {
 		return on(productsURL, eventSchedule).Q(presets.ParamID, slug(p)).
@@ -230,7 +230,7 @@ func TestSchedule(t *testing.T) {
 	start, end := at(time.Hour), at(2*time.Hour)
 	schedule(start, end)
 	got := reload(t, p)
-	if publish.ScheduleTimeString(got.Schedule.ScheduledStartAt) != start || publish.ScheduleTimeString(got.Schedule.ScheduledEndAt) != end {
+	if publish.ScheduleTimeString(nil, got.Schedule.ScheduledStartAt) != start || publish.ScheduleTimeString(nil, got.Schedule.ScheduledEndAt) != end {
 		t.Fatalf("schedule %v – %v, want %s – %s", got.Schedule.ScheduledStartAt, got.Schedule.ScheduledEndAt, start, end)
 	}
 
@@ -246,7 +246,7 @@ func TestSchedule(t *testing.T) {
 			if r := schedule(c.start, c.end); !r.Shows(c.message) {
 				t.Errorf("not told %q: %+v", c.message, r.TestEventResponse)
 			}
-			if s := publish.ScheduleTimeString(reload(t, p).Schedule.ScheduledStartAt); s != start {
+			if s := publish.ScheduleTimeString(nil, reload(t, p).Schedule.ScheduledStartAt); s != start {
 				t.Errorf("a refused schedule changed the saved one: %s", s)
 			}
 		})

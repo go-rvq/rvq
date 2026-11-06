@@ -306,7 +306,14 @@ var sqlOps = map[string]string{
 
 const SQLOperatorPlaceholder = "{op}"
 
+// SetByQueryString is SetByQueryStringIn in the local time zone.
 func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs []interface{}) {
+	return fd.SetByQueryStringIn(qs, time.Local)
+}
+
+// SetByQueryStringIn sets the filter from the query string qs and makes its
+// SQL condition; the dates and times of it are of the time zone loc.
+func (fd FilterData) SetByQueryStringIn(qs string, loc *time.Location) (sqlCondition string, sqlArgs []interface{}) {
 	queryMap, err := url.ParseQuery(qs)
 	if err != nil {
 		panic(err)
@@ -366,19 +373,19 @@ func (fd FilterData) SetByQueryString(qs string) (sqlCondition string, sqlArgs [
 				var ival interface{} = val
 				if it.ItemType == ItemTypeDatetimeRange {
 					var err error
-					ival, err = time.ParseInLocation("2006-01-02 15:04", val, time.Local)
+					ival, err = time.ParseInLocation("2006-01-02 15:04", val, loc)
 					if err != nil {
 						continue
 					}
 				} else if it.ItemType == ItemTypeDate || it.ItemType == ItemTypeDateRange {
 					var err error
-					ival, err = time.ParseInLocation("2006-01-02", val, time.Local)
+					ival, err = time.ParseInLocation("2006-01-02", val, loc)
 					if err != nil {
 						continue
 					}
 				} else if it.ItemType == ItemTypeMonth || it.ItemType == ItemTypeMonthRange {
 					var err error
-					ival, err = time.ParseInLocation("2006-01", val, time.Local)
+					ival, err = time.ParseInLocation("2006-01", val, loc)
 					if err != nil {
 						continue
 					}

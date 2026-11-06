@@ -59,7 +59,7 @@ func (b *Builder) installMailLogs(p *presets.Builder, sender *presets.ModelBuild
 		SearchColumns("subject", "recipients", "record_path", "message_id").
 		OrderBy("created_at DESC")
 	l.Field("CreatedAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Td(h.Text(field.Obj.(*MailLog).CreatedAt.Format("2006-01-02 15:04:05")))
+		return h.Td(h.Text(presets.InTimeLocation(ctx, field.Obj.(*MailLog).CreatedAt).Format("2006-01-02 15:04:05")))
 	})
 	l.Field("Status").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Td(statusChip(field.Obj.(*MailLog), ctx))
@@ -143,7 +143,7 @@ func (b *Builder) installMailLogs(p *presets.Builder, sender *presets.ModelBuild
 		var rows h.HTMLComponents
 		for _, o := range others {
 			rows = append(rows, h.Tr(
-				h.Td(h.A(h.Text(o.CreatedAt.Format("2006-01-02 15:04:05"))).Href(mb.Info().DetailingHref(o.ID.String()))),
+				h.Td(h.A(h.Text(presets.InTimeLocation(ctx, o.CreatedAt).Format("2006-01-02 15:04:05"))).Href(mb.Info().DetailingHref(o.ID.String()))),
 				h.Td(statusChip(o, ctx)),
 				h.Td(h.Text(o.Kind)),
 				h.Td(h.Text(o.Recipients)),

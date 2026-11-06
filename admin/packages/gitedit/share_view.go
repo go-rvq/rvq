@@ -2,6 +2,7 @@ package gitedit
 
 import (
 	"fmt"
+	"github.com/go-rvq/rvq/x/timezone"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,7 +30,7 @@ func (b *Builder) whoseDraft(ctx *web.EventContext, m *Messages, owner string, o
 			if s.Owner == owner {
 				how = m.ViaShare
 				if s.ExpiresAt != nil {
-					how += " · " + fmt.Sprintf(m.ShareUntil, s.ExpiresAt.Local().Format(dateFormat))
+					how += " · " + fmt.Sprintf(m.ShareUntil, s.ExpiresAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat))
 				}
 				break
 			}
@@ -48,12 +49,12 @@ func (b *Builder) whoseDraft(ctx *web.EventContext, m *Messages, owner string, o
 func (b *Builder) shareState(ctx *web.EventContext, m *Messages, s *DraftShare, now time.Time) (string, bool) {
 	switch {
 	case s.RevokedAt != nil:
-		return fmt.Sprintf(m.ShareRevokedOn, s.RevokedAt.Local().Format(dateFormat),
+		return fmt.Sprintf(m.ShareRevokedOn, s.RevokedAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat),
 			b.user(ctx.R, s.RevokedBy).Label()), false
 	case s.ExpiresAt != nil && !s.ExpiresAt.After(now):
-		return fmt.Sprintf(m.ShareExpiredOn, s.ExpiresAt.Local().Format(dateFormat)), false
+		return fmt.Sprintf(m.ShareExpiredOn, s.ExpiresAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat)), false
 	case s.ExpiresAt != nil:
-		return fmt.Sprintf(m.ShareUntil, s.ExpiresAt.Local().Format(dateFormat)), true
+		return fmt.Sprintf(m.ShareUntil, s.ExpiresAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat)), true
 	}
 	return m.ShareForever, true
 }
@@ -79,7 +80,7 @@ func (b *Builder) sharesView(ctx *web.EventContext, m *Messages, portal, owner s
 		}
 		row := h.Tr(
 			h.Td(h.Text(b.user(r, s.User).Label())),
-			h.Td(h.Text(s.CreatedAt.Local().Format(dateFormat)+" · "+b.user(r, s.CreatedBy).Label())),
+			h.Td(h.Text(s.CreatedAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat)+" · "+b.user(r, s.CreatedBy).Label())),
 			h.Td(h.Text(state)),
 			h.Td(revoke).Class("text-right"),
 		).Attr("data-share", s.ID.String())
@@ -153,7 +154,7 @@ func (b *Builder) draftsView(ctx *web.EventContext, m *Messages, all bool) h.HTM
 	for _, s := range shared {
 		until := m.ShareForever
 		if s.ExpiresAt != nil {
-			until = fmt.Sprintf(m.ShareUntil, s.ExpiresAt.Local().Format(dateFormat))
+			until = fmt.Sprintf(m.ShareUntil, s.ExpiresAt.In(timezone.Location(ctx.R.Context())).Format(dateFormat))
 		}
 		mine = append(mine, h.Tr(
 			h.Td(h.Text(b.user(ctx.R, s.Owner).Label())),

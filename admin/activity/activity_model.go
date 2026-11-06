@@ -119,7 +119,7 @@ func (mb *ModelBuilder) EnableActivityInfoTab() *ModelBuilder {
 			if mb.activity.tabHeading != nil {
 				headerText = mb.activity.tabHeading(log)
 			} else {
-				headerText = fmt.Sprintf("%s %s at %s", log.GetCreator(), strings.ToLower(log.GetAction()), log.GetCreatedAt().Format("2006-01-02 15:04:05 MST"))
+				headerText = fmt.Sprintf("%s %s at %s", log.GetCreator(), strings.ToLower(log.GetAction()), presets.InTimeLocation(ctx, log.GetCreatedAt()).Format("2006-01-02 15:04:05 MST"))
 			}
 
 			panels = append(panels, vuetify.VExpansionPanel(

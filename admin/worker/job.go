@@ -134,7 +134,7 @@ func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilde
 			t := field.Obj.(Scheduler).GetScheduleTime()
 			var v string
 			if t != nil {
-				v = t.Local().Format("2006-01-02 15:04")
+				v = presets.InTimeLocation(ctx, *t).Format("2006-01-02 15:04")
 			}
 			return vx.VXDateTimePicker().Attr(web.VField(field.FormKey, v)...).Label(msgr.ScheduleTime).
 				TimePickerProps(vx.TimePickerProps{
@@ -147,10 +147,11 @@ func (jb *JobBuilder) Resource(r interface{}, do ...func(mb *presets.ModelBuilde
 			if v == "" {
 				return nil
 			}
-			t, err := time.ParseInLocation("2006-01-02 15:04", v, time.Local)
+			t, err := time.ParseInLocation("2006-01-02 15:04", v, presets.TimeLocationOf(ctx))
 			if err != nil {
 				return err
 			}
+			t = t.UTC()
 			obj.(Scheduler).SetScheduleTime(&t)
 			return nil
 		})

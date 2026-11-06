@@ -163,7 +163,7 @@ func TestRecordStampGuardsTheEditForm(t *testing.T) {
 		t.Errorf("the answer does not explain what happened:\n%s", firstLines(body, 3))
 	}
 	// with no author to name, it still says when it happened
-	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt)
+	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt.UTC()) // the admin's time zone: UTC without one
 	if !strings.Contains(body, when) {
 		t.Errorf("the answer does not say when the record changed (%s):\n%s", when, firstLines(body, 3))
 	}
@@ -227,7 +227,7 @@ func TestRecordStampNamesTheAuthor(t *testing.T) {
 
 	// and WHEN they changed it — the stored UpdatedAt, the very value that did
 	// not match the stamp
-	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt)
+	when := presets.Messages_en_US.FormatDateTime(app.reload(t, article.ID).UpdatedAt.UTC()) // the admin's time zone: UTC without one
 	if !strings.Contains(body, when) {
 		t.Errorf("the message does not say when the record changed (%s):\n%s", when, firstLines(body, 3))
 	}

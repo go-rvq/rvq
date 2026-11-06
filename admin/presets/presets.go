@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets/actions"
@@ -69,6 +70,7 @@ type Builder struct {
 	menuTree                              *MenuGroupBuilder
 	menuItems                             map[string]*MenuItem
 	wrapHandlers                          map[string]func(in http.Handler) (out http.Handler)
+	timeLocationFunc                      func(r *http.Request) *time.Location
 	plugins                               []Plugin
 	ModelConfigurators                    ModelConfigurators
 	ModelSetupFactories                   ModelSetupFactories
@@ -1490,6 +1492,7 @@ func (b *Builder) Build(mux ...*http.ServeMux) {
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r = web.ParseRequest(r)
+	r = b.withTimeLocation(r)
 
 	if b.handler == nil {
 		b.Build()

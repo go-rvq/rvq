@@ -24,11 +24,13 @@ const (
 
 var errInvalidObject = errors.New("invalid object")
 
-func ScheduleTimeString(t *time.Time) string {
+// ScheduleTimeString is the schedule t in the time zone of the admin (of
+// ctx), as typed.
+func ScheduleTimeString(ctx *web.EventContext, t *time.Time) string {
 	if t == nil {
 		return ""
 	}
-	return t.Format(timeFormatSchedule)
+	return presets.InTimeLocation(ctx, *t).Format(timeFormatSchedule)
 }
 
 func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
@@ -51,8 +53,8 @@ func schedulePublishDialog(_ *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 			return
 		}
 
-		valStartAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledStartAt)
-		valEndAt := ScheduleTimeString(sc.EmbedSchedule().ScheduledEndAt)
+		valStartAt := ScheduleTimeString(ctx, sc.EmbedSchedule().ScheduledStartAt)
+		valEndAt := ScheduleTimeString(ctx, sc.EmbedSchedule().ScheduledEndAt)
 
 		displayStartAtPicker := EmbedStatus(sc).Status != StatusOnline
 		msgr := GetMessages(ctx.Context())
@@ -135,11 +137,14 @@ func schedulePublish(db *gorm.DB, mb *presets.ModelBuilder) web.EventFunc {
 	})
 }
 
-func parseScheduleTimeValue(val string) (*time.Time, error) {
+// parseScheduleTimeValue reads a schedule typed in the time zone of the admin
+// (of ctx), in UTC.
+func parseScheduleTimeValue(ctx *web.EventContext, val string) (*time.Time, error) {
 	if val == "" {
 		return nil, nil
 	}
-	t, err := time.ParseInLocation(timeFormatSchedule, val, time.Local)
+	t, err := time.ParseInLocation(timeFormatSchedule, val, presets.TimeLocationOf(ctx))
+	t = t.UTC()
 	if err != nil {
 		return nil, err
 	}
@@ -150,11 +155,11 @@ func parseScheduleTimeValue(val string) (*time.Time, error) {
 }
 
 func setScheduledTimesFromForm(ctx *web.EventContext, sc ScheduleInterface, db *gorm.DB, mb *presets.ModelBuilder) error {
-	startAt, err := parseScheduleTimeValue(ctx.R.FormValue(fieldScheduledStartAt))
+	startAt, err := parseScheduleTimeValue(ctx, ctx.R.FormValue(fieldScheduledStartAt))
 	if err != nil {
 		return err
 	}
-	endAt, err := parseScheduleTimeValue(ctx.R.FormValue(fieldScheduledEndAt))
+	endAt, err := parseScheduleTimeValue(ctx, ctx.R.FormValue(fieldScheduledEndAt))
 	if err != nil {
 		return err
 	}

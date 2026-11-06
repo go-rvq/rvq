@@ -105,7 +105,7 @@ func (mb *ModelBuilder) logItem(ctx *web.EventContext, msgr *Messages, log Activ
 	head := h.Div(
 		h.Strong(actionLabel(msgr, log.GetAction())),
 		h.Span(" · "+log.GetCreator()).Class("text-medium-emphasis"),
-		h.Span(" · "+log.GetCreatedAt().Format("2006-01-02 15:04:05")).Class("text-medium-emphasis"),
+		h.Span(" · "+presets.InTimeLocation(ctx, log.GetCreatedAt()).Format("2006-01-02 15:04:05")).Class("text-medium-emphasis"),
 	)
 
 	meta := h.HTMLComponents{}

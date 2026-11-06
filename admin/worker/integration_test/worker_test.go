@@ -151,12 +151,12 @@ func TestJobActions(t *testing.T) {
 		cleanData()
 		mustCreateJob(map[string]string{
 			"Job":          "scheduleJob",
-			"ScheduleTime": time.Now().Add(time.Hour).Local().Format(`2006-01-02 15:04`),
+			"ScheduleTime": time.Now().Add(time.Hour).UTC().Format(`2006-01-02 15:04`),
 		})
 		j := mustGetFirstJob()
 		rBody := bytes.NewBuffer(nil)
 		mw := multipart.NewWriter(rBody)
-		st := time.Now().Add(2 * time.Hour).Local().Format(`2006-01-02 15:04`)
+		st := time.Now().Add(2 * time.Hour).UTC().Format(`2006-01-02 15:04`) // the admin's time zone: UTC without one
 		mw.WriteField("ScheduleTime", st)
 		mw.Close()
 		r := httptest.NewRequest(http.MethodPost, fmt.Sprintf(`/workers/%s?__execute_event__=worker_updateJob&job=scheduleJob&jobID=%s`, j.ID, j.ID), rBody)

@@ -576,6 +576,7 @@ func (e *recordStampError) Unwrap() error { return e.cause }
 // load a user (Builder.SetRecordUserFinder), by WHOM.
 func (b *EditingBuilder) recordChangedMessage(stored any, at time.Time, ctx *web.EventContext) string {
 	msgr := MustGetMessages(ctx.Context())
+	at = at.In(TimeLocationOf(ctx))
 
 	user := b.recordUser(stored, ctx)
 	if user == nil {
