@@ -19,12 +19,6 @@ type Messages struct {
 
 	// selector
 	SelecioneOrganizacao string `i18n:"label='Select the organization', hint='Shown when an organization must be chosen and none was.'"`
-	// SelecionarOrganizacao is the chip of the menu with none chosen;
-	// TrocarOrganizacao, its hint.
-	SelecionarOrganizacao string `i18n:"label='Select (chip)', hint='Chip of the organization menu item when none is chosen.'"`
-	TrocarOrganizacao     string `i18n:"label='Change the organization', hint='Hint of the chip of the organization menu item; title of its dialog.'"`
-	PesquisarOrganizacao  string `i18n:"label='Search organizations', hint='Placeholder of the search of the dialog that chooses the organization.'"`
-	NenhumaOrganizacao    string `i18n:"label='No organization', hint='Shown in the dialog that chooses the organization when none is found.'"`
 }
 
 // Messages_pt_BR is the Brazilian Portuguese translation (module default).
@@ -42,11 +36,7 @@ var Messages_pt_BR = &Messages{
 	Compartilhamento:    "Compartilhamento",
 	CompartilharComDica: "Selecione os usuários com quem compartilhar esta organização.",
 
-	SelecioneOrganizacao:  "Selecione a organização",
-	SelecionarOrganizacao: "Selecionar",
-	TrocarOrganizacao:     "Trocar de organização",
-	PesquisarOrganizacao:  "Pesquisar organizações",
-	NenhumaOrganizacao:    "Nenhuma organização encontrada.",
+	SelecioneOrganizacao: "Selecione a organização",
 }
 
 // Messages_en_US is the American English translation.
@@ -64,9 +54,5 @@ var Messages_en_US = &Messages{
 	Compartilhamento:    "Sharing",
 	CompartilharComDica: "Select the users to share this organization with.",
 
-	SelecioneOrganizacao:  "Select the organization",
-	SelecionarOrganizacao: "Select",
-	TrocarOrganizacao:     "Change the organization",
-	PesquisarOrganizacao:  "Search organizations",
-	NenhumaOrganizacao:    "No organization found.",
+	SelecioneOrganizacao: "Select the organization",
 }

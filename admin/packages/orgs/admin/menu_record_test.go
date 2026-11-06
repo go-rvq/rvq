@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -184,7 +185,8 @@ func TestMenuRecordSelectorUnderOrg(t *testing.T) {
 
 	// two projects, no default: none chosen
 	n := a.menu(t, orgPage, "")
-	if c := chipOf(n); c.Title != presets.Messages_en_US.MenuRecordSelect || len(n.Children) != 0 {
+	// none chosen: the chip "Select" the title too, no clear
+	if c := chipOf(n); c.Title != presets.Messages_en_US.MenuRecordSelect || !c.Inline || c.Clear != nil || len(n.Children) != 0 {
 		t.Errorf("none chosen: %+v %+v", c, n.Children)
 	}
 	if c := chipOf(n); c.Event != actions.OpenActionDialog || !strings.Contains(c.Query, presets.ActionChooseMenuRecord) {
@@ -201,6 +203,16 @@ func TestMenuRecordSelectorUnderOrg(t *testing.T) {
 	if want := a.proj.Info().DetailingHref(a.p1.ID.String(), a.mid(t, OrganizacaoModel(a.b), a.org.ID)) + "/relatorios"; len(n.Children) == 2 &&
 		(n.Children[1].Value != want || n.Children[1].Title != "Relatórios") {
 		t.Errorf("the page: %+v, want %s", n.Children[1], want)
+	}
+	// chosen: the chip the title of the item (no label of the model), the
+	// clear at its right
+	if c := chipOf(n); !c.Inline || c.Clear == nil || c.Clear.Event == "" || n.Title != "Obra 1" {
+		t.Errorf("chosen: the chip inline, its clear: %+v %+v", n.Title, c)
+	}
+	// cleared (the browser's "none"): none, not the default
+	n = a.menu(t, orgPage, a.mid(t, OrganizacaoModel(a.b), a.org.ID).String()+"|")
+	if c := chipOf(n); c.Title != presets.Messages_en_US.MenuRecordSelect || !c.Inline || c.Clear != nil || len(n.Children) != 0 {
+		t.Errorf("cleared: %+v %+v", c, n.Children)
 	}
 	// the browser's
 	n = a.menu(t, orgPage, a.mid(t, OrganizacaoModel(a.b), a.org.ID).String()+"|"+a.p2.ID.String())
@@ -283,5 +295,40 @@ func TestTrailOfAProject(t *testing.T) {
 	trail = crumbs(a.proj.Info().DetailingHref(a.p1.ID.String(), orgMID) + "/relatorios")
 	if !strings.Contains(trail, "Finance") || !strings.Contains(trail, "Obra 1") {
 		t.Errorf("the trail of a page of the project: %s", trail)
+	}
+}
+
+// The organization in the menu is as any record chosen in the menu: at the
+// top, a group — the selector (the chip of the organization chosen, in the
+// place of its title, its clear; its resources under it in their menu
+// groups), then the listing of the organizations.
+func TestOrgInMenu(t *testing.T) {
+	a := newChoiceApp(t)
+	r := httptest.NewRequest("GET", "/admin/orgs/"+a.org.ID.String(), nil)
+	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+	nodes, opened, _ := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r})
+	if len(nodes) != 1 || !strings.HasPrefix(nodes[0].Value, "g:menu-records:") || len(nodes[0].Children) != 2 {
+		t.Fatalf("the item of the organization: %+v", nodes)
+	}
+	sel, list := nodes[0].Children[0], nodes[0].Children[1]
+	if c := chipOf(sel); c.Title != "Alpha" || !c.Inline || c.Clear == nil {
+		t.Errorf("the organization chosen: %+v", c)
+	}
+	if list.Value != OrganizacaoModel(a.b).Info().ListingHref() {
+		t.Errorf("the listing of the organizations: %+v", list)
+	}
+	// its resources in their menu group (finance)
+	if len(sel.Children) != 1 || !strings.HasSuffix(sel.Children[0].Value, ":finance") ||
+		!strings.HasPrefix(sel.Children[0].Children[0].Value, "g:menu-records:projetos:") {
+		t.Errorf("the resources of the organization: %+v", sel.Children)
+	}
+	if !slices.Contains(opened, sel.Value) {
+		t.Errorf("the organization chosen not open: %v", opened)
+	}
+	// a user with no organization: no item
+	r = httptest.NewRequest("GET", "/admin", nil)
+	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: uuid.New()}))
+	if nodes, _, _ := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r}); len(nodes) != 0 {
+		t.Errorf("no organization, an item: %+v", nodes)
 	}
 }
