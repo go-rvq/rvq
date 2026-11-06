@@ -42,6 +42,7 @@ func (mb *ModelBuilder) registerDefaultEventFuncs() {
 
 	// list editor
 	mb.RegisterEventFunc(actions.AddRowEvent, addListItemRow(mb))
+	mb.RegisterEventFunc(actions.ListEditorLayoutEvent, listEditorLayout(mb))
 	mb.RegisterEventFunc(actions.RemoveRowEvent, removeListItemRow(mb))
 	mb.RegisterEventFunc(actions.SortEvent, sortListItems(mb))
 }

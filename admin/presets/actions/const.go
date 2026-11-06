@@ -43,7 +43,10 @@ const (
 	// list editor
 	AddRowEvent    = "listEditor_addRowEvent"
 	RemoveRowEvent = "listEditor_removeRowEvent"
-	SortEvent      = "listEditor_sortEvent"
+	// ListEditorLayoutEvent draws the form again in the layout of the
+	// browser's width (a phone's: the tables of its list editors as panels)
+	ListEditorLayoutEvent = "listEditor_layoutEvent"
+	SortEvent             = "listEditor_sortEvent"
 )
 
 type OverlayMode string

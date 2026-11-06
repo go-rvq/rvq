@@ -203,6 +203,8 @@ func (f FieldContextSetups) Setup(ctx *FieldContext) {
 }
 
 type FieldBuilder struct {
+	// noColumn: no column of a table (NoColumn)
+	noColumn bool
 	NameLabel
 	mode        FieldMode
 	structField *reflect_utils.IndexableStructField
@@ -314,6 +316,18 @@ func (b *FieldBuilder) IsEnabled(ctx *FieldContext) bool {
 		return b.enabled(ctx)
 	}
 	return true
+}
+
+// NoColumn marks a field that draws nothing itself (a selector's id, its
+// value bound by another field): no column of a table of a list editor.
+func (b *FieldBuilder) NoColumn(v bool) *FieldBuilder {
+	b.noColumn = v
+	return b
+}
+
+// IsNoColumn says whether the field has no column in a table (NoColumn).
+func (b *FieldBuilder) IsNoColumn() bool {
+	return b.noColumn
 }
 
 func (b *FieldBuilder) SetDisabled(v bool) *FieldBuilder {

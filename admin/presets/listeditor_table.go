@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	"slices"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
@@ -49,6 +50,48 @@ type ListEditorTableBuilder struct {
 	footer ListEditorTableFooterFunc
 	// after follows the table (AfterFunc)
 	after ListEditorAfterFunc
+	// mobile renders the list on a phone (Mobile): expansion panels, unless
+	// set otherwise (MobileBuilder); noMobile, the table there too
+	mobile   ListEditorComponentBuilder
+	noMobile bool
+}
+
+// MobileBuilder sets what renders the list on a phone (narrower than md):
+// the expansion panels of the items' forms by default; nil, the table there
+// too.
+func (b *ListEditorTableBuilder) MobileBuilder(v ListEditorComponentBuilder) *ListEditorTableBuilder {
+	b.mobile = v
+	b.noMobile = v == nil
+	return b
+}
+
+// Mobile is what renders the list on a phone: the items as expansion panels
+// of their forms, the table's foot (its totals) under them.
+func (b *ListEditorTableBuilder) Mobile() ListEditorComponentBuilder {
+	if b.noMobile {
+		return nil
+	}
+	if b.mobile != nil {
+		return b.mobile
+	}
+	return &ListEditorPanelsBuilder{foot: b.footTable}
+}
+
+// footTable is the table's foot alone (a table of its tfoot): under the
+// panels of a phone.
+func (b *ListEditorTableBuilder) footTable(ctx *ListEditorContainerContext) h.HTMLComponent {
+	if b.footer == nil {
+		return nil
+	}
+	columns := listEditorTreeLeafCount(b.tree(ctx.FieldContext))
+	if !ctx.FieldContext.ReadOnly {
+		columns++
+	}
+	rows := b.footer(ctx, columns)
+	if rows == nil {
+		return nil
+	}
+	return VTable(h.Tfoot(rows)).Attr("density", b.density).Class("mt-2")
 }
 
 // ListEditorAfterFunc gives what follows the items of a list editor, even
@@ -152,7 +195,12 @@ func (b *ListEditorTableBuilder) tree(fc *FieldContext) FieldBuilderTreeNodes {
 			layout = l
 		}
 	}
-	return fb.fields.FieldTreeLayout(fb.fields.FilterLayout(layout, FieldRenderable()))
+	// the hidden fields (the primary key) are no columns — each row carries
+	// them apart (hiddenCells) —, nor the ones that draw nothing (NoColumn: a
+	// selector's id)
+	return fb.fields.FieldTreeLayout(fb.fields.FilterLayout(layout, FieldRenderable(), func(f *FieldBuilder) bool {
+		return !f.noColumn && !slices.Contains(fb.hiddenFields, f.name)
+	}))
 }
 
 // hintDialog renders, when the field has a hint, a blue info ("i") icon that

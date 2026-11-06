@@ -67,8 +67,13 @@ const (
 	ListEditorNewField      = "__new"
 	ListEditorDeletedField  = "__deleted"
 	ListEditorPresentField  = "__present"
-	ListEditorPurgedField   = "__purged"
-	ListEditorIndexField    = "__index"
+	// ListEditorLayoutKey is the key of the form that says the layout of its
+	// list editors: ListEditorLayoutMobile, a phone's (the table's panels);
+	// "", a wide screen's. The browser sets it (vx-layout-watch).
+	ListEditorLayoutKey    = "__listEditorLayout"
+	ListEditorLayoutMobile = "mobile"
+	ListEditorPurgedField  = "__purged"
+	ListEditorIndexField   = "__index"
 )
 
 const (
@@ -386,6 +391,24 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 		tempPortal = ctx.UID()
 	)
 
+	// the builder of the layout drawn: a phone's (the form's
+	// ListEditorLayoutKey "mobile") when the builder has one (the table's
+	// panels); the browser asks the other when its width crosses
+	// (vx-layout-watch, ListEditorLayoutEvent)
+	cb := b.ComponentBuilder
+	var (
+		hasMobile   bool
+		drawnMobile bool
+	)
+	if mb, ok := b.ComponentBuilder.(ListEditorMobileBuilder); ok {
+		if mobile := mb.Mobile(); mobile != nil {
+			hasMobile = true
+			if ctx.R.FormValue(ListEditorLayoutKey) == ListEditorLayoutMobile {
+				cb, drawnMobile = mobile, true
+			}
+		}
+	}
+
 	if b.value != nil {
 		// read per-item metadata from the reindexed multipart values, so slice
 		// positions align with the decoded (possibly __pos-reordered) slice.
@@ -473,22 +496,20 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 					// place and list order is preserved. No wrapping element is added
 					// here, so table rows (<tr>) stay valid direct children.
 					if itemCtx.New {
-						return b.ComponentBuilder.Item(itemCtx)
+						return cb.Item(itemCtx)
 					}
 					return h.Components(
-						b.ComponentBuilder.Item(itemCtx),
-						b.ComponentBuilder.DeletedItem(itemCtx),
+						cb.Item(itemCtx),
+						cb.DeletedItem(itemCtx),
 					)
 				})
 		)
 
 		if i > 0 {
-			form = b.ComponentBuilder.Container(&ListEditorContainerContext{
-				FieldContext: b.fieldContext,
-			}, items)
+			form = cb.Container(&ListEditorContainerContext{FieldContext: b.fieldContext}, items)
 		}
 	}
-	if ab, ok := b.ComponentBuilder.(ListEditorAfterBuilder); ok {
+	if ab, ok := cb.(ListEditorAfterBuilder); ok {
 		if after := ab.After(&ListEditorContainerContext{FieldContext: b.fieldContext}); after != nil {
 			form = h.Components(form, after)
 		}
@@ -532,6 +553,7 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 				EventFunc(b.addListItemRowEvent).
 				Queries(web.Query(ctx.Queries()).
 					Set(ParamAddRowFormKey, b.fieldContext.FormKey).
+					Set(ParamID, b.recordID(ctx)).
 					URLValues())
 		scopeSetup strings.Builder
 	)
@@ -665,7 +687,7 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 										EventFunc(b.sortListItemsEvent).
 										Queries(ctx.Queries()).
-										Query(ParamID, ctx.R.FormValue(ParamID)).
+										Query(ParamID, b.recordID(ctx)).
 										Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
 										Query(ParamSortSectionFormKey, b.fieldContext.FormKey).
 										Query(ParamIsStartSort, "1").
@@ -681,7 +703,7 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 										URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
 										EventFunc(b.sortListItemsEvent).
 										Queries(ctx.Queries()).
-										Query(ParamID, ctx.R.FormValue(ParamID)).
+										Query(ParamID, b.recordID(ctx)).
 										Query(ParamOverlay, ctx.R.FormValue(ParamOverlay)).
 										Query(ParamSortSectionFormKey, b.fieldContext.FormKey).
 										FieldValue(ParamSortResultFormKey, web.Var("JSON.stringify(items)")).
@@ -706,7 +728,46 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 			Scope("form").
 			Setup(scopeSetup.String()),
 		web.Portal().Name(tempPortal),
+		h.If(hasMobile, b.layoutWatch(ctx, drawnMobile)),
 	)
+}
+
+// recordID is the id of the record of the form (its events draw it again,
+// not a new one): the request's (an overlay's, an event's), else the
+// record's own — a page of its own carries it in its path, not in its query.
+func (b *ListEditorBuilder) recordID(ctx *web.EventContext) string {
+	if v := ctx.R.FormValue(ParamID); v != "" {
+		return v
+	}
+	root := b.fieldContext
+	for root != nil && root.Parent != nil {
+		root = root.Parent
+	}
+	if root == nil || root.Obj == nil || root.ModelInfo == nil {
+		return ""
+	}
+	if id, err := root.ModelInfo.mb.RecordID(root.Obj); err == nil && !id.IsZero() {
+		return id.String()
+	}
+	return ""
+}
+
+// layoutWatch asks the layout of the browser's width when it is not the one
+// drawn (drawnMobile): the form's ListEditorLayoutKey set, the form drawn
+// again (ListEditorLayoutEvent) — once for all its list editors (the first
+// to ask sets the key; the others see it set).
+func (b *ListEditorBuilder) layoutWatch(ctx *web.EventContext, drawnMobile bool) h.HTMLComponent {
+	reload := web.Plaid().
+		URL(b.fieldContext.ModelInfo.ListingHref(ParentsModelID(ctx.R)...)).
+		EventFunc(actions.ListEditorLayoutEvent).
+		Queries(ctx.Queries()).
+		Query(ParamID, b.recordID(ctx)).
+		Go()
+	return h.Tag("vx-layout-watch").
+		Attr(":mobile", h.JSONString(drawnMobile)).
+		Attr("@change", fmt.Sprintf(`const layout = $event ? %q : ''; if ((form[%q] || '') !== layout) { form[%q] = layout; %s }`,
+			ListEditorLayoutMobile, ListEditorLayoutKey, ListEditorLayoutKey, reload)).
+		Attr("data-list-editor-layout-watch", true)
 }
 
 // jsonOrEmptyArray marshals v, guaranteeing a JS array literal (never "null")
@@ -788,6 +849,23 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			}
 		}
 
+		return me.respondFormEdit(ctx, obj)
+	}
+}
+
+// listEditorLayout draws the form again as it is (its values posted) in the
+// layout its ListEditorLayoutKey says: the browser's width crossed md.
+func listEditorLayout(mb *ModelBuilder) web.EventFunc {
+	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		var mid ID
+		if mid, err = mb.ParseRecordID(ctx.R.FormValue(ParamID)); err != nil {
+			return
+		}
+		me := mb.Editing()
+		if mid.IsZero() {
+			me = me.CreatingBuilder()
+		}
+		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
 		return me.respondFormEdit(ctx, obj)
 	}
 }
