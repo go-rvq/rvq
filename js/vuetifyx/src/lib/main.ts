@@ -21,6 +21,7 @@ import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
 import {default as ImageField} from '@/lib/ImageTools/Input.vue'
 import WebCamUI from '@/lib/ImageTools/webcam/WebCamUI.vue'
+import {install as installLightbox} from '@/lib/Lightbox/lightbox'
 import LayoutWatch from '@/lib/LayoutWatch.vue'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
 import Dialog from '@/lib/Dialog.vue'
@@ -74,6 +75,8 @@ const vuetifyx = {
     app.component('vx-image-field', ImageField)
     // the webcam: a camera chosen, a photo taken (photo-taken: its Picture, data the blob)
     app.component('vx-webcam', WebCamUI)
+    // the lightbox: a click on [data-lightbox-src] (a group: data-lightbox)
+    installLightbox(app)
     // says the layout of the browser's width (a phone's) when not the one drawn
     app.component('vx-layout-watch', LayoutWatch)
     app.component('vx-navigation-drawer', NavigationDrawer)

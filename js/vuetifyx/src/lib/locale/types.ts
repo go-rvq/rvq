@@ -161,6 +161,14 @@ export interface VxMessages {
   cameraNotFound: string
   /** Said when the camera failed ({error}: why). */
   cameraError: string
+  /** Button of the lightbox: the image in a tab of its own. */
+  lightboxOpen: string
+  /** Button that closes the lightbox. */
+  lightboxClose: string
+  /** Button of the lightbox: the image before. */
+  lightboxPrev: string
+  /** Button of the lightbox: the image after. */
+  lightboxNext: string
   /** Said when the map could not be loaded. */
   mapLoadError: string
   /** Said when Google Maps could not be loaded. */

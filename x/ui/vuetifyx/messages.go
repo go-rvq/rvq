@@ -165,6 +165,10 @@ type Messages struct {
 	DiffRevert               string `json:"diffRevert" i18n:"hint='Title of the button of a change of a diff.'"`
 	DiffPrev                 string `json:"diffPrev" i18n:"hint='Title of the button of a diff.'"`
 	DiffNext                 string `json:"diffNext" i18n:"hint='Title of the button of a diff.'"`
+	LightboxOpen             string `json:"lightboxOpen" i18n:"hint='Button of the lightbox: the image in a tab of its own.'"`
+	LightboxClose            string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
+	LightboxPrev             string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
+	LightboxNext             string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
 
 	// the words of the editors of a text (mdkit: js/mdkit), by editor
 	MdkitRichBold               string `json:"mdkitRichBold" i18n:"hint='Editors of a text (mdkit), rich: bold.'"`
@@ -456,6 +460,10 @@ var Messages_en_US = &Messages{
 	CameraDenied:                "Permission to use the camera was denied: allow it in the browser.",
 	CameraNotFound:              "No camera found.",
 	CameraError:                 "The camera could not be opened: {error}",
+	LightboxOpen:                "Open in a new tab",
+	LightboxClose:               "Close",
+	LightboxPrev:                "Previous",
+	LightboxNext:                "Next",
 	MapLoadError:                "The map could not be loaded.",
 	MapsLoadError:               "Could not load Google Maps.",
 	MapsNoKey:                   "Set the Google Maps API Key in SEOConfig.",
@@ -804,6 +812,10 @@ var Messages_pt_BR = &Messages{
 	CameraDenied:                "A permissão para usar a câmera foi negada: libere-a no navegador.",
 	CameraNotFound:              "Nenhuma câmera encontrada.",
 	CameraError:                 "A câmera não pôde ser aberta: {error}",
+	LightboxOpen:                "Abrir em nova aba",
+	LightboxClose:               "Fechar",
+	LightboxPrev:                "Anterior",
+	LightboxNext:                "Próxima",
 	MapLoadError:                "O mapa não pôde ser carregado.",
 	MapsLoadError:               "Não foi possível carregar o Google Maps.",
 	MapsNoKey:                   "Configure a Google Maps API Key em SEOConfig.",

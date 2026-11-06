@@ -47,6 +47,7 @@ declare module 'vue' {
     Item: typeof import('./src/lib/TipTap/extensions/tools-button/tools/CopyAndPasteContent/Item.vue')['default']
     ItemFilter: typeof import('./src/lib/Filter/components/ItemFilter.vue')['default']
     LayoutWatch: typeof import('./src/lib/LayoutWatch.vue')['default']
+    Lightbox: typeof import('./src/lib/Lightbox/Lightbox.vue')['default']
     LinkageSelect: typeof import('./src/lib/LinkageSelect.vue')['default']
     LinkageSelectExample: typeof import('./src/demo/components/LinkageSelectExample.vue')['default']
     LinkageSelectItem: typeof import('./src/lib/Filter/components/LinkageSelectItem.vue')['default']
