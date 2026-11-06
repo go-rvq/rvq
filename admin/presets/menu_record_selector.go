@@ -20,9 +20,9 @@ import (
 // records have resources of their own — a project, its movements and its
 // payments. Its item in the menu is a group: first the selector — a chip
 // with the record chosen, or "Select", that opens the dialog of its records
-// —, the resources of the one chosen under it (its children, Items, and
-// pages of its detail, Pages, with the record in their path); then the item
-// that lists the records.
+// —, the resources of the one chosen under it (its children, Items, in
+// their menu groups, and pages of its detail, Pages, with the record in their
+// path); then the item that lists the records.
 //
 // It is on for a model of no parent, a child of a singleton, or a child of
 // a model that has it too (MenuRecordSelector of both): the records of its
@@ -30,7 +30,10 @@ import (
 //
 // The record chosen is the one of the page (…/<model>/{id}/…), else the one
 // kept in the browser for its parents (a cookie), else the only one, else
-// the default (DefaultConditions).
+// the default (DefaultConditions) — none when it was cleared (the cookie
+// keeps that too). The chip is the title of its item (no label of the
+// model): the record chosen — an icon at the right of the item clears it —,
+// or "Select".
 
 // MenuRecordSelectorConfig says what of the record chosen in the menu is
 // shown and which records may be chosen.
@@ -198,9 +201,12 @@ func (mb *ModelBuilder) menuRecordChosen(ctx *web.EventContext, parents IDSlice)
 			return ok(obj)
 		}
 	}
-	// the browser's
+	// the browser's — none, cleared
 	if ck, err := ctx.R.Cookie(mb.menuRecordCookie()); err == nil {
 		if p, id, found := strings.Cut(ck.Value, "|"); found && p == parents.String() {
+			if id == "" {
+				return nil, ID{}
+			}
 			if obj := mb.menuRecordFind(ctx, parents, id); obj != nil {
 				return ok(obj)
 			}
@@ -267,7 +273,8 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 		Value: "g:menu-record:" + key,
 		Props: map[string]any{"prependIcon": icon},
 	}
-	chip := &MenuChip{Title: msgs.MenuRecordSelect, Icon: "mdi-swap-horizontal", Color: "grey",
+	// the chip the title of the item (no label of the model), chosen or not
+	chip := &MenuChip{Title: msgs.MenuRecordSelect, Icon: "mdi-swap-horizontal", Color: "grey", Inline: true,
 		Hint:  fmt.Sprintf(msgs.MenuRecordChange, strings.ToLower(title)),
 		Event: actions.OpenActionDialog,
 		URL:   listHref,
@@ -286,16 +293,42 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 	}
 
 	if obj, mid := mb.menuRecordChosen(ctx, parents); obj != nil {
+		// its record in the chip, the clear at the right of the item
 		chip.Title, chip.Color = mb.RecordTitle(obj, ctx), "primary"
+		selector.Title = chip.Title
+		chip.Clear = &MenuChipAction{Icon: "mdi-close", Hint: msgs.MenuRecordClear,
+			Event: menuRecordClearEvent, URL: listHref}
 		opened = append(opened, n.Value, selector.Value)
 		under := append(append(IDSlice{}, parents...), mid)
+		// its resources, in their menu groups (Financeiro, People…) in the
+		// order they come
+		groups := map[*MenuGroupBuilder]*MenuNode{}
 		for _, child := range mb.menuRecordItems() {
 			if child.notInMenu || child.permissioner.Lister(ctx.R, under...).Denied() {
 				continue
 			}
 			cn, ca, co := child.MenuNodeOf(ctx, under)
-			selector.Children = append(selector.Children, cn)
 			opened = append(opened, co...)
+			g := child.MenuGroup()
+			if g == nil {
+				selector.Children = append(selector.Children, cn)
+			} else {
+				gn := groups[g]
+				if gn == nil {
+					gi := g.GetIcon()
+					if gi == "" {
+						gi = defaultMenuIcon(g.Name())
+					}
+					gn = &MenuNode{Title: g.TTitle(ctx.Context()), Value: selector.Value + ":" + g.Name(),
+						Props: map[string]any{"prependIcon": gi}}
+					groups[g] = gn
+					selector.Children = append(selector.Children, gn)
+				}
+				gn.Children = append(gn.Children, cn)
+				if ca != "" {
+					opened = append(opened, gn.Value)
+				}
+			}
 			if ca != "" {
 				active = ca
 			}
@@ -334,6 +367,7 @@ const ActionChooseMenuRecord = "choose_menu_record"
 
 const (
 	menuRecordListEvent  = "presets_menuRecord_list"
+	menuRecordClearEvent = "presets_menuRecord_clear"
 	menuRecordListPortal = "presetsMenuRecordList"
 	paramMenuRecordQ     = "menu_record_q"
 	paramMenuRecordPage  = "menu_record_page"
@@ -402,9 +436,34 @@ func (mb *ModelBuilder) menuRecordList(ctx *web.EventContext, q string, page int
 	return h.Div(list, pager).Attr("data-menu-record-list", mb.uriName)
 }
 
+// setMenuRecordCookie keeps in the browser the record id of the parents
+// chosen ("" none: cleared).
+func (mb *ModelBuilder) setMenuRecordCookie(ctx *web.EventContext, parents IDSlice, id string) {
+	path := mb.p.GetURIPrefix()
+	if path == "" {
+		path = "/"
+	}
+	http.SetCookie(ctx.W, &http.Cookie{Name: mb.menuRecordCookie(), Value: parents.String() + "|" + id,
+		Path: path, MaxAge: 365 * 24 * 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: ctx.R.TLS != nil})
+}
+
 // configureMenuRecordChoose installs the action ActionChooseMenuRecord on
-// the model (its listing's), and the event of its list.
+// the model (its listing's), the event of its list, and the one that
+// clears the choice.
 func (mb *ModelBuilder) configureMenuRecordChoose() {
+	mb.RegisterEventFunc(menuRecordClearEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		parents := ParentsModelID(ctx.R)
+		mb.setMenuRecordCookie(ctx, parents, "")
+		// a page of the record (its resources): the listing of the model;
+		// else the page again, its menu without the record
+		listHref := mb.Info().ListingHref(parents...)
+		if ref := refererRequest(ctx.R); strings.HasPrefix(ref.URL.Path, listHref+"/") {
+			r.RedirectURL = listHref
+		} else {
+			r.Reload = true
+		}
+		return
+	})
 	mb.RegisterEventFunc(menuRecordListEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		page, _ := strconv.ParseInt(ctx.R.FormValue(paramMenuRecordPage), 10, 64)
 		r.UpdatePortals = append(r.UpdatePortals, &web.PortalUpdate{
@@ -444,12 +503,7 @@ func (mb *ModelBuilder) configureMenuRecordChoose() {
 				return errors.New(msgs.MenuRecordRequired)
 			}
 			mid, _ := mb.RecordID(obj)
-			path := mb.p.GetURIPrefix()
-			if path == "" {
-				path = "/"
-			}
-			http.SetCookie(ctx.W, &http.Cookie{Name: mb.menuRecordCookie(), Value: parents.String() + "|" + mid.String(),
-				Path: path, MaxAge: 365 * 24 * 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: ctx.R.TLS != nil})
+			mb.setMenuRecordCookie(ctx, parents, mid.String())
 			// the first of its resources, else its page
 			under := append(append(IDSlice{}, parents...), mid)
 			ctx.Resp.RedirectURL = mb.Info().DetailingHref(mid.String(), parents...)

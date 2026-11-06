@@ -147,6 +147,7 @@ type Messages struct {
 	MenuRecordNone                             string                 `i18n:"hint='Shown in the dialog that chooses the record of the side menu when none is found.'"`
 	MenuRecordRequired                         string                 `i18n:"hint='Error: the dialog that chooses the record of the side menu was confirmed with none.'"`
 	MenuRecordList                             string                 `i18n:"hint='Item of the side menu that lists the records of a model whose record is chosen in the menu.', fields=(;'%s'='the name of the model, in the plural, lower case')"`
+	MenuRecordClear                            string                 `i18n:"hint='Button at the right of the chip of the record chosen in the side menu that clears the choice.'"`
 	PrinterOptions                             PrinterOptionsMessages `i18n:"hint='The words of the print options.'"`
 	BulkActionConfirmationTextTemplate         string                 `i18n:"type=html, label='Bulk action: confirmation', hint='Asks to confirm an action on the selected records (HTML).', fields=(;'{Action}'='the action', '{count}'='how many records')"`
 
@@ -341,6 +342,7 @@ var Messages_en_US = &Messages{
 	MenuRecordNone:     "Nothing found.",
 	MenuRecordRequired: "Select one.",
 	MenuRecordList:     "List %s",
+	MenuRecordClear:    "Clear the selection",
 
 	Error:           "ERROR",
 	ErrEmptyParamID: "Empty param ID",
@@ -447,6 +449,7 @@ var Messages_pt_BR = &Messages{
 	MenuRecordNone:                             "Nada encontrado.",
 	MenuRecordRequired:                         "Selecione um item.",
 	MenuRecordList:                             "Listar %s",
+	MenuRecordClear:                            "Limpar a seleção",
 	Error:                                      "Erro",
 	ErrEmptyParamID:                            "Parâmetro ID não informado",
 	ErrPermissionDenied:                        "Permissão negada",

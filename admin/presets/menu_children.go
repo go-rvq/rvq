@@ -31,6 +31,22 @@ type MenuChip struct {
 	Event string `json:"event"`
 	URL   string `json:"url"`
 	Query string `json:"query,omitempty"`
+	// Inline: the chip is the title of the item — drawn in its place, at its
+	// left —, not at its right.
+	Inline bool `json:"inline,omitempty"`
+	// Clear is an icon at the right of the item — out of the chip — that
+	// clears what the chip says (its event); nil, none.
+	Clear *MenuChipAction `json:"clear,omitempty"`
+}
+
+// MenuChipAction is an action of a chip of the side menu: its icon, its
+// hint, and the event its click runs at URL, with Query.
+type MenuChipAction struct {
+	Icon  string `json:"icon"`
+	Hint  string `json:"hint,omitempty"`
+	Event string `json:"event"`
+	URL   string `json:"url"`
+	Query string `json:"query,omitempty"`
 }
 
 // SetChip gives the node the chip c (in its Props: the menu draws it).

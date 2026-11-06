@@ -908,6 +908,39 @@ var menuChipClick = web.Plaid().
 	StringQuery(web.Var("item.props.chip.query || ''")).
 	Go()
 
+// menuChipClearClick runs the event of the clear of the chip of an item
+// (MenuChip.Clear).
+var menuChipClearClick = web.Plaid().
+	URL(web.Var("item.props.chip.clear.url")).
+	EventFunc(web.Var("item.props.chip.clear.event")).
+	StringQuery(web.Var("item.props.chip.clear.query || ''")).
+	Go()
+
+// menuChip is the chip of an item of the side menu (MenuChip); its click
+// runs its event, the node neither opened nor activated.
+func menuChip() h.HTMLComponent {
+	return VChip(h.Text("{{ item.props.chip.title }}")).
+		Attr(":prepend-icon", "item.props.chip.icon || undefined").
+		Attr(":color", "item.props.chip.color || 'primary'").
+		Attr(":title", "item.props.chip.hint || undefined").
+		Size(SizeSmall).
+		Variant(VariantTonal).
+		Class("rvq-menu-chip").
+		Attr("@click.stop", menuChipClick)
+}
+
+// menuChipClear is the clear of the chip of an item (MenuChip.Clear): an
+// icon at the right of the item, out of the chip.
+func menuChipClear() h.HTMLComponent {
+	return VBtn("").
+		Attr(":icon", "item.props.chip.clear.icon").
+		Attr(":title", "item.props.chip.clear.hint || undefined").
+		Attr(":aria-label", "item.props.chip.clear.hint || undefined").
+		Size(SizeXSmall).Variant(VariantText).Density(DensityCompact).
+		Class("rvq-menu-chip-clear").
+		Attr("@click.stop", menuChipClearClick)
+}
+
 // MenuRootFunc makes, at a request, root nodes of the side menu: the nodes,
 // the values of those to open, and the value of the active one ("" none).
 type MenuRootFunc func(ctx *web.EventContext) (nodes []*MenuNode, opened []string, active string)
@@ -938,18 +971,20 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 				Attr("v-else-if", "item.props && item.props.prependIcon").
 				Size(SizeSmall),
 		).Attr("v-slot:prepend", "{ item }"),
-		// a chip at the right of the item, when it has one (MenuNode.Chip):
-		// its click runs its event, the node neither opened nor activated
+		// the title, or the chip in its place (MenuChip.Inline)
 		h.Template(
-			VChip(h.Text("{{ item.props.chip.title }}")).
-				Attr("v-if", "item.props && item.props.chip").
-				Attr(":prepend-icon", "item.props.chip.icon || undefined").
-				Attr(":color", "item.props.chip.color || 'primary'").
-				Attr(":title", "item.props.chip.hint || undefined").
-				Size(SizeSmall).
-				Variant(VariantTonal).
-				Class("rvq-menu-chip").
-				Attr("@click.stop", menuChipClick),
+			h.Div(menuChip()).Class("d-flex align-center").
+				Attr("v-if", "item.props && item.props.chip && item.props.chip.inline"),
+			h.Template(h.Text("{{ item.title }}")).Attr("v-else", true),
+		).Attr("v-slot:title", "{ item }"),
+		// at the right of the item: its chip (MenuNode.Chip), or, the chip
+		// its title, the chip's clear (MenuChip.Clear)
+		h.Template(
+			h.Template(
+				h.Div(menuChip()).Class("d-flex align-center").
+					Attr("v-if", "!item.props.chip.inline"),
+				h.Template(menuChipClear()).Attr("v-else-if", "item.props.chip.clear"),
+			).Attr("v-if", "item.props && item.props.chip"),
 		).Attr("v-slot:append", "{ item }"),
 	).
 		// in locals: the children loaded on opening a node stay with it
