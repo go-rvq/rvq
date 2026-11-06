@@ -53,6 +53,15 @@ export function parseEdit(v: unknown, mode: CropMode = 'fixo'): Edit {
   }
 }
 
+// flipped: the turn of an image (rotate, flipH) mirrored as it is seen —
+// horizontally (h: left and right swapped) or vertically (v: top and
+// bottom) —, whatever it was turned: the mirror is applied after the turn.
+export function flipped(rotate: Edit['rotate'], flipH: boolean, axis: 'h' | 'v'): {rotate: Edit['rotate']; flipH: boolean} {
+  // H·R(r)·F = R(-r)·H·F; V = R(180)·H
+  const r = axis === 'h' ? 360 - rotate : 180 - rotate
+  return {rotate: ((r % 360) + 360) % 360 as Edit['rotate'], flipH: !flipH}
+}
+
 // geometryOf: whether the crop changes the image — the mode's shape is set
 // (a fixed crop of a size is not: it is the size's, CropOptions).
 export function hasGeometry(e: Edit, fixoIsSize: boolean): boolean {

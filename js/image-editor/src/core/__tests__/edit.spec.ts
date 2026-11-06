@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {changes, emptyEdit, parseEdit, resultName, resultType} from '../edit'
+import {changes, emptyEdit, flipped, parseEdit, resultName, resultType} from '../edit'
 
 describe('the edit', () => {
   it('a fixed crop of a size is no new image (its CropOption)', () => {
@@ -68,4 +68,25 @@ describe('the free rectangle', () => {
     expect(croppedSize(e, 800, 600, false)).toEqual({width: 500, height: 200})
     expect(transparent(e)).toBe(false)
   })
+})
+
+describe('flipped (the mirror as it is seen)', () => {
+  // a point of the image as drawn: mirrored (flipH), then turned clockwise
+  const seen = (rotate: number, flipH: boolean, p: {x: number; y: number}) => {
+    const q = flipH ? {x: -p.x, y: p.y} : p
+    const r = (rotate * Math.PI) / 180
+    return {x: Math.round(q.x * Math.cos(r) - q.y * Math.sin(r)), y: Math.round(q.x * Math.sin(r) + q.y * Math.cos(r))}
+  }
+  const p = {x: 2, y: 1}
+  for (const rotate of [0, 90, 180, 270] as const) {
+    for (const flipH of [false, true]) {
+      it(`turned ${rotate}°${flipH ? ', mirrored' : ''}`, () => {
+        const s = seen(rotate, flipH, p)
+        const h = flipped(rotate, flipH, 'h')
+        expect(seen(h.rotate, h.flipH, p)).toEqual({x: -s.x + 0, y: s.y})
+        const v = flipped(rotate, flipH, 'v')
+        expect(seen(v.rotate, v.flipH, p)).toEqual({x: s.x, y: -s.y + 0})
+      })
+    }
+  }
 })

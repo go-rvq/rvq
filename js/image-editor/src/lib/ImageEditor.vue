@@ -72,6 +72,7 @@ import {
   croppedSize,
   cropped,
   annotated,
+  flipped,
   oriented,
   normalized,
   parseEdit,
@@ -565,17 +566,30 @@ const annMarks = computed(() => {
 
 // --- the modes ---
 
+// sizeFor: the size of the image turned by rotate (the one shown now turned
+// by the rotation now)
+function sizeFor(rotate: Edit['rotate']): {w: number; h: number} {
+  const {w, h} = orientedSize.value
+  return (rotate - edit.value.rotate) % 180 === 0 ? {w, h} : {w: h, h: w}
+}
+
+// shaped: e with the shape of its mode where it has none — of the image
+// turned as e turns it
+function shaped(e: Edit): Edit {
+  const {w, h} = sizeFor(e.rotate)
+  if (e.mode === 'fixo' && !e.fixo) e.fixo = fitAspect(w, h, fixoRatio(e))
+  if (e.mode === 'perspectiva' && !e.perspectiva) e.perspectiva = defaultQuad(w, h)
+  if (e.mode === 'livre' && !e.livre) e.livre = {points: [], rotation: 0}
+  if (e.mode === 'retangulo' && !e.retangulo) e.retangulo = defaultTurned(w, h)
+  return e
+}
+
 function setMode(mode: CropMode) {
   const e = clone(edit.value)
   e.mode = mode
-  const {w, h} = orientedSize.value
-  if (mode === 'fixo' && !e.fixo) e.fixo = fitAspect(w, h, fixoRatio(e))
-  if (mode === 'perspectiva' && !e.perspectiva) e.perspectiva = defaultQuad(w, h)
-  if (mode === 'livre' && !e.livre) e.livre = {points: [], rotation: 0}
-  if (mode === 'retangulo' && !e.retangulo) e.retangulo = defaultTurned(w, h)
   selectedPoint.value = -1
   selectedEdge.value = -1
-  commit(e)
+  commit(shaped(e))
 }
 
 function resetMode() {
@@ -669,31 +683,30 @@ function turn(deg: 90 | -90) {
   e.rotate = (((e.rotate + deg) % 360) + 360) % 360 as Edit['rotate']
   e.fixo = null
   e.perspectiva = null
+  e.retangulo = null
   e.livre = e.mode === 'livre' ? {points: [], rotation: 0} : null
-  commit(e)
-  nextTick(() => {
-    setMode(edit.value.mode)
-    doFit()
-  })
+  // one step of the history: the turn and the crop made again
+  commit(shaped(e))
+  nextTick(doFit)
 }
 
-function mirror() {
+// mirror: the image mirrored as it is seen (h: left and right, v: top and
+// bottom)
+function mirror(axis: 'h' | 'v') {
   const e = clone(edit.value)
-  e.flipH = !e.flipH
+  const f = flipped(e.rotate, e.flipH, axis)
+  e.rotate = f.rotate
+  e.flipH = f.flipH
   e.fixo = null
   e.perspectiva = null
+  e.retangulo = null
   e.livre = e.mode === 'livre' ? {points: [], rotation: 0} : null
-  commit(e)
-  nextTick(() => setMode(edit.value.mode))
+  commit(shaped(e))
 }
 
 function backToOriginal() {
-  const e = parseEdit(null, initialMode())
-  commit(e)
-  nextTick(() => {
-    setMode(e.mode)
-    doFit()
-  })
+  commit(shaped(parseEdit(null, initialMode())))
+  nextTick(doFit)
 }
 
 // --- the colors ---
@@ -1408,9 +1421,10 @@ defineExpose({undo, redo, save, askCancel, edit, history, saving})
       <v-btn variant="text" size="small" prepend-icon="mdi-magnify-scan" :title="m.zoomActual" @click="doActual"><span class="vx-ie-label">{{ m.zoomActual }}</span></v-btn>
       <v-divider vertical class="mx-1" />
       <template v-if="tab === 'recortar'">
-        <v-btn icon="mdi-rotate-left" variant="text" size="small" :title="m.rotateLeft" @click="turn(-90)" />
-        <v-btn icon="mdi-rotate-right" variant="text" size="small" :title="m.rotateRight" @click="turn(90)" />
-        <v-btn icon="mdi-flip-horizontal" variant="text" size="small" :title="m.flip" @click="mirror" />
+        <v-btn icon="mdi-rotate-left" variant="text" size="small" :title="m.rotateLeft" @click="turn(-90)" data-ie-rotate-left />
+        <v-btn icon="mdi-rotate-right" variant="text" size="small" :title="m.rotateRight" @click="turn(90)" data-ie-rotate-right />
+        <v-btn icon="mdi-flip-horizontal" variant="text" size="small" :title="m.flip" @click="mirror('h')" data-ie-flip-h />
+        <v-btn icon="mdi-flip-vertical" variant="text" size="small" :title="m.flipVertical" @click="mirror('v')" data-ie-flip-v />
         <template v-if="edit.mode === 'livre'">
           <v-btn variant="text" size="small" prepend-icon="mdi-vector-point-minus" :disabled="selectedPoint < 0 || (edit.livre?.points.length || 0) <= 3" @click="removeSelectedPoint" data-ie-remove-point :title="m.removePoint"><span class="vx-ie-label">{{ m.removePoint }}</span></v-btn>
           <v-btn variant="text" size="small" prepend-icon="mdi-format-align-bottom" :disabled="selectedEdge < 0" @click="doAlignEdge" data-ie-align-edge :title="m.alignEdge"><span class="vx-ie-label">{{ m.alignEdge }}</span></v-btn>
