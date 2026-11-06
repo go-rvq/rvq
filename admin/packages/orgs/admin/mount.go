@@ -48,9 +48,13 @@ func MountUnderOrg(orgMb, child *presets.ModelBuilder, group string) {
 // must expose an OrganizacaoID uuid field. Use it on resources mounted under the
 // organization (see MountUnderOrg).
 func ScopeToOrg(mb *presets.ModelBuilder) {
-	mb.Editing().PostSetterFunc(func(obj interface{}, ctx *web.EventContext) {
-		if id, ok := OrgIDFromRequest(ctx.R); ok {
-			reflectutils.Set(obj, "OrganizacaoID", id)
+	// wrapped: the post setters of the model kept (ScopeToParent's, its own)
+	mb.Editing().WrapPostSetterFunc(func(in presets.SetterFunc) presets.SetterFunc {
+		return func(obj interface{}, ctx *web.EventContext) {
+			if id, ok := OrgIDFromRequest(ctx.R); ok {
+				reflectutils.Set(obj, "OrganizacaoID", id)
+			}
+			in(obj, ctx)
 		}
 	})
 
@@ -65,6 +69,58 @@ func ScopeToOrg(mb *presets.ModelBuilder) {
 						col := "organizacao_id"
 						if tbl := statementTable(state.DB); tbl != "" {
 							col = tbl + `.organizacao_id`
+						}
+						state.DB = state.DB.Where(col+" = ?", id)
+					}
+					return nil
+				})
+			})
+	})
+}
+
+// ScopeToParent stamps a model's field (its column, column) from the id of
+// its parent in the request path on save, and scopes every read to that
+// parent — a project's movements: ScopeToParent(mb, "ProjetoID",
+// "projeto_id"). Use it on a model mounted as a child of a model under the
+// organization (AddChild), with ScopeToOrg.
+func ScopeToParent(mb *presets.ModelBuilder, field, column string) {
+	parentID := func(r *http.Request) (any, bool) {
+		p := mb.Parent()
+		if p == nil {
+			return nil, false
+		}
+		ids := presets.ParentsModelID(r)
+		if d := p.Depth(); d < len(ids) {
+			switch v := ids[d].Value().(type) {
+			case uuid.UUID:
+				return v, true
+			case string:
+				if u, err := uuid.Parse(v); err == nil {
+					return u, true
+				}
+				return v, v != ""
+			default:
+				return v, v != nil
+			}
+		}
+		return nil, false
+	}
+	mb.Editing().WrapPostSetterFunc(func(in presets.SetterFunc) presets.SetterFunc {
+		return func(obj interface{}, ctx *web.EventContext) {
+			if id, ok := parentID(ctx.R); ok {
+				reflectutils.Set(obj, field, id)
+			}
+			in(obj, ctx)
+		}
+	})
+	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
+		return do.(*gorm2op.DataOperatorBuilder).
+			WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
+				cb.Pre(func(state *gorm2op.CallbackState) (err error) {
+					if id, ok := parentID(state.Ctx.R); ok {
+						col := column
+						if tbl := statementTable(state.DB); tbl != "" {
+							col = tbl + "." + column
 						}
 						state.DB = state.DB.Where(col+" = ?", id)
 					}

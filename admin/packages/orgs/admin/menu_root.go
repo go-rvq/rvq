@@ -101,7 +101,9 @@ func orgMenuRoot(b *presets.Builder, db *gorm.DB) presets.MenuRootFunc {
 		}
 		if org != nil {
 			chip.Title, chip.Color = org.Nome, "primary"
-			root.Children, active = orgResourceNodes(b, ctx, org)
+			var more []string
+			root.Children, active, more = orgResourceNodes(b, ctx, org)
+			opened = append(opened, more...)
 			// open, with the group of the page shown
 			opened = append(opened, orgMenuValue)
 			for _, n := range root.Children {
@@ -126,15 +128,15 @@ func hasValue(nodes []*presets.MenuNode, value string) bool {
 
 // orgResourceNodes are the nodes of the resources nested under org the user
 // may list (in it), by their menu group, and the one of the page shown.
-func orgResourceNodes(b *presets.Builder, ctx *web.EventContext, org *models.Organizacao) (nodes []*presets.MenuNode, active string) {
+func orgResourceNodes(b *presets.Builder, ctx *web.EventContext, org *models.Organizacao) (nodes []*presets.MenuNode, active string, opened []string) {
 	orgMb := OrganizacaoModel(b)
 	if orgMb == nil {
-		return nil, ""
+		return nil, "", nil
 	}
 	orgID := org.ID.String()
 	mid, err := orgMb.ParseRecordID(orgID)
 	if err != nil || mid.IsZero() {
-		return nil, ""
+		return nil, "", nil
 	}
 	prefix := b.GetURIPrefix()
 	var order []string
@@ -144,19 +146,32 @@ func orgResourceNodes(b *presets.Builder, ctx *web.EventContext, org *models.Org
 			continue
 		}
 		g := c.MenuGroupName()
-		seg := c.UriName()
-		if g != "" {
-			seg = g + "/" + seg
-		}
-		href := prefix + "/" + OrganizacaoURIName + "/" + orgID + "/" + seg
-		icon := c.GetMenuIcon()
-		if icon == "" {
-			icon = "mdi-circle-small"
-		}
-		n := &presets.MenuNode{Title: c.TTitlePlural(ctx.Context()), Value: href,
-			Props: map[string]any{"href": href, "prependIcon": icon}}
-		if ctx.R.URL.Path == href || strings.HasPrefix(ctx.R.URL.Path, href+"/") {
-			active = href
+		var n *presets.MenuNode
+		if c.HasMenuRecordSelector() {
+			// its record chosen in the menu: the group of its selector and
+			// of its listing
+			var a string
+			var o []string
+			n, a, o = c.MenuNodeOf(ctx, presets.IDSlice{mid})
+			opened = append(opened, o...)
+			if a != "" {
+				active = a
+			}
+		} else {
+			seg := c.UriName()
+			if g != "" {
+				seg = g + "/" + seg
+			}
+			href := prefix + "/" + OrganizacaoURIName + "/" + orgID + "/" + seg
+			icon := c.GetMenuIcon()
+			if icon == "" {
+				icon = "mdi-circle-small"
+			}
+			n = &presets.MenuNode{Title: c.TTitlePlural(ctx.Context()), Value: href,
+				Props: map[string]any{"href": href, "prependIcon": icon}}
+			if ctx.R.URL.Path == href || strings.HasPrefix(ctx.R.URL.Path, href+"/") {
+				active = href
+			}
 		}
 		if _, ok := groups[g]; !ok {
 			order = append(order, g)

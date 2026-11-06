@@ -26,6 +26,10 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
 	mb := Model(b, &models.Organizacao{}, presets.ModelWithID(OrganizacaoModelID)).
 		MenuIcon("mdi-domain")
 	mb.SetUriName(OrganizacaoURIName)
+	// its record chosen in the menu — its own item at the top (menu_root.go)
+	// —: the models under it may have theirs (MenuRecordSelector)
+	mb.MenuRecordSelectorConfig().External = true
+	mb.MenuRecordSelector(true)
 
 	mb.Listing("Nome", "Descricao", "Padrao").
 		SearchColumns("nome", "descricao").
