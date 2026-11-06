@@ -26,3 +26,11 @@ func (b *VXDialogBuilder) Expanded(v bool) *VXDialogBuilder {
 	b.Attr(":expanded", fmt.Sprint(v))
 	return b
 }
+
+// FullscreenOnMobile: on a phone (narrower than md, 960 px) the
+// dialog is always the whole screen, with no expand button (true, the
+// default); false, as on a wide screen.
+func (b *VXDialogBuilder) FullscreenOnMobile(v bool) *VXDialogBuilder {
+	b.Attr(":fullscreen-on-mobile", fmt.Sprint(v))
+	return b
+}

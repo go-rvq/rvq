@@ -1,5 +1,6 @@
 <script lang="ts">
 import {computed, defineComponent, useModel} from 'vue'
+import {useDisplay} from 'vuetify'
 import TempVar from 'vue-temp-var'
 import {type Density} from 'vuetify/lib/composables/density'
 
@@ -68,14 +69,25 @@ export default defineComponent({
     expanded: {
       type: Boolean,
       default: false
+    },
+    // on a phone (narrower than md, 960 px): always the whole screen,
+    // with no expand button
+    fullscreenOnMobile: {
+      type: Boolean,
+      default: true
     }
   },
   emits: ['update:modelValue', 'open', 'close'],
 
-  setup(props, { slots }) {
+  setup(props) {
     if (props.setup) {
       props.setup()
     }
+    const display = useDisplay()
+    // a phone's: narrower than md (960 px) — Vuetify's mobile (below lg)
+    // would take a laptop for one
+    const mobile = computed(() => display.smAndDown.value)
+    return {mobile}
   },
 
   data: (self) => ({
@@ -86,6 +98,14 @@ export default defineComponent({
   }),
 
   computed: {
+    // the whole screen: expanded, or a phone's
+    isFullscreen(): boolean {
+      return this.isExpanded || (this.fullscreenOnMobile && this.mobile)
+    },
+    // the expand button: not on a phone (it is always the whole screen there)
+    showExpand(): boolean {
+      return this.expandable && !(this.fullscreenOnMobile && this.mobile)
+    },
     cIsOpen: {
       get() {
         return this.isOpen as boolean
@@ -156,8 +176,9 @@ export default defineComponent({
   watch: {
     // opened or closed — as the model says, not as asked —: its callbacks
     isOpen(val) {
-      if (val && this.isExpanded) {
-        this.isExpanded = false
+      // each opening as it was asked (expanded or not)
+      if (val) {
+        this.isExpanded = !!this.expanded
       }
       if (!val) {
         // closed: its menus too (a menu left open holds the page's scroll)
@@ -188,9 +209,9 @@ export default defineComponent({
 <template>
   <v-dialog
     v-model="cIsOpen"
-    :class="['vx-dialog', isExpanded ? 'vx-dialog-expanded' : '']"
+    :class="['vx-dialog', isFullscreen ? 'vx-dialog-expanded' : '']"
     v-bind="containerProps"
-    :fullscreen="isExpanded"
+    :fullscreen="isFullscreen"
     scrollable
   >
     <template v-if="$slots.activator" v-slot:activator="slotProps">
@@ -265,8 +286,9 @@ export default defineComponent({
               @click="isSecondaryMenuOpen = !isSecondaryMenuOpen"
             ></v-btn>
             <v-btn
-              v-if="expandable"
+              v-if="showExpand"
               :icon="isExpanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
+              data-vx-dialog-expand
               @click="isExpanded = !isExpanded"
             ></v-btn>
             <v-btn
