@@ -47,6 +47,17 @@ type AggregateBuilder struct {
 	compFunc    func(ctx *web.EventContext, v *AggregateValue) h.HTMLComponent
 	hidden      bool
 	noSerialize bool
+	// combineGroups: the values of its groups in one chip (CombineGroups)
+	combineGroups bool
+}
+
+// CombineGroups shows the values of the groups of the aggregate (by
+// currency, say: AggregatesGroupBy) in one chip — "Total: $ 100,00 · R$
+// -500,00" —, each in its color, its group its title; else a chip of each
+// group, the group before the label.
+func (b *AggregateBuilder) CombineGroups(v bool) *AggregateBuilder {
+	b.combineGroups = v
+	return b
 }
 
 // Expr sets the SQL of the aggregate: an aggregate function on the columns of
@@ -335,31 +346,91 @@ func (b *ListingBuilder) aggregatesComponent(ctx *web.EventContext, vs Aggregate
 	if b.aggregates.compFunc != nil {
 		return b.aggregates.compFunc(ctx, vs)
 	}
-	var chips []h.HTMLComponent
+	// the chips in the order of the values: one of each value, or of each
+	// aggregate whose groups are combined (CombineGroups), where its first
+	// value is
+	type chipOf struct{ values []*AggregateValue }
+	var (
+		chips    []h.HTMLComponent
+		entries  []*chipOf
+		combined = map[string]*chipOf{}
+		custom   = map[*chipOf]h.HTMLComponent{}
+	)
 	for _, v := range vs {
 		if v.builder.hidden {
 			continue
 		}
 		if v.builder.compFunc != nil {
-			chips = append(chips, v.builder.compFunc(ctx, v))
+			e := &chipOf{}
+			custom[e] = v.builder.compFunc(ctx, v)
+			entries = append(entries, e)
 			continue
 		}
-		label := v.Label
-		if v.GroupLabel != "" {
-			label = v.GroupLabel + " · " + label
+		if v.builder.combineGroups {
+			if e := combined[v.Name]; e != nil {
+				e.values = append(e.values, v)
+				continue
+			}
+			combined[v.Name] = &chipOf{values: []*AggregateValue{v}}
+			entries = append(entries, combined[v.Name])
+			continue
 		}
-		chip := VChip(h.Span(label+": ").Class("text-medium-emphasis"), h.Strong(v.Text)).
-			Size(SizeSmall).Variant(VariantTonal).
-			Class("vx-aggregate", "vx-aggregate--"+strings.ReplaceAll(v.Name, " ", "-"))
-		if v.Color != "" {
-			chip.Color(v.Color)
+		entries = append(entries, &chipOf{values: []*AggregateValue{v}})
+	}
+	for _, e := range entries {
+		if c, ok := custom[e]; ok {
+			chips = append(chips, c)
+			continue
 		}
-		chips = append(chips, chip)
+		chips = append(chips, aggregateChip(e.values))
 	}
 	if len(chips) == 0 {
 		return nil
 	}
 	return h.Div(chips...).Class("d-flex flex-wrap ga-2 mb-2 rvq-listing-aggregates")
+}
+
+// aggregateChip is the chip of the values vs of an aggregate: its label, a
+// margin (the chip is a flex box, which drops the trailing space of its
+// items), its values. Not combined (one value): its group before the label.
+// Its groups combined (CombineGroups): " · " between the values, each in its
+// color, its group its title — one value too. The chip of the color of all
+// its values, when one.
+func aggregateChip(vs []*AggregateValue) *VChipBuilder {
+	combined := vs[0].builder != nil && vs[0].builder.combineGroups
+	label := vs[0].Label
+	if !combined && vs[0].GroupLabel != "" {
+		label = vs[0].GroupLabel + " · " + label
+	}
+	children := []h.HTMLComponent{h.Span(label + ":").Class("text-medium-emphasis me-1")}
+	color := vs[0].Color
+	for i, v := range vs {
+		if v.Color != color {
+			color = ""
+		}
+		if i > 0 {
+			children = append(children, h.Span("·").Class("text-medium-emphasis mx-1"))
+		}
+		// not in bold
+		value := h.Span(v.Text)
+		if combined {
+			value.Attr("data-aggregate-group", v.Group)
+			if v.Color != "" {
+				value.Class("text-" + v.Color)
+			}
+			if v.GroupLabel != "" {
+				value.Attr("title", v.GroupLabel)
+			}
+		}
+		children = append(children, value)
+	}
+	chip := VChip(children...).
+		Size(SizeSmall).Variant(VariantTonal).
+		Class("vx-aggregate", "vx-aggregate--"+strings.ReplaceAll(vs[0].Name, " ", "-"))
+	if color != "" {
+		chip.Color(color)
+	}
+	return chip
 }
 
 // Sum is the sum of col: SUM(col).
