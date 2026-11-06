@@ -42,12 +42,28 @@ type MediaBoxUsage struct {
 	// AppliedSizes are the sizes the crops were last made in (Recrop); none
 	// when they never were here.
 	AppliedSizes string `gorm:"type:text"`
-	RecropState  string `gorm:"size:16"`
-	RecropTotal  int
-	RecropDone   int
-	RecropError  string `gorm:"type:text"`
-	RecropAt     *time.Time
-	UpdatedAt    time.Time
+	// DefaultOriginalWidth × DefaultOriginalHeight is the code's limit of
+	// the original of an image (MediaBoxConfig.OriginalLimit; 0: the media
+	// library's), OriginalWidth × OriginalHeight the admin's (0: the code's):
+	// a larger image is made smaller to fit it — in the browser before it is
+	// sent, and checked by the server.
+	DefaultOriginalWidth  int
+	DefaultOriginalHeight int
+	OriginalWidth         int
+	OriginalHeight        int
+	// DefaultThumbWidth × DefaultThumbHeight is the code's limit of the
+	// thumbnail of an image (MediaBoxConfig.ThumbLimit; 0: none), ThumbWidth
+	// × ThumbHeight the admin's (0: the code's).
+	DefaultThumbWidth  int
+	DefaultThumbHeight int
+	ThumbWidth         int
+	ThumbHeight        int
+	RecropState        string `gorm:"size:16"`
+	RecropTotal        int
+	RecropDone         int
+	RecropError        string `gorm:"type:text"`
+	RecropAt           *time.Time
+	UpdatedAt          time.Time
 }
 
 func (MediaBoxUsage) TableName() string { return "media_box_usages" }
@@ -119,6 +135,30 @@ func (u *MediaBoxUsage) EffectiveSizes() []UsageSize {
 	return decodeSizes(u.DefaultSizes)
 }
 
+// EffectiveOriginalMax is the limit of the original of an image of the field:
+// the admin's when it has one, else the code's; nil, none of them.
+func (u *MediaBoxUsage) EffectiveOriginalMax() *base.Size {
+	if u.OriginalWidth > 0 && u.OriginalHeight > 0 {
+		return &base.Size{Width: u.OriginalWidth, Height: u.OriginalHeight}
+	}
+	if u.DefaultOriginalWidth > 0 && u.DefaultOriginalHeight > 0 {
+		return &base.Size{Width: u.DefaultOriginalWidth, Height: u.DefaultOriginalHeight}
+	}
+	return nil
+}
+
+// EffectiveThumbMax is the limit of the thumbnail of an image of the field:
+// the admin's when it has one, else the code's; nil, none of them.
+func (u *MediaBoxUsage) EffectiveThumbMax() *base.Size {
+	if u.ThumbWidth > 0 && u.ThumbHeight > 0 {
+		return &base.Size{Width: u.ThumbWidth, Height: u.ThumbHeight}
+	}
+	if u.DefaultThumbWidth > 0 && u.DefaultThumbHeight > 0 {
+		return &base.Size{Width: u.DefaultThumbWidth, Height: u.DefaultThumbHeight}
+	}
+	return nil
+}
+
 // sizesOf is l as the sizes of a MediaBoxConfig — what code gave a size of
 // the same name besides its width and height (Padding, Sm, Cols) kept.
 func sizesOf(l []UsageSize, code map[string]*base.Size) map[string]*base.Size {
@@ -145,20 +185,24 @@ func (b *Builder) usage(key string) *MediaBoxUsage {
 	return &u
 }
 
-// withUsage is cfg with the sizes of its use (cfg.Usage): the ones the
-// server trusts.
+// withUsage is cfg with the sizes and the limits of the original and of the
+// thumbnail of its use
+// (cfg.Usage): the ones the server trusts.
 func (b *Builder) withUsage(cfg *media_library.MediaBoxConfig) *media_library.MediaBoxConfig {
 	if cfg == nil || cfg.Usage == "" {
 		return cfg
 	}
-	if u := b.usage(cfg.Usage); u != nil {
-		if l := u.EffectiveSizes(); len(l) > 0 {
-			c := *cfg
-			c.Sizes = sizesOf(l, cfg.Sizes)
-			return &c
-		}
+	u := b.usage(cfg.Usage)
+	if u == nil {
+		return cfg
 	}
-	return cfg
+	c := *cfg
+	if l := u.EffectiveSizes(); len(l) > 0 {
+		c.Sizes = sizesOf(l, cfg.Sizes)
+	}
+	c.OriginalMax = u.EffectiveOriginalMax()
+	c.ThumbMax = u.EffectiveThumbMax()
+	return &c
 }
 
 // cfgOf is the config a browser sent back (v, its JSON) with the sizes of its
@@ -171,7 +215,7 @@ func (b *Builder) cfgOf(v string) *media_library.MediaBoxConfig {
 // use (the record's table, the field's name) — of a field of a record, not
 // of one of a list or a form in it —, and its sizes.
 func (b *Builder) fieldUsage(field *presets.FieldContext, cfg *media_library.MediaBoxConfig) *media_library.MediaBoxConfig {
-	if cfg == nil || len(cfg.Sizes) == 0 || field == nil || field.Parent != nil || field.Obj == nil {
+	if cfg == nil || !imagesOf(cfg) || field == nil || field.Parent != nil || field.Obj == nil {
 		return cfg
 	}
 	stmt := &gorm.Statement{DB: b.db}
@@ -184,8 +228,9 @@ func (b *Builder) fieldUsage(field *presets.FieldContext, cfg *media_library.Med
 }
 
 // RegisterUsages writes the uses of MediaBox of the models of pb — each
-// field of their editing with sizes (its MediaBoxConfig) —, their sizes the
-// code's (DefaultSizes); the admin's kept. A field whose sizes now are not
+// field of images of their editing (its MediaBoxConfig, sizes or not) —,
+// their sizes and the limits of their original and of their thumbnail the
+// code's (DefaultSizes, DefaultOriginal*, DefaultThumb*); the admin's kept. A field whose sizes now are not
 // the ones its crops were made in (the code's changed, and the admin has none)
 // has them made again (Recrop). Call it once the models are all registered.
 func (b *Builder) RegisterUsages(pb *presets.Builder) error {
@@ -203,13 +248,22 @@ func (b *Builder) RegisterUsages(pb *presets.Builder) error {
 			if fb == nil {
 				continue
 			}
-			ctx := *fb.ContextPtr()
-			if ctx == nil {
+			// a box with no config: one of no sizes
+			cfg := &media_library.MediaBoxConfig{}
+			if ctx := *fb.ContextPtr(); ctx != nil {
+				if c, _ := ctx.Value(MediaBoxConfig).(*media_library.MediaBoxConfig); c != nil {
+					cfg = c
+				}
+			}
+			if !imagesOf(cfg) {
 				continue
 			}
-			cfg, _ := ctx.Value(MediaBoxConfig).(*media_library.MediaBoxConfig)
-			if cfg == nil || len(cfg.Sizes) == 0 {
-				continue
+			var ow, oh, tw, th int
+			if o := cfg.OriginalLimit(); o != nil {
+				ow, oh = o.Width, o.Height
+			}
+			if t := cfg.ThumbLimit(); t != nil {
+				tw, th = t.Width, t.Height
 			}
 			u := MediaBoxUsage{
 				Key:          UsageKey(stmt.Schema.Table, f.Name),
@@ -219,11 +273,17 @@ func (b *Builder) RegisterUsages(pb *presets.Builder) error {
 				Label:        f.Name,
 				DefaultSizes: encodeSizes(sizesList(cfg.Sizes)),
 				UpdatedAt:    time.Now(),
+
+				DefaultOriginalWidth:  ow,
+				DefaultOriginalHeight: oh,
+				DefaultThumbWidth:     tw,
+				DefaultThumbHeight:    th,
 			}
 			b.usageModels.Store(u.Key, mb)
 			if err := b.db.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "usage_key"}},
-				DoUpdates: clause.AssignmentColumns([]string{"record_table", "field", "model", "label", "default_sizes", "updated_at"}),
+				Columns: []clause.Column{{Name: "usage_key"}},
+				DoUpdates: clause.AssignmentColumns([]string{"record_table", "field", "model", "label", "default_sizes",
+					"default_original_width", "default_original_height", "default_thumb_width", "default_thumb_height", "updated_at"}),
 			}).Create(&u).Error; err != nil {
 				return fmt.Errorf("media: the sizes of %s: %w", u.Key, err)
 			}
@@ -330,4 +390,19 @@ func (b *Builder) usageNames(u *MediaBoxUsage, ctx *web.EventContext) (model, fi
 		}
 	}
 	return
+}
+
+// uploadConfig is the config an image uploaded to a box of cfg is saved by:
+// the media library's, its original's limit the box's (OriginalLimit).
+func (b *Builder) uploadConfig(cfg *media_library.MediaBoxConfig) *base.Config {
+	c := b.Config
+	if s := cfg.OriginalLimit(); s != nil {
+		c.OriginalMaxWidth, c.OriginalMaxHeight = s.Width, s.Height
+	}
+	return &c
+}
+
+// imagesOf says the box of cfg takes images (its type an image's, or any).
+func imagesOf(cfg *media_library.MediaBoxConfig) bool {
+	return cfg.AllowType == "" || cfg.AllowType == media_library.ALLOW_TYPE_IMAGE
 }

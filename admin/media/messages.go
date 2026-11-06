@@ -35,6 +35,17 @@ type Messages struct {
 	MediaBoxUsageSizes          string `i18n:"hint='Label of the sizes of the crops of a field of images.'"`
 	MediaBoxUsageRecropState    string `i18n:"hint='Label of how the crops of a field are being made again.'"`
 	MediaBoxUsageRecropError    string `i18n:"hint='Label of what went wrong making the crops of a field again.'"`
+	MediaBoxUsageOriginal       string `i18n:"hint='Label of the largest an original image of a field is kept in.'"`
+	MediaBoxUsageOriginalWidth  string `i18n:"hint='Label of the largest width of an original image of a field.'"`
+	MediaBoxUsageOriginalHeight string `i18n:"hint='Label of the largest height of an original image of a field.'"`
+	OriginalOfTheCode           string `i18n:"hint='Hint of the limit of the original: empty, the code\\'s.', fields=(;'%[1]d'='its width', '%[2]d'='its height')"`
+	OriginalOfTheCodeNone       string `i18n:"hint='Hint of the limit of the original: empty, the media library\\'s (the code has none).'"`
+	OriginalBoth                string `i18n:"hint='Error: the limit of the original needs both its width and its height, or neither.'"`
+	MediaBoxUsageThumb          string `i18n:"hint='Label of the largest the thumbnail of an image of a field is made in.'"`
+	MediaBoxUsageThumbWidth     string `i18n:"hint='Label of the largest width of the thumbnail of an image of a field.'"`
+	MediaBoxUsageThumbHeight    string `i18n:"hint='Label of the largest height of the thumbnail of an image of a field.'"`
+	ThumbOfTheCode              string `i18n:"hint='Hint of the limit of the thumbnail: empty, the code\\'s.', fields=(;'%[1]d'='its width', '%[2]d'='its height')"`
+	ThumbOfTheCodeNone          string `i18n:"hint='Hint of the limit of the thumbnail: empty, none (the code has none).'"`
 	SizesOfTheAdmin             string `i18n:"hint='Said of sizes set in the admin, not the code\\'s.'"`
 	Recrop                      string `i18n:"hint='Action that makes the crops of the images of a field again.'"`
 	RecropStarted               string `i18n:"hint='Shown once the crops of a field started being made again.'"`
@@ -95,6 +106,17 @@ var Messages_en_US = &Messages{
 	MediaBoxUsageSizes:          "Sizes",
 	MediaBoxUsageRecropState:    "Crops",
 	MediaBoxUsageRecropError:    "What went wrong",
+	MediaBoxUsageOriginal:       "Largest original",
+	MediaBoxUsageOriginalWidth:  "Largest width of the original",
+	MediaBoxUsageOriginalHeight: "Largest height of the original",
+	OriginalOfTheCode:           "A larger image is made smaller to fit. Empty: the code's, %[1]d×%[2]d.",
+	OriginalOfTheCodeNone:       "A larger image is made smaller to fit. Empty: the media library's.",
+	OriginalBoth:                "Give both the width and the height, or neither.",
+	MediaBoxUsageThumb:          "Largest thumbnail",
+	MediaBoxUsageThumbWidth:     "Largest width of the thumbnail",
+	MediaBoxUsageThumbHeight:    "Largest height of the thumbnail",
+	ThumbOfTheCode:              "The thumbnail of an image is made to fit it. Empty: the code's, %[1]d×%[2]d.",
+	ThumbOfTheCodeNone:          "The thumbnail of an image is made to fit it. Empty: no thumbnail.",
 	SizesOfTheAdmin:             "the admin's",
 	Recrop:                      "Make the crops again",
 	RecropStarted:               "The crops are being made again.",
@@ -156,6 +178,17 @@ var Messages_zh_CN = &Messages{
 	MediaBoxUsageSizes:          "尺寸",
 	MediaBoxUsageRecropState:    "裁剪",
 	MediaBoxUsageRecropError:    "出错原因",
+	MediaBoxUsageOriginal:       "原图最大尺寸",
+	MediaBoxUsageOriginalWidth:  "原图最大宽度",
+	MediaBoxUsageOriginalHeight: "原图最大高度",
+	OriginalOfTheCode:           "更大的图片会按比例缩小。留空：使用代码设置 %[1]d×%[2]d。",
+	OriginalOfTheCodeNone:       "更大的图片会按比例缩小。留空：使用媒体库设置。",
+	OriginalBoth:                "宽度和高度需同时填写或都不填。",
+	MediaBoxUsageThumb:          "缩略图最大尺寸",
+	MediaBoxUsageThumbWidth:     "缩略图最大宽度",
+	MediaBoxUsageThumbHeight:    "缩略图最大高度",
+	ThumbOfTheCode:              "图片的缩略图按此尺寸生成。留空：使用代码设置 %[1]d×%[2]d。",
+	ThumbOfTheCodeNone:          "图片的缩略图按此尺寸生成。留空：不生成缩略图。",
 	SizesOfTheAdmin:             "管理员设置",
 	Recrop:                      "重新裁剪",
 	RecropStarted:               "正在重新裁剪。",
@@ -206,6 +239,17 @@ var Messages_ja_JP = &Messages{
 	MediaBoxUsageSizes:          "サイズ",
 	MediaBoxUsageRecropState:    "トリミング",
 	MediaBoxUsageRecropError:    "エラーの内容",
+	MediaBoxUsageOriginal:       "元画像の最大サイズ",
+	MediaBoxUsageOriginalWidth:  "元画像の最大幅",
+	MediaBoxUsageOriginalHeight: "元画像の最大高さ",
+	OriginalOfTheCode:           "これより大きい画像は縮小されます。空欄：コードの値 %[1]d×%[2]d。",
+	OriginalOfTheCodeNone:       "これより大きい画像は縮小されます。空欄：メディアライブラリの値。",
+	OriginalBoth:                "幅と高さは両方入力するか、両方空欄にしてください。",
+	MediaBoxUsageThumb:          "サムネイルの最大サイズ",
+	MediaBoxUsageThumbWidth:     "サムネイルの最大幅",
+	MediaBoxUsageThumbHeight:    "サムネイルの最大高さ",
+	ThumbOfTheCode:              "画像のサムネイルはこのサイズに収まるように作られます。空欄：コードの値 %[1]d×%[2]d。",
+	ThumbOfTheCodeNone:          "画像のサムネイルはこのサイズに収まるように作られます。空欄：サムネイルなし。",
 	SizesOfTheAdmin:             "管理画面の設定",
 	Recrop:                      "トリミングをやり直す",
 	RecropStarted:               "トリミングをやり直しています。",
@@ -256,6 +300,17 @@ var Messages_pt_BR = &Messages{
 	MediaBoxUsageSizes:          "Tamanhos",
 	MediaBoxUsageRecropState:    "Recortes",
 	MediaBoxUsageRecropError:    "O que deu errado",
+	MediaBoxUsageOriginal:       "Original máximo",
+	MediaBoxUsageOriginalWidth:  "Largura máxima do original",
+	MediaBoxUsageOriginalHeight: "Altura máxima do original",
+	OriginalOfTheCode:           "Uma imagem maior é reduzida para caber, proporcionalmente. Vazio: o do código, %[1]d×%[2]d.",
+	OriginalOfTheCodeNone:       "Uma imagem maior é reduzida para caber, proporcionalmente. Vazio: o da biblioteca de mídia.",
+	OriginalBoth:                "Informe a largura e a altura, ou nenhuma das duas.",
+	MediaBoxUsageThumb:          "Miniatura máxima",
+	MediaBoxUsageThumbWidth:     "Largura máxima da miniatura",
+	MediaBoxUsageThumbHeight:    "Altura máxima da miniatura",
+	ThumbOfTheCode:              "A miniatura de uma imagem é feita para caber nela, proporcionalmente. Vazio: a do código, %[1]d×%[2]d.",
+	ThumbOfTheCodeNone:          "A miniatura de uma imagem é feita para caber nela, proporcionalmente. Vazio: sem miniatura.",
 	SizesOfTheAdmin:             "do admin",
 	Recrop:                      "Refazer os recortes",
 	RecropStarted:               "Os recortes estão sendo refeitos.",

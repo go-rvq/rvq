@@ -1,6 +1,6 @@
 import type {App} from 'vue'
 import ImageEditor from './ImageEditor.vue'
-import {editUploads, isImage, open, setApp} from './api'
+import {editUploads, fitSave, fitUploads, isImage, open, setApp} from './api'
 
 declare const window: any
 
@@ -12,6 +12,6 @@ window.__goplaidVueComponentRegisters.push((app: App) => {
   setApp(app)
 })
 
-window.rvqImageEditor = {open, editUploads, isImage}
+window.rvqImageEditor = {open, editUploads, isImage, fitUploads, fitSave}
 
-export {ImageEditor, open, editUploads, isImage}
+export {ImageEditor, open, editUploads, isImage, fitUploads, fitSave}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/perm"
+	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
 // ActionRecrop is the action that makes the crops of a field's files again.
@@ -57,7 +59,13 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 	names := func(field *presets.FieldContext, ctx *web.EventContext) (string, string) {
 		return mb.usageNames(field.Obj.(*MediaBoxUsage), ctx)
 	}
-	l := m.Listing("Model", "Label", "Sizes", "RecropState")
+	original := func(field *presets.FieldContext, ctx *web.EventContext) string {
+		return originalText(GetMessages(ctx.Context()), field.Obj.(*MediaBoxUsage))
+	}
+	thumb := func(field *presets.FieldContext, ctx *web.EventContext) string {
+		return thumbText(GetMessages(ctx.Context()), field.Obj.(*MediaBoxUsage))
+	}
+	l := m.Listing("Model", "Label", "Sizes", "Original", "Thumb", "RecropState")
 	l.Field("Model").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		model, _ := names(field, ctx)
 		return h.Td(h.Text(model))
@@ -67,9 +75,15 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 		return h.Td(h.Text(label))
 	})
 	l.Field("Sizes").ComponentFunc(summary)
+	l.Field("Original").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Td(h.Text(original(field, ctx)))
+	})
+	l.Field("Thumb").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Td(h.Text(thumb(field, ctx)))
+	})
 	l.Field("RecropState").ComponentFunc(status)
 
-	d := m.Detailing("Model", "Label", "Sizes", "RecropState", "RecropError")
+	d := m.Detailing("Model", "Label", "Sizes", "Original", "Thumb", "RecropState", "RecropError")
 	labeled := func(label, text string) h.HTMLComponent {
 		return h.Div(h.Div(h.Text(label)).Class("text-caption text-medium-emphasis"), h.Div(h.Text(text))).Class("mb-4")
 	}
@@ -84,6 +98,12 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 	d.Field("Sizes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(h.Div(h.Text(field.Label)).Class("text-caption text-medium-emphasis"),
 			h.Div(h.Text(sizesText(GetMessages(ctx.Context()), field.Obj.(*MediaBoxUsage))))).Class("mb-4")
+	})
+	d.Field("Original").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return labeled(field.Label, original(field, ctx))
+	})
+	d.Field("Thumb").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return labeled(field.Label, thumb(field, ctx))
 	})
 	d.Field("RecropState").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(h.Div(h.Text(field.Label)).Class("text-caption text-medium-emphasis"),
@@ -113,7 +133,53 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 		return
 	})
 
-	ed := m.Editing("Sizes")
+	ed := m.Editing("Sizes", []string{"OriginalWidth", "OriginalHeight"}, []string{"ThumbWidth", "ThumbHeight"})
+	// the limits of the original and of the thumbnail: the admin's; empty
+	// (0), the code's — said as the hint
+	for _, f := range []string{"OriginalWidth", "OriginalHeight", "ThumbWidth", "ThumbHeight"} {
+		ed.Field(f).ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+			u := field.Obj.(*MediaBoxUsage)
+			msgs := GetMessages(ctx.Context())
+			value := ""
+			if n, _ := field.Value().(int); n > 0 {
+				value = fmt.Sprint(n)
+			}
+			hint := msgs.OriginalOfTheCodeNone
+			if u.DefaultOriginalWidth > 0 && u.DefaultOriginalHeight > 0 {
+				hint = fmt.Sprintf(msgs.OriginalOfTheCode, u.DefaultOriginalWidth, u.DefaultOriginalHeight)
+			}
+			if strings.HasPrefix(f, "Thumb") {
+				hint = msgs.ThumbOfTheCodeNone
+				if u.DefaultThumbWidth > 0 && u.DefaultThumbHeight > 0 {
+					hint = fmt.Sprintf(msgs.ThumbOfTheCode, u.DefaultThumbWidth, u.DefaultThumbHeight)
+				}
+			}
+			return v.VTextField().Type("number").Attr("min", 1).Label(field.Label).Suffix("px").
+				Hint(hint).PersistentHint(true).Variant(v.FieldVariantUnderlined).
+				ErrorMessages(field.Errors...).
+				Attr(web.VField(field.FormKey, value)...).Attr("data-original-field", f)
+		}).SetterFunc(func(obj any, field *presets.FieldContext, ctx *web.EventContext) error {
+			n := 0
+			if raw := strings.TrimSpace(ctx.R.FormValue(field.FormKey)); raw != "" {
+				var err error
+				if n, err = strconv.Atoi(raw); err != nil {
+					return err
+				}
+			}
+			u := obj.(*MediaBoxUsage)
+			switch f {
+			case "OriginalWidth":
+				u.OriginalWidth = n
+			case "OriginalHeight":
+				u.OriginalHeight = n
+			case "ThumbWidth":
+				u.ThumbWidth = n
+			default:
+				u.ThumbHeight = n
+			}
+			return nil
+		})
+	}
 	ed.Field("Sizes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		u := field.Obj.(*MediaBoxUsage)
 		stored := u.Sizes
@@ -165,6 +231,12 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 			}
 			seen[s.Name] = true
 		}
+		if u.OriginalWidth < 0 || u.OriginalHeight < 0 || (u.OriginalWidth > 0) != (u.OriginalHeight > 0) {
+			errs.FieldError("OriginalWidth", msgs.OriginalBoth)
+		}
+		if u.ThumbWidth < 0 || u.ThumbHeight < 0 || (u.ThumbWidth > 0) != (u.ThumbHeight > 0) {
+			errs.FieldError("ThumbWidth", msgs.OriginalBoth)
+		}
 		if c := mb.sizesConflict(u.Key, u.EffectiveSizes()); c != "" {
 			errs.FieldError("Sizes", fmt.Sprintf(msgs.SizesConflict, c))
 		}
@@ -174,7 +246,8 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 		u := obj.(*MediaBoxUsage)
 		before := mb.usage(u.Key)
 		if err := mb.db.Model(&MediaBoxUsage{}).Where("usage_key = ?", u.Key).
-			Update("sizes", u.Sizes).Error; err != nil {
+			Updates(map[string]any{"sizes": u.Sizes, "original_width": u.OriginalWidth, "original_height": u.OriginalHeight,
+				"thumb_width": u.ThumbWidth, "thumb_height": u.ThumbHeight}).Error; err != nil {
 			return err
 		}
 		// sizes of other measures: the crops made again in them
@@ -194,6 +267,35 @@ func sizesText(m *Messages, u *MediaBoxUsage) string {
 	}
 	text := strings.Join(parts, ", ")
 	if decodeSizes(u.Sizes) != nil {
+		text += " · " + m.SizesOfTheAdmin
+	}
+	return text
+}
+
+// originalText is the limit of the original of an image of the field u as a
+// person reads it — "1920×1080" —, and whether it is the admin's; none, the
+// media library's.
+func originalText(m *Messages, u *MediaBoxUsage) string {
+	o := u.EffectiveOriginalMax()
+	if o == nil {
+		return ""
+	}
+	text := fmt.Sprintf("%d×%d", o.Width, o.Height)
+	if u.OriginalWidth > 0 && u.OriginalHeight > 0 {
+		text += " · " + m.SizesOfTheAdmin
+	}
+	return text
+}
+
+// thumbText is the limit of the thumbnail of an image of the field u as a
+// person reads it, and whether it is the admin's; none, empty.
+func thumbText(m *Messages, u *MediaBoxUsage) string {
+	t := u.EffectiveThumbMax()
+	if t == nil {
+		return ""
+	}
+	text := fmt.Sprintf("%d×%d", t.Width, t.Height)
+	if u.ThumbWidth > 0 && u.ThumbHeight > 0 {
 		text += " · " + m.SizesOfTheAdmin
 	}
 	return text

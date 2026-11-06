@@ -7,6 +7,7 @@ import {type App, createVNode, render} from 'vue'
 import EditorDialog from './EditorDialog.vue'
 import type {SaveEvent} from './ImageEditor.vue'
 import type {Edit} from '@/core/edit'
+import {type Limit, fitSize, scaleRect} from '@/core/fit'
 
 export interface OpenOptions {
   src?: string
@@ -79,6 +80,9 @@ export interface Uploaded {
   edit?: Edit
   // the fixed crop (of the field's largest size), in the result's pixels
   cropOption?: {x: number; y: number; width: number; height: number} | null
+  // its thumbnail (fitUploads), made here: the server checks it, and makes
+  // it only when it is not sent
+  thumb?: File
 }
 
 export const isImage = (f: Blob): boolean => /^image\/(jpeg|png|webp|gif|bmp)$/.test(f.type)
@@ -132,4 +136,78 @@ export async function editUploads(files: File[], o: UploadOptions = {}): Promise
     }
   }
   return out
+}
+
+// fitFile: the image f made smaller to fit max (its proportions kept, its
+// EXIF orientation applied), of its type; f itself when it fits, is not an
+// image that can be drawn (a GIF: its frames) or cannot be read. ratio: the
+// scale it was made in.
+export async function fitFile(f: File, max: Limit | null | undefined): Promise<{file: File; ratio: number}> {
+  const same = {file: f, ratio: 1}
+  if (!max || !isImage(f) || f.type === 'image/gif' || typeof createImageBitmap !== 'function') return same
+  let bmp: ImageBitmap
+  try {
+    bmp = await createImageBitmap(f, {imageOrientation: 'from-image'} as ImageBitmapOptions)
+  } catch {
+    return same
+  }
+  try {
+    const s = fitSize(bmp.width, bmp.height, max)
+    if (s.ratio === 1) return same
+    const canvas = document.createElement('canvas')
+    canvas.width = s.width
+    canvas.height = s.height
+    const g = canvas.getContext('2d')
+    if (!g) return same
+    g.imageSmoothingEnabled = true
+    g.imageSmoothingQuality = 'high'
+    g.drawImage(bmp, 0, 0, s.width, s.height)
+    // a BMP is sent as a PNG
+    const type = f.type === 'image/bmp' ? 'image/png' : f.type
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, type, 0.92))
+    if (!blob) return same
+    const name = type === f.type ? f.name : f.name.replace(/\.[^.]*$/, '') + '.png'
+    return {file: new window.File([blob], name, {type: blob.type, lastModified: f.lastModified}), ratio: s.ratio}
+  } finally {
+    bmp.close()
+  }
+}
+
+// thumbOf: the thumbnail of the image f (made to fit max), sent with it —
+// the server keeps it, not making it —; none when f cannot be drawn here or
+// would change its type (a BMP: the server makes it).
+async function thumbOf(f: File, max: Limit | null | undefined): Promise<File | undefined> {
+  if (!max || !isImage(f) || f.type === 'image/gif' || f.type === 'image/bmp') return undefined
+  const {file} = await fitFile(f, max)
+  return file
+}
+
+// fitUploads: the images of list made smaller to fit max before they are
+// sent — after the editor —, their fixed crops at the new scale, and their
+// thumbnails (thumbMax) made; the originals kept for the edits (their pixels
+// the edit's).
+export async function fitUploads(list: Uploaded[], max: Limit | null | undefined, thumbMax?: Limit | null): Promise<Uploaded[]> {
+  if (!max && !thumbMax) return list
+  return Promise.all(
+    list.map(async (u) => {
+      const {file, ratio} = await fitFile(u.file, max)
+      const out: Uploaded = ratio === 1 ? {...u} : {...u, file, cropOption: u.cropOption ? scaleRect(u.cropOption, ratio) : u.cropOption}
+      const thumb = await thumbOf(out.file, thumbMax)
+      if (thumb) out.thumb = thumb
+      return out
+    }),
+  )
+}
+
+// fitSave: the image the editor saved (s.file) made smaller to fit max, its
+// fixed crop at the new scale, and its thumbnail (thumbMax).
+export async function fitSave(s: SaveEvent, max: Limit | null | undefined, thumbMax?: Limit | null): Promise<SaveEvent & {thumb?: File}> {
+  if (!s.file) return s
+  let out: SaveEvent & {thumb?: File} = s
+  const {file, ratio} = await fitFile(s.file, max)
+  if (ratio !== 1) {
+    out = {...s, file, blob: file, type: file.type, name: file.name, cropOption: s.cropOption ? scaleRect(s.cropOption, ratio) : s.cropOption}
+  }
+  const thumb = await thumbOf(out.file!, thumbMax)
+  return thumb ? {...out, thumb} : out
 }

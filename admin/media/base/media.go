@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"math"
 	"strings"
 
 	"gorm.io/gorm"
@@ -83,14 +84,31 @@ func (s *Size) FixDimension(max int) *Size {
 	return s
 }
 
+// FitSize is the size of an image w × h made smaller to fit max, its
+// proportions kept — max turned when the image is turned the other way (a
+// portrait image fits it on its side) —; w × h when it fits.
+func FitSize(w, h int, max Size) *Size {
+	mw, mh := (&Config{OriginalMaxWidth: max.Width, OriginalMaxHeight: max.Height}).originalMax(w, h)
+	return NewSize(w, h).RescaleToMax(mw, mh)
+}
+
+// RescaleToMax is s made smaller, its proportions kept, to fit maxWidth ×
+// maxHeight (a limit of 0: none on that side); s itself when it fits.
 func (s *Size) RescaleToMax(maxWidth, maxHeight int) (s2 *Size) {
-	s2 = NewSize(s.Width, s.Height, maxWidth)
-	if s.Height > maxHeight {
-		ratio := float64(maxHeight) / float64(s.Height)
-		s2.Width = int(float64(s.Width) * ratio)
-		s2.Height = int(float64(s.Height) * ratio)
+	ratio := 1.0
+	if maxWidth > 0 && s.Width > maxWidth {
+		ratio = float64(maxWidth) / float64(s.Width)
 	}
-	return
+	if maxHeight > 0 && s.Height > maxHeight {
+		ratio = min(ratio, float64(maxHeight)/float64(s.Height))
+	}
+	if ratio == 1 {
+		return &Size{Width: s.Width, Height: s.Height}
+	}
+	return &Size{
+		Width:  max(1, int(math.Round(float64(s.Width)*ratio))),
+		Height: max(1, int(math.Round(float64(s.Height)*ratio))),
+	}
 }
 
 func (s *Size) String() string {

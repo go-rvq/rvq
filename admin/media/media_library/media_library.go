@@ -18,6 +18,11 @@ var (
 	QorPreviewMaxSize  = 200
 )
 
+// ThumbSizeName is the size of the thumbnail of an image of a box with no
+// sizes (MediaBoxConfig.ThumbLimit): MediaBox.URL(ThumbSizeName). Not a size
+// of the field: none of its crops, nor shown in its form.
+const ThumbSizeName = "@thumb"
+
 type MediaLibrary struct {
 	uuidkey.Model
 	SelectedType string
@@ -76,6 +81,9 @@ type MediaLibraryStorage struct {
 	// Edit: the image was made in the editor — its original kept, and the
 	// edit to open again. Nil: the file is as it was uploaded.
 	Edit *ImageEdit `json:",omitempty"`
+	// ThumbMax is the largest its thumbnail (ThumbSizeName) is made in, its
+	// proportions kept; nil, none.
+	ThumbMax *base.Size `json:",omitempty"`
 }
 
 // ImageEdit is the edit of an image made in the editor (vx-image-editor):
@@ -102,6 +110,13 @@ func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*base.Size 
 
 	for key, value := range mediaLibraryStorage.Sizes {
 		sizes[key] = value
+	}
+	// the thumbnail: of the image's proportions, whatever was kept of it
+	if t := mediaLibraryStorage.ThumbMax; t != nil && t.Width > 0 && t.Height > 0 &&
+		mediaLibraryStorage.Width > 0 && mediaLibraryStorage.Height > 0 {
+		sizes[ThumbSizeName] = base.FitSize(mediaLibraryStorage.Width, mediaLibraryStorage.Height, *t)
+	} else {
+		delete(sizes, ThumbSizeName)
 	}
 	return sizes
 }

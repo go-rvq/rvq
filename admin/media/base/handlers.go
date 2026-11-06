@@ -162,8 +162,8 @@ func (imageHandler) Handle(defaulConfig *Config, media Media, file FileInterface
 
 	var originalOption *image.Rectangle
 
-	if saveOriginal && defaulConfig.OriginalMaxWidth > 0 && (w > defaulConfig.OriginalMaxWidth || h > defaulConfig.OriginalMaxHeight) {
-		s := NewSize(w, h).RescaleToMax(defaulConfig.OriginalMaxWidth, defaulConfig.OriginalMaxHeight)
+	if mw, mh := defaulConfig.originalMax(w, h); saveOriginal && ((mw > 0 && w > mw) || (mh > 0 && h > mh)) {
+		s := NewSize(w, h).RescaleToMax(mw, mh)
 
 		originalOption = &image.Rectangle{
 			Min: image.Point{X: 0, Y: 0},

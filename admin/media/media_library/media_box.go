@@ -67,10 +67,59 @@ type MediaBoxConfig struct {
 	// EditMaxPixels: a photo larger is made smaller before it is edited and
 	// sent (a camera's of 48 MP); 0, never.
 	EditMaxPixels int `json:",omitempty"`
+	// OriginalMax is the largest an image's original is kept in: a larger
+	// one, uploaded, is made smaller to fit it, its proportions kept (and
+	// the limit turned with the image: a portrait one fits it on its side).
+	// nil, a box with no sizes has DefaultOriginalMax (Full HD); one with
+	// sizes, the media library's (base.Config).
+	OriginalMax *base.Size `json:",omitempty"`
+	// ThumbMax is the largest the thumbnail of an image of the box
+	// (ThumbSizeName) is made in, its proportions kept: always made, not a
+	// size of the field (none of its crops, nor shown in its form). nil, a
+	// box with no sizes has DefaultThumbMax; one with sizes, none.
+	ThumbMax *base.Size `json:",omitempty"`
 	// Usage is the use of the field — "<table>.<Field>", a MediaBoxUsage —
 	// whose sizes (the admin's, else the code's) the server reads: the
 	// sizes the browser sends back are not the ones it trusts.
 	Usage string `json:",omitempty"`
+}
+
+// DefaultOriginalMax is the largest an image's original is kept in, in a box
+// with no sizes and no OriginalMax: Full HD.
+var DefaultOriginalMax = base.Size{Width: 1920, Height: 1080}
+
+// DefaultThumbMax is the largest the thumbnail of an image of a box with no
+// sizes and no ThumbMax is made in.
+var DefaultThumbMax = base.Size{Width: 320, Height: 320}
+
+// ThumbLimit is the largest the thumbnail of an image uploaded to the box is
+// made in (ThumbMax, else DefaultThumbMax with no sizes); nil, none. A nil
+// config is a box's with no sizes.
+func (c *MediaBoxConfig) ThumbLimit() *base.Size {
+	if c != nil && c.ThumbMax != nil && c.ThumbMax.Width > 0 && c.ThumbMax.Height > 0 {
+		s := *c.ThumbMax
+		return &s
+	}
+	if c == nil || len(c.Sizes) == 0 {
+		s := DefaultThumbMax
+		return &s
+	}
+	return nil
+}
+
+// OriginalLimit is the largest the original of an image uploaded to the box
+// is kept in (OriginalMax, else DefaultOriginalMax with no sizes); nil, the
+// media library's. A nil config is a box's with no sizes.
+func (c *MediaBoxConfig) OriginalLimit() *base.Size {
+	if c != nil && c.OriginalMax != nil && c.OriginalMax.Width > 0 && c.OriginalMax.Height > 0 {
+		s := *c.OriginalMax
+		return &s
+	}
+	if c == nil || len(c.Sizes) == 0 {
+		s := DefaultOriginalMax
+		return &s
+	}
+	return nil
 }
 
 func (mediaBox *MediaBox) Scan(data interface{}) (err error) {

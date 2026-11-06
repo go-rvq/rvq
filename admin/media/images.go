@@ -117,7 +117,12 @@ func imageCard(ctx *web.EventContext, mbx *media_library.MediaBox, field string,
 	}
 	var shown h.HTMLComponent
 	if isImage {
-		shown = v.VImg().Src(fmt.Sprintf("%s?%d", mbx.URL(), time.Now().UnixNano()%1e6)).Height(150).Cover(true).Class("rounded")
+		// its thumbnail when it has one (the lightbox, the image whole)
+		src := mbx.URL()
+		if mbx.FileSizes[media_library.ThumbSizeName] > 0 {
+			src = mbx.URL(media_library.ThumbSizeName)
+		}
+		shown = v.VImg().Src(fmt.Sprintf("%s?%d", src, time.Now().UnixNano()%1e6)).Height(150).Cover(true).Class("rounded")
 	} else {
 		shown = h.A(fileThumb(mbx.FileName)).Href(mbx.Url).Target("_blank").Style("display: block; height: 150px")
 	}

@@ -612,8 +612,9 @@ func uploadFile(b *Builder) web.EventFunc {
 			if err != nil {
 				panic(err)
 			}
+			prepareThumb(&m, cfg.ThumbLimit(), postedThumb(ctx.R, fmt.Sprintf("NewThumb%d", i)))
 
-			err = base.SaveUploadAndCropImage(&b.Config, b.db, &m)
+			err = base.SaveUploadAndCropImage(b.uploadConfig(cfg), b.db, &m)
 			if err == nil {
 				err = b.afterUpload(ctx, i, &m, cfg)
 			}
@@ -659,7 +660,8 @@ func uploadMediaBoxes(b *Builder) web.EventFunc {
 			if cfg != nil && len(cfg.Sizes) > 0 && m.SelectedType == media_library.ALLOW_TYPE_IMAGE {
 				m.File.Sizes = cfg.Sizes
 			}
-			if err = base.SaveUploadAndCropImage(&b.Config, b.db, &m); err == nil {
+			prepareThumb(&m, cfg.ThumbLimit(), postedThumb(ctx.R, fmt.Sprintf("NewThumb%d", i)))
+			if err = base.SaveUploadAndCropImage(b.uploadConfig(cfg), b.db, &m); err == nil {
 				err = b.afterUpload(ctx, i, &m, cfg)
 			}
 			if err != nil {
@@ -722,6 +724,11 @@ func chooseFile(b *Builder) web.EventFunc {
 			return
 		}
 		sizes, needCrop := mergeNewSizes(&m, cfg)
+		// a file of no thumbnail, chosen for a box that has one: made
+		if limit := cfg.ThumbLimit(); limit != nil && m.SelectedType == media_library.ALLOW_TYPE_IMAGE && m.File.ThumbMax == nil {
+			m.File.ThumbMax = limit
+			needCrop = true
+		}
 
 		if needCrop {
 			err = m.ScanMediaOptions(media_library.MediaOption{

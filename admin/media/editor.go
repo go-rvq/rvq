@@ -64,6 +64,7 @@ func editImageScript(field, id, thumb string, cfg *media_library.MediaBoxConfig)
 		FieldValue("Edit", web.Var("JSON.stringify(s.edit)")).
 		FieldValue("CropOption", web.Var("s.cropOption ? JSON.stringify(s.cropOption) : ''")).
 		FieldValue("Result", web.Var("s.file ? [s.file] : []")).
+		FieldValue("Thumb", web.Var("s.thumb ? [s.thumb] : []")).
 		FieldValue("Restore", web.Var("!s.file && d.edited ? '1' : ''")).
 		Go()
 	return web.Plaid().
@@ -73,8 +74,11 @@ func editImageScript(field, id, thumb string, cfg *media_library.MediaBoxConfig)
 		Query("id", id).
 		Query("thumb", thumb).
 		FieldValue("cfg", h.JSONString(cfg)).
-		ThenScript(`const d = r && r.data; if (!d || !window.rvqImageEditor) return;
-return window.rvqImageEditor.open(d).then(function(res) { if (res.action !== 'save') return; const s = res.save; ` + save + ` })`).
+		// the image saved, made smaller to fit the box's limit (fitSave) before
+		// it is sent
+		ThenScript(`const d = r && r.data; const ed = window.rvqImageEditor; if (!d || !ed) return;
+return ed.open(d).then(function(res) { if (res.action !== 'save') return;
+return (ed.fitSave ? ed.fitSave(res.save, ` + limitJS(cfg.OriginalLimit()) + `, ` + limitJS(cfg.ThumbLimit()) + `) : Promise.resolve(res.save)).then(function(s) { ` + save + ` }) })`).
 		Go()
 }
 
@@ -171,9 +175,9 @@ func saveImageEdit(b *Builder) web.EventFunc {
 
 		switch {
 		case result != nil:
-			err = b.saveEdited(&m, result, state)
+			err = b.saveEdited(&m, result, state, b.uploadConfig(cfg), cfg.ThumbLimit(), postedThumb(ctx.R, "Thumb"))
 		case ctx.R.FormValue("Restore") != "":
-			err = b.restoreOriginal(&m)
+			err = b.restoreOriginal(&m, b.uploadConfig(cfg), cfg.ThumbLimit())
 		case m.File.Edit != nil && len(state) > 0:
 			// the same image (only the size's crop): the edit kept for the
 			// next opening
@@ -199,7 +203,7 @@ func saveImageEdit(b *Builder) web.EventFunc {
 			if err = m.ScanMediaOptions(moption); err != nil {
 				return
 			}
-			if err = base.SaveUploadAndCropImage(&b.Config, db, &m); err != nil {
+			if err = base.SaveUploadAndCropImage(b.uploadConfig(cfg), db, &m); err != nil {
 				presets.ShowMessage(&r, err.Error(), "error")
 				return r, nil
 			}
@@ -237,8 +241,10 @@ func (b *Builder) keepSource(m *media_library.MediaLibrary) error {
 }
 
 // saveEdited makes result the file of m — its sizes made from it, the crops
-// of the sizes started over —, the original kept apart and state the edit.
-func (b *Builder) saveEdited(m *media_library.MediaLibrary, result *multipart.FileHeader, state json.RawMessage) error {
+// of the sizes started over, its thumbnail (of thumb, the browser's: thumb)
+// —, the original kept apart and state the edit.
+func (b *Builder) saveEdited(m *media_library.MediaLibrary, result *multipart.FileHeader, state json.RawMessage, conf *base.Config,
+	limit *base.Size, thumb *multipart.FileHeader) error {
 	if err := b.keepSource(m); err != nil {
 		return err
 	}
@@ -249,12 +255,16 @@ func (b *Builder) saveEdited(m *media_library.MediaLibrary, result *multipart.Fi
 	}
 	m.File.Edit = edit
 	m.File.CropOptions = map[string]*base.CropOption{}
-	return base.SaveUploadAndCropImage(&b.Config, b.db, m)
+	prepareThumb(m, limit, thumb)
+	if err := base.SaveUploadAndCropImage(conf, b.db, m); err != nil {
+		return err
+	}
+	return b.keepThumb(m, limit, thumb)
 }
 
 // restoreOriginal makes the original (kept apart) the file of m again: the
 // edit gone.
-func (b *Builder) restoreOriginal(m *media_library.MediaLibrary) error {
+func (b *Builder) restoreOriginal(m *media_library.MediaLibrary, conf *base.Config, limit *base.Size) error {
 	if m.File.Edit == nil || m.File.Edit.Source == "" {
 		return nil
 	}
@@ -276,7 +286,8 @@ func (b *Builder) restoreOriginal(m *media_library.MediaLibrary) error {
 	}
 	m.File.Edit = nil
 	m.File.CropOptions = map[string]*base.CropOption{}
-	return base.SaveUploadAndCropImage(&b.Config, b.db, m)
+	prepareThumb(m, limit, nil)
+	return base.SaveUploadAndCropImage(conf, b.db, m)
 }
 
 // keepUploadEdit keeps, with the result of an upload edited in the browser
@@ -321,8 +332,10 @@ func largestSize(cfg *media_library.MediaBoxConfig) (key string, ratio float64) 
 // array of File) by send — a script reading list, [{file, original, edit,
 // cropOption}] —: through the editor first when cfg.EditOnUpload, a photo of
 // the camera, or always (a JS expression: the switch "Edit before
-// uploading"). keep (cfg.UploadEdit) posts, with each result, its original,
-// the edit and the fixed crop (NewOriginal<i>, NewEdit<i>, NewCrop<i>).
+// uploading"); then, without a word, its images made smaller to fit the
+// limit of the original (fitUploads, OriginalLimit). keep (cfg.UploadEdit)
+// posts, with each result, its original, the edit and the fixed crop
+// (NewOriginal<i>, NewEdit<i>, NewCrop<i>).
 func uploadThroughEditor(cfg *media_library.MediaBoxConfig, files, send string, camera bool, always string) string {
 	_, ratio := largestSize(cfg)
 	opts := map[string]any{"aspect": ratio, "camera": camera}
@@ -339,23 +352,35 @@ func uploadThroughEditor(cfg *media_library.MediaBoxConfig, files, send string, 
 		always = "false"
 	}
 	return fmt.Sprintf(`(function(files) {
+const ed = window.rvqImageEditor;
 const send = function(list) { %s };
-const edit = window.rvqImageEditor && files.some(window.rvqImageEditor.isImage) && (%t || %t || (%s));
-if (!edit) return send(files.map(function(f) { return {file: f} }));
-return window.rvqImageEditor.editUploads(files, %s).then(function(list) {
+const fit = function(list) { return (ed && ed.fitUploads ? ed.fitUploads(list, %s, %s) : Promise.resolve(list)).then(send) };
+const edit = ed && files.some(ed.isImage) && (%t || %t || (%s));
+if (!edit) return fit(files.map(function(f) { return {file: f} }));
+return ed.editUploads(files, %s).then(function(list) {
 if (list === 'retake') { if (typeof locals !== 'undefined') locals.fileChooserCamera = true; return }
-if (list) return send(list);
+if (list) return fit(list);
 });
-})(%s)`, send, cfg.EditOnUpload, camera, always, h.JSONString(opts), files)
+})(%s)`, send, limitJS(cfg.OriginalLimit()), limitJS(cfg.ThumbLimit()), cfg.EditOnUpload, camera, always, h.JSONString(opts), files)
+}
+
+// limitJS is a limit of an image of a box (OriginalLimit, what the browser
+// makes an image fit before it is sent — the server makes it fit too, if it
+// does not —; ThumbLimit, its thumbnail, made there), as JS; null, none.
+func limitJS(s *base.Size) string {
+	if s == nil {
+		return "null"
+	}
+	return fmt.Sprintf("{width: %d, height: %d}", s.Width, s.Height)
 }
 
 // uploadFormScript puts list (the editor's) in form to be posted: the files
 // (NewFiles) and, when cfg keeps the edits, each one's original, edit and
-// fixed crop.
+// fixed crop; and each one's thumbnail (NewThumb<i>, fitUploads).
 func uploadFormScript(cfg *media_library.MediaBoxConfig, form string) string {
-	s := fmt.Sprintf(`Object.keys(%[1]s).forEach(function(k) { if (/^New(Original|Edit|Crop)\d+$/.test(k)) delete %[1]s[k] });
+	s := fmt.Sprintf(`Object.keys(%[1]s).forEach(function(k) { if (/^New(Original|Edit|Crop|Thumb)\d+$/.test(k)) delete %[1]s[k] });
 %[1]s.NewFiles = list.map(function(u) { return u.file });
-list.forEach(function(u, i) { if (u.cropOption) %[1]s['NewCrop' + i] = JSON.stringify(u.cropOption) });`, form)
+list.forEach(function(u, i) { if (u.cropOption) %[1]s['NewCrop' + i] = JSON.stringify(u.cropOption); if (u.thumb) %[1]s['NewThumb' + i] = [u.thumb] });`, form)
 	if cfg.UploadEdit {
 		s += fmt.Sprintf(`
 list.forEach(function(u, i) { if (u.original && u.edit) { %[1]s['NewOriginal' + i] = [u.original]; %[1]s['NewEdit' + i] = JSON.stringify(u.edit) } });`, form)
@@ -364,8 +389,9 @@ list.forEach(function(u, i) { if (u.original && u.edit) { %[1]s['NewOriginal' + 
 }
 
 // afterUpload keeps, of the i-th file uploaded (m), what the editor made with
-// it: the fixed crop of the largest size (NewCrop<i>), and its original and
-// edit (NewOriginal<i>, NewEdit<i>) when cfg keeps them.
+// it: the fixed crop of the largest size (NewCrop<i>), its original and edit
+// (NewOriginal<i>, NewEdit<i>) when cfg keeps them, and the thumbnail the
+// browser made (NewThumb<i>).
 func (b *Builder) afterUpload(ctx *web.EventContext, i int, m *media_library.MediaLibrary, cfg *media_library.MediaBoxConfig) error {
 	form := ctx.R.MultipartForm
 	if form == nil || m.SelectedType != media_library.ALLOW_TYPE_IMAGE {
@@ -397,7 +423,10 @@ func (b *Builder) afterUpload(ctx *web.EventContext, i int, m *media_library.Med
 		if err := m.ScanMediaOptions(moption); err != nil {
 			return err
 		}
-		return base.SaveUploadAndCropImage(&b.Config, b.db, m)
+		if err := base.SaveUploadAndCropImage(b.uploadConfig(cfg), b.db, m); err != nil {
+			return err
+		}
 	}
-	return nil
+	// the thumbnail the browser made: kept, once the crops are
+	return b.keepThumb(m, cfg.ThumbLimit(), postedThumb(ctx.R, fmt.Sprintf("NewThumb%d", i)))
 }
