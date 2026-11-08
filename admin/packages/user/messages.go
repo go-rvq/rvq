@@ -27,6 +27,16 @@ type Messages struct {
 	AllSessionLogsExpiredSuccessfully string `i18n:"label='Sessions expired', hint='Shown once all sessions of a user were ended.'"`
 	UserUnlockedSuccessfully          string `i18n:"label='User unlocked', hint='Shown once a locked user was unlocked.'"`
 
+	Group            string `i18n:"label='User group', hint='Name of a group of users in the singular (detail and form titles).'"`
+	Groups           string `i18n:"label='User groups', hint='Name of the groups of users in the plural (menu, listing title).'"`
+	GroupName        string `i18n:"label='Name', hint='Label of the name of a group of users.'"`
+	GroupDescription string `i18n:"label='Description', hint='Label of the description of a group of users.'"`
+	GroupMembers     string `i18n:"label='Members', hint='Label of the users of a group.'"`
+	GroupRoles       string `i18n:"label='Roles', hint='Label of the roles of a group, in order.'"`
+	GroupCreatedAt   string `i18n:"label='Created', hint='Label of when a group was created.'"`
+	GroupUpdatedAt   string `i18n:"label='Updated', hint='Label of when a group was last changed.'"`
+	ErrGroupName     string `i18n:"hint='Error when a group of users is saved without a name.'"`
+
 	ErrorAccountRequired string `i18n:"label='Account required', hint='Error when a user is saved without an account or email.'"`
 	Active               string `i18n:"hint='Status of a user who can log in.'"`
 	Inactive             string `i18n:"hint='Status of a user who cannot log in.'"`
@@ -74,6 +84,15 @@ var (
 		UserUnlockedSuccessfully:          "User Unlocked Successfully",
 		MailSentSuccessfully:              "Email sent successfully",
 		ErrorAccountRequired:              "Account/Email required",
+		Group:                             "User group",
+		Groups:                            "User groups",
+		GroupName:                         "Name",
+		GroupDescription:                  "Description",
+		GroupMembers:                      "Members",
+		GroupRoles:                        "Roles",
+		GroupCreatedAt:                    "Created",
+		GroupUpdatedAt:                    "Updated",
+		ErrGroupName:                      "A group needs a name.",
 		Active:                            "Active",
 		Inactive:                          "Inactive",
 		Actives:                           "Actives",
@@ -111,6 +130,15 @@ var (
 		AllSessionLogsExpiredSuccessfully: "Você foi desconectado de todas as sessões ativas",
 		UserUnlockedSuccessfully:          "Usuário desbloqueado com sucesso",
 		ErrorAccountRequired:              "Nome da conta/Email é obrigatório",
+		Group:                             "Grupo de usuários",
+		Groups:                            "Grupos de usuários",
+		GroupName:                         "Nome",
+		GroupDescription:                  "Descrição",
+		GroupMembers:                      "Membros",
+		GroupRoles:                        "Papéis",
+		GroupCreatedAt:                    "Criado em",
+		GroupUpdatedAt:                    "Atualizado em",
+		ErrGroupName:                      "Um grupo precisa de um nome.",
 		MailSentSuccessfully:              "Email enviado com sucesso",
 		Active:                            "Ativo",
 		Inactive:                          "Inativo",

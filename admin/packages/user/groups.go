@@ -31,6 +31,9 @@ type Group struct {
 
 func (Group) TableName() string { return "user_groups" }
 
+// String is the name of the group (its title in the admin).
+func (g *Group) String() string { return g.Name }
+
 func (g *Group) BeforeCreate(*gorm.DB) error {
 	if g.ID == uuid.Nil {
 		g.ID = uuid.New()
