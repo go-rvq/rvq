@@ -213,11 +213,17 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 			if err != nil {
 				return ErrRole
 			}
-			if _, err := s.Share(ctx.R.Context(), res.Name, recordOf(id), ctx.R.FormValue(fieldSubject), roleID,
-				currentUser(ctx.R), originOf(ctx.R)); err != nil {
+			req, err := s.Share(ctx.R.Context(), res.Name, recordOf(id), ctx.R.FormValue(fieldSubject), roleID,
+				currentUser(ctx.R), originOf(ctx.R))
+			if err != nil {
 				return err
 			}
-			ctx.Flash = msgs(ctx.Context()).RequestSent
+			if req == nil {
+				// None: at once
+				ctx.Flash = msgs(ctx.Context()).Granted
+			} else {
+				ctx.Flash = msgs(ctx.Context()).RequestSent
+			}
 			return nil
 		})
 
@@ -500,19 +506,18 @@ func (s *Service) InstallConfirm(pb *presets.Builder, path string) {
 	page.Build()
 }
 
-// NotificationCount is the number of the user's invites pending (the old
-// ones' too).
+// NotificationCount is the number of the user's invites pending.
 func (s *Service) NotificationCount(ctx *web.EventContext) int {
 	uid := currentUser(ctx.R)
 	if uid == "" {
 		return 0
 	}
 	invs, _ := s.Invites(ctx.R.Context(), uid)
-	return len(invs) + PendingCount(s.o.DB, uid)
+	return len(invs)
 }
 
 // InstallInvites puts the user's invites — accept, decline — in the
-// notification center (the old ones' too).
+// notification center.
 func (s *Service) InstallInvites(pb *presets.Builder) {
 	registerMessages(pb.I18n())
 	const evAccept, evDecline, portal = "shared_invite_accept", "shared_invite_decline", "sharedAccessInvites"
@@ -523,7 +528,7 @@ func (s *Service) InstallInvites(pb *presets.Builder) {
 		}
 		invs, _ := s.Invites(ctx.R.Context(), uid)
 		if len(invs) == 0 {
-			return invitesBody(s.o.DB, ctx)
+			return h.Div()
 		}
 		m := msgs(ctx.Context())
 		c := ctx.R.Context()
@@ -545,7 +550,7 @@ func (s *Service) InstallInvites(pb *presets.Builder) {
 				).Name("append"),
 			).Attr("data-shared-invite", id))
 		}
-		return h.Div(v.VList(items...).Density(v.DensityCompact), invitesBody(s.o.DB, ctx))
+		return v.VList(items...).Density(v.DensityCompact)
 	}
 	answer := func(accept bool) web.EventFunc {
 		return func(ctx *web.EventContext) (r web.EventResponse, err error) {

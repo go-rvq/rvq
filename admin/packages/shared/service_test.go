@@ -101,8 +101,16 @@ func (f *fixture) role(res, name string) uuid.UUID { return f.roles[res][name] }
 // by), confirmed by the owner, the invite (a user's) accepted.
 func (f *fixture) share(res, id, subject, role, by string) {
 	f.t.Helper()
-	if _, err := f.s.Share(f.ctx, res, id, subject, f.role(res, role), by, origin); err != nil {
+	req, err := f.s.Share(f.ctx, res, id, subject, f.role(res, role), by, origin)
+	if err != nil {
 		f.t.Fatal(err)
+	}
+	if role == shared.RoleNone {
+		// at once: no owner asked, no invite
+		if req != nil {
+			f.t.Fatalf("None asked the owner: %+v", req)
+		}
+		return
 	}
 	f.confirmLast()
 	if user, ok := strings.CutPrefix(subject, shared.SubjectUser); ok {

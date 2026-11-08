@@ -30,6 +30,11 @@ func (b *Builder) Sharing(s *shared.Service) *Builder {
 	return b
 }
 
+// SharingService is the service the organizations are shared by (nil: an
+// organization is its owner's alone): the resources under them may be
+// shared by it too, as their children (shared.Resource.Parent).
+func (b *Builder) SharingService() *shared.Service { return b.sharing }
+
 // OrgRoles are the roles of the sharing of an organization.
 var OrgRoles = []shared.RoleSeed{
 	{Name: "Viewer", Actions: shared.VerbView},

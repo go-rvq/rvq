@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/messages"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/shared"
@@ -27,21 +26,16 @@ func New(db *gorm.DB) *Builder {
 	return &Builder{db: db}
 }
 
-// Install implements presets.Plugin: it migrates the org tables, seeds the
-// sharing permission templates, registers the i18n messages and the
-// Organizacao resource, the selector, the nested menu and the share invites.
+// Install implements presets.Plugin: it migrates the org tables, registers the
+// i18n messages and the Organizacao resource, the selector, the nested menu
+// and — shared by a service (Sharing) — the sharing; without one, an
+// organization is its owner's alone.
 func (b *Builder) Install(pb *presets.Builder) error {
 	b.pb = pb
 	if OrganizacaoModel(pb) != nil {
 		return nil
 	}
 	if err := models.AutoMigrate(b.db); err != nil {
-		return err
-	}
-	if err := shared.AutoMigrateTemplates(b.db); err != nil {
-		return err
-	}
-	if err := shared.SeedDefaultTemplates(b.db, model.Nil); err != nil {
 		return err
 	}
 	messages.Register(pb.I18n())
@@ -56,7 +50,6 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		// confirmations, the invites
 		return installSharing(pb, b.sharing)
 	}
-	shared.InstallInvites(pb, b.db)
 	return nil
 }
 

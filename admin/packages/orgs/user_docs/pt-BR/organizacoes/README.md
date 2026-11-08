@@ -50,8 +50,8 @@ Nada é dado sem o **proprietário**: um compartilhamento novo, um papel que
 pode mais que antes, um novo proprietário — quem quer que peça, o
 proprietário recebe um **e-mail** com um link, válido por 48 horas, para uma
 página em que ele **Confirma** ou **Recusa**, entrando como ele mesmo. Até
-lá, nada muda. Um papel que pode menos que antes, e uma revogação, valem na
-hora.
+lá, nada muda. Um papel que pode menos que antes, uma revogação e um
+compartilhamento como **None** valem na hora.
 
 ## O convite
 

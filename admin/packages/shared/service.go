@@ -536,7 +536,8 @@ func tokenHash(token string) string {
 }
 
 // Share asks the owner of the record — by e-mail — to share it with the
-// subject (a user or a group) with the role, by by.
+// subject (a user or a group) with the role, by by; the role None, at once
+// (nil Request).
 func (s *Service) Share(ctx context.Context, resource, id, subject string, roleID uuid.UUID, by string, o Origin) (*Request, error) {
 	if !s.subjectExists(ctx, subject) {
 		return nil, ErrNoSuchSubject
@@ -548,6 +549,18 @@ func (s *Service) Share(ctx context.Context, resource, id, subject string, roleI
 	}
 	if n > 0 {
 		return nil, ErrAlreadyShared
+	}
+	// None gives nothing — it takes the record out of what is shared above
+	// it —: at once, no owner to ask, no invite to accept (one invited to
+	// lose a record would decline it)
+	role, err := s.role(s.o.DB.WithContext(ctx), resource, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if role.None {
+		return nil, s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return s.grant(tx, resource, id, subject, roleID, by, o)
+		})
 	}
 	return s.request(ctx, RequestShare, resource, id, subject, roleID, by, o)
 }
@@ -768,7 +781,8 @@ func (s *Service) Confirm(ctx context.Context, token, by string, o Origin) error
 				return err
 			}
 			return s.setRole(tx, &a, to, by, o)
-		case r.Kind == RequestShare && strings.HasPrefix(r.Subject, SubjectGroup):
+		case r.Kind == RequestShare && (strings.HasPrefix(r.Subject, SubjectGroup) || s.isNone(tx, r.Resource, r.RoleID)):
+			// a group's, at once for its members; None, no invite to accept
 			return s.grant(tx, r.Resource, r.RecordID, r.Subject, *r.RoleID, r.By, o)
 		default:
 			inv := &AccessInvite{RequestID: r.ID, Kind: r.Kind, Resource: r.Resource, RecordID: r.RecordID, Subject: r.Subject,
@@ -809,6 +823,15 @@ func (s *Service) Reject(ctx context.Context, token, by string, o Origin) error 
 		return ErrExpired
 	}
 	return err
+}
+
+// isNone says the role id is None.
+func (s *Service) isNone(tx *gorm.DB, resource string, id *uuid.UUID) bool {
+	if id == nil {
+		return false
+	}
+	role, err := s.role(tx, resource, *id)
+	return err == nil && role.None
 }
 
 // grant gives the subject the role on the record.

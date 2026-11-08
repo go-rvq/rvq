@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
-	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
@@ -51,11 +50,6 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB, ownerScope bool) {
 	if !ownerScope {
 		return
 	}
-
-	// the owner can share the organization with other users (SPEC: sharing is
-	// mounted on Organization and Project). Verbs come from the sharing
-	// permission templates (WithTemplates).
-	shared.Install(mb, db, shared.WithTemplates(TemplateScope))
 
 	// owner-scope every read (listing and detail) to the current user's orgs.
 	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {

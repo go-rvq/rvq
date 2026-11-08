@@ -50,7 +50,7 @@ Nothing is given without the **owner**: a new sharing, a role that may more
 than before, a new owner — whoever asks, the owner gets an **e-mail** with a
 link, good for 48 hours, to a page where they **Confirm** or **Decline** it,
 logged in as themselves. Until then nothing changes. A role that may less
-than before, and a revocation, are at once.
+than before, a revocation and a sharing as **None** are at once.
 
 ## The invite
 

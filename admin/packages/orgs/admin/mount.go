@@ -3,7 +3,6 @@ package admin
 import (
 	"net/http"
 
-	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
@@ -16,17 +15,6 @@ import (
 // the orgs module has not been configured on b.
 func OrganizacaoModel(b *presets.Builder) *presets.ModelBuilder {
 	return b.GetModelByID(OrganizacaoModelID)
-}
-
-// TemplateScope resolves the sharing permission-template scope from the request:
-// the organization in the path (for resources nested under an org). Returns nil
-// for the organization itself (top-level) or when no org is in the path, so only
-// global templates apply. Use it with shared.WithTemplates.
-func TemplateScope(ctx *web.EventContext) model.UUID {
-	if id, ok := OrgIDFromRequest(ctx.R); ok {
-		return model.UUID(id)
-	}
-	return model.Nil
 }
 
 // MountUnderOrg registers child as a resource nested under the organization, so
