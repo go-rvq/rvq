@@ -124,8 +124,8 @@ func (b *Builder) installDefaults() {
 		ActionResetDefaults: func(m *Messages) (string, string) { return m.ResetDefaultsAction, m.ResetDefaultsAction_Desc },
 	} {
 		b.page.Page().PermActionInfo(presets.ActionPerm(action),
-			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
-			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
+			func(ctx context.Context) string { t, _ := words(b.msgs(ctx)); return t },
+			func(ctx context.Context) string { _, d := words(b.msgs(ctx)); return d })
 	}
 }
 
@@ -140,7 +140,7 @@ func (b *Builder) setupDefaultsActions(p *presets.Builder, pg *presets.PageBuild
 	action(ActionInitDefaults, ActionInitDefaults).Icon("mdi-folder-download-outline").
 		SetI18nLabel(label(func(m *Messages) string { return m.InitDefaultsAction })).
 		UpdateFunc(func(_ string, ctx *web.EventContext) error {
-			m := GetMessages(ctx.Context())
+			m := b.msgs(ctx.Context())
 			_, author := b.Identity(ctx.R)
 			var hash string
 			err := b.Repo.InitFiles(ctx.Context(), b.Defaults, func(d *Draft) (err error) {
@@ -170,7 +170,7 @@ func (b *Builder) setupDefaultsActions(p *presets.Builder, pg *presets.PageBuild
 	form := presets.NewModelBuilder(p, &ResetDefaultsForm{}, presets.ModelConfig().SetModuleKey(MessagesKey))
 	ed := form.Editing("RemoveExtras")
 	ed.Field("RemoveExtras").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		m := GetMessages(ctx.Context())
+		m := b.msgs(ctx.Context())
 		hint := m.ResetDefaultsFormRemoveExtrasHint
 		if len(b.DefaultsDirs) > 0 {
 			hint += " " + strings.Join(b.DefaultsDirs, ", ")
@@ -315,7 +315,7 @@ func (b *Builder) defaultsDirs(extras bool) []string {
 // — with the extras removed or not —, browsed as the draft's: the tree of
 // the files, each opened in a tab, the draft's and the default side by side.
 func (b *Builder) defaultsPanel(ctx *web.EventContext, extras bool) (h.HTMLComponent, error) {
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	d, err := b.defaultsDraft(ctx)
 	if err != nil {
 		return nil, err
@@ -375,7 +375,7 @@ func (b *Builder) defaultsDiffEvent(ctx *web.EventContext) (r web.EventResponse,
 	if err != nil {
 		return
 	}
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	f, err := d.DefaultsDiff(b.resetFiles(d), ctx.R.FormValue("path"), b.defaultsDirs(ctx.R.FormValue("extras") != "")...)
 	switch {
 	case err != nil:

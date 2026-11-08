@@ -34,6 +34,8 @@ const ActionPublicPreviewOff = "PublicPreviewOff"
 type PublicPreview struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time
+	// Repo is the editor's repository (Builder.Name; "" the site's).
+	Repo string `gorm:"column:repo;index;size:64;not null;default:''"`
 	// Owner is the key of the owner of the draft.
 	Owner string `gorm:"column:owner_key;index;size:128"`
 	// Token is what its link carries: random, not guessed.
@@ -75,9 +77,9 @@ func (b *Builder) EnablePublicPreview(ctx context.Context, owner, by string, exp
 	if err != nil {
 		return nil, err
 	}
-	p := &PublicPreview{ID: uuid.New(), Owner: owner, Token: token, CreatedBy: by, ExpiresAt: expires}
+	p := &PublicPreview{ID: uuid.New(), Repo: b.Name, Owner: owner, Token: token, CreatedBy: by, ExpiresAt: expires}
 	err = b.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := endPublicPreview(tx, owner, by); err != nil {
+		if err := endPublicPreview(tx, b.Name, owner, by); err != nil {
 			return err
 		}
 		return tx.Create(p).Error
@@ -90,12 +92,12 @@ func (b *Builder) DisablePublicPreview(ctx context.Context, owner, by string) er
 	if b.DB == nil {
 		return errors.New("gitedit: no database for the public previews")
 	}
-	return endPublicPreview(b.DB.WithContext(ctx), owner, by)
+	return endPublicPreview(b.DB.WithContext(ctx), b.Name, owner, by)
 }
 
-func endPublicPreview(db *gorm.DB, owner, by string) error {
+func endPublicPreview(db *gorm.DB, repo, owner, by string) error {
 	now := time.Now()
-	return active(db.Model(&PublicPreview{}), now).Where("owner_key = ?", owner).
+	return active(db.Model(&PublicPreview{}), now).Where("repo = ? AND owner_key = ?", repo, owner).
 		Updates(map[string]any{"revoked_at": now, "revoked_by": by}).Error
 }
 
@@ -106,7 +108,7 @@ func (b *Builder) PublicPreviewOf(ctx context.Context, owner string) *PublicPrev
 		return nil
 	}
 	var p PublicPreview
-	if active(b.DB.WithContext(ctx), time.Now()).Where("owner_key = ?", owner).
+	if active(b.DB.WithContext(ctx), time.Now()).Where("repo = ? AND owner_key = ?", b.Name, owner).
 		Order("created_at DESC").First(&p).Error != nil {
 		return nil
 	}
@@ -119,7 +121,7 @@ func (b *Builder) publicPreview(ctx context.Context, token string) *PublicPrevie
 		return nil
 	}
 	var p PublicPreview
-	if active(b.DB.WithContext(ctx), time.Now()).Where("token = ?", token).First(&p).Error != nil {
+	if active(b.DB.WithContext(ctx), time.Now()).Where("repo = ? AND token = ?", b.Name, token).First(&p).Error != nil {
 		return nil
 	}
 	return &p
@@ -176,7 +178,7 @@ func (b *Builder) setupPublicPreviewActions(p *presets.Builder, pg *presets.Page
 	form := presets.NewModelBuilder(p, &PublicPreviewForm{}, presets.ModelConfig().SetModuleKey(MessagesKey))
 	ed := form.Editing("ExpiresAt")
 	ed.Field("ExpiresAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		m := GetMessages(ctx.Context())
+		m := b.msgs(ctx.Context())
 		return h.Div(
 			h.P(h.Text(m.PublicPreviewWarn)).Class("text-body-2 mb-4"),
 			v.VTextField().Type("date").Label(field.Label).Hint(m.PublicPreviewExpiresHint).PersistentHint(true).
@@ -186,7 +188,7 @@ func (b *Builder) setupPublicPreviewActions(p *presets.Builder, pg *presets.Page
 	})
 	presets.ActionForm[*PublicPreviewForm](open, ed, func(c *presets.ActionFormContext[*PublicPreviewForm]) error {
 		r := c.Context.R
-		m := GetMessages(r.Context())
+		m := b.msgs(r.Context())
 		owner, own := b.ownerKey(r)
 		if !own || !b.allowedAction(r, ActionPreview) {
 			return perm.PermissionDenied
@@ -226,7 +228,7 @@ func (b *Builder) setupPublicPreviewActions(p *presets.Builder, pg *presets.Page
 			if err := b.DisablePublicPreview(r.Context(), owner, actor); err != nil {
 				return err
 			}
-			ctx.Flash = GetMessages(r.Context()).PublicPreviewEnded
+			ctx.Flash = b.msgs(r.Context()).PublicPreviewEnded
 			return nil
 		})
 }

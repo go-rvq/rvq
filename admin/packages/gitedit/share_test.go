@@ -411,3 +411,32 @@ func TestShareActions(t *testing.T) {
 		t.Error("root did not revoke")
 	}
 }
+
+// Two editors on one database (Name): the sharings of one are not the
+// other's.
+func TestShareByRepo(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&DraftShare{}, &PublicPreview{}); err != nil {
+		t.Fatal(err)
+	}
+	site, admin := &Builder{DB: db}, &Builder{DB: db, Name: "admin-files"}
+	ctx := context.Background()
+	if _, err := site.Share(ctx, "ana", "bia", "ana", nil); err != nil {
+		t.Fatal(err)
+	}
+	if !site.sharedWith(ctx, "ana", "bia") || admin.sharedWith(ctx, "ana", "bia") {
+		t.Error("the site's sharing reached the admin's files")
+	}
+	if s, _ := admin.SharedWith(ctx, "bia"); len(s) != 0 {
+		t.Errorf("the admin's files' sharings: %d", len(s))
+	}
+	if _, err := admin.EnablePublicPreview(ctx, "ana", "ana", nil); err != nil {
+		t.Fatal(err)
+	}
+	if site.PublicPreviewOf(ctx, "ana") != nil || admin.PublicPreviewOf(ctx, "ana") == nil {
+		t.Error("a public preview of one editor seen by the other")
+	}
+}

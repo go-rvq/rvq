@@ -15,6 +15,8 @@ import (
 type DraftShare struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time
+	// Repo is the editor's repository (Builder.Name; "" the site's).
+	Repo string `gorm:"column:repo;index;size:64;not null;default:''"`
 	// Owner is the key of the owner of the draft.
 	Owner string `gorm:"column:owner_key;index;size:128"`
 	// User is the key of whom it is shared with.
@@ -51,7 +53,7 @@ func (b *Builder) sharedWith(ctx context.Context, owner, user string) bool {
 	}
 	var n int64
 	active(b.DB.WithContext(ctx).Model(&DraftShare{}), time.Now()).
-		Where("owner_key = ? AND user_key = ?", owner, user).Count(&n)
+		Where("repo = ? AND owner_key = ? AND user_key = ?", b.Name, owner, user).Count(&n)
 	return n > 0
 }
 
@@ -64,10 +66,10 @@ func (b *Builder) Share(ctx context.Context, owner, user, by string, expires *ti
 	if b.DB == nil {
 		return nil, errors.New("gitedit: no database for the sharings")
 	}
-	s := &DraftShare{ID: uuid.New(), Owner: owner, User: user, CreatedBy: by, ExpiresAt: expires}
+	s := &DraftShare{ID: uuid.New(), Repo: b.Name, Owner: owner, User: user, CreatedBy: by, ExpiresAt: expires}
 	err := b.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
-		if err := active(tx.Model(&DraftShare{}), now).Where("owner_key = ? AND user_key = ?", owner, user).
+		if err := active(tx.Model(&DraftShare{}), now).Where("repo = ? AND owner_key = ? AND user_key = ?", b.Name, owner, user).
 			Updates(map[string]any{"revoked_at": now, "revoked_by": by}).Error; err != nil {
 			return err
 		}
@@ -82,7 +84,7 @@ func (b *Builder) Revoke(ctx context.Context, id uuid.UUID, by string) error {
 		return errors.New("gitedit: no database for the sharings")
 	}
 	now := time.Now()
-	return b.DB.WithContext(ctx).Model(&DraftShare{}).Where("id = ? AND revoked_at IS NULL", id).
+	return b.DB.WithContext(ctx).Model(&DraftShare{}).Where("repo = ? AND id = ? AND revoked_at IS NULL", b.Name, id).
 		Updates(map[string]any{"revoked_at": now, "revoked_by": by}).Error
 }
 
@@ -92,7 +94,7 @@ func (b *Builder) SharesOf(ctx context.Context, owner string) (shares []*DraftSh
 	if b.DB == nil {
 		return nil, nil
 	}
-	err = b.DB.WithContext(ctx).Where("owner_key = ?", owner).Order("created_at DESC").Find(&shares).Error
+	err = b.DB.WithContext(ctx).Where("repo = ? AND owner_key = ?", b.Name, owner).Order("created_at DESC").Find(&shares).Error
 	return
 }
 
@@ -101,7 +103,7 @@ func (b *Builder) SharedWith(ctx context.Context, user string) (shares []*DraftS
 	if b.DB == nil {
 		return nil, nil
 	}
-	err = active(b.DB.WithContext(ctx), time.Now()).Where("user_key = ?", user).Order("created_at DESC").
+	err = active(b.DB.WithContext(ctx), time.Now()).Where("repo = ? AND user_key = ?", b.Name, user).Order("created_at DESC").
 		Find(&shares).Error
 	return
 }
@@ -116,5 +118,5 @@ func (b *Builder) share(ctx context.Context, id string) (*DraftShare, error) {
 		return nil, err
 	}
 	s := &DraftShare{}
-	return s, b.DB.WithContext(ctx).First(s, "id = ?", uid).Error
+	return s, b.DB.WithContext(ctx).First(s, "repo = ? AND id = ?", b.Name, uid).Error
 }

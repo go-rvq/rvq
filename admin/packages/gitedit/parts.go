@@ -29,7 +29,7 @@ const partsPortal = "gitEditAction"
 // to be built.
 func (b *Builder) installParts(p *presets.Builder) (pages []*presets.PageBuilder) {
 	title := func(f func(m *Messages) string) func(ctx context.Context) string {
-		return func(ctx context.Context) string { return f(GetMessages(ctx)) }
+		return func(ctx context.Context) string { return f(b.msgs(ctx)) }
 	}
 	part := func(pg *presets.PageBuilder, sub string, words func(m *Messages) string, f partFunc) *presets.PageBuilder {
 		part := pg.SubPage(sub).Title(title(words)).Layout(b.partLayout(f))
@@ -67,7 +67,7 @@ type partFunc func(ctx *web.EventContext, m *Messages, owner string, own bool) (
 // (mayReach); whose draft it is, when another's.
 func (b *Builder) partLayout(f partFunc) web.PageFunc {
 	return func(ctx *web.EventContext) (r web.PageResponse, err error) {
-		m := GetMessages(ctx.Context())
+		m := b.msgs(ctx.Context())
 		if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
 			return r, perm.PermissionDenied
 		}

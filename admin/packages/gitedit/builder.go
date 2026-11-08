@@ -57,7 +57,18 @@ type CommitForm struct {
 // Builder is the page of the admin that edits the files of Repo: the IDE on
 // the editor's draft, its changes, history and actions.
 type Builder struct {
-	Repo *Repo
+	// Name tells this editor's repository from another's in the same
+	// database (its sharings of drafts, its public previews): "" is the
+	// site's, as they were before there was more than one.
+	Name string
+	// Title is the title of the page and of its menu item (nil: the
+	// messages', "Site files"); Icon its icon (empty: mdi-file-code-outline).
+	Title func(ctx context.Context) string
+	Icon  string
+	// Messages are the words of the editor (nil: the module's, which speak
+	// of the site): an editor of other files gives its own.
+	Messages func(ctx context.Context) *Messages
+	Repo     *Repo
 	// Path is the page's ("/site-files").
 	Path string
 	// Identity is the draft and the author of the request (its user).
@@ -132,6 +143,22 @@ type Builder struct {
 
 // Page is the page of the editor.
 func (b *Builder) Page() *presets.PageBuilder { return b.page }
+
+// msgs are the words of the editor: its own (Messages), else the module's.
+func (b *Builder) msgs(ctx context.Context) *Messages {
+	if b.Messages != nil {
+		return b.Messages(ctx)
+	}
+	return GetMessages(ctx)
+}
+
+// title is the title of the page: its own (Title), else the words'.
+func (b *Builder) title(ctx context.Context) string {
+	if b.Title != nil {
+		return b.Title(ctx)
+	}
+	return b.msgs(ctx).Title
+}
 
 // opPerms are the permissions of the operations on the files.
 var opPerms = map[IdeOp]string{
@@ -268,10 +295,14 @@ func (b *Builder) Install(p *presets.Builder) error {
 	if b.Assets == nil {
 		b.Assets = rvqjs.GadIDE()
 	}
+	icon := b.Icon
+	if icon == "" {
+		icon = "mdi-file-code-outline"
+	}
 	b.page = p.PagesRegistrator().New(
 		presets.HttpPage(b.Path).
-			MenuIcon("mdi-file-code-outline").
-			TitleFunc(func(ctx context.Context) string { return GetMessages(ctx).Title })).
+			MenuIcon(icon).
+			TitleFunc(b.title)).
 		Private().
 		Layout(b.pageFunc)
 	defer b.page.Build()
@@ -292,8 +323,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 		ActionReset:   func(m *Messages) (string, string) { return m.ResetAction, m.ResetAction_Desc },
 	} {
 		b.page.Page().PermActionInfo(presets.ActionPerm(action),
-			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
-			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
+			func(ctx context.Context) string { t, _ := words(b.msgs(ctx)); return t },
+			func(ctx context.Context) string { _, d := words(b.msgs(ctx)); return d })
 	}
 
 	for action, words := range map[string]func(*Messages) (string, string){
@@ -307,8 +338,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 			continue
 		}
 		b.page.Page().PermActionInfo(presets.ActionPerm(action),
-			func(ctx context.Context) string { t, _ := words(GetMessages(ctx)); return t },
-			func(ctx context.Context) string { _, d := words(GetMessages(ctx)); return d })
+			func(ctx context.Context) string { t, _ := words(b.msgs(ctx)); return t },
+			func(ctx context.Context) string { _, d := words(b.msgs(ctx)); return d })
 	}
 	b.installDefaults()
 	if b.DB != nil {
@@ -364,8 +395,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 
 	if b.PreviewPath != "" {
 		b.page.Page().PermActionInfo(presets.ActionPerm(ActionPreview),
-			func(ctx context.Context) string { return GetMessages(ctx).PreviewAction },
-			func(ctx context.Context) string { return GetMessages(ctx).PreviewAction_Desc })
+			func(ctx context.Context) string { return b.msgs(ctx).PreviewAction },
+			func(ctx context.Context) string { return b.msgs(ctx).PreviewAction_Desc })
 		prefix := strings.TrimSuffix(p.GetURIPrefix(), "/") + b.PreviewPath
 		b.previewPrefix = prefix
 		if b.PreviewURL == "" {
@@ -481,7 +512,7 @@ func (b *Builder) editorFunc(ctx *web.EventContext) (r web.PageResponse, err err
 	if owner, _ := b.ownerKey(ctx.R); !b.mayReach(ctx.R, owner) {
 		return r, perm.PermissionDenied
 	}
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	title, logo := m.Title, ""
 	if b.Brand != nil {
 		title, logo = b.Brand(ctx)
@@ -498,7 +529,7 @@ func (b *Builder) editorFunc(ctx *web.EventContext) (r web.PageResponse, err err
 				Attr("data-editor-logout", true)
 		}
 	}
-	r.PageTitle = m.Title
+	r.PageTitle = b.title(ctx.Context())
 	r.Body = h.Div(
 		v.VToolbar(
 			h.A(
@@ -525,7 +556,7 @@ func (b *Builder) editorFunc(ctx *web.EventContext) (r web.PageResponse, err err
 // do runs f on the draft of the request — held (lockDraft): another user on
 // it waits —: the flash says how it went.
 func (b *Builder) do(ctx *web.EventContext, f func(d *Draft, author Author, m *Messages) (string, error)) error {
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	d, author, err := b.Draft(ctx.R)
 	if err != nil {
 		return err
@@ -573,7 +604,7 @@ const ActionRevoke = "Revoke"
 // another's —, each asking the permission of the page of the editor.
 func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 	label := func(f func(m *Messages) string) func(ctx context.Context) string {
-		return func(ctx context.Context) string { return f(GetMessages(ctx)) }
+		return func(ctx context.Context) string { return f(b.msgs(ctx)) }
 	}
 	action := func(name, asks string) *presets.ActionBuilder {
 		return pg.Action(name).SetVerifier(func(ctx *web.EventContext) *perm.Verifier {
@@ -652,14 +683,14 @@ func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 		return b.userSelect(ctx, field)
 	})
 	shareEd.Field("ExpiresAt").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		m := GetMessages(ctx.Context())
+		m := b.msgs(ctx.Context())
 		return v.VTextField().Type("date").Label(field.Label).Hint(m.ShareExpiresHint).PersistentHint(true).
 			Variant(v.FieldVariantOutlined).Density(v.DensityCompact).
 			Attr(web.VField(field.FormKey, "")...).ErrorMessages(field.Errors...)
 	})
 	presets.ActionForm[*ShareForm](share, shareEd, func(c *presets.ActionFormContext[*ShareForm]) error {
 		r := c.Context.R
-		m := GetMessages(r.Context())
+		m := b.msgs(r.Context())
 		owner, own := b.ownerKey(r)
 		if !own {
 			return perm.PermissionDenied
@@ -712,7 +743,7 @@ func (b *Builder) setupActions(p *presets.Builder, pg *presets.PageBuilder) {
 			if err := b.Revoke(r.Context(), s.ID, actor); err != nil {
 				return err
 			}
-			ctx.Flash = fmt.Sprintf(GetMessages(r.Context()).Revoked, b.user(r, s.User).Label())
+			ctx.Flash = fmt.Sprintf(b.msgs(r.Context()).Revoked, b.user(r, s.User).Label())
 			return nil
 		})
 }
@@ -750,7 +781,7 @@ func (b *Builder) actionOnClick(ctx *web.EventContext, name, portal string, quer
 }
 
 func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	// another's draft: the page's permission (it has none of its own) and
 	// the draft's (mayReach)
 	if ver := b.page.Page().ActionVerifier(ctx.R, presets.PermGet); ver != nil && ver.Denied() {
@@ -840,7 +871,7 @@ func (b *Builder) draftEvent(ctx *web.EventContext) (r web.EventResponse, err er
 		return
 	}
 	owner, own := b.ownerKey(ctx.R)
-	card, err := b.draftView(ctx, d, GetMessages(ctx.Context()), owner, own)
+	card, err := b.draftView(ctx, d, b.msgs(ctx.Context()), owner, own)
 	if err != nil {
 		return
 	}
@@ -865,7 +896,7 @@ func (b *Builder) diffEvent(ctx *web.EventContext) (r web.EventResponse, err err
 	if err != nil {
 		return
 	}
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	f, err := diffOf(ctx.Context(), d, ctx.R.FormValue("path"))
 	switch {
 	case err != nil:
@@ -897,7 +928,7 @@ func (b *Builder) saveEvent(ctx *web.EventContext) (r web.EventResponse, err err
 	if err != nil {
 		return
 	}
-	m := GetMessages(ctx.Context())
+	m := b.msgs(ctx.Context())
 	allowed := func(op IdeOp, p string) bool { return b.AllowedOp(ctx.R, op, p) }
 	if err := saveChange(d, ctx.R.FormValue("path"), ctx.R.FormValue("content"), allowed); err != nil {
 		msg := err.Error()
