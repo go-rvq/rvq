@@ -3,6 +3,7 @@ package profile
 import (
 	"fmt"
 	"hash/fnv"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -186,7 +187,7 @@ func (c *Builder) userMenu(ctx *web.EventContext, b *presets.Builder, u user.Use
 		if len(accounts) >= max {
 			add.Disabled(true).Children(VListItemSubtitle(h.Text(fmt.Sprintf(msgr.AccountsLimit, max))))
 		} else {
-			add.Href(c.lb.AddAccountURL(ctx.R.RequestURI))
+			add.Href(c.lb.AddAccountURL(pageURI(ctx.R.URL)))
 		}
 		items = append(items, add)
 	}
@@ -210,6 +211,18 @@ func (c *Builder) userMenu(ctx *web.EventContext, b *presets.Builder, u user.Use
 	return VCard(
 		VList(items...),
 	).Class("rvq-user-menu")
+}
+
+// pageURI is the page of the request, without the event that rendered it
+// (__execute_event__, __reload__): the page to go back to.
+func pageURI(u *url.URL) string {
+	q := u.Query()
+	q.Del("__execute_event__")
+	q.Del("__reload__")
+	if enc := q.Encode(); enc != "" {
+		return u.Path + "?" + enc
+	}
+	return u.Path
 }
 
 // accountSwitchURL is the page of the request in the account n: its index
