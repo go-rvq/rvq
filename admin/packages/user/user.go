@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/go-rvq/rvq/admin/role"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/login"
-	"github.com/go-rvq/rvq/x/perm"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/google/uuid"
@@ -91,13 +91,14 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		return gorm2op.DataOperator(qdb).Search(model, params, ctx)
 	})
 
-	ed := mb.Editing(
-		"Actions",
-		"Name",
-		"Account",
-		"Roles",
-		"Status",
-	)
+	// the address of the user (Emailer), when the model has one: what they
+	// are mailed at when their account is no address
+	email := hasField(mb, "Email")
+	fields := []any{"Actions", "Name", "Account"}
+	if email {
+		fields = append(fields, "Email")
+	}
+	ed := mb.Editing(append(fields, "Roles", "Status")...)
 
 	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (err web.ValidationErrors) {
 		u := obj.(User)
@@ -165,8 +166,12 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		}
 	}
 
-	ed.Field("Account").
-		Label("Email").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	account := ed.Field("Account")
+	if !email {
+		// the account is the address
+		account.Label("Email")
+	}
+	account.ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		u, ok := field.Obj.(User)
 		if !ok {
 			return nil
@@ -177,8 +182,11 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		return VTextField().Attr(web.VField(field.Name, field.Value())...).Label(field.Label).ErrorMessages(field.Errors...)
 	}).SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 		u := obj.(User)
-		email := ctx.R.FormValue(field.Name)
-		u.SetEmail(email)
+		if u.GetAccountName() == c.LoginInitialUserEmail {
+			// its account is fixed
+			return nil
+		}
+		u.SetEmail(ctx.R.FormValue(field.Name))
 		return nil
 	})
 
@@ -226,7 +234,8 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
 			u := obj.(User)
 			if u.GetAccountName() == c.LoginInitialUserEmail {
-				return perm.PermissionDenied
+				// its roles are fixed (the save keeps them)
+				return nil
 			}
 			rids := ctx.FormSliceValues(field.FormKey)
 			var roles []*role.Role
@@ -277,7 +286,13 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) (err error) {
 			u := obj.(User)
 			if u.GetAccountName() == c.LoginInitialUserEmail {
-				return perm.PermissionDenied
+				// the initial user: its account, roles and status are fixed;
+				// only its name (and address) are saved
+				cols := []string{"Name", "UpdatedAt"}
+				if email {
+					cols = append(cols, "Email")
+				}
+				return db.Model(obj).Select(cols).Updates(obj).Error
 			}
 			u.SetRegistrationDate(time.Now())
 			if err = in(obj, id, ctx); err != nil {
@@ -295,7 +310,11 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		}
 	})
 
-	ed.Only("Name", "Status", "Account", "Roles", "CreatedAt", "UpdatedAt")
+	if email {
+		ed.Only("Name", "Status", "Account", "Email", "Roles", "CreatedAt", "UpdatedAt")
+	} else {
+		ed.Only("Name", "Status", "Account", "Roles", "CreatedAt", "UpdatedAt")
+	}
 
 	d := mb.Detailing()
 	d.Field("Roles").ComponentFunc(presets.FieldComponentWrapper(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -307,7 +326,11 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		u.SetRoles(roles)
 		return h.Text(strings.Join(c.UserRoles(u), ", "))
 	}))
-	d.Only("Name", "Status", "Account", "Roles", "CreatedAt", "UpdatedAt")
+	if email {
+		d.Only("Name", "Status", "Account", "Email", "Roles", "CreatedAt", "UpdatedAt")
+	} else {
+		d.Only("Name", "Status", "Account", "Roles", "CreatedAt", "UpdatedAt")
+	}
 
 	// the order of the roles of the users (their stacks), and the page of the
 	// permissions of a user
@@ -376,7 +399,9 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 		})
 
 	cl := mb.Listing("ID", "Name", "Account", "Status", "Notes").PerPage(10)
-	cl.Field("Account").Label("Email")
+	if !email {
+		cl.Field("Account").Label("Email")
+	}
 	cl.SearchColumns("users.Name", "Account")
 
 	cl.FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
@@ -423,4 +448,14 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 	})
 
 	return
+}
+
+// hasField says whether the model of mb has the field name.
+func hasField(mb *presets.ModelBuilder, name string) bool {
+	t := mb.ModelType()
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	_, ok := t.FieldByName(name)
+	return t.Kind() == reflect.Struct && ok
 }
