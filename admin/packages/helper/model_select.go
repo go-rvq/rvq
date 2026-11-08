@@ -505,14 +505,20 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			if b.recordEncodeFactory != nil {
 				selector.Items(b.recordEncodeFactory.REF.EncodeSlice(ctx, val))
 			} else {
-				var items any = []any{val}
-				if itemText != nil {
+				// the records chosen: the one, or each of the many
+				recs := []any{val}
+				if b.many {
+					recs = nil
+					reflectutils.ForEach(val, func(item any) { recs = append(recs, item) })
+				}
+				var items any = recs
+				if itemText != nil && len(recs) > 0 {
 					key := itemText.Value.(string)
 					mt := b.Model.ModelType().Elem()
 					if _, ok := mt.FieldByName(key); !ok {
-						if s, _ := val.(fmt.Stringer); s != nil {
+						if s, _ := recs[0].(fmt.Stringer); s != nil {
 							items = h.JSONEncodeFunc(func() (b []byte, err error) {
-								return presets.JSONEncodeItemsWithStringer(key, []any{val})
+								return presets.JSONEncodeItemsWithStringer(key, recs)
 							})
 						}
 					}
