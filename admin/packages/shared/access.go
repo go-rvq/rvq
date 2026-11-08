@@ -234,10 +234,17 @@ func SeedRoles(db *gorm.DB, scope uuid.UUID, resource string, roles ...RoleSeed)
 	return nil
 }
 
-// RolesOf are the roles of the resource in scope (its own and the global
-// ones, of the resource or of any), None last.
+// RolesOf are the roles of the resource in scope (its own; when it has none,
+// the ones of any resource), None last.
 func RolesOf(db *gorm.DB, scope uuid.UUID, resource string) ([]ShareTemplate, error) {
-	q := db.Model(&ShareTemplate{}).Where("resource = ? OR resource = '' OR resource IS NULL", resource)
+	q := db.Model(&ShareTemplate{}).Where("resource = ?", resource)
+	var n int64
+	if err := q.Session(&gorm.Session{}).Count(&n).Error; err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		q = db.Model(&ShareTemplate{}).Where("resource = '' OR resource IS NULL")
+	}
 	if scope != uuid.Nil {
 		q = q.Where("scope = ? OR scope IS NULL", scope)
 	} else {

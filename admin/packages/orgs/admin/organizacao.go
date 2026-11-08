@@ -22,7 +22,7 @@ const OrganizacaoURIName = "orgs"
 // the current user only sees the organizations they own. New organizations are
 // stamped with the current user as owner. Broader access (shared organizations)
 // is added by the sharing manager.
-func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
+func configureOrganizacao(b *presets.Builder, db *gorm.DB, ownerScope bool) {
 	mb := Model(b, &models.Organizacao{}, presets.ModelWithID(OrganizacaoModelID)).
 		MenuIcon("mdi-domain")
 	mb.SetUriName(OrganizacaoURIName)
@@ -46,6 +46,11 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB) {
 	})
 
 	mb.Detailing("Nome", "Descricao", "Padrao")
+
+	// shared by the service (Builder.Sharing): its actions, its reads
+	if !ownerScope {
+		return
+	}
 
 	// the owner can share the organization with other users (SPEC: sharing is
 	// mounted on Organization and Project). Verbs come from the sharing

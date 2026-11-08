@@ -77,6 +77,35 @@ type Service struct {
 	resources map[string]*Resource
 	// lastAt keeps the times of the events increasing: their order
 	lastAt time.Time
+	hooks  map[string][]AccessHook
+}
+
+// AccessHook is told of an access given or changed (role its role) or taken
+// away (removed), in the transaction tx — e.g. the policies of the
+// permissions of the admin kept with it.
+type AccessHook func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error
+
+// OnAccess adds a hook of the accesses of the resource.
+func (s *Service) OnAccess(resource string, h AccessHook) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.hooks == nil {
+		s.hooks = map[string][]AccessHook{}
+	}
+	s.hooks[resource] = append(s.hooks[resource], h)
+}
+
+// accessChanged tells the hooks of the resource of a.
+func (s *Service) accessChanged(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+	s.mu.RLock()
+	hs := slices.Clone(s.hooks[a.Resource])
+	s.mu.RUnlock()
+	for _, h := range hs {
+		if err := h(tx, a, role, removed); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 var (
@@ -548,6 +577,10 @@ func (s *Service) setRole(tx *gorm.DB, a *Access, to *ShareTemplate, by string, 
 	if err := tx.Model(&Access{}).Where("id = ?", a.ID).Updates(map[string]any{"role_id": to.ID, "updated_at": s.o.Now()}).Error; err != nil {
 		return err
 	}
+	a.RoleID = to.ID
+	if err := s.accessChanged(tx, a, to, false); err != nil {
+		return err
+	}
 	return s.event(tx, Event{Resource: a.Resource, RecordID: a.RecordID, Subject: a.Subject, Event: EventRoleChanged,
 		RoleBefore: rolePtr(before), RoleAfter: rolePtr(to.ID), ActionsBefore: actsBefore, ActionsAfter: to.Actions, By: by}, o)
 }
@@ -561,6 +594,9 @@ func (s *Service) Revoke(ctx context.Context, resource, id, subject, by string, 
 			return ErrNotShared
 		}
 		if err := tx.Delete(&a).Error; err != nil {
+			return err
+		}
+		if err := s.accessChanged(tx, &a, a.Role, true); err != nil {
 			return err
 		}
 		return s.event(tx, Event{Resource: resource, RecordID: id, Subject: subject, Event: EventRevoked,
@@ -786,6 +822,9 @@ func (s *Service) grant(tx *gorm.DB, resource, id, subject string, roleID uuid.U
 	if err := tx.Create(a).Error; err != nil {
 		return err
 	}
+	if err := s.accessChanged(tx, a, role, false); err != nil {
+		return err
+	}
 	return s.event(tx, Event{Resource: resource, RecordID: id, Subject: subject, Event: EventGranted,
 		RoleAfter: &role.ID, ActionsAfter: role.Actions, By: by}, o)
 }
@@ -838,7 +877,16 @@ func (s *Service) transfer(tx *gorm.DB, inv *AccessInvite, user string, o Origin
 		return err
 	}
 	// the new owner's access, if any, is no more: they own it
-	tx.Where("resource = ? AND record_id = ? AND subject = ?", inv.Resource, inv.RecordID, UserSubject(user)).Delete(&Access{})
+	var mine Access
+	if tx.Preload("Role").Where("resource = ? AND record_id = ? AND subject = ?", inv.Resource, inv.RecordID, UserSubject(user)).
+		Limit(1).Find(&mine).RowsAffected > 0 {
+		if err := tx.Delete(&mine).Error; err != nil {
+			return err
+		}
+		if err := s.accessChanged(tx, &mine, mine.Role, true); err != nil {
+			return err
+		}
+	}
 	if err := s.event(tx, Event{Resource: inv.Resource, RecordID: inv.RecordID, Subject: UserSubject(user),
 		Event: EventOwnerTransferred, By: user, Note: "from " + former}, o); err != nil {
 		return err

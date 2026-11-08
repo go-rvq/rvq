@@ -15,8 +15,9 @@ import (
 // (people, finance) can safely ensure it. After Install it also exposes the
 // org model and the MountUnderOrg helper as methods.
 type Builder struct {
-	db *gorm.DB
-	pb *presets.Builder
+	db      *gorm.DB
+	pb      *presets.Builder
+	sharing *shared.Service
 }
 
 var _ presets.Plugin = (*Builder)(nil)
@@ -45,11 +46,16 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	}
 	messages.Register(pb.I18n())
 
-	configureOrganizacao(pb, b.db)
+	configureOrganizacao(pb, b.db, b.sharing == nil)
 	// the organization in the side menu: a root item, its chip opens the
 	// choice; the one chosen, its resources under it
 	configureMenuRoot(pb, b.db)
 	configureNestedMenu(pb, b.db)
+	if b.sharing != nil {
+		// shared by the service: the actions of sharing, the page of the
+		// confirmations, the invites
+		return installSharing(pb, b.sharing)
+	}
 	shared.InstallInvites(pb, b.db)
 	return nil
 }

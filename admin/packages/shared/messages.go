@@ -31,6 +31,32 @@ type Messages struct {
 	NoInvites         string `i18n:"hint='Shown when the user has no invite waiting.'"`
 	AcceptInvite      string `i18n:"label='Accept invite', hint='Button that accepts an invite to a shared record.'"`
 	RejectInvite      string `i18n:"label='Decline invite', hint='Button that declines an invite to a shared record.'"`
+	AccessesTitle     string `i18n:"hint='Title of the dialog of who reaches a record.'"`
+	HistoryTitle      string `i18n:"hint='Title of the dialog of the history of the sharing of a record.'"`
+	Subject           string `i18n:"hint='Label of whom a record is shared with.'"`
+	SubjectUser       string `i18n:"hint='Kind of a subject: a user.'"`
+	SubjectGroup      string `i18n:"hint='Kind of a subject: a group.'"`
+	Role              string `i18n:"hint='Label of the role of an access.'"`
+	Owner             string `i18n:"hint='The owner of a record.'"`
+	Inherited         string `i18n:"hint='Says an access comes from a record above.'"`
+	Revoke            string `i18n:"hint='Button that takes an access away.'"`
+	ChangeRole        string `i18n:"hint='Button that changes the role of an access.'"`
+	RequestSent       string `i18n:"hint='Shown when a sharing waits for the owner.'"`
+	RoleChanged       string `i18n:"hint='Shown when a role changed at once.'"`
+	Revoked           string `i18n:"hint='Shown when an access was taken away.'"`
+	ConfirmTitle      string `i18n:"hint='Title of the page where the owner confirms a request.'"`
+	Confirm           string `i18n:"hint='Button that confirms a request.'"`
+	Decline           string `i18n:"hint='Button that declines a request.'"`
+	Confirmed         string `i18n:"hint='Shown when a request was confirmed.'"`
+	Declined          string `i18n:"hint='Shown when a request was declined.'"`
+	RequestedBy       string `i18n:"hint='Label of who asked.'"`
+	Record            string `i18n:"hint='Label of the record of a request.'"`
+	Event             string `i18n:"hint='Label of an event of the history.'"`
+	When              string `i18n:"hint='Label of when an event happened.'"`
+	Who               string `i18n:"hint='Label of who did an event.'"`
+	NoHistory         string `i18n:"hint='Shown when a history is empty.'"`
+	TransferOwner     string `i18n:"hint='Button that asks a new owner of a record.'"`
+	KeepRole          string `i18n:"hint='Label of the role the former owner keeps.'"`
 	InviteFrom        string `i18n:"label='Invited by', hint='Label of who invited the user to a shared record.'"`
 }
 
@@ -52,6 +78,32 @@ var Messages_en_US = &Messages{
 	AcceptInvite:      "Accept",
 	RejectInvite:      "Decline",
 	InviteFrom:        "Invited by",
+	AccessesTitle:     "Accesses",
+	HistoryTitle:      "Access history",
+	Subject:           "User or group",
+	SubjectUser:       "User",
+	SubjectGroup:      "Group",
+	Role:              "Role",
+	Owner:             "Owner",
+	Inherited:         "inherited",
+	Revoke:            "Revoke",
+	ChangeRole:        "Change role",
+	RequestSent:       "Sent to the owner: the sharing waits for their confirmation by e-mail.",
+	RoleChanged:       "Role changed.",
+	Revoked:           "Access revoked.",
+	ConfirmTitle:      "Confirm the request",
+	Confirm:           "Confirm",
+	Decline:           "Decline",
+	Confirmed:         "Confirmed.",
+	Declined:          "Declined.",
+	RequestedBy:       "Asked by",
+	Record:            "Record",
+	Event:             "Event",
+	When:              "When",
+	Who:               "By",
+	NoHistory:         "Nothing yet.",
+	TransferOwner:     "Transfer ownership",
+	KeepRole:          "Role you keep",
 }
 
 var Messages_pt_BR = &Messages{
@@ -72,6 +124,32 @@ var Messages_pt_BR = &Messages{
 	AcceptInvite:      "Aceitar",
 	RejectInvite:      "Recusar",
 	InviteFrom:        "Convidado por",
+	AccessesTitle:     "Acessos",
+	HistoryTitle:      "Histórico de acessos",
+	Subject:           "Usuário ou grupo",
+	SubjectUser:       "Usuário",
+	SubjectGroup:      "Grupo",
+	Role:              "Papel",
+	Owner:             "Proprietário",
+	Inherited:         "herdado",
+	Revoke:            "Revogar",
+	ChangeRole:        "Trocar papel",
+	RequestSent:       "Enviado ao proprietário: o compartilhamento espera a confirmação dele por e-mail.",
+	RoleChanged:       "Papel trocado.",
+	Revoked:           "Acesso revogado.",
+	ConfirmTitle:      "Confirme o pedido",
+	Confirm:           "Confirmar",
+	Decline:           "Recusar",
+	Confirmed:         "Confirmado.",
+	Declined:          "Recusado.",
+	RequestedBy:       "Pedido por",
+	Record:            "Registro",
+	Event:             "Evento",
+	When:              "Quando",
+	Who:               "Por",
+	NoHistory:         "Nada ainda.",
+	TransferOwner:     "Transferir propriedade",
+	KeepRole:          "Papel que você mantém",
 }
 
 func registerMessages(b *i18n.Builder) {

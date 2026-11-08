@@ -26,7 +26,7 @@ func orgMenuRoot(b *presets.Builder, db *gorm.DB) presets.MenuRootFunc {
 			return
 		}
 		var n int64
-		if db.Model(&models.Organizacao{}).Where("owner_id = ?", u.GetID()).Count(&n); n == 0 {
+		if accessibleOrgs(ctx.R, db.Model(&models.Organizacao{})).Count(&n); n == 0 {
 			return
 		}
 		node, active, opened := mb.MenuNodeOf(ctx, nil)

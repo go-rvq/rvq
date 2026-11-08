@@ -63,6 +63,11 @@ func ScopeToOrg(mb *presets.ModelBuilder) {
 			WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
 				cb.Pre(func(state *gorm2op.CallbackState) (err error) {
 					if id, ok := OrgIDFromRequest(state.Ctx.R); ok {
+						// an organization the user does not see: nothing
+						if !orgVisible(state.Ctx.R, id) {
+							state.DB = state.DB.Where("1 = 0")
+							return nil
+						}
 						// qualify with the model's table so the filter is
 						// unambiguous when the query joins other org-scoped
 						// tables (which also have an organizacao_id column).

@@ -80,6 +80,9 @@ func (b *Builder) Stack(pb *perm.Builder, u User) *perm.Stack {
 	return role.Stack(pb, subjects, roles).Resolve()
 }
 
+// NewUser is a new record of the users' model.
+func (b *Builder) NewUser() User { return b.mb.NewModel().(User) }
+
 // Find is the user id (nil when none).
 func (b *Builder) Find(db *gorm.DB, id uuid.UUID) (User, error) {
 	u := b.mb.NewModel().(User)

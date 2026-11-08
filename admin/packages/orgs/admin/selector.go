@@ -27,7 +27,7 @@ func OrgSelectorComponent(b *presets.Builder, db *gorm.DB) presets.ComponentFunc
 			return nil
 		}
 		var orgs []models.Organizacao
-		db.Where("owner_id = ?", u.GetID()).Order("nome").Find(&orgs)
+		accessibleOrgs(ctx.R, db).Order("nome").Find(&orgs)
 		if len(orgs) == 0 {
 			return nil
 		}
