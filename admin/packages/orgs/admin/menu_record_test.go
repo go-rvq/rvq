@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -140,14 +142,14 @@ func (a *choiceApp) itemsHref(t *testing.T, p *choiceProject) string {
 	return a.items.Info().ListingHref(a.mid(t, OrganizacaoModel(a.b), a.org.ID), a.mid(t, a.proj, p.ID))
 }
 
-// menu is the node of the projects in the menu of the page path (cookie, the
-// record kept in the browser).
-func (a *choiceApp) menu(t *testing.T, path, cookie string) *presets.MenuNode {
+// menu is the node of the projects in the menu of the page path (records,
+// the ones chosen in the tab: vars.menuRecords, in its header).
+func (a *choiceApp) menu(t *testing.T, path string, records map[string]string) *presets.MenuNode {
 	t.Helper()
 	r := httptest.NewRequest("GET", path, nil)
 	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
-	if cookie != "" {
-		r.AddCookie(&http.Cookie{Name: "rvq_menu_projetos", Value: cookie})
+	if records != nil {
+		r.Header.Set(presets.MenuRecordsHeader, h.JSONString(records))
 	}
 	nodes, _, _ := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r})
 	if len(nodes) != 1 || len(nodes[0].Children) == 0 {
@@ -174,6 +176,22 @@ func (a *choiceApp) menu(t *testing.T, path, cookie string) *presets.MenuNode {
 	return g.Children[0]
 }
 
+// projectsKey is the key of the selector of the projects of the
+// organization org in vars.menuRecords.
+func (a *choiceApp) projectsKey(t *testing.T, org uuid.UUID) string {
+	return "g:menu-record:projetos:" + a.mid(t, OrganizacaoModel(a.b), org).String()
+}
+
+// projectValue is the project p of the organization org as vars.menuRecords
+// keeps it: its path of permission, its id when there is none.
+func (a *choiceApp) projectValue(t *testing.T, org uuid.UUID, p *choiceProject) string {
+	pm := a.mid(t, a.proj, p.ID)
+	if v := a.proj.Info().RecordPath(model.IDSlice{a.mid(t, OrganizacaoModel(a.b), org)}, pm); v != "" {
+		return v
+	}
+	return pm.String()
+}
+
 func chipOf(n *presets.MenuNode) *presets.MenuChip { return n.Props["chip"].(*presets.MenuChip) }
 
 // A record chosen in the menu (presets MenuRecordSelector), of a model under
@@ -184,7 +202,7 @@ func TestMenuRecordSelectorUnderOrg(t *testing.T) {
 	orgPage := "/admin/orgs/" + a.org.ID.String()
 
 	// two projects, no default: none chosen
-	n := a.menu(t, orgPage, "")
+	n := a.menu(t, orgPage, nil)
 	// none chosen: the chip "Select" the title too, no clear
 	if c := chipOf(n); c.Title != presets.Messages_en_US.MenuRecordSelect || !c.Inline || c.Clear != nil || len(n.Children) != 0 {
 		t.Errorf("none chosen: %+v %+v", c, n.Children)
@@ -195,7 +213,7 @@ func TestMenuRecordSelectorUnderOrg(t *testing.T) {
 
 	// the default
 	a.db.Model(a.p1).Update("padrao", true)
-	n = a.menu(t, orgPage, "")
+	n = a.menu(t, orgPage, nil)
 	if c := chipOf(n); c.Title != "Obra 1" || len(n.Children) != 2 || n.Children[0].Value != a.itemsHref(t, a.p1) {
 		t.Errorf("the default: %+v %+v", c, n.Children)
 	}
@@ -209,25 +227,183 @@ func TestMenuRecordSelectorUnderOrg(t *testing.T) {
 	if c := chipOf(n); !c.Inline || c.Clear == nil || c.Clear.Event == "" || n.Title != "Obra 1" {
 		t.Errorf("chosen: the chip inline, its clear: %+v %+v", n.Title, c)
 	}
-	// cleared (the browser's "none"): none, not the default
-	n = a.menu(t, orgPage, a.mid(t, OrganizacaoModel(a.b), a.org.ID).String()+"|")
+	// cleared in the tab (""): none, not the default
+	key := a.projectsKey(t, a.org.ID)
+	n = a.menu(t, orgPage, map[string]string{key: ""})
 	if c := chipOf(n); c.Title != presets.Messages_en_US.MenuRecordSelect || !c.Inline || c.Clear != nil || len(n.Children) != 0 {
 		t.Errorf("cleared: %+v %+v", c, n.Children)
 	}
-	// the browser's
-	n = a.menu(t, orgPage, a.mid(t, OrganizacaoModel(a.b), a.org.ID).String()+"|"+a.p2.ID.String())
-	if chipOf(n).Title != "Obra 2" {
-		t.Errorf("the browser's: %+v", chipOf(n))
+	// the tab's, its props for the menu to keep it
+	v2 := a.projectValue(t, a.org.ID, a.p2)
+	n = a.menu(t, orgPage, map[string]string{key: v2})
+	if chipOf(n).Title != "Obra 2" || n.Value != key || n.Props["recordKey"] != key || n.Props["recordPath"] != v2 || n.Props["recordFromURI"] != false {
+		t.Errorf("the tab's: %+v %+v", chipOf(n), n.Props)
 	}
-	// the browser's of another organization: not this one's
-	n = a.menu(t, orgPage, a.mid(t, OrganizacaoModel(a.b), a.other.ID).String()+"|"+a.pOther.ID.String())
+	// a project of another organization under this one's key: not this
+	// one's
+	n = a.menu(t, orgPage, map[string]string{key: a.projectValue(t, a.other.ID, a.pOther)})
 	if chipOf(n).Title != "Obra 1" {
 		t.Errorf("another organization's: %+v", chipOf(n))
 	}
-	// the page's, over the browser's
-	n = a.menu(t, a.itemsHref(t, a.p2), a.mid(t, OrganizacaoModel(a.b), a.org.ID).String()+"|"+a.p1.ID.String())
-	if chipOf(n).Title != "Obra 2" || n.Children[0].Value != a.itemsHref(t, a.p2) {
+	// the page's, over the tab's
+	n = a.menu(t, a.itemsHref(t, a.p2), map[string]string{key: a.projectValue(t, a.org.ID, a.p1)})
+	if chipOf(n).Title != "Obra 2" || n.Children[0].Value != a.itemsHref(t, a.p2) || n.Props["recordFromURI"] != true {
 		t.Errorf("the page's: %+v %+v", chipOf(n), n.Children)
+	}
+}
+
+// The record chosen in the tab: the item of the selector drawn again of the
+// one of the header (menuRecordNodeEvent); the choice in the dialog and the
+// clear keep it in the tab (vars.menuRecordSet), no cookie, the page
+// staying.
+func TestMenuRecordOfTheTab(t *testing.T) {
+	a := newChoiceApp(t)
+	orgMID := a.mid(t, OrganizacaoModel(a.b), a.org.ID)
+	listHref := a.proj.Info().ListingHref(orgMID)
+	key, v2 := a.projectsKey(t, a.org.ID), a.projectValue(t, a.org.ID, a.p2)
+	serve := func(r *http.Request, records map[string]string) (*httptest.ResponseRecorder, map[string]any) {
+		t.Helper()
+		r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+		if records != nil {
+			r.Header.Set(presets.MenuRecordsHeader, h.JSONString(records))
+		}
+		w := httptest.NewRecorder()
+		a.b.ServeHTTP(w, r)
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("%v: %.300s", err, w.Body.String())
+		}
+		if c := w.Header().Values("Set-Cookie"); len(c) > 0 {
+			t.Errorf("a cookie: %v", c)
+		}
+		return w, resp
+	}
+
+	// the item again, of the record of the tab
+	_, resp := serve(multipartestutils.NewMultipartBuilder().PageURL(listHref).
+		EventFunc("presets_menuRecord_node").BuildEventFuncRequest(), map[string]string{key: v2})
+	data, _ := resp["data"].(map[string]any)
+	node, _ := data["node"].(map[string]any)
+	body := h.JSONString(node)
+	if node == nil || node["value"] != key || node["title"] != "Obra 2" || !strings.Contains(body, a.itemsHref(t, a.p2)) {
+		t.Errorf("the item of the tab's record: %s", body)
+	}
+	// none in the tab: the chip "Select", no resources
+	_, resp = serve(multipartestutils.NewMultipartBuilder().PageURL(listHref).
+		EventFunc("presets_menuRecord_node").BuildEventFuncRequest(), map[string]string{key: ""})
+	data, _ = resp["data"].(map[string]any)
+	if node, _ = data["node"].(map[string]any); node == nil || node["children"] != nil {
+		t.Errorf("none: %s", h.JSONString(node))
+	}
+
+	// the choice in the dialog: kept in the tab, the page staying
+	_, resp = serve(multipartestutils.NewMultipartBuilder().PageURL(listHref).
+		EventFunc(actions.DoListingAction).Query(presets.ParamAction, presets.ActionChooseMenuRecord).
+		Query("menu_record_id", a.p2.ID.String()).BuildEventFuncRequest(), nil)
+	script, _ := resp["runScript"].(string)
+	if !strings.Contains(script, "vars.menuRecordSet") || !strings.Contains(script, h.JSONString(key)) ||
+		!strings.Contains(script, h.JSONString(v2)) || resp["redirectURL"] != nil {
+		t.Errorf("the choice: %v", resp)
+	}
+
+	// the choice on a page of the record before: the same page of the one
+	// chosen — its resource's listing (a record of it is the other's), a
+	// page of its detail; out of them, the page stays
+	choose := func(referer string) string {
+		t.Helper()
+		r := multipartestutils.NewMultipartBuilder().PageURL(listHref).
+			EventFunc(actions.DoListingAction).Query(presets.ParamAction, presets.ActionChooseMenuRecord).
+			Query("menu_record_id", a.p2.ID.String()).BuildEventFuncRequest()
+		r.Header.Set("Referer", referer)
+		_, resp := serve(r, nil)
+		script, _ := resp["runScript"].(string)
+		return script
+	}
+	detail := func(p *choiceProject) string {
+		return a.proj.Info().DetailingHref(p.ID.String(), orgMID)
+	}
+	for _, c := range []struct{ from, to string }{
+		{a.itemsHref(t, a.p1), a.itemsHref(t, a.p2)},
+		{a.itemsHref(t, a.p1) + "/" + uuid.NewString(), a.itemsHref(t, a.p2)},
+		{detail(a.p1) + "/relatorios", detail(a.p2) + "/relatorios"},
+		{detail(a.p1), detail(a.p2)},
+	} {
+		if script := choose(c.from); !strings.Contains(script, "pushStateURL("+h.JSONString(c.to)+")") {
+			t.Errorf("from %s: %s, want %s", c.from, script, c.to)
+		}
+	}
+	if script := choose(listHref); strings.Contains(script, "pushStateURL") {
+		t.Errorf("out of the record: %s", script)
+	}
+
+	// the clear: none in the tab; on a page of the record, its listing
+	r := multipartestutils.NewMultipartBuilder().PageURL(listHref).EventFunc("presets_menuRecord_clear").BuildEventFuncRequest()
+	r.Header.Set("Referer", a.itemsHref(t, a.p2))
+	_, resp = serve(r, nil)
+	script, _ = resp["runScript"].(string)
+	if !strings.Contains(script, "vars.menuRecordSet("+h.JSONString(key)+", \"\"") || !strings.Contains(script, "pushStateURL("+h.JSONString(listHref)+")") {
+		t.Errorf("the clear: %v", resp)
+	}
+}
+
+// The organization chosen anew: none of its projects chosen in the tab; on
+// a page of a project of the other, the projects of the one chosen.
+func TestMenuRecordOrgAnewProjectNone(t *testing.T) {
+	a := newChoiceApp(t)
+	orgs := OrganizacaoModel(a.b)
+	choose := func(referer string) string {
+		t.Helper()
+		r := multipartestutils.NewMultipartBuilder().PageURL(orgs.Info().ListingHref()).
+			EventFunc(actions.DoListingAction).Query(presets.ParamAction, presets.ActionChooseMenuRecord).
+			Query("menu_record_id", a.other.ID.String()).BuildEventFuncRequest()
+		r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+		r.Header.Set("Referer", referer)
+		w := httptest.NewRecorder()
+		a.b.ServeHTTP(w, r)
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("%v: %.300s", err, w.Body.String())
+		}
+		script, _ := resp["runScript"].(string)
+		return script
+	}
+	script := choose("/admin/x")
+	if want := "vars.menuRecords[" + h.JSONString(a.projectsKey(t, a.other.ID)) + "] = ''"; !strings.Contains(script, want) {
+		t.Errorf("the projects of the one chosen, none: %s", script)
+	}
+	if strings.Contains(script, "pushStateURL") {
+		t.Errorf("out of the organization, the page stays: %s", script)
+	}
+	want := a.proj.Info().ListingHref(a.mid(t, orgs, a.other.ID))
+	if script := choose(a.itemsHref(t, a.p1)); !strings.Contains(script, "pushStateURL("+h.JSONString(want)+")") {
+		t.Errorf("from a project of the other: %s, want %s", script, want)
+	}
+}
+
+// The groups of pages of the record chosen (PageGroups): a group under it,
+// after its pages, its pages in it; open when one of them is the page.
+func TestMenuRecordPageGroups(t *testing.T) {
+	a := newChoiceApp(t)
+	cfg := a.proj.MenuRecordSelectorConfig()
+	cfg.Pages = nil
+	cfg.PageGroups = []presets.MenuRecordPageGroup{{Name: "rel", Icon: "mdi-chart-box",
+		Title: func(context.Context) string { return "Relatórios" }, Pages: []string{"/relatorios", "/nada"}}}
+	a.db.Model(a.p1).Update("padrao", true)
+	page := a.proj.Info().DetailingHref(a.p1.ID.String(), a.mid(t, OrganizacaoModel(a.b), a.org.ID)) + "/relatorios"
+	n := a.menu(t, "/admin/orgs/"+a.org.ID.String(), nil)
+	if len(n.Children) != 2 {
+		t.Fatalf("the resources and the group: %s", h.JSONString(n.Children))
+	}
+	g := n.Children[1]
+	if g.Title != "Relatórios" || g.Value != n.Value+":pages:rel" || len(g.Children) != 1 || g.Children[0].Value != page {
+		t.Errorf("the group: %s", h.JSONString(g))
+	}
+	// the page open: its group opened
+	r := httptest.NewRequest("GET", page, nil)
+	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+	_, opened, active := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r})
+	if !slices.Contains(opened, g.Value) || active != page {
+		t.Errorf("opened %v, active %v", opened, active)
 	}
 }
 

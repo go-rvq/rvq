@@ -2,6 +2,7 @@ package presets
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,9 +30,11 @@ import (
 // parents are then known — the ones chosen above it.
 //
 // The record chosen is the one of the page (…/<model>/{id}/…), else the one
-// kept in the browser for its parents (a cookie), else the only one, else
-// the default (DefaultConditions) — none when it was cleared (the cookie
-// keeps that too). The chip is the title of its item (no label of the
+// chosen in this tab (vars.menuRecords, carried by every request of the page
+// in MenuRecordsHeader; none when it was cleared), else the only one, else
+// the default (DefaultConditions). Nothing is kept in the browser: a page
+// opened anew (F5) says it by its URI. A change in the dialog, or the clear,
+// keeps it in the tab and draws its item again, the page staying. The chip is the title of its item (no label of the
 // model): the record chosen — an icon at the right of the item clears it —,
 // or "Select".
 
@@ -45,6 +48,9 @@ type MenuRecordSelectorConfig struct {
 	// Pages are the paths of pages of the record's detail shown after them
 	// ("/relatorios").
 	Pages []string
+	// PageGroups are groups of pages of the record's detail, after Pages:
+	// a group of the menu each (Relatórios: its pages under it).
+	PageGroups []MenuRecordPageGroup
 	// Conditions narrow the records that may be chosen (the active ones).
 	Conditions SQLConditions
 	// DefaultConditions say the record chosen when none was: the first that
@@ -58,6 +64,16 @@ type MenuRecordSelectorConfig struct {
 	// it's (the organization's, at the top of the menu); its children have
 	// their selectors still. Set before MenuRecordSelector.
 	External bool
+}
+
+// MenuRecordPageGroup is a group of pages of the detail of the record chosen
+// in the menu (MenuRecordSelectorConfig.PageGroups): its name (of its node),
+// title and icon, the paths of its pages.
+type MenuRecordPageGroup struct {
+	Name  string
+	Title func(ctx context.Context) string
+	Icon  string
+	Pages []string
 }
 
 // MenuRecordSelector turns on (or off) the record chosen in the side menu
@@ -104,10 +120,99 @@ func withParents(ctx *web.EventContext, parents IDSlice) *web.EventContext {
 	return &c
 }
 
-// menuRecordCookie is the cookie that keeps, in the browser, the record of
-// mb chosen: "<parents>|<record>".
-func (mb *ModelBuilder) menuRecordCookie() string {
-	return "rvq_menu_" + strings.ReplaceAll(mb.id, "/", "_")
+// MenuRecordsHeader is the header of the requests of the page that carries
+// the records chosen in the menu in this tab (vars.menuRecords, a JSON
+// object): the key of the item of each selector (menuRecordKey) and the
+// record as its path of permission (RecordPath), "" cleared.
+const MenuRecordsHeader = "X-Rvq-Menu-Records"
+
+// menuRecordsSetup is the setup of the side menu (CreateMenus: scope.menu,
+// its locals) for the records chosen in it in this tab: vars.menuRecords,
+// the key of the item of each selector and its record (its path of
+// permission, "" cleared), carried by every request (MenuRecordsHeader); the
+// ones the page's URI says, kept in it; vars.menuRecordSet(key, value, url),
+// a record kept and its item drawn again (menuRecordNodeEvent at url).
+var menuRecordsSetup = `({scope, inject}) => {
+	const vars = inject('vars')
+	const plaid = inject('plaid')
+	const menu = scope.menu
+	if (!vars.menuRecords) vars.menuRecords = {}
+	if (!vars.__requestHeaders) vars.__requestHeaders = {}
+	vars.__requestHeaders['` + MenuRecordsHeader + `'] = () => {
+		const m = vars.menuRecords
+		return m && Object.keys(m).length ? JSON.stringify(m) : ''
+	}
+	const walk = (ns, f) => (ns || []).forEach((n) => { f(n); walk(n.children, f) })
+	walk(menu.items, (n) => {
+		const p = n.props
+		if (p && p.recordKey && p.recordFromURI) vars.menuRecords[p.recordKey] = p.recordPath
+	})
+	vars.menuRecordSet = (key, value, url) => {
+		vars.menuRecords[key] = value
+		return plaid().eventFunc('` + menuRecordNodeEvent + `').url(url).go().then((r) => {
+			const d = r && r.data
+			if (!d || !d.node) return
+			const replace = (ns) => {
+				for (let i = 0; i < (ns || []).length; i++) {
+					if (ns[i].value === key) { ns.splice(i, 1, d.node); return true }
+					if (replace(ns[i].children)) return true
+				}
+				return false
+			}
+			replace(menu.items)
+			;(d.opened || []).forEach((v) => { if (!menu.opened.includes(v)) menu.opened.push(v) })
+		})
+	}
+}`
+
+// menuRecordKey is the unique id of the item of the selector of mb, of the
+// parents: the key of its record in vars.menuRecords.
+func (mb *ModelBuilder) menuRecordKey(parents IDSlice) string {
+	return "g:menu-record:" + mb.uriName + ":" + parents.String()
+}
+
+// menuRecordValue is the record mid of mb, of the parents, as
+// vars.menuRecords keeps it: its path of permission (RecordPath); its id
+// when there is no generator of them.
+func (mb *ModelBuilder) menuRecordValue(parents IDSlice, mid ID) string {
+	if p := mb.RecordPath(parents, mid); p != "" {
+		return p
+	}
+	return mid.String()
+}
+
+// menuRecordsOf are the records chosen in the menu the request carries
+// (MenuRecordsHeader); nil, none.
+func menuRecordsOf(r *http.Request) map[string]string {
+	v := r.Header.Get(MenuRecordsHeader)
+	if v == "" {
+		return nil
+	}
+	var m map[string]string
+	if json.Unmarshal([]byte(v), &m) != nil {
+		return nil
+	}
+	return m
+}
+
+// menuRecordOfValue is the record of mb, of the parents, that v names (a
+// value of vars.menuRecords): its path of permission, read back and the
+// same as the one of the record found (of mb, of these parents); else its
+// id. nil when it names none.
+func (mb *ModelBuilder) menuRecordOfValue(ctx *web.EventContext, parents IDSlice, v string) any {
+	id := v
+	if strings.HasSuffix(v, ":") {
+		t, err := mb.p.ParseRecordPath(v)
+		if err != nil || len(t.Models) == 0 || t.Listing || t.Page != nil || t.Action != nil {
+			return nil
+		}
+		last := t.Models[len(t.Models)-1]
+		if last.Model != mb || mb.RecordPath(parents, last.ID) != v {
+			return nil
+		}
+		id = last.ID.String()
+	}
+	return mb.menuRecordFind(ctx, parents, id)
 }
 
 // menuRecordSearch searches the records of mb that may be chosen, of the
@@ -180,51 +285,60 @@ func (mb *ModelBuilder) menuRecordFind(ctx *web.EventContext, parents IDSlice, i
 	return obj
 }
 
+// menuRecordChoice is the record of mb chosen in the menu: the record and
+// its id (nil, none), and whether it is the one of the page (its URI).
+type menuRecordChoice struct {
+	obj     any
+	id      ID
+	fromURI bool
+}
+
 // menuRecordChosen is the record of mb chosen, of the parents: the one of
-// the page, else the browser's, else the only one, else the default; nil,
-// none.
-func (mb *ModelBuilder) menuRecordChosen(ctx *web.EventContext, parents IDSlice) (any, ID) {
-	ok := func(obj any) (any, ID) {
+// the page (its URI), else the one of this tab (MenuRecordsHeader: none,
+// cleared), else the only one, else the default; nil, none.
+func (mb *ModelBuilder) menuRecordChosen(ctx *web.EventContext, parents IDSlice) (c menuRecordChoice) {
+	ok := func(obj any) menuRecordChoice {
 		if obj == nil {
-			return nil, ID{}
+			return menuRecordChoice{}
 		}
 		mid, readable := mb.menuRecordReadable(ctx.R, parents, obj)
 		if !readable {
-			return nil, ID{}
+			return menuRecordChoice{}
 		}
-		return obj, mid
+		return menuRecordChoice{obj: obj, id: mid}
 	}
 	// the page's
 	if rest, found := strings.CutPrefix(ctx.R.URL.Path, mb.Info().ListingHref(parents...)+"/"); found {
 		id, _, _ := strings.Cut(rest, "/")
 		if obj := mb.menuRecordFind(ctx, parents, id); obj != nil {
-			return ok(obj)
+			if c = ok(obj); c.obj != nil {
+				c.fromURI = true
+				return
+			}
 		}
 	}
-	// the browser's — none, cleared
-	if ck, err := ctx.R.Cookie(mb.menuRecordCookie()); err == nil {
-		if p, id, found := strings.Cut(ck.Value, "|"); found && p == parents.String() {
-			if id == "" {
-				return nil, ID{}
-			}
-			if obj := mb.menuRecordFind(ctx, parents, id); obj != nil {
-				return ok(obj)
-			}
+	// the tab's — "", cleared
+	if v, found := menuRecordsOf(ctx.R)[mb.menuRecordKey(parents)]; found {
+		if v == "" {
+			return menuRecordChoice{}
+		}
+		if c = ok(mb.menuRecordOfValue(ctx, parents, v)); c.obj != nil {
+			return
 		}
 	}
 	// the only one
 	if objs, total, err := mb.menuRecordSearch(ctx, parents, "", nil, 1, 2); err == nil && total == 1 && len(objs) == 1 {
-		if obj, mid := ok(objs[0]); obj != nil {
-			return obj, mid
+		if c = ok(objs[0]); c.obj != nil {
+			return
 		}
 	}
 	// the default
-	if c := mb.MenuRecordSelectorConfig(); len(c.DefaultConditions) > 0 {
-		if objs, _, err := mb.menuRecordSearch(ctx, parents, "", c.DefaultConditions, 1, 1); err == nil && len(objs) > 0 {
+	if cfg := mb.MenuRecordSelectorConfig(); len(cfg.DefaultConditions) > 0 {
+		if objs, _, err := mb.menuRecordSearch(ctx, parents, "", cfg.DefaultConditions, 1, 1); err == nil && len(objs) > 0 {
 			return ok(objs[0])
 		}
 	}
-	return nil, ID{}
+	return menuRecordChoice{}
 }
 
 // menuRecordItems are the children shown under the record chosen.
@@ -266,12 +380,48 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 	}
 
 	msgs := MustGetMessages(ctx.Context())
-	key := mb.uriName + ":" + parents.String()
+	selector, active, opened := mb.menuRecordSelectorNode(ctx, parents, mb.menuRecordChosen(ctx, parents))
+	list := &MenuNode{Title: fmt.Sprintf(msgs.MenuRecordList, strings.ToLower(mb.TTitlePlural(ctx.Context()))),
+		Value: listHref, Props: map[string]any{"href": listHref, "prependIcon": "mdi-format-list-bulleted"}}
+	n = &MenuNode{
+		Title:    mb.TTitlePlural(ctx.Context()),
+		Value:    "g:menu-records:" + mb.uriName + ":" + parents.String(),
+		Props:    map[string]any{"prependIcon": icon},
+		Children: []*MenuNode{selector, list},
+	}
+	if len(selector.Children) > 0 {
+		opened = append(opened, n.Value)
+	}
+	if active == "" && isActive(listHref) {
+		active = listHref
+	}
+	if active != "" {
+		opened = append(opened, n.Value)
+	}
+	return
+}
+
+// menuRecordSelectorNode is the item of the selector of mb, of the parents,
+// with the record ch chosen: its chip — the record, or "Select" —, and under
+// it, chosen, the resources of the record (in their menu groups), the pages
+// of its detail and its groups of pages. Its props carry what the menu keeps
+// of it in the tab (vars.menuRecords): recordKey, recordPath (""
+// none) and recordFromURI.
+func (mb *ModelBuilder) menuRecordSelectorNode(ctx *web.EventContext, parents IDSlice, ch menuRecordChoice) (selector *MenuNode, active string, opened []string) {
+	path := ctx.R.URL.Path
+	isActive := func(href string) bool { return path == href || strings.HasPrefix(path, href+"/") }
+	icon := mb.menuIcon
+	if icon == "" {
+		icon = defaultMenuIcon(mb.label)
+	}
+	listHref := mb.Info().ListingHref(parents...)
+	msgs := MustGetMessages(ctx.Context())
+	key := mb.menuRecordKey(parents)
 	title := mb.TTitle(ctx.Context())
-	selector := &MenuNode{
+	selector = &MenuNode{
 		Title: title,
-		Value: "g:menu-record:" + key,
-		Props: map[string]any{"prependIcon": icon},
+		Value: key,
+		Props: map[string]any{"prependIcon": icon, "recordKey": key, "recordPath": "", "recordFromURI": ch.fromURI},
 	}
 	// the chip the title of the item (no label of the model), chosen or not
 	chip := &MenuChip{Title: msgs.MenuRecordSelect, Icon: "mdi-swap-horizontal", Color: "grey", Inline: true,
@@ -283,80 +433,99 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 			ParamOverlay: {string(actions.Dialog)},
 		}.Encode()}
 	selector.SetChip(chip)
-	list := &MenuNode{Title: fmt.Sprintf(msgs.MenuRecordList, strings.ToLower(mb.TTitlePlural(ctx.Context()))),
-		Value: listHref, Props: map[string]any{"href": listHref, "prependIcon": "mdi-format-list-bulleted"}}
-	n = &MenuNode{
-		Title:    mb.TTitlePlural(ctx.Context()),
-		Value:    "g:menu-records:" + key,
-		Props:    map[string]any{"prependIcon": icon},
-		Children: []*MenuNode{selector, list},
+	if ch.obj == nil {
+		return
 	}
-
-	if obj, mid := mb.menuRecordChosen(ctx, parents); obj != nil {
-		// its record in the chip, the clear at the right of the item
-		chip.Title, chip.Color = mb.RecordTitle(obj, ctx), "primary"
-		selector.Title = chip.Title
-		chip.Clear = &MenuChipAction{Icon: "mdi-close", Hint: msgs.MenuRecordClear,
-			Event: menuRecordClearEvent, URL: listHref}
-		opened = append(opened, n.Value, selector.Value)
-		under := append(append(IDSlice{}, parents...), mid)
-		// its resources, in their menu groups (Financeiro, People…) in the
-		// order they come
-		groups := map[*MenuGroupBuilder]*MenuNode{}
-		for _, child := range mb.menuRecordItems() {
-			if child.notInMenu || child.permissioner.Lister(ctx.R, under...).Denied() {
-				continue
-			}
-			cn, ca, co := child.MenuNodeOf(ctx, under)
-			opened = append(opened, co...)
-			g := child.MenuGroup()
-			if g == nil {
-				selector.Children = append(selector.Children, cn)
-			} else {
-				gn := groups[g]
-				if gn == nil {
-					gi := g.GetIcon()
-					if gi == "" {
-						gi = defaultMenuIcon(g.Name())
-					}
-					gn = &MenuNode{Title: g.TTitle(ctx.Context()), Value: selector.Value + ":" + g.Name(),
-						Props: map[string]any{"prependIcon": gi}}
-					groups[g] = gn
-					selector.Children = append(selector.Children, gn)
+	obj, mid := ch.obj, ch.id
+	selector.Props["recordPath"] = mb.menuRecordValue(parents, mid)
+	// its record in the chip, the clear at the right of the item
+	chip.Title, chip.Color = mb.RecordTitle(obj, ctx), "primary"
+	selector.Title = chip.Title
+	chip.Clear = &MenuChipAction{Icon: "mdi-close", Hint: msgs.MenuRecordClear,
+		Event: menuRecordClearEvent, URL: listHref}
+	opened = append(opened, selector.Value)
+	under := append(append(IDSlice{}, parents...), mid)
+	// its resources, in their menu groups (Financeiro, People…) in the
+	// order they come
+	groups := map[*MenuGroupBuilder]*MenuNode{}
+	for _, child := range mb.menuRecordItems() {
+		if child.notInMenu || child.permissioner.Lister(ctx.R, under...).Denied() {
+			continue
+		}
+		cn, ca, co := child.MenuNodeOf(ctx, under)
+		opened = append(opened, co...)
+		g := child.MenuGroup()
+		if g == nil {
+			selector.Children = append(selector.Children, cn)
+		} else {
+			gn := groups[g]
+			if gn == nil {
+				gi := g.GetIcon()
+				if gi == "" {
+					gi = defaultMenuIcon(g.Name())
 				}
-				gn.Children = append(gn.Children, cn)
-				if ca != "" {
-					opened = append(opened, gn.Value)
-				}
+				gn = &MenuNode{Title: g.TTitle(ctx.Context()), Value: selector.Value + ":" + g.Name(),
+					Props: map[string]any{"prependIcon": gi}}
+				groups[g] = gn
+				selector.Children = append(selector.Children, gn)
 			}
+			gn.Children = append(gn.Children, cn)
 			if ca != "" {
-				active = ca
+				opened = append(opened, gn.Value)
 			}
 		}
-		for _, p := range mb.MenuRecordSelectorConfig().Pages {
-			page := mb.Detailing().PagesRegistrator().GetHttpPage(p)
-			// the record readable (chosen); the page's own permission, when
-			// it has one
-			if page == nil || (page.GetBaseVerifier() != nil && page.Verifier(ctx.R).Denied()) {
-				continue
-			}
-			href := mb.Info().DetailingHref(mid.String(), parents...) + p
-			pi := page.GetMenuIcon()
-			if pi == "" {
-				pi = "mdi-circle-small"
-			}
-			selector.Children = append(selector.Children, &MenuNode{Title: page.TTitle(ctx.Context()), Value: href,
-				Props: map[string]any{"href": href, "prependIcon": pi}})
-			if isActive(href) {
-				active = href
-			}
+		if ca != "" {
+			active = ca
 		}
 	}
-	if active == "" && isActive(listHref) {
-		active = listHref
+	// a page of its detail: its node, nil when not to be shown
+	pageNode := func(p string) *MenuNode {
+		page := mb.Detailing().PagesRegistrator().GetHttpPage(p)
+		// the record readable (chosen); the page's own permission, when
+		// it has one
+		if page == nil || (page.GetBaseVerifier() != nil && page.Verifier(ctx.R).Denied()) {
+			return nil
+		}
+		href := mb.Info().DetailingHref(mid.String(), parents...) + p
+		pi := page.GetMenuIcon()
+		if pi == "" {
+			pi = "mdi-circle-small"
+		}
+		if isActive(href) {
+			active = href
+		}
+		return &MenuNode{Title: page.TTitle(ctx.Context()), Value: href,
+			Props: map[string]any{"href": href, "prependIcon": pi}}
 	}
-	if active != "" {
-		opened = append(opened, n.Value)
+	for _, p := range mb.MenuRecordSelectorConfig().Pages {
+		if pn := pageNode(p); pn != nil {
+			selector.Children = append(selector.Children, pn)
+		}
+	}
+	for _, pg := range mb.MenuRecordSelectorConfig().PageGroups {
+		gi := pg.Icon
+		if gi == "" {
+			gi = defaultMenuIcon(pg.Name)
+		}
+		gt := pg.Name
+		if pg.Title != nil {
+			gt = pg.Title(ctx.Context())
+		}
+		gn := &MenuNode{Title: gt, Value: selector.Value + ":pages:" + pg.Name,
+			Props: map[string]any{"prependIcon": gi}}
+		was := active
+		for _, p := range pg.Pages {
+			if pn := pageNode(p); pn != nil {
+				gn.Children = append(gn.Children, pn)
+			}
+		}
+		if len(gn.Children) == 0 {
+			continue
+		}
+		if active != was {
+			opened = append(opened, gn.Value)
+		}
+		selector.Children = append(selector.Children, gn)
 	}
 	return
 }
@@ -368,6 +537,10 @@ const ActionChooseMenuRecord = "choose_menu_record"
 const (
 	menuRecordListEvent  = "presets_menuRecord_list"
 	menuRecordClearEvent = "presets_menuRecord_clear"
+	// menuRecordNodeEvent is the item of the selector again, of the record
+	// the tab chose (MenuRecordsHeader): a change of it in the dialog, its
+	// clear
+	menuRecordNodeEvent  = "presets_menuRecord_node"
 	menuRecordListPortal = "presetsMenuRecordList"
 	paramMenuRecordQ     = "menu_record_q"
 	paramMenuRecordPage  = "menu_record_page"
@@ -403,8 +576,8 @@ func (mb *ModelBuilder) menuRecordList(ctx *web.EventContext, q string, page int
 	rctx := *ctx
 	rctx.R = refererRequest(ctx.R)
 	var chosenID string
-	if obj, mid := mb.menuRecordChosen(&rctx, parents); obj != nil {
-		chosenID = mid.String()
+	if ch := mb.menuRecordChosen(&rctx, parents); ch.obj != nil {
+		chosenID = ch.id.String()
 	}
 	href := mb.Info().ListingHref(parents...)
 	var items h.HTMLComponents
@@ -436,15 +609,53 @@ func (mb *ModelBuilder) menuRecordList(ctx *web.EventContext, q string, page int
 	return h.Div(list, pager).Attr("data-menu-record-list", mb.uriName)
 }
 
-// setMenuRecordCookie keeps in the browser the record id of the parents
-// chosen ("" none: cleared).
-func (mb *ModelBuilder) setMenuRecordCookie(ctx *web.EventContext, parents IDSlice, id string) {
-	path := mb.p.GetURIPrefix()
-	if path == "" {
-		path = "/"
+// menuRecordSetScript is the script that keeps in the tab the record v (a
+// value of vars.menuRecords, "" none) of the selector of mb, of the
+// parents, and draws its item again (vars.menuRecordSet, CreateMenus).
+func (mb *ModelBuilder) menuRecordSetScript(parents IDSlice, v string) string {
+	return fmt.Sprintf("vars.menuRecordSet && vars.menuRecordSet(%s, %s, %s)",
+		h.JSONString(mb.menuRecordKey(parents)), h.JSONString(v), h.JSONString(mb.Info().ListingHref(parents...)))
+}
+
+// menuRecordSamePage is, of the page path of a record of mb (of the
+// parents), the same page of the record mid: its detail, a page of it
+// (/relatorios); a page of a resource of it — of a record of the resource,
+// or below it, the other record's —, the listing of the resource; "" when
+// path is no page of a record of mb.
+func (mb *ModelBuilder) menuRecordSamePage(path string, parents IDSlice, mid ID) string {
+	listHref := mb.Info().ListingHref(parents...)
+	rest, found := strings.CutPrefix(path, listHref+"/")
+	if !found || rest == "" {
+		return ""
 	}
-	http.SetCookie(ctx.W, &http.Cookie{Name: mb.menuRecordCookie(), Value: parents.String() + "|" + id,
-		Path: path, MaxAge: 365 * 24 * 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: ctx.R.TLS != nil})
+	seg, tail, _ := strings.Cut(rest, "/")
+	to := mb.Info().DetailingHref(mid.String(), parents...)
+	if tail == "" {
+		return to
+	}
+	if old, err := mb.ParseRecordID(seg); err == nil {
+		was := append(append(IDSlice{}, parents...), old)
+		under := append(append(IDSlice{}, parents...), mid)
+		for _, child := range mb.children {
+			if h := child.Info().ListingHref(was...); path == h || strings.HasPrefix(path, h+"/") {
+				return child.Info().ListingHref(under...)
+			}
+		}
+	}
+	return to + "/" + tail
+}
+
+// menuRecordUnderScript is the script that leaves the selectors of the
+// children of the record mid (of the parents) with none chosen in the tab:
+// a record chosen anew, the ones under it are chosen again.
+func (mb *ModelBuilder) menuRecordUnderScript(parents IDSlice, mid ID) (script string) {
+	under := append(append(IDSlice{}, parents...), mid)
+	for _, child := range mb.children {
+		if child.HasMenuRecordSelector() {
+			script += fmt.Sprintf("vars.menuRecords && (vars.menuRecords[%s] = '');", h.JSONString(child.menuRecordKey(under)))
+		}
+	}
+	return
 }
 
 // configureMenuRecordChoose installs the action ActionChooseMenuRecord on
@@ -453,15 +664,29 @@ func (mb *ModelBuilder) setMenuRecordCookie(ctx *web.EventContext, parents IDSli
 func (mb *ModelBuilder) configureMenuRecordChoose() {
 	mb.RegisterEventFunc(menuRecordClearEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		parents := ParentsModelID(ctx.R)
-		mb.setMenuRecordCookie(ctx, parents, "")
-		// a page of the record (its resources): the listing of the model;
-		// else the page again, its menu without the record
+		// none, in the tab; on a page of the record (its resources), the
+		// listing of the model
+		script := mb.menuRecordSetScript(parents, "")
 		listHref := mb.Info().ListingHref(parents...)
 		if ref := refererRequest(ctx.R); strings.HasPrefix(ref.URL.Path, listHref+"/") {
-			r.RedirectURL = listHref
-		} else {
-			r.Reload = true
+			script += fmt.Sprintf(";plaid().vars(vars).pushStateURL(%s).go()", h.JSONString(listHref))
 		}
+		web.AppendRunScripts(&r, script)
+		return
+	})
+	mb.RegisterEventFunc(menuRecordNodeEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		parents := ParentsModelID(ctx.R)
+		// the record of the tab (the header), not of the page
+		var ch menuRecordChoice
+		if v, found := menuRecordsOf(ctx.R)[mb.menuRecordKey(parents)]; found && v != "" {
+			if obj := mb.menuRecordOfValue(ctx, parents, v); obj != nil {
+				if mid, ok := mb.menuRecordReadable(ctx.R, parents, obj); ok {
+					ch = menuRecordChoice{obj: obj, id: mid}
+				}
+			}
+		}
+		node, _, opened := mb.menuRecordSelectorNode(ctx, parents, ch)
+		r.Data = map[string]any{"node": node, "opened": opened}
 		return
 	})
 	mb.RegisterEventFunc(menuRecordListEvent, func(ctx *web.EventContext) (r web.EventResponse, err error) {
@@ -503,16 +728,13 @@ func (mb *ModelBuilder) configureMenuRecordChoose() {
 				return errors.New(msgs.MenuRecordRequired)
 			}
 			mid, _ := mb.RecordID(obj)
-			mb.setMenuRecordCookie(ctx, parents, mid.String())
-			// the first of its resources, else its page
-			under := append(append(IDSlice{}, parents...), mid)
-			ctx.Resp.RedirectURL = mb.Info().DetailingHref(mid.String(), parents...)
-			for _, child := range mb.menuRecordItems() {
-				if !child.permissioner.Lister(ctx.R, under...).Denied() {
-					ctx.Resp.RedirectURL = child.Info().ListingHref(under...)
-					break
-				}
+			// kept in the tab — none chosen under it —, its item drawn again;
+			// a page of the record before: the same of the record chosen
+			script := mb.menuRecordUnderScript(parents, mid) + mb.menuRecordSetScript(parents, mb.menuRecordValue(parents, mid))
+			if to := mb.menuRecordSamePage(refererRequest(ctx.R).URL.Path, parents, mid); to != "" {
+				script += fmt.Sprintf(";plaid().vars(vars).pushStateURL(%s).go()", h.JSONString(to))
 			}
+			web.AppendRunScripts(ctx.Resp, script)
 			return nil
 		})
 }

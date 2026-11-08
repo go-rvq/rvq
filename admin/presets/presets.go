@@ -15,6 +15,7 @@ import (
 	"github.com/go-rvq/rvq/utils/bcp47"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
+	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/go-rvq/rvq/x/ui/mdkit"
@@ -1011,7 +1012,8 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		// "g:<name>" and are ignored.
 		Attr("@update:activated", `(v) => { const p = Array.isArray(v) ? v[v.length-1] : v; if (p && String(p).charAt(0) === '/') { plaid().vars(vars).pushStateURL(String(p)).go(); } }`)
 
-	whole := web.Scope(tree).Slot("{ locals }").LocalsInit(
+	// the records chosen in the menu, in the tab (menuRecordsSetup)
+	whole := web.Scope(vue.UserComponent(tree).ScopeVar("menu", "locals").Setup(menuRecordsSetup)).Slot("{ locals }").LocalsInit(
 		fmt.Sprintf(`{ items: %s}`, h.JSONString(nodes)),
 		fmt.Sprintf(`{ opened: %s}`, h.JSONString(openedGroups)),
 		fmt.Sprintf(`{ activated: %s}`, h.JSONString(activated)),

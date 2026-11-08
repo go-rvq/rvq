@@ -366,7 +366,7 @@ export class Builder {
       // says this is the page asking, not the browser navigating: a middleware
       // that finds the session gone answers 401 + loginURI instead of sending
       // the browser away — see web.PlaidRequestHeader
-      headers: { 'X-Plaid-Request': '1' }
+      headers: { ...requestHeadersOf(this._vars), 'X-Plaid-Request': '1' }
     }
 
     if (this._method) {
@@ -588,4 +588,30 @@ export class Builder {
 
 export function plaid(): Builder {
   return new Builder()
+}
+
+// requestHeadersOf are the headers the page asks every request to carry:
+// vars.__requestHeaders, a name and its value — or a function that gives it,
+// read at each request; an empty value is not sent.
+export function requestHeadersOf(vars: any): Record<string, string> {
+  const out: Record<string, string> = {}
+  const hs = vars && vars.__requestHeaders
+  if (!hs) {
+    return out
+  }
+  for (const name of Object.keys(hs)) {
+    let v = hs[name]
+    if (typeof v === 'function') {
+      try {
+        v = v()
+      } catch (e) {
+        console.error(e)
+        v = ''
+      }
+    }
+    if (v !== undefined && v !== null && v !== '') {
+      out[name] = String(v)
+    }
+  }
+  return out
 }
