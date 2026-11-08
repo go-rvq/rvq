@@ -169,6 +169,7 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		if au, ok := u.(AvatarUser); ok {
 			profile.Avatar = au.GetAvatar()
 		}
+		profile.Language = user.LanguageOf(c.db, u.GetID())
 		return
 	}
 
@@ -184,7 +185,7 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		if err = c.db.First(u).Error; err != nil {
 			return
 		}
-		// what the profile edits: the name, the picture
+		// what the profile edits: the name, the picture, the language
 		profile := obj.(*Profile)
 		u.SetName(profile.Name)
 		if au, ok := u.(AvatarUser); ok {
@@ -194,13 +195,16 @@ func (c *Builder) Install(p *presets.Builder) (err error) {
 		if err = c.db.Save(u).Error; err != nil {
 			return
 		}
-
-		return nil
+		if profile.Language != "" && !supported(p, profile.Language) {
+			profile.Language = ""
+		}
+		return user.SetLanguage(c.db, u.GetID(), profile.Language)
 	})
 
 	d := m.Detailing()
 	d.FetchFunc(fetch)
 	configureAvatarField(c.db, e, d)
+	configureLanguageField(p, e, d)
 
 	d.Action("login_sessions").
 		Icon("mdi-account-network").
@@ -257,8 +261,20 @@ type Profile struct {
 	Name string
 	// Avatar is the picture of the user, when their model has one
 	// (AvatarUser)
-	Avatar      media_library.MediaBox
+	Avatar media_library.MediaBox
+	// Language is the default language of the user ("": the browser's)
+	Language    string
 	AccountName string `admin:"ro"`
 	Status      string `admin:"ro"`
 	Roles       string `admin:"ro"`
+}
+
+// supported says lang is a language of the admin.
+func supported(p *presets.Builder, lang string) bool {
+	for _, tag := range p.I18n().GetSupportLanguages() {
+		if tag.String() == lang {
+			return true
+		}
+	}
+	return false
 }
