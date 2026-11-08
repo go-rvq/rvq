@@ -1,0 +1,19 @@
+@main
+title
+    | Confirme:
+    | {= Kind == "owner_transfer" ? "novo proprietário de" : (Kind == "role_change" ? "novo papel em" : "compartilhamento de") }
+    | {= Record}
+div[style="font-family:Arial,sans-serif;font-size:14px;color:#222"]
+    p
+        | {= By} pede:
+    p
+        strong {= Kind == "owner_transfer" ? "Tornar " + Subject + " proprietário de " + Record + "." : (Kind == "role_change" ? Subject + " passa a ter o papel " + Role + " em " + Record + "." : "Compartilhar " + Record + " com " + Subject + ", como " + Role + ".") }
+    p
+        | Nada muda até você, o proprietário, confirmar.
+    p
+        a[
+            href=ConfirmURL
+            style="display:inline-block;padding:8px 16px;background:#1565c0;color:#fff;text-decoration:none;border-radius:4px"
+        ] Confirmar ou recusar
+    p[style="color:#777;font-size:12px"]
+        | O link vale até {= Expires}. Se você não esperava este pedido, recuse.

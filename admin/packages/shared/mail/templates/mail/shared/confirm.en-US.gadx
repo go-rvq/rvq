@@ -1,0 +1,19 @@
+@main
+title
+    | Confirm:
+    | {= Kind == "owner_transfer" ? "a new owner of" : (Kind == "role_change" ? "a new role on" : "sharing") }
+    | {= Record}
+div[style="font-family:Arial,sans-serif;font-size:14px;color:#222"]
+    p
+        | {= By} asks:
+    p
+        strong {= Kind == "owner_transfer" ? "Make " + Subject + " the owner of " + Record + "." : (Kind == "role_change" ? Subject + " gets the role " + Role + " on " + Record + "." : "Share " + Record + " with " + Subject + ", as " + Role + ".") }
+    p
+        | Nothing changes until you, its owner, confirm it.
+    p
+        a[
+            href=ConfirmURL
+            style="display:inline-block;padding:8px 16px;background:#1565c0;color:#fff;text-decoration:none;border-radius:4px"
+        ] Confirm or decline
+    p[style="color:#777;font-size:12px"]
+        | The link is good until {= Expires}. If you did not expect this, decline it.
