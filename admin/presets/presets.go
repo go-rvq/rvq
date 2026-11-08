@@ -58,6 +58,7 @@ type Builder struct {
 	postMenuOrder                         []string
 	notificationCountFunc                 func(ctx *web.EventContext) int
 	notificationContentFunc               ComponentFunc
+	notificationSources                   []NotificationSource
 	brandTitle                            string
 	vuetifyOptions                        string
 	progressBarColor                      string
@@ -307,6 +308,42 @@ func (b *Builder) NotificationFunc(contentFunc ComponentFunc, countFunc func(ctx
 	b.notificationContentFunc = contentFunc
 	b.GetWebBuilder().RegisterEventHandler(actions.NotificationCenter, web.EventFunc(b.notificationCenter))
 	return b
+}
+
+// NotificationSource is a source of the notification center (the bell) of
+// the user: how many things wait for them, and what they are (nil: none).
+type NotificationSource struct {
+	Name    string
+	Count   func(ctx *web.EventContext) int
+	Content ComponentFunc
+}
+
+// AddNotificationSource adds a source to the notification center, after
+// NotificationFunc's and the ones added before it.
+func (b *Builder) AddNotificationSource(s NotificationSource) (r *Builder) {
+	b.notificationSources = append(b.notificationSources, s)
+	return b
+}
+
+// Notifications are what the notification center shows to the user: the
+// count of all its sources and their contents, in order (NotificationFunc's
+// first); a source with nothing, left out.
+func (b *Builder) Notifications(ctx *web.EventContext) (total int, content h.HTMLComponents) {
+	sources := b.notificationSources
+	if b.notificationCountFunc != nil || b.notificationContentFunc != nil {
+		sources = append([]NotificationSource{{Count: b.notificationCountFunc, Content: b.notificationContentFunc}}, sources...)
+	}
+	for _, s := range sources {
+		if s.Count != nil {
+			total += s.Count(ctx)
+		}
+		if s.Content != nil {
+			if c := s.Content(ctx); c != nil {
+				content = append(content, c)
+			}
+		}
+	}
+	return
 }
 
 func (b *Builder) BrandTitle(v string) (r *Builder) {
@@ -1275,8 +1312,7 @@ type LayoutConfig struct {
 }
 
 func (b *Builder) notificationCenter(ctx *web.EventContext) (er web.EventResponse, err error) {
-	total := b.notificationCountFunc(ctx)
-	content := b.notificationContentFunc(ctx)
+	total, content := b.Notifications(ctx)
 	icon := VIcon("mdi-bell-outline").Size(20).Color("grey-darken-1")
 	er.Body = VMenu().Children(
 		h.Template().Attr("v-slot:activator", "{ props }").Children(
@@ -1291,7 +1327,7 @@ func (b *Builder) notificationCenter(ctx *web.EventContext) (er web.EventRespons
 				Variant(VariantText),
 			// .Class("ml-1")
 		),
-		VCard(content),
+		VCard(content...),
 	)
 	return
 }
