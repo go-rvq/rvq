@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-rvq/rvq/admin/packages/mail-sender/mailtest"
 	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/packages/shared/sharedtest"
 	"github.com/google/uuid"
@@ -25,14 +26,14 @@ const (
 // their documents; ana owns, bia, caio and dani are others; the roles of
 // each resource Viewer, Editor and None.
 type fixture struct {
-	t      *testing.T
-	ctx    context.Context
-	db     *gorm.DB
-	s      *shared.Service
-	users  *sharedtest.Users
-	sender *sharedtest.Sender
-	now    time.Time
-	roles  map[string]map[string]uuid.UUID
+	t     *testing.T
+	ctx   context.Context
+	db    *gorm.DB
+	s     *shared.Service
+	users *sharedtest.Users
+	mail  *mailtest.Server
+	now   time.Time
+	roles map[string]map[string]uuid.UUID
 }
 
 var origin = shared.Origin{IP: "127.0.0.1", UserAgent: "test"}
@@ -52,13 +53,19 @@ func newFixture(t *testing.T) *fixture {
 	if err := sharedtest.Migrate(db); err != nil {
 		t.Fatal(err)
 	}
-	f := &fixture{t: t, ctx: context.Background(), db: db, users: sharedtest.NewUsers(), sender: &sharedtest.Sender{},
+	// the mails to a mail server of the test's own
+	ms, err := mailtest.Start(mailtest.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ms.Close() })
+	f := &fixture{t: t, ctx: context.Background(), db: db, users: sharedtest.NewUsers(), mail: ms,
 		now: time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC), roles: map[string]map[string]uuid.UUID{}}
 	f.users.Add(&sharedtest.User{ID: "ana", Name: "Ana", Email: "ana@x.test", Language: "pt-BR"})
 	f.users.Add(&sharedtest.User{ID: "bia", Name: "Bia", Email: "bia@x.test", Language: "en-US"})
 	f.users.Add(&sharedtest.User{ID: "caio", Name: "Caio", Email: "caio@x.test"})
 	f.users.Add(&sharedtest.User{ID: "dani", Name: "Dani", Email: "dani@x.test"})
-	f.s, err = shared.New(shared.Options{DB: db, Users: f.users, Sender: f.sender, ConfirmURL: sharedtest.ConfirmURL,
+	f.s, err = shared.New(shared.Options{DB: db, Users: f.users, Sender: ms.Sender(), ConfirmURL: sharedtest.ConfirmURL,
 		Now: func() time.Time { return f.now }})
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +113,7 @@ func (f *fixture) share(res, id, subject, role, by string) {
 // confirmLast confirms, as the owner, the request of the last mail.
 func (f *fixture) confirmLast() {
 	f.t.Helper()
-	tok := sharedtest.Token(f.sender.Last())
+	tok := f.token()
 	req, err := f.s.RequestOf(f.ctx, tok)
 	if err != nil {
 		f.t.Fatal(err)
@@ -115,6 +122,19 @@ func (f *fixture) confirmLast() {
 		f.t.Fatal(err)
 	}
 }
+
+// last is the last mail sent.
+func (f *fixture) last() *mailtest.Message {
+	f.t.Helper()
+	m := f.mail.Last()
+	if m == nil {
+		f.t.Fatal("no mail")
+	}
+	return m
+}
+
+// token is the token of the link of the last mail.
+func (f *fixture) token() string { return sharedtest.Token(f.last().Body()) }
 
 func (f *fixture) acceptAll(user string) {
 	f.t.Helper()
@@ -167,15 +187,15 @@ func TestShareConfirmAccept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := f.sender.Last()
-	if m == nil || m.GetTo()[0] != "ana@x.test" || !strings.Contains(m.GetSubject(), "Confirme") ||
-		!strings.Contains(m.GetSubject(), "Contratos") || !strings.Contains(m.GetBody(), "Bia") {
-		t.Fatalf("the mail to the owner, in Portuguese: %+v", m)
+	m := f.last()
+	if m.To[0] != "ana@x.test" || !strings.Contains(m.Subject, "Confirme") ||
+		!strings.Contains(m.Subject, "Contratos") || !strings.Contains(m.Body(), "Bia") {
+		t.Fatalf("the mail to the owner, in Portuguese: %q %q %q", m.To, m.Subject, m.Body())
 	}
 	if req.State != shared.StatePending || f.roleName("bia", "pastas", p.ID) != "" {
 		t.Error("access before the owner confirms")
 	}
-	tok := sharedtest.Token(m)
+	tok := sharedtest.Token(m.Body())
 	if err := f.s.Confirm(f.ctx, tok, "bia", origin); !errors.Is(err, shared.ErrNotOwner) {
 		t.Errorf("confirmed by another: %v", err)
 	}
@@ -222,7 +242,7 @@ func TestMailLanguage(t *testing.T) {
 	if _, err := f.s.Share(f.ctx, "pastas", p.ID, shared.UserSubject("caio"), f.role("pastas", "Editor"), "bia", origin); err != nil {
 		t.Fatal(err)
 	}
-	if s := f.sender.Last().GetSubject(); !strings.HasPrefix(s, "Confirm:") || !strings.Contains(s, "Docs") {
+	if s := f.last().Subject; !strings.HasPrefix(s, "Confirm:") || !strings.Contains(s, "Docs") {
 		t.Errorf("subject %q", s)
 	}
 }
@@ -234,7 +254,7 @@ func TestExpiredAndRejected(t *testing.T) {
 	if _, err := f.s.Share(f.ctx, "pastas", p.ID, shared.UserSubject("bia"), f.role("pastas", "Viewer"), "ana", origin); err != nil {
 		t.Fatal(err)
 	}
-	tok := sharedtest.Token(f.sender.Last())
+	tok := f.token()
 	f.now = f.now.Add(49 * time.Hour)
 	if err := f.s.Confirm(f.ctx, tok, "ana", origin); !errors.Is(err, shared.ErrExpired) {
 		t.Errorf("late: %v", err)
@@ -245,7 +265,7 @@ func TestExpiredAndRejected(t *testing.T) {
 	if _, err := f.s.Share(f.ctx, "pastas", p.ID, shared.UserSubject("caio"), f.role("pastas", "Viewer"), "ana", origin); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.s.Reject(f.ctx, sharedtest.Token(f.sender.Last()), "ana", origin); err != nil {
+	if err := f.s.Reject(f.ctx, f.token(), "ana", origin); err != nil {
 		t.Fatal(err)
 	}
 	if inv, _ := f.s.Invites(f.ctx, "caio"); len(inv) != 0 {
@@ -400,8 +420,8 @@ func TestOwnerTransfer(t *testing.T) {
 	if _, err := f.s.TransferOwner(f.ctx, "pastas", p.ID, "bia", f.role("pastas", "Editor"), "ana", origin); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(f.sender.Last().GetSubject(), "propriet") {
-		t.Errorf("the mail: %q", f.sender.Last().GetSubject())
+	if !strings.Contains(f.last().Subject, "propriet") {
+		t.Errorf("the mail: %q", f.last().Subject)
 	}
 	f.confirmLast()
 	if o, _ := f.s.Owner(f.ctx, "pastas", p.ID); o != "ana" {

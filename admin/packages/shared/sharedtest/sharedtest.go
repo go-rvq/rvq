@@ -1,7 +1,7 @@
 // Package sharedtest is what the tests of the sharing (shared) use: models
 // of its own — a folder (Pasta, with an owner) and its documents
-// (Documento, under it) —, users and groups in memory (Users) and a sender
-// that keeps the mails (Sender).
+// (Documento, under it) — and users and groups in memory (Users); the mails
+// go to the mail server of the tests (mail-sender/mailtest).
 package sharedtest
 
 import (
@@ -10,7 +10,6 @@ import (
 	"slices"
 	"sync"
 
-	mail_sender "github.com/go-rvq/rvq/admin/packages/mail-sender"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -149,40 +148,14 @@ func (u *Users) GroupName(_ context.Context, id string) string {
 	return u.groups[id]
 }
 
-// Sender keeps the mails sent (mail_sender.Sender).
-type Sender struct {
-	mu   sync.Mutex
-	Sent []*mail_sender.MessageBuilder
-}
-
-func (s *Sender) Send(b *mail_sender.MessageBuilder) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Sent = append(s.Sent, b)
-	return nil
-}
-
-// Last is the last mail sent; nil when none.
-func (s *Sender) Last() *mail_sender.MessageBuilder {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.Sent) == 0 {
-		return nil
-	}
-	return s.Sent[len(s.Sent)-1]
-}
-
 // ConfirmURL is the link of the confirmations of the tests.
 func ConfirmURL(token string) string { return "https://app.test/shared/confirm?t=" + token }
 
 var tokenRe = regexp.MustCompile(`shared/confirm\?t=([A-Za-z0-9_-]+)`)
 
-// Token is the token of the link of the mail m; "" when none.
-func Token(m *mail_sender.MessageBuilder) string {
-	if m == nil {
-		return ""
-	}
-	if t := tokenRe.FindStringSubmatch(m.GetBody()); t != nil {
+// Token is the token of the link of a mail of body; "" when none.
+func Token(body string) string {
+	if t := tokenRe.FindStringSubmatch(body); t != nil {
 		return t[1]
 	}
 	return ""
