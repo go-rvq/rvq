@@ -29,9 +29,9 @@ type Role struct {
 	Permissions pq.StringArray `gorm:"type:text[]"`
 	// Policies are the permissions of the roles of before the lines: the
 	// policies whose ReferID is its key — made lines once (MigrateLines).
-	// The column is text — it also holds free-form references — so the
-	// relation is read but creates no foreign key (-:migration).
-	Policies []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
+	// Read by hand, not a relation: gorm would give ReferID — text, it also
+	// holds free-form references — the type of the key (uuid).
+	Policies []*perm.DefaultDBPolicy `gorm:"-"`
 }
 
 func (r *Role) String() string {

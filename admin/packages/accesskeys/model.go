@@ -61,7 +61,9 @@ type AccessKey struct {
 	Permissions pq.StringArray `gorm:"type:text[]"`
 	// Policies are the permissions of the keys of before the lines: the
 	// policies whose ReferID is its id — made lines once (MigrateLines).
-	Policies []*perm.DefaultDBPolicy `gorm:"-:migration;foreignKey:ReferID"`
+	// Read by hand, not a relation: gorm would give ReferID (text) the type
+	// of the key (uuid).
+	Policies []*perm.DefaultDBPolicy `gorm:"-"`
 
 	// Code is the code of a key just made — shown once —, never stored.
 	Code string `gorm:"-"`

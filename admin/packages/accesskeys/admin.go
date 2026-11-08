@@ -392,10 +392,13 @@ func MigrateLines(db *gorm.DB) error {
 		return nil
 	}
 	var all []*AccessKey
-	if err := db.Preload("Policies").Find(&all).Error; err != nil {
+	if err := db.Find(&all).Error; err != nil {
 		return err
 	}
 	for _, k := range all {
+		if err := db.Where("refer_id = ?", k.ID.String()).Order("created_at, id").Find(&k.Policies).Error; err != nil {
+			return err
+		}
 		if len(k.Permissions) > 0 || len(k.Policies) == 0 {
 			continue
 		}

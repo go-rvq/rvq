@@ -261,11 +261,13 @@ func MigrateLines(db *gorm.DB) error {
 		return nil
 	}
 	var roles []*Role
-	if err := db.Preload("Policies", func(db *gorm.DB) *gorm.DB { return db.Order("created_at, id") }).
-		Find(&roles).Error; err != nil {
+	if err := db.Find(&roles).Error; err != nil {
 		return err
 	}
 	for _, r := range roles {
+		if err := db.Where("refer_id = ?", r.ID.String()).Order("created_at, id").Find(&r.Policies).Error; err != nil {
+			return err
+		}
 		if len(r.Permissions) > 0 || len(r.Policies) == 0 && !strings.Contains(r.SystemPolicies, "|") {
 			continue
 		}
