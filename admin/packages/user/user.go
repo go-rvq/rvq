@@ -314,6 +314,18 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 	if err := EnsureRolePositions(db); err != nil {
 		panic(err)
 	}
+	// the groups of the users, and their preferences: the admin in the
+	// user's default language when the request asks none
+	if err := AutoMigrateGroups(db); err != nil {
+		panic(err)
+	}
+	mb.Builder().I18n().DefaultLanguage(func(r *http.Request) string {
+		u := GetCurrentUser(r)
+		if u == nil || u.Anonymous() {
+			return ""
+		}
+		return LanguageOf(db.WithContext(r.Context()), u.GetID())
+	})
 	c.installPermissionsPage()
 
 	ConfigureChangePasswordAction(c.lb, false, d, func(ctx *web.EventContext) (u User, err error) {

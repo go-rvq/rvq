@@ -26,6 +26,9 @@ type Builder struct {
 	getSupportLanguagesFromRequestFunc func(R *http.Request) []language.Tag
 	cookieName                         string
 	queryName                          string
+	// defaultLanguage is the language of a request that asks none (no query,
+	// no cookie): the user's default (DefaultLanguage); "" the browser's.
+	defaultLanguage func(r *http.Request) string
 
 	// mu orders the writers; the readers load state, which is never changed
 	// once stored — a writer stores a copy (copy-on-write), so an update at
@@ -257,6 +260,14 @@ const (
 	dynaBuilderKey
 )
 
+// DefaultLanguage gives the language of a request that asks none (no query,
+// no cookie) — e.g. the default language of the user —, before the
+// browser's (Accept-Language); "" from f, the browser's.
+func (b *Builder) DefaultLanguage(f func(r *http.Request) string) *Builder {
+	b.defaultLanguage = f
+	return b
+}
+
 func (b *Builder) EnsureLanguage(in http.Handler) (out http.Handler) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		lang := ""
@@ -272,6 +283,9 @@ func (b *Builder) EnsureLanguage(in http.Handler) (out http.Handler) {
 			})
 		} else {
 			lang = b.GetCurrentLangFromCookie(r)
+		}
+		if lang == "" && b.defaultLanguage != nil {
+			lang = b.defaultLanguage(r)
 		}
 
 		accept := r.Header.Get("Accept-Language")

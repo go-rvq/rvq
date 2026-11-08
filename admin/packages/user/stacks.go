@@ -59,13 +59,43 @@ func SubjectOf(id uuid.UUID) string { return "user:" + id.String() }
 // policies of the code for the user's subjects (UserRoles, and the user's
 // own) first, then the lines of the user's roles, in the user's order (the
 // roles u carries: WithRoles loads them so).
+//
+// The groups of the user are in it after them: the lines of the database
+// for each group (group:<id>), and each group's roles after the user's, the
+// groups in the user's order.
 func (b *Builder) Stack(pb *perm.Builder, u User) *perm.Stack {
 	subjects := append(b.UserRoles(u), SubjectOf(u.GetID()))
 	var roles []*role.Role
 	if u.GetAccountName() != b.lb.GetInitialUserAccount() {
 		roles = u.GetRoles()
 	}
+	if b.db != nil && !u.Anonymous() {
+		groups, _ := GroupsOf(b.db, u.GetID())
+		for _, g := range groups {
+			subjects = append(subjects, GroupSubject(g.ID))
+			grs, _ := GroupRolesOf(b.db, g.ID)
+			roles = append(roles, grs...)
+		}
+	}
 	return role.Stack(pb, subjects, roles).Resolve()
+}
+
+// Find is the user id (nil when none).
+func (b *Builder) Find(db *gorm.DB, id uuid.UUID) (User, error) {
+	u := b.mb.NewModel().(User)
+	if err := db.Where("id = ?", id).First(u).Error; err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// FindByAccount is the user of the account (nil when none).
+func (b *Builder) FindByAccount(db *gorm.DB, account string) (User, error) {
+	u := b.mb.NewModel().(User)
+	if err := db.Where("account = ?", account).First(u).Error; err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 // StackSource is the source of the stacks of the users (perm.Builder.Stacks):
@@ -90,7 +120,8 @@ func (s stackSource) StackOf(r *http.Request) (string, string, func() (*perm.Sta
 	for _, ro := range u.GetRoles() {
 		ids = append(ids, ro.ID.String())
 	}
-	version := strconv.FormatInt(role.Generation(), 10) + "|" + strings.Join(ids, ",")
+	version := strconv.FormatInt(role.Generation(), 10) + "|" + strconv.FormatInt(GroupGeneration(), 10) +
+		"|" + strings.Join(ids, ",")
 	return SubjectOf(u.GetID()), version, func() (*perm.Stack, error) {
 		return s.b.Stack(s.pb, u), nil
 	}
