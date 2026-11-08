@@ -58,6 +58,30 @@ type Messages struct {
 	TransferOwner     string `i18n:"hint='Button that asks a new owner of a record.'"`
 	KeepRole          string `i18n:"hint='Label of the role the former owner keeps.'"`
 	InviteFrom        string `i18n:"label='Invited by', hint='Label of who invited the user to a shared record.'"`
+
+	EventConfirmationRequested string `i18n:"hint='An event of the history: the owner was asked to confirm by e-mail.'"`
+	EventOwnerConfirmed        string `i18n:"hint='An event of the history: the owner confirmed.'"`
+	EventOwnerRejected         string `i18n:"hint='An event of the history: the owner declined.'"`
+	EventConfirmationExpired   string `i18n:"hint='An event of the history: the confirmation link expired.'"`
+	EventInvited               string `i18n:"hint='An event of the history: the user was invited.'"`
+	EventAccepted              string `i18n:"hint='An event of the history: the user accepted the invite.'"`
+	EventRejected              string `i18n:"hint='An event of the history: the user declined the invite.'"`
+	EventGranted               string `i18n:"hint='An event of the history: the access was given.'"`
+	EventRoleChangeRequested   string `i18n:"hint='An event of the history: a new role was asked.'"`
+	EventRoleChanged           string `i18n:"hint='An event of the history: the role changed.'"`
+	EventRevoked               string `i18n:"hint='An event of the history: the access was taken away.'"`
+	EventOwnerTransferRequest  string `i18n:"hint='An event of the history: a new owner was asked.'"`
+	EventOwnerTransferred      string `i18n:"hint='An event of the history: the record has a new owner.'"`
+	EventMemberAdded           string `i18n:"hint='An event of the history: a user joined a group with access.'"`
+	EventMemberRemoved         string `i18n:"hint='An event of the history: a user left a group with access.'"`
+	KindShare                  string `i18n:"hint='The kind of a request: a new sharing.'"`
+	KindRoleChange             string `i18n:"hint='The kind of a request: a new role.'"`
+	KindOwnerTransfer          string `i18n:"hint='The kind of a request: a new owner.'"`
+	StatePending               string `i18n:"hint='The state of a request or invite: waiting.'"`
+	StateConfirmed             string `i18n:"hint='The state of a request: confirmed by the owner.'"`
+	StateAccepted              string `i18n:"hint='The state of an invite: accepted.'"`
+	StateRejected              string `i18n:"hint='The state of a request or invite: declined.'"`
+	StateExpired               string `i18n:"hint='The state of a request: its link expired.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -104,6 +128,30 @@ var Messages_en_US = &Messages{
 	NoHistory:         "Nothing yet.",
 	TransferOwner:     "Transfer ownership",
 	KeepRole:          "Role you keep",
+
+	EventConfirmationRequested: "confirmation asked to the owner",
+	EventOwnerConfirmed:        "confirmed by the owner",
+	EventOwnerRejected:         "declined by the owner",
+	EventConfirmationExpired:   "confirmation expired",
+	EventInvited:               "invited",
+	EventAccepted:              "invite accepted",
+	EventRejected:              "invite declined",
+	EventGranted:               "access granted",
+	EventRoleChangeRequested:   "role change asked",
+	EventRoleChanged:           "role changed",
+	EventRevoked:               "access revoked",
+	EventOwnerTransferRequest:  "ownership transfer asked",
+	EventOwnerTransferred:      "ownership transferred",
+	EventMemberAdded:           "joined the group",
+	EventMemberRemoved:         "left the group",
+	KindShare:                  "Sharing",
+	KindRoleChange:             "Role change",
+	KindOwnerTransfer:          "Ownership transfer",
+	StatePending:               "pending",
+	StateConfirmed:             "confirmed",
+	StateAccepted:              "accepted",
+	StateRejected:              "declined",
+	StateExpired:               "expired",
 }
 
 var Messages_pt_BR = &Messages{
@@ -150,6 +198,30 @@ var Messages_pt_BR = &Messages{
 	NoHistory:         "Nada ainda.",
 	TransferOwner:     "Transferir propriedade",
 	KeepRole:          "Papel que você mantém",
+
+	EventConfirmationRequested: "confirmação pedida ao proprietário",
+	EventOwnerConfirmed:        "confirmado pelo proprietário",
+	EventOwnerRejected:         "recusado pelo proprietário",
+	EventConfirmationExpired:   "confirmação expirada",
+	EventInvited:               "convidado",
+	EventAccepted:              "convite aceito",
+	EventRejected:              "convite recusado",
+	EventGranted:               "acesso concedido",
+	EventRoleChangeRequested:   "troca de papel pedida",
+	EventRoleChanged:           "papel trocado",
+	EventRevoked:               "acesso revogado",
+	EventOwnerTransferRequest:  "transferência de propriedade pedida",
+	EventOwnerTransferred:      "propriedade transferida",
+	EventMemberAdded:           "entrou no grupo",
+	EventMemberRemoved:         "saiu do grupo",
+	KindShare:                  "Compartilhamento",
+	KindRoleChange:             "Troca de papel",
+	KindOwnerTransfer:          "Transferência de propriedade",
+	StatePending:               "pendente",
+	StateConfirmed:             "confirmado",
+	StateAccepted:              "aceito",
+	StateRejected:              "recusado",
+	StateExpired:               "expirado",
 }
 
 func registerMessages(b *i18n.Builder) {
@@ -159,4 +231,72 @@ func registerMessages(b *i18n.Builder) {
 
 func msgs(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, I18nSharedKey, Messages_en_US).(*Messages)
+}
+
+// EventName is the name of the event e of the history (e itself when
+// unknown).
+func (m *Messages) EventName(e string) string {
+	switch e {
+	case EventConfirmationRequested:
+		return m.EventConfirmationRequested
+	case EventOwnerConfirmed:
+		return m.EventOwnerConfirmed
+	case EventOwnerRejected:
+		return m.EventOwnerRejected
+	case EventConfirmationExpired:
+		return m.EventConfirmationExpired
+	case EventInvited:
+		return m.EventInvited
+	case EventAccepted:
+		return m.EventAccepted
+	case EventRejected:
+		return m.EventRejected
+	case EventGranted:
+		return m.EventGranted
+	case EventRoleChangeRequested:
+		return m.EventRoleChangeRequested
+	case EventRoleChanged:
+		return m.EventRoleChanged
+	case EventRevoked:
+		return m.EventRevoked
+	case EventOwnerTransferRequest:
+		return m.EventOwnerTransferRequest
+	case EventOwnerTransferred:
+		return m.EventOwnerTransferred
+	case EventMemberAdded:
+		return m.EventMemberAdded
+	case EventMemberRemoved:
+		return m.EventMemberRemoved
+	}
+	return e
+}
+
+// KindName is the name of the kind of a request.
+func (m *Messages) KindName(k string) string {
+	switch k {
+	case RequestShare:
+		return m.KindShare
+	case RequestRoleChange:
+		return m.KindRoleChange
+	case RequestOwnerTransfer:
+		return m.KindOwnerTransfer
+	}
+	return k
+}
+
+// StateName is the name of the state of a request or of an invite.
+func (m *Messages) StateName(st string) string {
+	switch st {
+	case StatePending:
+		return m.StatePending
+	case StateConfirmed:
+		return m.StateConfirmed
+	case StateAccepted:
+		return m.StateAccepted
+	case StateRejected:
+		return m.StateRejected
+	case StateExpired:
+		return m.StateExpired
+	}
+	return st
 }

@@ -103,9 +103,18 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 	// the subject (user:<id>, group:<id>) the role's actions on the record
 	// (a model on top: under another, its parent's permissions decide)
 	if mb.Parent() == nil {
-		s.OnAccess(res.Name, func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+		policies := func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
 			ref := "sharedaccess:" + a.ID.String()
+			// the listing of the model, scoped to the records reached
+			// (ReadScope): who reaches one lists them — and the columns of
+			// the listing (#<field>, of the model)
+			listRef, colsRef := ref+":list", ref+":list_columns"
 			if removed || role == nil || role.None {
+				for _, r := range []string{listRef, colsRef} {
+					if err := perms.Revoke(tx, r); err != nil {
+						return err
+					}
+				}
 				return perms.Revoke(tx, ref)
 			}
 			rid, err := mb.ParseRecordID(a.RecordID)
@@ -114,14 +123,44 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 			}
 			_ = perms.Revoke(tx, ref)
 			_, err = perms.GrantShared(tx, ref, a.Subject, perms.RecordResource(mb, rid)+"*", []string(role.Actions), a.ID)
-			if err == nil {
-				if pb := mb.Builder().GetPermission(); pb != nil {
-					from := s.o.Now().Add(-time.Minute)
-					pb.LoadDBPoliciesToMemory(tx, &from)
+			if err == nil && o.ReadScope && role.Allows(presets.PermList) {
+				list := perms.ListResource(mb)
+				_, err = perms.GrantShared(tx, listRef, a.Subject, list+presets.PermList, []string{presets.PermList}, a.ID)
+				if err == nil {
+					_, err = perms.GrantShared(tx, colsRef, a.Subject, list+"#*", []string{presets.PermList}, a.ID)
 				}
 			}
 			return err
+		}
+		load := func(tx *gorm.DB) {
+			if pb := mb.Builder().GetPermission(); pb != nil {
+				from := s.o.Now().Add(-time.Minute)
+				pb.LoadDBPoliciesToMemory(tx, &from)
+			}
+		}
+		s.OnAccess(res.Name, func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+			if err := policies(tx, a, role, removed); err != nil {
+				return err
+			}
+			load(tx)
+			return nil
 		})
+		// the policies of the accesses of before, as they are made now
+		if mb.Builder().GetPermission() != nil {
+			var accesses []Access
+			if err := s.o.DB.Preload("Role").Where("resource = ?", res.Name).Find(&accesses).Error; err != nil {
+				return err
+			}
+			for i := range accesses {
+				a := &accesses[i]
+				if err := policies(s.o.DB, a, a.Role, false); err != nil {
+					return fmt.Errorf("shared: the policies of %s %s: %w", res.Name, a.RecordID, err)
+				}
+			}
+			if len(accesses) > 0 {
+				load(s.o.DB)
+			}
+		}
 	}
 	recordOf := func(id string) string {
 		rid, err := mb.ParseRecordID(id)
@@ -377,7 +416,7 @@ func (s *Service) historyBody(ctx *web.EventContext, resource, record string) (h
 		if e.By != "" {
 			by = s.o.Users.Name(c, e.By)
 		}
-		rows.AppendChildren(h.Tr(h.Td(h.Text(e.At.Local().Format("2006-01-02 15:04"))), h.Td(h.Text(e.Event)),
+		rows.AppendChildren(h.Tr(h.Td(h.Text(e.At.Local().Format("2006-01-02 15:04"))), h.Td(h.Text(m.EventName(e.Event))),
 			h.Td(h.Text(subject)), h.Td(h.Text(role)), h.Td(h.Text(by))).Attr("data-shared-event", e.Event))
 	}
 	return v.VTable(
@@ -443,7 +482,7 @@ func (s *Service) InstallConfirm(pb *presets.Builder, path string) {
 				h.Tr(h.Th(m.Subject), h.Td(h.Text(s.subjectName(c, req.Subject)))),
 				h.Tr(h.Th(m.Role), h.Td(h.Text(role))),
 				h.Tr(h.Th(m.RequestedBy), h.Td(h.Text(s.o.Users.Name(c, req.By)))),
-				h.Tr(h.Th(m.Event), h.Td(h.Text(req.Kind+" — "+req.State))),
+				h.Tr(h.Th(m.Event), h.Td(h.Text(m.KindName(req.Kind)+" — "+m.StateName(req.State)))),
 			)).Density(v.DensityCompact)
 			var buttons h.HTMLComponent
 			if req.State == StatePending {
@@ -472,8 +511,8 @@ func (s *Service) NotificationCount(ctx *web.EventContext) int {
 	return len(invs) + PendingCount(s.o.DB, uid)
 }
 
-// InstallInvites puts the user's invites — accept, decline — in the menu
-// of the top (the old ones' too).
+// InstallInvites puts the user's invites — accept, decline — in the
+// notification center (the old ones' too).
 func (s *Service) InstallInvites(pb *presets.Builder) {
 	registerMessages(pb.I18n())
 	const evAccept, evDecline, portal = "shared_invite_accept", "shared_invite_decline", "sharedAccessInvites"
@@ -527,11 +566,15 @@ func (s *Service) InstallInvites(pb *presets.Builder) {
 	wb := pb.GetWebBuilder()
 	wb.RegisterEventFunc(evAccept, answer(true))
 	wb.RegisterEventFunc(evDecline, answer(false))
-	pb.AddMenuTopItemFunc("shared_access_invites", func(ctx *web.EventContext) h.HTMLComponent {
-		if currentUser(ctx.R) == "" {
-			return nil
-		}
-		return web.Portal(body(ctx)).Name(portal)
+	pb.AddNotificationSource(presets.NotificationSource{
+		Name:  "shared_access_invites",
+		Count: s.NotificationCount,
+		Content: func(ctx *web.EventContext) h.HTMLComponent {
+			if s.NotificationCount(ctx) == 0 {
+				return nil
+			}
+			return web.Portal(body(ctx)).Name(portal)
+		},
 	})
 }
 

@@ -19,8 +19,8 @@ const (
 	paramInviteID      = "invite_id"
 )
 
-// InstallInvites mounts the "my share invites" surface: a portal (menu-top item)
-// listing the current user's pending invites with accept/decline buttons, and
+// InstallInvites mounts the "my share invites" surface: a portal (in the
+// notification center) listing the current user's pending invites with accept/decline buttons, and
 // the events backing them. Accepting grants the actual access (see AcceptFor).
 // notifier, when given, notifies the inviter on acceptance.
 func InstallInvites(b *presets.Builder, db *gorm.DB, notifier ...Notifier) {
@@ -61,11 +61,15 @@ func InstallInvites(b *presets.Builder, db *gorm.DB, notifier ...Notifier) {
 		return
 	})
 
-	b.AddMenuTopItemFunc("shared_invites", func(ctx *web.EventContext) h.HTMLComponent {
-		if _, ok := currentSubject(ctx); !ok {
-			return nil
-		}
-		return web.Portal(invitesBody(db, ctx)).Name(invitesPortal)
+	b.AddNotificationSource(presets.NotificationSource{
+		Name:  "shared_invites",
+		Count: NotificationCount(db),
+		Content: func(ctx *web.EventContext) h.HTMLComponent {
+			if NotificationCount(db)(ctx) == 0 {
+				return nil
+			}
+			return web.Portal(invitesBody(db, ctx)).Name(invitesPortal)
+		},
 	})
 }
 
@@ -79,10 +83,8 @@ func currentSubject(ctx *web.EventContext) (string, bool) {
 	return u.GetID().String(), true
 }
 
-// NotificationCount returns a count function for presets.NotificationFunc: the
-// number of the current user's pending share invites. Wire it in the app, e.g.
-//
-//	b.NotificationFunc(shared.NotificationContent(db), shared.NotificationCount(db))
+// NotificationCount returns a count function of a notification source: the
+// number of the current user's pending share invites.
 func NotificationCount(db *gorm.DB) func(ctx *web.EventContext) int {
 	return func(ctx *web.EventContext) int {
 		if subject, ok := currentSubject(ctx); ok {
@@ -92,7 +94,7 @@ func NotificationCount(db *gorm.DB) func(ctx *web.EventContext) int {
 	}
 }
 
-// NotificationContent returns a content function for presets.NotificationFunc:
+// NotificationContent returns a content function of a notification source:
 // the current user's pending invites with accept/decline actions.
 func NotificationContent(db *gorm.DB) func(ctx *web.EventContext) h.HTMLComponent {
 	return func(ctx *web.EventContext) h.HTMLComponent {

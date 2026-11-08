@@ -1,8 +1,5 @@
 @main
-title
-    | Confirm:
-    | {= Kind == "owner_transfer" ? "a new owner of" : (Kind == "role_change" ? "a new role on" : "sharing") }
-    | {= Record}
+title {= "Confirm: " + (Kind == "owner_transfer" ? "a new owner of" : (Kind == "role_change" ? "a new role on" : "sharing")) + " " + Record }
 div[style="font-family:Arial,sans-serif;font-size:14px;color:#222"]
     p
         | {= By} asks:

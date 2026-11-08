@@ -188,8 +188,8 @@ func TestShareConfirmAccept(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := f.last()
-	if m.To[0] != "ana@x.test" || !strings.Contains(m.Subject, "Confirme") ||
-		!strings.Contains(m.Subject, "Contratos") || !strings.Contains(m.Body(), "Bia") {
+	if m.To[0] != "ana@x.test" || m.Subject != "Confirme: compartilhamento de Contratos" ||
+		!strings.Contains(m.Body(), "Bia") {
 		t.Fatalf("the mail to the owner, in Portuguese: %q %q %q", m.To, m.Subject, m.Body())
 	}
 	if req.State != shared.StatePending || f.roleName("bia", "pastas", p.ID) != "" {
@@ -242,7 +242,7 @@ func TestMailLanguage(t *testing.T) {
 	if _, err := f.s.Share(f.ctx, "pastas", p.ID, shared.UserSubject("caio"), f.role("pastas", "Editor"), "bia", origin); err != nil {
 		t.Fatal(err)
 	}
-	if s := f.last().Subject; !strings.HasPrefix(s, "Confirm:") || !strings.Contains(s, "Docs") {
+	if s := f.last().Subject; s != "Confirm: sharing Docs" {
 		t.Errorf("subject %q", s)
 	}
 }
