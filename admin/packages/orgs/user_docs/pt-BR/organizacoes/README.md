@@ -9,10 +9,15 @@ registros de uma organização nunca são vistos de outra.
 A organização em que você trabalha fica no **topo do menu**: o chip dela diz
 qual é, e os recursos dela ficam abaixo. Clique no chip para escolher outra;
 o ✕ limpa a escolha. A escolhida é a da página em que você está, senão a
-última que você escolheu neste navegador, senão a sua única, senão a
-organização padrão (**Padrão**).
+última que você escolheu neste navegador, senão a sua única, senão **a sua
+organização padrão**.
 
-**Listar organizações** lista as organizações que você alcança — só essas.
+A sua padrão é só sua — qualquer organização que você alcança, sua ou
+compartilhada com você: no detalhe dela,
+{%= admin.action("organizacoes", "set_my_default").link %} (e
+{%= admin.action("organizacoes", "unset_my_default").link %} para não ter
+nenhuma). **Listar organizações** lista as organizações que você alcança —
+só essas —, **Minha padrão** marcando a sua.
 
 ## Quem alcança uma organização
 

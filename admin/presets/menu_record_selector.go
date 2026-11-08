@@ -32,7 +32,8 @@ import (
 // The record chosen is the one of the page (…/<model>/{id}/…), else the one
 // chosen in this tab (vars.menuRecords, carried by every request of the page
 // in MenuRecordsHeader; none when it was cleared), else the only one, else
-// the default (DefaultConditions). Nothing is kept in the browser: a page
+// the default of the request (DefaultID: the user's), else the default
+// (DefaultConditions). Nothing is kept in the browser: a page
 // opened anew (F5) says it by its URI. A change in the dialog, or the clear,
 // keeps it in the tab and draws its item again, the page staying. The chip is the title of its item (no label of the
 // model): the record chosen — an icon at the right of the item clears it —,
@@ -53,6 +54,10 @@ type MenuRecordSelectorConfig struct {
 	PageGroups []MenuRecordPageGroup
 	// Conditions narrow the records that may be chosen (the active ones).
 	Conditions SQLConditions
+	// DefaultID is the id of the record chosen when none was, for the
+	// request — the user's own default —, before DefaultConditions; "" or
+	// one that may not be chosen, none.
+	DefaultID func(ctx *web.EventContext) string
 	// DefaultConditions say the record chosen when none was: the first that
 	// meets them (the default one); none, none.
 	DefaultConditions SQLConditions
@@ -330,6 +335,14 @@ func (mb *ModelBuilder) menuRecordChosen(ctx *web.EventContext, parents IDSlice)
 	if objs, total, err := mb.menuRecordSearch(ctx, parents, "", nil, 1, 2); err == nil && total == 1 && len(objs) == 1 {
 		if c = ok(objs[0]); c.obj != nil {
 			return
+		}
+	}
+	// the default of the request (the user's)
+	if f := mb.MenuRecordSelectorConfig().DefaultID; f != nil {
+		if obj := mb.menuRecordFind(ctx, parents, f(ctx)); obj != nil {
+			if c = ok(obj); c.obj != nil {
+				return
+			}
 		}
 	}
 	// the default

@@ -29,11 +29,11 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB, ownerScope bool) {
 	// "Organizacaos"
 	mb.SetPluralLabel("Organizacoes")
 
-	mb.Listing("Nome", "Descricao", "Padrao").
+	mb.Listing("Nome", "Descricao", "MyDefault").
 		SearchColumns("nome", "descricao").
 		OrderBy("nome")
 
-	ed := mb.Editing("Nome", "Descricao", "Padrao")
+	ed := mb.Editing("Nome", "Descricao")
 	ed.Field("Nome").Required(true)
 	ed.SetterFunc(func(obj interface{}, ctx *web.EventContext) {
 		o := obj.(*models.Organizacao)
@@ -44,7 +44,8 @@ func configureOrganizacao(b *presets.Builder, db *gorm.DB, ownerScope bool) {
 		}
 	})
 
-	mb.Detailing("Nome", "Descricao", "Padrao")
+	mb.Detailing("Nome", "Descricao")
+	configureMyDefault(mb, db)
 
 	// shared by the service (Builder.Sharing): its actions, its reads
 	if !ownerScope {

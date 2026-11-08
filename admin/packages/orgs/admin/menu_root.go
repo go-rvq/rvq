@@ -5,6 +5,7 @@ import (
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,7 +15,7 @@ import (
 // in their menu groups) and of the listing of the organizations —, at the
 // top of the menu, for a user with organizations. The one chosen is the one
 // of the page, else the one kept in the browser, else the only one of the
-// user, else the default (Organizacao.Padrao).
+// user, else their default (models.UserDefault).
 
 // orgMenuRoot is the item of the organization at the top of the menu
 // (presets.MenuRootFunc).
@@ -38,7 +39,14 @@ func orgMenuRoot(b *presets.Builder, db *gorm.DB) presets.MenuRootFunc {
 // item at the top of the menu (not where the model's would be).
 func configureMenuRoot(b *presets.Builder, db *gorm.DB) {
 	if mb := OrganizacaoModel(b); mb != nil {
-		mb.MenuRecordSelectorConfig().DefaultConditions = presets.SQLConditions{{Query: "org_organizacoes.padrao"}}
+		mb.MenuRecordSelectorConfig().DefaultID = func(ctx *web.EventContext) string {
+			if u := user.GetCurrentUser(ctx.R); u != nil && !u.Anonymous() {
+				if id := models.DefaultOf(db.WithContext(ctx.R.Context()), u.GetID()); id != uuid.Nil {
+					return id.String()
+				}
+			}
+			return ""
+		}
 		mb.MenuRecordSelector(true).InMenu(false)
 	}
 	b.AddMenuRootFunc(orgMenuRoot(b, db))

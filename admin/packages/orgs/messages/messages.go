@@ -10,12 +10,13 @@ type Messages struct {
 	OrganizacaoNome      string `i18n:"label='Name', hint='Label of an organization\\'s name field.'"`
 	OrganizacaoDescricao string `i18n:"label='Description', hint='Label of an organization\\'s description field.'"`
 	OrganizacaoOwner     string `i18n:"label='Owner', hint='Label of the user who owns an organization.'"`
-	OrganizacaoPadrao    string `i18n:"label='Default', hint='Label of the field that makes an organization the default of its owner (opened in the menu when none was chosen).'"`
+	OrganizacaoMyDefault string `i18n:"label='My default', hint='Column of the organizations: the one that is the user\\'s default (opened in the menu when none was chosen).'"`
 
-	// sharing
-	Compartilhar        string `i18n:"label='Share', hint='Action that shares an organization with other users.'"`
-	Compartilhamento    string `i18n:"label='Sharing', hint='Title of the users an organization is shared with.'"`
-	CompartilharComDica string `i18n:"label='Share: hint', hint='Hint of the field that chooses the users to share an organization with.'"`
+	// the default organization of the user
+	SetMyDefault   string `i18n:"label='Make it my default', hint='Action that makes the organization the default of the user (opened in the menu when none was chosen).'"`
+	UnsetMyDefault string `i18n:"label='No longer my default', hint='Action that leaves the user with no default organization.'"`
+	MyDefaultSet   string `i18n:"hint='Shown when the organization became the default of the user.'"`
+	MyDefaultUnset string `i18n:"hint='Shown when the user was left with no default organization.'"`
 
 	// selector
 	SelecioneOrganizacao string `i18n:"label='Select the organization', hint='Shown when an organization must be chosen and none was.'"`
@@ -30,11 +31,12 @@ var Messages_pt_BR = &Messages{
 	OrganizacaoNome:      "Nome",
 	OrganizacaoDescricao: "Descrição",
 	OrganizacaoOwner:     "Proprietário",
-	OrganizacaoPadrao:    "Padrão",
+	OrganizacaoMyDefault: "Minha padrão",
 
-	Compartilhar:        "Compartilhar",
-	Compartilhamento:    "Compartilhamento",
-	CompartilharComDica: "Selecione os usuários com quem compartilhar esta organização.",
+	SetMyDefault:   "Tornar minha padrão",
+	UnsetMyDefault: "Deixar de ser minha padrão",
+	MyDefaultSet:   "Agora é a sua organização padrão.",
+	MyDefaultUnset: "Você não tem mais organização padrão.",
 
 	SelecioneOrganizacao: "Selecione a organização",
 }
@@ -48,11 +50,12 @@ var Messages_en_US = &Messages{
 	OrganizacaoNome:      "Name",
 	OrganizacaoDescricao: "Description",
 	OrganizacaoOwner:     "Owner",
-	OrganizacaoPadrao:    "Default",
+	OrganizacaoMyDefault: "My default",
 
-	Compartilhar:        "Share",
-	Compartilhamento:    "Sharing",
-	CompartilharComDica: "Select the users to share this organization with.",
+	SetMyDefault:   "Make it my default",
+	UnsetMyDefault: "No longer my default",
+	MyDefaultSet:   "It is your default organization now.",
+	MyDefaultUnset: "You have no default organization any more.",
 
 	SelecioneOrganizacao: "Select the organization",
 }

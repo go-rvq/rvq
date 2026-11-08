@@ -22,10 +22,6 @@ type Organizacao struct {
 	// OwnerID is the owning user (a hermon/rvq user UUID). The owner is never
 	// removed from the organization and always has full access.
 	OwnerID model.UUID `gorm:"type:uuid;not null;index"`
-
-	// Padrao: the default organization of its owner — the one the menu opens
-	// when none was chosen (one per owner: marking one unmarks the others).
-	Padrao bool `gorm:"not null;default:false"`
 }
 
 func (Organizacao) TableName() string { return "org_organizacoes" }
@@ -45,17 +41,6 @@ func (o *Organizacao) BeforeSave(*gorm.DB) error {
 		return ErrProprietarioObrigatorio
 	}
 	return nil
-}
-
-// AfterSave keeps one default organization per owner: this one marked, the
-// others of its owner unmarked.
-func (o *Organizacao) AfterSave(tx *gorm.DB) error {
-	if !o.Padrao {
-		return nil
-	}
-	return tx.Session(&gorm.Session{NewDB: true}).Model(&Organizacao{}).
-		Where("owner_id = ? AND id <> ? AND padrao", o.OwnerID, o.ID).
-		UpdateColumn("padrao", false).Error
 }
 
 func (o *Organizacao) String() string { return o.Nome }

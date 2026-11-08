@@ -508,3 +508,35 @@ func TestOrgInMenu(t *testing.T) {
 		t.Errorf("no organization, an item: %+v", nodes)
 	}
 }
+
+// The organization of the menu when none was chosen, of two: the user's
+// default (models.UserDefault), else none.
+func TestOrgInMenuUserDefault(t *testing.T) {
+	a := newChoiceApp(t)
+	chosen := func() string {
+		t.Helper()
+		r := httptest.NewRequest("GET", "/admin", nil)
+		r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: a.me}))
+		nodes, _, _ := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r})
+		if len(nodes) != 1 || len(nodes[0].Children) == 0 {
+			t.Fatalf("the item of the organization: %+v", nodes)
+		}
+		return chipOf(nodes[0].Children[0]).Title
+	}
+	if got := chosen(); got != presets.Messages_en_US.MenuRecordSelect {
+		t.Errorf("no default: %q", got)
+	}
+	if err := models.SetDefault(a.db, a.me, a.other.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := chosen(); got != "Beta" {
+		t.Errorf("the user's default: %q", got)
+	}
+	// another user's default is not theirs
+	if err := models.SetDefault(a.db, uuid.New(), a.org.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := chosen(); got != "Beta" {
+		t.Errorf("another's default: %q", got)
+	}
+}

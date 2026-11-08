@@ -10,9 +10,13 @@ The organization you work in is at the **top of the menu**: its chip says
 which one it is, its resources are under it. Click the chip to choose
 another; the ✕ clears the choice. The one chosen is the one of the page you
 are on, else the one you chose last in this browser, else your only one,
-else the default organization (**Default**).
+else **your default organization**.
 
-**List organizations** lists the organizations you reach — only those.
+Your default is yours alone — any organization you reach, yours or shared
+with you: in its detail, {%= admin.action("organizacoes", "set_my_default").link %}
+(and {%= admin.action("organizacoes", "unset_my_default").link %} to have
+none). **List organizations** lists the organizations you reach — only
+those —, **My default** marking yours.
 
 ## Who reaches an organization
 

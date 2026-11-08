@@ -29,9 +29,14 @@ func (b *Base) BeforeCreate(*gorm.DB) error {
 	return nil
 }
 
+// UsersTable is the table of the users the defaults of the organizations
+// (UserDefault) refer to.
+var UsersTable = "users"
+
 // AutoMigrate creates/updates the org tables.
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
-		&Organizacao{},
-	)
+	if err := db.AutoMigrate(&Organizacao{}); err != nil {
+		return err
+	}
+	return migrateUserDefaults(db, UsersTable)
 }
