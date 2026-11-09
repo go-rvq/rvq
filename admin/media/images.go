@@ -137,6 +137,10 @@ func imageCard(ctx *web.EventContext, mbx *media_library.MediaBox, field string,
 	}
 	if isImage {
 		image.Attr(vx.Lightbox(group, mbx.URL(), mbx.FileName)...)
+		// its description below it (hideable)
+		if d := mbx.Description; d != "" && !cfg.DisableDescription {
+			image.Attr(vx.LightboxDescription(d)...)
+		}
 	}
 	// a field's own: its actions over the image
 	if single && !readonly && !disabled {

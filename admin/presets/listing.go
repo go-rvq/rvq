@@ -283,13 +283,7 @@ func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuIte
 	// actions, filtered (BuildMenuItemCompomentsOfActions); the pages
 	inTrash := b.requestMode(ctx).IsTrash()
 	fs = b.RowMenu().listingItemFuncsWhere(ctx, func(it *RowMenuItemBuilder) bool { return it.availableIn(inTrash) })
-	actions := b.itemActions
-
-	for _, action := range b.mb.detailing.actions {
-		if action.showInList {
-			actions = append(actions, action)
-		}
-	}
+	actions, _ := b.rowActions()
 
 	if len(actions) > 0 {
 		fs = append(fs, func(rctx *RecordMenuItemContext) h.HTMLComponent {
@@ -312,6 +306,40 @@ func (b *ListingBuilder) RowMenuOfItems(ctx *web.EventContext) (fs RecordMenuIte
 	})
 
 	return
+}
+
+// rowActions are the actions of a record in the listing: of its menu, of its
+// icons (Inline).
+func (b *ListingBuilder) rowActions() (menu, inline []*ActionBuilder) {
+	all := append([]*ActionBuilder{}, b.itemActions...)
+	for _, action := range b.mb.detailing.actions {
+		if action.showInList {
+			all = append(all, action)
+		}
+	}
+	for _, action := range all {
+		if action.inline {
+			inline = append(inline, action)
+		} else {
+			menu = append(menu, action)
+		}
+	}
+	return
+}
+
+// RowButtons are the icons of the rows (the actions Inline), nil when none.
+func (b *ListingBuilder) RowButtons(ctx *web.EventContext, sharedPortal string) vx.RowMenuItemFunc {
+	_, inline := b.rowActions()
+	if len(inline) == 0 {
+		return nil
+	}
+	return func(_ int, obj any, id string, _ *web.EventContext) h.HTMLComponent {
+		btns := buildInlineButtonsOfActions(sharedPortal, ctx, b.mb, id, obj, inline...)
+		if len(btns) == 0 {
+			return nil
+		}
+		return btns
+	}
 }
 
 func (b *ListingBuilder) PrependListAction(f func(ctx *web.EventContext) h.HTMLComponents) *ListingBuilder {
@@ -836,7 +864,8 @@ func (b *ListingBuilder) doListingActionInternal(actionList []*ActionBuilder, ct
 
 	ctx.Resp = &r
 
-	_, err = action.Do(b.mb, "", ctx)
+	// the record of an action of the rows (none of the listing's own)
+	_, err = action.Do(b.mb, ctx.R.FormValue(ParamID), ctx)
 	return
 }
 

@@ -12,6 +12,13 @@ import Lightbox from './Lightbox.vue'
 export interface LightboxImage {
   src: string
   caption?: string
+  // its size in bytes (data-lightbox-size) and the name it is downloaded
+  // as (data-lightbox-name; else the caption): its chip
+  size?: number
+  name?: string
+  // description: what is said below it (data-lightbox-description), hidden
+  // by the button of the bar; none, nothing
+  description?: string
 }
 
 let app: App | null = null
@@ -32,7 +39,14 @@ export function imagesOf(el: Element, root: ParentNode = document): {images: Lig
     // the same image twice in a group (an element repeated): once
     if (images.some((i) => i.src === src) && e !== el) continue
     if (e === el) index = images.length
-    images.push({src, caption: e.getAttribute('data-lightbox-caption') || undefined})
+    const size = Number(e.getAttribute('data-lightbox-size'))
+    images.push({
+      src,
+      caption: e.getAttribute('data-lightbox-caption') || undefined,
+      size: size > 0 ? size : undefined,
+      name: e.getAttribute('data-lightbox-name') || undefined,
+      description: e.getAttribute('data-lightbox-description') || undefined,
+    })
   }
   return {images, index}
 }

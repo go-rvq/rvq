@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"net/url"
@@ -63,6 +64,9 @@ type ActionBuilder struct {
 	// toolbar: a button of the detailing's toolbar (ToolbarButton)
 	toolbar     bool
 	toolbarLook ActionToolbarLookFunc
+	// inline: an icon of the row of the listing, at the left of its menu,
+	// not in it (Inline)
+	inline bool
 }
 
 // ActionToolbarLookFunc is the look of the button of an action in the
@@ -228,6 +232,17 @@ func (b *ActionBuilder) ToolbarButton(look ActionToolbarLookFunc) *ActionBuilder
 // toolbar (ToolbarButton).
 func (b *ActionBuilder) IsToolbarButton() bool { return b.toolbar }
 
+// Inline makes the action of a record an icon button of its row in the
+// listing, at the left of its menu (and not in it): its icon, its title the
+// tooltip; the click does what the item of the menu would (its dialog).
+func (b *ActionBuilder) Inline(v bool) *ActionBuilder {
+	b.inline = v
+	return b
+}
+
+// IsInline says whether the action is an icon of the row (Inline).
+func (b *ActionBuilder) IsInline() bool { return b.inline }
+
 func (b *ActionBuilder) ShowInList() *ActionBuilder {
 	b.showInList = true
 	return b
@@ -378,7 +393,7 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 	switch b.typ {
 	case ActionTypePage:
 		ctx.WithData(&PageDoActionOptions{})
-	case ActionTypeList:
+	case ActionTypeList, ActionTypeListItem:
 		ctx.WithData(&ListingDoActionOptions{})
 	}
 
@@ -540,7 +555,11 @@ func (b *ActionBuilder) content(mb *ModelBuilder, id string, overlay actions.Ove
 		switch b.typ {
 		case ActionTypeList:
 			click.EventFunc(actions.DoListingAction)
-		case ActionTypeListItem, ActionTypePage, ActionTypeDetailing:
+		case ActionTypeListItem:
+			// of the rows of the listing (ListingBuilder.ItemAction): its
+			// own, not the detail's
+			click.EventFunc(actions.DoListingItemAction)
+		case ActionTypePage, ActionTypeDetailing:
 			click.EventFunc(actions.DoAction)
 		}
 
@@ -610,29 +629,7 @@ func BuildMenuItemCompomentsOfActions(sharedPortal string, ctx *web.EventContext
 // buildMenuItemsOfActions is BuildMenuItemCompomentsOfActions, with what
 // each item's click also says (query: the detail's page, ParamToolbarAction).
 func buildMenuItemsOfActions(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, query func(*web.VueEventTagBuilder), actionBuilders ...*ActionBuilder) (items []*VListItemBuilder, errors h.HTMLComponents) {
-	// a record of the trash: only the actions available there
-	inTrash := InTrash(ctx) || mb.IsDeleted(obj)
-	for _, action := range actionBuilders {
-		if mb.permissioner.ReqObjectActioner(ctx.R, obj, action.PermName()).Denied() || !action.trash.Available(inTrash) {
-			continue
-		}
-
-		if ok, err := action.IsEnabledObj(obj, id, ctx); err != nil {
-			errors = append(errors, VAlert(h.Text(fmt.Sprintf("Action %q: IsEnabledObj: %v", action.RequestTitle(mb, ctx.Context()), err))).Color("error"))
-		} else if !ok {
-			continue
-		}
-
-		onclick := web.Plaid().
-			EventFunc(actions.Action).
-			Query(ParamID, id).
-			Query(ParamAction, action.name).
-			Query(ParamTargetPortal, sharedPortal).
-			Query(ParamOverlay, actions.Dialog).
-			URL(mb.Info().ListingHrefCtx(ctx))
-		if query != nil {
-			query(onclick)
-		}
+	errors = forEachActionOf(sharedPortal, ctx, mb, id, obj, query, actionBuilders, func(action *ActionBuilder, onclick *web.VueEventTagBuilder) {
 		btn := action.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
 			return VListItem(
 				h.If(
@@ -649,9 +646,62 @@ func buildMenuItemsOfActions(sharedPortal string, ctx *web.EventContext, mb *Mod
 		} else {
 			items = append(items, VListItem(btn))
 		}
+	})
+	return
+}
 
+// buildInlineButtonsOfActions are the icons of the row of the record id of
+// the actions (Inline): the click of each one, its item's of the menu.
+func buildInlineButtonsOfActions(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, actionBuilders ...*ActionBuilder) (btns h.HTMLComponents) {
+	errors := forEachActionOf(sharedPortal, ctx, mb, id, obj, nil, actionBuilders, func(action *ActionBuilder, onclick *web.VueEventTagBuilder) {
+		btns = append(btns, action.BuildButton(func(ctx *web.EventContext, onclick *OnClick) h.HTMLComponent {
+			title := action.RequestTitle(mb, ctx.Context())
+			// the icon a child: the tooltip, another (a VBtn with children
+			// draws them, not its icon)
+			return VBtn("").Icon(true).Variant(VariantText).Size(SizeSmall).
+				Children(VIcon(cmp.Or(action.icon, "mdi-play")), VTooltip().Activator("parent").Location("top").Text(title)).
+				Attr("aria-label", title, "data-row-action", action.name).
+				// not the click of the row (it opens the record)
+				Attr("@click.stop", onclick.String())
+		}, onclick, id, obj, ctx))
+	})
+	return append(errors, btns...)
+}
+
+// forEachActionOf calls do with each of the actions available for the record
+// id (its permission, the trash, enabled) and its click.
+func forEachActionOf(sharedPortal string, ctx *web.EventContext, mb *ModelBuilder, id string, obj any, query func(*web.VueEventTagBuilder), actionBuilders []*ActionBuilder, do func(action *ActionBuilder, onclick *web.VueEventTagBuilder)) (errors h.HTMLComponents) {
+	// a record of the trash: only the actions available there
+	inTrash := InTrash(ctx) || mb.IsDeleted(obj)
+	for _, action := range actionBuilders {
+		if mb.permissioner.ReqObjectActioner(ctx.R, obj, action.PermName()).Denied() || !action.trash.Available(inTrash) {
+			continue
+		}
+
+		if ok, err := action.IsEnabledObj(obj, id, ctx); err != nil {
+			errors = append(errors, VAlert(h.Text(fmt.Sprintf("Action %q: IsEnabledObj: %v", action.RequestTitle(mb, ctx.Context()), err))).Color("error"))
+		} else if !ok {
+			continue
+		}
+
+		// an action of the listing's rows: its own dialog (the detail's,
+		// the others)
+		event := actions.Action
+		if action.typ == ActionTypeListItem {
+			event = actions.OpenItemActionDialog
+		}
+		onclick := web.Plaid().
+			EventFunc(event).
+			Query(ParamID, id).
+			Query(ParamAction, action.name).
+			Query(ParamTargetPortal, sharedPortal).
+			Query(ParamOverlay, actions.Dialog).
+			URL(mb.Info().ListingHrefCtx(ctx))
+		if query != nil {
+			query(onclick)
+		}
+		do(action, onclick)
 	}
-
 	return
 }
 

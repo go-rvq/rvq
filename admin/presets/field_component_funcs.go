@@ -29,6 +29,17 @@ func TDStringComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLCompo
 	return h.Td(h.Text(field.StringValue()))
 }
 
+// TDDateTimeComponentFunc is the cell of an instant (time.Time, *time.Time) in
+// the time zone of the admin; empty when zero or nil.
+func TDDateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
+	t := timeFieldValue(field)
+	if t == nil {
+		return h.Td()
+	}
+	msgr := i18n.MustGetModuleMessages(ctx.Context(), CoreI18nModuleKey, Messages_en_US).(*Messages)
+	return h.Td(h.Text(t.In(TimeLocationOf(ctx)).Format(msgr.TimeFormats.DateTime)))
+}
+
 func CheckboxComponentFunc(field *FieldContext, _ *web.EventContext) h.HTMLComponent {
 	return FieldWithHint(field, VCheckbox().
 		Attr(web.VField(field.FormKey, field.Value().(bool))...).

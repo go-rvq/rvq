@@ -151,8 +151,19 @@ func (b *ScopeBuilder) Write(ctx *h.Context) (err error) {
 		b.Attr(":observers", h.JSONString(b.observers))
 	}
 	if len(b.slots) > 0 {
+		// a prop renamed ("locals: drop") is not also given by its name:
+		// the scope's own state does not hide an outer one's
+		renamed := map[string]bool{}
+		for k := range b.slots {
+			if prop, _, ok := strings.Cut(k, ":"); ok {
+				renamed[strings.TrimSpace(prop)] = true
+			}
+		}
 		var names []string
 		for k := range b.slots {
+			if renamed[k] {
+				continue
+			}
 			names = append(names, k)
 		}
 		sort.Strings(names)

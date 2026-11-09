@@ -127,6 +127,9 @@ type Messages struct {
 	LightboxClose              string `json:"lightboxClose" i18n:"hint='Button that closes the lightbox.'"`
 	LightboxPrev               string `json:"lightboxPrev" i18n:"hint='Button of the lightbox: the image before.'"`
 	LightboxNext               string `json:"lightboxNext" i18n:"hint='Button of the lightbox: the image after.'"`
+	LightboxDownload           string `json:"lightboxDownload" i18n:"hint='Button of the chip of the lightbox: downloads the image.'"`
+	LightboxShowDescription    string `json:"lightboxShowDescription" i18n:"hint='Button of the lightbox: shows the description below the image.'"`
+	LightboxHideDescription    string `json:"lightboxHideDescription" i18n:"hint='Button of the lightbox: hides the description below the image.'"`
 	MapLoadError               string `json:"mapLoadError" i18n:"hint='Said when the map could not be loaded.'"`
 	MapsLoadError              string `json:"mapsLoadError" i18n:"hint='Said when Google Maps could not be loaded.'"`
 	MapsNoKey                  string `json:"mapsNoKey" i18n:"hint='Said when there is no key of Google Maps.'"`
@@ -498,6 +501,9 @@ var Messages_en_US = &Messages{
 	LightboxClose:               "Close",
 	LightboxPrev:                "Previous",
 	LightboxNext:                "Next",
+	LightboxDownload:            "Download",
+	LightboxShowDescription:     "Show the description",
+	LightboxHideDescription:     "Hide the description",
 	MapLoadError:                "The map could not be loaded.",
 	MapsLoadError:               "Could not load Google Maps.",
 	MapsNoKey:                   "Set the Google Maps API Key in SEOConfig.",
@@ -867,6 +873,9 @@ var Messages_pt_BR = &Messages{
 	LightboxClose:               "Fechar",
 	LightboxPrev:                "Anterior",
 	LightboxNext:                "Próxima",
+	LightboxDownload:            "Baixar",
+	LightboxShowDescription:     "Mostrar a descrição",
+	LightboxHideDescription:     "Ocultar a descrição",
 	MapLoadError:                "O mapa não pôde ser carregado.",
 	MapsLoadError:               "Não foi possível carregar o Google Maps.",
 	MapsNoKey:                   "Configure a Google Maps API Key em SEOConfig.",

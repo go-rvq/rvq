@@ -203,6 +203,12 @@ export interface VxMessages {
   lightboxPrev: string
   /** Button of the lightbox: the image after. */
   lightboxNext: string
+  /** Button of the chip of the lightbox: downloads the image. */
+  lightboxDownload: string
+  /** Button of the lightbox: shows the description below the image. */
+  lightboxShowDescription: string
+  /** Button of the lightbox: hides the description below the image. */
+  lightboxHideDescription: string
   /** Said when the map could not be loaded. */
   mapLoadError: string
   /** Said when Google Maps could not be loaded. */

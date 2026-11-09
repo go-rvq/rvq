@@ -221,7 +221,20 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		density = DensityCompact
 	}
 
+	// the columns of a field with its label hidden (SetHiddenLabel): no
+	// title — the label read by the screen readers —, as narrow as their
+	// cells (an icon)
+	hiddenLabels := map[string]string{}
+	for _, f := range displayFields {
+		if f.hiddenLabel {
+			fcb := f.NewContextBuilder(b.mb.Info(), ctx, nil, nil)
+			hiddenLabels[f.name] = fcb.ContextLabel(fcb.ContextOptionsFromPath(f.name))
+		}
+	}
 	headCellWrapperFunc := func(cell h.MutableAttrHTMLComponent, rowspan, colspan int, field string, title string, ctx *web.EventContext) h.HTMLComponent {
+		if label, ok := hiddenLabels[field]; ok {
+			return h.Th("").Attr("aria-label", label).Style("width: 1%")
+		}
 		if len(field) > 0 {
 			if _, ok := sr.orderableFieldMap[field]; ok {
 				var orderBy string
@@ -308,6 +321,11 @@ func (lcb *ListingComponentBuilder) BuildTable(ctx *web.EventContext, sr *Search
 		SelectedCountLabel(msgr.ListingSelectedCountNotice).
 		SelectableColumnsBtn(selectColumnsBtn).
 		ClearSelectionLabel(msgr.ListingClearSelection)
+
+	// the icons of the rows (the actions Inline), at the left of their menu
+	if f := b.RowButtons(ctx, tempPortal); f != nil {
+		sDataTable.RowButtonFunc(f)
+	}
 
 	targetPortal := ctx.R.FormValue(ParamTargetPortal)
 

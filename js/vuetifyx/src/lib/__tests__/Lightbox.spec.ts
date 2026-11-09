@@ -50,3 +50,30 @@ it('a control over the image keeps its click', () => {
   expect(lightboxOf($('inner'))).toBe($('btn'))
   expect(lightboxOf(root)).toBeNull()
 })
+
+it('the size and the name of a file, for its chip', () => {
+  const root = document.createElement('div')
+  root.innerHTML = `
+    <div data-lightbox="f" data-lightbox-src="/a.png" data-lightbox-size="2048" data-lightbox-name="a.png"></div>
+    <div data-lightbox="f" data-lightbox-src="/b.png" data-lightbox-size="x"></div>`
+  document.body.appendChild(root)
+  const {images} = imagesOf(root.querySelector('[data-lightbox-src]')!)
+  expect(images[0]).toMatchObject({size: 2048, name: 'a.png'})
+  expect(images[1].size).toBeUndefined()
+  root.remove()
+})
+
+it('the description below the image, hidden by its button; none, no button', async () => {
+  ;(globalThis as any).visualViewport ??= Object.assign(new EventTarget(), {width: 1024, height: 768, scale: 1, offsetLeft: 0, offsetTop: 0})
+  const w = mountTemplate(Lightbox, {images: [{src: '/1.jpg', description: 'uma descrição'}, {src: '/2.jpg'}]})
+  await flushPromises()
+  const q = (s: string) => document.querySelector(s)
+  expect(q('[data-lightbox-description]')?.textContent).toBe('uma descrição')
+  ;(q('[data-lightbox-toggle-description]') as HTMLElement).click()
+  await flushPromises()
+  expect(q('[data-lightbox-description]')).toBeNull()
+  ;(w.vm as any).go(1)
+  await flushPromises()
+  expect(q('[data-lightbox-toggle-description]')).toBeNull()
+  w.unmount()
+})

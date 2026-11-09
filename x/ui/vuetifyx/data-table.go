@@ -41,6 +41,7 @@ type DataTableBuilder struct {
 	rowWrapper         RowWrapperFunc
 	rowStart           RowStartFunc
 	rowMenuItemFuncs   []RowMenuItemFunc
+	rowButtonFuncs     []RowMenuItemFunc
 	rowExpandFunc      RowComponentFunc
 	headers            []*DataTableHeaderBuilder
 	columns            []*DataTableColumnBuilder
@@ -143,6 +144,13 @@ func (b *DataTableBuilder) RowMenuItemFunc(v RowMenuItemFunc) (r *DataTableBuild
 	return b
 }
 
+// RowButtonFunc adds buttons of a row, in its column of actions at the left of
+// its menu (nil: none for the row).
+func (b *DataTableBuilder) RowButtonFunc(v RowMenuItemFunc) (r *DataTableBuilder) {
+	b.rowButtonFuncs = append(b.rowButtonFuncs, v)
+	return b
+}
+
 func (b *DataTableBuilder) RowExpandFunc(v RowComponentFunc) (r *DataTableBuilder) {
 	b.rowExpandFunc = v
 	return b
@@ -205,6 +213,8 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 	}
 	// map[obj_id]{rowMenus}
 	objRowMenusMap := make(map[string][]h.HTMLComponent)
+	// map[obj_id]{the buttons at the left of the menu}
+	objRowButtonsMap := make(map[string]h.HTMLComponents)
 	var i int
 	reflectutils.ForEach(b.data, func(obj interface{}) {
 		id := ObjectID(obj)
@@ -224,10 +234,19 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 		if len(opMenuItems) > 0 {
 			objRowMenusMap[id] = opMenuItems
 		}
+		var btns h.HTMLComponents
+		for _, f := range b.rowButtonFuncs {
+			if c := f(i, obj, id, ctx); c != nil {
+				btns = append(btns, c)
+			}
+		}
+		if len(btns) > 0 {
+			objRowButtonsMap[id] = btns
+		}
 		i++
 	})
 
-	hasRowMenuCol := len(objRowMenusMap) > 0 || b.selectableColumnsBtn != nil
+	hasRowMenuCol := len(objRowMenusMap) > 0 || len(objRowButtonsMap) > 0 || b.selectableColumnsBtn != nil
 
 	var rows []h.HTMLComponent
 	var idsOfPage []string
@@ -338,7 +357,20 @@ func (b *DataTableBuilder) Write(c *h.Context) (err error) {
 		if hasRowMenuCol {
 			var td h.HTMLComponent
 			rowMenus, ok := objRowMenusMap[id]
-			if ok {
+			if btns := objRowButtonsMap[id]; len(btns) > 0 {
+				var menu h.HTMLComponent
+				if ok {
+					menu = v.VMenu(
+						web.Slot(
+							v.VBtn("", v.VIcon("mdi-dots-horizontal")).
+								Attr("v-bind", "props").Variant("text").Size("small"),
+						).Name("activator").Scope("{ props }"),
+						v.VList(rowMenus...).Density("compact").Attr("slim", true),
+					).ZIndex("50000")
+				}
+				td = h.Td(h.Div(append(btns, menu)...).Class("d-flex align-center justify-end flex-nowrap")).
+					Style("min-width: 64px; white-space: nowrap").Class("pl-0 noprint")
+			} else if ok {
 				td = h.Td(
 					v.VMenu(
 						web.Slot(
