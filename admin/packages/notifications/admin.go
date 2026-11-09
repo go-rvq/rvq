@@ -31,6 +31,10 @@ const (
 type Builder struct {
 	db *gorm.DB
 	mb *presets.ModelBuilder
+	// Profile is the model of the profile of the user (rvq profile): the
+	// notifications go under it — the user browses all of theirs there;
+	// nil, a model of their own, out of the menu.
+	Profile *presets.ModelBuilder
 }
 
 // New is the notification center of the notifications of db.
@@ -58,8 +62,17 @@ func (b *Builder) Install(p *presets.Builder) error {
 	if permB := p.GetPermission(); permB != nil {
 		permB.CreatePolicies(perm.PolicyFor(user.RoleLogged).WhoAre(perm.Allowed).ToDo(perm.Anything).On("*:" + ModelID + ":*"))
 	}
-	mb := p.Model(&Notification{}, presets.ModelConfig().SetId(ModelID).SetModuleKey(MessagesKey)).
-		URIName("my-notifications").MenuIcon("mdi-bell-outline").InMenu(false)
+	config := presets.ModelConfig().SetId(ModelID).SetModuleKey(MessagesKey)
+	var mb *presets.ModelBuilder
+	if b.Profile != nil {
+		mb = presets.NewModelBuilder(p, &Notification{}, config)
+	} else {
+		mb = p.Model(&Notification{}, config).InMenu(false)
+	}
+	mb.URIName("my-notifications").MenuIcon("mdi-bell-outline")
+	if b.Profile != nil {
+		b.Profile.AddChild(mb)
+	}
 	b.mb = mb
 	mb.SetCreatingDisabled(true)
 	mb.SetEditingDisabled(true)
