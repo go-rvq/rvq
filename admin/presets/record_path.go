@@ -85,18 +85,16 @@ func (mb *ModelBuilder) ListingPath(parents IDSlice) string {
 	return mb.permissioner.ListVerifier(mb.permParents(parents)...).PreferredResource()
 }
 
-// permParents are the ids of the parents as the permissioner takes them:
-// only the ones of the parents that are not singletons, the nearest first.
+// permParents are the ids of the parents as the permissioner takes them —
+// as the request carries them —: one for each parent, the root first, zero
+// for a singleton.
 func (mb *ModelBuilder) permParents(parents IDSlice) (r IDSlice) {
 	for n, p := range mb.Parents() {
-		if p.singleton {
-			continue
-		}
 		var id ID
-		if n < len(parents) {
+		if n < len(parents) && !p.singleton {
 			id = parents[n]
 		}
-		r = append(IDSlice{pathID(id)}, r...)
+		r = append(r, pathID(id))
 	}
 	return
 }

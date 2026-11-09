@@ -30,10 +30,7 @@ func (p *ModelPermissioner) Verifier(id ID, parentID ...ID) (v *perm.Verifier) {
 		v.SnakeOn(p.mb.id)
 	case p.mb.parent != nil:
 		var pid ID
-		if !p.mb.parent.singleton && len(parentID) > 0 {
-			pid = parentID[0]
-			parentID = parentID[1:]
-		}
+		pid, parentID = p.parentOf(parentID)
 		// under its parent's record: by its groups and by its unique name
 		v = p.mb.parent.Info().Permissioner().Verifier(pid, parentID...)
 		v.SnakeOn(p.mb.id)
@@ -66,15 +63,31 @@ func (p *ModelPermissioner) rootVerifier() *perm.Verifier {
 func (p *ModelPermissioner) ListVerifier(parentID ...ID) (v *perm.Verifier) {
 	if p.mb.parent != nil {
 		var pid ID
-		if !p.mb.parent.singleton && len(parentID) > 0 {
-			pid = parentID[0]
-			parentID = parentID[1:]
-		}
+		pid, parentID = p.parentOf(parentID)
 		v = p.mb.parent.Info().Permissioner().Verifier(pid, parentID...)
 		v.SnakeOn(p.mb.id)
 		return
 	}
 	return p.rootVerifier()
+}
+
+// parentOf is the id of the parent of the model — of parentID, the ids of
+// its parents the outermost first (as the request carries them, its
+// path's): the last — and the ids of the parents above it. A list of one id
+// a parent (the request's) gives up the one of a singleton too; a shorter
+// one, ids only of the parents not singletons.
+func (p *ModelPermissioner) parentOf(parentID []ID) (pid ID, rest []ID) {
+	n := len(parentID)
+	if n == 0 {
+		return pid, nil
+	}
+	if p.mb.parent.singleton && n != len(p.mb.Parents()) {
+		return pid, parentID
+	}
+	if !p.mb.parent.singleton {
+		pid = parentID[n-1]
+	}
+	return pid, parentID[:n-1]
 }
 
 func (p *ModelPermissioner) ReqObjector(r *http.Request, obj any) *perm.Verifier {
