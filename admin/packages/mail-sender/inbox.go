@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"net/mail"
 	"strconv"
@@ -106,6 +107,10 @@ type InboundMessage struct {
 	References []string
 	// Text and HTML are its body, the plain and the HTML parts.
 	Text, HTML string
+	// Attachments are its files: the attachments and the inline parts that
+	// are not its text (a picture pasted), each at most InboundFileMaxSize
+	// (a larger one left out)
+	Attachments []InboundAttachment
 	// Raw is the message as it came.
 	Raw []byte
 }
@@ -290,8 +295,17 @@ func (in *IMAPInbox) Close() error {
 	return in.c.Close()
 }
 
-// ParseInbound reads the message raw: its headers and its text and HTML
-// parts.
+// InboundAttachment is a file of an InboundMessage.
+type InboundAttachment struct {
+	Name, ContentType string
+	Data              []byte
+}
+
+// InboundFileMaxSize is the largest file of an InboundMessage taken.
+const InboundFileMaxSize = 20 << 20
+
+// ParseInbound reads the message raw: its headers, its text and HTML parts
+// and its files.
 func ParseInbound(raw []byte) (*InboundMessage, error) {
 	r, err := gomail.CreateReader(bytes.NewReader(raw))
 	if err != nil && !gomessage.IsUnknownCharset(err) {
@@ -323,20 +337,43 @@ func ParseInbound(raw []byte) (*InboundMessage, error) {
 			}
 			return m, nil
 		}
-		ih, ok := p.Header.(*gomail.InlineHeader)
-		if !ok {
-			continue // an attachment
-		}
-		ct, _, _ := ih.ContentType()
-		body, _ := io.ReadAll(p.Body)
-		switch {
-		case ct == "text/html" && m.HTML == "":
-			m.HTML = string(body)
-		case (ct == "text/plain" || ct == "") && m.Text == "":
-			m.Text = string(body)
+		switch ph := p.Header.(type) {
+		case *gomail.AttachmentHeader:
+			name, _ := ph.Filename()
+			ct, _, _ := ph.ContentType()
+			m.addAttachment(name, ct, p.Body)
+		case *gomail.InlineHeader:
+			ct, params, _ := ph.ContentType()
+			switch {
+			case ct == "text/html" && m.HTML == "":
+				body, _ := io.ReadAll(p.Body)
+				m.HTML = string(body)
+			case (ct == "text/plain" || ct == "") && m.Text == "":
+				body, _ := io.ReadAll(p.Body)
+				m.Text = string(body)
+			case !strings.HasPrefix(ct, "text/"):
+				// a picture pasted: a file too
+				m.addAttachment(params["name"], ct, p.Body)
+			}
 		}
 	}
 	return m, nil
+}
+
+// addAttachment takes the file of body, at most InboundFileMaxSize (a larger
+// one left out); no name, one of its type.
+func (m *InboundMessage) addAttachment(name, contentType string, body io.Reader) {
+	data, err := io.ReadAll(io.LimitReader(body, InboundFileMaxSize+1))
+	if err != nil || len(data) > InboundFileMaxSize || len(data) == 0 {
+		return
+	}
+	if name == "" {
+		name = "anexo"
+		if exts, _ := mime.ExtensionsByType(contentType); len(exts) > 0 {
+			name += exts[0]
+		}
+	}
+	m.Attachments = append(m.Attachments, InboundAttachment{Name: name, ContentType: contentType, Data: data})
 }
 
 // WithSMTP is s with the values of smtp it reuses (Reuse): its user, its
