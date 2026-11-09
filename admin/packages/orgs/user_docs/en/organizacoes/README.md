@@ -16,7 +16,8 @@ Your default is yours alone — any organization you reach, yours or shared
 with you: in its detail, {%= admin.action("organizacoes", "set_my_default").link %}
 (and {%= admin.action("organizacoes", "unset_my_default").link %} to have
 none). **List organizations** lists the organizations you reach — only
-those —, **My default** marking yours.
+those —, **My default** marking yours; one of another, shared with you,
+says **shared by** and its owner.
 
 ## Who reaches an organization
 

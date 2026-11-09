@@ -141,6 +141,9 @@ func New(o Options) (*Service, error) {
 	return &Service{o: o, resources: map[string]*Resource{}}, nil
 }
 
+// UserName is the name of the user id (its id, unknown).
+func (s *Service) UserName(ctx context.Context, id string) string { return s.o.Users.Name(ctx, id) }
+
 // Register makes a resource shared.
 func (s *Service) Register(r Resource) {
 	if r.IDColumn == "" {
@@ -169,6 +172,11 @@ type level struct {
 
 // chain is the record and the ones above it, the record first.
 func (s *Service) chain(ctx context.Context, resource, id string) ([]level, error) {
+	return s.chainIn(s.o.DB.WithContext(ctx), resource, id)
+}
+
+// chainIn is chain, read by db (a transaction's).
+func (s *Service) chainIn(db *gorm.DB, resource, id string) ([]level, error) {
 	var out []level
 	for resource != "" {
 		r, err := s.resource(resource)
@@ -180,7 +188,7 @@ func (s *Service) chain(ctx context.Context, resource, id string) ([]level, erro
 			break
 		}
 		var parents []*string
-		if err := s.o.DB.WithContext(ctx).Table(r.Table).Where(r.IDColumn+" = ?", id).
+		if err := db.Table(r.Table).Where(r.IDColumn+" = ?", id).
 			Pluck(r.ParentColumn, &parents).Error; err != nil {
 			return nil, err
 		}

@@ -64,6 +64,23 @@ func ListResource(mb *presets.ModelBuilder, parentID ...model.ID) string {
 // Grant creates or updates a DB policy granting subject the actions on
 // resource, keyed by referID (so it can be updated or revoked later).
 func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*perm.DefaultDBPolicy, error) {
+	return keep(db, referID, subject, resource, actions, perm.Allowed)
+}
+
+// DenyShared is like GrantShared, denying: the subject may none of actions
+// on resource — whatever else allows them.
+func DenyShared(db *gorm.DB, referID, subject, resource string, actions []string, sharedID uuid.UUID) (*perm.DefaultDBPolicy, error) {
+	p, err := keep(db, referID, subject, resource, actions, perm.Denied)
+	if err != nil {
+		return nil, err
+	}
+	p.SharedID = model.UUID(sharedID)
+	return p, db.Model(p).Update("shared_id", sharedID).Error
+}
+
+// keep creates or updates the policy of referID: effect for subject on
+// resource.
+func keep(db *gorm.DB, referID, subject, resource string, actions []string, effect string) (*perm.DefaultDBPolicy, error) {
 	uuidkey.MustRegister(db) // policies have UUID keys
 	// the resource asked ends in its verb ("…:<7>:@edit"): a resource that
 	// ends a part holds the verbs after it
@@ -75,7 +92,7 @@ func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*p
 	switch err {
 	case nil:
 		p.Subject = subject
-		p.Effect = perm.Allowed
+		p.Effect = effect
 		p.Actions = actions
 		p.Resources = []string{resource}
 		return p, db.Save(p).Error
@@ -83,7 +100,7 @@ func Grant(db *gorm.DB, referID, subject, resource string, actions []string) (*p
 		p = &perm.DefaultDBPolicy{
 			ReferID:   referID,
 			Subject:   subject,
-			Effect:    perm.Allowed,
+			Effect:    effect,
 			Actions:   actions,
 			Resources: []string{resource},
 		}

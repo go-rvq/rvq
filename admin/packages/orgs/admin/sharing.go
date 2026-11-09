@@ -4,6 +4,11 @@ import (
 	"context"
 	"net/http"
 
+	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/packages/orgs/messages"
+	"github.com/go-rvq/rvq/web"
+	. "github.com/go-rvq/rvq/x/ui/vuetify"
+
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/packages/user"
@@ -63,7 +68,32 @@ func installSharing(pb *presets.Builder, s *shared.Service) error {
 	s.InstallConfirm(pb, ConfirmPath)
 	s.InstallInvites(pb)
 	s.ListenGroups()
+	configureOwnerShown(mb, s)
 	return nil
+}
+
+// configureOwnerShown: an organization of another, shared with the user, says
+// so — "shared" and its owner — beside its name in the listing; the detail
+// says its owner.
+func configureOwnerShown(mb *presets.ModelBuilder, s *shared.Service) {
+	mb.Listing().Field("Nome").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		o := field.Obj.(*models.Organizacao)
+		td := h.Td(h.Text(o.Nome))
+		if uid := currentUserID(ctx); uid != uuid.Nil && o.OwnerID.UUID() != uid {
+			m := messages.Get(ctx.Context())
+			td.AppendChildren(VChip(h.Text(m.SharedBy+" "+s.UserName(ctx.R.Context(), o.OwnerID.String()))).
+				Size(SizeXSmall).Variant(VariantTonal).Color(ColorPrimary).Class("ml-2").
+				Attr("data-org-shared", true))
+		}
+		return td
+	})
+	dt := mb.Detailing()
+	dt.Field("Owner").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		o := field.Obj.(*models.Organizacao)
+		field.ValueOverride = s.UserName(ctx.R.Context(), o.OwnerID.String())
+		return presets.ReadonlyComponentFunc(field, ctx)
+	})
+	dt.Only("Nome", "Descricao", "Owner")
 }
 
 // accessibleOrgs is db limited to the organizations of the user of r: the

@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/admin/model"
 	"net/http"
 	"sort"
 	"strings"
@@ -102,8 +103,11 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 	// the policies of the permissions of the admin kept with the accesses:
 	// the subject (user:<id>, group:<id>) the role's actions on the record
 	// (a model on top: under another, its parent's permissions decide)
+	// a model under another: its records reached by its parents'
+	// permissions — None, out of them (a deny)
+	policies := s.nestedPolicies(mb)
 	if mb.Parent() == nil {
-		policies := func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+		policies = func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
 			ref := "sharedaccess:" + a.ID.String()
 			// the listing of the model, scoped to the records reached
 			// (ReadScope): who reaches one lists them — and the columns of
@@ -132,6 +136,8 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 			}
 			return err
 		}
+	}
+	{
 		load := func(tx *gorm.DB) {
 			if pb := mb.Builder().GetPermission(); pb != nil {
 				from := s.o.Now().Add(-time.Minute)
@@ -605,4 +611,42 @@ func (a adminUsers) ListGroups(ctx context.Context) (out []Choice) {
 		out = append(out, Choice{Value: g.ID.String(), Title: g.Name})
 	}
 	return
+}
+
+// nestedPolicies are the policies of the accesses of a model under another
+// (mb): its records are reached by its parents' permissions (a role on the
+// parent covers what is under it); None takes one out — a policy denying the
+// subject everything of the record and under it.
+func (s *Service) nestedPolicies(mb *presets.ModelBuilder) AccessHook {
+	return func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+		ref := "sharedaccess:" + a.ID.String()
+		if err := perms.Revoke(tx, ref); err != nil {
+			return err
+		}
+		if removed || role == nil || !role.None {
+			return nil
+		}
+		levels, err := s.chainIn(tx, a.Resource, a.RecordID)
+		if err != nil {
+			return err
+		}
+		parents := mb.Parents()
+		if len(levels)-1 != len(parents) {
+			return fmt.Errorf("shared: the parents of %s %s: %d records, %d models", a.Resource, a.RecordID,
+				len(levels)-1, len(parents))
+		}
+		// the ids of the parents, the outermost first (presets' order)
+		pids := make([]model.ID, len(parents))
+		for i, p := range parents {
+			if pids[i], err = p.ParseRecordID(levels[len(levels)-1-i].id); err != nil {
+				return err
+			}
+		}
+		rid, err := mb.ParseRecordID(a.RecordID)
+		if err != nil {
+			return err
+		}
+		_, err = perms.DenyShared(tx, ref, a.Subject, perms.RecordResource(mb, rid, pids...)+"*", []string{"*"}, a.ID)
+		return err
+	}
 }

@@ -12,6 +12,8 @@ type Messages struct {
 	OrganizacaoOwner     string `i18n:"label='Owner', hint='Label of the user who owns an organization.'"`
 	OrganizacaoMyDefault string `i18n:"label='My default', hint='Column of the organizations: the one that is the user\\'s default (opened in the menu when none was chosen).'"`
 
+	SharedBy string `i18n:"hint='Beside the name of an organization of another, shared with the user: before the name of its owner.'"`
+
 	// the default organization of the user
 	SetMyDefault   string `i18n:"label='Make it my default', hint='Action that makes the organization the default of the user (opened in the menu when none was chosen).'"`
 	UnsetMyDefault string `i18n:"label='No longer my default', hint='Action that leaves the user with no default organization.'"`
@@ -33,6 +35,8 @@ var Messages_pt_BR = &Messages{
 	OrganizacaoOwner:     "Proprietário",
 	OrganizacaoMyDefault: "Minha padrão",
 
+	SharedBy: "compartilhada por",
+
 	SetMyDefault:   "Tornar minha padrão",
 	UnsetMyDefault: "Deixar de ser minha padrão",
 	MyDefaultSet:   "Agora é a sua organização padrão.",
@@ -51,6 +55,8 @@ var Messages_en_US = &Messages{
 	OrganizacaoDescricao: "Description",
 	OrganizacaoOwner:     "Owner",
 	OrganizacaoMyDefault: "My default",
+
+	SharedBy: "shared by",
 
 	SetMyDefault:   "Make it my default",
 	UnsetMyDefault: "No longer my default",

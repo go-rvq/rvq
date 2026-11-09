@@ -17,7 +17,8 @@ compartilhada com você: no detalhe dela,
 {%= admin.action("organizacoes", "set_my_default").link %} (e
 {%= admin.action("organizacoes", "unset_my_default").link %} para não ter
 nenhuma). **Listar organizações** lista as organizações que você alcança —
-só essas —, **Minha padrão** marcando a sua.
+só essas —, **Minha padrão** marcando a sua; uma de outro, compartilhada
+com você, diz **compartilhada por** e o proprietário.
 
 ## Quem alcança uma organização
 
