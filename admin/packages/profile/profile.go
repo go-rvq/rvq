@@ -88,13 +88,19 @@ func (c *Builder) ProfilePage(p *presets.Builder) http.Handler {
 }
 
 // Brand is what the top bar shows of the user (presets.ProfileFunc): their
-// notifications and their button (UserButton), with its menu.
+// notifications — the application's (SetNotificationComponentFunc), else the
+// bell of the notification center of b (NotificationBell) — and their
+// button (UserButton), with its menu.
 func (c *Builder) Brand(b *presets.Builder) func(ctx *web.EventContext) h.HTMLComponent {
 	button := c.UserButton(b)
 	return func(ctx *web.EventContext) h.HTMLComponent {
 		var notification h.HTMLComponent
-		if u := user.GetCurrentUser(ctx.R); u != nil && !u.Anonymous() && c.notificationComponentFunc != nil {
-			notification = c.notificationComponentFunc(ctx, u)
+		if u := user.GetCurrentUser(ctx.R); u != nil && !u.Anonymous() {
+			if c.notificationComponentFunc != nil {
+				notification = c.notificationComponentFunc(ctx, u)
+			} else {
+				notification = NotificationBell(b, ctx)
+			}
 		}
 		return h.HTMLComponents{notification, button(ctx)}
 	}
@@ -277,4 +283,25 @@ func supported(p *presets.Builder, lang string) bool {
 		}
 	}
 	return false
+}
+
+// NotificationBell is the bell of the notification center of b
+// (presets.Builder.Notifications: every source of it — the notes, the
+// invites, the notifications of the user…): a dot when something waits, its
+// contents in its menu.
+func NotificationBell(b *presets.Builder, ctx *web.EventContext) h.HTMLComponent {
+	total, content := b.Notifications(ctx)
+	icon := VIcon("mdi-bell-outline").Color("grey-darken-1")
+	return VMenu().Children(
+		h.Template().Attr("v-slot:activator", "{ props }").Children(
+			VBtn("").Icon(true).Children(
+				h.If(total > 0,
+					VBadge(icon).Content(total).Dot(true).Color("error"),
+				).Else(icon),
+			).Attr("v-bind", "props").Attr("data-notification-bell", true).
+				// the size of the other icons of the top bar
+				Variant(VariantText),
+		),
+		VCard(content...).MinWidth(280).MaxWidth(420),
+	)
 }
