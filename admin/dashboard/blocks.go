@@ -458,3 +458,9 @@ var rowLeaveStyle = h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML
 .dash-row { transition: opacity %[1]dms ease, transform %[1]dms ease, height %[1]dms ease, padding %[1]dms ease, margin %[1]dms ease; }
 .dash-row--leaving { opacity: 0; transform: translateX(32px); height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; border-color: transparent !important; overflow: hidden; }
 `, rowLeaveMS)))
+
+// Custom is a component of the app's own, drawn as given: what the blocks do
+// not say (tabs, expansion panels).
+type Custom struct{ Component h.HTMLComponent }
+
+func (c *Custom) render(*renderCtx) h.HTMLComponent { return c.Component }

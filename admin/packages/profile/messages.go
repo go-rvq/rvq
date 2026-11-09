@@ -19,6 +19,7 @@ type Messages struct {
 	ProfileAccountName  string `i18n:"hint='Label of the account name field of the profile.'"`
 	ProfileAvatar       string `i18n:"hint='Label of the picture of the user in their profile (shown in the top bar).'"`
 	ProfileLanguage     string `i18n:"hint='Label of the default language of the user in their profile.'"`
+	ProfileDashboard    string `i18n:"hint='Title of the widgets on the top of the profile (its dashboard).'"`
 	ProfileLanguageHint string `i18n:"hint='Under the default language of the user: what it is.'"`
 	LanguageAuto        string `i18n:"hint='The default language of no language chosen: the browser\\'s.'"`
 	MyProfile           string `i18n:"hint='Item of the menu of the user: their profile.'"`
@@ -39,6 +40,7 @@ var (
 		ProfileAccountName:  "Account name",
 		ProfileAvatar:       "Picture",
 		ProfileLanguage:     "Default language",
+		ProfileDashboard:    "My dashboard",
 		ProfileLanguageHint: "The language of the admin when you open it, and of the e-mails sent to you.",
 		LanguageAuto:        "Automatic (the browser's)",
 		MyProfile:           "My profile",
@@ -58,6 +60,7 @@ var (
 		ProfileAccountName:  "Nome da conta",
 		ProfileAvatar:       "Foto",
 		ProfileLanguage:     "Idioma padrão",
+		ProfileDashboard:    "Meu painel",
 		ProfileLanguageHint: "O idioma do admin quando você o abre, e dos e-mails enviados a você.",
 		LanguageAuto:        "Automático (o do navegador)",
 		MyProfile:           "Meu perfil",
