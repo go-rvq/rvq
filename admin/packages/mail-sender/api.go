@@ -1,7 +1,9 @@
 package mail_sender
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"html"
 	"io"
 	"net"
@@ -10,9 +12,25 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
+// Attachment is a file attached to a message: Body is read (and closed)
+// once, when it is first built.
 type Attachment struct {
 	Name string
 	Body io.ReadCloser
+	data []byte
+}
+
+// bytes is what the attachment holds, Body read once.
+func (a *Attachment) bytes() ([]byte, error) {
+	if a.data == nil && a.Body != nil {
+		defer a.Body.Close()
+		data, err := io.ReadAll(a.Body)
+		if err != nil {
+			return nil, err
+		}
+		a.data, a.Body = data, nil
+	}
+	return a.data, nil
 }
 
 type MessageBuilder struct {
@@ -309,6 +327,15 @@ func (b *MessageBuilder) Build() (m *mail.Msg, err error) {
 		b.footed = true
 	}
 	m.SetBodyString(mail.TypeTextHTML, b.body)
+	for _, a := range b.attachments {
+		data, err := a.bytes()
+		if err != nil {
+			return nil, fmt.Errorf("the attachment %s: %w", a.Name, err)
+		}
+		if err = m.AttachReader(a.Name, bytes.NewReader(data)); err != nil {
+			return nil, fmt.Errorf("the attachment %s: %w", a.Name, err)
+		}
+	}
 	return
 }
 
