@@ -41,6 +41,15 @@ func (b *Builder) Sharing(s *shared.Service) *Builder {
 // shared by it too, as their children (shared.Resource.Parent).
 func (b *Builder) SharingService() *shared.Service { return b.sharing }
 
+// Roles are the roles of the sharing of the organizations — an
+// application's (finance: Leitor, Lançador…) in place of OrgRoles —, the
+// ones of before renamed (renames: from → to; the accesses keep them).
+// Before Install.
+func (b *Builder) Roles(roles []shared.RoleSeed, renames map[string]string) *Builder {
+	b.roles, b.roleRenames = roles, renames
+	return b
+}
+
 // OrgRoles are the roles of the sharing of an organization.
 var OrgRoles = []shared.RoleSeed{
 	{Name: "Viewer", Actions: shared.VerbView},
@@ -61,9 +70,13 @@ func OrgResource() shared.Resource {
 }
 
 // installSharing shares the organizations by s.
-func installSharing(pb *presets.Builder, s *shared.Service) error {
+func installSharing(pb *presets.Builder, s *shared.Service, roles []shared.RoleSeed, renames map[string]string) error {
 	mb := OrganizacaoModel(pb)
-	if err := s.Install(mb, shared.ModelOptions{Resource: OrgResource(), Roles: OrgRoles, ReadScope: true}); err != nil {
+	if roles == nil {
+		roles = OrgRoles
+	}
+	if err := s.Install(mb, shared.ModelOptions{Resource: OrgResource(), Roles: roles, RenameRoles: renames,
+		ReadScope: true}); err != nil {
 		return err
 	}
 	s.InstallConfirm(pb, ConfirmPath)

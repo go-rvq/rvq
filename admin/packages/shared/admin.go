@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,8 +44,14 @@ type Directory interface {
 type ModelOptions struct {
 	// Resource is the model's (its Name, else the model's id).
 	Resource Resource
-	// Roles are the roles offered (seeded once, with None).
+	// Roles are the roles offered (SeedRoles, with None).
 	Roles []RoleSeed
+	// RenameRoles renames roles of before (from → to) before Roles are
+	// seeded: the accesses keep them, as the roles of the new names.
+	RenameRoles map[string]string
+	// RemoveRoles are roles of before no longer offered: removed when no
+	// access holds them (RemoveRoles).
+	RemoveRoles []string
 	// ReadScope limits the listing and the detail to the records the user
 	// sees.
 	ReadScope bool
@@ -100,6 +107,12 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 		res.Name = mb.Info().URIName()
 	}
 	s.Register(res)
+	if err := RenameRoles(s.o.DB, uuid.Nil, res.Name, o.RenameRoles); err != nil {
+		return err
+	}
+	if err := RemoveRoles(s.o.DB, uuid.Nil, res.Name, o.RemoveRoles...); err != nil {
+		return err
+	}
 	if err := SeedRoles(s.o.DB, uuid.Nil, res.Name, o.Roles...); err != nil {
 		return err
 	}
@@ -120,20 +133,17 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 			// (ReadScope): who reaches one lists them — and the columns of
 			// the listing (#<field>, of the model)
 			listRef, colsRef := ref+":list", ref+":list_columns"
+			if err := revokeRefs(tx, ref); err != nil {
+				return err
+			}
 			if removed || role == nil || role.None {
-				for _, r := range []string{listRef, colsRef} {
-					if err := perms.Revoke(tx, r); err != nil {
-						return err
-					}
-				}
-				return perms.Revoke(tx, ref)
+				return nil
 			}
 			rid, err := mb.ParseRecordID(a.RecordID)
 			if err != nil {
 				return err
 			}
-			_ = perms.Revoke(tx, ref)
-			_, err = perms.GrantShared(tx, ref, a.Subject, perms.RecordResource(mb, rid)+"*", []string(role.Actions), a.ID)
+			err = grantRules(tx, ref, a, perms.RecordResource(mb, rid), role)
 			if err == nil && o.ReadScope && role.Allows(presets.PermList) {
 				list := perms.ListResource(mb)
 				_, err = perms.GrantShared(tx, listRef, a.Subject, list+presets.PermList, []string{presets.PermList}, a.ID)
@@ -765,7 +775,7 @@ func (s *Service) nestedPoliciesOf(mb *presets.ModelBuilder, readScope bool, tx 
 		_, err := perms.GrantShared(tx, ref+suffix, a.Subject, resource, actions, a.ID)
 		return err
 	}
-	if err := grant("", record+"*", role.Actions); err != nil {
+	if err := grantRules(tx, ref, a, record, role); err != nil {
 		return err
 	}
 	if readScope && role.Allows(presets.PermList) {
@@ -1024,6 +1034,22 @@ func (s *Service) loadPolicies(mb *presets.ModelBuilder, tx *gorm.DB) {
 		from := s.o.Now().Add(-time.Minute)
 		pb.LoadDBPoliciesToMemory(tx, &from)
 	}
+}
+
+// grantRules are the policies of the rules of role (RuleList) for the
+// subject of a on the record (its resource, record): one of ref each, the
+// actions of its rule on the record and On after it.
+func grantRules(tx *gorm.DB, ref string, a *Access, record string, role *ShareTemplate) error {
+	for i, r := range role.RuleList() {
+		k := ref
+		if i > 0 {
+			k = ref + ":rule:" + strconv.Itoa(i)
+		}
+		if _, err := perms.GrantShared(tx, k, a.Subject, record+r.On, r.Do, a.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // revokeRefs takes the policies of the reference ref away, and its

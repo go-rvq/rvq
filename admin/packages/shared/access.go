@@ -2,6 +2,7 @@ package shared
 
 import (
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -187,13 +188,61 @@ func AutoMigrate(db *gorm.DB) error {
 // shared, it takes it out.
 const RoleNone = "None"
 
-// Allows says whether the role gives action.
+// Allows says whether the role gives action on the record (and all under
+// it): "*" any.
 func (t *ShareTemplate) Allows(action string) bool {
-	return t != nil && !t.None && slices.Contains([]string(t.Actions), action)
+	if t == nil || t.None {
+		return false
+	}
+	for _, r := range t.RuleList() {
+		if r.On == RuleAll && (slices.Contains(r.Do, action) || slices.Contains(r.Do, "*")) {
+			return true
+		}
+	}
+	return false
 }
 
-// More says whether the role to gives an action the role from does not
-// (from nil: any role gives more).
+// RuleAll is the resource of a rule of the record and all under it.
+const RuleAll = "*"
+
+// Rule is a part of a role: its actions (Do) on the resources under the
+// record shared — On, after the record's: "*" (RuleAll) the record and all
+// under it, "movimentacoes:*" the movements under it, "pagamentos:<*>:!efetivar"
+// … (perm patterns).
+type Rule struct {
+	On string
+	Do []string
+}
+
+func (r Rule) encode() string { return r.On + "|" + strings.Join(r.Do, ",") }
+
+func decodeRule(s string) (Rule, bool) {
+	on, do, ok := strings.Cut(s, "|")
+	if !ok || on == "" || do == "" {
+		return Rule{}, false
+	}
+	return Rule{On: on, Do: strings.Split(do, ",")}, true
+}
+
+// RuleList are the rules of the role: its Actions (on RuleAll), then its
+// Rules.
+func (t *ShareTemplate) RuleList() (out []Rule) {
+	if t == nil {
+		return nil
+	}
+	if len(t.Actions) > 0 {
+		out = append(out, Rule{On: RuleAll, Do: []string(t.Actions)})
+	}
+	for _, l := range t.Rules {
+		if r, ok := decodeRule(l); ok {
+			out = append(out, r)
+		}
+	}
+	return
+}
+
+// More says whether the role to gives an action — on a resource — the role
+// from does not (from nil: any role gives more).
 func More(from, to *ShareTemplate) bool {
 	if to == nil || to.None {
 		return false
@@ -201,46 +250,113 @@ func More(from, to *ShareTemplate) bool {
 	if from == nil || from.None {
 		return true
 	}
-	for _, a := range to.Actions {
-		if !slices.Contains([]string(from.Actions), a) {
-			return true
+	has := map[string]bool{}
+	for _, r := range from.RuleList() {
+		for _, a := range r.Do {
+			has[r.On+" "+a] = true
+		}
+	}
+	for _, r := range to.RuleList() {
+		for _, a := range r.Do {
+			if !has[r.On+" "+a] && !has[RuleAll+" "+a] && !has[r.On+" *"] && !has[RuleAll+" *"] {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-// RoleSeed is a role a resource offers.
+// RoleSeed is a role a resource offers: its Actions on the record and all
+// under it, its Rules on resources under it.
 type RoleSeed struct {
 	Name    string
 	Actions []string
+	Rules   []Rule
 }
 
-// SeedRoles gives the resource of scope its roles (and None) when it has
-// none (idempotent).
+func (r RoleSeed) rules() (out pq.StringArray) {
+	for _, x := range r.Rules {
+		out = append(out, x.encode())
+	}
+	return
+}
+
+// SeedRoles gives the resource of scope its roles (and None): the ones
+// missing made, the ones there — by name — given the actions and the rules
+// of the seed (the roles are the code's); roles of other names kept.
 func SeedRoles(db *gorm.DB, scope uuid.UUID, resource string, roles ...RoleSeed) error {
-	var n int64
-	q := db.Model(&ShareTemplate{}).Where("resource = ?", resource)
-	if scope != uuid.Nil {
-		q = q.Where("scope = ?", scope)
-	} else {
-		q = q.Where("scope IS NULL")
-	}
-	if err := q.Count(&n).Error; err != nil {
-		return err
-	}
-	if n > 0 {
-		return nil
-	}
 	for _, r := range append(roles, RoleSeed{Name: RoleNone}) {
-		t := &ShareTemplate{Name: r.Name, Actions: r.Actions, Resource: resource, None: r.Name == RoleNone}
+		var t ShareTemplate
+		q := rolesQuery(db, scope, resource).Where("name = ?", r.Name)
+		found := q.Limit(1).Find(&t).RowsAffected > 0
+		if q.Error != nil {
+			return q.Error
+		}
+		if found {
+			if err := db.Model(&t).Updates(map[string]any{"actions": pq.StringArray(r.Actions), "rules": r.rules(),
+				"none": r.Name == RoleNone}).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		t = ShareTemplate{Name: r.Name, Actions: r.Actions, Rules: r.rules(), Resource: resource, None: r.Name == RoleNone}
 		if scope != uuid.Nil {
 			t.Scope = scopeOf(scope)
 		}
-		if err := db.Create(t).Error; err != nil {
+		if err := db.Create(&t).Error; err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// RenameRoles renames the roles of the resource of scope (from → to) — the
+// accesses keep them —, unless one of the new name is there.
+func RenameRoles(db *gorm.DB, scope uuid.UUID, resource string, renames map[string]string) error {
+	for from, to := range renames {
+		var n int64
+		if err := rolesQuery(db, scope, resource).Where("name = ?", to).Count(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			continue
+		}
+		if err := rolesQuery(db, scope, resource).Where("name = ?", from).Update("name", to).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveRoles removes the roles of the names of the resource of scope that
+// no access, request or invite holds (one held stays).
+func RemoveRoles(db *gorm.DB, scope uuid.UUID, resource string, names ...string) error {
+	for _, name := range names {
+		var t ShareTemplate
+		if rolesQuery(db, scope, resource).Where("name = ?", name).Limit(1).Find(&t).RowsAffected == 0 {
+			continue
+		}
+		var n, m, k int64
+		db.Model(&Access{}).Where("role_id = ?", t.ID).Count(&n)
+		db.Model(&Request{}).Where("role_id = ? AND state = ?", t.ID, StatePending).Count(&m)
+		db.Model(&AccessInvite{}).Where("role_id = ? AND state = ?", t.ID, StatePending).Count(&k)
+		if n+m+k > 0 {
+			continue
+		}
+		if err := db.Delete(&t).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// rolesQuery are the roles of the resource of scope.
+func rolesQuery(db *gorm.DB, scope uuid.UUID, resource string) *gorm.DB {
+	q := db.Model(&ShareTemplate{}).Where("resource = ?", resource)
+	if scope != uuid.Nil {
+		return q.Where("scope = ?", scope)
+	}
+	return q.Where("scope IS NULL")
 }
 
 // RolesOf are the roles of the resource in scope (its own; when it has none,

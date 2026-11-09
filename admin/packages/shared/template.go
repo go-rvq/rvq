@@ -23,6 +23,10 @@ type ShareTemplate struct {
 	// Resource is the resource the role is offered for (the model of the
 	// record shared); empty: any.
 	Resource string `gorm:"size:120;index"`
+	// Rules are its actions on resources under the record shared, beyond
+	// Actions (of the record and all under it): "movimentacoes:*|@create,@edit"
+	// a line (Rule).
+	Rules pq.StringArray `gorm:"type:text[]"`
 	// None: the role of no access (RoleNone) — of a record under one shared,
 	// it takes it out.
 	None      bool `gorm:"not null;default:false"`

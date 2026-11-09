@@ -824,11 +824,11 @@ func (s *Service) RequestOf(ctx context.Context, token string) (*Request, error)
 	return &r, nil
 }
 
-// pending is the request of token pending, by its owner; expired, marked
+// pending is the request (of cond) pending, by its owner; expired, marked
 // so.
-func (s *Service) pending(tx *gorm.DB, token, by string, o Origin) (*Request, error) {
+func (s *Service) pending(tx *gorm.DB, cond string, arg any, by string, o Origin) (*Request, error) {
 	var r Request
-	if err := tx.First(&r, "token_hash = ?", tokenHash(token)).Error; err != nil {
+	if err := tx.First(&r, cond, arg).Error; err != nil {
 		return nil, ErrNotPending
 	}
 	if r.State != StatePending {
@@ -851,9 +851,35 @@ func (s *Service) pending(tx *gorm.DB, token, by string, o Origin) (*Request, er
 // a user, an invite to them; with a group, the access at once; a role
 // change, at once; a new owner, an invite to them.
 func (s *Service) Confirm(ctx context.Context, token, by string, o Origin) error {
+	return s.confirm(ctx, "token_hash = ?", tokenHash(token), by, o)
+}
+
+// ConfirmRequest is the owner (by) confirming the request id — in the
+// application, not by the link of the mail (a seed, a page of theirs).
+func (s *Service) ConfirmRequest(ctx context.Context, id uuid.UUID, by string, o Origin) error {
+	return s.confirm(ctx, "id = ?", id, by, o)
+}
+
+// Grant gives the subject the role on the record at once — no owner
+// asked, no invite —: for the application's own code (a seed, an import),
+// in the history as granted by by.
+func (s *Service) Grant(ctx context.Context, resource, id, subject string, roleID uuid.UUID, by string, o Origin, opts ...ShareOption) error {
+	var so shareOptions
+	for _, opt := range opts {
+		opt(&so)
+	}
+	if !s.subjectExists(ctx, subject) {
+		return ErrNoSuchSubject
+	}
+	return s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return s.grant(tx, resource, id, subject, roleID, so.noParentRead, by, o)
+	})
+}
+
+func (s *Service) confirm(ctx context.Context, cond string, arg any, by string, o Origin) error {
 	var expired bool
 	err := s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		r, err := s.pending(tx, token, by, o)
+		r, err := s.pending(tx, cond, arg, by, o)
 		if errors.Is(err, ErrExpired) {
 			expired = true
 			return nil
@@ -904,7 +930,7 @@ func (s *Service) Confirm(ctx context.Context, token, by string, o Origin) error
 func (s *Service) Reject(ctx context.Context, token, by string, o Origin) error {
 	var expired bool
 	err := s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		r, err := s.pending(tx, token, by, o)
+		r, err := s.pending(tx, "token_hash = ?", tokenHash(token), by, o)
 		if errors.Is(err, ErrExpired) {
 			expired = true
 			return nil

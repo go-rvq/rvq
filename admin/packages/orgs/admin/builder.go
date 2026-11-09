@@ -17,6 +17,10 @@ type Builder struct {
 	db      *gorm.DB
 	pb      *presets.Builder
 	sharing *shared.Service
+	// roles are the roles of the organizations (OrgRoles when none), the
+	// ones of before renamed (Roles)
+	roles       []shared.RoleSeed
+	roleRenames map[string]string
 }
 
 var _ presets.Plugin = (*Builder)(nil)
@@ -48,7 +52,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	if b.sharing != nil {
 		// shared by the service: the actions of sharing, the page of the
 		// confirmations, the invites
-		return installSharing(pb, b.sharing)
+		return installSharing(pb, b.sharing, b.roles, b.roleRenames)
 	}
 	return nil
 }
