@@ -128,6 +128,18 @@ func (u *Users) Language(_ context.Context, id string) string {
 	return ""
 }
 
+func (u *Users) Members(_ context.Context, group string) (out []string) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	for id, x := range u.users {
+		if slices.Contains(x.Groups, group) {
+			out = append(out, id)
+		}
+	}
+	slices.Sort(out)
+	return
+}
+
 func (u *Users) Groups(_ context.Context, id string) []string {
 	if x := u.get(id); x != nil {
 		return slices.Clone(x.Groups)

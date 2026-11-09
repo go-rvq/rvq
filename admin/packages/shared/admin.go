@@ -110,6 +110,9 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 	// permissions, a role on one of them its own, its parent read
 	// (nestedPolicies); a model on top: its records' own
 	policies := s.nestedPolicies(mb, o.ReadScope)
+	if mb.Parent() != nil {
+		s.OnMember(res.Name, s.memberPolicies(mb))
+	}
 	if mb.Parent() == nil {
 		policies = func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
 			ref := "sharedaccess:" + a.ID.String()
@@ -624,100 +627,200 @@ func (a adminUsers) ListGroups(ctx context.Context) (out []Choice) {
 //     (its other shared records stay out).
 func (s *Service) nestedPolicies(mb *presets.ModelBuilder, readScope bool) AccessHook {
 	return func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
-		ref := "sharedaccess:" + a.ID.String()
-		if err := revokeRefs(tx, ref); err != nil {
+		if err := s.nestedPoliciesOf(mb, readScope, tx, a, role, removed); err != nil {
 			return err
 		}
-		if removed || role == nil {
+		// a user's access to the record changed: the None of their groups
+		// on it decides again for them
+		if !strings.HasPrefix(a.Subject, SubjectUser) {
 			return nil
 		}
-		levels, err := s.chainIn(tx, a.Resource, a.RecordID)
-		if err != nil {
+		var groups []Access
+		if err := tx.Preload("Role").Where("resource = ? AND record_id = ? AND subject LIKE ?", a.Resource, a.RecordID,
+			SubjectGroup+"%").Find(&groups).Error; err != nil {
 			return err
 		}
-		parents := mb.Parents()
-		if len(levels)-1 != len(parents) {
-			return fmt.Errorf("shared: the parents of %s %s: %d records, %d models", a.Resource, a.RecordID,
-				len(levels)-1, len(parents))
-		}
-		// the ids of the parents, the outermost first (presets' order)
-		pids := make([]model.ID, len(parents))
-		for i, p := range parents {
-			if pids[i], err = p.ParseRecordID(levels[len(levels)-1-i].id); err != nil {
-				return err
-			}
-		}
-		rid, err := mb.ParseRecordID(a.RecordID)
-		if err != nil {
-			return err
-		}
-		record := perms.RecordResource(mb, rid, pids...)
-		if role.None {
-			_, err = perms.DenyShared(tx, ref, a.Subject, record+"*", []string{"*"}, a.ID)
-			return err
-		}
-		read := []string{presets.PermList, presets.PermGet}
-		grant := func(suffix, resource string, actions []string) error {
-			_, err := perms.GrantShared(tx, ref+suffix, a.Subject, resource, actions, a.ID)
-			return err
-		}
-		if err := grant("", record+"*", role.Actions); err != nil {
-			return err
-		}
-		if readScope && role.Allows(presets.PermList) {
-			list := perms.ListResource(mb, pids...)
-			if err := grant(":list", list+presets.PermList, []string{presets.PermList}); err != nil {
-				return err
-			}
-			if err := grant(":list_columns", list+"#*", []string{presets.PermList}); err != nil {
-				return err
-			}
-		}
-		if a.NoParentRead {
-			return nil
-		}
-		parent, ppids := parents[len(parents)-1], pids[:len(pids)-1]
-		pid := pids[len(pids)-1]
-		// the parent: its detail and listing, its fields declared
-		pfields := s.supportOf(parent).fieldsPattern()
-		precord := perms.RecordResource(parent, pid, ppids...)
-		plist := perms.ListResource(parent, ppids...)
-		gs := []struct{ suffix, resource string }{
-			{":parent", precord + presets.PermGet},
-			{":parent_list", plist + presets.PermList},
-		}
-		if pfields != "" {
-			gs = append(gs, struct{ suffix, resource string }{":parent_fields", precord + pfields},
-				struct{ suffix, resource string }{":parent_list_columns", plist + pfields})
-		}
-		// its supporting models: the ones declared (Support), not shared by
-		// themselves — their listing and records, the fields and children
-		// declared
-		for _, c := range parent.Children() {
-			o, ok := s.supportDecl(c)
-			if c == mb || !ok || s.isShared(c) {
-				continue
-			}
-			l := perms.ListResource(c, pids...)
-			k := ":support:" + c.UriName()
-			gs = append(gs, struct{ suffix, resource string }{k, l + presets.PermList},
-				struct{ suffix, resource string }{k + ":get", l + presets.PermGet},
-				struct{ suffix, resource string }{k + ":record", l + "<*>:" + presets.PermGet})
-			if f := o.fieldsPattern(); f != "" {
-				gs = append(gs, struct{ suffix, resource string }{k + ":columns", l + f},
-					struct{ suffix, resource string }{k + ":fields", l + "<*>:" + f})
-			}
-			for _, ch := range o.Children {
-				gs = append(gs, struct{ suffix, resource string }{k + ":child:" + ch, l + "<*>:" + ch + ":*"})
-			}
-		}
-		for _, g := range gs {
-			if err := grant(g.suffix, g.resource, read); err != nil {
-				return err
+		for i := range groups {
+			if g := &groups[i]; g.Role != nil && g.Role.None {
+				if err := s.nestedPoliciesOf(mb, readScope, tx, g, g.Role, false); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
 	}
+}
+
+// nestedRecord is the resource of the permissions of the record of a — of
+// mb, under its parents — and the ids of the parents (the outermost first).
+func (s *Service) nestedRecord(tx *gorm.DB, mb *presets.ModelBuilder, a *Access) (string, []model.ID, error) {
+	levels, err := s.chainIn(tx, a.Resource, a.RecordID)
+	if err != nil {
+		return "", nil, err
+	}
+	parents := mb.Parents()
+	if len(levels)-1 != len(parents) {
+		return "", nil, fmt.Errorf("shared: the parents of %s %s: %d records, %d models", a.Resource, a.RecordID,
+			len(levels)-1, len(parents))
+	}
+	pids := make([]model.ID, len(parents))
+	for i, p := range parents {
+		if pids[i], err = p.ParseRecordID(levels[len(levels)-1-i].id); err != nil {
+			return "", nil, err
+		}
+	}
+	rid, err := mb.ParseRecordID(a.RecordID)
+	if err != nil {
+		return "", nil, err
+	}
+	return perms.RecordResource(mb, rid, pids...), pids, nil
+}
+
+// memberDeny denies the member user — of the groups groups, in their order
+// — the record (of resource record) when the None of the group's access a
+// decides for them there: no access of their own on it, nor of a group of
+// theirs before (the user before their groups, the groups in their order).
+func (s *Service) memberDeny(tx *gorm.DB, a *Access, record, user string, groups []string) error {
+	ref := "sharedaccess:" + a.ID.String() + ":member:" + user
+	if err := perms.Revoke(tx, ref); err != nil {
+		return err
+	}
+	subs := []string{UserSubject(user)}
+	for _, g := range groups {
+		subs = append(subs, GroupSubject(g))
+	}
+	var accs []Access
+	if err := tx.Where("resource = ? AND record_id = ? AND subject IN ?", a.Resource, a.RecordID, subs).
+		Find(&accs).Error; err != nil {
+		return err
+	}
+	for _, sub := range subs {
+		for _, x := range accs {
+			if x.Subject != sub {
+				continue
+			}
+			if x.ID == a.ID {
+				_, err := perms.DenyShared(tx, ref, UserSubject(user), record+"*", []string{"*"}, a.ID)
+				return err
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// memberPolicies are the policies of a member joining or leaving a group
+// with None on a record of mb: the deny of the member, again.
+func (s *Service) memberPolicies(mb *presets.ModelBuilder) MemberHook {
+	return func(tx *gorm.DB, a *Access, user string, groups []string) error {
+		if a.Role == nil || !a.Role.None {
+			return nil
+		}
+		record, _, err := s.nestedRecord(tx, mb, a)
+		if err != nil {
+			return err
+		}
+		if err := s.memberDeny(tx, a, record, user, groups); err != nil {
+			return err
+		}
+		s.loadPolicies(mb, tx)
+		return nil
+	}
+}
+
+// nestedPoliciesOf are the policies of the access a of a record of mb
+// (nestedPolicies).
+func (s *Service) nestedPoliciesOf(mb *presets.ModelBuilder, readScope bool, tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+	ref := "sharedaccess:" + a.ID.String()
+	if err := revokeRefs(tx, ref); err != nil {
+		return err
+	}
+	if removed || role == nil {
+		return nil
+	}
+	record, pids, err := s.nestedRecord(tx, mb, a)
+	parents := mb.Parents()
+	if err != nil {
+		return err
+	}
+	if role.None {
+		// a group's: denied to the members it decides for (memberDeny)
+		if g, ok := strings.CutPrefix(a.Subject, SubjectGroup); ok {
+			ctx := tx.Statement.Context
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			for _, u := range s.o.Users.Members(ctx, g) {
+				if err := s.memberDeny(tx, a, record, u, s.o.Users.Groups(ctx, u)); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		_, err = perms.DenyShared(tx, ref, a.Subject, record+"*", []string{"*"}, a.ID)
+		return err
+	}
+	read := []string{presets.PermList, presets.PermGet}
+	grant := func(suffix, resource string, actions []string) error {
+		_, err := perms.GrantShared(tx, ref+suffix, a.Subject, resource, actions, a.ID)
+		return err
+	}
+	if err := grant("", record+"*", role.Actions); err != nil {
+		return err
+	}
+	if readScope && role.Allows(presets.PermList) {
+		list := perms.ListResource(mb, pids...)
+		if err := grant(":list", list+presets.PermList, []string{presets.PermList}); err != nil {
+			return err
+		}
+		if err := grant(":list_columns", list+"#*", []string{presets.PermList}); err != nil {
+			return err
+		}
+	}
+	if a.NoParentRead {
+		return nil
+	}
+	parent, ppids := parents[len(parents)-1], pids[:len(pids)-1]
+	pid := pids[len(pids)-1]
+	// the parent: its detail and listing, its fields declared
+	pfields := s.supportOf(parent).fieldsPattern()
+	precord := perms.RecordResource(parent, pid, ppids...)
+	plist := perms.ListResource(parent, ppids...)
+	gs := []struct{ suffix, resource string }{
+		{":parent", precord + presets.PermGet},
+		{":parent_list", plist + presets.PermList},
+	}
+	if pfields != "" {
+		gs = append(gs, struct{ suffix, resource string }{":parent_fields", precord + pfields},
+			struct{ suffix, resource string }{":parent_list_columns", plist + pfields})
+	}
+	// its supporting models: the ones declared (Support), not shared by
+	// themselves — their listing and records, the fields and children
+	// declared
+	for _, c := range parent.Children() {
+		o, ok := s.supportDecl(c)
+		if c == mb || !ok || s.isShared(c) {
+			continue
+		}
+		l := perms.ListResource(c, pids...)
+		k := ":support:" + c.UriName()
+		gs = append(gs, struct{ suffix, resource string }{k, l + presets.PermList},
+			struct{ suffix, resource string }{k + ":get", l + presets.PermGet},
+			struct{ suffix, resource string }{k + ":record", l + "<*>:" + presets.PermGet})
+		if f := o.fieldsPattern(); f != "" {
+			gs = append(gs, struct{ suffix, resource string }{k + ":columns", l + f},
+				struct{ suffix, resource string }{k + ":fields", l + "<*>:" + f})
+		}
+		for _, ch := range o.Children {
+			gs = append(gs, struct{ suffix, resource string }{k + ":child:" + ch, l + "<*>:" + ch + ":*"})
+		}
+	}
+	for _, g := range gs {
+		if err := grant(g.suffix, g.resource, read); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SupportOptions say what of a supporting model — under the parent of a

@@ -50,6 +50,8 @@ type Users interface {
 	Language(ctx context.Context, id string) string
 	// Groups are the ids of the groups of the user, in the user's order.
 	Groups(ctx context.Context, id string) []string
+	// Members are the ids of the users of the group.
+	Members(ctx context.Context, group string) []string
 	// GroupExists says whether the group id is one; GroupName its name.
 	GroupExists(ctx context.Context, id string) bool
 	GroupName(ctx context.Context, id string) string
@@ -78,11 +80,28 @@ type Service struct {
 	// lastAt keeps the times of the events increasing: their order
 	lastAt time.Time
 	hooks  map[string][]AccessHook
+	// memberHooks are told of a user joining or leaving a group with access
+	memberHooks map[string][]MemberHook
 	// installed are the models shared in the admin (Install): their
 	// policies, made again by SyncPolicies
 	installed []installedModel
 	// support are the models read as support (Support)
 	support supportModels
+}
+
+// MemberHook is told of the user joining or leaving the group of the
+// access a (groups: the user's groups now, in their order), in tx.
+type MemberHook func(tx *gorm.DB, a *Access, user string, groups []string) error
+
+// OnMember tells h of the members of the groups with an access to the
+// records of resource joining and leaving.
+func (s *Service) OnMember(resource string, h MemberHook) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.memberHooks == nil {
+		s.memberHooks = map[string][]MemberHook{}
+	}
+	s.memberHooks[resource] = append(s.memberHooks[resource], h)
 }
 
 // AccessHook is told of an access given or changed (role its role) or taken
@@ -1035,22 +1054,42 @@ func (s *Service) invite(tx *gorm.DB, id uuid.UUID, user string) (*AccessInvite,
 // group, that the user joined (added) or left it — their access, the
 // group's, at once.
 func (s *Service) MemberChanged(ctx context.Context, group, user string, added bool, by string, o Origin) error {
+	return s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return s.MemberChangedIn(tx, group, user, added, by, o)
+	})
+}
+
+// MemberChangedIn is MemberChanged in tx — the one where the membership
+// changed (user.OnMemberChange).
+func (s *Service) MemberChangedIn(tx *gorm.DB, group, user string, added bool, by string, o Origin) error {
 	var acc []Access
-	db := s.o.DB.WithContext(ctx)
-	if err := db.Where("subject = ?", GroupSubject(group)).Find(&acc).Error; err != nil {
+	if err := tx.Preload("Role").Where("subject = ?", GroupSubject(group)).Find(&acc).Error; err != nil {
 		return err
 	}
 	ev := EventMemberRemoved
 	if added {
 		ev = EventMemberAdded
 	}
-	return db.Transaction(func(tx *gorm.DB) error {
-		for _, a := range acc {
-			if err := s.event(tx, Event{Resource: a.Resource, RecordID: a.RecordID, Subject: GroupSubject(group), Event: ev,
-				By: by, Note: UserSubject(user)}, o); err != nil {
+	// the user's groups now: the one joined last (user.AddMember), the one
+	// left out — tx may hold what others do not see yet
+	groups := slices.DeleteFunc(s.o.Users.Groups(tx.Statement.Context, user), func(g string) bool { return g == group })
+	if added {
+		groups = append(groups, group)
+	}
+	for i := range acc {
+		a := &acc[i]
+		if err := s.event(tx, Event{Resource: a.Resource, RecordID: a.RecordID, Subject: GroupSubject(group), Event: ev,
+			By: by, Note: UserSubject(user)}, o); err != nil {
+			return err
+		}
+		s.mu.RLock()
+		hs := slices.Clone(s.memberHooks[a.Resource])
+		s.mu.RUnlock()
+		for _, h := range hs {
+			if err := h(tx, a, user, groups); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }

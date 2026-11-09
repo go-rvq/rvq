@@ -252,3 +252,81 @@ func TestInstallParentRead(t *testing.T) {
 		t.Errorf("NoParentRead: %q", got)
 	}
 }
+
+// None of a group on a record under another: denied to the members it
+// decides for — not to one with an access of their own there —, again as
+// members join and leave and as their own access changes.
+func TestInstallGroupNone(t *testing.T) {
+	f := newFixture(t)
+	if err := f.db.AutoMigrate(&perm.DefaultDBPolicy{}); err != nil {
+		t.Fatal(err)
+	}
+	p := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(f.db)).URIPrefix("/admin")
+	p.Permission(perm.New().AllowAll())
+	pastas := p.Model(&sharedtest.Pasta{}).URIName("pastas")
+	docs := presets.NewModelBuilder(p, &sharedtest.Documento{})
+	pastas.AddChild(docs)
+	viewer := []shared.RoleSeed{{Name: "Viewer", Actions: []string{presets.PermList, presets.PermGet}}}
+	if err := f.s.Install(pastas, shared.ModelOptions{
+		Resource: shared.Resource{Name: "admin_pastas", Table: "sharedtest_pastas", OwnerColumn: "owner_id"},
+		Roles:    viewer, ReadScope: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.s.Install(docs, shared.ModelOptions{
+		Resource: shared.Resource{Name: "admin_docs", Table: "sharedtest_documentos", Parent: "admin_pastas",
+			ParentColumn: "pasta_id"},
+		Roles: viewer, ReadScope: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, res := range []string{"admin_pastas", "admin_docs"} {
+		roles, _ := shared.RolesOf(f.db, uuid.Nil, res)
+		f.roles[res] = map[string]uuid.UUID{}
+		for _, r := range roles {
+			f.roles[res][r.Name] = r.ID
+		}
+	}
+	f.users.AddGroup("estag", "Estagiários")
+	f.users.Join("bia", "estag")
+	f.users.Join("caio", "estag")
+	pasta := sharedtest.NewPasta(f.db, "Contratos", "ana")
+	doc := sharedtest.NewDocumento(f.db, pasta, "Aluguel")
+	f.share("admin_docs", doc.ID, shared.UserSubject("bia"), "Viewer", "ana")
+	f.share("admin_docs", doc.ID, shared.GroupSubject("estag"), shared.RoleNone, "ana")
+
+	denied := func() (out []string) {
+		var ps []perm.DefaultDBPolicy
+		f.db.Where("effect = ?", perm.Denied).Find(&ps)
+		for _, p := range ps {
+			out = append(out, p.Subject)
+		}
+		slices.Sort(out)
+		return
+	}
+	want := func(step string, subs ...string) {
+		t.Helper()
+		var w []string
+		for _, u := range subs {
+			w = append(w, shared.UserSubject(u))
+		}
+		if got := denied(); !slices.Equal(got, w) {
+			t.Errorf("%s: denied %q, want %q", step, got, w)
+		}
+	}
+	want("bia's own access before the group's None", "caio")
+	f.users.Leave("caio", "estag")
+	if err := f.s.MemberChanged(f.ctx, "estag", "caio", false, "ana", origin); err != nil {
+		t.Fatal(err)
+	}
+	want("caio left")
+	f.users.Join("dani", "estag")
+	if err := f.s.MemberChanged(f.ctx, "estag", "dani", true, "ana", origin); err != nil {
+		t.Fatal(err)
+	}
+	want("dani joined", "dani")
+	if err := f.s.Revoke(f.ctx, "admin_docs", doc.ID, shared.UserSubject("bia"), "ana", origin); err != nil {
+		t.Fatal(err)
+	}
+	want("bia's own access revoked", "bia", "dani")
+}

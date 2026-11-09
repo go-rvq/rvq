@@ -71,6 +71,18 @@ func (a adminUsers) group(ctx context.Context, id string) *user.Group {
 	return &g
 }
 
+func (a adminUsers) Members(ctx context.Context, id string) (out []string) {
+	gid, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+	ids, _ := user.MembersOf(a.db.WithContext(ctx), gid)
+	for _, u := range ids {
+		out = append(out, u.String())
+	}
+	return
+}
+
 func (a adminUsers) GroupExists(ctx context.Context, id string) bool { return a.group(ctx, id) != nil }
 
 func (a adminUsers) GroupName(ctx context.Context, id string) string {
@@ -84,6 +96,6 @@ func (a adminUsers) GroupName(ctx context.Context, id string) string {
 // members joining and leaving (user.OnMemberChange).
 func (s *Service) ListenGroups() {
 	user.OnMemberChange(func(db *gorm.DB, group, u uuid.UUID, added bool, by string) error {
-		return s.MemberChanged(db.Statement.Context, group.String(), u.String(), added, by, Origin{})
+		return s.MemberChangedIn(db, group.String(), u.String(), added, by, Origin{})
 	})
 }
