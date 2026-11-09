@@ -1052,8 +1052,9 @@ func (b *ListingBuilder) selectColumnsBtn(
 		sortedColumns      []string
 	)
 
+	// the columns the request may read
 	b.fields.EachHavesComponent(func(f *FieldBuilder) bool {
-		if b.mb.permissioner.ReqLister(ctx.R).On(FieldPerm(f.name)).Denied() {
+		if !b.columnDenied(ctx, f.name) {
 			originalColumns = append(originalColumns, f.name)
 		}
 		return true

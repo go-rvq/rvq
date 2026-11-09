@@ -374,6 +374,12 @@ func listingEmpty(msgr *Messages) h.HTMLComponent {
 		Attr("data-listing-empty", true)
 }
 
+// columnDenied says the request may not read the column name of the listing
+// (its field, "#name", of the model).
+func (b *ListingBuilder) columnDenied(ctx *web.EventContext, name string) bool {
+	return b.mb.permissioner.ReqLister(ctx.R).On(FieldPerm(name)).Denied()
+}
+
 // layoutFields are the fields the listing's current layout shows, in order, and
 // the table headers for them (a field tree becomes grouped headers).
 func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*FieldBuilder, headers []*vx.DataTableHeaderBuilder) {
@@ -395,7 +401,9 @@ func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*F
 			} else {
 				fcb := node.Field.NewContext(b.mb.Info(), ctx, nil, nil)
 				fcb.Mode = FieldModeStack{b.requestMode(ctx)}
-				if !fcb.Disabled && node.Field.IsEnabled(fcb) {
+				// the header of a column the request may not read is not
+				// drawn (as its cells: columns)
+				if !fcb.Disabled && node.Field.IsEnabled(fcb) && !b.columnDenied(ctx, node.Field.name) {
 					displayFields = append(displayFields, node.Field)
 					t.Name(node.Field.name)
 					t.Title(fcb.Label)
@@ -408,6 +416,9 @@ func (b *ListingBuilder) layoutFields(ctx *web.EventContext) (displayFields []*F
 
 	headers = nodes2Headers(nodes)
 	for _, f := range b.enabledTrailingFields(ctx, displayFields) {
+		if b.columnDenied(ctx, f.name) {
+			continue
+		}
 		displayFields = append(displayFields, f)
 		headers = append(headers, (&vx.DataTableHeaderBuilder{}).Name(f.name).Title(f.NewContext(b.mb.Info(), ctx, nil, nil).Label))
 	}
@@ -497,7 +508,7 @@ func (b *ListingBuilder) columns(ctx *web.EventContext, fields []*FieldBuilder) 
 		if !f.IsEnabled(fctx) {
 			continue
 		}
-		if b.mb.permissioner.ReqLister(ctx.R).On(FieldPerm(f.name)).Denied() {
+		if b.columnDenied(ctx, f.name) {
 			continue
 		}
 		if f.compFunc == nil {
