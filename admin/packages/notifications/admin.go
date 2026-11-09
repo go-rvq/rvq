@@ -3,6 +3,7 @@ package notifications
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -49,6 +50,10 @@ type Builder struct {
 	// notifications go under it — the user browses all of theirs there;
 	// nil, a model of their own, out of the menu.
 	Profile *presets.ModelBuilder
+	// FilesDir, when given, is where the attachments are kept (beside the
+	// uploads of the app; the ones kept in the database before moved there by
+	// Install); none, in the database
+	FilesDir string
 	// Mailer, when given, mails a message of a user to who received it too
 	// (Deliver): its answer by mail comes back to the conversation by the
 	// app's inbox (Answer)
@@ -86,6 +91,13 @@ func (b *Builder) Install(p *presets.Builder) error {
 	b.p = p
 	if err := AutoMigrate(b.db); err != nil {
 		return err
+	}
+	if b.FilesDir != "" {
+		if n, err := MoveFilesToDir(b.db, b.FilesDir); err != nil {
+			return fmt.Errorf("notifications: the attachments to %s: %w", b.FilesDir, err)
+		} else if n > 0 {
+			log.Printf("notifications: %d attachments moved to %s", n, b.FilesDir)
+		}
 	}
 	ConfigureMessages(p.I18n())
 	if permB := p.GetPermission(); permB != nil {
@@ -221,7 +233,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 	})
 	// the attachments, to who received or sent their message
 	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		mux.Handle("GET "+strings.TrimSuffix(prefix, "/")+filesPath+"{id}", FileHandler(b.db))
+		mux.Handle("GET "+strings.TrimSuffix(prefix, "/")+filesPath+"{id}", FileHandler(b.db, b.FilesDir))
 	})
 	// the source: the user as a chip of their login, their id copied by its
 	// icon; the system, a chip; another, as it is

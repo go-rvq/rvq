@@ -5,8 +5,6 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/packages/comments"
@@ -19,21 +17,38 @@ import (
 const FileMaxSize = comments.FileMaxSize
 
 // File is an attachment of a message (MessageID): of each copy of it, seen
-// by who received it and by who sent it (FileHandler).
+// by who received it and by who sent it (FileHandler). Kept on disk (Path,
+// under Builder.FilesDir); without a directory — or one of before —, in Data.
 type File struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	MessageID   uuid.UUID `gorm:"type:uuid;not null;index"`
 	Name        string    `gorm:"size:255;not null"`
 	ContentType string    `gorm:"size:255"`
 	Size        int64
-	Data        []byte `gorm:"not null"`
-	CreatedAt   time.Time
+	// Path is under the directory of the files: "<message>/<id><ext>"
+	Path      string `gorm:"size:255"`
+	Data      []byte
+	CreatedAt time.Time
 }
 
 func (File) TableName() string { return "user_notification_files" }
 
-// AttachFiles keeps the files as the attachments of the message id.
-func AttachFiles(db *gorm.DB, message uuid.UUID, files ...comments.Attachment) error {
+// AttachFiles keeps the files as the attachments of the message: in dir
+// (comments.SaveFiles), or in the database (dir "").
+func AttachFiles(db *gorm.DB, dir string, message uuid.UUID, files ...comments.Attachment) error {
+	if dir != "" {
+		stored, err := comments.SaveFiles(dir, message, files...)
+		if err != nil {
+			return err
+		}
+		for _, sf := range stored {
+			f := File{ID: sf.ID, MessageID: message, Name: sf.Name, ContentType: sf.ContentType, Size: sf.Size, Path: sf.Path}
+			if err := db.Create(&f).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	for _, a := range files {
 		if len(a.Data) > FileMaxSize {
 			return fmt.Errorf("%w: %s", comments.ErrFileTooLarge, a.Name)
@@ -50,6 +65,32 @@ func AttachFiles(db *gorm.DB, message uuid.UUID, files ...comments.Attachment) e
 	return nil
 }
 
+// MoveFilesToDir writes the attachments kept in the database into dir, each
+// in its place there, and empties their data: once, the ones of before a
+// directory was given.
+func MoveFilesToDir(db *gorm.DB, dir string) (moved int, err error) {
+	var ids []uuid.UUID
+	if err := db.Model(&File{}).Where("(path IS NULL OR path = '') AND data IS NOT NULL").Pluck("id", &ids).Error; err != nil {
+		return 0, err
+	}
+	for _, id := range ids {
+		var f File
+		if err := db.First(&f, "id = ?", id).Error; err != nil {
+			return moved, err
+		}
+		stored, err := comments.SaveFiles(dir, f.MessageID, comments.Attachment{Name: f.Name, ContentType: f.ContentType, Data: f.Data})
+		if err != nil {
+			return moved, err
+		}
+		if err := db.Model(&File{}).Where("id = ?", f.ID).
+			Updates(map[string]any{"path": stored[0].Path, "data": nil}).Error; err != nil {
+			return moved, err
+		}
+		moved++
+	}
+	return moved, nil
+}
+
 // FilesOf are the attachments of the messages (no data), by message.
 func FilesOf(db *gorm.DB, messages ...uuid.UUID) (map[uuid.UUID][]File, error) {
 	out := map[uuid.UUID][]File{}
@@ -57,7 +98,7 @@ func FilesOf(db *gorm.DB, messages ...uuid.UUID) (map[uuid.UUID][]File, error) {
 		return out, nil
 	}
 	var fs []File
-	if err := db.Select("id", "message_id", "name", "content_type", "size", "created_at").
+	if err := db.Select("id", "message_id", "name", "content_type", "size", "path", "created_at").
 		Where("message_id IN ?", messages).Order("created_at, name").Find(&fs).Error; err != nil {
 		return nil, err
 	}
@@ -74,17 +115,13 @@ func canSee(db *gorm.DB, uid, message uuid.UUID) bool {
 	return n > 0
 }
 
-// inlineTypes are the types an attachment is shown in the browser as.
-var inlineTypes = map[string]bool{
-	"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true, "application/pdf": true,
-}
-
 // filesPath is where the attachments are served, under the admin's prefix.
 const filesPath = "/notifications/files/"
 
-// FileHandler serves the attachment of its id (the end of the path) to who
-// received or sent its message; to anyone else, not found.
-func FileHandler(db *gorm.DB) http.Handler {
+// FileHandler serves the attachment of its id (the end of the path), of dir
+// (or of the database), to who received or sent its message; to anyone
+// else, not found (comments.ServeFile: what keeps it from running).
+func FileHandler(db *gorm.DB, dir string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		u := user.GetCurrentUser(r)
@@ -97,24 +134,6 @@ func FileHandler(db *gorm.DB) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		ct := f.ContentType
-		if ct == "" {
-			ct = "application/octet-stream"
-		}
-		// a user's file: shown in the browser only when it can run nothing
-		// (an SVG can: downloaded)
-		disposition := "attachment"
-		if inlineTypes[strings.ToLower(strings.TrimSpace(strings.Split(ct, ";")[0]))] {
-			disposition = "inline"
-		} else {
-			ct = "application/octet-stream"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.Header().Set("Content-Length", strconv.Itoa(len(f.Data)))
-		w.Header().Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": f.Name}))
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox")
-		w.Header().Set("Cache-Control", "private, max-age=3600")
-		_, _ = w.Write(f.Data)
+		comments.ServeFile(w, r, dir, comments.StoredFile{ID: f.ID, Name: f.Name, ContentType: f.ContentType, Size: f.Size, Path: f.Path}, f.Data)
 	})
 }

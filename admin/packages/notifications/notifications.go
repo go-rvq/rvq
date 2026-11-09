@@ -165,6 +165,12 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(&Notification{}, &File{}); err != nil {
 		return err
 	}
+	// the data of an attachment kept on disk is none (it was not null)
+	if db.Dialector.Name() == "postgres" {
+		if err := db.Exec(`ALTER TABLE user_notification_files ALTER COLUMN data DROP NOT NULL`).Error; err != nil {
+			return err
+		}
+	}
 	return db.Model(&Notification{}).Unscoped().
 		Where("message_id IS NULL OR message_id = ?", uuid.Nil).
 		UpdateColumns(map[string]any{"message_id": gorm.Expr("id"), "thread_id": gorm.Expr("id")}).Error

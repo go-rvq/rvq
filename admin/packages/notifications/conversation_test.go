@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -39,7 +41,7 @@ var _ user.User = (*fakeUser)(nil)
 // "Re: "; an answer by mail kept once; its files seen by who is of it alone.
 func TestDeliverAnswer(t *testing.T) {
 	db := testDB(t)
-	b := &Builder{db: db}
+	b := &Builder{db: db, FilesDir: t.TempDir()}
 	ana, bia, caio, out := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	var mailed []uuid.UUID
 	b.Mailer = func(_ context.Context, m *Mail) error { mailed = append(mailed, m.To); return nil }
@@ -59,6 +61,16 @@ func TestDeliverAnswer(t *testing.T) {
 	files, _ := FilesOf(db, copies[0].MessageID)
 	if fs := files[copies[0].MessageID]; len(fs) != 1 || fs[0].Name != "pauta.txt" || fs[0].Size != 11 {
 		t.Fatalf("the files: %+v", files)
+	}
+	// on disk, under the directory of the files; not in the database
+	f0 := files[copies[0].MessageID][0]
+	if data, err := os.ReadFile(filepath.Join(b.FilesDir, f0.Path)); err != nil || string(data) != "1. abertura" {
+		t.Fatalf("the file on disk %q: %q %v", f0.Path, data, err)
+	}
+	var stored File
+	db.First(&stored, "id = ?", f0.ID)
+	if len(stored.Data) != 0 {
+		t.Error("the data in the database too")
 	}
 	thread := copies[0].ThreadID
 
@@ -89,7 +101,7 @@ func TestDeliverAnswer(t *testing.T) {
 
 	// the files: to ana (sent), bia (received); not to out
 	fid := files[copies[0].MessageID][0].ID
-	h := FileHandler(db)
+	h := FileHandler(db, b.FilesDir)
 	get := func(u uuid.UUID) int {
 		r := httptest.NewRequest("GET", "/admin/notifications/files/"+fid.String(), nil)
 		r.SetPathValue("id", fid.String())
@@ -100,5 +112,30 @@ func TestDeliverAnswer(t *testing.T) {
 	}
 	if get(ana) != http.StatusOK || get(bia) != http.StatusOK || get(out) != http.StatusNotFound {
 		t.Fatalf("the file: ana %d bia %d out %d", get(ana), get(bia), get(out))
+	}
+}
+
+// The attachments kept in the database before a directory was given: moved
+// there, their data emptied, served from it.
+func TestMoveFilesToDir(t *testing.T) {
+	db := testDB(t)
+	msg := uuid.New()
+	if err := AttachFiles(db, "", msg, comments.Attachment{Name: "a.txt", Data: []byte("antes")}); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if n, err := MoveFilesToDir(db, dir); err != nil || n != 1 {
+		t.Fatalf("moved %d: %v", n, err)
+	}
+	var f File
+	db.First(&f, "message_id = ?", msg)
+	if f.Path == "" || len(f.Data) != 0 {
+		t.Fatalf("the record: %+v", f)
+	}
+	if data, _ := os.ReadFile(filepath.Join(dir, f.Path)); string(data) != "antes" {
+		t.Errorf("on disk: %q", data)
+	}
+	if n, _ := MoveFilesToDir(db, dir); n != 0 {
+		t.Errorf("again: %d", n)
 	}
 }

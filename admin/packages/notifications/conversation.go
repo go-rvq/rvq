@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/packages/comments"
@@ -46,8 +48,12 @@ func (b *Builder) Deliver(r *http.Request, from uuid.UUID, to []uuid.UUID, n Not
 		if err := Notify(tx, n, to...); err != nil {
 			return err
 		}
-		return AttachFiles(tx, n.MessageID, files...)
+		return AttachFiles(tx, b.FilesDir, n.MessageID, files...)
 	})
+	if err != nil && b.FilesDir != "" {
+		// what was written of it, gone
+		_ = os.RemoveAll(filepath.Join(b.FilesDir, n.MessageID.String()))
+	}
 	if err != nil || b.Mailer == nil {
 		return err
 	}

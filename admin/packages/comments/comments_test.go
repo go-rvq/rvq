@@ -2,10 +2,14 @@ package comments
 
 import (
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-rvq/rvq/web"
+	"github.com/google/uuid"
 )
 
 // The text of rich text: its words; what a comment shows of it: no scripts,
@@ -52,5 +56,43 @@ func TestValidate(t *testing.T) {
 	}
 	if err := (&Builder{}).Validate(ctx, &Write{Files: []Attachment{{Data: make([]byte, 1<<20)}}}); err != nil {
 		t.Errorf("no limits: %v", err)
+	}
+}
+
+// The files of an owner on disk, named by their ids (the extension kept);
+// nothing out of the directory reached.
+func TestSaveFiles(t *testing.T) {
+	dir := t.TempDir()
+	owner := uuid.New()
+	fs, err := SaveFiles(dir, owner, Attachment{Name: "../../etc/Foto.PNG", Data: []byte("png")}, Attachment{Name: "sem", Data: []byte("x")})
+	if err != nil || len(fs) != 2 {
+		t.Fatalf("%v %+v", err, fs)
+	}
+	if fs[0].Name != "Foto.PNG" || !strings.HasPrefix(fs[0].Path, owner.String()+"/") || !strings.HasSuffix(fs[0].Path, ".png") {
+		t.Errorf("the first: %+v", fs[0])
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, fs[0].Path)); string(b) != "png" {
+		t.Errorf("on disk: %q", b)
+	}
+	if _, ok := FilePath(dir, "../fora"); ok {
+		t.Error("a path out of the directory")
+	}
+	if _, err := SaveFiles(dir, owner, Attachment{Name: "big", Data: make([]byte, FileMaxSize+1)}); err == nil {
+		t.Error("a file too large")
+	}
+}
+
+// A link of a file valid for its user only, until it expires.
+func TestSigner(t *testing.T) {
+	s, file, ana, bia := NewSigner(), uuid.New(), uuid.New(), uuid.New()
+	tok := s.Sign(file, ana, time.Hour)
+	if !s.Verify(file, ana, tok) {
+		t.Error("its user")
+	}
+	if s.Verify(file, bia, tok) || s.Verify(uuid.New(), ana, tok) || NewSigner().Verify(file, ana, tok) {
+		t.Error("another user, file or key")
+	}
+	if s.Verify(file, ana, s.Sign(file, ana, -time.Second)) || s.Verify(file, ana, "x") {
+		t.Error("expired, malformed")
 	}
 }
