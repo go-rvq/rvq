@@ -10,6 +10,9 @@
 // once the application asks about the features (Unknown), a mistyped one
 // being otherwise silent.
 //
+// A feature may be on by default (DefaultOn): on unless the configuration
+// turns it off (`hermon.builds: false`).
+//
 // A feature may depend on others (DependsOn): it is on only when they are —
 // whatever the configuration says of it —, so a module asks Enabled alone.
 // One the configuration turns on and a dependency keeps off is Unmet.
@@ -97,6 +100,17 @@ func built(f *Feature, seen map[*Feature]bool) bool {
 	return true
 }
 
+// DefaultOn makes the feature on unless the configuration turns it off — a
+// key it has, read before or after, wins.
+func (f *Feature) DefaultOn() *Feature {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := enabled[f.Name]; !ok {
+		enabled[f.Name] = true
+	}
+	return f
+}
+
 // Tag is the build tag that compiles the feature: its name.
 func (f *Feature) Tag() string { return f.Name }
 
@@ -121,7 +135,8 @@ var (
 	enabled  = map[string]bool{}
 )
 
-// Register declares a feature: off unless the configuration turns it on. A
+// Register declares a feature: off unless the configuration turns it on
+// (or DefaultOn). A
 // name declared twice panics.
 func Register(name, label, hint string) *Feature {
 	mu.Lock()

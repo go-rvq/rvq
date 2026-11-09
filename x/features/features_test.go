@@ -143,3 +143,24 @@ func TestCompiled(t *testing.T) {
 		t.Error("an undeclared feature on")
 	}
 }
+
+// A feature on by default is on without the configuration, off when it turns
+// it off — read before or after —, and not compiled, never on.
+func TestDefaultOn(t *testing.T) {
+	on := Register("zz.default.on", "", "").CompiledIf(true).DefaultOn()
+	if !on.Enabled() {
+		t.Fatal("off by default")
+	}
+	if err := Load(map[string]any{"zz.default.on": false, "zz.default.before": false}); err != nil {
+		t.Fatal(err)
+	}
+	if on.Enabled() {
+		t.Error("on, turned off")
+	}
+	if before := Register("zz.default.before", "", "").CompiledIf(true).DefaultOn(); before.Enabled() {
+		t.Error("on, turned off before declared")
+	}
+	if Register("zz.default.off", "", "").DefaultOn().Enabled() {
+		t.Error("on, not compiled")
+	}
+}
