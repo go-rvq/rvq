@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-rvq/rvq/admin/model"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -67,8 +68,10 @@ const (
 	paramRecord   = "record"
 	fieldSubject  = "shared_subject"
 	fieldRole     = "shared_role"
-	fieldKeep     = "shared_keep"
-	fieldNewOwner = "shared_new_owner"
+	// fieldParentRead: of a record under another, its parent read too
+	fieldParentRead = "shared_parent_read"
+	fieldKeep       = "shared_keep"
+	fieldNewOwner   = "shared_new_owner"
 )
 
 // originOf is where the request came from.
@@ -104,8 +107,9 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 	// the subject (user:<id>, group:<id>) the role's actions on the record
 	// (a model on top: under another, its parent's permissions decide)
 	// a model under another: its records reached by its parents'
-	// permissions — None, out of them (a deny)
-	policies := s.nestedPolicies(mb)
+	// permissions, a role on one of them its own, its parent read
+	// (nestedPolicies); a model on top: its records' own
+	policies := s.nestedPolicies(mb, o.ReadScope)
 	if mb.Parent() == nil {
 		policies = func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
 			ref := "sharedaccess:" + a.ID.String()
@@ -137,35 +141,21 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 			return err
 		}
 	}
-	{
-		load := func(tx *gorm.DB) {
-			if pb := mb.Builder().GetPermission(); pb != nil {
-				from := s.o.Now().Add(-time.Minute)
-				pb.LoadDBPoliciesToMemory(tx, &from)
-			}
+	s.OnAccess(res.Name, func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
+		if err := policies(tx, a, role, removed); err != nil {
+			return err
 		}
-		s.OnAccess(res.Name, func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
-			if err := policies(tx, a, role, removed); err != nil {
-				return err
-			}
-			load(tx)
-			return nil
-		})
-		// the policies of the accesses of before, as they are made now
-		if mb.Builder().GetPermission() != nil {
-			var accesses []Access
-			if err := s.o.DB.Preload("Role").Where("resource = ?", res.Name).Find(&accesses).Error; err != nil {
-				return err
-			}
-			for i := range accesses {
-				a := &accesses[i]
-				if err := policies(s.o.DB, a, a.Role, false); err != nil {
-					return fmt.Errorf("shared: the policies of %s %s: %w", res.Name, a.RecordID, err)
-				}
-			}
-			if len(accesses) > 0 {
-				load(s.o.DB)
-			}
+		s.loadPolicies(mb, tx)
+		return nil
+	})
+	s.mu.Lock()
+	s.installed = append(s.installed, installedModel{mb: mb, resource: res.Name, policies: policies})
+	s.mu.Unlock()
+	// the policies of the accesses of before, as they are made now — of a
+	// model under another, by SyncPolicies, once every model is in the admin
+	if mb.Parent() == nil && mb.Builder().GetPermission() != nil {
+		if err := s.syncPolicies(installedModel{mb: mb, resource: res.Name, policies: policies}); err != nil {
+			return err
 		}
 	}
 	recordOf := func(id string) string {
@@ -207,20 +197,30 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 		SetVerifier(verifier).
 		ComponentFunc(func(id string, ctx *web.EventContext) (h.HTMLComponent, error) {
 			m := msgs(ctx.Context())
-			return h.Div(
+			body := h.Div(
 				v.VAutocomplete().Label(m.Subject).Items(s.choices(ctx.R.Context(), m)).ItemTitle("title").ItemValue("value").
 					Attr(web.VField(fieldSubject, "")...).Attr("data-shared-subject", true),
 				v.VSelect().Label(m.Role).Items(s.roleChoices(ctx.R.Context(), res.Name)).ItemTitle("title").ItemValue("value").
 					Attr(web.VField(fieldRole, "")...).Attr("data-shared-role", true),
-			), nil
+			)
+			if mb.Parent() != nil {
+				// a record under another: its parent read too, by default
+				body.AppendChildren(v.VSwitch().Label(m.ParentRead).Color(v.ColorPrimary).HideDetails(true).
+					Attr(web.VField(fieldParentRead, true)...).Attr("data-shared-parent-read", true))
+			}
+			return body, nil
 		}).
 		UpdateFunc(func(id string, ctx *web.EventContext) error {
 			roleID, err := uuid.Parse(ctx.R.FormValue(fieldRole))
 			if err != nil {
 				return ErrRole
 			}
+			var opts []ShareOption
+			if mb.Parent() != nil && ctx.R.FormValue(fieldParentRead) == "false" {
+				opts = append(opts, NoParentRead())
+			}
 			req, err := s.Share(ctx.R.Context(), res.Name, recordOf(id), ctx.R.FormValue(fieldSubject), roleID,
-				currentUser(ctx.R), originOf(ctx.R))
+				currentUser(ctx.R), originOf(ctx.R), opts...)
 			if err != nil {
 				return err
 			}
@@ -614,16 +614,21 @@ func (a adminUsers) ListGroups(ctx context.Context) (out []Choice) {
 }
 
 // nestedPolicies are the policies of the accesses of a model under another
-// (mb): its records are reached by its parents' permissions (a role on the
-// parent covers what is under it); None takes one out — a policy denying the
-// subject everything of the record and under it.
-func (s *Service) nestedPolicies(mb *presets.ModelBuilder) AccessHook {
+// (mb):
+//   - None takes the record out: a policy denying the subject everything of
+//     it and under it;
+//   - a role: its actions on the record and under it, the listing of the
+//     model under the parent (scoped: readScope); its parent read (not
+//     NoParentRead) — the parent's detail and listing, and its supporting
+//     models, the ones under it not shared by themselves: listed and read
+//     (its other shared records stay out).
+func (s *Service) nestedPolicies(mb *presets.ModelBuilder, readScope bool) AccessHook {
 	return func(tx *gorm.DB, a *Access, role *ShareTemplate, removed bool) error {
 		ref := "sharedaccess:" + a.ID.String()
-		if err := perms.Revoke(tx, ref); err != nil {
+		if err := revokeRefs(tx, ref); err != nil {
 			return err
 		}
-		if removed || role == nil || !role.None {
+		if removed || role == nil {
 			return nil
 		}
 		levels, err := s.chainIn(tx, a.Resource, a.RecordID)
@@ -646,7 +651,292 @@ func (s *Service) nestedPolicies(mb *presets.ModelBuilder) AccessHook {
 		if err != nil {
 			return err
 		}
-		_, err = perms.DenyShared(tx, ref, a.Subject, perms.RecordResource(mb, rid, pids...)+"*", []string{"*"}, a.ID)
+		record := perms.RecordResource(mb, rid, pids...)
+		if role.None {
+			_, err = perms.DenyShared(tx, ref, a.Subject, record+"*", []string{"*"}, a.ID)
+			return err
+		}
+		read := []string{presets.PermList, presets.PermGet}
+		grant := func(suffix, resource string, actions []string) error {
+			_, err := perms.GrantShared(tx, ref+suffix, a.Subject, resource, actions, a.ID)
+			return err
+		}
+		if err := grant("", record+"*", role.Actions); err != nil {
+			return err
+		}
+		if readScope && role.Allows(presets.PermList) {
+			list := perms.ListResource(mb, pids...)
+			if err := grant(":list", list+presets.PermList, []string{presets.PermList}); err != nil {
+				return err
+			}
+			if err := grant(":list_columns", list+"#*", []string{presets.PermList}); err != nil {
+				return err
+			}
+		}
+		if a.NoParentRead {
+			return nil
+		}
+		parent, ppids := parents[len(parents)-1], pids[:len(pids)-1]
+		pid := pids[len(pids)-1]
+		// the parent: its detail and listing, its fields declared
+		pfields := s.supportOf(parent).fieldsPattern()
+		precord := perms.RecordResource(parent, pid, ppids...)
+		plist := perms.ListResource(parent, ppids...)
+		gs := []struct{ suffix, resource string }{
+			{":parent", precord + presets.PermGet},
+			{":parent_list", plist + presets.PermList},
+		}
+		if pfields != "" {
+			gs = append(gs, struct{ suffix, resource string }{":parent_fields", precord + pfields},
+				struct{ suffix, resource string }{":parent_list_columns", plist + pfields})
+		}
+		// its supporting models: the ones declared (Support), not shared by
+		// themselves — their listing and records, the fields and children
+		// declared
+		for _, c := range parent.Children() {
+			o, ok := s.supportDecl(c)
+			if c == mb || !ok || s.isShared(c) {
+				continue
+			}
+			l := perms.ListResource(c, pids...)
+			k := ":support:" + c.UriName()
+			gs = append(gs, struct{ suffix, resource string }{k, l + presets.PermList},
+				struct{ suffix, resource string }{k + ":get", l + presets.PermGet},
+				struct{ suffix, resource string }{k + ":record", l + "<*>:" + presets.PermGet})
+			if f := o.fieldsPattern(); f != "" {
+				gs = append(gs, struct{ suffix, resource string }{k + ":columns", l + f},
+					struct{ suffix, resource string }{k + ":fields", l + "<*>:" + f})
+			}
+			for _, ch := range o.Children {
+				gs = append(gs, struct{ suffix, resource string }{k + ":child:" + ch, l + "<*>:" + ch + ":*"})
+			}
+		}
+		for _, g := range gs {
+			if err := grant(g.suffix, g.resource, read); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+// SupportOptions say what of a supporting model — under the parent of a
+// shared model, not shared by itself — is read by whom reaches the parent
+// only as support (a record under it shared with them): none declared,
+// the model is not read.
+type SupportOptions struct {
+	// Fields are the fields read (in its listing and its records); none,
+	// none.
+	Fields []string
+	// Children are the URI names of its models read under its records;
+	// none, none.
+	Children []string
+	// Related narrows its records to the ones related to the records
+	// shared with the user (the ids of sharedIDs, of the shared models
+	// under the same parent); nil, all of the parent's.
+	Related func(db *gorm.DB, sharedIDs []string) *gorm.DB
+}
+
+// supportModels are the supporting models declared (Support).
+type supportModels map[*presets.ModelBuilder]SupportOptions
+
+// fieldsPattern is the resource of the fields of o: "#{A,B}:*" ("" none).
+func (o SupportOptions) fieldsPattern() string {
+	switch len(o.Fields) {
+	case 0:
+		return ""
+	case 1:
+		return "#" + o.Fields[0] + ":*"
+	}
+	return "#{" + strings.Join(o.Fields, ",") + "}:*"
+}
+
+// Support declares mb a supporting model, read as o says — mb under the
+// parent of a shared model (or that parent itself: its fields read). Before
+// SyncPolicies. A model under the parent not declared is not read.
+func (s *Service) Support(mb *presets.ModelBuilder, o SupportOptions) {
+	s.mu.Lock()
+	if s.support == nil {
+		s.support = supportModels{}
+	}
+	s.support[mb] = o
+	s.mu.Unlock()
+	if o.Related != nil {
+		s.scopeSupport(mb, o.Related)
+	}
+}
+
+func (s *Service) supportDecl(mb *presets.ModelBuilder) (SupportOptions, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	o, ok := s.support[mb]
+	return o, ok
+}
+
+func (s *Service) supportOf(mb *presets.ModelBuilder) SupportOptions {
+	o, _ := s.supportDecl(mb)
+	return o
+}
+
+// installedOf is the model shared of mb (nil, not shared).
+func (s *Service) installedOf(mb *presets.ModelBuilder) *installedModel {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.installed {
+		if s.installed[i].mb == mb {
+			m := s.installed[i]
+			return &m
+		}
+	}
+	return nil
+}
+
+// scopeSupport narrows the reads of the supporting model mb, for whom
+// reaches its parent only as support, to the records related to the ones
+// shared with them.
+func (s *Service) scopeSupport(mb *presets.ModelBuilder, related func(db *gorm.DB, sharedIDs []string) *gorm.DB) {
+	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
+		return do.(*gorm2op.DataOperatorBuilder).
+			WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
+				cb.Pre(func(state *gorm2op.CallbackState) error {
+					if state.Ctx == nil {
+						return nil
+					}
+					ids, ok, err := s.supportedIDs(state.Ctx, mb)
+					if err != nil || !ok {
+						return err
+					}
+					state.DB = related(state.DB, ids)
+					return nil
+				})
+			})
+	})
+}
+
+// supportedIDs are the records shared with the user of ctx under the parent
+// of the path of mb — ok when the user reaches that parent only as support.
+func (s *Service) supportedIDs(ctx *web.EventContext, mb *presets.ModelBuilder) (ids []string, ok bool, err error) {
+	uid := currentUser(ctx.R)
+	parentMB := mb.Parent()
+	if uid == "" || parentMB == nil {
+		return nil, false, nil
+	}
+	pids, err := mb.ParseParentsID(ctx.R)
+	if err != nil || len(pids) == 0 {
+		return nil, false, nil
+	}
+	return s.supportedFor(ctx.R.Context(), uid, parentMB, strings.Join(pids[len(pids)-1].StringValues(), "_"))
+}
+
+// supportedFor are the records shared with user under the record pid of
+// parentMB — ok when user reaches that record only as support.
+func (s *Service) supportedFor(c context.Context, uid string, parentMB *presets.ModelBuilder, pid string) (ids []string, ok bool, err error) {
+	pm := s.installedOf(parentMB)
+	if pm == nil {
+		return nil, false, nil
+	}
+	// a real access to the parent (owned, shared, inherited): all
+	reached, err := s.accessible(c, uid, pm.resource, false)
+	if err != nil || slices.Contains(reached, pid) {
+		return nil, false, err
+	}
+	s.mu.RLock()
+	var shared []installedModel
+	for _, m := range s.installed {
+		if m.mb.Parent() == parentMB {
+			shared = append(shared, m)
+		}
+	}
+	s.mu.RUnlock()
+	for _, m := range shared {
+		r, err := s.resource(m.resource)
+		if err != nil {
+			return nil, false, err
+		}
+		got, err := s.accessible(c, uid, m.resource, false)
+		if err != nil {
+			return nil, false, err
+		}
+		if len(got) == 0 {
+			continue
+		}
+		var under []string
+		if err := s.o.DB.WithContext(c).Table(r.Table).Where(r.IDColumn+" IN ? AND "+r.ParentColumn+" = ?", got, pid).
+			Pluck(r.IDColumn, &under).Error; err != nil {
+			return nil, false, err
+		}
+		ids = append(ids, under...)
+	}
+	return ids, true, nil
+}
+
+// installedModel is a model shared in the admin (Install): its resource,
+// the policies of its accesses.
+type installedModel struct {
+	mb       *presets.ModelBuilder
+	resource string
+	policies AccessHook
+}
+
+// SyncPolicies makes again the policies of the accesses of every model
+// shared in the admin (Install), as they are made now: to call once the
+// admin has all its models — the policies of a model under another name its
+// parent's (supporting) models.
+func (s *Service) SyncPolicies() error {
+	s.mu.RLock()
+	ms := slices.Clone(s.installed)
+	s.mu.RUnlock()
+	for _, m := range ms {
+		if err := s.syncPolicies(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) syncPolicies(m installedModel) error {
+	if m.mb.Builder().GetPermission() == nil {
+		return nil
+	}
+	var accesses []Access
+	if err := s.o.DB.Preload("Role").Where("resource = ?", m.resource).Find(&accesses).Error; err != nil {
 		return err
 	}
+	for i := range accesses {
+		a := &accesses[i]
+		if err := m.policies(s.o.DB, a, a.Role, false); err != nil {
+			return fmt.Errorf("shared: the policies of %s %s: %w", m.resource, a.RecordID, err)
+		}
+	}
+	if len(accesses) > 0 {
+		s.loadPolicies(m.mb, s.o.DB)
+	}
+	return nil
+}
+
+// loadPolicies puts the policies just written in the permissions of the
+// admin of mb.
+func (s *Service) loadPolicies(mb *presets.ModelBuilder, tx *gorm.DB) {
+	if pb := mb.Builder().GetPermission(); pb != nil {
+		from := s.o.Now().Add(-time.Minute)
+		pb.LoadDBPoliciesToMemory(tx, &from)
+	}
+}
+
+// revokeRefs takes the policies of the reference ref away, and its
+// derived ones (ref:…).
+func revokeRefs(tx *gorm.DB, ref string) error {
+	return tx.Where("refer_id = ? OR refer_id LIKE ?", ref, ref+":%").Delete(&perm.DefaultDBPolicy{}).Error
+}
+
+// shared says the model mb is shared by s (Install).
+func (s *Service) isShared(mb *presets.ModelBuilder) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, m := range s.installed {
+		if m.mb == mb {
+			return true
+		}
+	}
+	return false
 }

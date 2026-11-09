@@ -78,6 +78,11 @@ type Service struct {
 	// lastAt keeps the times of the events increasing: their order
 	lastAt time.Time
 	hooks  map[string][]AccessHook
+	// installed are the models shared in the admin (Install): their
+	// policies, made again by SyncPolicies
+	installed []installedModel
+	// support are the models read as support (Support)
+	support supportModels
 }
 
 // AccessHook is told of an access given or changed (role its role) or taken
@@ -319,6 +324,14 @@ func (s *Service) Can(ctx context.Context, user, resource, id, action string) bo
 // with them or their groups, or under a record they see — the most
 // specific access deciding (None takes a record out).
 func (s *Service) AccessibleIDs(ctx context.Context, user, resource string) ([]string, error) {
+	return s.accessible(ctx, user, resource, true)
+}
+
+// accessible are the records of the resource the user reaches; support: and
+// the ones read as the parent of a record under them shared with the user
+// (not Access.NoParentRead) — read only, what is under them not reached by
+// it.
+func (s *Service) accessible(ctx context.Context, user, resource string, support bool) ([]string, error) {
 	r, err := s.resource(resource)
 	if err != nil {
 		return nil, err
@@ -365,7 +378,7 @@ func (s *Service) AccessibleIDs(ctx context.Context, user, resource string) ([]s
 	// under a record seen: the parent's, but the ones taken out (None);
 	// under a record owned, every one
 	if r.Parent != "" {
-		parents, err := s.AccessibleIDs(ctx, user, r.Parent)
+		parents, err := s.accessible(ctx, user, r.Parent, false)
 		if err != nil {
 			return nil, err
 		}
@@ -387,7 +400,54 @@ func (s *Service) AccessibleIDs(ctx context.Context, user, resource string) ([]s
 			}
 		}
 	}
+	if support {
+		ids, err := s.supportParents(ctx, subs, r, decide)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range ids {
+			add(id)
+		}
+	}
 	return out, nil
+}
+
+// supportParents are the records of r read as the parent of a record under
+// them shared with one of subs (not NoParentRead, not None) — but the ones
+// taken out of the subjects (None, deciding).
+func (s *Service) supportParents(ctx context.Context, subs []string, r *Resource, decide map[string]*Access) (out []string, err error) {
+	db := s.o.DB.WithContext(ctx)
+	s.mu.RLock()
+	var children []*Resource
+	for _, c := range s.resources {
+		if c.Parent == r.Name {
+			children = append(children, c)
+		}
+	}
+	s.mu.RUnlock()
+	for _, c := range children {
+		var ids []string
+		if err := db.Model(&Access{}).Joins("JOIN shared_templates t ON t.id = shared_access.role_id").
+			Where("shared_access.resource = ? AND shared_access.subject IN ? AND NOT shared_access.no_parent_read AND NOT t.none",
+				c.Name, subs).Pluck("shared_access.record_id", &ids).Error; err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			continue
+		}
+		var parents []string
+		if err := db.Table(c.Table).Where(c.IDColumn+" IN ?", ids).Distinct(c.ParentColumn).
+			Pluck(c.ParentColumn, &parents).Error; err != nil {
+			return nil, err
+		}
+		for _, p := range parents {
+			if a := decide[p]; a != nil && a.Role != nil && a.Role.None {
+				continue
+			}
+			out = append(out, p)
+		}
+	}
+	return
 }
 
 // ownedIDs are the records of the resource owned by user, the ones under
@@ -546,7 +606,11 @@ func tokenHash(token string) string {
 // Share asks the owner of the record — by e-mail — to share it with the
 // subject (a user or a group) with the role, by by; the role None, at once
 // (nil Request).
-func (s *Service) Share(ctx context.Context, resource, id, subject string, roleID uuid.UUID, by string, o Origin) (*Request, error) {
+func (s *Service) Share(ctx context.Context, resource, id, subject string, roleID uuid.UUID, by string, o Origin, opts ...ShareOption) (*Request, error) {
+	var so shareOptions
+	for _, opt := range opts {
+		opt(&so)
+	}
 	if !s.subjectExists(ctx, subject) {
 		return nil, ErrNoSuchSubject
 	}
@@ -567,11 +631,20 @@ func (s *Service) Share(ctx context.Context, resource, id, subject string, roleI
 	}
 	if role.None {
 		return nil, s.o.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			return s.grant(tx, resource, id, subject, roleID, by, o)
+			return s.grant(tx, resource, id, subject, roleID, false, by, o)
 		})
 	}
-	return s.request(ctx, RequestShare, resource, id, subject, roleID, by, o)
+	return s.request(ctx, RequestShare, resource, id, subject, roleID, so.noParentRead, by, o)
 }
+
+// ShareOption is an option of a sharing (Share).
+type ShareOption func(*shareOptions)
+
+type shareOptions struct{ noParentRead bool }
+
+// NoParentRead: shared a record under another, the subject does not read its
+// parent and the parent's supporting records (Access.NoParentRead).
+func NoParentRead() ShareOption { return func(o *shareOptions) { o.noParentRead = true } }
 
 // ChangeRole changes the role of the subject on the record: to one with an
 // action the old one has not, asking the owner (a Request); to one with
@@ -588,7 +661,7 @@ func (s *Service) ChangeRole(ctx context.Context, resource, id, subject string, 
 		return nil, err
 	}
 	if More(a.Role, to) {
-		return s.request(ctx, RequestRoleChange, resource, id, subject, roleID, by, o)
+		return s.request(ctx, RequestRoleChange, resource, id, subject, roleID, false, by, o)
 	}
 	return nil, db.Transaction(func(tx *gorm.DB) error { return s.setRole(tx, &a, to, by, o) })
 }
@@ -635,11 +708,11 @@ func (s *Service) TransferOwner(ctx context.Context, resource, id, user string, 
 	if user == owner || !s.o.Users.Exists(ctx, user) {
 		return nil, ErrOwnerIsUser
 	}
-	return s.request(ctx, RequestOwnerTransfer, resource, id, UserSubject(user), keep, by, o)
+	return s.request(ctx, RequestOwnerTransfer, resource, id, UserSubject(user), keep, false, by, o)
 }
 
 // request makes the request and mails the owner the link to confirm it.
-func (s *Service) request(ctx context.Context, kind, resource, id, subject string, roleID uuid.UUID, by string, o Origin) (*Request, error) {
+func (s *Service) request(ctx context.Context, kind, resource, id, subject string, roleID uuid.UUID, noParentRead bool, by string, o Origin) (*Request, error) {
 	owner, err := s.Owner(ctx, resource, id)
 	if err != nil {
 		return nil, err
@@ -660,7 +733,7 @@ func (s *Service) request(ctx context.Context, kind, resource, id, subject strin
 		return nil, err
 	}
 	req := &Request{Kind: kind, Resource: resource, RecordID: id, Subject: subject, RoleID: rolePtr(roleID),
-		Owner: owner, By: by, TokenHash: hash, ExpiresAt: s.o.Now().Add(s.o.TTL), State: StatePending, CreatedAt: s.o.Now()}
+		NoParentRead: noParentRead, Owner: owner, By: by, TokenHash: hash, ExpiresAt: s.o.Now().Add(s.o.TTL), State: StatePending, CreatedAt: s.o.Now()}
 	ev := map[string]string{RequestShare: EventConfirmationRequested, RequestRoleChange: EventRoleChangeRequested,
 		RequestOwnerTransfer: EventOwnerTransferRequest}[kind]
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -791,10 +864,10 @@ func (s *Service) Confirm(ctx context.Context, token, by string, o Origin) error
 			return s.setRole(tx, &a, to, by, o)
 		case r.Kind == RequestShare && (strings.HasPrefix(r.Subject, SubjectGroup) || s.isNone(tx, r.Resource, r.RoleID)):
 			// a group's, at once for its members; None, no invite to accept
-			return s.grant(tx, r.Resource, r.RecordID, r.Subject, *r.RoleID, r.By, o)
+			return s.grant(tx, r.Resource, r.RecordID, r.Subject, *r.RoleID, r.NoParentRead, r.By, o)
 		default:
 			inv := &AccessInvite{RequestID: r.ID, Kind: r.Kind, Resource: r.Resource, RecordID: r.RecordID, Subject: r.Subject,
-				RoleID: r.RoleID, By: r.By, State: StatePending, CreatedAt: now}
+				RoleID: r.RoleID, NoParentRead: r.NoParentRead, By: r.By, State: StatePending, CreatedAt: now}
 			if err := tx.Create(inv).Error; err != nil {
 				return err
 			}
@@ -843,12 +916,12 @@ func (s *Service) isNone(tx *gorm.DB, resource string, id *uuid.UUID) bool {
 }
 
 // grant gives the subject the role on the record.
-func (s *Service) grant(tx *gorm.DB, resource, id, subject string, roleID uuid.UUID, by string, o Origin) error {
+func (s *Service) grant(tx *gorm.DB, resource, id, subject string, roleID uuid.UUID, noParentRead bool, by string, o Origin) error {
 	role, err := s.role(tx, resource, roleID)
 	if err != nil {
 		return err
 	}
-	a := &Access{Resource: resource, RecordID: id, Subject: subject, RoleID: roleID, GrantedBy: by,
+	a := &Access{Resource: resource, RecordID: id, Subject: subject, RoleID: roleID, GrantedBy: by, NoParentRead: noParentRead,
 		CreatedAt: s.o.Now(), UpdatedAt: s.o.Now()}
 	if err := tx.Create(a).Error; err != nil {
 		return err
@@ -884,7 +957,7 @@ func (s *Service) Accept(ctx context.Context, inviteID uuid.UUID, user string, o
 			return err
 		}
 		if inv.Kind != RequestOwnerTransfer {
-			return s.grant(tx, inv.Resource, inv.RecordID, inv.Subject, *inv.RoleID, inv.By, o)
+			return s.grant(tx, inv.Resource, inv.RecordID, inv.Subject, *inv.RoleID, inv.NoParentRead, inv.By, o)
 		}
 		return s.transfer(tx, inv, user, o)
 	})
@@ -923,7 +996,7 @@ func (s *Service) transfer(tx *gorm.DB, inv *AccessInvite, user string, o Origin
 		return err
 	}
 	if former != "" && inv.RoleID != nil {
-		return s.grant(tx, inv.Resource, inv.RecordID, UserSubject(former), *inv.RoleID, user, o)
+		return s.grant(tx, inv.Resource, inv.RecordID, UserSubject(former), *inv.RoleID, false, user, o)
 	}
 	return nil
 }

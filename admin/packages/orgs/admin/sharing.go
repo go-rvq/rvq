@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/packages/orgs/messages"
@@ -69,6 +70,9 @@ func installSharing(pb *presets.Builder, s *shared.Service) error {
 	s.InstallInvites(pb)
 	s.ListenGroups()
 	configureOwnerShown(mb, s)
+	// read as the parent of a record shared under it (a project): its name,
+	// description, owner
+	s.Support(mb, shared.SupportOptions{Fields: []string{"Nome", "Descricao", "Owner", "MyDefault"}})
 	return nil
 }
 
@@ -123,5 +127,11 @@ func orgVisible(r *http.Request, id uuid.UUID) bool {
 		return false
 	}
 	e, err := sharing.RoleOf(r.Context(), u.GetID().String(), OrganizacaoModelID, id.String())
-	return err == nil && e.Visible()
+	if err == nil && e.Visible() {
+		return true
+	}
+	// read as support: the parent of a record under it shared with the user
+	// (what of it they read, the permissions and the supporting models say)
+	ids, err := sharing.AccessibleIDs(r.Context(), u.GetID().String(), OrganizacaoModelID)
+	return err == nil && slices.Contains(ids, id.String())
 }

@@ -50,6 +50,18 @@ No detalhe de uma organização (o menu ⋮ dela):
 - {%= admin.action("organizacoes", "transfer_owner").link %}: dá a ela outro
   proprietário.
 
+## Compartilhar só um registro sob a organização
+
+Um registro sob a organização — um projeto, por exemplo — pode ser
+compartilhado sozinho, sem a organização. Quem o recebe o alcança (como o
+papel diz) e, a não ser que **Ver o pai e os registros de apoio dele** tenha
+sido desligado ao compartilhar, lê a organização: na lista e no menu dele
+(**compartilhada por**), o nome e a descrição, e os registros **de apoio**
+que a aplicação declara — nomes, códigos, o que o registro precisa (as
+moedas, os bancos…), só alguns dos campos; dos ligados ao registro, só os
+dele (as carteiras, os cartões dele). Os outros registros compartilhados
+assim (os outros projetos) e o resto da organização ficam de fora.
+
 ## O proprietário confirma por e-mail
 
 Nada é dado sem o **proprietário**: um compartilhamento novo, um papel que

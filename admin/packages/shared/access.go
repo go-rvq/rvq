@@ -37,8 +37,13 @@ type Access struct {
 	RoleID    uuid.UUID `gorm:"type:uuid;not null"`
 	Role      *ShareTemplate
 	GrantedBy string `gorm:"size:128"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	// NoParentRead: of a record under another, the subject does not read its
+	// parent and the parent's supporting records (by default they do: the
+	// parent seen read only, its records that are not shared by themselves
+	// — its other records shared so stay out)
+	NoParentRead bool `gorm:"not null;default:false"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (Access) TableName() string { return "shared_access" }
@@ -125,14 +130,16 @@ type Request struct {
 	Subject  string    `gorm:"size:128;not null"`
 	// RoleID is the role asked (a sharing, a change); of a new owner, the
 	// role the former owner keeps.
-	RoleID     *uuid.UUID `gorm:"type:uuid"`
-	Owner      string     `gorm:"size:128;not null"`
-	By         string     `gorm:"column:requested_by;size:128"`
-	TokenHash  string     `gorm:"size:64;uniqueIndex"`
-	ExpiresAt  time.Time
-	State      string `gorm:"size:12;not null;index"`
-	CreatedAt  time.Time
-	AnsweredAt *time.Time
+	RoleID    *uuid.UUID `gorm:"type:uuid"`
+	Owner     string     `gorm:"size:128;not null"`
+	By        string     `gorm:"column:requested_by;size:128"`
+	TokenHash string     `gorm:"size:64;uniqueIndex"`
+	// NoParentRead is the Access's, asked
+	NoParentRead bool `gorm:"not null;default:false"`
+	ExpiresAt    time.Time
+	State        string `gorm:"size:12;not null;index"`
+	CreatedAt    time.Time
+	AnsweredAt   *time.Time
 }
 
 func (Request) TableName() string { return "shared_requests" }
@@ -147,17 +154,19 @@ func (r *Request) BeforeCreate(*gorm.DB) error {
 // AccessInvite is a sharing confirmed by the owner, waiting for the user invited
 // (or the new owner) to accept it.
 type AccessInvite struct {
-	ID         uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	RequestID  uuid.UUID  `gorm:"type:uuid;not null"`
-	Kind       string     `gorm:"size:20;not null"`
-	Resource   string     `gorm:"size:120;not null"`
-	RecordID   string     `gorm:"size:64;not null"`
-	Subject    string     `gorm:"size:128;not null;index"`
-	RoleID     *uuid.UUID `gorm:"type:uuid"`
-	By         string     `gorm:"column:invited_by;size:128"`
-	State      string     `gorm:"size:12;not null;index"`
-	CreatedAt  time.Time
-	AnsweredAt *time.Time
+	ID        uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	RequestID uuid.UUID  `gorm:"type:uuid;not null"`
+	Kind      string     `gorm:"size:20;not null"`
+	Resource  string     `gorm:"size:120;not null"`
+	RecordID  string     `gorm:"size:64;not null"`
+	Subject   string     `gorm:"size:128;not null;index"`
+	RoleID    *uuid.UUID `gorm:"type:uuid"`
+	By        string     `gorm:"column:invited_by;size:128"`
+	// NoParentRead is the Access's, confirmed
+	NoParentRead bool   `gorm:"not null;default:false"`
+	State        string `gorm:"size:12;not null;index"`
+	CreatedAt    time.Time
+	AnsweredAt   *time.Time
 }
 
 func (AccessInvite) TableName() string { return "shared_access_invites" }

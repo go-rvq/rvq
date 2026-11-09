@@ -1,6 +1,7 @@
 package shared_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/packages/shared"
@@ -130,5 +131,124 @@ func TestInstallNoneUnderAParent(t *testing.T) {
 	f.db.Model(&perm.DefaultDBPolicy{}).Where("subject = ? AND effect = ?", shared.UserSubject("bia"), perm.Denied).Count(&n)
 	if n != 0 {
 		t.Errorf("revoked, the deny stays: %d", n)
+	}
+}
+
+// nota is a model of the folders not shared by itself: a supporting one.
+type nota struct {
+	ID      string `gorm:"primaryKey"`
+	PastaID string
+	Texto   string
+	Segredo string
+}
+
+func (nota) TableName() string { return "sharedtest_notas" }
+
+// anexo is a model of the folders declared nowhere: not read as support.
+type anexo struct {
+	ID      string `gorm:"primaryKey"`
+	PastaID string
+}
+
+func (anexo) TableName() string { return "sharedtest_anexos" }
+
+// A role on a record under another: its actions there, the listing of its
+// model under the parent; its parent read — the parent's detail and
+// listing, its fields declared, its supporting models declared (Support:
+// their fields and children declared; not the shared ones, not the ones
+// declared nowhere) —, unless NoParentRead.
+func TestInstallParentRead(t *testing.T) {
+	f := newFixture(t)
+	if err := f.db.AutoMigrate(&perm.DefaultDBPolicy{}); err != nil {
+		t.Fatal(err)
+	}
+	p := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(f.db)).URIPrefix("/admin")
+	p.Permission(perm.New().AllowAll())
+	pastas := p.Model(&sharedtest.Pasta{}).URIName("pastas")
+	docs := presets.NewModelBuilder(p, &sharedtest.Documento{})
+	notas := presets.NewModelBuilder(p, &nota{})
+	pastas.AddChild(docs)
+	pastas.AddChild(notas)
+	pastas.AddChild(presets.NewModelBuilder(p, &anexo{}))
+	viewer := []shared.RoleSeed{{Name: "Viewer", Actions: []string{presets.PermList, presets.PermGet}}}
+	if err := f.s.Install(pastas, shared.ModelOptions{
+		Resource: shared.Resource{Name: "admin_pastas", Table: "sharedtest_pastas", OwnerColumn: "owner_id"},
+		Roles:    viewer, ReadScope: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.s.Install(docs, shared.ModelOptions{
+		Resource: shared.Resource{Name: "admin_docs", Table: "sharedtest_documentos", Parent: "admin_pastas",
+			ParentColumn: "pasta_id"},
+		Roles: viewer, ReadScope: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, res := range []string{"admin_pastas", "admin_docs"} {
+		roles, _ := shared.RolesOf(f.db, uuid.Nil, res)
+		f.roles[res] = map[string]uuid.UUID{}
+		for _, r := range roles {
+			f.roles[res][r.Name] = r.ID
+		}
+	}
+	f.s.Support(pastas, shared.SupportOptions{Fields: []string{"Nome"}})
+	f.s.Support(notas, shared.SupportOptions{Fields: []string{"Texto"}, Children: []string{"revisoes"}})
+	pasta := sharedtest.NewPasta(f.db, "Contratos", "ana")
+	doc := sharedtest.NewDocumento(f.db, pasta, "Aluguel")
+	resources := func(user string) (out []string) {
+		var ps []perm.DefaultDBPolicy
+		f.db.Where("subject = ?", shared.UserSubject(user)).Find(&ps)
+		for _, p := range ps {
+			out = append(out, p.Resources...)
+		}
+		slices.Sort(out)
+		return
+	}
+	f.share("admin_docs", doc.ID, shared.UserSubject("caio"), "Viewer", "ana")
+	pr := "admin:pasta:<" + pasta.ID + ">:"
+	want := []string{
+		"admin:pasta:#Nome:*", "admin:pasta:@list",
+		pr + "#Nome:*", pr + "@get",
+		pr + "documentos:#*", pr + "documentos:<" + doc.ID + ">:*", pr + "documentos:@list",
+		pr + "nota:#Texto:*", pr + "nota:<*>:#Texto:*", pr + "nota:<*>:@get", pr + "nota:<*>:revisoes:*",
+		pr + "nota:@get", pr + "nota:@list",
+	}
+	slices.Sort(want)
+	if got := resources("caio"); !slices.Equal(got, want) {
+		t.Errorf("the policies of caio:\n got %q\nwant %q", got, want)
+	}
+	// the patterns, by the matcher of the permissions
+	m := &perm.PathMatcher{}
+	matches := func(needle string) bool {
+		ok, err := m.Matches(nil, want, needle)
+		return err == nil && ok
+	}
+	for needle, ok := range map[string]bool{
+		pr + "nota:<n1>:#Texto:@get":             true,
+		pr + "nota:#Texto:@list":                 true,
+		pr + "nota:<n1>:#Segredo:@get":           false,
+		pr + "nota:#Segredo:@list":               false,
+		pr + "nota:<n1>:revisoes:<r1>:@get":      true,
+		pr + "nota:<n1>:outros:<o1>:@get":        false,
+		pr + "anexo:@list":                       false,
+		pr + "#Nome:@get":                        true,
+		pr + "#Owner:@get":                       false,
+		pr + "documentos:<outro>:@get":           false,
+		pr + "documentos:<" + doc.ID + ">:@edit": true,
+	} {
+		if matches(needle) != ok {
+			t.Errorf("%s: matched %v", needle, !ok)
+		}
+	}
+	// installed again (SyncPolicies), the same
+	if err := f.s.SyncPolicies(); err != nil {
+		t.Fatal(err)
+	}
+	if got := resources("caio"); !slices.Equal(got, want) {
+		t.Errorf("synced again: %q", got)
+	}
+	f.share("admin_docs", doc.ID, shared.UserSubject("dani"), "Viewer", "ana", shared.NoParentRead())
+	if got := resources("dani"); len(got) != 3 {
+		t.Errorf("NoParentRead: %q", got)
 	}
 }

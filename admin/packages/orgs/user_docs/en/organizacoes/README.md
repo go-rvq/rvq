@@ -49,6 +49,19 @@ In the detail of an organization (its ⋮ menu):
 - {%= admin.action("organizacoes", "transfer_owner").link %}: give it another
   owner.
 
+## Sharing only a record under the organization
+
+A record under the organization — a project, say — may be shared alone,
+the organization not. Whom it is shared with reaches it (as their role
+says) and, unless **See its parent and the parent's supporting records**
+was turned off when sharing, reads the organization: in their list and
+their menu (**shared by**), its name and description, and the
+**supporting** records the application declares — names, codes, what the
+record needs (the currencies, the banks…), only some of their fields; the
+ones related to the record only (its wallets, its cards). The other records
+shared that way (the other projects) and the rest of the organization stay
+out.
+
 ## The owner confirms by e-mail
 
 Nothing is given without the **owner**: a new sharing, a role that may more

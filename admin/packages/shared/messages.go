@@ -30,6 +30,7 @@ type Messages struct {
 	Inherited         string `i18n:"hint='Says an access comes from a record above.'"`
 	Revoke            string `i18n:"hint='Button that takes an access away.'"`
 	RequestSent       string `i18n:"hint='Shown when a sharing waits for the owner.'"`
+	ParentRead        string `i18n:"hint='Switch of the sharing of a record under another: the subject reads its parent and the parent\\'s supporting records too (read only).'"`
 	Granted           string `i18n:"hint='Shown when a sharing was done at once (the role None: no owner to ask).'"`
 	RoleChanged       string `i18n:"hint='Shown when a role changed at once.'"`
 	Revoked           string `i18n:"hint='Shown when an access was taken away.'"`
@@ -90,6 +91,7 @@ var Messages_en_US = &Messages{
 	Inherited:         "inherited",
 	Revoke:            "Revoke",
 	RequestSent:       "Sent to the owner: the sharing waits for their confirmation by e-mail.",
+	ParentRead:        "See its parent and the parent's supporting records (read only)",
 	Granted:           "Done: the record is out of what they reach.",
 	RoleChanged:       "Role changed.",
 	Revoked:           "Access revoked.",
@@ -149,6 +151,7 @@ var Messages_pt_BR = &Messages{
 	Inherited:         "herdado",
 	Revoke:            "Revogar",
 	RequestSent:       "Enviado ao proprietário: o compartilhamento espera a confirmação dele por e-mail.",
+	ParentRead:        "Ver o pai e os registros de apoio dele (somente leitura)",
 	Granted:           "Feito: o registro saiu do que ele alcança.",
 	RoleChanged:       "Papel trocado.",
 	Revoked:           "Acesso revogado.",

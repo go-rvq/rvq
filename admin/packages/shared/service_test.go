@@ -99,9 +99,9 @@ func (f *fixture) role(res, name string) uuid.UUID { return f.roles[res][name] }
 
 // share asks the sharing of the record with the subject as the role (by
 // by), confirmed by the owner, the invite (a user's) accepted.
-func (f *fixture) share(res, id, subject, role, by string) {
+func (f *fixture) share(res, id, subject, role, by string, opts ...shared.ShareOption) {
 	f.t.Helper()
-	req, err := f.s.Share(f.ctx, res, id, subject, f.role(res, role), by, origin)
+	req, err := f.s.Share(f.ctx, res, id, subject, f.role(res, role), by, origin, opts...)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -444,5 +444,31 @@ func TestOwnerTransfer(t *testing.T) {
 	}
 	if got := f.events("pastas", p.ID); !slices.Contains(got, shared.EventOwnerTransferred) {
 		t.Errorf("history %v", got)
+	}
+}
+
+// A record under another shared alone: its parent read (supporting), not
+// the parent's other records; with NoParentRead, not even the parent.
+func TestParentRead(t *testing.T) {
+	f := newFixture(t)
+	p := sharedtest.NewPasta(f.db, "Contratos", "ana")
+	d1 := sharedtest.NewDocumento(f.db, p, "Aluguel")
+	sharedtest.NewDocumento(f.db, p, "Luz")
+	f.share("documentos", d1.ID, shared.UserSubject("caio"), "Viewer", "ana")
+	if ids, _ := f.s.AccessibleIDs(f.ctx, "caio", "pastas"); !slices.Equal(ids, []string{p.ID}) {
+		t.Errorf("the parent read: %v", ids)
+	}
+	if ids, _ := f.s.AccessibleIDs(f.ctx, "caio", "documentos"); !slices.Equal(ids, []string{d1.ID}) {
+		t.Errorf("the documents: %v, want only %s", ids, d1.ID)
+	}
+	if r, _ := f.s.RoleOf(f.ctx, "caio", "pastas", p.ID); r != nil && (r.Owner || r.Role != nil) {
+		t.Errorf("a role on the parent: %+v", r)
+	}
+	f.share("documentos", d1.ID, shared.UserSubject("dani"), "Viewer", "ana", shared.NoParentRead())
+	if ids, _ := f.s.AccessibleIDs(f.ctx, "dani", "pastas"); len(ids) != 0 {
+		t.Errorf("NoParentRead, the parent: %v", ids)
+	}
+	if ids, _ := f.s.AccessibleIDs(f.ctx, "dani", "documentos"); !slices.Equal(ids, []string{d1.ID}) {
+		t.Errorf("NoParentRead, the document: %v", ids)
 	}
 }
