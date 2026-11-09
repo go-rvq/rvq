@@ -26,6 +26,7 @@ type Messages struct {
 	SeeAll                string `i18n:"hint='Link of the bell to the listing of the notifications of the user.'"`
 	Open                  string `i18n:"hint='Action of a notification that opens where it takes (marking it read).'"`
 	Unread                string `i18n:"hint='Tab of the notifications: the unread ones.'"`
+	Read                  string `i18n:"hint='Tab of the notifications: the read ones.'"`
 	All                   string `i18n:"hint='Tab of the notifications: all of them.'"`
 	BellTitle             string `i18n:"hint='Title of the notifications in the bell: %d is how many are unread.'"`
 }
@@ -33,7 +34,7 @@ type Messages struct {
 var Messages_en_US = &Messages{
 	ModuleDescription:     "The notification center of the users.",
 	Notification:          "Notification",
-	Notifications:         "My notifications",
+	Notifications:         "Notifications",
 	NotificationTitle:     "Title",
 	NotificationBody:      "Text",
 	NotificationLevel:     "Level",
@@ -45,6 +46,7 @@ var Messages_en_US = &Messages{
 	SeeAll:                "See all",
 	Open:                  "Open",
 	Unread:                "Unread",
+	Read:                  "Read",
 	All:                   "All",
 	BellTitle:             "Notifications (%d unread)",
 }
@@ -52,7 +54,7 @@ var Messages_en_US = &Messages{
 var Messages_pt_BR = &Messages{
 	ModuleDescription:     "A central de notificações dos usuários.",
 	Notification:          "Notificação",
-	Notifications:         "Minhas notificações",
+	Notifications:         "Notificações",
 	NotificationTitle:     "Título",
 	NotificationBody:      "Texto",
 	NotificationLevel:     "Nível",
@@ -64,6 +66,7 @@ var Messages_pt_BR = &Messages{
 	SeeAll:                "Ver todas",
 	Open:                  "Abrir",
 	Unread:                "Não lidas",
+	Read:                  "Lidas",
 	All:                   "Todas",
 	BellTitle:             "Notificações (%d não lidas)",
 }

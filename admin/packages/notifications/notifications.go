@@ -34,9 +34,14 @@ type Notification struct {
 	CreatedAt time.Time
 	// ReadAt is when the user read it (nil: unread)
 	ReadAt *time.Time `gorm:"index:idx_user_notifications_user"`
+	// DeletedAt: deleted softly — in the trash of the listing, restored
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 func (Notification) TableName() string { return "user_notifications" }
+
+// String is its title (its name in the admin).
+func (n *Notification) String() string { return n.Title }
 
 func (n *Notification) BeforeCreate(*gorm.DB) error {
 	if n.ID == uuid.Nil {

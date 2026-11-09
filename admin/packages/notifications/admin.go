@@ -3,20 +3,27 @@ package notifications
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/packages/perms"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// ModelID is the id of the listing of the notifications of the user.
-const ModelID = "my_notifications"
+// ModelID is the id of the listing of the notifications of the user (under
+// their profile: my-profile/notifications).
+const ModelID = "notifications"
+
+// filterRead is the filter of the tabs: "no" unread, "yes" read.
+const filterRead = "read"
 
 // bellLimit is how many unread notifications the bell shows.
 const bellLimit = 10
@@ -69,14 +76,35 @@ func (b *Builder) Install(p *presets.Builder) error {
 	} else {
 		mb = p.Model(&Notification{}, config).InMenu(false)
 	}
-	mb.URIName("my-notifications").MenuIcon("mdi-bell-outline")
+	mb.URIName("notifications").MenuIcon("mdi-bell-outline")
 	if b.Profile != nil {
 		b.Profile.AddChild(mb)
 	}
 	b.mb = mb
 	mb.SetCreatingDisabled(true)
 	mb.SetEditingDisabled(true)
-	mb.Listing("CreatedAt", "Title", "Body", "ReadAt").SearchColumns("title", "body").OrderBy("created_at desc")
+	lb := mb.Listing("CreatedAt", "Title", "Body", "ReadAt").SearchColumns("title", "body").OrderBy("created_at desc")
+	// the tabs: unread (the default), read, all
+	lb.FilterTabsFunc(func(ctx *web.EventContext) []*presets.FilterTab {
+		m := GetMessages(ctx.Context())
+		return []*presets.FilterTab{
+			{ID: "unread", Label: m.Unread, Query: url.Values{filterRead: {"no"}}, Default: true},
+			{ID: "read", Label: m.Read, Query: url.Values{filterRead: {"yes"}}},
+			{ID: "all", Label: m.All, Query: url.Values{filterRead: {}}},
+		}
+	})
+	lb.FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
+		return []*vx.FilterItem{{Key: filterRead, Invisible: true,
+			SQLConditionFunc: func(val, _ string) (bool, string, []any) {
+				switch val {
+				case "no":
+					return true, "user_notifications.read_at IS NULL", nil
+				case "yes":
+					return true, "user_notifications.read_at IS NOT NULL", nil
+				}
+				return false, "", nil
+			}}}
+	})
 	mb.Detailing("Title", "Body", "Link", "Level", "Source", "CreatedAt", "ReadAt")
 	// theirs only
 	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
@@ -88,6 +116,8 @@ func (b *Builder) Install(p *presets.Builder) error {
 				})
 			})
 	})
+	// deleted softly: the trash of the listing, restored
+	perms.SetupTrash(mb, b.db, perms.TrashOptions{TableName: Notification{}.TableName()})
 	// opened: read, where it takes
 	mb.Detailing().Action("open_notification").Icon("mdi-open-in-new").
 		SetI18nLabel(func(ctx context.Context) string { return GetMessages(ctx).Open }).
