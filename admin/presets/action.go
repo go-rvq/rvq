@@ -466,10 +466,14 @@ done:
 			ctx.Resp.AppendRunScript("presetsListing?.loader?.go()")
 		case "page":
 			// of a page: the page shown again — its toolbar too —; done in
-			// the action's own dialog (an action of the menu), it closed
+			// the action's own dialog (an action of the menu), it closed.
+			// The page comes by the reload of the push state, a request of
+			// its own whose layout is new: the message goes by the flash
+			// cookie, which that reload reads, else it was lost.
 			if ctx.Resp.PushState == nil {
 				ctx.Resp.PushState = web.Location(url.Values{})
 			}
+			WithEventHandlerWrapperNoFlash(ctx)
 			if IsInDialog(ctx) {
 				ctx.Resp.AppendRunScript("closer.show = false")
 			}

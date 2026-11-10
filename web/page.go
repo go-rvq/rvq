@@ -156,7 +156,10 @@ func (p *PageBuilder) render(
 	if p.pageRenderFunc == nil {
 		return
 	}
-	rf := p.pageRenderFunc
+	// the flash of the cookie, in the page and in its reload too: what an
+	// event said before a push state shows in the page the push state
+	// reloads, a request of its own
+	rf := PageWithFlashCookie(FlashCookieName, "", p.pageRenderFunc)
 	if !event {
 		rf = PageWithFlashCookie(FlashCookieName, "", p.b.layoutFunc(p.pageRenderFunc))
 	}
