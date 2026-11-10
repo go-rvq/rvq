@@ -393,15 +393,30 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 	}
 
 	msgs := MustGetMessages(ctx.Context())
-	selector, active, opened := mb.menuRecordSelectorNode(ctx, parents, mb.menuRecordChosen(ctx, parents))
 	list := &MenuNode{Title: fmt.Sprintf(msgs.MenuRecordList, strings.ToLower(mb.TTitlePlural(ctx.Context()))),
 		Value: listHref, Props: map[string]any{"href": listHref, "prependIcon": "mdi-format-list-bulleted"}}
 	n = &MenuNode{
-		Title:    mb.TTitlePlural(ctx.Context()),
-		Value:    "g:menu-records:" + mb.uriName + ":" + parents.String(),
-		Props:    map[string]any{"prependIcon": icon},
-		Children: []*MenuNode{selector, list},
+		Title: mb.TTitlePlural(ctx.Context()),
+		Value: "g:menu-records:" + mb.uriName + ":" + parents.String(),
+		Props: map[string]any{"prependIcon": icon},
 	}
+	// the selector: a record to choose — the only one chosen already
+	// (menuRecordChosen), of several the user's choice —; none, the listing
+	// alone, where the first is made
+	ch := mb.menuRecordChosen(ctx, parents)
+	if ch.obj == nil {
+		if _, total, err := mb.menuRecordSearch(ctx, parents, "", nil, 1, 1); err == nil && total == 0 {
+			n.Children = []*MenuNode{list}
+			if isActive(listHref) {
+				active = listHref
+				opened = append(opened, n.Value)
+			}
+			return
+		}
+	}
+	var selector *MenuNode
+	selector, active, opened = mb.menuRecordSelectorNode(ctx, parents, ch)
+	n.Children = []*MenuNode{selector, list}
 	if len(selector.Children) > 0 {
 		opened = append(opened, n.Value)
 	}

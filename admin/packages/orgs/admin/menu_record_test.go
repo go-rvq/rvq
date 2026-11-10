@@ -501,11 +501,14 @@ func TestOrgInMenu(t *testing.T) {
 	if !slices.Contains(opened, sel.Value) {
 		t.Errorf("the organization chosen not open: %v", opened)
 	}
-	// a user with no organization: no item
+	// a user with no organization: the item all the same, with no selector
+	// — nothing to choose —, the listing alone, where the first is made
 	r = httptest.NewRequest("GET", "/admin", nil)
 	r = r.WithContext(context.WithValue(r.Context(), login.UserKey, &fakeUser{id: uuid.New()}))
-	if nodes, _, _ := orgMenuRoot(a.b, a.db)(&web.EventContext{R: r}); len(nodes) != 0 {
-		t.Errorf("no organization, an item: %+v", nodes)
+	nodes, _, _ = orgMenuRoot(a.b, a.db)(&web.EventContext{R: r})
+	if len(nodes) != 1 || len(nodes[0].Children) != 1 ||
+		nodes[0].Children[0].Value != OrganizacaoModel(a.b).Info().ListingHref() {
+		t.Fatalf("no organization, the item: %+v", nodes)
 	}
 }
 

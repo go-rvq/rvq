@@ -13,9 +13,10 @@ import (
 // model's (presets MenuRecordSelector) — its item the group of the selector
 // (the chip of the organization chosen, its clear; its resources under it,
 // in their menu groups) and of the listing of the organizations —, at the
-// top of the menu, for a user with organizations. The one chosen is the one
-// of the page, else the one kept in the browser, else the only one of the
-// user, else their default (models.UserDefault).
+// top of the menu, for a user who may list them: with none yet too (the
+// chip "Select", the listing where the first is made). The one chosen is the
+// one of the page, else the one kept in the browser, else the only one of
+// the user, else their default (models.UserDefault).
 
 // orgMenuRoot is the item of the organization at the top of the menu
 // (presets.MenuRootFunc).
@@ -26,8 +27,9 @@ func orgMenuRoot(b *presets.Builder, db *gorm.DB) presets.MenuRootFunc {
 		if mb == nil || u == nil || u.Anonymous() {
 			return
 		}
-		var n int64
-		if accessibleOrgs(ctx.R, db.Model(&models.Organizacao{})).Count(&n); n == 0 {
+		// as the menu does with any model: the one who may not list them has
+		// no item
+		if mb.Permissioner().ReqLister(ctx.R).Denied() {
 			return
 		}
 		node, active, opened := mb.MenuNodeOf(ctx, nil)
