@@ -177,7 +177,10 @@ func (w *EventHandlerWrapper) Handle(ctx *web.EventContext) (r web.EventResponse
 	} else {
 		if len(msgs) > 0 {
 			ctx.Flash = msgs
-			web.RespondFlashCookie(web.FlashCookieName, "", []byte{}, ctx, &web.PageResponse{})
+			// on "/": the page that reads it deletes it on the same path —
+			// the default path, the event's, was not always the page's, and
+			// the message came back in other pages
+			web.RespondFlashCookie(web.FlashCookieName, "/", []byte{}, ctx, &web.PageResponse{})
 		}
 	}
 	return

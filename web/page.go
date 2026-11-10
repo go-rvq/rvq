@@ -125,6 +125,11 @@ func PageWithFlashCookie(cookieName string, defaultUrl string, pr PageFunc) Page
 						msg.HtmlDetail = ""
 					}
 				}
+				// what was read, as RespondFlashCookie writes it: the page
+				// that does not show it leaves it as it is, and it is not
+				// written again (it was, by the change of HtmlDetail, and
+				// came back in every page)
+				messageBytes, _ = json.Marshal(NewFlashMessages(ctx.Flash))
 
 				http.SetCookie(ctx.W, &http.Cookie{
 					Name:   cookieName,

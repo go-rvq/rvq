@@ -510,7 +510,9 @@ done:
 		}
 	}
 
-	if ctx.Flash != nil {
+	// the message gone by the flash cookie (the page reloaded shows it): not
+	// shown here too, twice
+	if noFlash, _ := ctx.ContextValue(CtxEventHandlerWrapperNoFlash).(bool); ctx.Flash != nil && !noFlash {
 		ShowMessage(ctx.Resp, ctx.Flash)
 	}
 

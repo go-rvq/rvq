@@ -1,7 +1,9 @@
 package web_test
 
 import (
+	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -42,5 +44,32 @@ func TestFlashCookieInReload(t *testing.T) {
 	// read, the cookie is removed
 	if c := w.Result().Cookies(); len(c) != 1 || c[0].MaxAge >= 0 {
 		t.Fatalf("the reload kept the flash cookie: %v", c)
+	}
+}
+
+// A page that does not show the flash it read does not write it again: the
+// cookie, written by another (the admin's messages have more fields), was
+// written back and came again in every page.
+func TestFlashCookieNotWrittenBack(t *testing.T) {
+	p := New().Page(func(ctx *EventContext) (pr PageResponse, err error) {
+		pr.Body = h.Div(h.Text("a page that shows no flash"))
+		return
+	})
+	raw := `[{"text":"done","htmlText":"","detail":null,"more":1}]` + "\r/"
+	for _, event := range []bool{false, true} {
+		var r *http.Request
+		if event {
+			r = multipartestutils.NewMultipartBuilder().EventFunc("__reload__").BuildEventFuncRequest()
+		} else {
+			r = httptest.NewRequest("GET", "/", nil)
+		}
+		r.AddCookie(&http.Cookie{Name: FlashCookieName, Value: base64.StdEncoding.EncodeToString([]byte(raw))})
+		w := httptest.NewRecorder()
+		p.ServeHTTP(w, r)
+		for _, c := range w.Result().Cookies() {
+			if c.Name == FlashCookieName && c.MaxAge >= 0 {
+				t.Errorf("event %v: the flash was written back: %+v", event, c)
+			}
+		}
 	}
 }
