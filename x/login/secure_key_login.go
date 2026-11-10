@@ -77,11 +77,11 @@ func (b *Builder) secureKeyLogin(w http.ResponseWriter, r *http.Request) {
 		err = uerr
 	}
 	if err != nil {
-		log.Printf("secure key login refused: from %s: %v", r.RemoteAddr, err)
+		log.Printf("secure key login refused: from %s: %v", ClientAddr(r), err)
 		page(http.StatusUnauthorized, true)
 		return
 	}
-	log.Printf("secure key login: from %s, as %s", r.RemoteAddr, b.initialUserAccount)
+	log.Printf("secure key login: from %s, as %s", ClientAddr(r), b.initialUserAccount)
 	if err = b.completeLogin(w, r, user); err != nil {
 		http.Redirect(w, r, b.loginPageURL, http.StatusFound)
 	}
@@ -99,13 +99,13 @@ func (b *Builder) secureKeyAsPassword(r *http.Request, account, password string)
 	}
 	admin, err := b.secureKeyUser()
 	if err != nil {
-		log.Printf("secure key as the password refused: from %s: %v", r.RemoteAddr, err)
+		log.Printf("secure key as the password refused: from %s: %v", ClientAddr(r), err)
 		return nil
 	}
 	if account != b.initialUserAccount {
 		u, err := b.userModel.(UserPasser).FindUser(b.db, b.newUserObject(), account)
 		if err != nil || objectID(u) != objectID(admin) {
-			log.Printf("secure key as the password refused: from %s: the account is not the administrator's", r.RemoteAddr)
+			log.Printf("secure key as the password refused: from %s: the account is not the administrator's", ClientAddr(r))
 			return nil
 		}
 	}

@@ -1146,7 +1146,7 @@ func (b *Builder) userpassLogin(w http.ResponseWriter, r *http.Request) {
 	// what finds it) in the form, where the login by the key is on
 	if u := b.secureKeyAsPassword(r, account, password); u != nil {
 		user = u
-		log.Printf("secure key as the password: from %s, as %s", r.RemoteAddr, b.initialUserAccount)
+		log.Printf("secure key as the password: from %s, as %s", ClientAddr(r), b.initialUserAccount)
 		err = b.completeLogin(w, r, user)
 		return
 	}

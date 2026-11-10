@@ -358,6 +358,11 @@ func actionTitle(mb *presets.ModelBuilder, name string, ctx *web.EventContext) (
 			return a.RequestTitle(mb, ctx.Context()), true
 		}
 	}
+	for _, a := range listingActions(mb) {
+		if a.Name() == name {
+			return a.RequestTitle(mb, ctx.Context()), true
+		}
+	}
 	for _, a := range mb.Listing().GetBulkActions() {
 		if a.Name() == name {
 			return a.RequestTitle(ctx.Context()), true
@@ -430,3 +435,13 @@ func PageMenuPath(ctx context.Context, page *presets.HttpPageBuilder) string {
 	}
 	return strings.Join(append(parts, page.TTitle(ctx)), " → ")
 }
+
+// vueDelims are the delimiters of Vue's interpolation in a document, as
+// entities: the browser shows them, Vue does not read them.
+var vueDelims = strings.NewReplacer("{{", "&#123;&#123;", "}}", "&#125;&#125;")
+
+// VueSafe is the HTML of a document made to be compiled by Vue (the admin's
+// documentation, not v-pre: its links are Vue's): a `{{…}}` written in it —
+// in a text, in its code — is shown as written, not taken as an expression
+// (which, not one, broke the whole page).
+func VueSafe(html string) string { return vueDelims.Replace(html) }

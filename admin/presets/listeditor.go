@@ -145,6 +145,21 @@ func (c *ListEditorItemContext) DeletedVisibleCond() string {
 	return c.DeletedCond() + " && !" + c.PurgedCond()
 }
 
+// listEditorItemInfo is the info of the model of the items of the list
+// editor of fc — its labels the item model's (<Item><Field>), not the
+// parent's —: of a nested slice its model, a child of the parent (an item of
+// the slice when item >= 0, as the walk gives its fields); else the parent's.
+func listEditorItemInfo(fc *FieldContext, item int) *ModelInfo {
+	if fc.Nested == nil || fc.Nested.Model() == nil {
+		return fc.ModelInfo
+	}
+	info := fc.Nested.Model().Info().ChildOf(fc.ModelInfo, fc.Obj)
+	if item >= 0 {
+		info = info.ItemOf(fc.RawValue(), item)
+	}
+	return info
+}
+
 type ListEditorContainerContext struct {
 	FieldContext *FieldContext
 }

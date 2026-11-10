@@ -336,7 +336,7 @@ func (b *Builder) document(ctx *web.EventContext, tree []*Node, node string) h.H
 				Class("text-caption")
 		}
 		return h.Div(
-			h.Div(h.RawHTML(out)).Class("user-doc").Attr("lang", locale),
+			h.Div(h.RawHTML(VueSafe(out))).Class("user-doc").Attr("lang", locale),
 			edit,
 		)
 	}

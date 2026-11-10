@@ -654,6 +654,10 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 		if b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied() || !a.trash.Available(inTrash) {
 			continue
 		}
+		// one off (SetEnabled) is not offered
+		if ok, err := a.IsEnabled("", ctx); err != nil || !ok {
+			continue
+		}
 
 		var (
 			onclick = web.Plaid().EventFunc(actions.OpenActionDialog).

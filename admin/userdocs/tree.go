@@ -99,6 +99,10 @@ func (b *Builder) modelTree(mb *presets.ModelBuilder, id string, ctx *web.EventC
 		actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
 			Title: a.RequestTitle(mb, ctx.Context())})
 	}
+	for _, a := range listingActions(mb) {
+		actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
+			Title: a.RequestTitle(mb, ctx.Context())})
+	}
 	for _, a := range mb.Listing().GetBulkActions() {
 		actions.Children = append(actions.Children, &Node{ID: id + "/actions/" + a.Name(),
 			Title: a.RequestTitle(ctx.Context())})
@@ -166,6 +170,23 @@ func detailingActions(mb *presets.ModelBuilder) []*presets.ActionBuilder {
 		return nil
 	}
 	return mb.Detailing().GetActions()
+}
+
+// listingActions are the actions of the listing of mb: of the listing itself
+// (its top, Listing().Action) and of each of its rows (ItemAction) — the
+// ones not of the detailing too.
+func listingActions(mb *presets.ModelBuilder) (r []*presets.ActionBuilder) {
+	seen := map[string]bool{}
+	for _, a := range detailingActions(mb) {
+		seen[a.Name()] = true
+	}
+	for _, a := range append(append([]*presets.ActionBuilder{}, mb.Listing().GetActions()...), mb.Listing().GetItemActions()...) {
+		if !seen[a.Name()] {
+			seen[a.Name()] = true
+			r = append(r, a)
+		}
+	}
+	return
 }
 
 // childKey is the name of a model nested in another, in the path of its

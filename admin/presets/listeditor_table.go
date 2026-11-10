@@ -280,7 +280,7 @@ func (b *ListEditorTableBuilder) Container(ctx *ListEditorContainerContext, item
 						Class("text-center"))
 				walk(node.Tree.Nodes, level+1)
 			} else {
-				fctx := node.Field.NewContext(fc.ModelInfo, fc.EventContext, nil, nil)
+				fctx := node.Field.NewContext(listEditorItemInfo(fc, -1), fc.EventContext, nil, nil)
 				rows[level] = append(rows[level],
 					h.Tag("th").Attr("rowspan", fmt.Sprint(depth-level)).Children(
 						h.Div(
@@ -420,7 +420,7 @@ func (b *ListEditorTableBuilder) renderCell(ctx *ListEditorItemContext, f *Field
 	parent.Path = ctx.Path
 	parent.Obj = ctx.Item
 
-	fctx := f.NewContext(fc.ModelInfo, fc.EventContext, &parent, ctx.Item)
+	fctx := f.NewContext(listEditorItemInfo(fc, ctx.ItemKey), fc.EventContext, &parent, ctx.Item)
 	fctx.Mode = fc.Mode
 	fctx.MustInput = true
 	fctx.Label = ""

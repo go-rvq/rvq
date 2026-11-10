@@ -141,12 +141,12 @@ func (b *Builder) SecureKeyBasicAuthMiddleware(next http.Handler) http.Handler {
 			err = ErrSecureKeyTransport
 		}
 		if err != nil {
-			log.Printf("secure key refused: %s %s from %s: %v", r.Method, r.URL.Path, r.RemoteAddr, err)
+			log.Printf("secure key refused: %s %s from %s: %v", r.Method, r.URL.Path, ClientAddr(r), err)
 			w.Header().Set("WWW-Authenticate", `Basic realm="secure key"`)
 			http.Error(w, "ERROR: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
-		log.Printf("secure key: %s %s from %s, as %s", r.Method, r.URL.Path, r.RemoteAddr, b.initialUserAccount)
+		log.Printf("secure key: %s %s from %s, as %s", r.Method, r.URL.Path, ClientAddr(r), b.initialUserAccount)
 		ctx := context.WithValue(context.WithValue(WithAuth(r.Context(), AuthSecureKey), keyAuthenticatedKey{}, true), UserKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -180,6 +180,36 @@ func secureTransport(r *http.Request) bool {
 		return ip.IsLoopback()
 	}
 	return strings.EqualFold(proto, "https")
+}
+
+// IsTrustedProxy reports whether ip is a reverse proxy whose forwarded
+// headers are believed: the loopback, or one of TrustedProxies.
+func IsTrustedProxy(ip net.IP) bool { return ip != nil && (ip.IsLoopback() || trustedProxy(ip)) }
+
+// ClientAddr is the address of the client of r: behind trusted proxies
+// (IsTrustedProxy), the last address of X-Forwarded-For not of one of them
+// — the one the first proxy of ours saw —; else the connection's (r.RemoteAddr,
+// its port too). An address a client wrote into the header itself is never
+// taken over the one a trusted proxy appended.
+func ClientAddr(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if !IsTrustedProxy(net.ParseIP(host)) {
+		return r.RemoteAddr
+	}
+	fwd := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	for i := len(fwd) - 1; i >= 0; i-- {
+		a := strings.TrimSpace(fwd[i])
+		if a == "" {
+			continue
+		}
+		if ip := net.ParseIP(a); ip == nil || !IsTrustedProxy(ip) {
+			return a
+		}
+	}
+	return r.RemoteAddr
 }
 
 // trustedProxy reports whether ip is of TrustedProxies.

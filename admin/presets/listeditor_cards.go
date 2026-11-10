@@ -73,7 +73,7 @@ func (b *ListEditorCardsBuilder) renderField(ctx *ListEditorItemContext, f *Fiel
 	parent.Path = ctx.Path
 	parent.Obj = ctx.Item
 
-	fctx := f.NewContext(fc.ModelInfo, fc.EventContext, &parent, ctx.Item)
+	fctx := f.NewContext(listEditorItemInfo(fc, ctx.ItemKey), fc.EventContext, &parent, ctx.Item)
 	fctx.Mode = fc.Mode
 	fctx.Density = DensityCompact
 	if vErr, ok := fc.EventContext.Flash.(*web.ValidationErrors); ok && vErr != nil {

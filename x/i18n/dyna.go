@@ -113,19 +113,45 @@ func (d *DynaBuilder) putMissingVal(module ModuleKey, key, val string) {
 	mm.missingVals = append(mm.missingVals, kv{key, val, true})
 }
 
+// HaveMissingKeys says a translation is missing: a key no messages have, or
+// one empty — not a key allowed to be (a field's hint, its description).
 func (d *DynaBuilder) HaveMissingKeys() bool {
-	return len(d.missing) > 0
+	for _, mm := range d.missing {
+		if mm.reported() {
+			return true
+		}
+	}
+	return false
+}
+
+// reported says the module has a translation missing that is not allowed to
+// be.
+func (mm *moduleMissing) reported() bool {
+	if len(mm.missingVals) > 0 {
+		return true
+	}
+	for _, kv := range mm.missingKeys {
+		if !kv.allowEmpty {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *DynaBuilder) PrettyMissingKeys() string {
 	buf := new(bytes.Buffer)
 	for module, missing := range d.missing {
-
+		// only what may not be empty (HaveMissingKeys)
+		if !missing.reported() {
+			continue
+		}
 		buf.WriteString(fmt.Sprintf("\nFor module %s, ", module))
 		buf.WriteString("Missing the following translations\nCopy these to your Messages struct definition\n============================\n\n")
 
 		for _, kv := range missing.missingKeys {
-			_, _ = fmt.Fprintf(buf, "%s string\n", kv.key)
+			if !kv.allowEmpty {
+				_, _ = fmt.Fprintf(buf, "%s string\n", kv.key)
+			}
 		}
 
 		buf.WriteString("\n")

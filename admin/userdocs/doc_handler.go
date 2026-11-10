@@ -211,6 +211,7 @@ func (b *Builder) docBody(ctx *web.EventContext, q docQuery, html string, locale
 	pre := " v-pre"
 	if q.admin {
 		pre = ""
+		html = VueSafe(html)
 	}
 	s.WriteString(`<div class="user-doc" lang="` + esc(q.locale) + `"` + pre + `>` + html + `</div></div>`)
 	return s.String()
