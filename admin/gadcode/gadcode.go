@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gad-lang/gad/gadx/node"
 	gadxparser "github.com/gad-lang/gad/gadx/parser"
@@ -145,10 +146,17 @@ func (c Code) parse() (*parser.File, *source.File, error) {
 // Setup serves the operations under the admin's prefix (Path) — behind its
 // login, as the rest of it. The editor's words are vuetifyx's (vx).
 func Setup(p *presets.Builder) {
+	// once per admin: a package mounted into an admin that serves it already
+	if _, ja := setup.LoadOrStore(p, true); ja {
+		return
+	}
 	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
 		mux.HandleFunc("POST "+prefix+Path+"{op}", serve)
 	})
 }
+
+// setup are the admins Setup served.
+var setup sync.Map
 
 // API is where the editor asks: the admin's prefix and Path.
 func API(prefix string) string { return prefix + Path }

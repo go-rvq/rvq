@@ -10,6 +10,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
+	"sync"
 )
 
 // revisionsByTable maps each versioned model's revisions table to its history,
@@ -36,6 +37,25 @@ func NewBuilder(db *gorm.DB) *Builder {
 // Configure mounts the history plugin on b (starts the access recorder) and
 // returns it. Activate per model with New(db).Model(mb).Build().
 func Configure(b *presets.Builder, db *gorm.DB) *Builder {
+	// once per admin: a package mounted into an admin that has it already
+	// (finance into hermon's) gets the one it has
+	configured.Lock()
+	defer configured.Unlock()
+	if hb := configured.by[b]; hb != nil {
+		return hb
+	}
+	hb := configure(b, db)
+	configured.by[b] = hb
+	return hb
+}
+
+// configured are the history builders of the admins Configure set up.
+var configured = struct {
+	sync.Mutex
+	by map[*presets.Builder]*Builder
+}{by: map[*presets.Builder]*Builder{}}
+
+func configure(b *presets.Builder, db *gorm.DB) *Builder {
 	ConfigureMessages(b.I18n())
 	// the map of a revision's origin (ActionOrigin)
 	geomap.Install(b)
