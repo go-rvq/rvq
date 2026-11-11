@@ -142,7 +142,13 @@
     height: 36px !important;
     padding: 0 12px;
 }
-.rvq-page-header .v-btn.v-btn--icon {
+/* an action of the bar shown by its icon (PageBarIconButton): the same size
+   wherever the bar is — the page's, or the head of a dialog (of a listing:
+   the new record; of a detail: the edit), where the button is not in
+   .rvq-page-header and was Vuetify's 48px disc around its icon — the size
+   of the save of the dialog of an edit */
+.rvq-page-header .v-btn.v-btn--icon,
+.v-btn.v-btn--icon.rvq-page-bar__btn {
     width: 36px !important;
     height: 36px !important;
 }
