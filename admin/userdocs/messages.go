@@ -101,6 +101,32 @@ type Messages struct {
 	PermMethodPut         string `i18n:"hint='Permission of a page asked by the HTTP method PUT: replacing.'"`
 	PermMethodPatch       string `i18n:"hint='Permission of a page asked by the HTTP method PATCH: changing.'"`
 	PermMethodDelete      string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
+	PermTreeName          string `i18n:"hint='Column of the tree of the permissions: what the permission is of (a model, a field, an action and so on).'"`
+	PermTreeKind          string `i18n:"hint='Column of the tree of the permissions: what the row is (a model, a field, an action and so on).'"`
+	PermTreeKinds         string `i18n:"hint='Filter of the tree of the permissions: the kinds of the rows shown.'"`
+	PermTreeDescription   string `i18n:"hint='Column of the tree of the permissions: what it is.'"`
+	PermTreePermission    string `i18n:"hint='Column of the tree of the permissions: the permission as a line of the stack writes it.'"`
+	PermTreeActive        string `i18n:"hint='Column of the tree of the permissions of a user: what of the row the stack of the user allows.'"`
+	PermTreeActiveAll     string `i18n:"hint='Tooltip of the column Active: everything of the row is allowed.'"`
+	PermTreeActiveSome    string `i18n:"hint='Tooltip of the column Active: some of the row is allowed.'"`
+	PermTreeActiveNone    string `i18n:"hint='Tooltip of the column Active: nothing of the row is allowed.'"`
+	PermTreeSearch        string `i18n:"hint='Search field of the tree of the permissions.'"`
+	PermTreeExpandAll     string `i18n:"hint='Button: open every row of the tree of the permissions.'"`
+	PermTreeCollapseAll   string `i18n:"hint='Button: close every row of the tree of the permissions.'"`
+	PermTreeByVerb        string `i18n:"hint='Tab of the tree of the permissions: a model by the verbs asked of it, each with what it asks.'"`
+	PermTreeByKind        string `i18n:"hint='Tab of the tree of the permissions: a model by what it holds, each with its verbs.'"`
+	PermTreeGroups        string `i18n:"hint='Switch of the tree of the permissions: the groups of the menu as branches, and the permissions by them too.'"`
+	PermTreeLoadError     string `i18n:"hint='Shown when the tree of the permissions could not be loaded.'"`
+	PermKindGroup         string `i18n:"hint='Kind of a row of the tree of the permissions: a group of the menu.'"`
+	PermKindModel         string `i18n:"hint='Kind of a row of the tree of the permissions: a model (its listing, its records).'"`
+	PermKindSingleton     string `i18n:"hint='Kind of a row of the tree of the permissions: a model of a single record.'"`
+	PermKindVerb          string `i18n:"hint='Kind of a row of the tree of the permissions: a permission asked (list, edit, the GET of a page and so on).'"`
+	PermKindAction        string `i18n:"hint='Kind of a row of the tree of the permissions: an action.'"`
+	PermKindField         string `i18n:"hint='Kind of a row of the tree of the permissions: a field.'"`
+	PermKindInline        string `i18n:"hint='Kind of a row of the tree of the permissions: a field holding a model edited in place.'"`
+	PermKindSection       string `i18n:"hint='Kind of a row of the tree of the permissions: a section of a detail.'"`
+	PermKindPage          string `i18n:"hint='Kind of a row of the tree of the permissions: a page.'"`
+	PermKindCheck         string `i18n:"hint='Kind of a row of the tree of the permissions: a permission of its own.'"`
 	HelpBar               string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
 	HelpFocusPage         string `i18n:"hint='Said by the help bar when the help shown is of the page.'"`
 	HelpFocusDrawer       string `i18n:"hint='Said by the help bar when the help shown is of the drawer open (a form, a detail).'"`
@@ -200,6 +226,32 @@ var Messages_en_US = &Messages{
 	PermMethodPut:         "Replace (PUT)",
 	PermMethodPatch:       "Change (PATCH)",
 	PermMethodDelete:      "Delete (DELETE)",
+	PermTreeName:          "Name",
+	PermTreeKind:          "Kind",
+	PermTreeKinds:         "Kinds",
+	PermTreeDescription:   "Description",
+	PermTreePermission:    "Permission",
+	PermTreeActive:        "Active",
+	PermTreeActiveAll:     "All active",
+	PermTreeActiveSome:    "Some active",
+	PermTreeActiveNone:    "None active",
+	PermTreeSearch:        "Search",
+	PermTreeExpandAll:     "Open all",
+	PermTreeCollapseAll:   "Close all",
+	PermTreeByVerb:        "By verb",
+	PermTreeByKind:        "By kind",
+	PermTreeGroups:        "Include the groups of the menu",
+	PermTreeLoadError:     "The tree of the permissions could not be loaded.",
+	PermKindGroup:         "Group of the menu",
+	PermKindModel:         "Model",
+	PermKindSingleton:     "Single record",
+	PermKindVerb:          "Permission",
+	PermKindAction:        "Action",
+	PermKindField:         "Field",
+	PermKindInline:        "Model edited in place",
+	PermKindSection:       "Section",
+	PermKindPage:          "Page",
+	PermKindCheck:         "Permission of its own",
 	HelpBar:               "Help",
 	HelpFocusPage:         "Page",
 	HelpFocusDrawer:       "Drawer",
@@ -299,6 +351,32 @@ var Messages_pt_BR = &Messages{
 	PermMethodPut:         "Substituir (PUT)",
 	PermMethodPatch:       "Alterar (PATCH)",
 	PermMethodDelete:      "Excluir (DELETE)",
+	PermTreeName:          "Nome",
+	PermTreeKind:          "Tipo",
+	PermTreeKinds:         "Tipos",
+	PermTreeDescription:   "Descrição",
+	PermTreePermission:    "Permissão",
+	PermTreeActive:        "Ativa",
+	PermTreeActiveAll:     "Todas ativas",
+	PermTreeActiveSome:    "Algumas ativas",
+	PermTreeActiveNone:    "Nenhuma ativa",
+	PermTreeSearch:        "Buscar",
+	PermTreeExpandAll:     "Abrir tudo",
+	PermTreeCollapseAll:   "Fechar tudo",
+	PermTreeByVerb:        "Por verbo",
+	PermTreeByKind:        "Por tipo",
+	PermTreeGroups:        "Incluir os grupos do menu",
+	PermTreeLoadError:     "Não foi possível carregar a árvore das permissões.",
+	PermKindGroup:         "Grupo do menu",
+	PermKindModel:         "Modelo",
+	PermKindSingleton:     "Registro único",
+	PermKindVerb:          "Permissão",
+	PermKindAction:        "Ação",
+	PermKindField:         "Campo",
+	PermKindInline:        "Modelo em linha",
+	PermKindSection:       "Seção",
+	PermKindPage:          "Página",
+	PermKindCheck:         "Permissão própria",
 	HelpBar:               "Ajuda",
 	HelpFocusPage:         "Página",
 	HelpFocusDrawer:       "Painel",

@@ -156,12 +156,9 @@ are in {%= admin.model("my_access_keys").link %}.
 
 ## The permissions of the admin
 
-Every part of the admin and what may be asked of it — open a node to see what
-is inside it. Inside a model — its records too — what it has is in groups:
-its permissions, actions, fields, sections, pages, nested models and
-permissions of its own, each with its resource. Each part of the
-documentation also has its own **Permissions** item.
-
-{%= admin.permissionsTree() %}
+Every permission of the admin, part by part and down to the leaves — each
+as a line of the stack writes it —, is in
+{%= admin.doc("guides/policies/01-permissions/01-tree").link %}. Each part
+of the documentation also has its own **Permissions** item.
 
 Ask whoever administers the roles for what your work needs.

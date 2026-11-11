@@ -233,6 +233,8 @@ func (b *Builder) Configure(mb, pkg *presets.ModelBuilder) {
 
 	// the help of an address, for the help bar (HelpBar)
 	mb.RegisterEventFunc(HelpEvent, b.helpEvent)
+	// the tree of the permissions of the admin (admin.permissionsTree)
+	mb.RegisterEventFunc(PermissionsTreeEvent, PermissionsTreeEventFunc(b.p, nil))
 
 	b.configurePackages(pkg)
 }

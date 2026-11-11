@@ -2,16 +2,12 @@ package userdocs
 
 import (
 	"context"
-	"encoding/json"
-	"html"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
-	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	"golang.org/x/text/language"
@@ -53,7 +49,7 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	meta := presets.NewModelBuilder(pb, &treeMeta{}, presets.ModelConfig().SetId("meta"))
 	posts.Editing("Title", "Meta").Field("Meta").AutoNested(meta, &meta.Editing("Note").FieldsBuilder)
 	d := posts.Detailing("Title")
-	d.Section("Main")
+	d.Section("Main").Editing("Title")
 	d.PagesRegistrator().AddHttpPage(presets.HttpPage("/report").Handler(nop).AutoPerm())
 	posts.AddChild(presets.NewModelBuilder(pb, &treeComment{}, presets.ModelConfig().SetId("comments")))
 	pb.Model(&treeSetting{}, presets.ModelConfig().SetSingleton(true).SetId("settings"))
@@ -65,30 +61,23 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 	pb.MenuOrder(pb.MenuGroup("site").Add(presets.ModelItem("posts")), presets.ModelItem("settings"))
 	pb.Build(http.NewServeMux())
 
-	tree := func(lang string) (items []*permTreeItem) {
-		var out string
+	tree := func(lang string) (items []*PermTreeItem) {
 		ib.EnsureLanguage(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			out = (&renderer{b: &Builder{p: pb}, ctx: &web.EventContext{R: r}}).permissionsTree()
+			items = PermissionsTree(r.Context(), pb, PermTreeOptions{View: PermTreeByKind, Groups: true})
 		})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/admin/docs?lang="+lang, nil))
-		m := regexp.MustCompile(`:items='([^']*)'`).FindStringSubmatch(out)
-		if m == nil {
-			t.Fatalf("no tree:\n%s", out)
-		}
-		if err := json.Unmarshal([]byte(html.UnescapeString(m[1])), &items); err != nil {
-			t.Fatal(err)
-		}
+		SetSubtitles(items)
 		return
 	}
 
-	descs, subs := map[string]string{}, map[string]string{}
-	var walk func(items []*permTreeItem, msgs *Messages)
-	walk = func(items []*permTreeItem, msgs *Messages) {
+	descs, subs, titles := map[string]string{}, map[string]string{}, map[string]string{}
+	var walk func(items []*PermTreeItem, msgs *Messages)
+	walk = func(items []*PermTreeItem, msgs *Messages) {
 		for _, it := range items {
 			if it.Title == "" || it.Subtitle == "" {
 				t.Errorf("%s: no label or description: %+v", it.Value, it)
 			}
 			desc, _, _ := strings.Cut(it.Subtitle, " · ")
-			descs[it.Value], subs[it.Value] = desc, it.Subtitle
+			descs[it.Value], subs[it.Value], titles[it.Value] = desc, it.Subtitle, it.Title
 			walk(it.Children, msgs)
 		}
 	}
@@ -128,8 +117,17 @@ func TestPermissionsTreeLocalized(t *testing.T) {
 		}
 	}
 	// a page's permissions: one by HTTP method it registers, localized
-	if sub := subs["admin:site/:/tools:"]; !strings.Contains(sub, "Abrir (GET) (@get)") || !strings.Contains(sub, "Enviar (POST) (@post)") {
-		t.Errorf("the permissions of a page by its methods: %q", sub)
+	if titles["admin:site/:/tools:@get"] != "Abrir (GET)" || titles["admin:site/:/tools:@post"] != "Enviar (POST)" {
+		t.Errorf("the permissions of a page by its methods: %q, %q", titles["admin:site/:/tools:@get"], titles["admin:site/:/tools:@post"])
+	}
+	// a leaf is one permission: its resources by the groups and by the
+	// unique name, each with its verb
+	if sub := subs["admin:site/:posts:<*>:@edit"]; sub != "admin:site/:posts:<*>:@edit · admin:posts:<*>:@edit" {
+		t.Errorf("the leaf @edit: %q", sub)
+	}
+	// the section: its verbs, then the fields of the record it holds
+	if _, ok := titles["admin:site/:posts:<*>:$Main:(fields)"]; !ok {
+		t.Error("the fields of the section Main")
 	}
 	en := tree("en")
 	walk(en, Messages_en_US)

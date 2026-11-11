@@ -330,3 +330,42 @@ func TestStackDBLines(t *testing.T) {
 		t.Errorf("made %d times, want 2", builds)
 	}
 }
+
+// A stack allows a permission when an active line of no prefix matches it
+// and no deny does; an exception takes from a line what it matches; the
+// unique name decides first; a line of conditions does not count.
+func TestStackAllows(t *testing.T) {
+	s := (&Stack{}).Add("role: Editor",
+		"admin:content/:*",
+		"deny admin:content/:users:*",
+		"allow admin:content/:users:@list",
+		"deny admin:pages:@delete",
+	)
+	s.AddLine(&Line{Pattern: "admin:content/:files:*", Conditions: ladon.Conditions{"owner": &ladon.EqualsSubjectCondition{}}})
+	s.Resolve()
+	for _, c := range []struct {
+		resource, preferred string
+		want                bool
+	}{
+		{"admin:content/:posts:@list", "", true},
+		{"admin:content/:users:@edit", "", false},
+		{"admin:content/:users:@list", "", true},
+		{"admin:other:@list", "", false},
+		// the unique name denies, though the resource allows
+		{"admin:content/:pages:@delete", "admin:pages:@delete", false},
+		// nothing of the unique name: the resource decides
+		{"admin:content/:pages:@list", "admin:pages:@list", true},
+		// the line of conditions does not count; the wider one does
+		{"admin:content/:files:@list", "", true},
+		{"admin:x/:files:@list", "", false},
+	} {
+		if got := s.Allows(c.resource, c.preferred, ""); got != c.want {
+			t.Errorf("%s (%s): %v, want %v", c.resource, c.preferred, got, c.want)
+		}
+	}
+	// a line of the code that names its actions takes only them
+	k := (&Stack{}).AddLine(&Line{Pattern: "admin:posts:*", Actions: []string{"@list"}}).Resolve()
+	if !k.Allows("admin:posts:@list", "", "@list") || k.Allows("admin:posts:@edit", "", "@edit") {
+		t.Error("the actions of a line of the code")
+	}
+}

@@ -157,12 +157,9 @@ o que o usuário pode. Os exemplos estão em
 
 ## As permissões do admin
 
-Cada parte do admin e o que pode ser pedido dela — abra um nó para ver o que
-está dentro dele. Dentro de um modelo — e dos registros dele — o que ele
-tem fica em grupos: permissões, ações, campos, seções, páginas, modelos
-filhos e permissões próprias, cada um com o seu recurso. Cada parte da
-documentação tem também o seu item **Permissões**.
-
-{%= admin.permissionsTree() %}
+Todas as permissões do admin, parte por parte e até as folhas — cada uma
+como uma linha da pilha a escreve —, estão em
+{%= admin.doc("guides/policies/01-permissions/01-tree").link %}. Cada parte
+da documentação tem também o seu item **Permissões**.
 
 Peça a quem administra os papéis o que o seu trabalho precisa.

@@ -205,11 +205,13 @@ func (b *Builder) BuildPermissions() (rootMenu *PermMenu) {
 				}
 				sub := &PermMenu{Name: strings.Join(parts, ":") + ":", Kind: PermNodeGroup, Title: v.TTitle, Description: v.TDescription}
 				group(v, sub)
-				into.AddChildren(sub)
-			case *ModelBuilder:
-				if !v.IsInMenu() {
-					continue
+				// a group with nothing of its own is none
+				if len(sub.Children) > 0 || len(sub.Resources) > 0 {
+					into.AddChildren(sub)
 				}
+			case *ModelBuilder:
+				// in its group even when out of the menu (InMenu(false)):
+				// its resources are by the group still
 				mp := b.modelPerm(v)
 				seen[mp.Name] = true
 				into.Resources = append(into.Resources, mp)
@@ -395,7 +397,9 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 				return HumanizeString(section.name)
 			},
 			Description: func(ctx context.Context) string { return section.TDescription(mb, ctx) },
-			Actions:     []*PermNodeAction{{Name: PermUpdate}, {Name: PermGet}}})
+			// its fields: the record's ("<*>:#Title:@get"), the ones it holds
+			Actions: []*PermNodeAction{{Name: PermUpdate, Fields: permFields(&section.editingFB)},
+				{Name: PermGet, Fields: permFields(&section.editingFB)}}})
 	}
 	if mb.detailing.pagesRegistrator != nil {
 		for _, p := range mb.detailing.pagesRegistrator.HttpPages() {

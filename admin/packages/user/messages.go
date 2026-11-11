@@ -55,6 +55,8 @@ type Messages struct {
 	Permissions        string `i18n:"hint='Page of the detail of a user: the stack of their permissions.'"`
 	PermissionsAll     string `i18n:"hint='Tab of the permissions page: every line of the stack.'"`
 	PermissionsActive  string `i18n:"hint='Tab of the permissions page: the lines that count.'"`
+	PermissionsTreeTab string `i18n:"hint='Tab of the permissions page: every permission there is, as a tree (models, pages, fields, actions…).'"`
+	PermissionsTreeTip string `i18n:"hint='Above the tree of the permissions: what it is.'"`
 	PermissionsIndex   string `i18n:"hint='Column: the place of a line in the stack.'"`
 	PermissionsLine    string `i18n:"hint='Column: the permission, as written.'"`
 	PermissionsOrigin  string `i18n:"hint='Column: where the line comes from (a role, the code).'"`
@@ -104,6 +106,8 @@ var (
 		Permissions:                       "Permissions",
 		PermissionsAll:                    "All",
 		PermissionsActive:                 "Active",
+		PermissionsTreeTab:                "Tree",
+		PermissionsTreeTip:                "Every permission the admin has, by what it is of: the models (their permissions, actions, fields, sections, pages and models inside), the pages and the groups of the menu. A permission is what a line of the stack writes.",
 		PermissionsIndex:                  "Index",
 		PermissionsLine:                   "Permission",
 		PermissionsOrigin:                 "Origin",
@@ -151,6 +155,8 @@ var (
 		Permissions:                       "Permissões",
 		PermissionsAll:                    "Tudo",
 		PermissionsActive:                 "Ativas",
+		PermissionsTreeTab:                "Árvore",
+		PermissionsTreeTip:                "Todas as permissões do admin, pelo que são: os modelos (suas permissões, ações, campos, seções, páginas e modelos dentro deles), as páginas e os grupos do menu. Uma permissão é o que uma linha da pilha escreve.",
 		PermissionsIndex:                  "Índice",
 		PermissionsLine:                   "Permissão",
 		PermissionsOrigin:                 "Origem",

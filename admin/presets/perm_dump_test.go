@@ -28,6 +28,11 @@ type dumpSetting struct {
 	Name string
 }
 
+type dumpDraft struct {
+	ID   uint
+	Text string
+}
+
 type dumpHidden struct {
 	ID   uint
 	Code string
@@ -51,7 +56,7 @@ func dumpApp(t *testing.T) *Builder {
 	posts.Editing("Title", "Body")
 	d := posts.Detailing("Title", "Body")
 	d.Action("Publish")
-	d.Section("Main")
+	d.Section("Main").Editing("Body")
 	d.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().Methods("GET", "POST"))
 	comments := NewModelBuilder(b, &dumpComment{}, ModelConfig().SetId("comments"))
 	posts.AddChild(comments)
@@ -60,7 +65,10 @@ func dumpApp(t *testing.T) *Builder {
 	b.Model(&dumpHidden{}, ModelWithID("hidden"), ModelNotInMenu())
 	b.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().MenuGroup("site").Methods("GET", "DELETE"))
 
-	b.MenuOrder(b.MenuGroup("site").Add(b.MenuGroup("content").Add(ModelItem("posts"))), ModelItem("settings"))
+	// a model of a group taken out of the menu; a group with nothing in it
+	b.Model(&dumpDraft{}, ModelWithID("drafts")).InMenu(false)
+	b.MenuOrder(b.MenuGroup("site").Add(b.MenuGroup("content").Add(ModelItem("posts"), ModelItem("drafts"))), ModelItem("settings"),
+		b.MenuGroup("empty"))
 	b.Build(http.NewServeMux())
 	return b
 }
@@ -119,6 +127,11 @@ func TestPermissionsDump(t *testing.T) {
 	if node(site, "admin:site/:content/:") == nil {
 		t.Error("the group content is not inside site")
 	}
+	// a model out of the menu stays in its group; an empty group is none
+	want("admin:site/:content/:drafts:", "admin:drafts:", PermList)
+	if node(tree, "admin:empty/:") != nil {
+		t.Error("the empty group is in the dump")
+	}
 	// the listing, the record
 	want("admin:site/:content/:posts:", "admin:posts:", PermList, PermCreate, "!archive", "!import", "!reindex_posts")
 	record := want("admin:site/:content/:posts:<*>:", "admin:posts:<*>:",
@@ -130,7 +143,13 @@ func TestPermissionsDump(t *testing.T) {
 	want("admin:site/:content/:posts:<*>:#Title:", "admin:posts:<*>:#Title:", PermGet, PermUpdate)
 	// a new record's fields and the listing's columns: of the model
 	want("admin:site/:content/:posts:#Title:", "admin:posts:#Title:", PermCreate, PermList)
-	want("admin:site/:content/:posts:<*>:$Main:", "admin:posts:<*>:$Main:", PermGet, PermUpdate)
+	main := want("admin:site/:content/:posts:<*>:$Main:", "admin:posts:<*>:$Main:", PermGet, PermUpdate)
+	// the section's fields: the record's it holds
+	for _, a := range main.Actions {
+		if !slices.Equal(a.Fields, []string{"Body"}) {
+			t.Errorf("the fields of the section by %s: %v", a.Name, a.Fields)
+		}
+	}
 	// the pages: a permission a HTTP method; every method when it names none
 	want("admin:site/:content/:posts:/export:", "admin:posts:/export:", "@get", "@post", "@put", "@patch", "@delete")
 	want("admin:site/:content/:posts:<*>:/report:", "admin:posts:<*>:/report:", "@get", "@post")

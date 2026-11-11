@@ -172,6 +172,17 @@ const props = defineProps({
     type: Array<string>,
     default: () => ['title']
   },
+  // filterKey, filterValues: the rows whose filterKey is one of
+  // filterValues, with their ancestors, opened — as a search, and with it;
+  // none (or no key), every row
+  filterKey: {
+    type: String,
+    default: ''
+  },
+  filterValues: {
+    type: Array<any>,
+    default: null
+  },
   // openAll: every row opened (true) or closed (false) as it changes; null,
   // each as it is
   openAll: {
@@ -321,10 +332,15 @@ const matches = (item: any, q: string): boolean =>
   )
 
 const updateRows = () => {
-  // a search shows the rows that hold it and their ancestors, opened
+  // a search shows the rows that hold it and their ancestors, opened; a
+  // filter, the rows of its values (and the search) and their ancestors
   const q = (props.search || '').trim().toLowerCase(),
+    fv = props.filterKey && props.filterValues?.length ? (props.filterValues as any[]) : null,
+    active = !!q || !!fv,
+    hit = (item: any): boolean =>
+      (!q || matches(item, q)) && (!fv || fv.includes(item?.[props.filterKey])),
     shown = (item: any): boolean =>
-      !q || matches(item, q) || getControl(item).children.some((child: any) => shown(child))
+      !active || hit(item) || getControl(item).children.some((child: any) => shown(child))
   const items: any[] = [],
     doItem = (parent: any, item: any, path: any[], lasts: boolean[]) => {
       const c = getControl(item)
@@ -333,7 +349,7 @@ const updateRows = () => {
       c.parent = parent
 
       c.shownChildren = 0
-      if (c.expanded || q) {
+      if (c.expanded || active) {
         const children = c.children.filter((child: any) => shown(child))
         c.shownChildren = children.length
         children.forEach((child: any, i: any) => {
@@ -525,6 +541,12 @@ onMounted(() => {
 watch(
   () => props.search,
   () => updateRows()
+)
+
+watch(
+  () => [props.filterKey, props.filterValues],
+  () => updateRows(),
+  { deep: true }
 )
 
 // every row opened or closed (openAll), as it changes

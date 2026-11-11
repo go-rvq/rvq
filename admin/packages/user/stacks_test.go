@@ -139,11 +139,11 @@ func TestPermissionsBody(t *testing.T) {
 	b := &Builder{lb: login.New(i18n.New())}
 	s := (&perm.Stack{}).Add("role: Editor", "admin:users:{list,new}", "deny admin:users:new", "allow admin:secret:*",
 		"reset admin:pages:*").Resolve()
-	body := h.MustString(b.permissionsBody(Messages_pt_BR, s, &stackUser{ID: uuid.New()}), context.Background())
+	body := h.MustString(b.permissionsBody(context.Background(), Messages_pt_BR, s, &stackUser{ID: uuid.New()}), context.Background())
 	for _, want := range []string{
 		"Tudo", "Ativas", "Índice", "Origem", "Situação",
 		"substituída pela #3", "remoção", "role: Editor",
-		"admin:secret:*", "Em árvore", "users:{",
+		"admin:secret:*", "Em árvore", "users:{", "Árvore",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("no %q", want)
@@ -154,7 +154,7 @@ func TestPermissionsBody(t *testing.T) {
 	}
 	// an allow under a wider deny: the deny but what it matches
 	s = (&perm.Stack{}).Add("role: Editor", "admin:*", "deny admin:users:*", "allow admin:users:@list").Resolve()
-	body = h.MustString(b.permissionsBody(Messages_pt_BR, s, &stackUser{ID: uuid.New()}), context.Background())
+	body = h.MustString(b.permissionsBody(context.Background(), Messages_pt_BR, s, &stackUser{ID: uuid.New()}), context.Background())
 	for _, want := range []string{"ativa, menos o que #3 casa", "menos admin:users:@list"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("no %q", want)

@@ -2,12 +2,10 @@ package userdocs
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"html"
 	"net/http"
 	"strings"
 
+	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
 )
 
@@ -255,243 +253,21 @@ func findGroup(g *presets.MenuGroupBuilder, name string) *presets.MenuGroupBuild
 	return nil
 }
 
-// permTreeItem is a node of the tree of the permissions as the VTreeview
-// shows it: its title, its resources and what is asked of them.
-type permTreeItem struct {
-	Title    string          `json:"title"`
-	Subtitle string          `json:"subtitle,omitempty"`
-	Value    string          `json:"value"`
-	Children []*permTreeItem `json:"children,omitempty"`
-}
-
-// permissionsTree is the tree of the permissions of the admin
-// (presets.Builder.Permissions) as a VTreeview: each part by its title, its
-// resource by the groups and by the unique name, and the permissions and
-// actions asked of it — made from the menu as it is.
+// permissionsTree is the tree of the permissions of the admin as a tree
+// table (PermissionsTreeView, its tree by the event of the documentation),
+// a block of HTML of the markdown: in a <div> first — a block the markdown
+// keeps as it is, attributes as @click too, up to a blank line —, no blank
+// line in it.
 func (r *renderer) permissionsTree() string {
 	ctx := r.ctx.Context()
-	msgs := GetMessages(ctx)
-	title := func(n *presets.PermNode) string {
-		if n == nil {
-			return ""
+	view := PermissionsTreeView(ctx, PermTreeViewOptions{URL: r.b.mb.Info().ListingHref(), Event: PermissionsTreeEvent})
+	var lines []string
+	for _, l := range strings.Split(h.MustString(view, ctx), "\n") {
+		if strings.TrimSpace(l) != "" {
+			lines = append(lines, l)
 		}
-		if n.Title != nil {
-			if t := n.Title(ctx); t != "" {
-				return t
-			}
-		}
-		parts := strings.Split(strings.TrimSuffix(n.Name, ":"), ":")
-		return fmt.Sprintf(msgs.PermUntitled, presets.HumanizeString(strings.TrimLeft(parts[len(parts)-1], "#$/<")))
 	}
-	// what the node is, in the language of the request
-	describe := func(n *presets.PermNode, label string) string {
-		// its own, when it has one
-		if n.Description != nil {
-			if d := n.Description(ctx); d != "" {
-				return d
-			}
-		}
-		parent := title(n.Parent)
-		switch n.Kind {
-		case presets.PermNodeGroup:
-			return fmt.Sprintf(msgs.PermDescGroup, label)
-		case presets.PermNodeModel:
-			if n.Parent != nil && n.Parent.Kind == presets.PermNodeRecord {
-				return fmt.Sprintf(msgs.PermDescNested, label, parent)
-			}
-			return fmt.Sprintf(msgs.PermDescModel, label)
-		case presets.PermNodeSingleton:
-			return fmt.Sprintf(msgs.PermDescSingleton, label)
-		case presets.PermNodeRecord:
-			return fmt.Sprintf(msgs.PermDescRecord, label)
-		case presets.PermNodeField:
-			return fmt.Sprintf(msgs.PermDescField, label, parent)
-		case presets.PermNodeInline:
-			return fmt.Sprintf(msgs.PermDescInline, label, parent)
-		case presets.PermNodeSection:
-			return fmt.Sprintf(msgs.PermDescSection, label, parent)
-		case presets.PermNodePage:
-			if n.Parent != nil && n.Parent.Kind != presets.PermNodeGroup && n.Parent.Kind != "" {
-				return fmt.Sprintf(msgs.PermDescPageOf, label, parent)
-			}
-			return fmt.Sprintf(msgs.PermDescPage, label)
-		}
-		return fmt.Sprintf(msgs.PermDescCheck, label)
-	}
-	// resources is the subtitle part of the resources of n: by the groups,
-	// by the unique name
-	resources := func(n *presets.PermNode, suffix string) []string {
-		r := []string{n.Name + suffix}
-		if n.Unique != "" && n.Unique != n.Name {
-			r = append(r, n.Unique+suffix)
-		}
-		return r
-	}
-	var items func(nodes []*presets.PermNode) []*permTreeItem
-	var item func(n *presets.PermNode) *permTreeItem
-	// fieldItems are the fields of a model and of its record as one item a
-	// field — its resources each with what is asked of it: of the model, a
-	// new record's and the listing's (@create, @list); of the record, the
-	// rest —, the fields nested in it merged the same way
-	var fieldItems func(nodes []*presets.PermNode) []*permTreeItem
-	fieldItems = func(nodes []*presets.PermNode) (out []*permTreeItem) {
-		var order []string
-		same := map[string][]*presets.PermNode{}
-		for _, n := range nodes {
-			parts := strings.Split(strings.TrimSuffix(n.Name, ":"), ":")
-			key := parts[len(parts)-1]
-			if same[key] == nil {
-				order = append(order, key)
-			}
-			same[key] = append(same[key], n)
-		}
-		for _, key := range order {
-			ns := same[key]
-			first := ns[0]
-			label := title(first)
-			sub := []string{describe(first, label)}
-			var children []*presets.PermNode
-			for _, n := range ns {
-				var verbs []string
-				for _, a := range n.Actions {
-					verbs = append(verbs, verbLabel(msgs, a, ctx)+" ("+a.Name+")")
-				}
-				res := strings.Join(resources(n, ""), " · ")
-				if len(verbs) > 0 {
-					res += " " + strings.Join(verbs, " ")
-				}
-				sub = append(sub, res)
-				children = append(children, n.Children...)
-			}
-			it := &permTreeItem{Title: label, Subtitle: strings.Join(sub, " · "), Value: first.Name}
-			if sub := fieldItems(children); first.Kind == presets.PermNodeInline && len(sub) > 0 {
-				// a model edited in place: its structure inside, grouped
-				it.Children = []*permTreeItem{{Title: fmt.Sprintf("%s (%d)", msgs.PermGroupFields, len(sub)),
-					Subtitle: fmt.Sprintf(msgs.PermGroupFieldsDesc, label), Value: first.Name + "(fields)", Children: sub}}
-			} else {
-				it.Children = sub
-			}
-			out = append(out, it)
-		}
-		return
-	}
-	// grouped is what is inside a model — its record's too —, in groups:
-	// its permissions, actions, fields, sections, pages, nested models and
-	// permissions of its own
-	grouped := func(n *presets.PermNode, label string) (out []*permTreeItem) {
-		type owned struct {
-			node *presets.PermNode
-			a    *presets.PermNodeAction
-		}
-		var verbs, actions []owned
-		var fields, inlines, sections, pages, models, checks []*presets.PermNode
-		var collect func(n *presets.PermNode)
-		collect = func(n *presets.PermNode) {
-			for _, a := range n.Actions {
-				if strings.HasPrefix(a.Name, "@") {
-					verbs = append(verbs, owned{n, a})
-				} else {
-					actions = append(actions, owned{n, a})
-				}
-			}
-			for _, c := range n.Children {
-				switch c.Kind {
-				case presets.PermNodeRecord:
-					collect(c) // the record is inside the model
-				case presets.PermNodeField:
-					fields = append(fields, c)
-				case presets.PermNodeInline:
-					inlines = append(inlines, c)
-				case presets.PermNodeSection:
-					sections = append(sections, c)
-				case presets.PermNodePage:
-					pages = append(pages, c)
-				case presets.PermNodeModel, presets.PermNodeSingleton:
-					models = append(models, c)
-				default:
-					checks = append(checks, c)
-				}
-			}
-		}
-		collect(n)
-		group := func(key, title, desc string, children []*permTreeItem) {
-			if len(children) == 0 {
-				return
-			}
-			out = append(out, &permTreeItem{Title: fmt.Sprintf("%s (%d)", title, len(children)),
-				Subtitle: fmt.Sprintf(desc, label), Value: n.Name + "(" + key + ")", Children: children})
-		}
-		var vi, ai []*permTreeItem
-		for _, o := range verbs {
-			vi = append(vi, &permTreeItem{Title: verbLabel(msgs, o.a, ctx),
-				Subtitle: strings.Join(resources(o.node, o.a.Name), " · "), Value: o.node.Name + o.a.Name})
-		}
-		for _, o := range actions {
-			t := verbLabel(msgs, o.a, ctx)
-			d := ""
-			if o.a.Description != nil {
-				d = o.a.Description(ctx)
-			}
-			if d == "" {
-				d = fmt.Sprintf(msgs.PermDescAction, t, label)
-			}
-			ai = append(ai, &permTreeItem{Title: t,
-				Subtitle: strings.Join(append([]string{d}, resources(o.node, o.a.Name)...), " · "), Value: o.node.Name + o.a.Name})
-		}
-		group("verbs", msgs.PermGroupVerbs, msgs.PermGroupVerbsDesc, vi)
-		group("actions", msgs.PermGroupActions, msgs.PermGroupActionsDesc, ai)
-		group("fields", msgs.PermGroupFields, msgs.PermGroupFieldsDesc, fieldItems(fields))
-		group("inlines", msgs.PermGroupInlines, msgs.PermGroupInlinesDesc, fieldItems(inlines))
-		group("sections", msgs.PermGroupSections, msgs.PermGroupSectionsDesc, items(sections))
-		group("pages", msgs.PermGroupPages, msgs.PermGroupPagesDesc, items(pages))
-		group("models", msgs.PermGroupModels, msgs.PermGroupModelsDesc, items(models))
-		group("checks", msgs.PermGroupChecks, msgs.PermGroupChecksDesc, items(checks))
-		return
-	}
-	item = func(n *presets.PermNode) *permTreeItem {
-		label := title(n)
-		sub := append([]string{describe(n, label)}, resources(n, "")...)
-		it := &permTreeItem{Title: label, Value: n.Name}
-		switch n.Kind {
-		case presets.PermNodeModel, presets.PermNodeSingleton, presets.PermNodeInline:
-			// a model edited in place too: its structure inside the field
-			it.Children = grouped(n, label)
-		default:
-			// a field, a section, a page: what is asked of it, beside it
-			label := verbLabel
-			if n.Kind == presets.PermNodePage {
-				label = pageVerbLabel
-			}
-			var verbs []string
-			for _, a := range n.Actions {
-				verbs = append(verbs, label(msgs, a, ctx)+" ("+a.Name+")")
-			}
-			if len(verbs) > 0 {
-				sub = append(sub, strings.Join(verbs, " "))
-			}
-			it.Children = items(n.Children)
-		}
-		it.Subtitle = strings.Join(sub, " · ")
-		return it
-	}
-	items = func(nodes []*presets.PermNode) (out []*permTreeItem) {
-		for _, n := range nodes {
-			out = append(out, item(n))
-		}
-		return
-	}
-	// the scopes first, by their labels: the admin's — its resources begin
-	// with "admin:"
-	scope := presets.PermModule
-	tree := []*permTreeItem{{Title: msgs.PermScopeAdmin, Subtitle: msgs.PermScopeAdminDesc + " · " + scope + ":*", Value: scope + ":",
-		// made now, as the dump: from the menu as it is
-		Children: items(r.b.p.BuildPermissions().Tree().Children)}}
-	data, err := json.Marshal(tree)
-	if err != nil {
-		return ""
-	}
-	// a block of HTML of its own in the markdown: the page's Vue makes it
-	return "\n<v-treeview :items='" + html.EscapeString(string(data)) + "' item-props density=\"compact\" open-on-click class=\"user-docs-perm-tree\"></v-treeview>\n"
+	return "\n<div class=\"user-docs-perm-tree\">\n" + strings.Join(lines, "\n") + "\n</div>\n"
 }
 
 // verbLabel is what a permission or an action asked of a resource is, in the

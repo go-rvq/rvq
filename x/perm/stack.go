@@ -214,7 +214,8 @@ type Line struct {
 	// Except are the patterns of ExceptBy: what it no longer matches.
 	Except []string
 
-	g glob.Glob
+	g  glob.Glob
+	eg []glob.Glob
 }
 
 // Text is the line as written: its prefix, its pattern and, of a policy of
@@ -365,6 +366,62 @@ func (s *Stack) Active() []*Line {
 		}
 	}
 	return out
+}
+
+// match says whether the line, active, counts for the resource asked with
+// action: its pattern matches it, its actions take the action, none of its
+// exceptions matches it. A line of conditions does not count: what the
+// request will be is not known.
+func (l *Line) match(resource, action string) bool {
+	if len(l.Conditions) > 0 || !l.glob().Match(resource) {
+		return false
+	}
+	if !anyAction(l.Actions) && !containsString(l.Actions, action) {
+		return false
+	}
+	if l.eg == nil && len(l.Except) > 0 {
+		l.eg = NewExceptCondition(l.Except...).globs
+	}
+	for _, g := range l.eg {
+		if g.Match(resource) {
+			return false
+		}
+	}
+	return true
+}
+
+// allows is the decision of the active lines for the resource asked with
+// action: matched, some line counts for it; allowed, a line of no prefix
+// counts and no deny does (denied, a deny counts).
+func (s *Stack) allows(active []*Line, resource, action string) (allowed, denied bool) {
+	for _, l := range active {
+		if !l.match(resource, action) {
+			continue
+		}
+		if l.Denies() {
+			return false, true
+		}
+		allowed = true
+	}
+	return
+}
+
+// Allows says whether the stack, resolved, allows the permission asked —
+// the resource with its verb at the end, as a Verifier asks it
+// ("admin:content/:posts:@list") —, with action (the verb; the lines of the
+// code may name theirs), and by the unique name preferred ("" none) first,
+// as the Verifier decides: there a deny denies and an allow allows; when no
+// line counts for it, the resource decides. A line of conditions does not
+// count.
+func (s *Stack) Allows(resource, preferred, action string) bool {
+	active := s.Active()
+	if preferred != "" {
+		if allowed, denied := s.allows(active, preferred, action); allowed || denied {
+			return allowed
+		}
+	}
+	allowed, _ := s.allows(active, resource, action)
+	return allowed
 }
 
 // CodeLines are the lines of the policies of the code — those not loaded from

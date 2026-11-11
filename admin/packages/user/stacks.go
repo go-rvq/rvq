@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/role"
+	"github.com/go-rvq/rvq/admin/userdocs"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -132,8 +133,10 @@ func (s stackSource) StackOf(r *http.Request) (string, string, func() (*perm.Sta
 
 // installPermissionsPage puts the page of the permissions of a user in its
 // detail: its stack — Tudo, every line in its place, where it comes from, its
-// state (active, replaced by which, a removal) —, and the active lines —
-// Ativas, a list, or a tree.
+// state (active, replaced by which, a removal) —, the active lines —
+// Ativas, a list, or a tree —, and every permission there is — Árvore, the
+// tree of the admin's permissions (userdocs.PermissionsTreeView), each row
+// with what of it the stack allows.
 func (b *Builder) installPermissionsPage() {
 	pb := b.mb.Builder().GetPermission()
 	page := b.mb.Detailing().PagesRegistrator().New(
@@ -153,14 +156,43 @@ func (b *Builder) installPermissionsPage() {
 			u.SetRoles(roles)
 			m := GetMessages(ctx.Context())
 			r.PageTitle = m.Permissions
-			r.Body = b.permissionsBody(m, b.Stack(pb, u), u)
+			r.Body = b.permissionsBody(ctx.Context(), m, b.Stack(pb, u), u)
 			return
 		})
 	page.Build()
+
+	// the tree of the permissions of a user (Árvore): of the admin, each row
+	// with what of it the user's stack allows — to whom may see the page
+	b.mb.RegisterEventFunc(permissionsTreeEvent, userdocs.PermissionsTreeEventFunc(b.mb.Builder(),
+		func(ctx *web.EventContext) (func(userdocs.PermCheck) bool, error) {
+			id, err := uuid.Parse(ctx.R.FormValue("id"))
+			if err != nil {
+				return nil, err
+			}
+			u, err := b.Find(b.db, id)
+			if err != nil {
+				return nil, err
+			}
+			if err := b.mb.Permissioner().ReqObjector(ctx.R, u).On("/permissions").
+				Do(presets.PermFromHttpMethod(http.MethodGet)).IsAllowed(); err != nil {
+				return nil, err
+			}
+			roles, err := OrderedRoles(b.db, u.GetID())
+			if err != nil {
+				return nil, err
+			}
+			u.SetRoles(roles)
+			s := b.Stack(pb, u)
+			return func(c userdocs.PermCheck) bool { return s.Allows(c.Resource, c.Preferred, c.Action) }, nil
+		}))
 }
 
+// permissionsTreeEvent is the event of the users that answers the tree of
+// the permissions of one (its id), with what its stack allows.
+const permissionsTreeEvent = "user_PermissionsTree"
+
 // permissionsBody is the stack s of the user u: its tabs.
-func (b *Builder) permissionsBody(m *Messages, s *perm.Stack, u User) h.HTMLComponent {
+func (b *Builder) permissionsBody(ctx context.Context, m *Messages, s *perm.Stack, u User) h.HTMLComponent {
 	var note h.HTMLComponent
 	if u.GetAccountName() == b.lb.GetInitialUserAccount() {
 		note = v.VAlert(h.Text(m.PermissionsFixed)).Type("info").Density(v.DensityCompact).Class("mb-4")
@@ -232,16 +264,28 @@ func (b *Builder) permissionsBody(m *Messages, s *perm.Stack, u User) h.HTMLComp
 		)
 	}
 
+	// Árvore: every permission there is (the admin's dump), down to its
+	// leaves, each row with what of it the stack allows — the tree by the
+	// event of the page (permissionsTreeEvent), never in the page
+	var tree h.HTMLComponent = h.P(h.Text(m.PermissionsTreeTip)).Class("text-body-2 text-medium-emphasis mb-2")
+	if b.mb != nil {
+		tree = h.Div(tree, userdocs.PermissionsTreeView(ctx, userdocs.PermTreeViewOptions{
+			URL: b.mb.Info().ListingHref(), Event: permissionsTreeEvent,
+			Query: map[string]string{"id": u.GetID().String()}, Active: true}))
+	}
+
 	return h.Div(
 		note,
 		web.Scope(
 			v.VTabs(
 				v.VTab(h.Text(m.PermissionsAll)).Value("all"),
 				v.VTab(h.Text(m.PermissionsActive)).Value("active"),
+				v.VTab(h.Text(m.PermissionsTreeTab)).Value("tree"),
 			).Attr("v-model", "locals.tab").Color("primary").Class("mb-4"),
 			v.VTabsWindow(
 				v.VTabsWindowItem(all).Value("all"),
 				v.VTabsWindowItem(active).Value("active"),
+				v.VTabsWindowItem(tree).Value("tree"),
 			).Attr("v-model", "locals.tab"),
 		).Slot("{ locals }").LocalsInit(`{tab: "all", tree: false}`),
 	).Class("pa-4").Attr("data-user-permissions", true)
