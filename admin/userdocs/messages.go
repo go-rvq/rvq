@@ -103,6 +103,7 @@ type Messages struct {
 	PermMethodDelete      string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
 	PermTreeName          string `i18n:"hint='Column of the tree of the permissions: what the permission is of (a model, a field, an action and so on).'"`
 	PermTreeKind          string `i18n:"hint='Column of the tree of the permissions: what the row is (a model, a field, an action and so on).'"`
+	PermTreePath          string `i18n:"hint='Column of the tree of the permissions: where a part of the admin is, the groups of the menu and the models it is in, as breadcrumbs.'"`
 	PermTreeKinds         string `i18n:"hint='Filter of the tree of the permissions: the kinds of the rows shown.'"`
 	PermTreeDescription   string `i18n:"hint='Column of the tree of the permissions: what it is.'"`
 	PermTreePermission    string `i18n:"hint='Column of the tree of the permissions: the permission as a line of the stack writes it.'"`
@@ -228,6 +229,7 @@ var Messages_en_US = &Messages{
 	PermMethodDelete:      "Delete (DELETE)",
 	PermTreeName:          "Name",
 	PermTreeKind:          "Kind",
+	PermTreePath:          "Path",
 	PermTreeKinds:         "Kinds",
 	PermTreeDescription:   "Description",
 	PermTreePermission:    "Permission",
@@ -353,6 +355,7 @@ var Messages_pt_BR = &Messages{
 	PermMethodDelete:      "Excluir (DELETE)",
 	PermTreeName:          "Nome",
 	PermTreeKind:          "Tipo",
+	PermTreePath:          "Caminho",
 	PermTreeKinds:         "Tipos",
 	PermTreeDescription:   "Descrição",
 	PermTreePermission:    "Permissão",

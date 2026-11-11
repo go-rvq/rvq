@@ -58,6 +58,11 @@ type PermTreeItem struct {
 	// Kind is what it is (PermKindModel, PermKindField…); "" a branch of
 	// the tree only ("Fields (3)")
 	Kind string `json:"kind,omitempty"`
+	// Path is where a part of the admin (a group, a model, a page, a
+	// check) is: the groups of the menu and the models it is in, the
+	// outermost first, each [id, label] — breadcrumbs ("Site › SEO"), two of
+	// the same title told apart
+	Path []PermPathPart `json:"path,omitempty"`
 	// Active: of a user's stack (SetActive), whether it allows what the item
 	// asks and what is under it — PermActiveAll, PermActiveSome,
 	// PermActiveNone
@@ -186,9 +191,14 @@ func PermissionsTree(ctx context.Context, p *presets.Builder, opts PermTreeOptio
 		Resources: []string{scope + ":*"}, Value: scope + ":", Kind: PermKindScope}
 	root.Children = t.nodes(p.BuildPermissions().Tree().Children)
 	if !opts.Groups {
-		// the models and pages of every group together: by their titles
+		// the models and pages of every group together: by their titles,
+		// then where they are
 		sort.SliceStable(root.Children, func(i, j int) bool {
-			return strings.ToLower(root.Children[i].Title) < strings.ToLower(root.Children[j].Title)
+			a, b := root.Children[i], root.Children[j]
+			if ta, tb := strings.ToLower(a.Title), strings.ToLower(b.Title); ta != tb {
+				return ta < tb
+			}
+			return strings.ToLower(pathText(a.Path)) < strings.ToLower(pathText(b.Path))
 		})
 	}
 	return []*PermTreeItem{root}
@@ -274,11 +284,45 @@ func (t *permTree) check(n *presets.PermNode, verb string) PermCheck {
 	return c
 }
 
-// branch is the item of n: its title, description and resources, no verb.
+// branch is the item of n: its title, description and resources, no verb;
+// of a part of the admin, where it is (Path).
 func (t *permTree) branch(n *presets.PermNode) *PermTreeItem {
 	label := t.title(n)
-	return &PermTreeItem{Title: label, Description: t.describe(n, label), Resources: t.resources(n, ""), Value: n.Name,
+	it := &PermTreeItem{Title: label, Description: t.describe(n, label), Resources: t.resources(n, ""), Value: n.Name,
 		Kind: kindOf(n)}
+	switch it.Kind {
+	case PermKindGroup, PermKindModel, PermKindSingleton, PermKindPage, PermKindCheck:
+		it.Path = t.path(n)
+	}
+	return it
+}
+
+// PermPathPart is a part of PermTreeItem.Path: [its id — the resource of
+// the group or model, by the groups —, its label].
+type PermPathPart [2]string
+
+// PathSep separates the labels of a path shown.
+const PathSep = " › "
+
+// pathText is the labels of path, by PathSep.
+func pathText(path []PermPathPart) string {
+	labels := make([]string, len(path))
+	for i, p := range path {
+		labels[i] = p[1]
+	}
+	return strings.Join(labels, PathSep)
+}
+
+// path is where n is: the groups of the menu and the models above it, the
+// outermost first.
+func (t *permTree) path(n *presets.PermNode) (parts []PermPathPart) {
+	for p := n.Parent; p != nil; p = p.Parent {
+		switch p.Kind {
+		case presets.PermNodeGroup, presets.PermNodeModel, presets.PermNodeSingleton:
+			parts = append([]PermPathPart{{p.Name, t.title(p)}}, parts...)
+		}
+	}
+	return
 }
 
 // leaf is the permission of n asked with verb: its title, its

@@ -123,6 +123,23 @@ func TestPermissionsTreeByVerb(t *testing.T) {
 			t.Errorf("%s: kind %+v, want %q", p, it, kind)
 		}
 	}
+	// where a part is: the groups of the menu and the models above it,
+	// also without the groups in the tree; a permission, none
+	for p, path := range map[string]string{
+		"Admin/Tree Posts":   "Site",
+		"Admin/Tree Setting": "",
+		"Admin/Tree Posts/See a record/Nested models/Tree Comments": "Site" + PathSep + "Tree Posts",
+		"Admin/Tree Posts/See a record/Pages/Permission Report":     "Site" + PathSep + "Tree Posts",
+		"Admin/Tree Posts/Edit/Fields/Title":                        "",
+	} {
+		if it := tree[p]; it == nil || pathText(it.Path) != path {
+			t.Errorf("%s: path %+v, want %q", p, it, path)
+		}
+	}
+	if p := tree["Admin/Tree Posts/See a record/Nested models/Tree Comments"].Path; len(p) != 2 ||
+		p[0] != (PermPathPart{"admin:site/:", "Site"}) || p[1] != (PermPathPart{"admin:site/:posts:", "Tree Posts"}) {
+		t.Errorf("the path, [id, label] each: %v", p)
+	}
 	// no groups of the menu: the models at the root
 	if _, ok := tree["Admin/Site"]; ok {
 		t.Error("the group site is in the tree")
@@ -187,7 +204,7 @@ func TestPermissionsTreeView(t *testing.T) {
 		active = h.MustString(PermissionsTreeView(r.Context(), PermTreeViewOptions{URL: "/admin/users", Event: "e",
 			Query: map[string]string{"id": "7"}, Active: true}), r.Context())
 	})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/admin?lang=en", nil))
-	for _, want := range []string{"vx-tree-data-table", "st.items", PermissionsTreeEvent, "/admin/docs", "data-permissions-tree-kinds",
+	for _, want := range []string{"vx-tree-data-table", "st.items", `"key":"path"`, "debounce", "st.q ||", PermissionsTreeEvent, "/admin/docs", "data-permissions-tree-kinds",
 		"data-permissions-tree-views", "data-permissions-tree-groups", "Permission"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("no %q in the view", want)

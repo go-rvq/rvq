@@ -102,7 +102,10 @@ func PermissionsTreeView(ctx context.Context, o PermTreeViewOptions) h.HTMLCompo
 		query += ".query(" + strconv.Quote(k) + ", " + strconv.Quote(o.Query[k]) + ")"
 	}
 
-	headers := []map[string]any{{"title": m.PermTreeKind, "key": "kind", "sortable": false, "nowrap": true}}
+	headers := []map[string]any{
+		{"title": m.PermTreeKind, "key": "kind", "sortable": false, "nowrap": true},
+		{"title": m.PermTreePath, "key": "path", "sortable": false},
+	}
 	state := func(value, icon, color, title string) h.HTMLComponent {
 		return v.VIcon(icon).Color(color).Size(v.SizeSmall).
 			Attr("v-if", fmt.Sprintf("item.active === %q", value)).Attr("title", title)
@@ -113,6 +116,9 @@ func PermissionsTreeView(ctx context.Context, o PermTreeViewOptions) h.HTMLCompo
 			Attr("v-slot:item.resources", "{ item }"),
 		h.Template(h.Span("").Attr("v-text", fmt.Sprintf("(%s)[item.kind] || ''", h.JSONString(labels)))).
 			Attr("v-slot:item.kind", "{ item }"),
+		// the path: its labels ([id, label] each)
+		h.Template(h.Span("").Attr("v-text", fmt.Sprintf("(item.path || []).map((p) => p[1]).join(%q)", PathSep))).
+			Attr("v-slot:item.path", "{ item }"),
 	}
 	if o.Active {
 		headers = append(headers, map[string]any{"title": m.PermTreeActive, "key": "active", "sortable": false, "align": "center", "width": "1%"})
@@ -132,8 +138,9 @@ func PermissionsTreeView(ctx context.Context, o PermTreeViewOptions) h.HTMLCompo
 		Attr("v-if", "st.items").
 		Attr("control-title", m.PermTreeName).
 		Attr(":open-all", "st.open").
-		Attr(":search", "st.search || ''").
-		Attr(":search-keys", `["title", "description", "resources"]`).
+		// the search typed, once the typing stops (st.q)
+		Attr(":search", "st.q || ''").
+		Attr(":search-keys", `["title", "path", "description", "resources"]`).
 		// the kinds chosen: their rows and their ancestors
 		Attr("filter-key", "kind").
 		Attr(":filter-values", "st.kinds").
@@ -174,8 +181,11 @@ func PermissionsTreeView(ctx context.Context, o PermTreeViewOptions) h.HTMLCompo
 
 	// the tree of the view shown: asked once, kept out of the reactivity
 	// (markRaw) — the same array every render
-	setup := `({$scope, inject, watch, Vue}) => {
+	setup := `({$scope, inject, watch, debounce, Vue}) => {
 	const plaid = inject('plaid'), st = $scope.value.st, trees = {};
+	// the search: the table's once the typing stops — every row is gone
+	// through by it
+	watch(() => st.search, debounce((q) => { st.q = q }, 300));
 	const key = () => st.view + '/' + (st.groups ? 1 : 0);
 	const load = () => {
 		const k = key();
@@ -195,6 +205,6 @@ func PermissionsTreeView(ctx context.Context, o PermTreeViewOptions) h.HTMLCompo
 }`
 	return vue.UserComponent(body).
 		Scope("st", map[string]any{"view": string(PermTreeByVerb), "groups": false, "kinds": []string{},
-			"search": "", "open": nil, "items": nil, "shown": "", "loading": false, "error": false}).
+			"search": "", "q": "", "open": nil, "items": nil, "shown": "", "loading": false, "error": false}).
 		Setup(setup)
 }
