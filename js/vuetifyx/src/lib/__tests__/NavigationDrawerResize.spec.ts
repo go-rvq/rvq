@@ -3,7 +3,7 @@ import { defineComponent, h, nextTick } from 'vue'
 import { VLayout } from 'vuetify/components'
 
 import NavigationDrawer from '../NavigationDrawer.vue'
-import { dragWidth, isEndSide, savedWidth, saveWidth } from '../navigation-drawer-resize'
+import { dragWidth, isEndSide, pixelWidth, savedWidth, saveWidth } from '../navigation-drawer-resize'
 import { mountTemplate } from '@/lib/__tests__/testutils'
 
 // a localStorage of the test's (the page of jsdom here has no origin: none)
@@ -18,6 +18,19 @@ beforeAll(() => {
       removeItem: (k: string) => void data.delete(k),
       clear: () => data.clear()
     }
+  })
+})
+
+describe('the width given of a drawer', () => {
+  it('is in pixels: a percentage of the viewport', () => {
+    expect(pixelWidth('92%', 1000)).toBe(920)
+    expect(pixelWidth('50%', 1001)).toBe(501)
+    expect(pixelWidth(320, 1000)).toBe(320)
+    expect(pixelWidth('320', 1000)).toBe(320)
+    expect(pixelWidth('320px', 1000)).toBe(320)
+    expect(pixelWidth(undefined, 1000)).toBeUndefined()
+    expect(pixelWidth('', 1000)).toBeUndefined()
+    expect(pixelWidth('auto', 1000)).toBeUndefined()
   })
 })
 

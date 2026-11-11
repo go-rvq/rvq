@@ -1,7 +1,7 @@
 <script lang="ts">
 import {defineComponent, useModel, useTemplateRef} from 'vue'
 import TempVar from 'vue-temp-var'
-import { dragWidth, isEndSide, saveWidth, savedWidth } from './navigation-drawer-resize'
+import { dragWidth, isEndSide, pixelWidth, saveWidth, savedWidth } from './navigation-drawer-resize'
 import { lockScroll, unlockScroll } from './scroll-lock'
 import { pushEscClose, removeEscClose } from './esc-close'
 import {type Density} from 'vuetify/lib/composables/density'
@@ -117,6 +117,8 @@ export default defineComponent({
     // the width dragged (resizable); null: the width given
     resizedWidth: null as number | null,
     resizing: false,
+    // the viewport's width: what a width in percent is of
+    viewportWidth: window.innerWidth,
     state: {
       closeChanging: false,
       expandChanging: false
@@ -131,7 +133,7 @@ export default defineComponent({
     },
     currentWidth(): any {
       if (this.isExpanded) return this.parentWidth()
-      return this.resizedWidth ?? this.width
+      return this.resizedWidth ?? pixelWidth(this.width, this.viewportWidth) ?? this.width
     },
     cIsOpen: {
       get() {
@@ -241,6 +243,9 @@ export default defineComponent({
         drawerUpStyle: { top: 0, height: '100%' }
       }
     },
+    onViewportResize() {
+      this.viewportWidth = window.innerWidth
+    },
     parentWidth() {
       return parentEl(this.$parent?.$el).offsetWidth
     },
@@ -275,6 +280,7 @@ export default defineComponent({
   },
 
   mounted() {
+    window.addEventListener('resize', this.onViewportResize)
     if (this.resizable) {
       const [min, max] = this.widthLimits
       this.resizedWidth = savedWidth(this.storageKey, min, max)
@@ -285,6 +291,7 @@ export default defineComponent({
   },
 
   unmounted() {
+    window.removeEventListener('resize', this.onViewportResize)
     this.closeCb()
   }
 })
