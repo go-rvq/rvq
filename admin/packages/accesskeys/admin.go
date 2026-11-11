@@ -340,21 +340,22 @@ func (b *Builder) reloadPolicies() {
 	}
 }
 
-// codeMessage is the message of a key just made: its code, shown once, to
-// copy.
+// codeMessage is the message of a key just made: it stays until it is
+// closed (Persistent), its code in it with a button to copy — shown this
+// time only. The code is in the body alone, never in the text: the text may
+// go in the cookie of a page's flash.
 func codeMessage(ctx context.Context, k *AccessKey) *presets.FlashMessage {
 	m := GetMessages(ctx)
 	return &presets.FlashMessage{
-		Text: fmt.Sprintf(m.CodeCreated, k.Code),
-		// long: the code is copied before it goes (the "created" message
-		// goes first)
-		Duration: 600,
-		Detail: h.Div(
-			h.P(h.Text(m.CodeOnce)).Class("mb-3"),
-			v.VTextField().Label(m.Code).ModelValue(k.Code).Readonly(true).Variant(v.FieldVariantOutlined).
+		Text:       m.CodeCreated,
+		Persistent: true,
+		Body: h.Div(
+			h.P(h.Text(m.CodeOnce)).Class("mb-2 text-body-2"),
+			v.VTextField().Label(m.Code).ModelValue(k.Code).Readonly(true).Variant(v.FieldVariantSolo).
 				Density(v.DensityCompact).HideDetails(true).Attr("data-access-key-code", true).
 				Attr("append-inner-icon", "mdi-content-copy").
-				Attr("@click:append-inner", "copyToClipboard("+h.JSONString(k.Code)+")"),
+				Attr("@click:append-inner", "copyToClipboard("+h.JSONString(k.Code)+")").
+				Style("min-width: 360px; font-family: monospace"),
 		),
 	}
 }

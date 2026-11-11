@@ -128,14 +128,18 @@ func RenderFlash(msg any, color ...string) h.HTMLComponent {
 		ZIndex(2000000).
 		Attr("v-model", "flash.show")
 
-	if m.Duration == 0 {
-		m.Duration = 5
-		if m.Color == "error" {
-			m.Duration *= 2
+	if m.Persistent {
+		// until it is closed
+		snack.Timeout(-1)
+	} else {
+		if m.Duration == 0 {
+			m.Duration = 5
+			if m.Color == "error" {
+				m.Duration *= 2
+			}
 		}
+		snack.Timeout(m.Duration * 1000)
 	}
-
-	snack.Timeout(m.Duration * 1000)
 
 	comps = append(comps, snack)
 
@@ -179,6 +183,11 @@ func RenderFlash(msg any, color ...string) h.HTMLComponent {
 		text = h.Text(m.Text)
 	} else {
 		text = h.RawHTML(m.HtmlText)
+	}
+
+	if m.Body != nil {
+		// the body, below the text: in the message itself
+		text = h.Div(h.Div(text), h.Div(m.Body).Class("mt-2").Attr("data-flash-body", true))
 	}
 
 	snack.TagBuilder.Children(text, actions)

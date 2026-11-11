@@ -16,6 +16,13 @@ type FlashMessage struct {
 	// HtmlDetail this comp is Detail wraped into Dialog
 	HtmlDetail  string `json:"rawDetail,omitempty"`
 	NotClosable bool   `json:"notClosable,omitempty"`
+	// Body is shown in the message itself, below its text — a code to copy.
+	// It is never written in the cookie of a page's flash: it stays in the
+	// response that made it.
+	Body h.HTMLComponent `json:"-"`
+	// Persistent: the message stays until it is closed (no timeout) — what
+	// has to be read or copied before it goes.
+	Persistent bool `json:"persistent,omitempty"`
 }
 
 func (m *FlashMessage) Error() string {

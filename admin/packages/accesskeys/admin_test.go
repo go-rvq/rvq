@@ -96,6 +96,14 @@ func TestMyKeys(t *testing.T) {
 		i := strings.Index(w.Body.String(), "created")
 		t.Errorf("the code not shown: %d %.600s", i, w.Body.String()[max(0, i-300):])
 	}
+	// in the message itself, with a button to copy it, the message staying
+	// until it is closed
+	for _, want := range []string{"data-access-key-code", "data-flash-body", "mdi-content-copy", `:timeout='-1'`} {
+		if !strings.Contains(w.Body.String(), want) {
+			i := strings.Index(w.Body.String(), "data-flash-body")
+			t.Errorf("no %s in the message: %.800s", want, w.Body.String()[max(0, i-400):])
+		}
+	}
 	if d := time.Until(k.ExpiresAt); d < 89*24*time.Hour || d > 91*24*time.Hour {
 		t.Errorf("the default validity: %v", d)
 	}

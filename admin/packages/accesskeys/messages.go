@@ -84,8 +84,8 @@ type Messages struct {
 	DefaultDbpolicyResources string `i18n:"label='Resources', hint='Label of the resources a permission of a key applies to.'"`
 
 	PermissionsHelp string `i18n:"hint='Title of the help button of the permissions of a key.'"`
-	CodeCreated     string `i18n:"hint='Shown once a key was made: its code, to be copied now.', fields=(;'%s'='the code')"`
-	CodeOnce        string `i18n:"hint='Says the code is shown only now.'"`
+	CodeCreated     string `i18n:"hint='Shown once a key was made, above its code (in the message, with a button to copy it).'"`
+	CodeOnce        string `i18n:"hint='Says the code of a key just made is shown this time only, and has to be kept in a safe place.'"`
 	Code            string `i18n:"hint='Label of the code of a key just made.'"`
 	ErrNameRequired string `i18n:"hint='Error: the key has no name.'"`
 	// %s: the permission written
@@ -158,8 +158,8 @@ var Messages_en_US = &Messages{
 	DefaultDbpolicyResources: "Resources",
 
 	PermissionsHelp: "Help: policies and permissions",
-	CodeCreated:     "Access key created. Copy its code now — it is shown only this time: %s",
-	CodeOnce:        "This is the only time the code is shown. Copy it and keep it safe: it acts in your name.",
+	CodeCreated:     "Access key created.",
+	CodeOnce:        "Its code is shown this time only: copy it now and keep it in a safe place (a password manager). Once this message is closed it cannot be seen again — whoever has it acts in your name.",
 	Code:            "Code",
 	ErrNameRequired: "Give the key a name.",
 	ErrNotDeny:      "%q: a key's permissions are denies — \"deny \" and a resource (\"deny admin:users:*\"); it may what its user may, but them.",
@@ -231,8 +231,8 @@ var Messages_pt_BR = &Messages{
 	DefaultDbpolicyResources: "Recursos",
 
 	PermissionsHelp: "Ajuda: políticas e permissões",
-	CodeCreated:     "Chave de acesso criada. Copie o código agora — ele só aparece desta vez: %s",
-	CodeOnce:        "É a única vez que o código aparece. Copie e guarde num lugar seguro: ele age em seu nome.",
+	CodeCreated:     "Chave de acesso criada.",
+	CodeOnce:        "O código dela aparece só esta vez: copie-o agora e guarde-o num lugar seguro (um gerenciador de senhas). Depois que este aviso for fechado, ele não pode ser visto de novo — quem o tiver age em seu nome.",
 	Code:            "Código",
 	ErrNameRequired: "Dê um nome à chave.",
 	ErrNotDeny:      "%q: as permissões de uma chave são negações — \"deny \" e um recurso (\"deny admin:users:*\"); ela pode o que o usuário pode, menos elas.",
