@@ -15,6 +15,7 @@ func GetMessages(ctx context.Context) *Messages {
 
 type Messages struct {
 	ModuleDescription   string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	Profiles            string `i18n:"hint='The profiles of the users (the name of the model, plural).'"`
 	ChangePassword      string `i18n:"hint='Button of the user\\'s profile that opens the change of their password.'"`
 	ProfileAccountName  string `i18n:"hint='Label of the account name field of the profile.'"`
 	ProfileAvatar       string `i18n:"hint='Label of the picture of the user in their profile (shown in the top bar).'"`
@@ -36,6 +37,7 @@ type Messages struct {
 var (
 	Messages_en_US = &Messages{
 		ModuleDescription:   "The profile of the signed-in user.",
+		Profiles:            "Profiles",
 		ChangePassword:      "Change Password",
 		ProfileAccountName:  "Account name",
 		ProfileAvatar:       "Picture",
@@ -56,6 +58,7 @@ var (
 
 	Messages_pt_BR = &Messages{
 		ModuleDescription:   "O perfil do usuário conectado.",
+		Profiles:            "Perfis",
 		ChangePassword:      "Alterar Senha",
 		ProfileAccountName:  "Nome da conta",
 		ProfileAvatar:       "Foto",
