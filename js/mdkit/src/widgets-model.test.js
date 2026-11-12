@@ -13,6 +13,21 @@ const buttons = {
 
 const doc = () => new Window().document
 
+test('buttons: a group (data-group), in HTML and in Markdown, and back', () => {
+  const v = { ...buttons, group: true }
+  const html = buttonsHTML(v)
+  expect(html.startsWith('<div data-type="buttons" data-align="center" data-group>')).toBe(true)
+  const d = doc()
+  d.body.innerHTML = html
+  expect(buttonsOf(d.body.firstChild).group).toBe(true)
+  expect(blockAt(html, 5).value.group).toBe(true)
+  // apart: none
+  expect(buttonsHTML(buttons)).not.toContain('data-group')
+  d.body.innerHTML = buttonsHTML(buttons)
+  expect(buttonsOf(d.body.firstChild).group).toBe(false)
+  expect(blockAt(buttonsHTML(buttons), 5).value.group).toBe(false)
+})
+
 test('buttons: their HTML (escaped, only known colors and icons) and back', () => {
   const html = buttonsHTML(buttons)
   expect(html).toBe('<div data-type="buttons" data-align="center">' +

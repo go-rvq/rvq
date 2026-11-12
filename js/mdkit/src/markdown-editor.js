@@ -653,8 +653,9 @@ const MarkdownEditor = {
       const after = line.slice(pos.ch).trim() ? '\n\n' : ''
       return before + '[[' + target + ']]' + after
     },
-    // openLink picks the address of a link (the picker): [the text chosen —
-    // else the page's title, the address —](address) in its place
+    // openLink picks the address of a link and its text (the picker): [the
+    // text — typed, else the page's or post's title, the address —](address)
+    // in its place
     openLink() {
       const cm = this.mde.codemirror
       const from = cm.getCursor('from')
@@ -662,9 +663,9 @@ const MarkdownEditor = {
       const text = cm.getRange(from, to)
       // a link chosen whole: its address there
       const m = /^\[([^\]]*)\]\(([^)\s]*)\)$/.exec(text)
-      this.$refs.links.open({ href: m ? m[2] : '' }, (link) => {
+      this.$refs.links.open({ href: m ? m[2] : '', text: m ? m[1] : text }, (link) => {
         if (!link) return
-        const label = (m ? m[1] : text) || link.title || link.href
+        const label = link.text || link.title || link.href
         cm.replaceRange('[' + label.replace(/[[\]]/g, '') + '](' + link.href.replace(/[\s)]/g, (c) => encodeURIComponent(c)) + ')', from, to)
         cm.focus()
       })

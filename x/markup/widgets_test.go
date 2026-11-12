@@ -10,18 +10,18 @@ import (
 // known; a script); in Markdown a block of HTML, a tab's content Markdown;
 // made Markdown and back the same.
 func TestWidgets(t *testing.T) {
-	buttons := `<div data-type="buttons" data-align="center">` +
+	buttons := `<div data-type="buttons" data-align="center" data-group>` +
 		`<a data-type="button" href="/en-us/about" data-href="/en-us/about" title="Who we are" data-color="primary" data-icon-left="mdi-information"></a>` +
 		`<a data-type="button" href="https://x.test/" data-icon-right="mdi-open-in-new" target="_blank" rel="noopener">Site</a></div>`
 	got := Render(Rich, buttons)
-	for _, want := range []string{`data-type="buttons"`, `data-align="center"`, `data-type="button"`, `data-href="/en-us/about"`,
+	for _, want := range []string{`data-type="buttons"`, `data-align="center"`, `data-group=""`, `data-type="button"`, `data-href="/en-us/about"`,
 		`title="Who we are"`, `data-color="primary"`, `data-icon-left="mdi-information"`, `data-icon-right="mdi-open-in-new"`, `target="_blank"`, `>Site</a>`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("buttons: no %s\n%s", want, got)
 		}
 	}
-	bad := Render(Rich, `<div data-type="buttons" data-align="left"><a data-type="button" href="javascript:alert(1)" data-color="pink" data-icon-left="x y" data-href="//evil" target="_top" onclick="x()">X</a></div>`)
-	for _, not := range []string{"javascript", "pink", "x y", "evil", "_top", "onclick", `data-align="left"`} {
+	bad := Render(Rich, `<div data-type="buttons" data-align="left" data-group="x"><a data-type="button" href="javascript:alert(1)" data-color="pink" data-icon-left="x y" data-href="//evil" target="_top" onclick="x()">X</a></div>`)
+	for _, not := range []string{"javascript", "pink", "x y", "evil", "_top", "onclick", `data-align="left"`, "data-group"} {
 		if strings.Contains(bad, not) {
 			t.Errorf("buttons kept %s: %s", not, bad)
 		}
@@ -38,7 +38,7 @@ func TestWidgets(t *testing.T) {
 
 	// made Markdown: the tabs' HTML lines, their contents Markdown
 	md := Convert(Rich, Markdown, buttons+tabs)
-	for _, want := range []string{"<div data-type=\"buttons\" data-align=\"center\">",
+	for _, want := range []string{"<div data-type=\"buttons\" data-align=\"center\" data-group=\"\">",
 		"<div data-type=\"tabs\" data-align=\"end\">\n<div data-type=\"tab\" data-title=\"One &#34;1&#34;\" data-color=\"success\" data-icon-right=\"mdi-star\">\n\n**bold**\n\n- a\n\n</div>\n<div data-type=\"tab\" data-title=\"Two\">\n\ntwo\n\n</div>\n</div>"} {
 		if !strings.Contains(md, want) {
 			t.Errorf("markdown: no %q\n%s", want, md)

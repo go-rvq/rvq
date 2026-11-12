@@ -125,11 +125,16 @@ func (b *Builder) linkCards(ctx *web.EventContext) (r web.EventResponse, err err
 const LinkCardSearchEvent = "presets_LinkCardSearch"
 
 // LinkCardOption is what a link card may link: its title, its target (a path
-// of the site, a record path), where it is (sub).
+// of the site, a record path), where it is (sub), its icon; in a tree, the
+// options under it (Children: a page's pages and posts) — one there only to
+// hold them, not found itself, is Context —.
 type LinkCardOption struct {
-	Title  string `json:"title"`
-	Target string `json:"target"`
-	Sub    string `json:"sub,omitempty"`
+	Title    string            `json:"title"`
+	Target   string            `json:"target"`
+	Sub      string            `json:"sub,omitempty"`
+	Icon     string            `json:"icon,omitempty"`
+	Context  bool              `json:"context,omitempty"`
+	Children []*LinkCardOption `json:"children,omitempty"`
 }
 
 // LinkCardOptionGroup is a group of options: its title, or its kind (the
@@ -141,8 +146,80 @@ type LinkCardOptionGroup struct {
 	Items []LinkCardOption `json:"items"`
 }
 
-// LinkCardSearcher is the application's options matching q.
+// LinkCardSearcher is the application's options matching q — and the
+// values of its facets chosen (LinkCardFacetValues) —.
 type LinkCardSearcher func(ctx *web.EventContext, q string) []*LinkCardOptionGroup
+
+// LinkCardFacet is a filter of the search of what a link card may link,
+// the application's (LinkCardFacets): its key — its values posted as
+// "f_<key>", many —, its label, how it is shown — chips (LinkCardFacetChips:
+// all its items, chosen by a click) or a field that finds them, chosen as
+// chips (LinkCardFacetAutocomplete) —, its items (in groups, by their
+// Group, in their order), the values chosen when the picker opens (Default).
+type LinkCardFacet struct {
+	Key     string              `json:"key"`
+	Label   string              `json:"label"`
+	Kind    string              `json:"kind"`
+	Items   []LinkCardFacetItem `json:"items"`
+	Default []string            `json:"default,omitempty"`
+}
+
+// LinkCardFacetItem is a value a facet may have: its value, its title, its
+// group (the title of the group it is shown in).
+type LinkCardFacetItem struct {
+	Value string `json:"value"`
+	Title string `json:"title"`
+	Group string `json:"group,omitempty"`
+}
+
+// The kinds of a facet.
+const (
+	LinkCardFacetChips        = "chips"
+	LinkCardFacetAutocomplete = "autocomplete"
+)
+
+// LinkCardRecords says whether the search of what a link card may link
+// finds the admin's records too (by default: yes), after the application's
+// options; off, only these — the application's content (its pages, its
+// posts).
+func (b *Builder) LinkCardRecords(on bool) *Builder {
+	b.linkCardNoRecords = !on
+	return b
+}
+
+// LinkCardFacetsFunc are the facets of the search, given the values chosen
+// (LinkCardFacetValues): a facet may show only when another has a value.
+type LinkCardFacetsFunc func(ctx *web.EventContext) []*LinkCardFacet
+
+// LinkCardFacets adds facets of the application to the search.
+func (b *Builder) LinkCardFacets(f LinkCardFacetsFunc) *Builder {
+	b.linkCardFacets = append(b.linkCardFacets, f)
+	return b
+}
+
+// LinkCardFacetValues are the values of the facet key chosen in the
+// search; nil, none posted (the picker knows no facets: no filter).
+func LinkCardFacetValues(ctx *web.EventContext, key string) []string {
+	_ = ctx.R.ParseMultipartForm(1 << 20)
+	vs, ok := ctx.R.Form["f_"+key]
+	if !ok {
+		return nil
+	}
+	out := []string{}
+	for _, v := range vs {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// linkCardSearchResult is what LinkCardSearchEvent answers when the picker
+// asks for the facets (facets=1): the groups and the facets.
+type linkCardSearchResult struct {
+	Groups []*LinkCardOptionGroup `json:"groups"`
+	Facets []*LinkCardFacet       `json:"facets"`
+}
 
 // LinkCardSearcher adds a searcher of the application's options, before the
 // admin's records.
@@ -151,12 +228,30 @@ func (b *Builder) LinkCardSearcher(f LinkCardSearcher) *Builder {
 	return b
 }
 
-// linkCardSearch is LinkCardSearchEvent.
+// linkCardSearch is LinkCardSearchEvent: the groups — and, asked
+// (facets=1), the facets: {groups, facets} —. Without a text of two
+// letters, only the application's searchers are asked (its facets may find
+// without one), not the records.
 func (b *Builder) linkCardSearch(ctx *web.EventContext) (r web.EventResponse, err error) {
 	q := strings.TrimSpace(ctx.R.FormValue("q"))
 	groups := []*LinkCardOptionGroup{}
-	r.Data = groups
-	if len([]rune(q)) < 2 {
+	withFacets := ctx.R.FormValue("facets") == "1"
+	defer func() {
+		if !withFacets {
+			r.Data = groups
+			return
+		}
+		res := &linkCardSearchResult{Groups: groups, Facets: []*LinkCardFacet{}}
+		for _, f := range b.linkCardFacets {
+			for _, fc := range f(ctx) {
+				if fc != nil {
+					res.Facets = append(res.Facets, fc)
+				}
+			}
+		}
+		r.Data = res
+	}()
+	if len([]rune(q)) < 2 && !withFacets {
 		return
 	}
 	for _, f := range b.linkCardSearchers {
@@ -165,6 +260,9 @@ func (b *Builder) linkCardSearch(ctx *web.EventContext) (r web.EventResponse, er
 				groups = append(groups, g)
 			}
 		}
+	}
+	if len([]rune(q)) < 2 || b.linkCardNoRecords {
+		return
 	}
 	gs, err := b.globalSearch(ctx)
 	if err != nil {
@@ -182,6 +280,5 @@ func (b *Builder) linkCardSearch(ctx *web.EventContext) (r web.EventResponse, er
 			groups = append(groups, og)
 		}
 	}
-	r.Data = groups
 	return
 }

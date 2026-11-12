@@ -11,6 +11,7 @@
 import { config, wordsOf } from './config.js'
 import { metaResolver } from './link-cards.js'
 import { metaSearch } from './link-card-picker.js'
+import { searchMixin } from './link-search.js'
 
 // hrefOf is the address a link of target has: a path of the site as it is; a
 // record path, its address (resolve: the cards'); '', none.
@@ -24,6 +25,7 @@ export async function hrefOf(target, resolve = metaResolver()) {
 
 export const LinkForm = {
   name: 'MdkitLinkForm',
+  mixins: [searchMixin],
   props: {
     href: { type: String, default: '' },
     target: { type: String, default: '' },
@@ -31,35 +33,44 @@ export const LinkForm = {
     targets: { type: Boolean, default: true },
     // linked: a link is there (it may be taken out)
     linked: { type: Boolean, default: false },
+    // text: the text of the link (the one chosen); texts: whether it is
+    // asked — empty, a page's or a post's chosen is its title, else the
+    // address
+    text: { type: String, default: '' },
+    texts: { type: Boolean, default: true },
     words: { type: Object, default: () => wordsOf('link') },
     search: { type: Function, default: null },
   },
   emits: ['apply', 'remove', 'cancel'],
   data() {
-    return { url: this.href || '', blank: this.target === '_blank', q: '', groups: [], loading: false, seq: 0, timer: null, busy: false, title: '' }
+    return { url: this.href || '', blank: this.target === '_blank', busy: false, title: '', label: this.text || '' }
   },
   computed: {
     finder() { return this.search || config.cardSearch || metaSearch() },
   },
+  // the facets of the search, asked at once
+  mounted() { this.resetSearch() },
   watch: {
     href(v) { this.url = v || '' },
+    text(v) { this.label = v || '' },
     target(v) { this.blank = v === '_blank' },
   },
   template: `
 <div data-link-form>
   <v-text-field v-model="url" autofocus density="compact" variant="outlined" hide-details prepend-inner-icon="mdi-link-variant"
     :label="words.address || 'Address'" placeholder="https://… /…" @keydown.enter.prevent="apply" data-link-href></v-text-field>
+  <v-text-field v-if="texts" v-model="label" density="compact" variant="outlined" hide-details class="mt-3"
+    prepend-inner-icon="mdi-format-text" :label="words.text || 'Link text'"
+    :placeholder="title || words.textHint || 'Empty: the title of the page or post'" persistent-placeholder
+    @keydown.enter.prevent="apply" data-link-text></v-text-field>
   <v-text-field v-if="finder" v-model="q" density="compact" variant="outlined" hide-details clearable class="mt-3"
     prepend-inner-icon="mdi-magnify" :loading="loading" :label="words.search || 'Search a page or a record'"
-    @update:model-value="typed" data-link-q></v-text-field>
-  <v-list v-if="groups.length" density="compact" class="mt-1" style="max-height:16rem;overflow:auto" data-link-options>
-    <template v-for="(g, i) in groups" :key="i">
-      <v-list-subheader v-if="words[g.kind] || g.title">{{ words[g.kind] || g.title }}</v-list-subheader>
-      <v-list-item v-for="it in g.items" :key="it.target" :title="it.title" :subtitle="it.target"
-        :prepend-icon="g.icon || 'mdi-file-document-outline'" @click="pick(it)" :data-link-option="it.target"></v-list-item>
-    </template>
-  </v-list>
-  <div v-else-if="(q || '').trim().length >= 2 && !loading" class="text-body-2 text-medium-emphasis mt-2" data-link-none>
+    @update:model-value="runSearch()" data-link-q></v-text-field>
+  <mdkit-link-facets v-if="finder" :facets="facets" v-model="values"></mdkit-link-facets>
+  <div v-if="groups.length" class="mt-1" style="max-height:20rem;overflow:auto">
+    <mdkit-link-options :groups="groups" :words="words" @pick="pick"></mdkit-link-options>
+  </div>
+  <div v-else-if="searched && !loading" class="text-body-2 text-medium-emphasis mt-2" data-link-none>
     {{ words.none || 'Nothing found.' }}
   </div>
   <v-switch v-if="targets" v-model="blank" color="primary" density="compact" hide-details class="mt-2"
@@ -73,29 +84,6 @@ export const LinkForm = {
   </div>
 </div>`,
   methods: {
-    // typed searches what is typed, a moment after the last key
-    typed() {
-      clearTimeout(this.timer)
-      const q = (this.q || '').trim()
-      if (q.length < 2 || !this.finder) {
-        this.groups = []
-        this.loading = false
-        return
-      }
-      const n = ++this.seq
-      this.loading = true
-      this.timer = setTimeout(async () => {
-        let groups = []
-        try {
-          groups = (await this.finder(q)) || []
-        } catch (e) {
-          groups = []
-        }
-        if (n !== this.seq) return
-        this.groups = groups.filter((g) => g && g.items && g.items.length)
-        this.loading = false
-      }, 250)
-    },
     // pick makes the address the option's (a record's: its address in the
     // admin)
     async pick(it) {
@@ -109,7 +97,10 @@ export const LinkForm = {
     apply() {
       const href = this.url.trim()
       if (!href) return
-      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title: this.title || '' })
+      // the text: the one typed; empty, the title of the page or post chosen,
+      // else the address
+      const text = (this.label || '').trim() || this.title || href
+      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title: this.title || '', text })
     },
   },
 }
@@ -121,13 +112,13 @@ export default {
     words: { type: Object, default: () => wordsOf('link') },
     targets: { type: Boolean, default: true },
   },
-  data: () => ({ show: false, href: '', target: '', linked: false, done: null, key: 0 }),
+  data: () => ({ show: false, href: '', target: '', text: '', linked: false, done: null, key: 0 }),
   template: `
 <v-dialog v-model="show" max-width="560" scrollable data-link-picker>
   <v-card>
     <v-card-title class="d-flex align-center ga-2"><v-icon icon="mdi-link-variant"></v-icon>{{ words.title || 'Link' }}</v-card-title>
     <v-card-text>
-      <mdkit-link-form :key="key" :href="href" :target="target" :targets="targets" :linked="linked" :words="words"
+      <mdkit-link-form :key="key" :href="href" :target="target" :text="text" :targets="targets" :linked="linked" :words="words"
         @apply="finish" @remove="finish(null)" @cancel="show = false"></mdkit-link-form>
     </v-card-text>
   </v-card>
@@ -138,6 +129,7 @@ export default {
     open(attrs, done) {
       this.href = (attrs && attrs.href) || ''
       this.target = (attrs && attrs.target) || ''
+      this.text = (attrs && attrs.text) || ''
       this.linked = !!this.href
       this.done = done
       this.key++

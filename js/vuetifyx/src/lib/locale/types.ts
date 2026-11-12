@@ -613,6 +613,8 @@ export interface VxMessages {
   mdkitLinkAddress: string
   /** Editors of a text (mdkit), link: search. */
   mdkitLinkSearch: string
+  mdkitLinkText: string
+  mdkitLinkTextHint: string
   /** Editors of a text (mdkit), link: newTab. */
   mdkitLinkNewTab: string
   /** Editors of a text (mdkit), link: apply. */
@@ -727,6 +729,8 @@ export interface VxMessages {
   mdkitWidgetsUpdate: string
   /** Editors of a text (mdkit), buttons and tabs: preview. */
   mdkitWidgetsPreview: string
+  mdkitWidgetsOpen: string
+  mdkitWidgetsGroup: string
   /** Editors of a text (mdkit), buttons and tabs: newTab. */
   mdkitWidgetsNewTab: string
   /** Editors of a text (mdkit), buttons and tabs: tab. */

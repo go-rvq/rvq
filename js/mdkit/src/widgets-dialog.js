@@ -5,7 +5,8 @@
 //     page of the site or a record of the admin: the link picker's; the
 //     title it has, the one the page shows when it is given none), title,
 //     description (its tooltip), color of the theme, icons left and right;
-//     the line's alignment; a preview;
+//     the line's alignment, whether they are one group of buttons; a
+//     preview, not clicked — its addresses opened in a new tab by its icon;
 //   - mdkit-tabs-dialog: tabs, each its title, color, icons and content —
 //     written in the editor given (the text's own: `editor`, `editorProps`,
 //     its v-model the content) —; the bar's alignment.
@@ -22,7 +23,7 @@ const WORDS = {
   description: 'Description (tooltip)', color: 'Color', iconLeft: 'Icon on the left', iconRight: 'Icon on the right',
   iconHint: 'A Material Design icon: mdi-…', icons: 'The icons', up: 'Up', down: 'Down', left: 'To the left', right: 'To the right',
   remove: 'Remove', removeAll: 'Remove', cancel: 'Cancel', insert: 'Insert', update: 'Update', preview: 'Preview',
-  newTab: 'In a new tab', tab: 'Tab', content: 'Content', noLink: 'No link chosen',
+  newTab: 'In a new tab', tab: 'Tab', content: 'Content', noLink: 'No link chosen', open: 'Open in a new tab', group: 'Button group',
   default: 'Default', primary: 'Primary', secondary: 'Secondary', success: 'Success', info: 'Information', warning: 'Warning', error: 'Error',
 }
 
@@ -57,9 +58,14 @@ const alignField = `
   <v-btn-toggle v-model="align" mandatory density="compact" variant="outlined" divided data-widget-align>
     <v-btn v-for="a in aligns" :key="a.value" :value="a.value" size="small" :title="a.title" :data-align="a.value"><v-icon :icon="a.icon"></v-icon></v-btn>
   </v-btn-toggle>
+  __OPTIONS__
   <v-spacer></v-spacer>
   <a href="https://pictogrammers.com/library/mdi/" target="_blank" rel="noopener" class="text-caption">{{ w.icons }} <v-icon icon="mdi-open-in-new" size="x-small"></v-icon></a>
 </div>`
+
+// groupField is whether the buttons are one group (joined), not apart.
+const groupField = `
+  <v-switch v-model="group" :label="w.group" color="primary" density="compact" hide-details class="flex-grow-0" data-widget-group></v-switch>`
 
 const methods = {
   validIcon: (i) => (/^mdi-[a-z0-9-]+$/.test(i || '') ? i : ''),
@@ -93,9 +99,11 @@ export const ButtonsDialog = {
   mixins: [wordsMixin],
   components: { MdkitLinkPicker: LinkPicker },
   props: { linkWords: { type: Object, default: () => wordsOf('link') } },
-  data: () => ({ show: false, align: 'start', items: [], there: false, done: null }),
+  data: () => ({ show: false, align: 'start', group: false, items: [], there: false, done: null }),
   computed: {
-    value() { return { align: this.align, items: this.items.map((it) => this.clean(it)) } },
+    value() { return { align: this.align, group: this.group, items: this.items.map((it) => this.clean(it)) } },
+    // links are the addresses of the preview, to open in a new tab
+    links() { return this.value.items.filter((it) => it.href).map((it) => ({ href: it.href, title: it.title || it.hint || it.href })) },
     previewHTML() { return buttonsHTML(this.value) },
   },
   watch: {
@@ -107,7 +115,7 @@ export const ButtonsDialog = {
     <v-card-title class="d-flex align-center ga-2"><v-icon icon="mdi-gesture-tap-button"></v-icon>{{ w.buttons }}</v-card-title>
     <v-divider></v-divider>
     <v-card-text style="max-height:70vh">
-      ${alignField}
+      ${alignField.replace('__OPTIONS__', groupField)}
       <v-card v-for="(it, i) in items" :key="i" variant="outlined" class="mt-4 pa-3" data-widget-item>
         <div class="d-flex align-center ga-2">
           <v-icon icon="mdi-link-variant" size="small"></v-icon>
@@ -128,7 +136,23 @@ export const ButtonsDialog = {
       </v-card>
       <v-btn class="mt-4" variant="tonal" prepend-icon="mdi-plus" @click="add" data-widget-add>{{ w.add }}</v-btn>
       <div class="text-caption text-medium-emphasis mt-4">{{ w.preview }}</div>
-      <div ref="preview" class="pa-3 border rounded" data-widget-preview></div>
+      <div class="d-flex align-center ga-2">
+        <!-- a preview: its buttons not clicked (the dialog stays) -->
+        <div ref="preview" class="pa-3 border rounded flex-grow-1" style="min-width:0" @click.capture.prevent.stop
+          data-widget-preview></div>
+        <v-btn v-if="links.length === 1" icon="mdi-open-in-new" size="small" variant="text" :title="w.open"
+          @click="openLink(links[0].href)" data-widget-open></v-btn>
+        <v-menu v-else-if="links.length > 1">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" icon="mdi-open-in-new" size="small" variant="text" :title="w.open" data-widget-open></v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-subheader>{{ w.open }}</v-list-subheader>
+            <v-list-item v-for="(l, i) in links" :key="i" :title="l.title" :subtitle="l.href" append-icon="mdi-open-in-new"
+              @click="openLink(l.href)" :data-widget-open-link="l.href"></v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
     </v-card-text>
     <v-divider></v-divider>
     <v-card-actions>
@@ -148,6 +172,7 @@ export const ButtonsDialog = {
     open(value, done) {
       swatchStyle()
       this.align = (value && value.align) || 'start'
+      this.group = !!(value && value.group)
       this.items = value && value.items && value.items.length ? value.items.map((it) => ({ ...newButton(), ...it })) : [newButton()]
       this.there = !!(value && value.items && value.items.length)
       this.done = done
@@ -171,6 +196,10 @@ export const ButtonsDialog = {
         it.hint = link.title || ''
       })
     },
+    // openLink opens the address of a button of the preview in a new tab
+    openLink(href) {
+      if (href && typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
+    },
     drawPreview() {
       const el = this.$refs.preview
       if (!el) return
@@ -179,7 +208,7 @@ export const ButtonsDialog = {
     },
     finish(value) {
       this.show = false
-      if (this.done) this.done(value && { align: value.align, items: value.items.filter((it) => it.href).map(({ hint, ...it }) => it) })
+      if (this.done) this.done(value && { align: value.align, group: value.group, items: value.items.filter((it) => it.href).map(({ hint, ...it }) => it) })
     },
   },
 }
@@ -205,7 +234,7 @@ export const TabsDialog = {
     <v-card-title class="d-flex align-center ga-2"><v-icon icon="mdi-tab"></v-icon>{{ w.tabs }}</v-card-title>
     <v-divider></v-divider>
     <v-card-text style="max-height:78vh">
-      ${alignField}
+      ${alignField.replace('__OPTIONS__', '')}
       <div class="d-flex align-center mt-3">
         <v-tabs v-model="active" show-arrows density="compact" style="flex:1 1 auto;min-width:0" data-tabs-bar>
           <v-tab v-for="(t, i) in items" :key="i" :value="i" class="text-none" :data-tab="i">

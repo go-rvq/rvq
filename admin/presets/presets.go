@@ -85,6 +85,8 @@ type Builder struct {
 	// linkCardResolvers: the application's (link_cards.go)
 	linkCardResolvers []LinkCardResolver
 	linkCardSearchers []LinkCardSearcher
+	linkCardFacets    []LinkCardFacetsFunc
+	linkCardNoRecords bool
 	// docHref: the address of a document of the documentation (doc_href.go)
 	docHref          func(node string) string
 	docData          func(node string) string

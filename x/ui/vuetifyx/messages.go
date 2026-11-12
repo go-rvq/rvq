@@ -334,6 +334,8 @@ type Messages struct {
 	MdkitLinkTitle              string `json:"mdkitLinkTitle" i18n:"hint='Editors of a text (mdkit), link: title.'"`
 	MdkitLinkAddress            string `json:"mdkitLinkAddress" i18n:"hint='Editors of a text (mdkit), link: address.'"`
 	MdkitLinkSearch             string `json:"mdkitLinkSearch" i18n:"hint='Editors of a text (mdkit), link: search.'"`
+	MdkitLinkText               string `json:"mdkitLinkText" i18n:"hint='Editors of a text (mdkit), link: the text of the link.'"`
+	MdkitLinkTextHint           string `json:"mdkitLinkTextHint" i18n:"hint='Editors of a text (mdkit), link: what the text is when left empty.'"`
 	MdkitLinkNewTab             string `json:"mdkitLinkNewTab" i18n:"hint='Editors of a text (mdkit), link: newTab.'"`
 	MdkitLinkApply              string `json:"mdkitLinkApply" i18n:"hint='Editors of a text (mdkit), link: apply.'"`
 	MdkitLinkRemove             string `json:"mdkitLinkRemove" i18n:"hint='Editors of a text (mdkit), link: remove.'"`
@@ -391,6 +393,8 @@ type Messages struct {
 	MdkitWidgetsInsert          string `json:"mdkitWidgetsInsert" i18n:"hint='Editors of a text (mdkit), buttons and tabs: insert.'"`
 	MdkitWidgetsUpdate          string `json:"mdkitWidgetsUpdate" i18n:"hint='Editors of a text (mdkit), buttons and tabs: update.'"`
 	MdkitWidgetsPreview         string `json:"mdkitWidgetsPreview" i18n:"hint='Editors of a text (mdkit), buttons and tabs: preview.'"`
+	MdkitWidgetsOpen            string `json:"mdkitWidgetsOpen" i18n:"hint='Editors of a text (mdkit), buttons: opens the address of a button of the preview in a new tab.'"`
+	MdkitWidgetsGroup           string `json:"mdkitWidgetsGroup" i18n:"hint='Editors of a text (mdkit), buttons: shown as one group of buttons, joined, not apart.'"`
 	MdkitWidgetsNewTab          string `json:"mdkitWidgetsNewTab" i18n:"hint='Editors of a text (mdkit), buttons and tabs: newTab.'"`
 	MdkitWidgetsTab             string `json:"mdkitWidgetsTab" i18n:"hint='Editors of a text (mdkit), buttons and tabs: tab.'"`
 	MdkitWidgetsContent         string `json:"mdkitWidgetsContent" i18n:"hint='Editors of a text (mdkit), buttons and tabs: content.'"`
@@ -706,6 +710,8 @@ var Messages_en_US = &Messages{
 	MdkitLinkTitle:              "Link",
 	MdkitLinkAddress:            "Address",
 	MdkitLinkSearch:             "Search a page or a record",
+	MdkitLinkText:               "Link text",
+	MdkitLinkTextHint:           "Empty: the title of the page or post",
 	MdkitLinkNewTab:             "Open in a new tab",
 	MdkitLinkApply:              "Apply",
 	MdkitLinkRemove:             "Remove the link",
@@ -763,6 +769,8 @@ var Messages_en_US = &Messages{
 	MdkitWidgetsInsert:          "Insert",
 	MdkitWidgetsUpdate:          "Update",
 	MdkitWidgetsPreview:         "Preview",
+	MdkitWidgetsOpen:            "Open in a new tab",
+	MdkitWidgetsGroup:           "Button group",
 	MdkitWidgetsNewTab:          "In a new tab",
 	MdkitWidgetsTab:             "Tab",
 	MdkitWidgetsContent:         "Content",
@@ -1078,6 +1086,8 @@ var Messages_pt_BR = &Messages{
 	MdkitLinkTitle:              "Link",
 	MdkitLinkAddress:            "Endereço",
 	MdkitLinkSearch:             "Buscar uma página ou um registro",
+	MdkitLinkText:               "Texto do link",
+	MdkitLinkTextHint:           "Vazio: o título da página ou postagem",
 	MdkitLinkNewTab:             "Abrir em nova aba",
 	MdkitLinkApply:              "Aplicar",
 	MdkitLinkRemove:             "Tirar o link",
@@ -1135,6 +1145,8 @@ var Messages_pt_BR = &Messages{
 	MdkitWidgetsInsert:          "Inserir",
 	MdkitWidgetsUpdate:          "Atualizar",
 	MdkitWidgetsPreview:         "Prévia",
+	MdkitWidgetsOpen:            "Abrir em nova aba",
+	MdkitWidgetsGroup:           "Grupo de botões",
 	MdkitWidgetsNewTab:          "Em nova aba",
 	MdkitWidgetsTab:             "Aba",
 	MdkitWidgetsContent:         "Conteúdo",

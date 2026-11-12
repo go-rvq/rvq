@@ -31,6 +31,13 @@ export function widgetStyle() {
     '[data-type="buttons"][data-align="center"]{justify-content:center}' +
     '[data-type="buttons"][data-align="end"]{justify-content:flex-end}' +
     '[data-type="buttons"][data-align="stretch"]>a{flex:1 1 0}' +
+    // a group: the buttons joined, the corners of the ends rounded
+    '[data-type="buttons"][data-group]{gap:0}' +
+    '[data-type="buttons"][data-group]>a[data-type="button"]{border-radius:0}' +
+    '[data-type="buttons"][data-group]>a[data-type="button"]+a[data-type="button"]{margin-left:-1px}' +
+    '[data-type="buttons"][data-group]>a[data-type="button"]:first-child{border-radius:6px 0 0 6px}' +
+    '[data-type="buttons"][data-group]>a[data-type="button"]:last-child{border-radius:0 6px 6px 0}' +
+    '[data-type="buttons"][data-group]>a[data-type="button"]:only-child{border-radius:6px}' +
     'a[data-type="button"]{display:inline-flex;align-items:center;justify-content:center;gap:.4em;min-height:2.25rem;padding:.35rem 1rem;' +
     'border-radius:6px;border:1px solid rgba(var(--mdkit-c,127,127,127),.6);color:rgb(var(--mdkit-c,60,60,60));background:transparent;' +
     'text-decoration:none!important;font-weight:500;line-height:1.2;transition:filter .15s,background .15s}' +
@@ -38,6 +45,13 @@ export function widgetStyle() {
     'a[data-type="button"]:hover{filter:brightness(.92);background-color:rgba(var(--mdkit-c,127,127,127),.08)}' +
     'a[data-type="button"][data-color]:hover{background-color:rgb(var(--mdkit-c))}' +
     'a[data-type="button"]:empty::before{content:attr(href);opacity:.7}' +
+    // the look given by the page (its children: HermonCMS): outlined in the
+    // color — not filled —; filled without a color, the theme's text on its
+    // surface, in contrast
+    'a[data-type="button"][data-variant="outlined"][data-color]{background:transparent;color:rgb(var(--mdkit-c));border-color:rgb(var(--mdkit-c))}' +
+    'a[data-type="button"][data-variant="outlined"][data-color]:hover{background-color:rgba(var(--mdkit-c),.08)}' +
+    'a[data-type="button"][data-variant="filled"]:not([data-color]){background:rgb(var(--v-theme-on-surface,60,60,60));' +
+    'border-color:rgb(var(--v-theme-on-surface,60,60,60));color:rgb(var(--v-theme-surface,255,255,255))}' +
     '[data-type="tabs"]{margin:.75em 0}' +
     '.mdkit-tabs-bar{display:flex;flex-wrap:wrap;gap:.15rem;border-bottom:1px solid rgba(127,127,127,.3);justify-content:flex-start}' +
     '[data-type="tabs"][data-align="center"]>.mdkit-tabs-bar{justify-content:center}' +
@@ -48,6 +62,15 @@ export function widgetStyle() {
     '.mdkit-tabs-bar>button[data-color]{color:rgb(var(--mdkit-c))}' +
     '.mdkit-tabs-bar>button[aria-selected="true"]{opacity:1;border-bottom-color:rgb(var(--mdkit-c,var(--v-theme-primary,25,118,210)))}' +
     '.mdkit-tabs-bar>button:hover{background:rgba(127,127,127,.08)}' +
+    // the color of the set (data-color on the tabs: its bar), filled
+    // (data-variant="filled": the bar in the color, its text in contrast),
+    // without the line under the bar (data-line="none")
+    '[data-type="tabs"][data-color]>.mdkit-tabs-bar>button{color:rgb(var(--mdkit-c))}' +
+    '[data-type="tabs"][data-variant="filled"]>.mdkit-tabs-bar{background:rgb(var(--mdkit-c,var(--v-theme-on-surface,60,60,60)));border-radius:6px 6px 0 0}' +
+    '[data-type="tabs"][data-variant="filled"]>.mdkit-tabs-bar>button{color:rgb(var(--mdkit-on,var(--v-theme-surface,255,255,255)))}' +
+    '[data-type="tabs"][data-variant="filled"]>.mdkit-tabs-bar>button[aria-selected="true"]{border-bottom-color:rgb(var(--mdkit-on,var(--v-theme-surface,255,255,255)))}' +
+    '[data-type="tabs"][data-line="none"]>.mdkit-tabs-bar{border-bottom:0}' +
+    '[data-type="tabs"][data-line="none"][data-drawn]>[data-type="tab"]{border:0;padding:.75rem .25rem}' +
     '[data-type="tab"]{padding:.75rem .25rem}' +
     // the content of the tab shown in a frame under the bar: apart from the
     // text after it

@@ -14,13 +14,14 @@ import (
 // widgets-model.js) — in Markdown a block of HTML, a tab's content Markdown
 // between blank lines —:
 //
-//	<div data-type="buttons" data-align="center"><a data-type="button"
+//	<div data-type="buttons" data-align="center" data-group><a data-type="button"
 //	href="…" data-href="…" title="description" data-color="primary"
 //	data-icon-left="mdi-…" data-icon-right="mdi-…">title</a>…</div>
 //	<div data-type="tabs" data-align="start"><div data-type="tab"
 //	data-title="…" data-color="…" data-icon-left="…">…</div>…</div>
 //
-// a button's title empty is its target's (the page shows it: the link
+// data-group the buttons one group (joined, not apart); a button's title
+// empty is its target's (the page shows it: the link
 // cards'); the tabs drawn by the page (a section each, printed).
 const (
 	Buttons = "buttons"
@@ -42,6 +43,7 @@ func allowWidgets(p *bluemonday.Policy) {
 	p.AllowAttrs("data-type").Matching(regexp.MustCompile(`^(` + Buttons + `|` + Tabs + `|` + Tab + `)$`)).OnElements("div")
 	p.AllowAttrs("data-type").Matching(regexp.MustCompile(`^` + Button + `$`)).OnElements("a")
 	p.AllowAttrs("data-align").Matching(widgetAlignRe).OnElements("div")
+	p.AllowAttrs("data-group").Matching(regexp.MustCompile(`^(|data-group|true)$`)).OnElements("div")
 	p.AllowAttrs("data-color").Matching(widgetColorRe).OnElements("div", "a")
 	p.AllowAttrs("data-icon-left", "data-icon-right").Matching(widgetIconRe).OnElements("div", "a")
 	p.AllowAttrs("data-title").Matching(regexp.MustCompile(`^[^\x00]*$`)).OnElements("div")

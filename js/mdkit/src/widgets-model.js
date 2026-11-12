@@ -1,9 +1,10 @@
 // The buttons and the tabs of a text: their value and their HTML, the same
 // in the rich text (tiptap's nodes) and in Markdown (a block of HTML; a
 // tab's content Markdown between blank lines), read back from either.
-//   buttons: {align, items: [{href, target, title, description, color,
-//            iconLeft, iconRight, newTab}]} —
-//     <div data-type="buttons" data-align="…"><a data-type="button" href="…"
+//   buttons: {align, group, items: [{href, target, title, description,
+//            color, iconLeft, iconRight, newTab}]} — group: one group of
+//            buttons, joined, not apart —
+//     <div data-type="buttons" data-align="…" data-group><a data-type="button" href="…"
 //     data-href="…" title="description" data-color="…" data-icon-left="mdi-…"
 //     data-icon-right="mdi-…" target="_blank" rel="noopener">title</a>…</div>;
 //     a title empty is the page's or the record's (target: the link cards'),
@@ -47,7 +48,7 @@ function look(el) {
 // buttonsHTML is the HTML of buttons (one line: a block of Markdown too).
 export function buttonsHTML(v) {
   const items = (v.items || []).filter((it) => it.href)
-  return '<div data-type="buttons" data-align="' + align(v.align) + '">' + items.map((it) => {
+  return '<div data-type="buttons" data-align="' + align(v.align) + '"' + (v.group ? ' data-group' : '') + '>' + items.map((it) => {
     let a = '<a data-type="button" href="' + esc(it.href) + '"'
     if (it.target) a += ' data-href="' + esc(it.target) + '"'
     if (it.description) a += ' title="' + esc(it.description) + '"'
@@ -61,6 +62,7 @@ export function buttonsHTML(v) {
 export function buttonsOf(el) {
   return {
     align: align(el.getAttribute('data-align')),
+    group: el.hasAttribute('data-group'),
     items: [...el.querySelectorAll('a')].map((a) => ({
       href: a.getAttribute('href') || '',
       target: a.getAttribute('data-href') || '',
@@ -164,7 +166,7 @@ export function buttonsOfMarkdown(src) {
       description: attrOf(tag, 'title'), newTab: attrOf(tag, 'target') === '_blank', ...tagLook(tag),
     })
   }
-  return { align: align(open ? attrOf(open[0], 'data-align') : ''), items }
+  return { align: align(open ? attrOf(open[0], 'data-align') : ''), group: !!open && /\sdata-group[\s>=]/.test(open[0]), items }
 }
 
 // tabsOfMarkdown is the value of the tabs of their Markdown, each body
