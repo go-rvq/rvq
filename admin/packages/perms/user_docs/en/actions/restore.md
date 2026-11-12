@@ -6,8 +6,11 @@ A record deleted from a listing is not gone: it goes to the **Trash** tab of
 its listing, with who deleted it, when, and from where. To bring it back:
 
 1. Open the listing of the record and choose the **Trash** tab.
-2. Open the menu of the row (**⋯**) of the record.
-3. Choose **Restore**.
+2. Open the menu of the row (**⋯**) of the record — or its detail.
+3. Choose **Restore from the trash**.
+
+For several at once, tick them in the trash and choose **Restore**, in the
+bar: if any of them may not be restored, none is, and the message says which.
 
 The record goes back to the other tabs of the listing, and the deletion is
 kept in its history of revisions.
@@ -16,4 +19,6 @@ See also: {%= admin.doc("actions/deleted_origin").link %}.
 
 ## When it is available
 
-Only in the Trash tab of a listing, to whoever may see the trash.
+Only in the Trash tab of a listing, to whoever may see it (the part's
+`@trash`), and of each record to whoever may restore it (its `@restore`:
+`admin:posts:<7>:@restore`).

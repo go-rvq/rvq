@@ -27,12 +27,15 @@ As permissões de uma chave **só negam**: um pedido feito pela chave pode
 mais do que você tem — e, **sem nenhuma permissão, pode tudo o que você
 pode**.
 
-São uma **lista**, uma negação por linha: `deny` **e um espaço**, e um
-recurso, escrito como os dos papéis (veja
-{%= admin.doc("guides/policies/01-permissions").link %}: `*` casa com
-qualquer coisa, `{a,b}` com uma das alternativas). Uma linha sem o `deny`,
-ou com `allow` ou `reset`, não é aceita — nem um grupo com uma alternativa
-que não negue (`admin:users:{deny @edit, @list}`).
+São negações: `deny` **e um espaço**, e um recurso, escrito como os dos
+papéis (veja {%= admin.doc("guides/policies/01-permissions").link %}: `*`
+casa com qualquer coisa, `{a,b}` com uma das alternativas). Uma linha sem o
+`deny`, ou com `allow` ou `reset`, não é aceita — nem um grupo com uma
+alternativa que não negue (`admin:users:{deny @edit, @list}`).
+
+São editadas no **campo de permissões** (o mesmo dos papéis): a árvore do
+que **você** pode, cada linha com o prefixo **—** ou **NEGA**, e a coluna
+**Ativa** mostrando o que a chave ainda alcança.
 
 Exemplos:
 

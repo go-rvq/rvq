@@ -24,13 +24,13 @@ termina no que é pedido dele:
 | o escopo: quem pede — sempre o primeiro; o do admin é `admin` (veja abaixo) | `admin:…` |
 | um grupo do menu: o nome e `/` | `site/` |
 | uma parte (model) | `seo_config` |
-| um registro: o id entre `<…>` | `<7>` — `<*>` qualquer um |
+| um registro: o id entre `<…>` — um rótulo depois do id só o mostra, não decide nada | `<7>`, `<7<Primeiro post>>` — `<*>` qualquer um |
 | um campo | `#Title` |
 | um registro editado no lugar, num campo: `&` e o campo; os campos dele embaixo | `&Config`, `&Config:#Title` |
 | uma seção do detalhe | `$Main` |
 | uma página | `/report` |
 | o que se pede de uma página: `@` e o método HTTP, um para cada que ela atende | `/report:@get`, `/report:@post` |
-| uma permissão: `@` e o nome | `@list`, `@get`, `@create`, `@edit`, `@delete` |
+| uma permissão: `@` e o nome | `@list`, `@get`, `@create`, `@edit`, `@delete`; numa parte com lixeira, `@trash` (navegar nela) e, no registro, `@restore` (trazê-lo de volta) |
 | uma ação: `!` e o nome | `!publish` |
 
 Uma parte é alcançada de dois jeitos — **pelos grupos** e **pelo nome
@@ -83,6 +83,13 @@ junto com o grupo (`admin:site/:/site-files:!edit`): com as duas, decide a de
 fora do grupo. E ela continua valendo quando o menu muda a parte de grupo — a
 declarada com o grupo deixa de casar.
 
+Por isso o **campo de permissões** (abaixo) grava sempre **fora do grupo** o
+que é dado a uma parte — um modelo, uma página, e o que está neles —, mesmo
+escolhida dentro de um grupo: `admin:content/:posts:*` é gravado
+`admin:posts:*`. O que é dado **ao grupo** fica com o grupo e vale para o que
+está nele: `admin:content/:*`, `admin:content/:sub/:*`. As permissões gravadas
+antes dentro de grupos são regravadas assim quando a aplicação sobe.
+
 ## A pilha de permissões
 
 As permissões de um papel são uma **lista em ordem**, uma por linha. As de um
@@ -124,6 +131,9 @@ seu prefixo — `admin:users:{*, deny @delete}` é `admin:users:*` e depois
 `deny admin:users:@delete`; `admin:users:{*, deny {@edit,@delete}}` nega
 só as duas —, e isso vale em qualquer parte do recurso: partes, campos,
 ações. Uma quebra de linha dentro de um grupo separa como a vírgula.
+Várias linhas na raiz são uma lista — `admin:posts:*, site:*` é
+`{admin:posts:*, site:*}` —, e um espaço entre o `:` e o grupo é permitido
+(`admin: {…}`).
 
 Exemplos (a pilha de um usuário, de cima para baixo):
 
@@ -146,6 +156,47 @@ aba **Tudo**, cada linha com o seu índice, de onde veio (o sistema, um papel)
 e se está ativa — ou ativa menos o que uma linha depois casa —, ou foi
 substituída — e por qual —; na aba **Ativas**, só as que valem, cada uma
 com o que ela não cobre mais ("menos …"), em lista ou em árvore.
+
+## O campo de permissões
+
+As permissões de um papel, ou de uma chave de acesso, são editadas num campo
+só: a **árvore das permissões do admin** reduzida ao que elas tocam — o que
+permitem (coluna **Ativa**), o que tem uma linha própria, e o que está acima
+disso —, com as mesmas abas (**Por verbo**, **Por tipo**), a busca e o filtro
+de **Tipos** da árvore do usuário. Na barra, os ícones:
+
+- **grupos do menu**: ligados, os grupos aparecem na tabela e no diálogo, cada
+  parte dentro do seu grupo; desligados, as partes ficam direto sob o escopo —
+  o que se grava é o mesmo (fora do grupo, veja *Qual decide*);
+- **só as definidas**: só as linhas próprias e o que está acima delas, e não
+  tudo o que permitem;
+- **abrir tudo** / **fechar tudo**.
+
+Cada linha da tabela:
+
+- o **prefixo**, num seletor: **—** (não tem linha própria; escolher um cria a
+  linha), **CONCEDE** (sem prefixo), **NEGA** (`deny`), **LIBERA** (`allow`),
+  **REDEFINE** (`reset`). Num ramo (uma parte, um registro, um grupo), vale
+  para tudo o que está nele (`admin:posts:*`);
+- **+**: o que pode vir depois dela — e, numa parte, os registros, buscados
+  pelo id ou pelo título;
+- a **lixeira**: tira a linha dela e as de tudo o que está abaixo;
+- o botão de abrir fica na **cor primária** quando há algo definido nela ou
+  abaixo dela.
+
+Uma linha que só nomeia uma parte sem dizer o quê (`admin:users:`) não decide
+nada: aparece como incompleta enquanto se edita, e **não é gravada**.
+
+**Incluir a partir de texto**: permissões escritas em qualquer forma — uma por
+linha, por vírgulas, indentadas como no painel — juntadas às do campo; uma de
+mesmo recurso que uma existente toma o lugar dela. `unset ` antes de uma tira
+as linhas anteriores que ela cobre, qualquer que seja o prefixo delas
+(`unset admin:posts:*`); nunca é gravado. Uma linha mais larga não é tirada
+(`admin:*` não sai com `unset admin:posts:*`: use `deny`) — o campo avisa.
+
+O painel **Permissão em texto**, ao lado da tabela (abaixo dela numa tela
+estreita), mostra as permissões indentadas, para ler e copiar; o ícone dele o
+recolhe.
 
 ## As chaves de acesso
 

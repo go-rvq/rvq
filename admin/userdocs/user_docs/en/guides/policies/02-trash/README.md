@@ -22,4 +22,7 @@ restore it first.
 
 ## When it is available
 
-The trash is shown to the roles allowed to see it; the others see no tab.
+The trash is shown to the roles of the part's **`@trash`**
+(`admin:posts:@trash`); the others see no tab. Restoring a record asks its
+**`@restore`** (`admin:posts:<7>:@restore`, or `admin:posts:<*>:@restore` for
+all): who may delete a record shared may restore it too.

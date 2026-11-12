@@ -26,12 +26,15 @@ A key's permissions **only deny**: a request by the key may **all you
 may**, **but what the key denies**. A key never gives more than you have —
 and, **with no permission, it may all you may**.
 
-They are a **list**, a deny a line: `deny` **and a space**, and a resource,
-written as a role's are (see
-{%= admin.doc("guides/policies/01-permissions").link %}: `*` matches
-anything, `{a,b}` one of the alternatives). A line without the `deny`, or
-with `allow` or `reset`, is not taken — nor a group with an alternative that
-does not deny (`admin:users:{deny @edit, @list}`).
+They are denies: `deny` **and a space**, and a resource, written as a role's
+are (see {%= admin.doc("guides/policies/01-permissions").link %}: `*`
+matches anything, `{a,b}` one of the alternatives). A line without the
+`deny`, or with `allow` or `reset`, is not taken — nor a group with an
+alternative that does not deny (`admin:users:{deny @edit, @list}`).
+
+They are edited in the **field of the permissions** (the same as the roles'):
+the tree of what **you** may, each row of the prefix **—** or **DENY**, and
+the column **Active** showing what the key still reaches.
 
 Examples:
 

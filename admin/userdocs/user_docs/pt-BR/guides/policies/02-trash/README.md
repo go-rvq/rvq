@@ -22,5 +22,8 @@ registro excluído, restaure-o antes.
 
 ## Quando está disponível
 
-A lixeira aparece para os papéis com permissão para vê-la; os outros não veem
-a aba.
+A lixeira aparece para os papéis com a permissão **`@trash`** da parte
+(`admin:posts:@trash`); os outros não veem a aba. Restaurar um registro pede a
+permissão **`@restore`** dele (`admin:posts:<7>:@restore`, ou
+`admin:posts:<*>:@restore` para todos): quem pode excluir um registro
+compartilhado pode também restaurá-lo.

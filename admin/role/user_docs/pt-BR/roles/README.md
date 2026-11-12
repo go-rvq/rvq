@@ -12,12 +12,14 @@ no admin. Um usuário tem um ou mais papéis (veja
 
 ## As permissões
 
-As permissões de um papel são uma **lista em ordem**, uma por linha
-(arraste para mudar a ordem): um recurso, que **permite**, ou com um prefixo
-— `deny ` **nega**, `allow ` força a permissão do que casa com ela, por
-cima das negações anteriores, `reset ` tira das linhas anteriores o que casa
-com ela. Um grupo é várias
-linhas: `admin:users:{*, deny @delete}`. Tudo isso, com exemplos, em
+As permissões de um papel são **linhas em ordem**: um recurso, que
+**permite**, ou com um prefixo — `deny ` **nega**, `allow ` força a permissão
+do que casa com ela, por cima das negações anteriores, `reset ` tira das linhas
+anteriores o que casa com ela. Um grupo é várias linhas:
+`admin:users:{*, deny @delete}`. São editadas no **campo de permissões**: a
+árvore das permissões do admin reduzida ao que elas tocam, cada linha com o
+seu prefixo, o **+** do que pode vir depois e a lixeira — e permissões
+incluídas a partir de um texto. Tudo isso, com exemplos, em
 {%= admin.doc("guides/policies/01-permissions").link %}.
 
 Os papéis de um usuário também têm **ordem**: as linhas de um papel vêm

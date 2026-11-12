@@ -23,13 +23,13 @@ what is asked of it:
 | the scope: who asks — first, always; the admin's is `admin` (see below) | `admin:…` |
 | a group of the menu: its name and `/` | `site/` |
 | a part (model) | `seo_config` |
-| a record: its id in `<…>` | `<7>` — `<*>` any |
+| a record: its id in `<…>` — a label after the id only shows it, it decides nothing | `<7>`, `<7<First post>>` — `<*>` any |
 | a field | `#Title` |
 | a record edited in place, in a field: `&` and the field; its fields under it | `&Config`, `&Config:#Title` |
 | a section of the detail | `$Main` |
 | a page | `/report` |
 | what is asked of a page: `@` and its HTTP method, one for each the page answers | `/report:@get`, `/report:@post` |
-| a permission: `@` and its name | `@list`, `@get`, `@create`, `@edit`, `@delete` |
+| a permission: `@` and its name | `@list`, `@get`, `@create`, `@edit`, `@delete`; of a part with a trash, `@trash` (browsing it) and, of the record, `@restore` (bringing it back) |
 | an action: `!` and its name | `!publish` |
 
 A part is reached two ways — **through its groups** and **by its unique
@@ -83,6 +83,13 @@ the one declared with the group (`admin:site/:/site-files:!edit`): with both,
 the one out of the group decides. And it keeps holding when the menu moves the
 part to another group — the one with the group no longer matches.
 
+So the **field of the permissions** (below) always stores **out of the group**
+what is given to a part — a model, a page, and what is in them —, even chosen
+inside a group: `admin:content/:posts:*` is stored `admin:posts:*`. What is
+given **to the group** stays with the group and holds for what is in it:
+`admin:content/:*`, `admin:content/:sub/:*`. The permissions stored before
+inside groups are written so again when the application starts.
+
 ## The stack of permissions
 
 The permissions of a role are an **ordered list**, one a line. A user's are a
@@ -123,7 +130,9 @@ allowed when an active one of no prefix matches it and no active `deny` does.
 prefix — `admin:users:{*, deny @delete}` is `admin:users:*` and then
 `deny admin:users:@delete`; `admin:users:{*, deny {@edit,@delete}}` denies
 just those two —, anywhere in the resource: parts, fields, actions. A new line
-inside a group separates as a comma does.
+inside a group separates as a comma does. Several lines at the root are a
+list — `admin:posts:*, site:*` is `{admin:posts:*, site:*}` —, and a space
+between the `:` and the group is allowed (`admin: {…}`).
 
 Examples (a user's stack, from top to bottom):
 
@@ -146,6 +155,45 @@ The page **Permissions** of each user's detail shows their stack: in the tab
 and whether it is active — or active but what a later line matches —, or was
 replaced — and by which —; in the tab **Active**, only the ones that count,
 each with what it no longer covers ("but …"), as a list or as a tree.
+
+## The field of the permissions
+
+The permissions of a role, or of an access key, are edited in one field: the
+**tree of the permissions of the admin** kept to what they touch — what they
+allow (column **Active**), what has a line of its own, and what is above
+it —, with the same tabs (**By verb**, **By kind**), search and **Kinds**
+filter as the user's tree. In the bar, the icons:
+
+- **groups of the menu**: on, the groups are in the table and in the dialog,
+  each part inside its group; off, the parts are right under the scope — what
+  is stored is the same (out of the group, see *Which one decides*);
+- **only what is defined**: only the lines of their own and what is above
+  them, not all they allow;
+- **open all** / **close all**.
+
+Each row of the table:
+
+- the **prefix**, in a selector: **—** (no line of its own; choosing one makes
+  the line), **GRANT** (no prefix), **DENY**, **ALLOW**, **RESET**. Of a branch
+  (a part, a record, a group), it is of all in it (`admin:posts:*`);
+- **+**: what may follow it — and, of a part, its records, searched by id or
+  title;
+- the **trash**: takes out its line and those of all under it;
+- the button that opens it is of the **primary color** when something is
+  defined in it or under it.
+
+A line that names a part but not what of it (`admin:users:`) decides nothing:
+it shows as incomplete while editing, and **is not stored**.
+
+**Add from text**: permissions written in any form — one a line, by commas,
+indented as in the panel — merged into the field's; one of the resource of
+one there takes its place. `unset ` before one takes out the earlier lines it
+covers, whatever their prefix (`unset admin:posts:*`); it is never stored. A
+wider line is not taken out (`admin:*` stays with `unset admin:posts:*`: use
+`deny`) — the field says so.
+
+The panel **The permission as text**, beside the table (under it on a narrow
+screen), shows the permissions indented, to read and copy; its icon folds it.
 
 ## The access keys
 

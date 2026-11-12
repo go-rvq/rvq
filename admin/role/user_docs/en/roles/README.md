@@ -11,12 +11,14 @@ A user has one or more roles (see {%= admin.model("users").link %}).
 
 ## The permissions
 
-A role's permissions are an **ordered list**, one a line (drag to change the
-order): a resource, which **allows**, or with a prefix — `deny ` **denies**,
-`allow ` forces the allow of what matches it, over the earlier denies,
-`reset ` takes from the earlier lines what matches it. A group is several lines:
-`admin:users:{*, deny @delete}`. All of it, with examples, in
-{%= admin.doc("guides/policies/01-permissions").link %}.
+A role's permissions are **lines in order**: a resource, which **allows**, or
+with a prefix — `deny ` **denies**, `allow ` forces the allow of what matches
+it, over the earlier denies, `reset ` takes from the earlier lines what
+matches it. A group is several lines: `admin:users:{*, deny @delete}`. They
+are edited in the **field of the permissions**: the tree of the permissions of
+the admin kept to what they touch, each row with its prefix, the **+** of
+what may follow it and the trash — and permissions added from a text. All of
+it, with examples, in {%= admin.doc("guides/policies/01-permissions").link %}.
 
 A user's roles have an **order** too: a role's lines come after the earlier
 one's, so it may deny what the earlier allows, or allow (`allow`) what it
