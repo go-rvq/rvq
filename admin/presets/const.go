@@ -18,6 +18,11 @@ const (
 	PermUpdate            = "@edit"
 	PermDelete            = "@delete"
 	PermDeleteWithRelated = "@delete_with_related"
+	// PermTrash browses the deleted records of a listing — the tab of its
+	// trash ("admin:posts:@trash"); PermRestore brings a record of it back
+	// ("admin:posts:<7>:@restore")
+	PermTrash   = "@trash"
+	PermRestore = "@restore"
 
 	PermActions         = "action"
 	PermDoListingAction = "do_listing_action"

@@ -61,6 +61,9 @@ type ActionBuilder struct {
 	verifier                    func(ctx *web.EventContext) *perm.Verifier
 	// trash is where it is available (TrashPolicy)
 	trash TrashPolicy
+	// permName is the permission it asks (SetPermName); "": its own
+	// (ActionPerm of its name)
+	permName string
 	// toolbar: a button of the detailing's toolbar (ToolbarButton)
 	toolbar     bool
 	toolbarLook ActionToolbarLookFunc
@@ -600,9 +603,20 @@ func (b *ActionBuilder) content(mb *ModelBuilder, id string, overlay actions.Ove
 	return
 }
 
-// PermName is the permission of the action: "!publish" (ActionPerm).
+// PermName is the permission of the action: its own, "!publish"
+// (ActionPerm), unless set (SetPermName).
 func (b *ActionBuilder) PermName() string {
+	if b.permName != "" {
+		return b.permName
+	}
 	return ActionPerm(b.name)
+}
+
+// SetPermName sets the permission the action asks — a verb of the record,
+// say ("@restore") —, in place of its own ("!restore").
+func (b *ActionBuilder) SetPermName(v string) *ActionBuilder {
+	b.permName = v
+	return b
 }
 
 func (b *ActionBuilder) BuildButton(defaultBtnBuilder ButtonComponentFunc, onclick *web.VueEventTagBuilder, id string, obj any, ctx *web.EventContext) h.HTMLComponent {

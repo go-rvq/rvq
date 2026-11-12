@@ -141,6 +141,9 @@ type PermNode struct {
 	Description func(ctx context.Context) string `yaml:"-" json:"-"`
 	Actions     []*PermNodeAction                `yaml:",omitempty" json:",omitempty"`
 	Children    []*PermNode                      `yaml:",omitempty" json:",omitempty"`
+	// Model is the model of a model's node (its listing) and of its
+	// record's: whose records a permission names ("<7>")
+	Model *ModelBuilder `yaml:"-" json:"-"`
 }
 
 func (n *PermNode) AddChildren(children ...*PermNode) {
@@ -303,7 +306,7 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	}
 	lv := mb.Permissioner().ListVerifier(parents...)
 	n := &PermNode{Name: lv.Resource(), Unique: lv.PreferredResource(), Kind: PermNodeModel,
-		Title: func(ctx context.Context) string { return mb.TTitleAuto(ctx) }, Description: mb.TDescription}
+		Title: func(ctx context.Context) string { return mb.TTitleAuto(ctx) }, Description: mb.TDescription, Model: mb}
 	if mb.singleton {
 		n.Kind = PermNodeSingleton
 	}
@@ -323,6 +326,11 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 				Fields: permFields(&mb.editing.CreatingBuilder().FieldsBuilder)})
 		}
 		for _, a := range mb.listing.bulkActions {
+			if a.perm != nil {
+				// it asks a permission of its own making (SetPerm): one
+				// of the tree already (the trash's restore asks @trash)
+				continue
+			}
 			n.Actions = append(n.Actions, &PermNodeAction{Name: ActionPerm(a.name), Title: a.RequestTitle, Description: a.RequestDescription})
 		}
 		for _, a := range mb.listing.actions {
@@ -347,7 +355,7 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 
 		rv := mb.Permissioner().Verifier(anyID(), parents...)
 		record = &PermNode{Name: rv.Resource(), Unique: rv.PreferredResource(), Kind: PermNodeRecord,
-			Title: func(ctx context.Context) string { return mb.TTitle(ctx) }}
+			Title: func(ctx context.Context) string { return mb.TTitle(ctx) }, Model: mb}
 		n.AddChildren(record)
 	}
 
