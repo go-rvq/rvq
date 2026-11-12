@@ -132,6 +132,16 @@ func TestCompiled(t *testing.T) {
 	if got := Unmet(); len(got) != 0 {
 		t.Errorf("Unmet: %v", got)
 	}
+	// declared, compiled or not
+	var decl []string
+	for _, f := range Declared() {
+		if strings.HasPrefix(f.Name, "zz.cmp.") {
+			decl = append(decl, f.Name)
+		}
+	}
+	if !reflect.DeepEqual(decl, []string{"zz.cmp.dep", "zz.cmp.off"}) {
+		t.Errorf("Declared: %v", decl)
+	}
 	if off.Tag() != "zz.cmp.off" {
 		t.Errorf("tag: %s", off.Tag())
 	}

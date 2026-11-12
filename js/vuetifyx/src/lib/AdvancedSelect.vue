@@ -1,8 +1,9 @@
 <template>
   <div class="vx-advanced-select mb-2" :class="'vx-advanced-select__' + (many ? 'many' : 'one')">
+    <!-- the label on a line of its own: the chosen, the button below it -->
     <label
       v-if="label"
-      class="v-label theme--light"
+      class="v-label theme--light d-block mb-1"
       v-html="label"
       :style="errorMessages.length ? 'color: rgb(var(--v-theme-error));opacity: inherit;' : ''"
     ></label>
@@ -121,7 +122,23 @@
             @update:model-value="dialogSearch"
           />
           <v-progress-linear v-if="isLoading" indeterminate />
-          <v-list density="compact">
+          <!-- a tree (itemParent): each under its parent, when it is there -->
+          <v-treeview
+            v-if="itemParent && dialogItems.length"
+            :items="dialogTree"
+            item-title="title"
+            item-value="value"
+            item-children="children"
+            open-all
+            activatable
+            active-strategy="single-independent"
+            :activated="selectedValues"
+            density="compact"
+            color="primary"
+            class="vx-advanced-select__tree"
+            @update:activated="pickValue"
+          />
+          <v-list v-else density="compact">
             <v-list-item
               v-for="item in dialogItems"
               :key="item[itemValue]"
@@ -198,7 +215,8 @@
 import draggable from 'vuedraggable'
 import VxDialog from '@/lib/Dialog.vue'
 
-import {isReactive, onMounted, ref, toRaw, watch} from 'vue'
+import {computed, isReactive, onMounted, ref, toRaw, watch} from 'vue'
+import {itemsTree} from './advancedSelectTree'
 
 const props = defineProps({
   hint: {
@@ -220,6 +238,17 @@ const props = defineProps({
   itemImage: {
     type: String,
     default: 'image'
+  },
+  // itemParent: the key of an item's parent (its value) — the dialog a tree
+  // (advancedSelectTree.ts) —; itemNodeText, the text of an item under its
+  // parent (none: itemText)
+  itemParent: {
+    type: String,
+    default: ''
+  },
+  itemNodeText: {
+    type: String,
+    default: ''
   },
   label: {
     type: String,
@@ -312,16 +341,22 @@ const initValue = (modelValue: any) => {
   if (modelValue) {
     const rawModelValueArray = modelValueArray(modelValue)
 
+    // a value with no item (not given, or of another key) is not drawn:
+    // nothing of it to show
     if (internalItems.value.length) {
-      items = rawModelValueArray.map((id: any) => {
-        return internalItems.value.find(
-          (item: any) => item[props.itemValue].toString() === id.toString()
-        )
-      })
+      items = rawModelValueArray
+        .map((id: any) => {
+          return internalItems.value.find(
+            (item: any) => item[props.itemValue].toString() === id.toString()
+          )
+        })
+        .filter(Boolean)
     } else {
-      items = rawModelValueArray.map((id: any) => {
-        return oldItems.find((item: any) => item[props.itemValue].toString() === id.toString())
-      })
+      items = rawModelValueArray
+        .map((id: any) => {
+          return oldItems.find((item: any) => item[props.itemValue].toString() === id.toString())
+        })
+        .filter(Boolean)
     }
   }
 
@@ -336,11 +371,13 @@ onMounted(() => {
 
   const value = modelValueArray(props.modelValue)
   if (value.length && internalItems.value.length) {
-    internalSelectedItems.value = value.map((id: any) => {
-      return internalItems.value.find(
-        (item: any) => item[props.itemValue].toString() === id.toString()
-      )
-    })
+    internalSelectedItems.value = value
+      .map((id: any) => {
+        return internalItems.value.find(
+          (item: any) => item[props.itemValue].toString() === id.toString()
+        )
+      })
+      .filter(Boolean)
   }
 
   selecting.value = many || value.length == 0
@@ -518,6 +555,18 @@ const openDialog = () => {
 }
 
 // pick chooses item: one, the dialog closes; many, it is marked or unmarked
+// the dialog's items as a tree (itemParent), and the values chosen
+const dialogTree = computed(() =>
+  itemsTree(dialogItems.value, props.itemValue, props.itemParent, props.itemNodeText, props.itemText)
+)
+const selectedValues = computed(() => internalSelectedItems.value.map((it: any) => String(it[props.itemValue])))
+// pickValue picks the item of the value activated in the tree
+const pickValue = (values: any[]) => {
+  const v = values && values.length ? String(values[values.length - 1]) : ''
+  const item = dialogItems.value.find((it: any) => String(it[props.itemValue]) === v)
+  if (item && !isSelected(item)) pick(item)
+}
+
 const pick = (item: any) => {
   const oldItems = internalSelectedItems.value
   if (isSelected(item)) {

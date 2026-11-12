@@ -270,6 +270,18 @@ func All() (out []State) {
 	return
 }
 
+// Declared are the features declared, compiled or not (Compiled), by name:
+// what a test checks every one of is there — compiled, turned on.
+func Declared() (out []*Feature) {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, f := range declared {
+		out = append(out, f)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return
+}
+
 // Unmet are the features the configuration turns on, compiled, that a
 // dependency keeps off: "name (needs dep, …)".
 func Unmet() (out []string) {

@@ -33,15 +33,23 @@ func New() *Builder {
 }
 
 func (sb *Builder) Install(b *presets.Builder) error {
-	b.I18n().
-		RegisterForModule(language.English, I18nSlugKey, Messages_en_US).
-		RegisterForModule(language.SimplifiedChinese, I18nSlugKey, Messages_zh_CN).
-		RegisterForModule(language.BrazilianPortuguese, I18nSlugKey, Messages_pt_BR)
+	registerMessages(b)
 	b.GetWebBuilder().RegisterEventFunc(syncEvent, sync)
 	return nil
 }
 
+// registerMessages registers the words of the slugs: by Install, and by
+// ModelInstall — a model that uses the slugs (mb.Use) without the builder
+// installing them still has them in its language.
+func registerMessages(b *presets.Builder) {
+	b.I18n().
+		RegisterForModule(language.English, I18nSlugKey, Messages_en_US).
+		RegisterForModule(language.SimplifiedChinese, I18nSlugKey, Messages_zh_CN).
+		RegisterForModule(language.BrazilianPortuguese, I18nSlugKey, Messages_pt_BR)
+}
+
 func (sb *Builder) ModelInstall(b *presets.Builder, mb *presets.ModelBuilder) error {
+	registerMessages(b)
 	reflectType := reflect.Indirect(reflect.ValueOf(mb.NewModel())).Type()
 	if reflectType.Kind() != reflect.Struct {
 		panic("slug: model must be struct")
@@ -93,7 +101,7 @@ const HideSlugConditionKey slugCtxKey = 0
 func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 	msgr := i18n.MustGetModuleMessages(ctx.Context(), I18nSlugKey, Messages_en_US).(*Messages)
 	slugFieldName := field.Name + "WithSlug"
-	slugLabel := strings.TrimSpace(strings.TrimSuffix(field.Label, "*")) + " Slug"
+	slugLabel := slugFieldLabel(field, slugFieldName, ctx)
 	ckbName := checkBoxName(slugFieldName)
 
 	hideCond, _ := field.ContextValue(HideSlugConditionKey).(string)
@@ -117,7 +125,8 @@ func SlugEditingComponentFunc(field *presets.FieldContext, ctx *web.EventContext
 		VCol(
 			VCheckbox().
 				Attr("v-model", fmt.Sprintf("form[%q]", ckbName)).
-				Label(fmt.Sprintf(msgr.Sync, strings.ToLower(field.Label))),
+				// the label of the field, without the mark of a required one
+				Label(fmt.Sprintf(msgr.Sync, strings.ToLower(strings.TrimSpace(strings.TrimSuffix(field.Label, "*"))))),
 		).Cols(4),
 	)
 
@@ -199,4 +208,17 @@ func portalName(field string) string {
 
 func checkBoxName(field string) string {
 	return fmt.Sprintf("%sSlugSync", field)
+}
+
+// slugFieldLabel is the label of the slug field of field — its own, as the
+// model names it ("TitleWithSlug": the address) —, else field's and "Slug".
+func slugFieldLabel(field *presets.FieldContext, slugFieldName string, ctx *web.EventContext) string {
+	if field.ModelInfo != nil {
+		if mb := field.ModelInfo.Builder(); mb != nil {
+			if l := mb.Editing().Field(slugFieldName).ContextLabel(mb.Info(), ctx.Context()); l != "" && l != slugFieldName {
+				return l
+			}
+		}
+	}
+	return strings.TrimSpace(strings.TrimSuffix(field.Label, "*")) + " Slug"
 }

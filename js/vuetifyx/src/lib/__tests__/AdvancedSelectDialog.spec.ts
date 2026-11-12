@@ -85,3 +85,35 @@ it('a RecordPickerItem goes as key.in, one record or many', () => {
     filterData([{ key: 'moeda', itemType: 'RecordPickerItem', selected: true, valuesAre: ['a', 'b'] }])
   ).toEqual([['moeda.in', 'a,b']])
 })
+
+it('a value no item has (of another key): not drawn, no error', async () => {
+  const wrapper = mountTemplate(AdvancedSelect, {
+    dialog: true,
+    itemValue: 'ID',
+    itemText: 'Text',
+    label: 'Parent',
+    selectText: 'Pick',
+    items: [{ ID: 'a_en-US', Text: 'About' }],
+    modelValue: 'a',
+    searchPageFunc: searchPage
+  })
+  await nextTick()
+  expect(wrapper.text()).toContain('Pick')
+  expect(wrapper.text()).toContain('Parent')
+  // the label on a line of its own
+  expect(wrapper.find('label.d-block').exists()).toBe(true)
+})
+
+it('itemsTree: each under its parent when there, else at the root by its full text', async () => {
+  const {itemsTree} = await import('../advancedSelectTree')
+  const items = [
+    { ID: 'a', Name: 'About', Title: 'About', Parent: '' },
+    { ID: 't', Name: 'Team', Title: 'About › Team', Parent: 'a' },
+    { ID: 'l', Name: 'Leadership', Title: 'About › Team › Leadership', Parent: 't' },
+    { ID: 's', Name: 'Small', Title: 'Services › Small', Parent: 'x' }
+  ]
+  const tree = itemsTree(items, 'ID', 'Parent', 'Name', 'Title')
+  expect(tree.map((n) => n.title)).toEqual(['About', 'Services › Small'])
+  expect(tree[0].children!.map((n) => n.title)).toEqual(['Team'])
+  expect(tree[0].children![0].children!.map((n) => n.title)).toEqual(['Leadership'])
+})
