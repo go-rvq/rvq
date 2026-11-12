@@ -45,6 +45,9 @@ const (
 	PrefixDeny  = "deny "
 	PrefixAllow = "allow "
 	PrefixReset = "reset "
+	// PrefixUnset is of an edit only (ExprAlt.Merge): never a line of a
+	// stack
+	PrefixUnset = "unset "
 )
 
 // LineKind is what a line of a stack does.
@@ -59,7 +62,17 @@ const (
 	LineAllow
 	// LineReset replaces the lines before it it covers.
 	LineReset
+	// LineUnset is an edit, not a line of a stack: in a merge
+	// (ExprAlt.Merge), it takes out the lines before it it covers; a stack
+	// never takes it (CheckLine: ErrUnset)
+	LineUnset
 )
+
+// LineKinds are the kinds of a prefix, in the order they are read.
+var LineKinds = []LineKind{LineDeny, LineAllow, LineReset, LineUnset}
+
+// ErrUnset is a line of a stack with an unset: an edit of a merge only.
+var ErrUnset = errors.New(`"unset" takes out lines in a merge: it is no line of a stack`)
 
 // Prefix is the prefix of the kind: "" for a grant.
 func (k LineKind) Prefix() string {
@@ -70,6 +83,8 @@ func (k LineKind) Prefix() string {
 		return PrefixAllow
 	case LineReset:
 		return PrefixReset
+	case LineUnset:
+		return PrefixUnset
 	}
 	return ""
 }
@@ -81,7 +96,7 @@ var ErrLine = errors.New(`a permission is a resource, maybe after a prefix — i
 // ParseLine is the kind and the pattern of a line: its prefix taken off.
 func ParseLine(s string) (LineKind, string) {
 	s = strings.TrimSpace(s)
-	for _, k := range []LineKind{LineDeny, LineAllow, LineReset} {
+	for _, k := range LineKinds {
 		if p := k.Prefix(); strings.HasPrefix(s, p) {
 			return k, strings.TrimSpace(s[len(p):])
 		}
@@ -90,13 +105,28 @@ func ParseLine(s string) (LineKind, string) {
 }
 
 // CheckLine says what is wrong with a line: nil when nothing is (a blank one
-// is left out).
+// is left out) — its prefix and its grammar (ParseExpr): what a field that
+// writes lines takes.
 func CheckLine(s string) error {
+	if err := checkPrefix(s); err != nil {
+		return err
+	}
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	_, err := ParseExpr(s)
+	return err
+}
+
+// checkPrefix says what is wrong with the prefix of a line: what a stack
+// leaves out (Stack.Add) — a line of an odd grammar, stored before the
+// grammar was, decides as it always did.
+func checkPrefix(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil
 	}
-	for _, k := range []LineKind{LineDeny, LineAllow, LineReset} {
+	for _, k := range LineKinds {
 		w := strings.TrimSpace(k.Prefix())
 		if s == w {
 			return ErrLine
@@ -107,7 +137,11 @@ func CheckLine(s string) error {
 		return ErrLine
 	}
 	for _, l := range ExpandLine(s) {
-		if _, e := ParseLine(l); e == "" && k != LineGrant {
+		lk, e := ParseLine(l)
+		if lk == LineUnset {
+			return ErrUnset
+		}
+		if e == "" && k != LineGrant {
 			return ErrLine
 		}
 	}
@@ -117,9 +151,12 @@ func CheckLine(s string) error {
 // ExpandLine is the lines a line is, its groups of alternatives broken in
 // their order: "deny admin:users:{list, new}" is "deny admin:users:list" and
 // "deny admin:users:new"; the prefix of an alternative takes the place of
-// the line's. Blank lines are none.
+// the line's. Blank lines are none. The labels of its records are none of it
+// (StripLabels); its alternatives at the root, by commas or lines, a group:
+// "admin:a, site:b" is "admin:a" and "site:b".
 func ExpandLine(s string) []string {
-	kind, pattern := ParseLine(s)
+	kind, pattern := ParseLine(StripLabels(s))
+	pattern = rootList(pattern)
 	if pattern == "" {
 		return nil
 	}
@@ -315,11 +352,12 @@ type Stack struct {
 	Lines []*Line
 }
 
-// Add adds the lines of origin, each expanded (ExpandLine), the blank and
-// the wrong ones left out.
+// Add adds the lines of origin, each expanded (ExpandLine), the blank ones
+// and those of a wrong prefix left out (a grammar odd decides as it always
+// did: CheckLine is for what is written now).
 func (s *Stack) Add(origin string, lines ...string) *Stack {
 	for _, l := range lines {
-		if CheckLine(l) != nil {
+		if checkPrefix(l) != nil {
 			continue
 		}
 		for _, e := range ExpandLine(l) {
