@@ -13,8 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// A line removed in the form — the list posted without it — is gone once the
-// role is saved; the one kept stays.
+// A line removed in the form — the value posted without it — is gone once
+// the role is saved; the one kept stays.
 func TestRolePermissionRemoved(t *testing.T) {
 	mine := Role{ID: uuid.New(), Name: "Mine", Permissions: pq.StringArray{"admin:kept:*", "admin:gone:*"}}
 	db, _, h := systemApp(t, func(db *gorm.DB) { db.Create(&mine) })
@@ -34,8 +34,7 @@ func TestRolePermissionRemoved(t *testing.T) {
 	}
 	body := event(actions.Update, [][2]string{
 		{"Name", "Mine"}, {presets.RecordStampFormKey, stamp[1]},
-		{"Permissions.__present", "1"},
-		{"Permissions[0].__value", "admin:kept:*"}, {"Permissions[0].$id", "1"},
+		{"Permissions", "admin:kept:*"},
 	})
 	if got := linesOf(db, mine); got != "admin:kept:*" {
 		t.Errorf("the lines after the removal: %q\n%.400s", got, body)

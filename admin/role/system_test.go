@@ -216,23 +216,22 @@ func TestSystemRolesAdmin(t *testing.T) {
 	}
 }
 
-// The lines as the form posts them — a list of texts, each item its
-// __value —: kept as written, in their order, the blank ones out; a prefix
-// of no resource refused.
+// The permissions as the form posts them — one value, several lines at its
+// root a group —: stored canonical, a line a scope, what is given to a
+// resource out of the groups of the menu; a prefix of no resource refused.
 func TestRolePermissionsAsTheFormPosts(t *testing.T) {
 	db, _, h := systemApp(t, nil)
 	post := func(name string, lines ...string) {
 		mb := multipartestutils.NewMultipartBuilder().PageURL("/admin/roles").EventFunc(actions.Create).
-			AddField("Name", name).AddField("Permissions.__present", "1")
-		for i, l := range lines {
-			mb = mb.AddField(fmt.Sprintf("Permissions[%d].__value", i), l).AddField(fmt.Sprintf("Permissions[%d].$id", i), fmt.Sprint(i+1))
-		}
+			AddField("Name", name).AddField("Permissions", strings.Join(lines, "\n"))
 		h.ServeHTTP(httptest.NewRecorder(), mb.BuildEventFuncRequest())
 	}
-	post("Lists", "admin:x:*", " ", "deny admin:x:@delete", "admin:users:{*, deny @edit}")
+	// a placeholder ("admin:pages:", "deny admin:"): decides nothing, not stored
+	post("Lists", "admin:x:*", " ", "deny admin:x:@delete", "admin:users:{*, deny @edit}", "admin:content/:posts:@list", "site:*",
+		"admin:pages:", "deny admin:")
 	var r Role
 	db.First(&r, "name = ?", "Lists")
-	if got := strings.Join(r.Permissions, "|"); got != "admin:x:*|deny admin:x:@delete|admin:users:{*, deny @edit}" {
+	if got := strings.Join(r.Permissions, "|"); got != "admin:{x:{*, deny @delete}, users:{*, deny @edit}, posts:@list}|site:*" {
 		t.Errorf("the lines: %q", got)
 	}
 	post("Bad", "admin:x:*", "deny")

@@ -70,6 +70,29 @@ type PermTreeItem struct {
 	Children []*PermTreeItem `json:"children,omitempty"`
 	// Checks are the permissions the item asks, each as a Verifier asks it
 	Checks []PermCheck `json:"-"`
+
+	// Of the tree of a value (PermValueTree), what edits it:
+	//
+	// Edit is the resource the item's line writes — a resource by its unique
+	// name, a group by the groups —; "" not editable (a branch of the tree
+	// only)
+	Edit string `json:"edit,omitempty"`
+	// Set is the resource the prefix of the item writes: of a branch, what is
+	// under it ("admin:posts:*"); of a leaf, Edit
+	Set string `json:"set,omitempty"`
+	// Prefix is of an item of a line of its own (Explicit — of a branch, its
+	// "*"): "grant", "deny", "allow", "reset"
+	Prefix   string `json:"prefix,omitempty"`
+	Explicit bool   `json:"explicit,omitempty"`
+	// CanAdd: parts may follow it (the + of the field)
+	CanAdd bool `json:"canAdd,omitempty"`
+	// Incomplete: a line of its own ending by ":" — what follows it missing,
+	// no "*" of it
+	Incomplete bool `json:"incomplete,omitempty"`
+	// Error: a record not found (or the user may not read)
+	Error bool `json:"error,omitempty"`
+	// Expand: on the way to a line of its own — opened when shown
+	Expand bool `json:"expand,omitempty"`
 }
 
 // The kinds of the items of the tree (PermTreeItem.Kind).

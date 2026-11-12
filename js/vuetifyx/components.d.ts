@@ -61,6 +61,7 @@ declare module 'vue' {
     MultipleSelectItem: typeof import('./src/lib/Filter/components/MultipleSelectItem.vue')['default']
     NavigationDrawer: typeof import('./src/lib/NavigationDrawer.vue')['default']
     NumberItem: typeof import('./src/lib/Filter/components/NumberItem.vue')['default']
+    PermissionInput: typeof import('./src/lib/PermissionInput.vue')['default']
     PortalExample: typeof import('./src/demo/components/PortalExample.vue')['default']
     PreviewActionButton: typeof import('./src/lib/TipTap/components/PreviewActionButton.vue')['default']
     RecordPickerItem: typeof import('./src/lib/Filter/components/RecordPickerItem.vue')['default']

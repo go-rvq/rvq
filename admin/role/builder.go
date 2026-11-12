@@ -11,6 +11,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/userdocs"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/perm"
@@ -126,29 +127,22 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 		"Permissions",
 	)
 
-	// its lines: a list of texts, in order (perm.Stack)
-	ed.Field("Permissions").AsSlice()
-	// the help of the permissions: a ? that opens their documentation
-	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
-		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			comp := old(field, ctx)
-			if b.permissionsHelp == nil {
-				return comp
-			}
-			href := b.permissionsHelp(ctx)
-			if href == "" {
-				return comp
-			}
-			return h.Div(
-				h.Div(
-					VBtn("").Icon("mdi-help-circle-outline").Variant(VariantText).Size(SizeSmall).
-						Attr("href", href).Attr("target", "_blank").Attr("rel", "noopener").
-						Attr("title", GetMessages(ctx.Context()).PermissionsHelp).Attr("data-permissions-help", true),
-				).Style("position: absolute; top: -8px; right: 0; z-index: 1"),
-				comp,
-			).Style("position: relative")
+	// its lines, in order (perm.Stack), edited as one value — the tree of the
+	// permissions of the admin it touches (userdocs.PermissionInput) —, any
+	// part of the admin; stored a line a scope, what is given to a resource
+	// by its unique name
+	permOpts := func(ctx *web.EventContext) (userdocs.PermissionInputOptions, error) {
+		o := userdocs.PermissionInputOptions{URL: b.roleMb.Info().ListingHref(), Event: PermissionInputEvent,
+			StringView: true}
+		// the help of the permissions: a ? in the bar of the field
+		if b.permissionsHelp != nil {
+			o.HelpURL, o.HelpTitle = b.permissionsHelp(ctx), GetMessages(ctx.Context()).PermissionsHelp
 		}
-	})
+		return o, nil
+	}
+	ed.Field("Permissions").ComponentFunc(userdocs.PermissionFieldComponentFunc(pb, permOpts)).
+		SetterFunc(userdocs.PermissionFieldSetter)
+	b.roleMb.RegisterEventFunc(PermissionInputEvent, userdocs.PermissionInputEventFunc(pb, permOpts))
 
 	ed.Validators.AppendFunc(func(obj interface{}, _ presets.FieldModeStack, ctx *web.EventContext) (errs web.ValidationErrors) {
 		r := obj.(*Role)
@@ -209,6 +203,11 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	if err = MigrateLines(b.db); err != nil {
 		return err
 	}
+	// what was given to resources inside the groups of the menu: by their
+	// unique names; the placeholders out (perm.CleanLines)
+	if err = MigrateUngroup(b.db); err != nil {
+		return err
+	}
 	if len(b.systemRoles) > 0 {
 		if err = b.EnsureSystemRoles(); err != nil {
 			return err
@@ -233,6 +232,10 @@ func Generation() int64 { return generation.Load() }
 
 // Changed tells the roles changed — by this process, or by another one (a
 // listener): the stacks of the users are made again at their next request.
+// PermissionInputEvent is the event of the field of the permissions of the
+// roles (userdocs.PermissionInputEventFunc).
+const PermissionInputEvent = "role_PermissionInput"
+
 func Changed(pb *perm.Builder) {
 	generation.Add(1)
 	if pb != nil {
@@ -295,6 +298,29 @@ func MigrateLines(db *gorm.DB) error {
 		})
 		if err != nil {
 			return fmt.Errorf("role %s: its lines: %w", r.Name, err)
+		}
+	}
+	return nil
+}
+
+// MigrateUngroup cleans the lines of the roles (perm.CleanLines): what they
+// give to resources inside the groups of the menu by their unique names
+// ("admin:content/:posts:*" is "admin:posts:*") — what is given to a
+// resource is stored out of its groups: a resource moved to another group
+// keeps its permissions —, and no placeholder ("admin:users:", which decides
+// nothing). Only the roles whose lines change; once done, nothing more.
+func MigrateUngroup(db *gorm.DB) error {
+	var roles []*Role
+	if err := db.Select("id", "name", "permissions").Find(&roles).Error; err != nil {
+		return err
+	}
+	for _, r := range roles {
+		lines, changed := perm.CleanLines(r.Permissions)
+		if !changed {
+			continue
+		}
+		if err := db.Model(r).UpdateColumn("permissions", pq.StringArray(lines)).Error; err != nil {
+			return fmt.Errorf("role %s: its lines out of the groups: %w", r.Name, err)
 		}
 	}
 	return nil

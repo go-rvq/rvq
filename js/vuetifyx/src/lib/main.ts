@@ -15,6 +15,7 @@ import MessageListener from '@/lib/MessageListener.vue'
 import DragListener from '@/lib/DragListener.vue'
 import AdvancedSelect from '@/lib/AdvancedSelect.vue'
 import TreeDataTable from '@/lib/TreeDataTable.vue'
+import PermissionInput from '@/lib/PermissionInput.vue'
 import TreeRows from '@/lib/TreeRows.vue'
 import TreeDraggable from '@/lib/TreeDraggable.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
@@ -67,6 +68,8 @@ const vuetifyx = {
     app.component('vx-drag-listener', DragListener)
     app.component('vx-tree-rows', TreeRows)
     app.component('vx-tree-data-table', TreeDataTable)
+    // a field of one permission (a line of x/perm), as the tree of its parts
+    app.component('vx-permission-input', PermissionInput)
     // a tree of nodes dragged and dropped, among their siblings or into
     // another node (a child): the folders of a file system
     app.component('vx-tree-draggable', TreeDraggable)

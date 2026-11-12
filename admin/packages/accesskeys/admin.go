@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
+	"github.com/go-rvq/rvq/admin/userdocs"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/account"
 	"github.com/go-rvq/rvq/x/login"
@@ -67,7 +68,31 @@ func (b *Builder) AutoMigrate() error {
 	if err := b.db.AutoMigrate(&AccessKey{}, &AccessKeyUse{}); err != nil {
 		return err
 	}
-	return MigrateLines(b.db)
+	if err := MigrateLines(b.db); err != nil {
+		return err
+	}
+	return MigrateUngroup(b.db)
+}
+
+// MigrateUngroup cleans the lines of the keys (perm.CleanLines): what they
+// deny of resources inside the groups of the menu by their unique names, no
+// placeholder ("deny admin:", which decides nothing). Only the keys whose
+// lines change; once done, nothing more.
+func MigrateUngroup(db *gorm.DB) error {
+	var all []*AccessKey
+	if err := db.Select("id", "permissions").Find(&all).Error; err != nil {
+		return err
+	}
+	for _, k := range all {
+		lines, changed := perm.CleanLines(k.Permissions)
+		if !changed {
+			continue
+		}
+		if err := db.Model(k).UpdateColumn("permissions", pq.StringArray(lines)).Error; err != nil {
+			return fmt.Errorf("accesskeys: the lines of %s out of the groups: %w", k.ID, err)
+		}
+	}
+	return nil
 }
 
 // currentUserID is the id of the user of r: its login's.
@@ -199,27 +224,32 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		"Permissions")
 	ed := mb.Editing("Name", "Description", "ExpiresAt", "Enabled", "Permissions")
 
-	// a list of texts: a resource each, "!" before one it denies
-	ed.Field("Permissions").AsSlice()
-	ed.Field("Permissions").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
-		return func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-			comp := old(field, ctx)
-			if b.PermissionsHelpURL == nil {
-				return comp
-			}
-			href := b.PermissionsHelpURL(ctx)
-			if href == "" {
-				return comp
-			}
-			return h.Div(
-				h.Div(v.VBtn("").Icon("mdi-help-circle-outline").Variant(v.VariantText).Size(v.SizeSmall).
-					Attr("href", href).Attr("target", "_blank").Attr("rel", "noopener").
-					Attr("title", GetMessages(ctx.Context()).PermissionsHelp).Attr("data-permissions-help", true),
-				).Style("position: absolute; top: -8px; right: 0; z-index: 1"),
-				comp,
-			).Style("position: relative")
+	// its lines, denies only, edited as one value — the tree of the
+	// permissions of the admin it touches (userdocs.PermissionInput) —, kept
+	// to what the key's user may, what the key allows its effect (all but its
+	// denies and the protected)
+	event := mb.Info().URIName() + "_" + PermissionInputEvent
+	permOpts := func(ctx *web.EventContext) (userdocs.PermissionInputOptions, error) {
+		allows, err := b.ownerAllows(ctx, owner)
+		if err != nil {
+			return userdocs.PermissionInputOptions{}, err
 		}
-	})
+		// the help of the permissions: a ? in the bar of the field
+		help := ""
+		if b.PermissionsHelpURL != nil {
+			help = b.PermissionsHelpURL(ctx)
+		}
+		return userdocs.PermissionInputOptions{URL: ctx.R.URL.Path, Event: event,
+			HelpURL: help, HelpTitle: GetMessages(ctx.Context()).PermissionsHelp,
+			Prefixes: []string{userdocs.PermPrefixDeny}, StringView: true,
+			Value: userdocs.PermValueOptions{Base: allows, Effect: func(lines []string) func(userdocs.PermCheck) bool {
+				st := (&AccessKey{Permissions: lines}).Stack().Resolve()
+				return func(c userdocs.PermCheck) bool { return st.Allows(c.Resource, c.Preferred, c.Action) }
+			}}}, nil
+	}
+	ed.Field("Permissions").ComponentFunc(userdocs.PermissionFieldComponentFunc(b.p, permOpts)).
+		SetterFunc(userdocs.PermissionFieldSetter)
+	mb.RegisterEventFunc(event, userdocs.PermissionInputEventFunc(b.p, permOpts))
 
 	// a new key starts enabled — the form opened, not posted back
 	ed.Field("Enabled").WrapComponentFunc(func(old presets.FieldComponentFunc) presets.FieldComponentFunc {
@@ -418,4 +448,39 @@ func MigrateLines(db *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+// PermissionInputEvent is the event of the field of the permissions of the
+// keys (userdocs.PermissionInputEventFunc), after the URI name of the model
+// (the user's keys, My keys).
+const PermissionInputEvent = "PermissionInput"
+
+// ownerAllows is what the stack of the user of the keys of the request
+// (owner) allows — what a key of it may deny —; nil when the permissions are
+// not by stacks.
+func (b *Builder) ownerAllows(ctx *web.EventContext, owner func(r *http.Request) (uuid.UUID, bool)) (func(userdocs.PermCheck) bool, error) {
+	pb := b.p.GetPermission()
+	if pb == nil || pb.GetStacks() == nil || b.auth.FindUser == nil {
+		return nil, nil
+	}
+	id, ok := owner(ctx.R)
+	if !ok {
+		return nil, errors.New("accesskeys: no user of the keys")
+	}
+	u, err := b.auth.FindUser(ctx.R.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	// the stack of the owner: the request as if it were the owner's
+	r := ctx.R.WithContext(context.WithValue(ctx.R.Context(), login.UserKey, u))
+	_, _, build := pb.GetStacks().StackOf(r)
+	if build == nil {
+		return nil, nil
+	}
+	st, err := build()
+	if err != nil {
+		return nil, err
+	}
+	st.Resolve()
+	return func(c userdocs.PermCheck) bool { return st.Allows(c.Resource, c.Preferred, c.Action) }, nil
 }

@@ -17,381 +17,507 @@ func GetMessages(ctx context.Context) *Messages {
 
 // Messages are the words of the documentation page.
 type Messages struct {
-	ModuleDescription     string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
-	NothingWritten        string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
-	SeeAlso               string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
-	CopyCode              string `i18n:"hint='Button of a block of code of a document that copies it.'"`
-	CodeCopied            string `i18n:"hint='Said by the button of a block of code once it copied it.'"`
-	CopyCodeError         string `i18n:"hint='Said by the button of a block of code when it could not copy it: how to copy it by hand.'"`
-	EditDocuments         string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
-	DocLanguage           string `i18n:"hint='The page of a guide (the help of an editor): label of the languages it can be read in.'"`
-	DocNotInYours         string `i18n:"hint='The page of a guide: said when it is not in the language of who reads it, above the languages to choose.'"`
-	RenderError           string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
-	NoDocument            string `i18n:"hint='Shown for a document there is not, or of a part the user does not see.'"`
-	ResetDocuments        string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
-	Actions               string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
-	Pages                 string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
-	FormNew               string `i18n:"hint='Node of the tree with the form of a new record of a model.'"`
-	FormEdit              string `i18n:"hint='Node of the tree with the form of an edit of a record of a model.'"`
-	FormDetail            string `i18n:"hint='Node of the tree with the detail of a record of a model.'"`
-	Field                 string `i18n:"hint='Column of the table of the fields of a form: the field.'"`
-	Description           string `i18n:"hint='Column of the table of the fields of a form: what the field is.'"`
-	Conditional           string `i18n:"hint='Said of a field shown depending on the record.'"`
-	NoFields              string `i18n:"hint='Shown for a form with no field.'"`
-	Children              string `i18n:"hint='Title of the models nested in a record, in the menu of its detail.'"`
-	NothingInMenu         string `i18n:"hint='Shown for a detail whose menu has nothing.'"`
-	RuleHeading           string `i18n:"hint='Heading of the section of the document of an action that says when it is available: the text under it is shown in the menu of the detail. The documents use the same.'"`
-	RuleUndocumented      string `i18n:"hint='Shown for an action available by a rule its document does not say.'"`
-	Permissions           string `i18n:"hint='Node of the tree with the permissions of a part of the admin.'"`
-	PermNone              string `i18n:"hint='Shown for a part with no permission of its own.'"`
-	PermResources         string `i18n:"hint='Title of the resources of a part.'"`
-	PermBy                string `i18n:"hint='Column of the table of the resources: how the resource names the part.'"`
-	PermResource          string `i18n:"hint='Column with a resource of a permission.'"`
-	PermUnique            string `i18n:"hint='Says a resource names the part by its unique name: it decides first.'"`
-	PermByGroups          string `i18n:"hint='Says a resource names the part through the groups of the menu.'"`
-	PermRecords           string `i18n:"hint='Title of the permissions of the records of a model.'"`
-	PermWhat              string `i18n:"hint='Column with what a permission allows.'"`
-	PermVerb              string `i18n:"hint='Column with the verb (action) of a permission.'"`
-	PermList              string `i18n:"hint='Permission to list the records.'"`
-	PermGet               string `i18n:"hint='Permission to see a record.'"`
-	PermCreate            string `i18n:"hint='Permission to create a record.'"`
-	PermUpdate            string `i18n:"hint='Permission to edit a record.'"`
-	PermDelete            string `i18n:"hint='Permission to delete a record.'"`
-	PermDeleteWithRelated string `i18n:"hint='Permission to delete a record with the records related to it.'"`
-	PermFields            string `i18n:"hint='Title of the permissions of the fields of a model.'"`
-	PermFieldsHint        string `i18n:"hint='Explains the permissions of the fields.'"`
-	PermSections          string `i18n:"hint='Title of the permissions of the sections of a detail.'"`
-	PermSection           string `i18n:"hint='Column with a section of a detail.'"`
-	PermSectionsHint      string `i18n:"hint='Explains the permissions of the sections.'"`
-	PermParts             string `i18n:"hint='Title of the parts of a group, with their unique names.'"`
-	PermScopeAdminDesc    string `i18n:"hint='Description of the scope of the admin in the tree of the permissions.'"`
-	PermScopeAdmin        string `i18n:"hint='Name of the scope of the admin (its resources begin with admin:) in the tree of the permissions.'"`
-	PermDescGroup         string `i18n:"hint='Description of a group of the menu in the tree of the permissions.', fields=(;'%s'='the group')"`
-	PermDescModel         string `i18n:"hint='Description of a model (its listing) in the tree of the permissions.', fields=(;'%s'='the model')"`
-	PermDescNested        string `i18n:"hint='Description of a model nested in a record of another, in the tree of the permissions.', fields=(;'%s'='the model; the second %s, the parent')"`
-	PermDescSingleton     string `i18n:"hint='Description of a model with a single record in the tree of the permissions.', fields=(;'%s'='the model')"`
-	PermDescRecord        string `i18n:"hint='Description of the records of a model in the tree of the permissions.', fields=(;'%s'='the model')"`
-	PermDescField         string `i18n:"hint='Description of a field in the tree of the permissions.', fields=(;'%s'='the field; the second %s, its record or field')"`
-	PermDescSection       string `i18n:"hint='Description of a section of a detail in the tree of the permissions.', fields=(;'%s'='the section; the second %s, the record')"`
-	PermDescPage          string `i18n:"hint='Description of a page of the admin in the tree of the permissions.', fields=(;'%s'='the page')"`
-	PermDescPageOf        string `i18n:"hint='Description of a page of a model or record in the tree of the permissions.', fields=(;'%s'='the page; the second %s, its model or record')"`
-	PermDescCheck         string `i18n:"hint='Description of a permission of its own (a verifier) in the tree of the permissions.', fields=(;'%s'='what it allows')"`
-	PermUntitled          string `i18n:"hint='Label of a part of the tree of the permissions with no title of its own.', fields=(;'%s'='its name')"`
-	PermPartsHint         string `i18n:"hint='Explains the parts of a group.'"`
-	PermGroupVerbs        string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions (list, see, edit…).'"`
-	PermGroupVerbsDesc    string `i18n:"hint='Description of the group of the permissions of a model or record.', fields=(;'%s'='the model or record')"`
-	PermGroupActions      string `i18n:"hint='Group of the tree of the permissions under a model or record: its actions.'"`
-	PermGroupActionsDesc  string `i18n:"hint='Description of the group of the actions of a model or record.', fields=(;'%s'='the model or record')"`
-	PermGroupFields       string `i18n:"hint='Group of the tree of the permissions under a model or record: its fields.'"`
-	PermGroupFieldsDesc   string `i18n:"hint='Description of the group of the fields of a record.', fields=(;'%s'='the model or record')"`
-	PermGroupSections     string `i18n:"hint='Group of the tree of the permissions under a model or record: the sections of its detail.'"`
-	PermGroupSectionsDesc string `i18n:"hint='Description of the group of the sections of a record.', fields=(;'%s'='the model or record')"`
-	PermGroupPages        string `i18n:"hint='Group of the tree of the permissions under a model or record: its pages.'"`
-	PermGroupPagesDesc    string `i18n:"hint='Description of the group of the pages of a model or record.', fields=(;'%s'='the model or record')"`
-	PermGroupModels       string `i18n:"hint='Group of the tree of the permissions under a model or record: the models nested in it.'"`
-	PermGroupModelsDesc   string `i18n:"hint='Description of the group of the models nested in a record.', fields=(;'%s'='the model or record')"`
-	PermGroupChecks       string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions of its own.'"`
-	PermGroupChecksDesc   string `i18n:"hint='Description of the group of the permissions of its own of a model or record.', fields=(;'%s'='the model or record')"`
-	PermDescAction        string `i18n:"hint='Description of an action with none of its own, in the tree of the permissions.', fields=(;'%s'='the action, then the model or record')"`
-	PermDescInline        string `i18n:"hint='Description of a field of a model edited in place (its fields under it), in the tree of the permissions.', fields=(;'%s'='the field, then its record')"`
-	PermGroupInlines      string `i18n:"hint='Group of the tree of the permissions under a model or record: the models edited in place in its fields.'"`
-	PermGroupInlinesDesc  string `i18n:"hint='Description of the group of the models edited in place of a record.', fields=(;'%s'='the model or record')"`
-	PermMethodGet         string `i18n:"hint='Permission of a page asked by the HTTP method GET: opening it.'"`
-	PermMethodPost        string `i18n:"hint='Permission of a page asked by the HTTP method POST: sending to it.'"`
-	PermMethodPut         string `i18n:"hint='Permission of a page asked by the HTTP method PUT: replacing.'"`
-	PermMethodPatch       string `i18n:"hint='Permission of a page asked by the HTTP method PATCH: changing.'"`
-	PermMethodDelete      string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
-	PermTreeName          string `i18n:"hint='Column of the tree of the permissions: what the permission is of (a model, a field, an action and so on).'"`
-	PermTreeKind          string `i18n:"hint='Column of the tree of the permissions: what the row is (a model, a field, an action and so on).'"`
-	PermTreePath          string `i18n:"hint='Column of the tree of the permissions: where a part of the admin is, the groups of the menu and the models it is in, as breadcrumbs.'"`
-	PermTreeKinds         string `i18n:"hint='Filter of the tree of the permissions: the kinds of the rows shown.'"`
-	PermTreeDescription   string `i18n:"hint='Column of the tree of the permissions: what it is.'"`
-	PermTreePermission    string `i18n:"hint='Column of the tree of the permissions: the permission as a line of the stack writes it.'"`
-	PermTreeActive        string `i18n:"hint='Column of the tree of the permissions of a user: what of the row the stack of the user allows.'"`
-	PermTreeActiveAll     string `i18n:"hint='Tooltip of the column Active: everything of the row is allowed.'"`
-	PermTreeActiveSome    string `i18n:"hint='Tooltip of the column Active: some of the row is allowed.'"`
-	PermTreeActiveNone    string `i18n:"hint='Tooltip of the column Active: nothing of the row is allowed.'"`
-	PermTreeSearch        string `i18n:"hint='Search field of the tree of the permissions.'"`
-	PermTreeExpandAll     string `i18n:"hint='Button: open every row of the tree of the permissions.'"`
-	PermTreeCollapseAll   string `i18n:"hint='Button: close every row of the tree of the permissions.'"`
-	PermTreeByVerb        string `i18n:"hint='Tab of the tree of the permissions: a model by the verbs asked of it, each with what it asks.'"`
-	PermTreeByKind        string `i18n:"hint='Tab of the tree of the permissions: a model by what it holds, each with its verbs.'"`
-	PermTreeGroups        string `i18n:"hint='Switch of the tree of the permissions: the groups of the menu as branches, and the permissions by them too.'"`
-	PermTreeLoadError     string `i18n:"hint='Shown when the tree of the permissions could not be loaded.'"`
-	PermKindGroup         string `i18n:"hint='Kind of a row of the tree of the permissions: a group of the menu.'"`
-	PermKindModel         string `i18n:"hint='Kind of a row of the tree of the permissions: a model (its listing, its records).'"`
-	PermKindSingleton     string `i18n:"hint='Kind of a row of the tree of the permissions: a model of a single record.'"`
-	PermKindVerb          string `i18n:"hint='Kind of a row of the tree of the permissions: a permission asked (list, edit, the GET of a page and so on).'"`
-	PermKindAction        string `i18n:"hint='Kind of a row of the tree of the permissions: an action.'"`
-	PermKindField         string `i18n:"hint='Kind of a row of the tree of the permissions: a field.'"`
-	PermKindInline        string `i18n:"hint='Kind of a row of the tree of the permissions: a field holding a model edited in place.'"`
-	PermKindSection       string `i18n:"hint='Kind of a row of the tree of the permissions: a section of a detail.'"`
-	PermKindPage          string `i18n:"hint='Kind of a row of the tree of the permissions: a page.'"`
-	PermKindCheck         string `i18n:"hint='Kind of a row of the tree of the permissions: a permission of its own.'"`
-	HelpBar               string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
-	HelpFocusPage         string `i18n:"hint='Said by the help bar when the help shown is of the page.'"`
-	HelpFocusDrawer       string `i18n:"hint='Said by the help bar when the help shown is of the drawer open (a form, a detail).'"`
-	HelpFocusDialog       string `i18n:"hint='Said by the help bar when the help shown is of the dialog open.'"`
-	HelpOpenDocs          string `i18n:"hint='Button of the help bar: opens the document shown in the documentation page, in a new tab.'"`
-	HelpReload            string `i18n:"hint='Button of the help bar: shows its document again.'"`
-	HelpCollapse          string `i18n:"hint='Button of the help bar: makes it narrow again, only its icon.'"`
-	HelpLoadError         string `i18n:"hint='Shown by the help bar when its document could not be loaded.'"`
-	HelpFocusTab          string `i18n:"hint='Title of the first tab of the help bar: the help of what is in focus, following it.'"`
-	HelpCloseTab          string `i18n:"hint='Button of a tab of the help bar that closes it.'"`
-	HelpBack              string `i18n:"hint='Button of the help bar: the document shown before.'"`
-	HelpForward           string `i18n:"hint='Button of the help bar: the document shown after, gone back from.'"`
+	ModuleDescription       string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	NothingWritten          string `i18n:"hint='Shown for a part of the admin nothing was written about yet.'"`
+	SeeAlso                 string `i18n:"hint='Title of the list of the parts inside the one shown.'"`
+	CopyCode                string `i18n:"hint='Button of a block of code of a document that copies it.'"`
+	CodeCopied              string `i18n:"hint='Said by the button of a block of code once it copied it.'"`
+	CopyCodeError           string `i18n:"hint='Said by the button of a block of code when it could not copy it: how to copy it by hand.'"`
+	EditDocuments           string `i18n:"hint='Link to the form of the documents of the package of the page shown.'"`
+	DocLanguage             string `i18n:"hint='The page of a guide (the help of an editor): label of the languages it can be read in.'"`
+	DocNotInYours           string `i18n:"hint='The page of a guide: said when it is not in the language of who reads it, above the languages to choose.'"`
+	RenderError             string `i18n:"hint='Shown when a document could not be shown.', fields=(;'%s'='what went wrong')"`
+	NoDocument              string `i18n:"hint='Shown for a document there is not, or of a part the user does not see.'"`
+	ResetDocuments          string `i18n:"hint='Button that brings the documents of a package back to the initial ones.'"`
+	Actions                 string `i18n:"hint='Node of the tree with the actions of a part of the admin.'"`
+	Pages                   string `i18n:"hint='Node of the tree with the pages of a part of the admin.'"`
+	FormNew                 string `i18n:"hint='Node of the tree with the form of a new record of a model.'"`
+	FormEdit                string `i18n:"hint='Node of the tree with the form of an edit of a record of a model.'"`
+	FormDetail              string `i18n:"hint='Node of the tree with the detail of a record of a model.'"`
+	Field                   string `i18n:"hint='Column of the table of the fields of a form: the field.'"`
+	Description             string `i18n:"hint='Column of the table of the fields of a form: what the field is.'"`
+	Conditional             string `i18n:"hint='Said of a field shown depending on the record.'"`
+	NoFields                string `i18n:"hint='Shown for a form with no field.'"`
+	Children                string `i18n:"hint='Title of the models nested in a record, in the menu of its detail.'"`
+	NothingInMenu           string `i18n:"hint='Shown for a detail whose menu has nothing.'"`
+	RuleHeading             string `i18n:"hint='Heading of the section of the document of an action that says when it is available: the text under it is shown in the menu of the detail. The documents use the same.'"`
+	RuleUndocumented        string `i18n:"hint='Shown for an action available by a rule its document does not say.'"`
+	Permissions             string `i18n:"hint='Node of the tree with the permissions of a part of the admin.'"`
+	PermNone                string `i18n:"hint='Shown for a part with no permission of its own.'"`
+	PermResources           string `i18n:"hint='Title of the resources of a part.'"`
+	PermBy                  string `i18n:"hint='Column of the table of the resources: how the resource names the part.'"`
+	PermResource            string `i18n:"hint='Column with a resource of a permission.'"`
+	PermUnique              string `i18n:"hint='Says a resource names the part by its unique name: it decides first.'"`
+	PermByGroups            string `i18n:"hint='Says a resource names the part through the groups of the menu.'"`
+	PermRecords             string `i18n:"hint='Title of the permissions of the records of a model.'"`
+	PermWhat                string `i18n:"hint='Column with what a permission allows.'"`
+	PermVerb                string `i18n:"hint='Column with the verb (action) of a permission.'"`
+	PermList                string `i18n:"hint='Permission to list the records.'"`
+	PermGet                 string `i18n:"hint='Permission to see a record.'"`
+	PermCreate              string `i18n:"hint='Permission to create a record.'"`
+	PermUpdate              string `i18n:"hint='Permission to edit a record.'"`
+	PermDelete              string `i18n:"hint='Permission to delete a record.'"`
+	PermDeleteWithRelated   string `i18n:"hint='Permission to delete a record with the records related to it.'"`
+	PermFields              string `i18n:"hint='Title of the permissions of the fields of a model.'"`
+	PermFieldsHint          string `i18n:"hint='Explains the permissions of the fields.'"`
+	PermSections            string `i18n:"hint='Title of the permissions of the sections of a detail.'"`
+	PermSection             string `i18n:"hint='Column with a section of a detail.'"`
+	PermSectionsHint        string `i18n:"hint='Explains the permissions of the sections.'"`
+	PermParts               string `i18n:"hint='Title of the parts of a group, with their unique names.'"`
+	PermScopeAdminDesc      string `i18n:"hint='Description of the scope of the admin in the tree of the permissions.'"`
+	PermScopeAdmin          string `i18n:"hint='Name of the scope of the admin (its resources begin with admin:) in the tree of the permissions.'"`
+	PermDescGroup           string `i18n:"hint='Description of a group of the menu in the tree of the permissions.', fields=(;'%s'='the group')"`
+	PermDescModel           string `i18n:"hint='Description of a model (its listing) in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescNested          string `i18n:"hint='Description of a model nested in a record of another, in the tree of the permissions.', fields=(;'%s'='the model; the second %s, the parent')"`
+	PermDescSingleton       string `i18n:"hint='Description of a model with a single record in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescRecord          string `i18n:"hint='Description of the records of a model in the tree of the permissions.', fields=(;'%s'='the model')"`
+	PermDescField           string `i18n:"hint='Description of a field in the tree of the permissions.', fields=(;'%s'='the field; the second %s, its record or field')"`
+	PermDescSection         string `i18n:"hint='Description of a section of a detail in the tree of the permissions.', fields=(;'%s'='the section; the second %s, the record')"`
+	PermDescPage            string `i18n:"hint='Description of a page of the admin in the tree of the permissions.', fields=(;'%s'='the page')"`
+	PermDescPageOf          string `i18n:"hint='Description of a page of a model or record in the tree of the permissions.', fields=(;'%s'='the page; the second %s, its model or record')"`
+	PermDescCheck           string `i18n:"hint='Description of a permission of its own (a verifier) in the tree of the permissions.', fields=(;'%s'='what it allows')"`
+	PermUntitled            string `i18n:"hint='Label of a part of the tree of the permissions with no title of its own.', fields=(;'%s'='its name')"`
+	PermPartsHint           string `i18n:"hint='Explains the parts of a group.'"`
+	PermGroupVerbs          string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions (list, see, edit…).'"`
+	PermGroupVerbsDesc      string `i18n:"hint='Description of the group of the permissions of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupActions        string `i18n:"hint='Group of the tree of the permissions under a model or record: its actions.'"`
+	PermGroupActionsDesc    string `i18n:"hint='Description of the group of the actions of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupFields         string `i18n:"hint='Group of the tree of the permissions under a model or record: its fields.'"`
+	PermGroupFieldsDesc     string `i18n:"hint='Description of the group of the fields of a record.', fields=(;'%s'='the model or record')"`
+	PermGroupSections       string `i18n:"hint='Group of the tree of the permissions under a model or record: the sections of its detail.'"`
+	PermGroupSectionsDesc   string `i18n:"hint='Description of the group of the sections of a record.', fields=(;'%s'='the model or record')"`
+	PermGroupPages          string `i18n:"hint='Group of the tree of the permissions under a model or record: its pages.'"`
+	PermGroupPagesDesc      string `i18n:"hint='Description of the group of the pages of a model or record.', fields=(;'%s'='the model or record')"`
+	PermGroupModels         string `i18n:"hint='Group of the tree of the permissions under a model or record: the models nested in it.'"`
+	PermGroupModelsDesc     string `i18n:"hint='Description of the group of the models nested in a record.', fields=(;'%s'='the model or record')"`
+	PermGroupChecks         string `i18n:"hint='Group of the tree of the permissions under a model or record: its permissions of its own.'"`
+	PermGroupChecksDesc     string `i18n:"hint='Description of the group of the permissions of its own of a model or record.', fields=(;'%s'='the model or record')"`
+	PermDescAction          string `i18n:"hint='Description of an action with none of its own, in the tree of the permissions.', fields=(;'%s'='the action, then the model or record')"`
+	PermDescInline          string `i18n:"hint='Description of a field of a model edited in place (its fields under it), in the tree of the permissions.', fields=(;'%s'='the field, then its record')"`
+	PermGroupInlines        string `i18n:"hint='Group of the tree of the permissions under a model or record: the models edited in place in its fields.'"`
+	PermGroupInlinesDesc    string `i18n:"hint='Description of the group of the models edited in place of a record.', fields=(;'%s'='the model or record')"`
+	PermMethodGet           string `i18n:"hint='Permission of a page asked by the HTTP method GET: opening it.'"`
+	PermMethodPost          string `i18n:"hint='Permission of a page asked by the HTTP method POST: sending to it.'"`
+	PermMethodPut           string `i18n:"hint='Permission of a page asked by the HTTP method PUT: replacing.'"`
+	PermMethodPatch         string `i18n:"hint='Permission of a page asked by the HTTP method PATCH: changing.'"`
+	PermMethodDelete        string `i18n:"hint='Permission of a page asked by the HTTP method DELETE: deleting.'"`
+	PermTreeName            string `i18n:"hint='Column of the tree of the permissions: what the permission is of (a model, a field, an action and so on).'"`
+	PermTreeKind            string `i18n:"hint='Column of the tree of the permissions: what the row is (a model, a field, an action and so on).'"`
+	PermTreePath            string `i18n:"hint='Column of the tree of the permissions: where a part of the admin is, the groups of the menu and the models it is in, as breadcrumbs.'"`
+	PermTreeKinds           string `i18n:"hint='Filter of the tree of the permissions: the kinds of the rows shown.'"`
+	PermTreeDescription     string `i18n:"hint='Column of the tree of the permissions: what it is.'"`
+	PermTreePermission      string `i18n:"hint='Column of the tree of the permissions: the permission as a line of the stack writes it.'"`
+	PermTreeActive          string `i18n:"hint='Column of the tree of the permissions of a user: what of the row the stack of the user allows.'"`
+	PermTreeActiveAll       string `i18n:"hint='Tooltip of the column Active: everything of the row is allowed.'"`
+	PermTreeActiveSome      string `i18n:"hint='Tooltip of the column Active: some of the row is allowed.'"`
+	PermTreeActiveNone      string `i18n:"hint='Tooltip of the column Active: nothing of the row is allowed.'"`
+	PermTreeSearch          string `i18n:"hint='Search field of the tree of the permissions.'"`
+	PermTreeExpandAll       string `i18n:"hint='Button: open every row of the tree of the permissions.'"`
+	PermTreeCollapseAll     string `i18n:"hint='Button: close every row of the tree of the permissions.'"`
+	PermTreeByVerb          string `i18n:"hint='Tab of the tree of the permissions: a model by the verbs asked of it, each with what it asks.'"`
+	PermTreeByKind          string `i18n:"hint='Tab of the tree of the permissions: a model by what it holds, each with its verbs.'"`
+	PermTreeGroups          string `i18n:"hint='Switch of the tree of the permissions: the groups of the menu as branches, and the permissions by them too.'"`
+	PermTreeLoadError       string `i18n:"hint='Shown when the tree of the permissions could not be loaded.'"`
+	PermKindGroup           string `i18n:"hint='Kind of a row of the tree of the permissions: a group of the menu.'"`
+	PermKindModel           string `i18n:"hint='Kind of a row of the tree of the permissions: a model (its listing, its records).'"`
+	PermKindSingleton       string `i18n:"hint='Kind of a row of the tree of the permissions: a model of a single record.'"`
+	PermKindVerb            string `i18n:"hint='Kind of a row of the tree of the permissions: a permission asked (list, edit, the GET of a page and so on).'"`
+	PermKindAction          string `i18n:"hint='Kind of a row of the tree of the permissions: an action.'"`
+	PermKindField           string `i18n:"hint='Kind of a row of the tree of the permissions: a field.'"`
+	PermKindInline          string `i18n:"hint='Kind of a row of the tree of the permissions: a field holding a model edited in place.'"`
+	PermKindSection         string `i18n:"hint='Kind of a row of the tree of the permissions: a section of a detail.'"`
+	PermKindPage            string `i18n:"hint='Kind of a row of the tree of the permissions: a page.'"`
+	PermKindCheck           string `i18n:"hint='Kind of a row of the tree of the permissions: a permission of its own.'"`
+	PermKindScope           string `i18n:"hint='Kind of a part of a permission: a scope (admin and the others), the root of a permission.'"`
+	PermKindRecord          string `i18n:"hint='Kind of a part of a permission: a record of a model, or all of them.'"`
+	PermKindAll             string `i18n:"hint='Kind of a part of a permission: everything under it (*).'"`
+	PermInputAllRecords     string `i18n:"hint='A part of a permission: every record of a model (<*>).'"`
+	PermInputEverything     string `i18n:"hint='A part of a permission: everything under it (*).'"`
+	PermInputEverythingDesc string `i18n:"hint='Description of the part * of a permission.'"`
+	PermInputAdd            string `i18n:"hint='Button of the field of a permission: adds parts under a row (or a scope, at the root).'"`
+	PermInputAddTo          string `i18n:"hint='Title of the dialog that adds parts under a row of the field of a permission; %s is the row.'"`
+	PermInputAddScope       string `i18n:"hint='Title of the dialog that adds a scope to an empty field of a permission.'"`
+	PermInputRemove         string `i18n:"hint='Button of a row of the field of a permission: takes the row out, with what is under it.'"`
+	PermInputChildren       string `i18n:"hint='Heading of the dialog of the field of a permission: the parts that may follow the row.'"`
+	PermInputRecord         string `i18n:"hint='Heading of the dialog of the field of a permission: a record of the model, searched.'"`
+	PermInputRecordSearch   string `i18n:"hint='Search of a record of a model in the field of a permission.'"`
+	PermInputRecordNotFound string `i18n:"hint='Said by the field of a permission of a record that is not found (or may not be read).'"`
+	PermInputNoChoices      string `i18n:"hint='Said by the dialog of the field of a permission when nothing may follow the row.'"`
+	PermInputEmpty          string `i18n:"hint='Said by the field of a permission when it is empty.'"`
+	PermInputOk             string `i18n:"hint='Button of the dialog of the field of a permission: adds the parts chosen.'"`
+	PermInputCancel         string `i18n:"hint='Button of the dialog of the field of a permission: closes it.'"`
+	PermInputCopy           string `i18n:"hint='Button of the field of a permission: copies the permission as written.'"`
+	PermInputPrefix         string `i18n:"hint='Tooltip of the chip of the prefix of a row of the field of a permission (none, deny, allow, reset).'"`
+	PermInputPrefixNone     string `i18n:"hint='The chip of a row of the field of a permission with no prefix of its own (it allows, or follows the row above).'"`
+	PermInputLoadError      string `i18n:"hint='Said by the field of a permission when what may follow a row could not be loaded.'"`
+	PermInputInvalid        string `i18n:"hint='Said by the field of a permission when the permission written cannot be read; %s is why.'"`
+	PermInputIncomplete     string `i18n:"hint='Said by the field of a permission of a row that ends by a colon and has nothing after it.'"`
+	PermInputUnsetIdle      string `i18n:"hint='Warning of the field of text of the field of a permission: the unsets (%s) took nothing out — a wider line covers what they name.'"`
+	PermInputDeny           string `i18n:"hint='The chip of a row of the field of a permission of a line that denies (deny).'"`
+	PermInputAllow          string `i18n:"hint='The chip of a row of the field of a permission of a line that allows again what was denied before it (allow).'"`
+	PermInputReset          string `i18n:"hint='The chip of a row of the field of a permission of a line that makes the lines before it count no more for what it matches (reset).'"`
+	PermInputDefinedUnder   string `i18n:"hint='Tooltip of the button of a row of the field of a permission, of the primary color: a line of the permission is of the row or under it.'"`
+	PermInputShowText       string `i18n:"hint='Icon of the field of a permission: shows the panel of the permission as text again.'"`
+	PermInputHideText       string `i18n:"hint='Icon of the panel of the permission as text: hides it, its icon alone left.'"`
+	PermInputFromText       string `i18n:"hint='Label of the field of text of the field of a permission: lines added to it.'"`
+	PermInputFromTextHint   string `i18n:"hint='Hint of the field of text of the field of a permission.'"`
+	PermInputPaste          string `i18n:"hint='Icon of the field of text of the field of a permission: pastes what was copied.'"`
+	PermInputApply          string `i18n:"hint='Icon of the field of text of the field of a permission: adds its lines to the table.'"`
+	PermInputOnlyDefined    string `i18n:"hint='Icon of the bar of the field of a permission: the table shows only the permissions defined in it (and what holds them), not all it allows.'"`
+	PermInputAsText         string `i18n:"hint='Title of the card of the field of a permission that shows the permission as text, indented.'"`
+	PermInputGrant          string `i18n:"hint='The chip of a row of the field of a permission of a line of its own of no prefix: it allows.'"`
+	PermInputRecordOf       string `i18n:"hint='A branch of the field of a permission: a record of a model; %s is its title.'"`
+	PermInputOthers         string `i18n:"hint='A branch of the field of a permission: the lines that are of no part of the admin.'"`
+	PermInputOthersDesc     string `i18n:"hint='Description of the branch Others of the field of a permission.'"`
+	PermKindOther           string `i18n:"hint='Kind of a row of the field of a permission: a line of no part of the admin.'"`
+	HelpBar                 string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
+	HelpFocusPage           string `i18n:"hint='Said by the help bar when the help shown is of the page.'"`
+	HelpFocusDrawer         string `i18n:"hint='Said by the help bar when the help shown is of the drawer open (a form, a detail).'"`
+	HelpFocusDialog         string `i18n:"hint='Said by the help bar when the help shown is of the dialog open.'"`
+	HelpOpenDocs            string `i18n:"hint='Button of the help bar: opens the document shown in the documentation page, in a new tab.'"`
+	HelpReload              string `i18n:"hint='Button of the help bar: shows its document again.'"`
+	HelpCollapse            string `i18n:"hint='Button of the help bar: makes it narrow again, only its icon.'"`
+	HelpLoadError           string `i18n:"hint='Shown by the help bar when its document could not be loaded.'"`
+	HelpFocusTab            string `i18n:"hint='Title of the first tab of the help bar: the help of what is in focus, following it.'"`
+	HelpCloseTab            string `i18n:"hint='Button of a tab of the help bar that closes it.'"`
+	HelpBack                string `i18n:"hint='Button of the help bar: the document shown before.'"`
+	HelpForward             string `i18n:"hint='Button of the help bar: the document shown after, gone back from.'"`
 }
 
 var Messages_en_US = &Messages{
-	ModuleDescription:     "The documentation of the admin: the page that explains each part of it.",
-	NothingWritten:        "Nothing was written about this yet.",
-	SeeAlso:               "In this part",
-	CopyCode:              "Copy",
-	CodeCopied:            "Copied!",
-	CopyCodeError:         "Press Ctrl+C to copy",
-	EditDocuments:         "Edit the documents",
-	DocLanguage:           "Language",
-	DocNotInYours:         "This guide is not in your language: choose one.",
-	RenderError:           "This document could not be shown: %s",
-	NoDocument:            "There is no such document.",
-	ResetDocuments:        "Reset to the initial documents",
-	Actions:               "Actions",
-	Pages:                 "Pages",
-	FormNew:               "New record",
-	FormEdit:              "Edit",
-	FormDetail:            "Detail",
-	Field:                 "Field",
-	Description:           "Description",
-	Conditional:           "Shown depending on the record.",
-	NoFields:              "No fields.",
-	Children:              "Nested records",
-	NothingInMenu:         "The menu has nothing.",
-	RuleHeading:           "When it is available",
-	RuleUndocumented:      "Available depending on the record (the rule is not documented).",
-	Permissions:           "Permissions",
-	PermNone:              "This part has no permission of its own.",
-	PermResources:         "Resources",
-	PermBy:                "By",
-	PermResource:          "Resource",
-	PermUnique:            "Its unique name (decides first)",
-	PermByGroups:          "Its groups",
-	PermRecords:           "Records",
-	PermWhat:              "What",
-	PermVerb:              "Verb",
-	PermList:              "List",
-	PermGet:               "See a record",
-	PermCreate:            "Create",
-	PermUpdate:            "Edit",
-	PermDelete:            "Delete",
-	PermDeleteWithRelated: "Delete with the related",
-	PermFields:            "Fields",
-	PermFieldsHint:        "A field allowed to see but not to edit is shown read only; one not allowed to see is not shown.",
-	PermSections:          "Sections",
-	PermSection:           "Section",
-	PermSectionsHint:      "A section is seen and edited in place by its own permission; the fields it writes still ask theirs.",
-	PermParts:             "Inside the group",
-	PermScopeAdminDesc:    "Everything of the admin: the groups of the menu, its models with their records, fields, sections and actions, and its pages",
-	PermDescGroup:         "Everything in the group %s of the menu",
-	PermDescModel:         "The listing of %s: listing and creating records, and its actions",
-	PermDescNested:        "The records of %s inside a record of %s",
-	PermDescSingleton:     "The single record of %s: seeing and editing it, and its actions",
-	PermDescRecord:        "Any record of %s (<*>), or one by its id (<7>): seeing, editing, deleting it, and its actions",
-	PermDescField:         "The field %s of %s, in the forms that hold it",
-	PermDescSection:       "The section %s of the detail of %s, seen and edited in place",
-	PermDescPage:          "The page %s",
-	PermDescPageOf:        "The page %s of %s",
-	PermDescCheck:         "A permission of its own: %s",
-	PermUntitled:          "Permission %s",
-	PermScopeAdmin:        "Admin",
-	PermPartsHint:         "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
-	PermGroupVerbs:        "Permissions",
-	PermGroupVerbsDesc:    "What may be done with %s",
-	PermGroupActions:      "Actions",
-	PermGroupActionsDesc:  "The actions of %s",
-	PermGroupFields:       "Fields",
-	PermGroupFieldsDesc:   "The fields of %s, each seen, edited or filled in the forms",
-	PermGroupSections:     "Sections",
-	PermGroupSectionsDesc: "The sections of the detail of %s",
-	PermGroupPages:        "Pages",
-	PermGroupPagesDesc:    "The pages of %s",
-	PermGroupModels:       "Nested models",
-	PermGroupModelsDesc:   "The models inside a record of %s",
-	PermGroupChecks:       "Permissions of its own",
-	PermGroupChecksDesc:   "The permissions of its own of %s",
-	PermDescAction:        "The action %s of %s",
-	PermDescInline:        "The field %s of %s: a record edited in place, its fields inside it",
-	PermGroupInlines:      "Models edited in place",
-	PermGroupInlinesDesc:  "The records edited in place inside %s, each with its fields",
-	PermMethodGet:         "Open (GET)",
-	PermMethodPost:        "Send (POST)",
-	PermMethodPut:         "Replace (PUT)",
-	PermMethodPatch:       "Change (PATCH)",
-	PermMethodDelete:      "Delete (DELETE)",
-	PermTreeName:          "Name",
-	PermTreeKind:          "Kind",
-	PermTreePath:          "Path",
-	PermTreeKinds:         "Kinds",
-	PermTreeDescription:   "Description",
-	PermTreePermission:    "Permission",
-	PermTreeActive:        "Active",
-	PermTreeActiveAll:     "All active",
-	PermTreeActiveSome:    "Some active",
-	PermTreeActiveNone:    "None active",
-	PermTreeSearch:        "Search",
-	PermTreeExpandAll:     "Open all",
-	PermTreeCollapseAll:   "Close all",
-	PermTreeByVerb:        "By verb",
-	PermTreeByKind:        "By kind",
-	PermTreeGroups:        "Include the groups of the menu",
-	PermTreeLoadError:     "The tree of the permissions could not be loaded.",
-	PermKindGroup:         "Group of the menu",
-	PermKindModel:         "Model",
-	PermKindSingleton:     "Single record",
-	PermKindVerb:          "Permission",
-	PermKindAction:        "Action",
-	PermKindField:         "Field",
-	PermKindInline:        "Model edited in place",
-	PermKindSection:       "Section",
-	PermKindPage:          "Page",
-	PermKindCheck:         "Permission of its own",
-	HelpBar:               "Help",
-	HelpFocusPage:         "Page",
-	HelpFocusDrawer:       "Drawer",
-	HelpFocusDialog:       "Dialog",
-	HelpOpenDocs:          "Open in the documentation",
-	HelpReload:            "Reload",
-	HelpCollapse:          "Collapse",
-	HelpLoadError:         "The help could not be loaded.",
-	HelpFocusTab:          "Focus",
-	HelpCloseTab:          "Close",
-	HelpBack:              "Back",
-	HelpForward:           "Forward",
+	ModuleDescription:       "The documentation of the admin: the page that explains each part of it.",
+	NothingWritten:          "Nothing was written about this yet.",
+	SeeAlso:                 "In this part",
+	CopyCode:                "Copy",
+	CodeCopied:              "Copied!",
+	CopyCodeError:           "Press Ctrl+C to copy",
+	EditDocuments:           "Edit the documents",
+	DocLanguage:             "Language",
+	DocNotInYours:           "This guide is not in your language: choose one.",
+	RenderError:             "This document could not be shown: %s",
+	NoDocument:              "There is no such document.",
+	ResetDocuments:          "Reset to the initial documents",
+	Actions:                 "Actions",
+	Pages:                   "Pages",
+	FormNew:                 "New record",
+	FormEdit:                "Edit",
+	FormDetail:              "Detail",
+	Field:                   "Field",
+	Description:             "Description",
+	Conditional:             "Shown depending on the record.",
+	NoFields:                "No fields.",
+	Children:                "Nested records",
+	NothingInMenu:           "The menu has nothing.",
+	RuleHeading:             "When it is available",
+	RuleUndocumented:        "Available depending on the record (the rule is not documented).",
+	Permissions:             "Permissions",
+	PermNone:                "This part has no permission of its own.",
+	PermResources:           "Resources",
+	PermBy:                  "By",
+	PermResource:            "Resource",
+	PermUnique:              "Its unique name (decides first)",
+	PermByGroups:            "Its groups",
+	PermRecords:             "Records",
+	PermWhat:                "What",
+	PermVerb:                "Verb",
+	PermList:                "List",
+	PermGet:                 "See a record",
+	PermCreate:              "Create",
+	PermUpdate:              "Edit",
+	PermDelete:              "Delete",
+	PermDeleteWithRelated:   "Delete with the related",
+	PermFields:              "Fields",
+	PermFieldsHint:          "A field allowed to see but not to edit is shown read only; one not allowed to see is not shown.",
+	PermSections:            "Sections",
+	PermSection:             "Section",
+	PermSectionsHint:        "A section is seen and edited in place by its own permission; the fields it writes still ask theirs.",
+	PermParts:               "Inside the group",
+	PermScopeAdminDesc:      "Everything of the admin: the groups of the menu, its models with their records, fields, sections and actions, and its pages",
+	PermDescGroup:           "Everything in the group %s of the menu",
+	PermDescModel:           "The listing of %s: listing and creating records, and its actions",
+	PermDescNested:          "The records of %s inside a record of %s",
+	PermDescSingleton:       "The single record of %s: seeing and editing it, and its actions",
+	PermDescRecord:          "Any record of %s (<*>), or one by its id (<7>): seeing, editing, deleting it, and its actions",
+	PermDescField:           "The field %s of %s, in the forms that hold it",
+	PermDescSection:         "The section %s of the detail of %s, seen and edited in place",
+	PermDescPage:            "The page %s",
+	PermDescPageOf:          "The page %s of %s",
+	PermDescCheck:           "A permission of its own: %s",
+	PermUntitled:            "Permission %s",
+	PermScopeAdmin:          "Admin",
+	PermPartsHint:           "What the group's resource allows covers all of them; a permission by the unique name of one of them decides before it — and a deny wins.",
+	PermGroupVerbs:          "Permissions",
+	PermGroupVerbsDesc:      "What may be done with %s",
+	PermGroupActions:        "Actions",
+	PermGroupActionsDesc:    "The actions of %s",
+	PermGroupFields:         "Fields",
+	PermGroupFieldsDesc:     "The fields of %s, each seen, edited or filled in the forms",
+	PermGroupSections:       "Sections",
+	PermGroupSectionsDesc:   "The sections of the detail of %s",
+	PermGroupPages:          "Pages",
+	PermGroupPagesDesc:      "The pages of %s",
+	PermGroupModels:         "Nested models",
+	PermGroupModelsDesc:     "The models inside a record of %s",
+	PermGroupChecks:         "Permissions of its own",
+	PermGroupChecksDesc:     "The permissions of its own of %s",
+	PermDescAction:          "The action %s of %s",
+	PermDescInline:          "The field %s of %s: a record edited in place, its fields inside it",
+	PermGroupInlines:        "Models edited in place",
+	PermGroupInlinesDesc:    "The records edited in place inside %s, each with its fields",
+	PermMethodGet:           "Open (GET)",
+	PermMethodPost:          "Send (POST)",
+	PermMethodPut:           "Replace (PUT)",
+	PermMethodPatch:         "Change (PATCH)",
+	PermMethodDelete:        "Delete (DELETE)",
+	PermTreeName:            "Name",
+	PermTreeKind:            "Kind",
+	PermTreePath:            "Path",
+	PermTreeKinds:           "Kinds",
+	PermTreeDescription:     "Description",
+	PermTreePermission:      "Permission",
+	PermTreeActive:          "Active",
+	PermTreeActiveAll:       "All active",
+	PermTreeActiveSome:      "Some active",
+	PermTreeActiveNone:      "None active",
+	PermTreeSearch:          "Search",
+	PermTreeExpandAll:       "Open all",
+	PermTreeCollapseAll:     "Close all",
+	PermTreeByVerb:          "By verb",
+	PermTreeByKind:          "By kind",
+	PermTreeGroups:          "Include the groups of the menu",
+	PermTreeLoadError:       "The tree of the permissions could not be loaded.",
+	PermKindGroup:           "Group of the menu",
+	PermKindModel:           "Model",
+	PermKindSingleton:       "Single record",
+	PermKindVerb:            "Permission",
+	PermKindAction:          "Action",
+	PermKindField:           "Field",
+	PermKindInline:          "Model edited in place",
+	PermKindSection:         "Section",
+	PermKindPage:            "Page",
+	PermKindCheck:           "Permission of its own",
+	PermKindScope:           "Scope",
+	PermKindRecord:          "Record",
+	PermKindAll:             "Everything",
+	PermInputAllRecords:     "All the records",
+	PermInputEverything:     "Everything",
+	PermInputEverythingDesc: "Everything under it: what there is and what there will be",
+	PermInputAdd:            "Add",
+	PermInputAddTo:          "Add to %s",
+	PermInputAddScope:       "Add a scope",
+	PermInputRemove:         "Remove",
+	PermInputChildren:       "Parts",
+	PermInputRecord:         "Record",
+	PermInputRecordSearch:   "Search by id or title",
+	PermInputRecordNotFound: "Record not found",
+	PermInputNoChoices:      "Nothing more may follow it",
+	PermInputEmpty:          "No permission: + adds a scope",
+	PermInputOk:             "Add",
+	PermInputCancel:         "Cancel",
+	PermInputCopy:           "Copy",
+	PermInputPrefix:         "Prefix: what the lines of the row do",
+	PermInputPrefixNone:     "—",
+	PermInputLoadError:      "Could not be loaded",
+	PermInputInvalid:        "Invalid permission: %s",
+	PermInputIncomplete:     "Incomplete: + adds what follows it",
+	PermInputUnsetIdle:      "%s took nothing out: a wider line covers it (\"admin:*\")? a deny narrows it",
+	PermInputDeny:           "DENY",
+	PermInputAllow:          "ALLOW",
+	PermInputReset:          "RESET",
+	PermInputDefinedUnder:   "Something is defined in it or under it",
+	PermInputShowText:       "Show the permission as text",
+	PermInputHideText:       "Hide the permission as text",
+	PermInputFromText:       "Add from text",
+	PermInputFromTextHint:   "Lines of permissions, in any form: one a line, by commas, indented; \"unset\" before one takes out the lines it covers",
+	PermInputPaste:          "Paste",
+	PermInputApply:          "Apply: add to the table",
+	PermInputOnlyDefined:    "Only the permissions defined",
+	PermInputAsText:         "The permission as text",
+	PermInputGrant:          "GRANT",
+	PermInputRecordOf:       "Record: %s",
+	PermInputOthers:         "Others",
+	PermInputOthersDesc:     "Lines of no part of the admin: their own globs, resources there are no more",
+	PermKindOther:           "Line",
+	HelpBar:                 "Help",
+	HelpFocusPage:           "Page",
+	HelpFocusDrawer:         "Drawer",
+	HelpFocusDialog:         "Dialog",
+	HelpOpenDocs:            "Open in the documentation",
+	HelpReload:              "Reload",
+	HelpCollapse:            "Collapse",
+	HelpLoadError:           "The help could not be loaded.",
+	HelpFocusTab:            "Focus",
+	HelpCloseTab:            "Close",
+	HelpBack:                "Back",
+	HelpForward:             "Forward",
 }
 
 var Messages_pt_BR = &Messages{
-	ModuleDescription:     "A documentação do admin: a página que explica cada parte dele.",
-	NothingWritten:        "Ainda não há nada escrito sobre isto.",
-	SeeAlso:               "Nesta parte",
-	CopyCode:              "Copiar",
-	CodeCopied:            "Copiado!",
-	CopyCodeError:         "Use Ctrl+C para copiar",
-	EditDocuments:         "Editar os documentos",
-	DocLanguage:           "Idioma",
-	DocNotInYours:         "Este guia não está no seu idioma: escolha um.",
-	RenderError:           "Este documento não pôde ser mostrado: %s",
-	NoDocument:            "Não há este documento.",
-	ResetDocuments:        "Restaurar os documentos iniciais",
-	Actions:               "Ações",
-	Pages:                 "Páginas",
-	FormNew:               "Cadastro",
-	FormEdit:              "Edição",
-	FormDetail:            "Detalhe",
-	Field:                 "Campo",
-	Description:           "Descrição",
-	Conditional:           "Aparece conforme o registro.",
-	NoFields:              "Nenhum campo.",
-	Children:              "Registros filhos",
-	NothingInMenu:         "O menu não tem nada.",
-	RuleHeading:           "Quando está disponível",
-	RuleUndocumented:      "Disponível conforme o registro (a regra não está documentada).",
-	Permissions:           "Permissões",
-	PermNone:              "Esta parte não tem permissão própria.",
-	PermResources:         "Recursos",
-	PermBy:                "Por",
-	PermResource:          "Recurso",
-	PermUnique:            "Nome único (decide primeiro)",
-	PermByGroups:          "Grupos",
-	PermRecords:           "Registros",
-	PermWhat:              "O quê",
-	PermVerb:              "Verbo",
-	PermList:              "Listar",
-	PermGet:               "Ver um registro",
-	PermCreate:            "Criar",
-	PermUpdate:            "Editar",
-	PermDelete:            "Excluir",
-	PermDeleteWithRelated: "Excluir com os relacionados",
-	PermFields:            "Campos",
-	PermFieldsHint:        "Um campo permitido para ver mas não para editar aparece somente leitura; um não permitido para ver não aparece.",
-	PermSections:          "Seções",
-	PermSection:           "Seção",
-	PermSectionsHint:      "Uma seção é vista e editada no lugar pela própria permissão; os campos que ela grava ainda pedem as deles.",
-	PermParts:             "Dentro do grupo",
-	PermScopeAdminDesc:    "Tudo do admin: os grupos do menu, os modelos com seus registros, campos, seções e ações, e as páginas",
-	PermDescGroup:         "Tudo o que está no grupo %s do menu",
-	PermDescModel:         "A listagem de %s: listar e criar registros, e as ações dela",
-	PermDescNested:        "Os registros de %s dentro de um registro de %s",
-	PermDescSingleton:     "O registro único de %s: ver e editar, e as ações dele",
-	PermDescRecord:        "Qualquer registro de %s (<*>), ou um pelo id (<7>): ver, editar, excluir, e as ações dele",
-	PermDescField:         "O campo %s de %s, nos formulários que o contêm",
-	PermDescSection:       "A seção %s do detalhe de %s, vista e editada no lugar",
-	PermDescPage:          "A página %s",
-	PermDescPageOf:        "A página %s de %s",
-	PermDescCheck:         "Uma permissão própria: %s",
-	PermUntitled:          "Permissão %s",
-	PermScopeAdmin:        "Administração",
-	PermPartsHint:         "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
-	PermGroupVerbs:        "Permissões",
-	PermGroupVerbsDesc:    "O que se pode fazer com %s",
-	PermGroupActions:      "Ações",
-	PermGroupActionsDesc:  "As ações de %s",
-	PermGroupFields:       "Campos",
-	PermGroupFieldsDesc:   "Os campos de %s, cada um visto, editado ou preenchido nos formulários",
-	PermGroupSections:     "Seções",
-	PermGroupSectionsDesc: "As seções do detalhe de %s",
-	PermGroupPages:        "Páginas",
-	PermGroupPagesDesc:    "As páginas de %s",
-	PermGroupModels:       "Modelos filhos",
-	PermGroupModelsDesc:   "Os modelos dentro de um registro de %s",
-	PermGroupChecks:       "Permissões próprias",
-	PermGroupChecksDesc:   "As permissões próprias de %s",
-	PermDescAction:        "A ação %s de %s",
-	PermDescInline:        "O campo %s de %s: um registro editado no lugar, com os seus campos dentro",
-	PermGroupInlines:      "Modelos em linha",
-	PermGroupInlinesDesc:  "Os registros editados no lugar dentro de %s, cada um com os seus campos",
-	PermMethodGet:         "Abrir (GET)",
-	PermMethodPost:        "Enviar (POST)",
-	PermMethodPut:         "Substituir (PUT)",
-	PermMethodPatch:       "Alterar (PATCH)",
-	PermMethodDelete:      "Excluir (DELETE)",
-	PermTreeName:          "Nome",
-	PermTreeKind:          "Tipo",
-	PermTreePath:          "Caminho",
-	PermTreeKinds:         "Tipos",
-	PermTreeDescription:   "Descrição",
-	PermTreePermission:    "Permissão",
-	PermTreeActive:        "Ativa",
-	PermTreeActiveAll:     "Todas ativas",
-	PermTreeActiveSome:    "Algumas ativas",
-	PermTreeActiveNone:    "Nenhuma ativa",
-	PermTreeSearch:        "Buscar",
-	PermTreeExpandAll:     "Abrir tudo",
-	PermTreeCollapseAll:   "Fechar tudo",
-	PermTreeByVerb:        "Por verbo",
-	PermTreeByKind:        "Por tipo",
-	PermTreeGroups:        "Incluir os grupos do menu",
-	PermTreeLoadError:     "Não foi possível carregar a árvore das permissões.",
-	PermKindGroup:         "Grupo do menu",
-	PermKindModel:         "Modelo",
-	PermKindSingleton:     "Registro único",
-	PermKindVerb:          "Permissão",
-	PermKindAction:        "Ação",
-	PermKindField:         "Campo",
-	PermKindInline:        "Modelo em linha",
-	PermKindSection:       "Seção",
-	PermKindPage:          "Página",
-	PermKindCheck:         "Permissão própria",
-	HelpBar:               "Ajuda",
-	HelpFocusPage:         "Página",
-	HelpFocusDrawer:       "Painel",
-	HelpFocusDialog:       "Diálogo",
-	HelpOpenDocs:          "Abrir na documentação",
-	HelpReload:            "Recarregar",
-	HelpCollapse:          "Compactar",
-	HelpLoadError:         "Não foi possível carregar a ajuda.",
-	HelpFocusTab:          "Foco",
-	HelpCloseTab:          "Fechar",
-	HelpBack:              "Voltar",
-	HelpForward:           "Avançar",
+	ModuleDescription:       "A documentação do admin: a página que explica cada parte dele.",
+	NothingWritten:          "Ainda não há nada escrito sobre isto.",
+	SeeAlso:                 "Nesta parte",
+	CopyCode:                "Copiar",
+	CodeCopied:              "Copiado!",
+	CopyCodeError:           "Use Ctrl+C para copiar",
+	EditDocuments:           "Editar os documentos",
+	DocLanguage:             "Idioma",
+	DocNotInYours:           "Este guia não está no seu idioma: escolha um.",
+	RenderError:             "Este documento não pôde ser mostrado: %s",
+	NoDocument:              "Não há este documento.",
+	ResetDocuments:          "Restaurar os documentos iniciais",
+	Actions:                 "Ações",
+	Pages:                   "Páginas",
+	FormNew:                 "Cadastro",
+	FormEdit:                "Edição",
+	FormDetail:              "Detalhe",
+	Field:                   "Campo",
+	Description:             "Descrição",
+	Conditional:             "Aparece conforme o registro.",
+	NoFields:                "Nenhum campo.",
+	Children:                "Registros filhos",
+	NothingInMenu:           "O menu não tem nada.",
+	RuleHeading:             "Quando está disponível",
+	RuleUndocumented:        "Disponível conforme o registro (a regra não está documentada).",
+	Permissions:             "Permissões",
+	PermNone:                "Esta parte não tem permissão própria.",
+	PermResources:           "Recursos",
+	PermBy:                  "Por",
+	PermResource:            "Recurso",
+	PermUnique:              "Nome único (decide primeiro)",
+	PermByGroups:            "Grupos",
+	PermRecords:             "Registros",
+	PermWhat:                "O quê",
+	PermVerb:                "Verbo",
+	PermList:                "Listar",
+	PermGet:                 "Ver um registro",
+	PermCreate:              "Criar",
+	PermUpdate:              "Editar",
+	PermDelete:              "Excluir",
+	PermDeleteWithRelated:   "Excluir com os relacionados",
+	PermFields:              "Campos",
+	PermFieldsHint:          "Um campo permitido para ver mas não para editar aparece somente leitura; um não permitido para ver não aparece.",
+	PermSections:            "Seções",
+	PermSection:             "Seção",
+	PermSectionsHint:        "Uma seção é vista e editada no lugar pela própria permissão; os campos que ela grava ainda pedem as deles.",
+	PermParts:               "Dentro do grupo",
+	PermScopeAdminDesc:      "Tudo do admin: os grupos do menu, os modelos com seus registros, campos, seções e ações, e as páginas",
+	PermDescGroup:           "Tudo o que está no grupo %s do menu",
+	PermDescModel:           "A listagem de %s: listar e criar registros, e as ações dela",
+	PermDescNested:          "Os registros de %s dentro de um registro de %s",
+	PermDescSingleton:       "O registro único de %s: ver e editar, e as ações dele",
+	PermDescRecord:          "Qualquer registro de %s (<*>), ou um pelo id (<7>): ver, editar, excluir, e as ações dele",
+	PermDescField:           "O campo %s de %s, nos formulários que o contêm",
+	PermDescSection:         "A seção %s do detalhe de %s, vista e editada no lugar",
+	PermDescPage:            "A página %s",
+	PermDescPageOf:          "A página %s de %s",
+	PermDescCheck:           "Uma permissão própria: %s",
+	PermUntitled:            "Permissão %s",
+	PermScopeAdmin:          "Administração",
+	PermPartsHint:           "O que o recurso do grupo permite vale para todos eles; uma permissão pelo nome único de um deles decide antes — e negar prevalece.",
+	PermGroupVerbs:          "Permissões",
+	PermGroupVerbsDesc:      "O que se pode fazer com %s",
+	PermGroupActions:        "Ações",
+	PermGroupActionsDesc:    "As ações de %s",
+	PermGroupFields:         "Campos",
+	PermGroupFieldsDesc:     "Os campos de %s, cada um visto, editado ou preenchido nos formulários",
+	PermGroupSections:       "Seções",
+	PermGroupSectionsDesc:   "As seções do detalhe de %s",
+	PermGroupPages:          "Páginas",
+	PermGroupPagesDesc:      "As páginas de %s",
+	PermGroupModels:         "Modelos filhos",
+	PermGroupModelsDesc:     "Os modelos dentro de um registro de %s",
+	PermGroupChecks:         "Permissões próprias",
+	PermGroupChecksDesc:     "As permissões próprias de %s",
+	PermDescAction:          "A ação %s de %s",
+	PermDescInline:          "O campo %s de %s: um registro editado no lugar, com os seus campos dentro",
+	PermGroupInlines:        "Modelos em linha",
+	PermGroupInlinesDesc:    "Os registros editados no lugar dentro de %s, cada um com os seus campos",
+	PermMethodGet:           "Abrir (GET)",
+	PermMethodPost:          "Enviar (POST)",
+	PermMethodPut:           "Substituir (PUT)",
+	PermMethodPatch:         "Alterar (PATCH)",
+	PermMethodDelete:        "Excluir (DELETE)",
+	PermTreeName:            "Nome",
+	PermTreeKind:            "Tipo",
+	PermTreePath:            "Caminho",
+	PermTreeKinds:           "Tipos",
+	PermTreeDescription:     "Descrição",
+	PermTreePermission:      "Permissão",
+	PermTreeActive:          "Ativa",
+	PermTreeActiveAll:       "Todas ativas",
+	PermTreeActiveSome:      "Algumas ativas",
+	PermTreeActiveNone:      "Nenhuma ativa",
+	PermTreeSearch:          "Buscar",
+	PermTreeExpandAll:       "Abrir tudo",
+	PermTreeCollapseAll:     "Fechar tudo",
+	PermTreeByVerb:          "Por verbo",
+	PermTreeByKind:          "Por tipo",
+	PermTreeGroups:          "Incluir os grupos do menu",
+	PermTreeLoadError:       "Não foi possível carregar a árvore das permissões.",
+	PermKindGroup:           "Grupo do menu",
+	PermKindModel:           "Modelo",
+	PermKindSingleton:       "Registro único",
+	PermKindVerb:            "Permissão",
+	PermKindAction:          "Ação",
+	PermKindField:           "Campo",
+	PermKindInline:          "Modelo em linha",
+	PermKindSection:         "Seção",
+	PermKindPage:            "Página",
+	PermKindCheck:           "Permissão própria",
+	PermKindScope:           "Escopo",
+	PermKindRecord:          "Registro",
+	PermKindAll:             "Tudo",
+	PermInputAllRecords:     "Todos os registros",
+	PermInputEverything:     "Tudo",
+	PermInputEverythingDesc: "Tudo o que está abaixo: o que há e o que houver",
+	PermInputAdd:            "Adicionar",
+	PermInputAddTo:          "Adicionar em %s",
+	PermInputAddScope:       "Adicionar um escopo",
+	PermInputRemove:         "Remover",
+	PermInputChildren:       "Partes",
+	PermInputRecord:         "Registro",
+	PermInputRecordSearch:   "Buscar pelo id ou título",
+	PermInputRecordNotFound: "Registro não encontrado",
+	PermInputNoChoices:      "Nada mais pode vir depois",
+	PermInputEmpty:          "Nenhuma permissão: o + adiciona um escopo",
+	PermInputOk:             "Adicionar",
+	PermInputCancel:         "Cancelar",
+	PermInputCopy:           "Copiar",
+	PermInputPrefix:         "Prefixo: o que as linhas da linha fazem",
+	PermInputPrefixNone:     "—",
+	PermInputLoadError:      "Não foi possível carregar",
+	PermInputInvalid:        "Permissão inválida: %s",
+	PermInputIncomplete:     "Incompleta: o + adiciona o que vem depois",
+	PermInputUnsetIdle:      "%s não tirou nada: uma linha mais larga o cobre (\"admin:*\")? um deny o restringe",
+	PermInputDeny:           "NEGA",
+	PermInputAllow:          "LIBERA",
+	PermInputReset:          "REDEFINE",
+	PermInputDefinedUnder:   "Há algo definido nele ou abaixo dele",
+	PermInputShowText:       "Exibir a permissão em texto",
+	PermInputHideText:       "Ocultar a permissão em texto",
+	PermInputFromText:       "Incluir a partir de texto",
+	PermInputFromTextHint:   "Linhas de permissões, em qualquer forma: uma por linha, por vírgulas, indentadas; \"unset\" antes de uma tira as linhas que ela cobre",
+	PermInputPaste:          "Colar",
+	PermInputApply:          "Aplicar: incluir na tabela",
+	PermInputOnlyDefined:    "Só as permissões definidas",
+	PermInputAsText:         "Permissão em texto",
+	PermInputGrant:          "CONCEDE",
+	PermInputRecordOf:       "Registro: %s",
+	PermInputOthers:         "Outras",
+	PermInputOthersDesc:     "Linhas que não caem numa parte do admin: globs próprios, recursos que não existem mais",
+	PermKindOther:           "Linha",
+	HelpBar:                 "Ajuda",
+	HelpFocusPage:           "Página",
+	HelpFocusDrawer:         "Painel",
+	HelpFocusDialog:         "Diálogo",
+	HelpOpenDocs:            "Abrir na documentação",
+	HelpReload:              "Recarregar",
+	HelpCollapse:            "Compactar",
+	HelpLoadError:           "Não foi possível carregar a ajuda.",
+	HelpFocusTab:            "Foco",
+	HelpCloseTab:            "Fechar",
+	HelpBack:                "Voltar",
+	HelpForward:             "Avançar",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

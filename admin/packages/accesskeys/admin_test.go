@@ -78,8 +78,7 @@ func TestMyKeys(t *testing.T) {
 	my := p.GetModelByID(MyKeysModelID).Info().ListingHref()
 
 	w := do(ana, createKey(my, [2]string{"Name", "deploy"}, [2]string{"Enabled", "true"},
-		[2]string{"Permissions.__present", "1"},
-		[2]string{"Permissions[0].__value", "deny admin:users:*"}, [2]string{"Permissions[0].$id", "1"}))
+		[2]string{"Permissions", "deny admin:users:*"}))
 	if w.Code != http.StatusOK {
 		t.Fatalf("creating: %d %.300s", w.Code, w.Body.String())
 	}
@@ -147,8 +146,8 @@ func TestMyKeys(t *testing.T) {
 	}
 }
 
-// The permissions as the form posts them — a list of texts, each item its
-// __value —: kept as written, in their order, the blank ones out; only
+// The permissions as the form posts them — one value, several lines at its
+// root a group —: stored canonical, a line a scope; only
 // denies — a line that allows, resets, or a group of one that does not deny,
 // refused.
 func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
@@ -157,19 +156,15 @@ func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
 	db.Create(&keyUser{ID: ana, Name: "Ana"})
 	my := p.GetModelByID(MyKeysModelID).Info().ListingHref()
 	post := func(name string, lines ...string) {
-		form := [][2]string{{"Name", name}, {"Enabled", "true"}, {"Permissions.__present", "1"}}
-		for i, v := range lines {
-			form = append(form, [2]string{fmt.Sprintf("Permissions[%d].__value", i), v},
-				[2]string{fmt.Sprintf("Permissions[%d].$id", i), fmt.Sprint(i + 1)})
-		}
-		do(ana, createKey(my, form...))
+		do(ana, createKey(my, [2]string{"Name", name}, [2]string{"Enabled", "true"},
+			[2]string{"Permissions", strings.Join(lines, "\n")}))
 	}
 	post("denies", "deny admin:users:*", " ", " deny admin:pages:{@edit,@delete} ")
 	var k AccessKey
 	if err := db.First(&k, "name = ?", "denies").Error; err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(k.Permissions, "|"); got != "deny admin:users:*|deny admin:pages:{@edit,@delete}" {
+	if got := strings.Join(k.Permissions, "|"); got != "deny admin:{users:*, pages:{@edit, @delete}}" {
 		t.Errorf("the denies: %q", got)
 	}
 	for i, bad := range []string{"admin:*", "allow admin:*", "reset admin:users:*", "deny", "denyadmin:users:*",

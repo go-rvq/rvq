@@ -20,7 +20,12 @@
               class="vx-tree-guide-space"
               :style="`width:${(getControl(item).lasts.length - guideFrom()) * guideStep}px`"
             ></span>
-            <span v-for="(g, i) in guideLines(item)" :key="i" :class="g.class" :style="g.style"></span>
+            <span
+              v-for="(g, i) in guideLines(item)"
+              :key="i"
+              :class="g.class"
+              :style="g.style"
+            ></span>
           </template>
           <div v-else :style="`width:${(getControl(item).path.length - 1) * 30}px`"></div>
         </slot>
@@ -114,8 +119,8 @@
   </v-data-table-virtual>
 </template>
 <script setup lang="ts">
-import {computed, isReactive, nextTick, onMounted, reactive, ref, watch} from 'vue'
-import {useVxMessages} from '@/lib/locale'
+import { computed, isReactive, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useVxMessages } from '@/lib/locale'
 
 const props = defineProps({
   settingsTitle: {
@@ -157,6 +162,12 @@ const props = defineProps({
   expanded: {
     type: Boolean,
     default: false
+  },
+  // expandedOf: whether a row starts opened (item → boolean); none, expanded
+  // for all — a table made again keeps what was opened
+  expandedOf: {
+    type: Function,
+    default: null
   },
   expandable: {
     type: Boolean,
@@ -243,7 +254,7 @@ function initItem(item: any) {
     path: [],
     lasts: [],
     shownChildren: 0,
-    expanded: props.expanded,
+    expanded: props.expandedOf ? !!props.expandedOf(item) : props.expanded,
     item: item,
     children: reactive(((props.children(item) || []) as any[]).map(reactive)),
     parent: null
@@ -261,7 +272,13 @@ const allHeaders = ref<any[]>([{}]),
 
 const updateHeaders = (value: any[]) => {
   const h: any[] = [
-    reactive({ title: props.controlTitle, key: '$control', sortable: false, noSelectable: true, visible: true })
+    reactive({
+      title: props.controlTitle,
+      key: '$control',
+      sortable: false,
+      noSelectable: true,
+      visible: true
+    })
   ]
   value.forEach((item: any) => {
     if (item.visible === undefined) {
@@ -476,6 +493,7 @@ const tooggleExpansion = (item: any) => {
       update: updateRows
     })
   }
+  emit('toggle', { item, expanded: c.expanded })
 
   updateRows()
 }
@@ -507,7 +525,10 @@ const guideLines = (item: any): { class: string; style: string }[] => {
   }
   const own = lasts.length - 1
   if (own >= from) {
-    out.push({ class: 'vx-tree-guide-v' + (lasts[own] ? ' vx-tree-guide-v--top' : ''), style: x(own) })
+    out.push({
+      class: 'vx-tree-guide-v' + (lasts[own] ? ' vx-tree-guide-v--top' : ''),
+      style: x(own)
+    })
     // to its button, or — a leaf — almost to its title
     const leaf = !(props.expandable || c.children.length)
     out.push({
@@ -529,6 +550,8 @@ const applySettings = () => {
 const emit = defineEmits<{
   (e: 'postLoad', props: PostLoadEvent): void
   (e: 'expand', props: ExpandEvent): void
+  // a row opened or closed by its button
+  (e: 'toggle', props: { item: any; expanded: boolean }): void
   (e: 'applySettings'): void
 }>()
 
