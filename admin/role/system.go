@@ -270,7 +270,9 @@ func (b *Builder) installSystem(mb *presets.ModelBuilder) {
 		r := field.Obj.(*Role)
 		m := GetMessages(ctx.Context())
 		if r.SystemKey == "" {
-			return h.Text("")
+			// an element, empty: the listing makes its cell of it (a text is
+			// none, and the row lost a cell)
+			return h.Div()
 		}
 		text := m.SystemRole
 		if sr := b.systemRole(r.SystemKey); sr != nil && sr.Description != nil {
