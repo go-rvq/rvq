@@ -6,5 +6,9 @@ import "embed"
 // Tailwind's script, Font Awesome, the Inter font —, at the versions they
 // ask for: served by the app (js/api/vendor) when a CDN does not answer.
 //
-//go:embed vendor
+// The folder is cdn, not vendor: a module's zip leaves out what is under a
+// subfolder of a folder named vendor (the vendored packages of old) — a
+// dependent of rvq got none of them.
+//
+//go:embed cdn
 var Vendor embed.FS

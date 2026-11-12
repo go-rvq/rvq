@@ -15,9 +15,9 @@ bun build src/bundle.js --minify --target=browser --format=iife --outfile=dist/m
 # dist/page.js
 bun build src/page.js --minify --target=browser --format=iife --outfile=dist/page.js
 # the Prism of a page that shows a text, highlighting its code (code.js):
-# served as rvq's vendor (js/vendor/prism, vendor.Prism)
-bun build src/prism/bundle.js --minify --target=browser --format=iife --outfile=../vendor/prism/1.30.0/prism.min.js
+# served as rvq's vendor (js/cdn/prism, vendor.Prism)
+bun build src/prism/bundle.js --minify --target=browser --format=iife --outfile=../cdn/prism/1.30.0/prism.min.js
 # the CodeMirror of the code blocks of the rich text editor
-# (code-block-tiptap.js): served as rvq's vendor (js/vendor/codemirror,
+# (code-block-tiptap.js): served as rvq's vendor (js/cdn/codemirror,
 # vendor.CodeMirror)
 bun src/codemirror/build.js

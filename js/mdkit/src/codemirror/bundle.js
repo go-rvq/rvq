@@ -1,5 +1,5 @@
 // The CodeMirror of the code blocks of the rich text editor (built to rvq's
-// js/vendor/codemirror: loaded by mdkit's code-block-tiptap.js when a code
+// js/cdn/codemirror: loaded by mdkit's code-block-tiptap.js when a code
 // block is shown in an editor): window.RvqCodeMirror — its view, its state,
 // its commands, the highlighting of its languages (languages[name]() its
 // extensions; the names the ones of a block's language-* class).

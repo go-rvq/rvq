@@ -18,7 +18,7 @@ import (
 func TestCopies(t *testing.T) {
 	h := Handler()
 	for _, a := range Assets {
-		b, err := fs.ReadFile(js.Vendor, "vendor/"+a.Local)
+		b, err := fs.ReadFile(js.Vendor, "cdn/"+a.Local)
 		if err != nil {
 			t.Errorf("%s: no copy: %v", a.Name, err)
 			continue
@@ -40,7 +40,7 @@ func TestCopies(t *testing.T) {
 	}
 	// what a stylesheet of a copy asks (its fonts): there too
 	for _, css := range []string{FontAwesome.Local, Inter.Local} {
-		b, _ := fs.ReadFile(js.Vendor, "vendor/"+css)
+		b, _ := fs.ReadFile(js.Vendor, "cdn/"+css)
 		for _, part := range strings.Split(string(b), "url(")[1:] {
 			u := strings.Trim(part[:strings.IndexByte(part, ')')], `"'`)
 			if strings.HasPrefix(u, "data:") {

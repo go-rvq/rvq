@@ -1,4 +1,4 @@
-// Builds the CodeMirror bundle (bundle.js → rvq's js/vendor/codemirror),
+// Builds the CodeMirror bundle (bundle.js → rvq's js/cdn/codemirror),
 // every importer given one copy of CodeMirror's core and of Lezer's — the
 // workspace keeps more than one version, and two copies of
 // @codemirror/state make CodeMirror refuse the extensions of the other.
@@ -25,5 +25,5 @@ if (!out.success) {
   console.error(out.logs.join('\n'))
   process.exit(1)
 }
-await Bun.write(resolve(root, '../vendor/codemirror/6/codemirror.min.js'), out.outputs[0])
+await Bun.write(resolve(root, '../cdn/codemirror/6/codemirror.min.js'), out.outputs[0])
 console.log('codemirror.min.js', (out.outputs[0].size / 1024).toFixed(0), 'KB')

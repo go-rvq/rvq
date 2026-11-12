@@ -1,4 +1,4 @@
-# vendor
+# cdn
 
 Copies of what the pages of a site take from CDNs, at fixed versions: the
 fallback when a CDN does not answer (`js/api/vendor`: each asset's tag asks

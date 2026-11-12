@@ -125,7 +125,7 @@ func init() {
 
 // version is the version of the copy at local: its hash, short.
 func version(local string) string {
-	b, err := fs.ReadFile(js.Vendor, "vendor/"+local)
+	b, err := fs.ReadFile(js.Vendor, "cdn/"+local)
 	if err != nil {
 		panic(err)
 	}
@@ -211,7 +211,7 @@ func Tags(names ...string) (string, error) {
 // Handler serves the copies (js.Vendor) at Prefix, cached a year: a new
 // version is another path.
 func Handler() http.Handler {
-	sub, err := fs.Sub(js.Vendor, "vendor")
+	sub, err := fs.Sub(js.Vendor, "cdn")
 	if err != nil {
 		panic(err)
 	}

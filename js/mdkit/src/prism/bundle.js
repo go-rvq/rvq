@@ -1,5 +1,5 @@
 // The Prism of a page that shows a text (built to rvq's
-// js/vendor/prism: loaded by mdkit's code.js when a block of code is there
+// js/cdn/prism: loaded by mdkit's code.js when a block of code is there
 // and the page has no Prism of its own): the languages and plugins of the
 // admin's code viewer (vuetifyx vx-code) — line numbers, a toolbar with the
 // language and a copy button — (their look is code.js's). window.Prism.
