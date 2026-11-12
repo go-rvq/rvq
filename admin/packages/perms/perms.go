@@ -18,14 +18,19 @@ import (
 // Permission verbs granted per record. They map to the presets action names
 // checked by the verifier.
 var (
-	VerbView   = []string{presets.PermList, presets.PermGet}
-	VerbEdit   = []string{presets.PermUpdate}
-	VerbDelete = []string{presets.PermDelete}
+	VerbView = []string{presets.PermList, presets.PermGet}
+	VerbEdit = []string{presets.PermUpdate}
+	// who may delete a record may bring it back from the trash
+	VerbDelete = []string{presets.PermDelete, presets.PermRestore}
 )
 
 // PermTrash is the listing permission verb that gates the trash view and the
-// restore action.
-const PermTrash = "@trash"
+// restore of its records (presets.PermTrash); PermRestore, the record's verb
+// that brings it back (presets.PermRestore).
+const (
+	PermTrash   = presets.PermTrash
+	PermRestore = presets.PermRestore
+)
 
 // PermManageAction is the name of the detail action of the permission
 // manager; PermManage, the perm verb that guards it — the action's own

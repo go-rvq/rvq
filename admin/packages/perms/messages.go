@@ -32,6 +32,12 @@ type Messages struct {
 	TabAll            string `i18n:"label='Tab: all', hint='Tab of a listing that shows the records not deleted.'"`
 	TabTrash          string `i18n:"label='Tab: trash', hint='Tab of a listing that shows the deleted records.'"`
 	Restore           string `i18n:"hint='Action that restores deleted records.'"`
+	PermTrashTitle    string `i18n:"hint='Permission of a listing: browsing its trash (the tab of the deleted records).'"`
+	PermTrashDesc     string `i18n:"hint='Description of the permission of browsing the trash of a listing.'"`
+	PermRestoreTitle  string `i18n:"hint='Permission of a record: bringing it back from the trash.'"`
+	PermRestoreDesc   string `i18n:"hint='Description of the permission of restoring a record from the trash.'"`
+	RestoreDenied     string `i18n:"hint='Said when some of the records chosen may not be restored; %s are their titles.'"`
+	RestoredNotice    string `i18n:"hint='Said when records were restored.'"`
 	TrashEmptyHint    string `i18n:"label='Trash empty', hint='Shown when there is no deleted record.'"`
 	// The trash's columns — when, by whom and from where a record was
 	// deleted —, the action that shows where from, and its words.
@@ -69,6 +75,12 @@ var Messages_en_US = &Messages{
 	TabAll:            "All",
 	TabTrash:          "Trash",
 	Restore:           "Restore",
+	PermTrashTitle:    "Browse the trash",
+	PermTrashDesc:     "The tab of the deleted records, and opening them",
+	PermRestoreTitle:  "Restore from the trash",
+	PermRestoreDesc:   "Bring the deleted record back",
+	RestoreDenied:     "Not restored — no permission to restore: %s",
+	RestoredNotice:    "Restored",
 	TrashEmptyHint:    "No deleted records.",
 	DeletedNotice:     "This record was deleted.",
 	DeletedAt:         "Deleted on",
@@ -103,6 +115,12 @@ var Messages_pt_BR = &Messages{
 	TabAll:            "Tudo",
 	TabTrash:          "Lixeira",
 	Restore:           "Restaurar",
+	PermTrashTitle:    "Navegar na lixeira",
+	PermTrashDesc:     "A aba dos registros excluídos, e abri-los",
+	PermRestoreTitle:  "Restaurar da lixeira",
+	PermRestoreDesc:   "Trazer de volta o registro excluído",
+	RestoreDenied:     "Nada restaurado — sem permissão para restaurar: %s",
+	RestoredNotice:    "Restaurado",
 	TrashEmptyHint:    "Nenhum registro excluído.",
 	DeletedNotice:     "Este registro foi excluído.",
 	DeletedAt:         "Excluído em",

@@ -2,8 +2,10 @@ package perms
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/go-rvq/rvq/admin/model"
@@ -122,26 +124,105 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 		})
 	})
 
-	lb.BulkAction("restore").
+	// the permissions of the trash, in the tree: browsing it (the listing's)
+	mb.AppendListPermActions(func() []*presets.PermNodeAction {
+		return []*presets.PermNodeAction{{Name: PermTrash,
+			Title:       func(ctx context.Context) string { return msgs(ctx).PermTrashTitle },
+			Description: func(ctx context.Context) string { return msgs(ctx).PermTrashDesc }}}
+	})
+
+	// restoring: of the records chosen in the trash, each of its own
+	// permission (@restore); the listing's asks only the trash's
+	lb.BulkAction(ActionRestore).
 		SetI18nLabel(func(ctx context.Context) string { return msgs(ctx).Restore }).
 		Icon("mdi-restore").
 		// in the trash only: what it brings back is there
 		SetTrash(presets.TrashOnly).
+		SetPerm(perm.PermVerifier().Func(func(v *perm.Verifier) *perm.Verifier { return v.Do(PermTrash) })).
 		UpdateFunc(func(selectedIds []string, ctx *web.EventContext, r *web.EventResponse) error {
-			if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Denied() {
-				return perm.PermissionDenied
-			}
-			if err := db.Session(&gorm.Session{}).Unscoped().
-				Table(opts.TableName).
-				Where("id IN ?", selectedIds).
-				UpdateColumns(restored(deletion)).Error; err != nil {
-				return err
-			}
-			if opts.OnRestore != nil {
-				return opts.OnRestore(ctx, selectedIds)
-			}
-			return nil
+			return restoreRecords(ctx, mb, db, deletion, selectedIds)
 		})
+
+	// and the record's, in its detail and in its row of the trash: of its
+	// permission (@restore — the tree's, the action's own)
+	mb.Detailing().Action(ActionRestore).
+		SetI18nLabel(func(ctx context.Context) string { return msgs(ctx).PermRestoreTitle }).
+		SetI18nDescription(func(ctx context.Context) string { return msgs(ctx).PermRestoreDesc }).
+		Icon("mdi-restore").
+		SetPermName(PermRestore).
+		SetTrash(presets.TrashOnly).
+		ShowInList().
+		SetEnabledObj(func(obj any, _ string, _ *web.EventContext) (bool, error) {
+			return !deletedAtOf(obj).IsZero(), nil
+		}).
+		OnClick(func(_ *web.EventContext, id string, _ any) string {
+			return web.Plaid().EventFunc(EventRestore).Query(presets.ParamID, id).Go()
+		})
+	mb.RegisterEventFunc(EventRestore, func(ctx *web.EventContext) (r web.EventResponse, err error) {
+		if err = restoreRecords(ctx, mb, db, deletion, []string{ctx.R.FormValue(presets.ParamID)}); err != nil {
+			return
+		}
+		ctx.Flash = msgs(ctx.Context()).RestoredNotice
+		r.Reload = true
+		return
+	})
+}
+
+// ActionRestore is the action that restores deleted records: the trash's,
+// of those chosen, and the detail's, of its record; EventRestore, the
+// event of the detail's.
+const (
+	ActionRestore = "restore"
+	EventRestore  = "perms_restore"
+)
+
+// restoreRecords brings back the deleted records of the ids of mb: who may
+// browse its trash (@trash), each of them of its permission (@restore) —
+// one not, none restored (the error names them). Then TrashOptions.OnRestore.
+func restoreRecords(ctx *web.EventContext, mb *presets.ModelBuilder, db *gorm.DB, deletion bool, ids []string) error {
+	if mb.Permissioner().ReqListDo(ctx.R, PermTrash).Denied() {
+		return perm.PermissionDenied
+	}
+	opts := trashOptionsOf(mb)
+	var refused []string
+	for _, id := range ids {
+		mid, err := mb.ParseRecordID(id)
+		if err != nil {
+			return err
+		}
+		obj := mb.NewModel()
+		mid.SetTo(obj)
+		// deleted: out of the scoped queries
+		if err = db.Session(&gorm.Session{NewDB: true}).Unscoped().Table(opts.TableName).Where(obj).First(obj).Error; err != nil {
+			return err
+		}
+		if mb.Permissioner().ReqObjectActioner(ctx.R, obj, PermRestore).Denied() {
+			refused = append(refused, mb.RecordTitle(obj, ctx))
+		}
+	}
+	if len(refused) > 0 {
+		return fmt.Errorf(msgs(ctx.Context()).RestoreDenied, strings.Join(refused, ", "))
+	}
+	if err := db.Session(&gorm.Session{}).Unscoped().
+		Table(opts.TableName).
+		Where("id IN ?", ids).
+		UpdateColumns(restored(deletion)).Error; err != nil {
+		return err
+	}
+	if opts.OnRestore != nil {
+		return opts.OnRestore(ctx, ids)
+	}
+	return nil
+}
+
+// trashOptionsOf are the options of the trash of mb (SetupTrash).
+func trashOptionsOf(mb *presets.ModelBuilder) TrashOptions {
+	trashSetupsMu.Lock()
+	defer trashSetupsMu.Unlock()
+	if o := trashSetups[mb]; o != nil {
+		return *o
+	}
+	return TrashOptions{}
 }
 
 // trashSetups are the options of the models whose trash SetupTrash set up.
