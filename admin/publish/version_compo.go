@@ -26,6 +26,10 @@ type VersionComponentConfig struct {
 	UnPublishEvent func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) string
 	RePublishEvent func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) string
 	Top            bool
+	// Live, when not nil, is the state of the record on the site (live,
+	// draft, offline: LiveFieldComponentFunc), drawn right of the buttons of
+	// its actions
+	Live presets.FieldComponentFunc
 }
 
 func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponentConfig) presets.FieldComponentFunc {
@@ -128,6 +132,12 @@ func DefaultVersionComponentFunc(b *presets.ModelBuilder, cfg ...VersionComponen
 				).Class("d-inline-flex")
 			}
 			div.AppendChildren(publishBtn)
+			// its state on the site, right of its actions
+			if config.Live != nil {
+				if live := config.Live(field, ctx); live != nil {
+					div.AppendChildren(h.Div(live).Class("ml-3 d-inline-flex align-center").Attr("data-publish-live", true))
+				}
+			}
 
 			// Publish/UnPublish/Republish ConfirmDialog
 			div.AppendChildren(

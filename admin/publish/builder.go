@@ -111,7 +111,10 @@ func (b *Builder) configVersionAndPublish(pb *presets.Builder, m *presets.ModelB
 	creating := ed.Creating().HiddenField(FieldOnlineUrl).Except(VersionsPublishBar, FieldStatus)
 	detailing := m.Detailing()
 
-	detailing.HiddenField(FieldOnlineUrl).Field(VersionsPublishBar).ComponentFunc(DefaultVersionComponentFunc(m))
+	// the bar of its publication: its actions, and its state on the site
+	// right of them
+	detailing.HiddenField(FieldOnlineUrl).Field(VersionsPublishBar).ComponentFunc(
+		DefaultVersionComponentFunc(m, VersionComponentConfig{Live: LiveFieldComponentFunc(b.db, &LiveChipsFormBuilder)}))
 	listing := m.Listing()
 
 	listing.WrapDeleteFunc(func(in presets.DeleteFunc) presets.DeleteFunc {
