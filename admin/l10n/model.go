@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/utils/bcp47"
 	"net/url"
 	"reflect"
 	"slices"
@@ -208,100 +209,60 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 			return MustGetMessages(ctx).Location
 		})
 
-	m.Detailing().Field(FieldLocations).
-		ComponentFunc(presets.FieldComponentWrapper(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			locations, _ := b.GetModelLocationsI(m, m.MustRecordID(field.Obj))
-			if len(locations) == 0 {
-				return nil
+	// the languages of a record, in its detail: a chip group of them by
+	// their names, its own selected; another's click opens its detail in a
+	// new dialog, the middle button in a new tab — the field Localizations,
+	// and the record's own language (Locale, LocaleCode): of every model that
+	// embeds Locale, its plugin's
+	locations := presets.FieldComponentWrapper(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+		records, _ := b.GetModelLocationsI(m, m.MustRecordID(field.Obj))
+		current := EmbedLocale(field.Obj).LocaleCode
+		type entry struct {
+			name, code string
+			obj        LocaleInterface
+		}
+		var entries []*entry
+		for _, e := range records {
+			code := e.EmbedLocale().LocaleCode
+			name := bcp47.Name(code)
+			if loc := b.GetLocale(code); loc != nil {
+				name = loc.Name()
 			}
+			entries = append(entries, &entry{MustGetTranslation(ctx.Context(), name), code, e})
+		}
+		if len(entries) == 0 {
+			return nil
+		}
+		slices.SortFunc(entries, func(a, b *entry) int { return strings.Compare(a.name, b.name) })
 
-			type entry struct {
-				Label string
-				Code  string
-				Obj   LocaleInterface
-			}
-
-			entries := make([]*entry, len(locations))
-
-			for i, e := range locations {
-				var (
-					code  = e.EmbedLocale().LocaleCode
-					loc   = b.GetLocale(code)
-					label string
-				)
-
-				if loc == nil {
-					label = code
-				} else {
-					label = loc.label
-				}
-				entries[i] = &entry{
-					Label: label,
-					Code:  code,
-					Obj:   e,
-				}
-			}
-
-			slices.SortFunc(entries, func(a *entry, b *entry) int {
-				if a.Label < b.Label {
-					return -1
-				}
-				if a.Label > b.Label {
-					return 1
-				}
-				return 0
-			})
-
-			current := field.Obj.(LocaleInterface).EmbedLocale().LocaleCode
-
-			onclick := web.Plaid().URL(m.Info().ListingHrefCtx(ctx))
-
-			if m.HasDetailing() {
-				onclick.EventFunc(actions.Detailing)
+		portal := ctx.UID()
+		var open *web.VueEventTagBuilder
+		if m.HasDetailing() {
+			open = web.Plaid().URL(m.Info().ListingHrefCtx(ctx)).EventFunc(actions.Detailing).
+				Query(presets.ParamOverlay, actions.Dialog).Query(presets.ParamTargetPortal, portal)
+		}
+		var group []HTMLComponent
+		for _, e := range entries {
+			c := v.VChip(Text(e.name)).Density(v.DensityCompact).Attr("data-locale", e.code)
+			if e.code == current {
+				// its own: selected, nothing to open
+				c.Color(v.ColorPrimary).Variant(v.VariantFlat)
 			} else {
-				if !m.CanEditObj(obj, ctx) {
-					onclick = nil
-				} else {
-					onclick.EventFunc(actions.EditForm)
+				c.Variant(v.VariantTonal)
+				if open != nil {
+					id := e.obj.(presets.SlugEncoder).PrimarySlug()
+					c.Attr("@click", open.Clone().Query(presets.ParamID, id).Go()).
+						Attr("@click.middle", fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, m.Info().DetailingHrefCtx(ctx, id)))
 				}
 			}
-
-			overlayMode := presets.GetOverlay(ctx)
-			onclick.Query(presets.ParamOverlay, overlayMode.Up())
-
-			portal := ctx.UID()
-			var chips = HTMLComponents{web.Portal().Name(portal)}
-
-			if overlayMode.Overlayed() {
-				onclick.Query(presets.ParamTargetPortal, portal)
-			}
-
-			var group []HTMLComponent
-			for _, e := range entries {
-				c := v.VChip(Text(e.Label)).
-					Density(v.DensityCompact).
-					Attr("data-locale", e.Code)
-
-				if e.Code == current {
-					c.Color(v.ColorPrimary).Variant(v.VariantFlat)
-				} else {
-					c.Variant(v.VariantTonal)
-				}
-
-				if onclick != nil {
-					id := e.Obj.(presets.SlugEncoder).PrimarySlug()
-					onclick := onclick.Clone().Query(presets.ParamID, id)
-
-					c.Attr("@click",
-						onclick.Go()).
-						Attr("@click.middle",
-							fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, m.Info().DetailingHrefCtx(ctx, id)))
-				}
-
-				group = append(group, c)
-			}
-			return append(chips, v.VChipGroup(group...).Column(true))
-		})).
+			group = append(group, c)
+		}
+		return HTMLComponents{web.Portal().Name(portal), v.VChipGroup(group...).Column(true)}
+	})
+	m.Detailing().Field("LocaleCode").ComponentFunc(locations)
+	m.Detailing().Field("Locale").ComponentFunc(locations)
+	m.Detailing().Field(FieldLocations).
+		ComponentFunc(locations).
 		SetI18nLabel(func(ctx context.Context) string {
 			return MustGetMessages(ctx).Localizations
 		})
@@ -388,12 +349,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 			), nil
 		})
 
-	// the language of the record: read only in the detail; at the top of the
-	// form, the one it is edited in
-	m.Detailing().Field("Locale").ComponentFunc(presets.FieldComponentWrapper(
-		func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			return Text(b.localeName(ctx, EmbedLocale(field.Obj).LocaleCode))
-		}))
+	// at the top of the form, the language it is edited in
 	// the language at the top of the form — of a new record, the one it is
 	// made in —, and of the detail
 	banner := func(text func(*Messages) string) func(*presets.ModelInfo, interface{}, presets.FieldModeStack, string, *web.EventContext) HTMLComponent {
