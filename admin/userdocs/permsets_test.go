@@ -115,3 +115,45 @@ func TestPermValueVia(t *testing.T) {
 		}
 	})
 }
+
+// The table in the order of the string: the items of each level as the lines
+// of the value (perm.ComparePatterns) — the row of a set beside the verbs, not
+// at the end —, in both views.
+func TestPermValueTreeOrder(t *testing.T) {
+	t.Cleanup(func() { perm.SetSetExpander(nil) })
+	pb, ib := schemaApp(t)
+	inRequest(t, ib, func(ctx *web.EventContext) {
+		value := "admin:{settings:@edit, posts:{<1>:@edit, @create, %readers, @list, !import}}"
+		for _, view := range []PermTreeView{PermTreeByVerb, PermTreeByKind} {
+			items, err := PermValueTree(ctx, pb, value, PermValueOptions{View: view})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var check func(items []*PermTreeItem)
+			check = func(items []*PermTreeItem) {
+				for i := 1; i < len(items); i++ {
+					a, b := itemKey(items[i-1]), itemKey(items[i])
+					if a != "" && b != "" && perm.ComparePatterns(a, b) > 0 {
+						t.Errorf("view %v: %q before %q", view, a, b)
+					}
+				}
+				for _, it := range items {
+					check(it.Children)
+				}
+			}
+			check(items)
+			var posts *PermTreeItem
+			walkItems(items, func(it *PermTreeItem) {
+				if it.Edit == "admin:posts:" {
+					posts = it
+				}
+			})
+			if posts == nil || len(posts.Children) == 0 {
+				t.Fatalf("view %v: no posts", view)
+			}
+			if view == PermTreeByVerb && posts.Children[0].Kind != PermKindSet {
+				t.Errorf("the set not first of posts: %q", itemKey(posts.Children[0]))
+			}
+		}
+	})
+}

@@ -2,6 +2,7 @@ package userdocs
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -123,6 +124,7 @@ func PermValueTree(ctx *web.EventContext, p *presets.Builder, value string, o Pe
 		return it.Explicit || len(it.Via) > 0 || !o.Only && (it.Active == PermActiveAll || it.Active == PermActiveSome)
 	})
 	items = v.others(items)
+	sortItems(items)
 	setExpand(items)
 	return items, nil
 }
@@ -186,6 +188,39 @@ func prune(items []*PermTreeItem, keep func(it *PermTreeItem) bool) (out []*Perm
 		}
 	}
 	return
+}
+
+// itemKey is the resource an item is ordered by: its own (Edit), else of the
+// first of its children of one; "" none.
+func itemKey(it *PermTreeItem) string {
+	if it.Edit != "" {
+		return perm.StripLabels(it.Edit)
+	}
+	for _, c := range it.Children {
+		if k := itemKey(c); k != "" {
+			return k
+		}
+	}
+	return ""
+}
+
+// sortItems puts the items of each level in the order of the lines of the
+// value (perm.ComparePatterns): the table as the string — "*", the sets, the
+// verbs, the actions, the records, the fields, the sections, the pages, the
+// models —; those of no resource ("Outras"), at the end, as they are.
+func sortItems(items []*PermTreeItem) {
+	keyed := make([]*PermTreeItem, 0, len(items))
+	var rest []*PermTreeItem
+	for _, it := range items {
+		if strings.HasPrefix(it.Value, "(others)") && it.Edit == "" || itemKey(it) == "" {
+			rest = append(rest, it)
+		} else {
+			keyed = append(keyed, it)
+		}
+		sortItems(it.Children)
+	}
+	sort.SliceStable(keyed, func(i, j int) bool { return perm.ComparePatterns(itemKey(keyed[i]), itemKey(keyed[j])) < 0 })
+	copy(items, append(keyed, rest...))
 }
 
 // setExpand opens the items on the way to a line of their own (or to a
@@ -662,7 +697,13 @@ func EditValue(value, op string, resources []string, prefix string) (string, err
 		k, p := perm.ParseLine(l)
 		out[i] = k.Prefix() + perm.UngroupPattern(p)
 	}
-	return perm.JoinLines(perm.DropPlaceholders(out))
+	v, err := perm.JoinLines(perm.DropPlaceholders(out))
+	if err != nil {
+		return "", err
+	}
+	// in their order (perm.SortValue): the string and the table alike
+	// (sortItems)
+	return perm.SortValue(v)
 }
 
 // groupMembers are, of the group of the menu (by the groups), the resources

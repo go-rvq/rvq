@@ -164,7 +164,7 @@ func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
 	if err := db.First(&k, "name = ?", "denies").Error; err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(k.Permissions, "|"); got != "deny admin:{users:*, pages:{@edit, @delete}}" {
+	if got := strings.Join(k.Permissions, "|"); got != "deny admin:{pages:{@edit, @delete}, users:*}" {
 		t.Errorf("the denies: %q", got)
 	}
 	for i, bad := range []string{"admin:*", "allow admin:*", "reset admin:users:*", "deny", "denyadmin:users:*",

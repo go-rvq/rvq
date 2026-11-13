@@ -195,6 +195,19 @@ wider line is not taken out (`admin:*` stays with `unset admin:posts:*`: use
 The panel **The permission as text**, beside the table (under it on a narrow
 screen), shows the permissions indented, to read and copy; its icon folds it.
 
+### The order
+
+The field keeps the permissions **in order**, from the general to the
+particular, as the tree: `*`, the sets, the permissions (`@list`, `@get`,
+`@create`, `@edit`, `@delete`…), the actions, the records, the fields, the
+sections, the pages and the parts. The table and the text follow the same
+order.
+
+The order never changes what the permissions decide. Permissions and denials
+hold in any order. An `allow` and a `reset` depend on what comes before
+them: they only change places with lines of other parts, and keep their
+order with those of the same part.
+
 ## The access keys
 
 The permissions of an **access key** accept only **denies**

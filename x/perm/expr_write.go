@@ -21,6 +21,8 @@ type WriteContext struct {
 	Indent string
 	// NoLabels: the records without their labels ("<7>")
 	NoLabels bool
+	// sort: of FormatLine, its lines in their order first (WithSort)
+	sort bool
 }
 
 // WriteOption is an option of a WriteContext.
@@ -117,9 +119,20 @@ func (a *ExprAlt) Format(opts ...WriteOption) string {
 }
 
 // FormatLine is the line, canonical (Normalize), as opts write it — of
-// WithIndent, to read —; a line that cannot be read, as it is, and its
+// WithIndent, to read; of WithSort, its lines in their order —; a line that cannot be read, as it is, and its
 // error.
 func FormatLine(line string, opts ...WriteOption) (string, error) {
+	var probe WriteContext
+	for _, o := range opts {
+		o(&probe)
+	}
+	if probe.sort {
+		sorted, err := SortValue(line)
+		if err != nil {
+			return line, err
+		}
+		line = sorted
+	}
 	e, err := ParseExpr(line)
 	if err != nil {
 		return line, err

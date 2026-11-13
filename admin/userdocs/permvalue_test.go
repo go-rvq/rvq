@@ -113,9 +113,9 @@ func TestEditValue(t *testing.T) {
 	}{
 		{"admin:posts:@list", PermEditSet, []string{"admin:posts:@list"}, PermPrefixDeny, "deny admin:posts:@list"},
 		{"admin:posts:{@list, @get}", PermEditSet, []string{"admin:posts:@list"}, "", "admin:posts:@get"},
-		{"admin:posts:@list", PermEditSet, []string{"admin:pages:*"}, PermPrefixDeny, "admin:{posts:@list, deny pages:*}"},
+		{"admin:posts:@list", PermEditSet, []string{"admin:pages:*"}, PermPrefixDeny, "admin:{deny pages:*, posts:@list}"},
 		// what is under a branch: the branch alone out
-		{"admin:{posts:@list, pages:}", PermEditSet, []string{"admin:pages:*"}, PermPrefixDeny, "admin:{posts:@list, deny pages:*}"},
+		{"admin:{posts:@list, pages:}", PermEditSet, []string{"admin:pages:*"}, PermPrefixDeny, "admin:{deny pages:*, posts:@list}"},
 		{"admin:{posts:{@list, <1<A>>:@get}, pages:*}", PermEditRemove, []string{"admin:posts:"}, "", "admin:pages:*"},
 		// added in a group: out of it
 		{"admin:pages:*", PermEditAdd, []string{"admin:site/:posts:", "admin:site/:*"}, "", "admin:{pages:*, posts:, site/:*}"},
@@ -127,9 +127,9 @@ func TestEditValue(t *testing.T) {
 		// a text merged: its lines after, one of the same resource in the
 		// place of the value's
 		{"admin:{posts:@list, pages:*}", PermEditMerge, []string{"deny admin:pages:*", "admin:content/:users:*"}, "",
-			"admin:{posts:@list, deny pages:*, users:*}"},
+			"admin:{deny pages:*, posts:@list, users:*}"},
 		// the value stored inside a group: out of it on any edit
-		{"admin:site/:posts:*", PermEditAdd, []string{"admin:pages:@list"}, "", "admin:{posts:*, pages:@list}"},
+		{"admin:site/:posts:*", PermEditAdd, []string{"admin:pages:@list"}, "", "admin:{pages:@list, posts:*}"},
 	} {
 		got, err := EditValue(c.value, c.op, c.resources, c.prefix)
 		if err != nil {
@@ -161,7 +161,7 @@ func TestMergeText(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "admin:{posts:{@list, @get}, deny pages:*}"; got != want {
+	if want := "admin:{deny pages:*, posts:{@list, @get}}"; got != want {
 		t.Errorf("%q, want %q", got, want)
 	}
 	if _, _, err := mergeText("admin:posts:@list", "admin:{posts", nil); err == nil {

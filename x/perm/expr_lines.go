@@ -289,8 +289,8 @@ func DropIncomplete(lines []string) (out []string) {
 // StoreLines are the lines of the value a field of permissions stores: its
 // lines (LinesOf) out of the groups of the menu (UngroupPattern), without any
 // placeholder — a line ending by ":" ("admin:users:") names a part but not
-// what of it, and decides nothing (DropIncomplete) —, the items of their
-// root, one a scope (SplitRoot). A value it cannot read, its error.
+// what of it, and decides nothing (DropIncomplete) —, in their order
+// (SortValue), the items of their root, one a scope (SplitRoot). A value it cannot read, its error.
 func StoreLines(value string) ([]string, error) {
 	ls, err := LinesOf(value)
 	if err != nil {
@@ -302,6 +302,10 @@ func StoreLines(value string) ([]string, error) {
 	}
 	v, err := JoinLines(DropIncomplete(ls))
 	if err != nil {
+		return nil, err
+	}
+	// in their order (SortValue)
+	if v, err = SortValue(v); err != nil {
 		return nil, err
 	}
 	return SplitRoot(v)

@@ -231,7 +231,7 @@ func TestRolePermissionsAsTheFormPosts(t *testing.T) {
 		"admin:pages:", "deny admin:")
 	var r Role
 	db.First(&r, "name = ?", "Lists")
-	if got := strings.Join(r.Permissions, "|"); got != "admin:{x:{*, deny @delete}, users:{*, deny @edit}, posts:@list}|site:*" {
+	if got := strings.Join(r.Permissions, "|"); got != "admin:{posts:@list, users:{*, deny @edit}, x:{*, deny @delete}}|site:*" {
 		t.Errorf("the lines: %q", got)
 	}
 	post("Bad", "admin:x:*", "deny")

@@ -273,6 +273,38 @@ describe('vx-permission-input', () => {
     expect(chip.text()).toBe('Reading')
   })
 
+  it('shows the rows in the order the server gives them (the order of the value)', async () => {
+    const child = (edit: string, title: string, kind = 'verb') => ({ title, kind, value: edit, edit })
+    const items = [
+      {
+        title: 'Admin',
+        kind: 'scope',
+        value: 'admin:',
+        edit: 'admin:',
+        expand: true,
+        children: [
+          child('admin:posts:%readers', 'Reading', 'set'),
+          child('admin:posts:@list', 'List'),
+          child('admin:posts:@create', 'Create'),
+          child('admin:posts:!import', 'Import', 'action')
+        ]
+      }
+    ]
+    const w = mountTemplate(PermissionInput, {
+      modelValue: 'admin:posts:{%readers, @list, @create, !import}',
+      loader: () => ({ value: '', items, formatted: '' })
+    })
+    await flush()
+    const rows = w.findAll('[data-permission-row]').map((e) => e.attributes('data-permission-row'))
+    expect(rows).toEqual([
+      'admin:',
+      'admin:posts:%readers',
+      'admin:posts:@list',
+      'admin:posts:@create',
+      'admin:posts:!import'
+    ])
+  })
+
   it('adds lines from a text, or says what is wrong with it', async () => {
     const calls: any[] = []
     const w = mountTemplate(PermissionInput, {

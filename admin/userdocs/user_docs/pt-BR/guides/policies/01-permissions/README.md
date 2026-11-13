@@ -198,6 +198,18 @@ O painel **Permissão em texto**, ao lado da tabela (abaixo dela numa tela
 estreita), mostra as permissões indentadas, para ler e copiar; o ícone dele o
 recolhe.
 
+### A ordem
+
+O campo guarda as permissões **em ordem**, do geral para o específico, como
+a árvore: `*`, os conjuntos, as permissões (`@list`, `@get`, `@create`,
+`@edit`, `@delete`…), as ações, os registros, os campos, as seções, as
+páginas e as partes. A tabela e o texto seguem a mesma ordem.
+
+A ordem nunca muda o que as permissões decidem. Permissões e negações valem
+em qualquer ordem. Um `allow` e um `reset` dependem do que vem antes deles:
+só mudam de lugar em relação a linhas de outras partes, e ficam na mesma
+ordem em relação às da mesma parte.
+
 ## As chaves de acesso
 
 As permissões de uma **chave de acesso** só aceitam **negações**
