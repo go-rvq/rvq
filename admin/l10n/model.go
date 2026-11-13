@@ -17,6 +17,7 @@ import (
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/vue"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/sunfmin/reflectutils"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
@@ -175,17 +176,34 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	rmb.RowMenuItem("Localize").ComponentFunc(localizeRowMenuItemFunc(m.Info(), "", url.Values{})).
 		Title(func(ctx context.Context) string { return MustGetTranslation(ctx, "Localize") })
 
-	locationLabelComp := func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-		loc := b.GetLocale(field.Obj.(LocaleInterface).EmbedLocale().LocaleCode)
-		if loc == nil {
-			return nil
+	// the filter of the languages of the listing, beside its own filters
+	// (none of its own of them): of the languages its records are in, when
+	// more than one
+	localeFilter := b.LocaleCodeListDataFilter(m, true)
+	m.Listing().WrapFilterDataFunc(func(old presets.FilterDataFunc) presets.FilterDataFunc {
+		return func(ctx *web.EventContext) vx.FilterData {
+			var fd vx.FilterData
+			if old != nil {
+				fd = old(ctx)
+			}
+			for _, it := range fd {
+				if it != nil && it.Key == SlugLocaleCode {
+					return fd
+				}
+			}
+			if f := localeFilter(ctx); f != nil && len(f.Options) > 1 {
+				fd = append(fd, f)
+			}
+			return fd
 		}
-		return Text(loc.label)
-	}
+	})
 
+	// the column of the languages of a record (a listing's): its flags — the
+	// record's own marked, a click opening its detail in that language, the
+	// middle button in a new tab — (localeListFunc)
 	l := m.Listing()
 	l.Field(FieldLocationLabel).
-		ComponentFunc(presets.ListingFieldComponentFuncWrapper(locationLabelComp)).
+		ComponentFunc(localeListFunc(db, b)).
 		SetI18nLabel(func(ctx context.Context) string {
 			return MustGetMessages(ctx).Location
 		})
@@ -376,22 +394,33 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
 			return Text(b.localeName(ctx, EmbedLocale(field.Obj).LocaleCode))
 		}))
-	editingIn := func(_ *presets.ModelInfo, obj interface{}, _ presets.FieldModeStack, parent string, ctx *web.EventContext) HTMLComponent {
-		if parent != "" {
-			return nil
+	// the language at the top of the form — of a new record, the one it is
+	// made in —, and of the detail
+	banner := func(text func(*Messages) string) func(*presets.ModelInfo, interface{}, presets.FieldModeStack, string, *web.EventContext) HTMLComponent {
+		return func(_ *presets.ModelInfo, obj interface{}, _ presets.FieldModeStack, parent string, ctx *web.EventContext) HTMLComponent {
+			if parent != "" {
+				return nil
+			}
+			code := EmbedLocale(obj).LocaleCode
+			say := text
+			if code == "" {
+				code = b.GetCorrectLocaleCode(ctx.R)
+			}
+			if id, err := reflectutils.Get(obj, "ID"); err == nil && isZeroID(id) && text != nil {
+				// a new one: made in it
+				say = func(m *Messages) string { return m.CreatingLocale }
+			}
+			return v.VAlert(Text(fmt.Sprintf(say(MustGetMessages(ctx.Context())), b.localeName(ctx, code)))).
+				Type("info").Variant(v.VariantTonal).Density(v.DensityCompact).Icon("mdi-translate").
+				Class("mb-4").Attr("data-editing-locale", code)
 		}
-		code := EmbedLocale(obj).LocaleCode
-		if code == "" {
-			code = b.GetCorrectLocaleCode(ctx.R)
-		}
-		return v.VAlert(Text(fmt.Sprintf(MustGetMessages(ctx.Context()).EditingLocale, b.localeName(ctx, code)))).
-			Type("info").Variant(v.VariantTonal).Density(v.DensityCompact).Icon("mdi-translate").
-			Class("mb-4").Attr("data-editing-locale", code)
 	}
+	editingIn := banner(func(m *Messages) string { return m.EditingLocale })
 	m.Editing().FieldsBuilder.BeginComponent(editingIn)
 	if cb := m.Editing().CreatingBuilder(); cb != m.Editing() {
 		cb.FieldsBuilder.BeginComponent(editingIn)
 	}
+	m.Detailing().FieldsBuilder.BeginComponent(banner(func(m *Messages) string { return m.DetailingLocale }))
 
 	b.installChangeLocaleCodeAction(pb, m)
 
@@ -400,7 +429,6 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	if b.modelOnly {
 		// the field Locale of this model, not of every model of its type: the
 		// admin's builder has those
-		m.Listing().Field("Locale").ComponentFunc(localeListFunc(db, b))
 		for _, eb := range []*presets.EditingBuilder{m.Editing(), m.Editing().CreatingBuilder()} {
 			eb.Field("Locale").ComponentFunc(b.localeFieldFunc).SetterFunc(b.localeSetterFunc)
 		}
@@ -425,6 +453,22 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		RegisterForModule(language.SimplifiedChinese, I18nLocalizeKey, Messages_zh_CN).
 		RegisterForModule(language.Japanese, I18nLocalizeKey, Messages_ja_JP)
 	return nil
+}
+
+// isZeroID says id is the id of a record not made yet (zero, "", 0, a
+// zero UUID).
+func isZeroID(id any) bool {
+	if id == nil {
+		return true
+	}
+	if z, ok := id.(interface{ IsZero() bool }); ok {
+		return z.IsZero()
+	}
+	switch s := fmt.Sprint(id); s {
+	case "", "0", "00000000-0000-0000-0000-000000000000":
+		return true
+	}
+	return false
 }
 
 // installChangeLocaleCodeAction adds the detailing action that moves a record

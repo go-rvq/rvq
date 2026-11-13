@@ -55,6 +55,9 @@ type LocaleInfo struct {
 	code  string
 	path  string
 	label string
+	// name is the language as a person reads it, without its code
+	// ("American English"); "" its name in its own language (bcp47.Name)
+	name string
 	datafield.DataField[*LocaleInfo]
 }
 
@@ -86,6 +89,21 @@ func (l *LocaleInfo) Label() string {
 // already-registered locale's label from its source.
 func (l *LocaleInfo) SetLabel(label string) *LocaleInfo {
 	l.label = label
+	return l
+}
+
+// Name is the language as a person reads it, without its code: the one set
+// (SetName), else its name in its own language ("Português (Brasil)").
+func (l *LocaleInfo) Name() string {
+	if l.name != "" {
+		return l.name
+	}
+	return bcp47.Name(l.code)
+}
+
+// SetName sets the language as a person reads it (a locale's own name).
+func (l *LocaleInfo) SetName(name string) *LocaleInfo {
+	l.name = name
 	return l
 }
 
@@ -441,9 +459,13 @@ func (b *Builder) Install(pb *presets.Builder) error {
 }
 
 // localeName is the language code as a person reads it: its flag, when it has
-// one, and its label ("🇧🇷 Português (Brasil)").
+// one, and its name, without its code ("🇧🇷 Português (Brasil)").
 func (b *Builder) localeName(ctx *web.EventContext, code string) string {
-	name := MustGetTranslation(ctx.Context(), b.GetLocaleLabel(code))
+	name := bcp47.Name(code)
+	if l := b.GetLocale(code); l != nil {
+		name = l.Name()
+	}
+	name = MustGetTranslation(ctx.Context(), name)
 	if f := bcp47.Flag(code); f != "" {
 		return f + " " + name
 	}

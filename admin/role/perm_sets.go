@@ -22,7 +22,6 @@ import (
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
-	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -355,13 +354,9 @@ func (b *Builder) installPermSets(pb *presets.Builder) error {
 	// localized by the languages of the admin: the switch, Localize, the
 	// localizations (l10n)
 	mb.Use(lb)
-	// its languages: the chips of the record's, and the filter that switches
-	// the listing to another
-	mb.Listing("Name", "Title", "Definition", "System", "Locale")
-	localeFilter := lb.LocaleCodeListDataFilter(mb, true)
-	mb.Listing().FilterDataFunc(func(ctx *web.EventContext) vx.FilterData {
-		return vx.FilterData{localeFilter(ctx)}
-	})
+	// its languages: the column of the plugin's (their flags; its filter, the
+	// plugin's too)
+	mb.Listing("Name", "Title", "Definition", "System", l10n.FieldLocationLabel)
 	if b.ab != nil {
 		// its history
 		mb.Use(b.ab)

@@ -19,6 +19,8 @@ type Messages struct {
 	SuccessfullyLocalized            string `i18n:"hint='Shown once a record was localized.'"`
 	Location                         string `i18n:"label='Language', hint='Label of the language (location) of a record.'"`
 	EditingLocale                    string `i18n:"hint='Top of the form of a localized record: the language it is edited in; %s its name.'"`
+	CreatingLocale                   string `i18n:"hint='Top of the form of a new localized record: the language it is made in; %s its name.'"`
+	DetailingLocale                  string `i18n:"hint='Top of the detail of a localized record: the language it is seen in; %s its name.'"`
 	Colon                            string `i18n:"hint='The colon put after a label, as the language writes it.'"`
 	International                    string `i18n:"hint='Name of the international (default) language option.'"`
 	China                            string `i18n:"hint='Name of the China location option.'"`
@@ -39,8 +41,10 @@ var Messages_en_US = &Messages{
 	Actions:                          "Actions",
 	Localizations:                    "Localizations",
 	SuccessfullyLocalized:            "Successfully Localized",
-	Location:                         "Location",
+	Location:                         "Language",
 	EditingLocale:                    "Editing in %s",
+	CreatingLocale:                   "Creating in %s",
+	DetailingLocale:                  "Viewing in %s",
 	Colon:                            ":",
 	International:                    "International",
 	China:                            "China",
@@ -63,6 +67,8 @@ var Messages_zh_CN = &Messages{
 	SuccessfullyLocalized:            "本地化成功",
 	Location:                         "地区",
 	EditingLocale:                    Messages_en_US.EditingLocale,
+	CreatingLocale:                   Messages_en_US.CreatingLocale,
+	DetailingLocale:                  Messages_en_US.DetailingLocale,
 	Colon:                            "：",
 	International:                    "全球",
 	China:                            "中国",
@@ -85,6 +91,8 @@ var Messages_ja_JP = &Messages{
 	SuccessfullyLocalized:            "ローカライズに成功しました",
 	Location:                         "場所",
 	EditingLocale:                    Messages_en_US.EditingLocale,
+	CreatingLocale:                   Messages_en_US.CreatingLocale,
+	DetailingLocale:                  Messages_en_US.DetailingLocale,
 	Colon:                            ":",
 	International:                    "インターナショナル",
 	China:                            "中国",
@@ -113,8 +121,10 @@ var Messages_pt_BR = &Messages{
 	Actions:                          "Ações",
 	Localizations:                    "Localizações",
 	SuccessfullyLocalized:            "Localizado com sucesso",
-	Location:                         "Local",
+	Location:                         "Idioma",
 	EditingLocale:                    "Editando em %s",
+	CreatingLocale:                   "Criando em %s",
+	DetailingLocale:                  "Vendo em %s",
 	Colon:                            ":",
 	International:                    "Internacional",
 	China:                            "China",
