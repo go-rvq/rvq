@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"path"
 	"slices"
+	"sync"
 	"time"
 
 	. "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/activity"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/utils/bcp47"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
 	"github.com/sunfmin/reflectutils"
@@ -33,6 +35,11 @@ type Builder struct {
 	defaultLocaleCode                                string
 	disableDeletionForDefaultInternationalizedRecord bool
 	messageInits                                     []messageInitializer
+	// mu guards locales: a builder may register a locale while serving
+	// (NewAdmin: an admin language added)
+	mu sync.RWMutex
+	// modelOnly: the builder of the models that use it, only (ModelOnly)
+	modelOnly bool
 }
 
 func (b *Builder) DisableDeletionForDefaultInternationalizedRecord() bool {
@@ -129,8 +136,26 @@ func (b *Builder) GetDefaultLocale() *LocaleInfo {
 }
 
 func (b *Builder) SupportedLocales() Locales {
-	return b.locales
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return append(Locales{}, b.locales...)
 }
+
+// ModelOnly makes b the builder of the models that use it (ModelBuilder.Use)
+// and nothing else — beside the one of the admin (Install), of other locales:
+// it installs nothing for every model (no wrap handler, no switch in the top
+// of the menu, no defaults of the field Locale), keeps no cookie, and the
+// locale of a request is its query queryName, else its fallback
+// (FallbackLocaleFunc), else the default.
+func (b *Builder) ModelOnly(queryName string) *Builder {
+	b.modelOnly = true
+	b.queryName = queryName
+	b.cookieName = ""
+	return b
+}
+
+// IsModelOnly says b is of the models that use it only (ModelOnly).
+func (b *Builder) IsModelOnly() bool { return b.modelOnly }
 
 func (b *Builder) IsTurnedOn() bool {
 	return len(b.GetSupportLocaleCodes()) > 0
@@ -154,10 +179,12 @@ func (b *Builder) GetAtivity() *activity.Builder {
 }
 
 func (b *Builder) RegisterLocale(localeCode, localePath, localeLabel string) (r *LocaleInfo) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	if slices.ContainsFunc(b.locales, func(l *LocaleInfo) bool {
 		return l.code == localeCode
 	}) {
-		return b.GetLocale(localeCode)
+		return b.getLocale(localeCode)
 	}
 
 	l := datafield.New(&LocaleInfo{
@@ -170,6 +197,8 @@ func (b *Builder) RegisterLocale(localeCode, localePath, localeLabel string) (r 
 }
 
 func (b *Builder) UnRegisterLocales(localeCode ...string) (r *Builder) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	var newLocales Locales
 
 loop:
@@ -188,6 +217,12 @@ loop:
 }
 
 func (b *Builder) GetLocale(localeCode string) *LocaleInfo {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.getLocale(localeCode)
+}
+
+func (b *Builder) getLocale(localeCode string) *LocaleInfo {
 	for _, l := range b.locales {
 		if l.code == localeCode {
 			return l
@@ -227,6 +262,8 @@ func LocalePathFromContext(m interface{}, ctx context.Context) (localePath strin
 }
 
 func (b *Builder) GetAllLocalePaths() (r []string) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for _, l := range b.locales {
 		r = append(r, l.path)
 	}
@@ -234,6 +271,8 @@ func (b *Builder) GetAllLocalePaths() (r []string) {
 }
 
 func (b *Builder) GetLocaleLabel(localeCode string) string {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for _, l := range b.locales {
 		if l.code == localeCode {
 			return l.label
@@ -243,6 +282,8 @@ func (b *Builder) GetLocaleLabel(localeCode string) string {
 }
 
 func (b *Builder) GetSupportLocaleCodes() (r []string) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for _, l := range b.locales {
 		r = append(r, l.code)
 	}
@@ -262,6 +303,9 @@ func (b *Builder) SupportLocalesFunc(v func(R *http.Request) []string) (r *Build
 }
 
 func (b *Builder) GetCurrentLocaleCodeFromCookie(r *http.Request) (localeCode string) {
+	if b.cookieName == "" {
+		return
+	}
 	localeCookie, _ := r.Cookie(b.cookieName)
 	if localeCookie != nil {
 		localeCode = localeCookie.Value
@@ -353,7 +397,26 @@ func (b *Builder) EnsureLocale(in http.Handler) (out http.Handler) {
 	})
 }
 
+// RequestLocaleCode is the locale of the request: of a builder of the
+// models only (ModelOnly), of the request itself; else the one EnsureLocale
+// put in its context — nil, none.
+func (b *Builder) RequestLocaleCode(r *http.Request, ctxs ...context.Context) any {
+	if b.modelOnly {
+		if code := b.GetCorrectLocaleCode(r); code != "" {
+			return code
+		}
+		return nil
+	}
+	if len(ctxs) > 0 {
+		return web.GetContexValue(LocaleCode, append(ctxs, r.Context())...)
+	}
+	return r.Context().Value(LocaleCode)
+}
+
 func (b *Builder) Install(pb *presets.Builder) error {
+	if b.modelOnly {
+		return fmt.Errorf("l10n: a builder of the models only (ModelOnly) is not installed: its models use it")
+	}
 	pb.SetData(BuilderKey, b)
 
 	db := b.db
@@ -363,18 +426,8 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		ComponentFunc(localeListFunc(db, b))
 	pb.FieldDefaults(presets.WRITE).
 		FieldType(Locale{}).
-		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			value := b.localeValue(field, ctx)
-			return Input("").Type("hidden").Attr(web.VField("LocaleCode", value)...)
-		}).
-		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-			value := EmbedLocale(obj).LocaleCode
-			if !slices.Contains(b.GetSupportLocaleCodesFromRequest(ctx.R), value) {
-				return IncorrectLocaleErr
-			}
-
-			return nil
-		})
+		ComponentFunc(b.localeFieldFunc).
+		SetterFunc(b.localeSetterFunc)
 
 	pb.AddWrapHandler(WrapHandlerKey, b.EnsureLocale)
 	pb.AddMenuTopItemFunc(MenuTopItemFunc, runSwitchLocaleFunc(b))
@@ -384,6 +437,29 @@ func (b *Builder) Install(pb *presets.Builder) error {
 		RegisterForModule(language.Japanese, I18nLocalizeKey, Messages_ja_JP).
 		RegisterForModule(language.BrazilianPortuguese, I18nLocalizeKey, Messages_pt_BR)
 
+	return nil
+}
+
+// localeName is the language code as a person reads it: its flag, when it has
+// one, and its label ("🇧🇷 Português (Brasil)").
+func (b *Builder) localeName(ctx *web.EventContext, code string) string {
+	name := MustGetTranslation(ctx.Context(), b.GetLocaleLabel(code))
+	if f := bcp47.Flag(code); f != "" {
+		return f + " " + name
+	}
+	return name
+}
+
+// localeFieldFunc is the field Locale of a form: the locale, hidden.
+func (b *Builder) localeFieldFunc(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+	return Input("").Type("hidden").Attr(web.VField("LocaleCode", b.localeValue(field, ctx))...)
+}
+
+// localeSetterFunc refuses a locale that is none of the request's.
+func (b *Builder) localeSetterFunc(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
+	if !slices.Contains(b.GetSupportLocaleCodesFromRequest(ctx.R), EmbedLocale(obj).LocaleCode) {
+		return IncorrectLocaleErr
+	}
 	return nil
 }
 

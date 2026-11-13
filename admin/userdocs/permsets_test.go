@@ -69,3 +69,49 @@ func TestPermValueSets(t *testing.T) {
 		}
 	})
 }
+
+// The permissions a set gives, marked on their items (Via): of each set that
+// gives them, of the prefix it gives them with; a line of its own beside;
+// shown with "only what is defined"; not a line of their own.
+func TestPermValueVia(t *testing.T) {
+	t.Cleanup(func() { perm.SetSetExpander(nil) })
+	pb, ib := schemaApp(t)
+	inRequest(t, ib, func(ctx *web.EventContext) {
+		value := "admin:{posts:{%readers, %editors, @list}, settings:{deny %editors}}"
+		items, err := PermValueTree(ctx, pb, value, PermValueOptions{View: PermTreeByVerb, Only: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		via := map[string]string{}
+		explicit := map[string]bool{}
+		walkItems(items, func(it *PermTreeItem) {
+			if it.Kind == PermKindSet || it.Edit == "" {
+				return
+			}
+			var vs []string
+			for _, v := range it.Via {
+				if v.Title == "" {
+					t.Errorf("%s: a via of no title", it.Edit)
+				}
+				vs = append(vs, v.Prefix+":"+v.Set)
+			}
+			if len(vs) > 0 {
+				via[it.Edit] = strings.Join(vs, ",")
+			}
+			explicit[it.Edit] = it.Explicit
+		})
+		for edit, want := range map[string]string{
+			"admin:posts:@list":    "grant:readers,grant:editors",
+			"admin:posts:<*>:@get": "grant:readers,grant:editors",
+			"admin:posts:@create":  "grant:editors",
+			"admin:settings:@edit": "deny:editors",
+		} {
+			if got := via[edit]; got != want {
+				t.Errorf("%s: %q, want %q", edit, got, want)
+			}
+		}
+		if !explicit["admin:posts:@list"] || explicit["admin:posts:@create"] {
+			t.Errorf("the lines of their own: %v", explicit)
+		}
+	})
+}

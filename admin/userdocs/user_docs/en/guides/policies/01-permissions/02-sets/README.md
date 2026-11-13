@@ -61,7 +61,9 @@ In **Administrator › Permission sets** new sets are made:
 
 - a **name**: lower case letters, digits and `_`, a letter first;
 - the **definition**, by kind of resource, as above;
-- a **title** and a **description** in each language of the admin.
+- a **title** and a **description**, in each language of the admin: the set
+  is localized as pages and posts are.
 
-The name may not be one of a set of the system. Saving or deleting a set
+The sets of the system are there too, only to translate their title and
+description. A new set may not take the name of one of them. Saving or deleting a set
 makes the users' permissions again at their next request.

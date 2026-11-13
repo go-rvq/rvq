@@ -376,7 +376,7 @@ func permInputMessages(ctx context.Context) map[string]string {
 		"expandAll": m.PermTreeExpandAll, "collapseAll": m.PermTreeCollapseAll, "path": m.PermTreePath,
 		"description": m.PermTreeDescription, "active": m.PermTreeActive, "activeAll": m.PermTreeActiveAll,
 		"activeSome": m.PermTreeActiveSome, "activeNone": m.PermTreeActiveNone,
-		"sets": m.PermInputSets, "setGives": m.PermInputSetGives,
+		"sets": m.PermInputSets, "setGives": m.PermInputSetGives, "via": m.PermInputVia,
 	}
 }
 

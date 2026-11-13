@@ -61,7 +61,9 @@ Em **Administrador › Conjuntos de permissões** criam-se conjuntos novos:
 
 - um **nome**: letras minúsculas, algarismos e `_`, começando por letra;
 - a **definição**, por tipo de recurso, como acima;
-- um **título** e uma **descrição** em cada idioma do admin.
+- um **título** e uma **descrição**, em cada idioma do admin: o conjunto é
+  localizado como as páginas e postagens.
 
-O nome não pode ser o de um conjunto do sistema. Salvar ou excluir um
+Os conjuntos do sistema também estão lá, só para traduzir o título e a
+descrição. O nome de um conjunto novo não pode ser o de um deles. Salvar ou excluir um
 conjunto refaz as permissões dos usuários no próximo acesso.

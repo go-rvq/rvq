@@ -91,6 +91,8 @@ type Builder struct {
 	// by (made at Build)
 	permSets  permSets
 	permSetIx *permSetIndex
+	// afterBuild are called at the end of Build (AfterBuild)
+	afterBuild []func()
 	// docHref: the address of a document of the documentation (doc_href.go)
 	docHref          func(node string) string
 	docData          func(node string) string
@@ -1537,6 +1539,17 @@ func (b *Builder) Build(mux ...*http.ServeMux) {
 	// the sets of permissions given by the tree: the expander of the process
 	b.permSetIx = newPermSetIndex(b.permissions.Tree())
 	perm.SetSetExpander(b.expandSet)
+	for _, f := range b.afterBuild {
+		f()
+	}
+}
+
+// AfterBuild adds f to what is called at the end of Build: the routes, the
+// tree of the permissions and the sets made — what a package registers then
+// (the sets of the code, in the database of the role package).
+func (b *Builder) AfterBuild(f func()) *Builder {
+	b.afterBuild = append(b.afterBuild, f)
+	return b
 }
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {

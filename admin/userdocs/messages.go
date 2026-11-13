@@ -172,6 +172,8 @@ type Messages struct {
 	PermKindOther           string `i18n:"hint='Kind of a row of the field of a permission: a line of no part of the admin.'"`
 	PermKindSet             string `i18n:"hint='Kind of a row of the field of a permission: a set of permissions (%readers), a name for permissions given together.'"`
 	PermInputSets           string `i18n:"hint='Title of the section of the dialog of the field of a permission (its + button) of the sets of permissions that give something to the resource.'"`
+	PermInputVia            string `i18n:"hint='Title of the column of the table of the field of a permission: the sets of permissions each permission is given by.'"`
+	PermInputViaNoItem      string `i18n:"hint='Description of a permission a set gives that is of no part of the admin (a resource there is no more).'"`
 	PermInputSetGives       string `i18n:"hint='Before the lines a set of permissions gives to a resource, in the field of a permission.'"`
 	PermInputSetIgnored     string `i18n:"hint='Description of a row of a set of permissions that gives nothing to its resource (there is no such set, or none for its kind): the line is kept and ignored; %s is its name.'"`
 	HelpBar                 string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
@@ -344,6 +346,8 @@ var Messages_en_US = &Messages{
 	PermKindOther:           "Line",
 	PermKindSet:             "Set",
 	PermInputSets:           "Sets of permissions",
+	PermInputVia:            "Sets",
+	PermInputViaNoItem:      "Given by the set, of no part of the admin",
 	PermInputSetGives:       "Gives",
 	PermInputSetIgnored:     "The set %s gives nothing here (there is no such set, or none for this kind of resource): the line is kept and ignored",
 	HelpBar:                 "Help",
@@ -516,6 +520,8 @@ var Messages_pt_BR = &Messages{
 	PermKindOther:           "Linha",
 	PermKindSet:             "Conjunto",
 	PermInputSets:           "Conjuntos de permissões",
+	PermInputVia:            "Conjuntos",
+	PermInputViaNoItem:      "Concedida pelo conjunto, de nenhuma parte do admin",
 	PermInputSetGives:       "Concede",
 	PermInputSetIgnored:     "O conjunto %s não concede nada aqui (não existe, ou não tem nada para este tipo de recurso): a linha fica guardada e é ignorada",
 	HelpBar:                 "Ajuda",

@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/activity"
+	"github.com/go-rvq/rvq/admin/l10n"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
@@ -34,9 +36,20 @@ type Builder struct {
 	pb          *presets.Builder
 	// permSetMb is the model of the sets of permissions (perm_sets.go)
 	permSetMb *presets.ModelBuilder
+	// permSetL10n localizes the sets by the languages of the admin
+	permSetL10n *l10n.Builder
+	// ab keeps the history of the sets (Activity); nil, none
+	ab *activity.Builder
 	// permissionsHelp is the URL of the documentation of the permissions,
 	// opened by the help button of the form's permissions ("" none)
 	permissionsHelp func(ctx *web.EventContext) string
+}
+
+// Activity keeps the history of the sets of permissions in ab: each one
+// made, changed, deleted, localized — the tab of its history.
+func (b *Builder) Activity(ab *activity.Builder) *Builder {
+	b.ab = ab
+	return b
 }
 
 // PermissionsHelpURL sets where the help button (?) of the permissions of the

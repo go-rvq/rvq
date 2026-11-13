@@ -96,6 +96,17 @@ type PermTreeItem struct {
 	// Lines: of a line of a set (PermKindSet), the lines it gives, after its
 	// resource; none, and Error, it gives nothing there — ignored
 	Lines []string `json:"lines,omitempty"`
+	// Via are the sets of the lines of the value that give the item's
+	// permission (the column Conjuntos)
+	Via []PermVia `json:"via,omitempty"`
+}
+
+// PermVia is a set a permission is given by: its name, its title, the prefix
+// it gives it with ("deny" of a deny of the set).
+type PermVia struct {
+	Set    string `json:"set"`
+	Title  string `json:"title"`
+	Prefix string `json:"prefix"`
 }
 
 // The kinds of the items of the tree (PermTreeItem.Kind).

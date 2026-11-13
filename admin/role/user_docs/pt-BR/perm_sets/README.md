@@ -12,8 +12,23 @@ Aqui se criam os conjuntos do admin, ao lado dos do sistema (`readers`,
   sistema.
 - **Definição**: o que ele dá por tipo de recurso, por exemplo
   `{model: {@list, <*>:@get}, singleton: @get}`.
-- **Títulos** e **Descrições**: um em cada idioma do admin. É o que o campo
-  de permissões mostra.
+- **Título** e **Descrição**: no idioma do registro. É o que o campo de
+  permissões mostra.
+
+Um conjunto é **localizado pelos idiomas do admin**, como as páginas e
+postagens pelos do site: um registro em cada idioma, cada um com o seu título
+e a sua descrição. A listagem mostra os do idioma do admin; **Localizar**
+copia um conjunto para outro idioma e **Localizações** mostra os que ele já
+tem. Nome e Definição são do conjunto: salvos num idioma, valem em todos. Um
+idioma do admin criado a partir de outro recebe os conjuntos já traduzidos,
+pelo tradutor automático, quando ele está ligado.
+
+Os conjuntos **do sistema** (`readers`, `authors`…) são registrados aqui
+sozinhos, marcados *Do sistema*: Nome e Definição são os do código, só
+leitura, e eles não são excluídos. Título e Descrição podem ser traduzidos.
+
+O detalhe mostra quem criou e quem alterou por último, e quando. A aba de
+histórico guarda cada mudança.
 
 A linha guarda o nome. Mudar um conjunto muda o que todas as linhas dele
 dão, no próximo acesso de cada usuário. Um conjunto excluído deixa as suas

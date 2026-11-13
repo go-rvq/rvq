@@ -229,6 +229,50 @@ describe('vx-permission-input', () => {
     expect(calls.at(-1)).toMatchObject({ op: 'add', resources: JSON.stringify(['admin:posts:%readers']) })
   })
 
+  it('shows the sets of each permission, and a line of a set by its title', async () => {
+    const items = [
+      {
+        title: 'Admin',
+        kind: 'scope',
+        value: 'admin:',
+        edit: 'admin:',
+        expand: true,
+        children: [
+          {
+            title: 'List',
+            kind: 'verb',
+            value: 'admin:posts:@list',
+            edit: 'admin:posts:@list',
+            via: [
+              { set: 'readers', title: 'Reading', prefix: 'grant' },
+              { set: 'editors', title: 'Editing', prefix: 'deny' }
+            ]
+          },
+          {
+            title: 'Reading',
+            subtitle: '%readers',
+            kind: 'set',
+            value: 'admin:posts:%readers',
+            edit: 'admin:posts:%readers',
+            explicit: true,
+            prefix: 'grant'
+          }
+        ]
+      }
+    ]
+    const w = mountTemplate(PermissionInput, {
+      modelValue: 'admin:posts:%readers',
+      loader: () => ({ value: 'admin:posts:%readers', items, formatted: '' })
+    })
+    await flush()
+    const html = document.body.innerHTML + w.html()
+    expect(html).toContain('data-permission-via="readers"')
+    expect(html).toContain('data-permission-via="editors"')
+    const chip = w.find('[data-permission-set="%readers"]')
+    expect(chip.exists()).toBe(true)
+    expect(chip.text()).toBe('Reading')
+  })
+
   it('adds lines from a text, or says what is wrong with it', async () => {
     const calls: any[] = []
     const w = mountTemplate(PermissionInput, {

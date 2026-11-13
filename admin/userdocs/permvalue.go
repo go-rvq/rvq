@@ -116,10 +116,11 @@ func PermValueTree(ctx *web.EventContext, p *presets.Builder, value string, o Pe
 	if !o.Groups {
 		v.groupLines(items)
 	}
+	v.via(items)
 	v.sets(items)
 	SetActive(items, func(c PermCheck) bool { return (o.Base == nil || o.Base(c)) && effect(c) })
 	items = prune(items, func(it *PermTreeItem) bool {
-		return it.Explicit || !o.Only && (it.Active == PermActiveAll || it.Active == PermActiveSome)
+		return it.Explicit || len(it.Via) > 0 || !o.Only && (it.Active == PermActiveAll || it.Active == PermActiveSome)
 	})
 	items = v.others(items)
 	setExpand(items)
@@ -136,6 +137,9 @@ type valueTree struct {
 	// the tree with the groups of the menu (of the groups of lines shown
 	// without them), made once asked
 	grouped []*PermTreeItem
+	// noItem are the lines a line of a set gives that are of no item, by the
+	// key of the line of the set (via): under its row
+	noItem map[string][]*PermTreeItem
 }
 
 // walkItems calls f with each item, the children after their parent.
@@ -184,12 +188,13 @@ func prune(items []*PermTreeItem, keep func(it *PermTreeItem) bool) (out []*Perm
 	return
 }
 
-// setExpand opens the items on the way to a line of their own; whether
+// setExpand opens the items on the way to a line of their own (or to a
+// permission given by a set, Via); whether
 // some item of items is one or is on the way.
 func setExpand(items []*PermTreeItem) (any bool) {
 	for _, it := range items {
 		it.Expand = setExpand(it.Children)
-		if it.Expand || it.Explicit {
+		if it.Expand || it.Explicit || len(it.Via) > 0 {
 			any = true
 		}
 	}
@@ -435,10 +440,57 @@ func (v *valueTree) sets(items []*PermTreeItem) {
 	}
 }
 
-// setItem is the row of the line l of the set name given to res.
-func (v *valueTree) setItem(l *valueLine, res, name string) *PermTreeItem {
+// via marks the items of the permissions each line of a set gives (Via):
+// the set, its title, the prefix it gives them with (a deny of a set denies
+// them); a permission it gives of no item, a row under the set's (noItem). A
+// line of a set that gives nothing there marks nothing.
+func (v *valueTree) via(items []*PermTreeItem) {
+	for _, l := range v.lines {
+		res, name, ok := perm.SetRef(l.key)
+		if !ok {
+			continue
+		}
+		lines, ok := perm.ExpandSet(res, name)
+		if !ok {
+			continue
+		}
+		title := v.setTitle(res, name)
+		for _, el := range lines {
+			k, p := perm.ParseLine(el)
+			key := perm.UngroupPattern(perm.StripLabels(p))
+			via := PermVia{Set: name, Title: title, Prefix: prefixNames[perm.SetLineKind(l.kind, k)]}
+			found := false
+			walkItems(items, func(it *PermTreeItem) {
+				if it.Edit == "" || it.Kind == PermKindSet {
+					return
+				}
+				if perm.StripLabels(it.Set) != key && perm.StripLabels(it.Edit) != key {
+					return
+				}
+				found = true
+				for _, o := range it.Via {
+					if o == via {
+						return
+					}
+				}
+				it.Via = append(it.Via, via)
+			})
+			if !found {
+				if v.noItem == nil {
+					v.noItem = map[string][]*PermTreeItem{}
+				}
+				v.noItem[l.key] = append(v.noItem[l.key], &PermTreeItem{Title: strings.TrimPrefix(key, res),
+					Description: v.t.msgs.PermInputViaNoItem, Value: l.key + "|" + el, Resources: []string{key},
+					Kind: PermKindOther, Via: []PermVia{via}})
+			}
+		}
+	}
+}
+
+// setTitle is the title of the set name given to res: its own there, else
+// the set's; its name, of none.
+func (v *valueTree) setTitle(res, name string) (title string) {
 	ctx := v.ctx.Context()
-	title := ""
 	if n := v.ix.byName[res]; n != nil {
 		for _, o := range v.p.PermSetsOf(ctx, n) {
 			if o.Name == name {
@@ -452,6 +504,14 @@ func (v *valueTree) setItem(l *valueLine, res, name string) *PermTreeItem {
 	if title == "" {
 		title = name
 	}
+	return
+}
+
+// setItem is the row of the line l of the set name given to res; under it,
+// what it gives of no item (via).
+func (v *valueTree) setItem(l *valueLine, res, name string) *PermTreeItem {
+	ctx := v.ctx.Context()
+	title := v.setTitle(res, name)
 	lines, ok := perm.ExpandSet(res, name)
 	it := &PermTreeItem{Title: title, Subtitle: perm.SetPrefix + name, Kind: PermKindSet, Value: l.key,
 		Resources: []string{l.pattern}, Edit: l.pattern, Set: l.pattern, Explicit: true, Prefix: prefixNames[l.kind],
@@ -462,6 +522,7 @@ func (v *valueTree) setItem(l *valueLine, res, name string) *PermTreeItem {
 	if !ok {
 		it.Description = fmt.Sprintf(v.t.msgs.PermInputSetIgnored, name)
 	}
+	it.Children = v.noItem[l.key]
 	return it
 }
 

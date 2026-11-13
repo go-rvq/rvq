@@ -219,44 +219,26 @@
                   >{{ prefixLabel(item.prefix) }}</v-chip
                 >
               </template>
+              <!-- a line of a set: the chip of its title alone (its name is in
+                   the column of the permission; red, ignored: its description
+                   says why); what it gives, in the column of the sets -->
+              <v-chip
+                v-if="item.kind === 'set'"
+                size="x-small"
+                label
+                variant="tonal"
+                :color="item.error ? 'error' : 'secondary'"
+                prepend-icon="mdi-shield-star-outline"
+                :title="item.error ? item.description : ''"
+                :data-permission-set="item.subtitle"
+                >{{ item.title }}</v-chip
+              >
               <span
+                v-else
                 :class="{ 'text-error': item.error }"
-                :title="
-                  item.error ? (item.kind === 'set' ? item.description : msg.recordNotFound) : ''
-                "
+                :title="item.error ? msg.recordNotFound : ''"
                 >{{ item.title }}</span
               >
-              <!-- a line of a set: its name, what it gives opened from it -->
-              <v-menu v-if="item.kind === 'set'" open-on-hover :close-on-content-click="false">
-                <template #activator="{ props: p }">
-                  <v-chip
-                    v-bind="p"
-                    size="x-small"
-                    label
-                    variant="tonal"
-                    :color="item.error ? 'error' : 'secondary'"
-                    prepend-icon="mdi-shield-star-outline"
-                    :data-permission-set="item.subtitle"
-                    >{{ item.subtitle }}</v-chip
-                  >
-                </template>
-                <v-card density="compact" max-width="420" data-permission-set-lines>
-                  <v-card-text class="py-2">
-                    <div v-if="item.error" class="text-error text-caption">
-                      {{ item.description }}
-                    </div>
-                    <template v-else>
-                      <div class="text-caption text-medium-emphasis">{{ msg.setGives }}</div>
-                      <code
-                        v-for="(l, i) in item.lines || []"
-                        :key="i"
-                        class="d-block text-caption"
-                        >{{ l }}</code
-                      >
-                    </template>
-                  </v-card-text>
-                </v-card>
-              </v-menu>
               <v-icon
                 v-if="item.incomplete"
                 icon="mdi-alert-circle-outline"
@@ -296,6 +278,27 @@
               size="small"
               :title="msg.activeNone"
             />
+          </template>
+          <!-- the sets that give the item's permission: their titles, the
+               name in a tooltip, the color of the prefix they give it with -->
+          <template #item.via="{ item }">
+            <span v-if="item.via && item.via.length" class="d-inline-flex flex-wrap ga-1">
+              <v-tooltip v-for="v in item.via" :key="v.set + v.prefix" location="top">
+                <template #activator="{ props: p }">
+                  <v-chip
+                    v-bind="p"
+                    size="x-small"
+                    label
+                    variant="tonal"
+                    :color="viaColor(v.prefix)"
+                    prepend-icon="mdi-shield-star-outline"
+                    :data-permission-via="v.set"
+                    >{{ v.title }}</v-chip
+                  >
+                </template>
+                %{{ v.set }}
+              </v-tooltip>
+            </span>
           </template>
           <template #item.description="{ item }">
             <span class="text-caption">{{ item.description }}</span>
@@ -659,6 +662,7 @@ const msg = computed(() => ({
   collapseAll: 'Close all',
   sets: 'Sets of permissions',
   setGives: 'Gives',
+  via: 'Sets',
   ...(props.messages as Record<string, string>)
 }))
 
@@ -673,6 +677,7 @@ const headers = computed(() => [
   { title: msg.value.kind, key: 'kind', sortable: false, nowrap: true },
   { title: msg.value.path, key: 'path', sortable: false },
   { title: msg.value.active, key: 'active', sortable: false, align: 'center', width: '1%' },
+  { title: msg.value.via, key: 'via', sortable: false },
   { title: msg.value.description, key: 'description', sortable: false },
   { title: msg.value.permission, key: 'resources', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end', width: '1%' }
@@ -827,6 +832,11 @@ const choices = computed<Prefix[]>(() => ['', ...((props.prefixes as Prefix[]) |
 // the word of a prefix, in the language of the page: "" none (—)
 const prefixLabel = (p: string) =>
   !p ? msg.value.prefixNone : (msg.value as any)[p] || p.toUpperCase()
+// viaColor is the color of a set that gives a permission with prefix
+const viaColor = (prefix: string) =>
+  (({ grant: 'primary', deny: 'error', allow: 'success', reset: 'warning' }) as any)[prefix] ||
+  'secondary'
+
 const prefixColor = (item: any) =>
   !item.explicit
     ? undefined

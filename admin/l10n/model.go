@@ -98,7 +98,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 						Args:  []any{strings.Split(localeCode, ",")},
 					}
 					params.SQLConditions = append(params.SQLConditions, &con)
-				} else if localeCode := web.GetContexValue(LocaleCode, params.Context, ctx.Context()); localeCode != nil {
+				} else if localeCode := b.RequestLocaleCode(ctx.R, params.Context, ctx.Context()); localeCode != nil {
 					con := presets.SQLCondition{
 						Query: "#TABLE#.locale_code = ?",
 						Args:  []interface{}{localeCode},
@@ -115,7 +115,7 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 		return func(obj interface{}, ctx *web.EventContext) {
 			id := ctx.Param(presets.ParamID)
 			if id == "" {
-				if localeCode := ctx.R.Context().Value(LocaleCode); localeCode != nil {
+				if localeCode := b.RequestLocaleCode(ctx.R); localeCode != nil {
 					if err := reflectutils.Set(obj, "LocaleCode", localeCode); err != nil {
 						return
 					}
@@ -258,12 +258,16 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 				onclick.Query(presets.ParamTargetPortal, portal)
 			}
 
+			var group []HTMLComponent
 			for _, e := range entries {
 				c := v.VChip(Text(e.Label)).
-					Density(v.DensityCompact)
+					Density(v.DensityCompact).
+					Attr("data-locale", e.Code)
 
 				if e.Code == current {
 					c.Color(v.ColorPrimary).Variant(v.VariantFlat)
+				} else {
+					c.Variant(v.VariantTonal)
 				}
 
 				if onclick != nil {
@@ -276,9 +280,9 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 							fmt.Sprintf(`(e) => e.view.window.open(%q, "_blank")`, m.Info().DetailingHrefCtx(ctx, id)))
 				}
 
-				chips = append(chips, c)
+				group = append(group, c)
 			}
-			return chips
+			return append(chips, v.VChipGroup(group...).Column(true))
 		})).
 		SetI18nLabel(func(ctx context.Context) string {
 			return MustGetMessages(ctx).Localizations
@@ -366,27 +370,53 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 			), nil
 		})
 
+	// the language of the record: read only in the detail; at the top of the
+	// form, the one it is edited in
+	m.Detailing().Field("Locale").ComponentFunc(presets.FieldComponentWrapper(
+		func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
+			return Text(b.localeName(ctx, EmbedLocale(field.Obj).LocaleCode))
+		}))
+	editingIn := func(_ *presets.ModelInfo, obj interface{}, _ presets.FieldModeStack, parent string, ctx *web.EventContext) HTMLComponent {
+		if parent != "" {
+			return nil
+		}
+		code := EmbedLocale(obj).LocaleCode
+		if code == "" {
+			code = b.GetCorrectLocaleCode(ctx.R)
+		}
+		return v.VAlert(Text(fmt.Sprintf(MustGetMessages(ctx.Context()).EditingLocale, b.localeName(ctx, code)))).
+			Type("info").Variant(v.VariantTonal).Density(v.DensityCompact).Icon("mdi-translate").
+			Class("mb-4").Attr("data-editing-locale", code)
+	}
+	m.Editing().FieldsBuilder.BeginComponent(editingIn)
+	if cb := m.Editing().CreatingBuilder(); cb != m.Editing() {
+		cb.FieldsBuilder.BeginComponent(editingIn)
+	}
+
 	b.installChangeLocaleCodeAction(pb, m)
 
 	registerEventFuncs(db, m, b)
+
+	if b.modelOnly {
+		// the field Locale of this model, not of every model of its type: the
+		// admin's builder has those
+		m.Listing().Field("Locale").ComponentFunc(localeListFunc(db, b))
+		for _, eb := range []*presets.EditingBuilder{m.Editing(), m.Editing().CreatingBuilder()} {
+			eb.Field("Locale").ComponentFunc(b.localeFieldFunc).SetterFunc(b.localeSetterFunc)
+		}
+		pb.I18n().
+			RegisterForModule(language.English, I18nLocalizeKey, Messages_en_US).
+			RegisterForModule(language.BrazilianPortuguese, I18nLocalizeKey, Messages_pt_BR)
+		return nil
+	}
 
 	pb.FieldDefaults(presets.LIST).
 		FieldType(Locale{}).
 		ComponentFunc(localeListFunc(db, b))
 	pb.FieldDefaults(presets.WRITE).
 		FieldType(Locale{}).
-		ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) HTMLComponent {
-			value := b.localeValue(field, ctx)
-			return Input("").Type("hidden").Attr(web.VField("LocaleCode", value)...)
-		}).
-		SetterFunc(func(obj interface{}, field *presets.FieldContext, ctx *web.EventContext) (err error) {
-			value := EmbedLocale(obj).LocaleCode
-			if !slices.Contains(b.GetSupportLocaleCodesFromRequest(ctx.R), value) {
-				return IncorrectLocaleErr
-			}
-
-			return nil
-		})
+		ComponentFunc(b.localeFieldFunc).
+		SetterFunc(b.localeSetterFunc)
 
 	pb.AddWrapHandler(WrapHandlerKey, b.EnsureLocale)
 	pb.AddMenuTopItemFunc(MenuTopItemFunc, runSwitchLocaleFunc(b))

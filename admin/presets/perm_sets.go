@@ -46,6 +46,21 @@ func (s *PermSet) TitleOf(ctx context.Context) string {
 	return s.Name
 }
 
+// Definition is the set as it is written: "{model: {@list, <*>:@get},
+// singleton: @get}" — its kinds in order of name.
+func (s *PermSet) Definition() string {
+	kinds := make([]string, 0, len(s.Blocks))
+	for k := range s.Blocks {
+		kinds = append(kinds, k)
+	}
+	sort.Strings(kinds)
+	parts := make([]string, len(kinds))
+	for i, k := range kinds {
+		parts[i] = k + ": " + s.Blocks[k]
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
+
 // DescriptionOf is the set's description in the language of ctx; "" none.
 func (s *PermSet) DescriptionOf(ctx context.Context) string {
 	if s.Description != nil {
@@ -118,19 +133,54 @@ func (b *Builder) PermSets() []*PermSet {
 	if source == nil {
 		return out
 	}
-	names := map[string]bool{}
-	for _, s := range code {
-		names[s.Name] = true
+	names := map[string]int{}
+	for i, s := range code {
+		names[s.Name] = i
 	}
 	more := source()
 	sort.SliceStable(more, func(i, j int) bool { return more[i].Name < more[j].Name })
 	for _, s := range more {
-		if s != nil && !names[s.Name] {
-			names[s.Name] = true
-			out = append(out, s)
+		if s == nil {
+			continue
 		}
+		if i, ok := names[s.Name]; ok {
+			// a set of the code, as the admin keeps it (role): what it gives is
+			// the code's; its title and description, the admin's translations
+			if i < len(code) {
+				merged := *code[i]
+				merged.Title = firstText(s.Title, code[i].Title)
+				merged.Description = firstText(s.Description, code[i].Description)
+				out[i] = &merged
+			}
+			continue
+		}
+		names[s.Name] = len(out)
+		out = append(out, s)
 	}
 	return out
+}
+
+// CodePermSets are the sets of the code (RegisterPermSets), in their order.
+func (b *Builder) CodePermSets() []*PermSet {
+	b.permSets.mu.RLock()
+	defer b.permSets.mu.RUnlock()
+	return append([]*PermSet{}, b.permSets.code...)
+}
+
+// firstText is a text of first, else of then.
+func firstText(first, then func(ctx context.Context) string) func(ctx context.Context) string {
+	if first == nil {
+		return then
+	}
+	return func(ctx context.Context) string {
+		if t := first(ctx); t != "" {
+			return t
+		}
+		if then != nil {
+			return then(ctx)
+		}
+		return ""
+	}
 }
 
 // PermSet is the set name; nil none.

@@ -51,7 +51,8 @@ func TestLocalization(t *testing.T) {
 			},
 			// a page's body travels as the escaped payload of the app portal, so the
 			// markup is matched the way it is written there
-			ExpectPageBodyContainsInOrder: []string{"中文标题", `v-chip color=&#39;success&#39; :variant=&#39;\"flat\"&#39; :label=&#39;true&#39; :size=&#39;\"small\"&#39;\u003eChina`},
+			// the cell of the languages: the record's own (no region: its code), marked
+			ExpectPageBodyContainsInOrder: []string{"中文标题", `data-locale=&#39;China&#39;`, `border-primary`},
 		},
 		{
 			Name:  "Localize dialog",

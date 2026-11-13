@@ -36,9 +36,15 @@ type Messages struct {
 	PermSetName_Hint       string `i18n:"hint='Hint of the name of a set.'"`
 	PermSetDefinition      string `i18n:"hint='Label of what a set gives, by kind of resource.'"`
 	PermSetDefinition_Hint string `i18n:"hint='Hint of the definition of a set.'"`
-	PermSetTitles          string `i18n:"hint='Label of the titles of a set, one a language.'"`
-	PermSetDescriptions    string `i18n:"hint='Label of the descriptions of a set, one a language.'"`
-	PermSetSystem          string `i18n:"hint='Title of the list of the sets of the system.'"`
+	PermSetTitle           string `i18n:"hint='Label of the title of a set, in the language of its localization.'"`
+	PermSetDescription     string `i18n:"hint='Label of the description of a set, in the language of its localization.'"`
+	PermSetSystem          string `i18n:"hint='Label of the mark of a set of the system: of the code, its name and definition read only, its title and description translatable.'"`
+	PermSetCreatedAt       string `i18n:"hint='Label of when a set was made.'"`
+	PermSetCreatedBy       string `i18n:"hint='Label of who made a set.'"`
+	PermSetUpdatedAt       string `i18n:"hint='Label of when a set was changed last.'"`
+	PermSetUpdatedBy       string `i18n:"hint='Label of who changed a set last.'"`
+	PermSetLocale          string `i18n:"hint='Label of the language of a set: the language of its title and description.'"`
+	ErrPermSetSystem       string `i18n:"hint='Error: a set of the system is not deleted.'"`
 	ErrPermSetName         string `i18n:"hint='Error: a name a set may not have.'"`
 	ErrPermSetTaken        string `i18n:"hint='Error: the name of a set taken, by another or by one of the system.'"`
 	ErrPermSetKind         string `i18n:"hint='Error: a kind of resource a definition names that the admin has not; %s the kind.'"`
@@ -71,9 +77,15 @@ var (
 		PermSetName_Hint:         "as a permission writes it, after %: lower case letters, digits and _",
 		PermSetDefinition:        "Definition",
 		PermSetDefinition_Hint:   "by kind of resource, what it gives: {model: {@list, <*>:@get}, singleton: @get}",
-		PermSetTitles:            "Title",
-		PermSetDescriptions:      "Description",
+		PermSetTitle:             "Title",
+		PermSetDescription:       "Description",
 		PermSetSystem:            "Of the system",
+		PermSetCreatedAt:         "Created at",
+		PermSetCreatedBy:         "Created by",
+		PermSetUpdatedAt:         "Updated at",
+		PermSetUpdatedBy:         "Updated by",
+		PermSetLocale:            "Language",
+		ErrPermSetSystem:         "A set of the system is not deleted: its title and description may be translated.",
 		ErrPermSetName:           "A name of lower case letters, digits and _, a letter first.",
 		ErrPermSetTaken:          "There is a set of this name already.",
 		ErrPermSetKind:           "Unknown kind of resource: %s.",
@@ -104,9 +116,15 @@ var (
 		PermSetName_Hint:         "como uma permissão o escreve, depois de %: letras minúsculas, números e _",
 		PermSetDefinition:        "Definição",
 		PermSetDefinition_Hint:   "por tipo de recurso, o que ele dá: {model: {@list, <*>:@get}, singleton: @get}",
-		PermSetTitles:            "Título",
-		PermSetDescriptions:      "Descrição",
+		PermSetTitle:             "Título",
+		PermSetDescription:       "Descrição",
 		PermSetSystem:            "Do sistema",
+		PermSetCreatedAt:         "Criado em",
+		PermSetCreatedBy:         "Criado por",
+		PermSetUpdatedAt:         "Atualizado em",
+		PermSetUpdatedBy:         "Atualizado por",
+		PermSetLocale:            "Idioma",
+		ErrPermSetSystem:         "Um conjunto do sistema não é excluído: o título e a descrição dele podem ser traduzidos.",
 		ErrPermSetName:           "Um nome de letras minúsculas, números e _, começando por uma letra.",
 		ErrPermSetTaken:          "Já existe um conjunto com este nome.",
 		ErrPermSetKind:           "Tipo de recurso desconhecido: %s.",

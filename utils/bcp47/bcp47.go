@@ -79,6 +79,19 @@ func nameOnly(code string) string {
 	return capFirst(name)
 }
 
+// Name is the name of the tag in its own language ("Português (Brasil)",
+// "English"), without its code; the code when it has none.
+func Name(code string) string {
+	if code == "" {
+		return ""
+	}
+	once.Do(build)
+	if n := nameOnly(code); n != "" {
+		return n
+	}
+	return code
+}
+
 func nameOf(code string) string {
 	name := nameOnly(code)
 	if name == "" {
