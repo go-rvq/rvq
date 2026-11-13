@@ -40,6 +40,7 @@ const (
 func registerEventFuncs(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder) {
 	mb.RegisterEventHandler(Localize, localizeToConfirmation(db, lb, mb))
 	mb.RegisterEventHandler(DoLocalize, doLocalizeTo(db, mb, lb))
+	mb.RegisterEventHandler(LocalizePreview, localizePreview(mb))
 }
 
 type SelectLocale struct {
@@ -96,11 +97,19 @@ func localizeToConfirmation(db *gorm.DB, lb *Builder, mb *presets.ModelBuilder) 
 		}
 
 		attr := web.VField("LocalizeTo", vue.Var("[]"))
+		if onChange := PreviewOnChange(ctx, mb, []string{paramID}); onChange != "" {
+			attr = append(attr, "@update:model-value", onChange)
+		}
+		var notice h.HTMLComponent
+		if o := OptionsOf(mb); o != nil && o.Notice != nil {
+			notice = o.Notice(ctx)
+		}
 
 		var cb = &presets.ContentComponentBuilder{
 			Context: ctx,
-			Title:   msgr.Localize,
+			Title:   ActionTitle(ctx.Context(), mb),
 			Body: h.HTMLComponents{
+				notice,
 				VContainer(
 					VRow(
 						VCol(
@@ -131,7 +140,9 @@ func localizeToConfirmation(db *gorm.DB, lb *Builder, mb *presets.ModelBuilder) 
 								HideDetails(true).
 								ItemValue("Code"),
 						).Class("px-0 py-0"),
-					)),
+					),
+					VRow(VCol(LocalizeSwitchesComponent(ctx, mb, []string{paramID})).Class("px-0 py-0")),
+				),
 			},
 			BottomActions: h.HTMLComponents{
 				VSpacer(),
@@ -296,23 +307,26 @@ func DoLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *web.E
 func doLocalizeTo(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {
 		var (
-			mid         = mb.MustParseRecordID(ctx.Param(presets.ParamID))
-			toForm      doLocalize
-			localizedTo []string
+			mid    = mb.MustParseRecordID(ctx.Param(presets.ParamID))
+			toForm doLocalize
+			n      int
 		)
 
 		ctx.UnmarshalForm(&toForm)
 
-		if localizedTo, err = DoLocalizeTo(db, mb, lb, ctx, mid, toForm.LocalizeTo); err != nil {
-			return
+		// what the switches take along too, by Do (LocalizeRecords); refused,
+		// the dialog stays, saying why
+		if n, err = LocalizeRecords(db, mb, lb, ctx, model.IDSlice{mid}, toForm.LocalizeTo); err != nil {
+			presets.ShowMessage(&r, ErrorMessage(err), "error")
+			return r, nil
 		}
 
-		if len(localizedTo) == 0 {
+		if n == 0 {
 			web.AppendRunScripts(&r, "vars.localizeConfirmation = false")
 			return
 		}
 
-		presets.ShowMessage(&r, MustGetTranslation(ctx.Context(), "SuccessfullyLocalized"), "")
+		presets.ShowMessage(&r, LocalizedMessage(ctx.Context(), mb, n), "")
 
 		// refresh current page
 		r.Reload = true

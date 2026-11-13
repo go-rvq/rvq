@@ -179,7 +179,8 @@ func runSwitchLocaleFunc(lb *Builder) func(ctx *web.EventContext) (r h.HTMLCompo
 	}
 }
 
-func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams url.Values) presets.RecordMenuItemFunc {
+func localizeRowMenuItemFunc(mb *presets.ModelBuilder, url string, editExtraParams url.Values) presets.RecordMenuItemFunc {
+	mi := mb.Info()
 	return func(rctx *presets.RecordMenuItemContext) h.HTMLComponent {
 		var (
 			ctx = rctx.Ctx
@@ -195,7 +196,7 @@ func localizeRowMenuItemFunc(mi *presets.ModelInfo, url string, editExtraParams 
 				// icon was language
 				VIcon("mdi-translate"),
 			).Name("prepend"),
-			VListItemTitle(h.Text(MustGetTranslation(ctx.Context(), "Localize"))),
+			VListItemTitle(h.Text(ActionTitle(ctx.Context(), mb))),
 		).Attr("@click", web.Plaid().
 			EventFunc(Localize).
 			Queries(editExtraParams).

@@ -30,6 +30,7 @@ type Messages struct {
 	SuccessfullyChangedLocale        string `i18n:"label='Language changed', hint='Shown once a record was moved to another language.'"`
 	ErrChangeLocaleEmpty             string `i18n:"label='Change language: none chosen', hint='Error when no language was chosen to move a record to.'"`
 	ErrChangeLocaleUnavailable       string `i18n:"label='Change language: taken', hint='Error when the record already exists in the chosen language.'"`
+	ErrLocalizeDenied                string `i18n:"label='Localize: denied', hint='Error when a record a localization takes along may not be changed by the user; %s its title.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -54,6 +55,7 @@ var Messages_en_US = &Messages{
 	SuccessfullyChangedLocale:        "Location changed",
 	ErrChangeLocaleEmpty:             "Choose the location to move this record to.",
 	ErrChangeLocaleUnavailable:       "This location is no longer available: the record already exists there.",
+	ErrLocalizeDenied:                "No permission to localize “%s”.",
 }
 
 var Messages_zh_CN = &Messages{
@@ -78,6 +80,7 @@ var Messages_zh_CN = &Messages{
 	SuccessfullyChangedLocale:        Messages_en_US.SuccessfullyChangedLocale,
 	ErrChangeLocaleEmpty:             Messages_en_US.ErrChangeLocaleEmpty,
 	ErrChangeLocaleUnavailable:       Messages_en_US.ErrChangeLocaleUnavailable,
+	ErrLocalizeDenied:                "无权本地化“%s”。",
 }
 
 var Messages_ja_JP = &Messages{
@@ -102,6 +105,7 @@ var Messages_ja_JP = &Messages{
 	SuccessfullyChangedLocale:        Messages_en_US.SuccessfullyChangedLocale,
 	ErrChangeLocaleEmpty:             Messages_en_US.ErrChangeLocaleEmpty,
 	ErrChangeLocaleUnavailable:       Messages_en_US.ErrChangeLocaleUnavailable,
+	ErrLocalizeDenied:                "「%s」をローカライズする権限がありません。",
 }
 
 func MustGetTranslation(ctx context.Context, key string) string {
@@ -134,4 +138,5 @@ var Messages_pt_BR = &Messages{
 	SuccessfullyChangedLocale:        "Local alterado",
 	ErrChangeLocaleEmpty:             "Escolha o local para onde mover este registro.",
 	ErrChangeLocaleUnavailable:       "Este local não está mais disponível: o registro já existe nele.",
+	ErrLocalizeDenied:                "Sem permissão para localizar “%s”.",
 }

@@ -168,6 +168,36 @@ func (b *RowMenuBuilder) rowMenuItem(set bool, name string) *RowMenuItemBuilder 
 	return ib
 }
 
+// Rename gives the item from the name to, keeping its place in the menu; nil
+// when there is no item from. An item to already there is replaced.
+func (b *RowMenuBuilder) Rename(from, to string) *RowMenuItemBuilder {
+	ib, ok := b.items[strcase.ToSnake(from)]
+	if !ok {
+		return nil
+	}
+	delete(b.items, strcase.ToSnake(from))
+	ib.name = to
+	b.items[strcase.ToSnake(to)] = ib
+	rename := func(names []string) []string {
+		var out []string
+		for _, n := range names {
+			switch strcase.ToSnake(n) {
+			case strcase.ToSnake(from):
+				out = append(out, to)
+			case strcase.ToSnake(to):
+			default:
+				out = append(out, n)
+			}
+		}
+		return out
+	}
+	b.defaultListings = rename(b.defaultListings)
+	if len(b.listings) > 0 {
+		b.listings = rename(b.listings)
+	}
+	return ib
+}
+
 func (b *RowMenuItemBuilder) Icon(v string) *RowMenuItemBuilder {
 	b.icon = v
 	return b

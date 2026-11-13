@@ -174,8 +174,11 @@ func (b *Builder) ModelInstall(pb *presets.Builder, m *presets.ModelBuilder) err
 	})
 
 	rmb := m.Listing().RowMenu()
-	rmb.RowMenuItem("Localize").ComponentFunc(localizeRowMenuItemFunc(m.Info(), "", url.Values{})).
-		Title(func(ctx context.Context) string { return MustGetTranslation(ctx, "Localize") })
+	rmb.RowMenuItem(ActionName(m)).ComponentFunc(localizeRowMenuItemFunc(m, "", url.Values{})).
+		Title(func(ctx context.Context) string { return ActionTitle(ctx, m) })
+	// and in the detail's menu: a record localized from where it is seen
+	m.Detailing().RowMenu().RowMenuItem(ActionName(m)).ComponentFunc(localizeRowMenuItemFunc(m, "", url.Values{})).
+		Title(func(ctx context.Context) string { return ActionTitle(ctx, m) })
 
 	// the filter of the languages of the listing, beside its own filters
 	// (none of its own of them): of the languages its records are in, when
