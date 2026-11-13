@@ -23,6 +23,39 @@ export async function hrefOf(target, resolve = metaResolver()) {
   return (cards && cards[target] && cards[target].href) || ''
 }
 
+// externalHref says href is an address of another site (http or https, not
+// of this one's origin).
+export function externalHref(href, origin = (typeof location !== 'undefined' ? location.origin : '')) {
+  const h = String(href || '').trim()
+  if (!/^https?:\/\//i.test(h)) return false
+  return !origin || !(h === origin || h.startsWith(origin + '/'))
+}
+
+// metaTitle is the reader of the title of a page of another site the
+// page's meta mdkit-link-cards says (its data-title: the admin's
+// LinkTitleEvent): given an address, its title, '' of none; null, no meta.
+// It waits ms at most (the server waits less: one try).
+export function metaTitle(doc = (typeof document !== 'undefined' ? document : null), ms = 5000) {
+  const meta = doc && doc.querySelector('meta[name="mdkit-link-cards"]')
+  const url = meta && meta.getAttribute('data-title')
+  if (!url) return null
+  return async (href) => {
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null
+    const timer = ctl && setTimeout(() => ctl.abort(), ms)
+    try {
+      const res = await fetch(url, { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ url: href }), signal: ctl && ctl.signal })
+      if (!res.ok) return ''
+      const out = await res.json().catch(() => ({}))
+      const data = out && out.data !== undefined ? out.data : out
+      return (data && typeof data.title === 'string' && data.title) || ''
+    } catch (e) {
+      return ''
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+}
+
 export const LinkForm = {
   name: 'MdkitLinkForm',
   mixins: [searchMixin],
@@ -40,6 +73,9 @@ export const LinkForm = {
     texts: { type: Boolean, default: true },
     words: { type: Object, default: () => wordsOf('link') },
     search: { type: Function, default: null },
+    // titleOf: the title of a page of another site (a promise); by default
+    // the page's meta's (metaTitle)
+    titleOf: { type: Function, default: null },
   },
   emits: ['apply', 'remove', 'cancel'],
   data() {
@@ -80,7 +116,7 @@ export const LinkForm = {
       {{ words.remove || 'Remove the link' }}</v-btn>
     <v-spacer></v-spacer>
     <v-btn variant="text" @click="$emit('cancel')">{{ words.cancel || 'Cancel' }}</v-btn>
-    <v-btn color="primary" variant="flat" :disabled="!url.trim() || busy" @click="apply" data-link-apply>{{ words.apply || 'Apply' }}</v-btn>
+    <v-btn color="primary" variant="flat" :disabled="!url.trim() || busy" :loading="busy" @click="apply" data-link-apply>{{ words.apply || 'Apply' }}</v-btn>
   </div>
 </div>`,
   methods: {
@@ -94,13 +130,23 @@ export const LinkForm = {
       this.q = ''
       this.title = it.title
     },
-    apply() {
+    async apply() {
       const href = this.url.trim()
-      if (!href) return
-      // the text: the one typed; empty, the title of the page or post chosen,
-      // else the address
-      const text = (this.label || '').trim() || this.title || href
-      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title: this.title || '', text })
+      if (!href || this.busy) return
+      // the text: the one typed; empty, the title of the page or post chosen
+      // — of an address of another site, its page's title (asked of the
+      // server: once, a short wait) —, else the address
+      let title = this.title || ''
+      if (!(this.label || '').trim() && !title && externalHref(href)) {
+        const ask = this.titleOf || config.linkTitle || metaTitle()
+        if (ask) {
+          this.busy = true
+          title = (await ask(href).catch(() => '')) || ''
+          this.busy = false
+        }
+      }
+      const text = (this.label || '').trim() || title || href
+      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title, text })
     },
   },
 }

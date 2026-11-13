@@ -1,6 +1,6 @@
 // bun test: the link cards — what a card may link, what the server answers.
 import { expect, test } from 'bun:test'
-import { cardTarget, cardsOf, safeHref } from './link-cards.js'
+import { cardTarget, cardsOf, drawCard, externalTarget, safeHref } from './link-cards.js'
 
 test('a card links a path of the site or an address of it; never another site or a script', () => {
   const o = 'https://site.test'
@@ -20,15 +20,29 @@ test('the cards of what the server answers: an event\'s data, cards, or the map'
   expect(cardsOf(null)).toEqual({})
 })
 
-test('the target of a card typed or pasted: a path, an address of the site, a record path', () => {
+test('the target of a card typed or pasted: a path, an address of the site, a record path, another site\'s', () => {
   const o = 'https://site.test'
   expect(cardTarget('/en-us/about', o)).toBe('/en-us/about')
   expect(cardTarget('  https://site.test/en-us/about?x=1  ', o)).toBe('/en-us/about?x=1')
   expect(cardTarget('https://site.test', o)).toBe('/')
   expect(cardTarget('admin:posts:<01a0_en-US>:', o)).toBe('admin:posts:<01a0_en-US>:')
-  for (const bad of ['//evil.com', 'https://evil.com/x', 'about', 'javascript:alert(1)', '/a b', 'admin:posts', '']) {
+  // another site's page: its address as it is (its card read by the server)
+  expect(cardTarget('https://example.com/a?b=1', o)).toBe('https://example.com/a?b=1')
+  expect(externalTarget('https://example.com/a', o)).toBe(true)
+  expect(externalTarget('https://site.test/a', o)).toBe(false)
+  for (const bad of ['//evil.com', 'https:///x', 'ftp://example.com', 'about', 'javascript:alert(1)', '/a b', 'admin:posts', '']) {
     expect(cardTarget(bad, o)).toBe('')
   }
+})
+
+test('a card of another site\'s page opens it in a new tab, telling it nothing', () => {
+  const doc = { createElement: (tag) => ({ tag, attrs: {}, children: [], className: '', setAttribute(k, v) { this.attrs[k] = v }, append(...c) { this.children.push(...c) } }) }
+  const el = { ownerDocument: doc, attrs: {}, setAttribute(k, v) { this.attrs[k] = v }, replaceChildren(a) { this.a = a } }
+  expect(drawCard(el, { href: 'https://example.com/a', title: 'Example', summary: 'S', cover: 'https://example.com/i.png' })).toBe(true)
+  expect(el.a.href).toBe('https://example.com/a')
+  expect(el.a.target).toBe('_blank')
+  expect(el.a.rel).toBe('noopener noreferrer nofollow')
+  expect(drawCard(el, { href: 'javascript:alert(1)', title: 'x' })).toBe(false)
 })
 
 test('the address of a link chosen: a path as it is; a record, its address in the admin', async () => {

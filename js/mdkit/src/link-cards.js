@@ -22,12 +22,22 @@ export function safeHref(href, origin = (typeof location !== 'undefined' ? locat
   return ''
 }
 
-// targetRe is what a card may link: a path of the site (not //host), or a
-// record path of the admin (admin:…:, an action after) — x/markup's rule.
-const targetRe = /^(\/|\/[^/\\\s"'<>][^\s"'<>]*|admin:[^\s"'\\]*:(![A-Za-z0-9_]+)?)$/
+// targetRe is what a card may link: a path of the site (not //host), a
+// record path of the admin (admin:…:, an action after), an address of
+// another site (http or https) — x/markup's rule.
+const targetRe = /^(\/|\/[^/\\\s"'<>][^\s"'<>]*|admin:[^\s"'\\]*:(![A-Za-z0-9_]+)?|https?:\/\/[^/\s"'<>\\][^\s"'<>\\]*)$/
+
+// externalTarget says target is an address of another site (http or https):
+// its card opens it in a new tab.
+export function externalTarget(target, origin = (typeof location !== 'undefined' ? location.origin : '')) {
+  const t = String(target || '').trim()
+  if (!/^https?:\/\/[^/\s"'<>\\][^\s"'<>\\]*$/i.test(t)) return false
+  return !origin || !(t === origin || t.startsWith(origin + '/'))
+}
 
 // cardTarget is the target of a card of text — typed or pasted: a path of
-// the site, an address of this site (its path), a record path —; '', none.
+// the site, an address of this site (its path), a record path, an address of
+// another site —; '', none.
 export function cardTarget(text, origin = (typeof location !== 'undefined' ? location.origin : '')) {
   let t = String(text || '').trim()
   if (origin && (t === origin || t.startsWith(origin + '/'))) t = t.slice(origin.length) || '/'
@@ -59,14 +69,20 @@ function style() {
   document.head.append(st)
 }
 
-// drawCard makes el the card of card: its texts as text (never HTML).
+// drawCard makes el the card of card: its texts as text (never HTML); of
+// another site's page, it opens in a new tab, telling it nothing.
 export function drawCard(el, card) {
-  const href = safeHref(card && card.href)
+  const external = externalTarget(card && card.href)
+  const href = safeHref(card && card.href) || (external ? String(card.href).trim() : '')
   if (!href || !card.title) return false
   const doc = el.ownerDocument
   const a = doc.createElement('a')
   a.className = 'mdkit-card'
   a.href = href
+  if (external) {
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer nofollow'
+  }
   a.setAttribute('data-card-href', href)
   const cover = safeHref(card.cover) || (/^https:\/\//.test(card.cover || '') ? card.cover : '')
   if (cover) {

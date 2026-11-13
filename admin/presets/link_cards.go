@@ -7,7 +7,8 @@ import (
 )
 
 // The link cards of a text (x/markup: a page of the site, a record of the
-// admin, linked on a line of its own): what each is — its title, its
+// admin, a page of another site — link_external.go —, linked on a line of
+// its own): what each is — its title, its
 // address, its cover and its summary —, answered by LinkCardsEvent to the
 // script that draws them (rvq mdkit link-cards), for who may see it; a
 // target not known, or not theirs to see, has none (its link stays).
@@ -59,6 +60,9 @@ func (b *Builder) LinkCard(ctx *web.EventContext, target string) *LinkCard {
 	if strings.HasPrefix(target, PermModule+":") {
 		return b.recordLinkCard(ctx, target)
 	}
+	if ExternalTarget(target) {
+		return b.externalLinkCard(ctx, target, true)
+	}
 	return nil
 }
 
@@ -105,6 +109,7 @@ func (b *Builder) linkCards(ctx *web.EventContext) (r web.EventResponse, err err
 	out := map[string]*LinkCard{}
 	r.Data = out
 	_ = ctx.R.ParseMultipartForm(1 << 20)
+	read := 0
 	for _, target := range ctx.R.Form["target"] {
 		if len(out) >= linkCardsMax {
 			break
@@ -112,7 +117,18 @@ func (b *Builder) linkCards(ctx *web.EventContext) (r web.EventResponse, err err
 		if _, done := out[target]; done || target == "" {
 			continue
 		}
-		if c := b.LinkCard(ctx, target); c != nil {
+		var c *LinkCard
+		if ExternalTarget(target) {
+			// a page of another site: kept; none or old, read — a few a request
+			var stale bool
+			if c, stale = b.GetExternalLinkCards().ExternalLinkCard(ctx.R.Context(), target); (c == nil || stale) && read < externalFetchesMax {
+				read++
+				c = b.externalLinkCard(ctx, target, true)
+			}
+		} else {
+			c = b.LinkCard(ctx, target)
+		}
+		if c != nil {
 			out[target] = c
 		}
 	}

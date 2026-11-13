@@ -595,6 +595,8 @@ export interface VxMessages {
   mdkitCardSearch: string
   /** Editors of a text (mdkit), card: useAddress. */
   mdkitCardUseAddress: string
+  /** Editors of a text (mdkit), card: unread. */
+  mdkitCardUnread: string
   /** Editors of a text (mdkit), card: none. */
   mdkitCardNone: string
   /** Editors of a text (mdkit), card: hint. */

@@ -325,6 +325,7 @@ type Messages struct {
 	MdkitCardTitle              string `json:"mdkitCardTitle" i18n:"hint='Editors of a text (mdkit), card: title.'"`
 	MdkitCardSearch             string `json:"mdkitCardSearch" i18n:"hint='Editors of a text (mdkit), card: search.'"`
 	MdkitCardUseAddress         string `json:"mdkitCardUseAddress" i18n:"hint='Editors of a text (mdkit), card: useAddress.'"`
+	MdkitCardUnread             string `json:"mdkitCardUnread" i18n:"hint='Editors of a text (mdkit), card: the discreet notice of a page of another site that could not be read (its address follows).'"`
 	MdkitCardNone               string `json:"mdkitCardNone" i18n:"hint='Editors of a text (mdkit), card: none.'"`
 	MdkitCardHint               string `json:"mdkitCardHint" i18n:"hint='Editors of a text (mdkit), card: hint.'"`
 	MdkitCardCancel             string `json:"mdkitCardCancel" i18n:"hint='Editors of a text (mdkit), card: cancel.'"`
@@ -699,8 +700,9 @@ var Messages_en_US = &Messages{
 	MdkitMarkdownHelpUrl:        "https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax",
 	MdkitCardButton:             "Link card",
 	MdkitCardTitle:              "Link card",
-	MdkitCardSearch:             "Search, or type an address of the site (/…)",
+	MdkitCardSearch:             "Search, or type an address (/…, https://…)",
 	MdkitCardUseAddress:         "Use the address",
+	MdkitCardUnread:             "The page could not be read: the card shows its address.",
 	MdkitCardNone:               "Nothing found.",
 	MdkitCardHint:               "The card shows the title, the cover and the summary, in the language of the page.",
 	MdkitCardCancel:             "Cancel",
@@ -1075,8 +1077,9 @@ var Messages_pt_BR = &Messages{
 	MdkitMarkdownHelpUrl:        "https://docs.github.com/pt/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax",
 	MdkitCardButton:             "Cartão de link",
 	MdkitCardTitle:              "Cartão de link",
-	MdkitCardSearch:             "Busque, ou digite um endereço do site (/…)",
+	MdkitCardSearch:             "Busque, ou digite um endereço (/…, https://…)",
 	MdkitCardUseAddress:         "Usar o endereço",
+	MdkitCardUnread:             "Não foi possível ler a página: o card mostra o endereço.",
 	MdkitCardNone:               "Nada encontrado.",
 	MdkitCardHint:               "O cartão mostra o título, a capa e o resumo, no idioma da página.",
 	MdkitCardCancel:             "Cancelar",

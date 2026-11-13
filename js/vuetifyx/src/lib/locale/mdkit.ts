@@ -146,6 +146,7 @@ export const mdkitKeys: Record<string, Record<string, string>> = {
     title: 'mdkitCardTitle',
     search: 'mdkitCardSearch',
     useAddress: 'mdkitCardUseAddress',
+    unread: 'mdkitCardUnread',
     none: 'mdkitCardNone',
     hint: 'mdkitCardHint',
     cancel: 'mdkitCardCancel',

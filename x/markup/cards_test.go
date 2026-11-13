@@ -33,3 +33,22 @@ func TestLinkCards(t *testing.T) {
 		t.Errorf("to Markdown: %q", md)
 	}
 }
+
+// A card of another site's page: an address of http or https, its link in a
+// new tab telling it nothing; never a script, nor a scheme of no web.
+func TestExternalLinkCards(t *testing.T) {
+	for target, ok := range map[string]bool{
+		"https://example.com/a?b=1": true, "http://example.com": true,
+		"javascript:alert(1)": false, "ftp://example.com": false, "https://": false, "https:///x": false,
+		`https://example.com/"onmouseover=x`: false,
+	} {
+		if LinkCardTarget(target) != ok {
+			t.Errorf("%q: %v", target, !ok)
+		}
+	}
+	got := LinkCardHTML("https://example.com/a?b=1&c=2")
+	want := `<div class="mdkit-link-card" data-href="https://example.com/a?b=1&amp;c=2"><a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer nofollow">https://example.com/a?b=1&amp;c=2</a></div>`
+	if got != want {
+		t.Errorf("the HTML:\n got %s\nwant %s", got, want)
+	}
+}

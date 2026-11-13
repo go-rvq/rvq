@@ -2,9 +2,12 @@
 // a dialog (open(done)) —: the pages of the site and, in the admin, its
 // records, found as one types (the page's search: the meta
 // mdkit-link-cards' data-search, or `search`), or an address typed (a path of
-// the site, /…; a record path, admin:…:). Chosen, its target given to done.
+// the site, /…; a record path, admin:…:; another site's, https://… — read
+// at once by the server, its failure told discreetly). Chosen, its target
+// given to done.
 import { config, wordsOf } from './config.js'
-import { cardTarget } from './link-cards.js'
+import { cardTarget, externalTarget, metaResolver } from './link-cards.js'
+import { notify } from './notify.js'
 import { searchMixin } from './link-search.js'
 
 // queryLocale is the locale of the address of the page (?locale=…); '', none.
@@ -56,8 +59,11 @@ export default {
     // search: the groups of options matching q — and the values of the
     // facets: {groups, facets} — (a promise); by default the page's meta's
     search: { type: Function, default: null },
+    // resolve: the cards of the targets (a promise of {target: card}); by
+    // default the page's meta's — a page of another site read by it
+    resolve: { type: Function, default: null },
   },
-  data: () => ({ show: false, done: null }),
+  data: () => ({ show: false, done: null, reading: false }),
   computed: {
     // typed is the address typed, when it is one a card may link
     typed() { return cardTarget((this.q || '').trim()) },
@@ -71,8 +77,8 @@ export default {
     </v-card-title>
     <v-card-text>
       <v-text-field v-model="q" autofocus density="compact" variant="outlined" hide-details clearable
-        prepend-inner-icon="mdi-magnify" :loading="loading"
-        :placeholder="words.search || 'Search, or type an address of the site (/…)'"
+        prepend-inner-icon="mdi-magnify" :loading="loading || reading" :disabled="reading"
+        :placeholder="words.search || 'Search, or type an address (/…, https://…)'"
         @update:model-value="runSearch()" @keydown.enter.prevent="enter" data-link-card-q></v-text-field>
       <mdkit-link-facets v-if="!typed" :facets="facets" v-model="values"></mdkit-link-facets>
       <v-list v-if="typed || groups.length" density="compact" class="mt-2" data-link-card-options>
@@ -106,7 +112,25 @@ export default {
       const first = this.groups[0] && this.groups[0].items[0]
       if (first) this.pick(first.target)
     },
-    pick(target) {
+    // pick takes target: of another site's page, read first (its title, its
+    // summary, its cover: the server's, once) — not read, the card is its
+    // address, said discreetly —
+    async pick(target) {
+      if (externalTarget(target)) {
+        const resolve = this.resolve || metaResolver()
+        if (resolve) {
+          this.reading = true
+          let card = null
+          try {
+            const cards = (await resolve([target])) || {}
+            card = cards[target] || null
+          } catch (e) {
+            card = null
+          }
+          this.reading = false
+          if (!card) notify((this.words.unread || 'The page could not be read: the card shows its address.') + ' ' + target)
+        }
+      }
       this.show = false
       if (this.done) this.done(target)
     },

@@ -58,3 +58,4 @@ export function install(app, { prefix = 'mdkit' } = {}) {
   Object.keys(components).forEach((name) => app.component(prefix + '-' + name, components[name]))
 }
 export { inlineHTML } from './rich-cells.js'
+export { notify } from './notify.js'

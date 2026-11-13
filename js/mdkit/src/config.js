@@ -3,14 +3,15 @@
 // and the words of the editors when no component is given its own (by
 // editor: rich, markdown, table, footnote, card; else window.mdkitWords, or
 // window.hermonWords: a site of hermon's).
-export const config = { textClass: 'mdkit-text', words: null, cardSearch: null }
+export const config = { textClass: 'mdkit-text', words: null, cardSearch: null, linkTitle: null }
 
 // configure sets what options says (textClass, words, cardSearch: the search
-// of the link card picker).
+// of the link card picker, linkTitle: the title of a page of another site).
 export function configure(options = {}) {
   if (options.textClass) config.textClass = options.textClass
   if (options.words) config.words = options.words
   if (options.cardSearch) config.cardSearch = options.cardSearch
+  if (options.linkTitle) config.linkTitle = options.linkTitle
   return config
 }
 

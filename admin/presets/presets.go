@@ -84,6 +84,8 @@ type Builder struct {
 	formSigner                            FormSigner
 	// linkCardResolvers: the application's (link_cards.go)
 	linkCardResolvers []LinkCardResolver
+	// externalCards keeps the cards of pages of other sites (link_external.go)
+	externalCards     ExternalLinkCardStore
 	linkCardSearchers []LinkCardSearcher
 	linkCardFacets    []LinkCardFacetsFunc
 	linkCardNoRecords bool
@@ -153,6 +155,7 @@ func New(i18nB *i18n.Builder) *Builder {
 	// the cards of the links of a text (link_cards.go)
 	r.GetWebBuilder().RegisterEventHandler(LinkCardsEvent, web.EventFunc(r.linkCards))
 	r.GetWebBuilder().RegisterEventHandler(LinkCardSearchEvent, web.EventFunc(r.linkCardSearch))
+	r.GetWebBuilder().RegisterEventHandler(LinkTitleEvent, web.EventFunc(r.linkTitle))
 	// the words of the vuetifyx components: the page's vue-i18n's (vx)
 	r.registerVxMessages()
 	// the sets of permissions every admin has (perm_sets.go)
@@ -1440,12 +1443,14 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 			</style>
 		`))
 
-	// where the cards of the links of the texts are asked, and what a card
-	// may link is searched (link_cards.go; rvq mdkit's watchLinkCards and
-	// its picker read it)
+	// where the cards of the links of the texts are asked, what a card may
+	// link is searched (link_cards.go) and the title of a page of another
+	// site read (link_title.go) — rvq mdkit's watchLinkCards and its picker
+	// read it
 	prefix := b.URIPrefixCtx(ctx.R.Context())
 	ctx.Injector.HeadHTML(`<meta name="mdkit-link-cards" content="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardsEvent) +
-		`" data-search="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardSearchEvent) + `">`)
+		`" data-search="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkCardSearchEvent) +
+		`" data-title="` + stdhtml.EscapeString(prefix+"?__execute_event__="+LinkTitleEvent) + `">`)
 	// where the formulas and diagrams of the texts load KaTeX and Mermaid
 	ctx.Injector.HeadHTML(mdkit.VendorMeta())
 
