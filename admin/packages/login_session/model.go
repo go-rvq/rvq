@@ -36,6 +36,12 @@ type LoginSession struct {
 	Place     place.Place `gorm:"embedded"`
 	TokenHash string      `sql:"index"`
 	ExpiredAt time.Time
+	// PrevTokenHash is the token the session had before its last renewal,
+	// still taken until PrevTokenUntil (PrevTokenGrace): the requests sent
+	// with it before the browser got the new one — the page refreshing
+	// itself while nobody touches it — are not turned away.
+	PrevTokenHash  string `sql:"index"`
+	PrevTokenUntil *time.Time
 
 	// Kind is the way of the access: KindLogin, KindWebDAV, KindGit ("" a
 	// login recorded before it).

@@ -436,6 +436,15 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 
 			if autoRedirectToHomePage {
 				if path == b.loginPageURL || path == b.totpSetupPageURL || path == b.totpValidatePageURL {
+					// signed in already: where the login was to go (its
+					// continue URL — the end of the login dialog of the
+					// admin, which then closes it), else the home
+					if path == b.loginPageURL {
+						if to := b.getContinueURL(w, r); to != "" {
+							http.Redirect(w, r, to, http.StatusFound)
+							return
+						}
+					}
 					http.Redirect(w, r, b.homePageURLFunc(r, user), http.StatusFound)
 					return
 				}

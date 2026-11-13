@@ -88,7 +88,34 @@ func TestInitialUserSessionRenewed(t *testing.T) {
 		t.Fatalf("the renewal of the initial user ends %v, want the end of the day", renewed.ExpiresAt.Time)
 	}
 	other := b.renewedSessionClaims(&UserClaims{UserID: "2"}, "ana")
-	if !near(other.ExpiresAt.Time, time.Hour) {
+	// a renewal's times to the minute: up to a minute short
+	if left := time.Until(other.ExpiresAt.Time); left <= time.Hour-61*time.Second || left > time.Hour {
 		t.Fatalf("the renewal of another user ends %v, want an hour", other.ExpiresAt.Time)
+	}
+}
+
+// The renewals of the same token in the same minute are one token: its ID
+// kept, its times to the minute — the requests a page sends at once, all
+// past the time to renew, do not make tokens the session's record has not.
+func TestRenewalIdempotent(t *testing.T) {
+	b := New(i18n.New()).Secret("s3cret").SessionMaxAge(3600)
+	if n := time.Now(); n.Second() >= 58 {
+		time.Sleep(3 * time.Second)
+	}
+	old := &UserClaims{UserID: "1", RegisteredClaims: b.genBaseSessionClaim("1", false)}
+	renew := func() string {
+		c := *old
+		c.RegisteredClaims = b.renewedSessionClaims(old, "ana")
+		return b.mustGetSessionToken(c)
+	}
+	a, c := renew(), renew()
+	if a != c {
+		t.Fatal("two renewals of the same token in the same minute made two tokens")
+	}
+	if r := b.renewedSessionClaims(old, "ana"); r.ID != old.ID || r.IssuedAt.Time.Second() != 0 {
+		t.Fatalf("the renewal: id %q (was %q), issued %v", r.ID, old.ID, r.IssuedAt.Time)
+	}
+	if a == b.mustGetSessionToken(*old) {
+		t.Fatal("the renewal kept the old token")
 	}
 }

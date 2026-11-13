@@ -192,15 +192,23 @@ func (m *Manager) AddSessionLogByUserID(db *gorm.DB, r *http.Request, userID uui
 	return nil
 }
 
+// PrevTokenGrace is how long the token of a session stays good after it is
+// renewed: the requests already on their way with it (several at once — a
+// page refreshing its parts) still pass.
+const PrevTokenGrace = time.Minute
+
 func (m *Manager) UpdateCurrentSessionLog(db *gorm.DB, r *http.Request, userID uuid.UUID, oldToken string) (err error) {
 	token := login.GetSessionToken(m.lb, r)
 	tokenHash := GetStringHash(token, LoginTokenHashLen)
 	oldTokenHash := GetStringHash(oldToken, LoginTokenHashLen)
+	until := time.Now().Add(PrevTokenGrace)
 	if err = db.Model(&LoginSession{}).
 		Where("user_id = ? and token_hash = ?", userID, oldTokenHash).
 		Updates(map[string]interface{}{
-			"token_hash": tokenHash,
-			"expired_at": time.Now().Add(time.Duration(m.lb.SessionMaxAgeOf(r)) * time.Second),
+			"token_hash":       tokenHash,
+			"expired_at":       time.Now().Add(time.Duration(m.lb.SessionMaxAgeOf(r)) * time.Second),
+			"prev_token_hash":  oldTokenHash,
+			"prev_token_until": &until,
 		}).Error; err != nil {
 		return err
 	}
@@ -246,7 +254,11 @@ func (m *Manager) CheckIsTokenValidFromRequest(db *gorm.DB, r *http.Request, use
 		return false, nil
 	}
 	sessionLog := LoginSession{}
-	if err = db.Where("user_id = ? and token_hash = ?", userID, GetStringHash(token, LoginTokenHashLen)).
+	hash := GetStringHash(token, LoginTokenHashLen)
+	// its token, or the one it had before its last renewal, for a moment
+	// (PrevTokenGrace)
+	if err = db.Where("user_id = ? AND (token_hash = ? OR (prev_token_hash = ? AND prev_token_until > ?))",
+		userID, hash, hash, time.Now()).
 		First(&sessionLog).
 		Error; err != nil {
 		if err != gorm.ErrRecordNotFound {

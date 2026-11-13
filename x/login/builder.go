@@ -1266,11 +1266,25 @@ func (b *Builder) genBaseSessionClaim(id string, initialUser bool, keep ...bool)
 }
 
 // renewedSessionClaims are the base claims of a session renewed while used
-// (AutoExtendSession): of claims, of the user of the account.
+// (AutoExtendSession): of claims, of the user of the account. The same for
+// every renewal of the same token in the same minute — its ID kept, its times
+// to the minute —: the requests a page sends at once, all past the time to
+// renew, make ONE token, the one the session's record (afterExtendSessionHook)
+// is given, whichever answer the browser keeps.
 func (b *Builder) renewedSessionClaims(claims *UserClaims, account string) jwt.RegisteredClaims {
 	// the initial user as at the login (completeLogin): the end of the day
 	// when it is logged (SetInitialUserLoggerd)
-	return b.genBaseSessionClaim(claims.UserID, account == b.initialUserAccount, claims.KeepSignedIn)
+	rc := b.genBaseSessionClaim(claims.UserID, account == b.initialUserAccount, claims.KeepSignedIn)
+	if claims.ID != "" {
+		rc.ID = claims.ID
+	}
+	now := time.Now().Truncate(time.Minute)
+	rc.IssuedAt = jwt.NewNumericDate(now)
+	rc.NotBefore = jwt.NewNumericDate(now)
+	if rc.ExpiresAt != nil {
+		rc.ExpiresAt = jwt.NewNumericDate(rc.ExpiresAt.Time.Truncate(time.Minute))
+	}
+	return rc
 }
 
 // cookieMaxAge is the max age of the cookies of the session of claims: until
