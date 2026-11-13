@@ -80,6 +80,8 @@ type ModelBuilder struct {
 	// listPermActions are actions of its listing no builder knows, for the
 	// permissions (AppendListPermActions)
 	listPermActions []func() []*PermNodeAction
+	// permSets: the sets of permissions of its own (PermSet)
+	permSets map[string]*resourceSet
 	// descriptionFunc is what the model is, in the language of the request
 	descriptionFunc     func(ctx context.Context) string
 	defaultURLQueryFunc func(*http.Request) url.Values

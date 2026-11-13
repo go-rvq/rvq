@@ -46,6 +46,9 @@ type PermChoice struct {
 	// resource by its unique name, out of the groups of the menu
 	// (perm.UngroupPattern) — a group by the groups
 	Resource string `json:"resource"`
+	// Lines: of a set (PermKindSet, "%readers"), the lines it gives there,
+	// after the resource ("@list", "<*>:@get")
+	Lines []string `json:"lines,omitempty"`
 }
 
 // PermChoices are the parts that may follow a beginning, and, of a model's
@@ -266,6 +269,31 @@ func PermChoicesOf(ctx context.Context, p *presets.Builder, path string, groups 
 		}
 		r.Choices = append(r.Choices, c)
 	}
+	// the sets that give something there: their name, what they give
+	if owner != nil {
+		res := owner.Unique
+		if res == "" {
+			res = owner.Name
+		}
+		for _, o := range p.PermSetsOf(ctx, owner) {
+			c := PermChoice{Segment: perm.SetPrefix + o.Name, Kind: PermKindSet, Title: o.Title, Description: o.Description,
+				Lines: relativeLines(res, o.Lines)}
+			if allows != nil {
+				// of what it gives there, what the stack allows
+				given := (&perm.Stack{}).Add("set", o.Lines...).Resolve()
+				var checks []PermCheck
+				for _, ch := range checksUnder(t, owner) {
+					if given.Allows(ch.Resource, ch.Preferred, ch.Action) {
+						checks = append(checks, ch)
+					}
+				}
+				if c.Active = activeOf(checks, allows); c.Active == "" {
+					c.Active = PermActiveNone
+				}
+			}
+			r.Choices = append(r.Choices, c)
+		}
+	}
 	if allows != nil {
 		out := r.Choices[:0]
 		for _, c := range r.Choices {
@@ -276,6 +304,17 @@ func PermChoicesOf(ctx context.Context, p *presets.Builder, path string, groups 
 		r.Choices = out
 	}
 	return
+}
+
+// relativeLines are the lines, each after res when it is under it ("deny
+// <*>:#Secret:*" of "deny admin:posts:<*>:#Secret:*").
+func relativeLines(res string, lines []string) []string {
+	out := make([]string, 0, len(lines))
+	for _, l := range lines {
+		k, p := perm.ParseLine(l)
+		out = append(out, k.Prefix()+strings.TrimPrefix(p, res))
+	}
+	return out
 }
 
 // scopeChoice is the part of the scope s ("admin:").

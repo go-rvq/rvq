@@ -342,6 +342,9 @@ func (b *Builder) Install(p *presets.Builder) error {
 			func(ctx context.Context) string { _, d := words(b.msgs(ctx)); return d })
 	}
 	b.installDefaults()
+	// the sets of permissions of the page: at the end, its actions known
+	// (the preview, the public one)
+	defer b.installPermSets()
 	if b.DB != nil {
 		if err := b.DB.AutoMigrate(&DraftShare{}, &PublicPreview{}); err != nil {
 			return err

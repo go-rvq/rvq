@@ -22,14 +22,26 @@ type Messages struct {
 	DefaultDbpolicyActions   string `i18n:"hint='Label of the actions a permission of a role applies to.'"`
 	PermissionsHelp          string `i18n:"hint='Title of the help button of the permissions of a role: it opens the documentation of policies and permissions.'"`
 	// %s: the line
-	ErrLine             string `i18n:"hint='Error: a line of the permissions of a role whose prefix (deny, allow, reset) has no resource after it.'"`
-	RoleSystemKey       string `i18n:"label='System', hint='Label of the mark of a role of the system.'"`
-	SystemRole          string `i18n:"hint='Said of a role of the system: made by the application, not deleted.'"`
-	ResetPermissions    string `i18n:"hint='Action that resets the permissions of a role of the system to its originals.'"`
-	PermissionsReset    string `i18n:"hint='Shown once the permissions of a role were reset.'"`
-	ErrSystemRoleDelete string `i18n:"hint='Error: a role of the system is not deleted.'"`
-	ErrSystemRoleRename string `i18n:"hint='Error: a role of the system is not renamed.'"`
-	ErrSystemRoleFixed  string `i18n:"hint='Error: the permissions of a fixed role of the system are not changed.'"`
+	ErrLine                string `i18n:"hint='Error: a line of the permissions of a role whose prefix (deny, allow, reset) has no resource after it.'"`
+	RoleSystemKey          string `i18n:"label='System', hint='Label of the mark of a role of the system.'"`
+	SystemRole             string `i18n:"hint='Said of a role of the system: made by the application, not deleted.'"`
+	ResetPermissions       string `i18n:"hint='Action that resets the permissions of a role of the system to its originals.'"`
+	PermissionsReset       string `i18n:"hint='Shown once the permissions of a role were reset.'"`
+	ErrSystemRoleDelete    string `i18n:"hint='Error: a role of the system is not deleted.'"`
+	ErrSystemRoleRename    string `i18n:"hint='Error: a role of the system is not renamed.'"`
+	ErrSystemRoleFixed     string `i18n:"hint='Error: the permissions of a fixed role of the system are not changed.'"`
+	PermSets               string `i18n:"hint='Name of the sets of permissions model in the plural (menu, listing title).'"`
+	PermSet                string `i18n:"hint='Name of the sets of permissions model in the singular.'"`
+	PermSetName            string `i18n:"hint='Label of the name of a set of permissions, as a line writes it (%name).'"`
+	PermSetName_Hint       string `i18n:"hint='Hint of the name of a set.'"`
+	PermSetDefinition      string `i18n:"hint='Label of what a set gives, by kind of resource.'"`
+	PermSetDefinition_Hint string `i18n:"hint='Hint of the definition of a set.'"`
+	PermSetTitles          string `i18n:"hint='Label of the titles of a set, one a language.'"`
+	PermSetDescriptions    string `i18n:"hint='Label of the descriptions of a set, one a language.'"`
+	PermSetSystem          string `i18n:"hint='Title of the list of the sets of the system.'"`
+	ErrPermSetName         string `i18n:"hint='Error: a name a set may not have.'"`
+	ErrPermSetTaken        string `i18n:"hint='Error: the name of a set taken, by another or by one of the system.'"`
+	ErrPermSetKind         string `i18n:"hint='Error: a kind of resource a definition names that the admin has not; %s the kind.'"`
 }
 
 var (
@@ -53,6 +65,18 @@ var (
 		ErrSystemRoleDelete:      "A role of the system is not deleted.",
 		ErrSystemRoleRename:      "A role of the system keeps its name.",
 		ErrSystemRoleFixed:       "This role may everything, by the application: its permissions are not changed.",
+		PermSets:                 "Permission sets",
+		PermSet:                  "Permission set",
+		PermSetName:              "Name",
+		PermSetName_Hint:         "as a permission writes it, after %: lower case letters, digits and _",
+		PermSetDefinition:        "Definition",
+		PermSetDefinition_Hint:   "by kind of resource, what it gives: {model: {@list, <*>:@get}, singleton: @get}",
+		PermSetTitles:            "Title",
+		PermSetDescriptions:      "Description",
+		PermSetSystem:            "Of the system",
+		ErrPermSetName:           "A name of lower case letters, digits and _, a letter first.",
+		ErrPermSetTaken:          "There is a set of this name already.",
+		ErrPermSetKind:           "Unknown kind of resource: %s.",
 	}
 	Messages_pt_BR = &Messages{
 		ModuleDescription:        "Os papéis dos usuários.",
@@ -74,6 +98,18 @@ var (
 		ErrSystemRoleDelete:      "Um papel do sistema não é excluído.",
 		ErrSystemRoleRename:      "Um papel do sistema mantém o nome.",
 		ErrSystemRoleFixed:       "Este papel pode tudo, pela aplicação: as permissões dele não mudam.",
+		PermSets:                 "Conjuntos de permissões",
+		PermSet:                  "Conjunto de permissões",
+		PermSetName:              "Nome",
+		PermSetName_Hint:         "como uma permissão o escreve, depois de %: letras minúsculas, números e _",
+		PermSetDefinition:        "Definição",
+		PermSetDefinition_Hint:   "por tipo de recurso, o que ele dá: {model: {@list, <*>:@get}, singleton: @get}",
+		PermSetTitles:            "Título",
+		PermSetDescriptions:      "Descrição",
+		PermSetSystem:            "Do sistema",
+		ErrPermSetName:           "Um nome de letras minúsculas, números e _, começando por uma letra.",
+		ErrPermSetTaken:          "Já existe um conjunto com este nome.",
+		ErrPermSetKind:           "Tipo de recurso desconhecido: %s.",
 	}
 )
 

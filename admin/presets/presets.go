@@ -87,6 +87,10 @@ type Builder struct {
 	linkCardSearchers []LinkCardSearcher
 	linkCardFacets    []LinkCardFacetsFunc
 	linkCardNoRecords bool
+	// the sets of permissions (perm_sets.go), and the tree they are given
+	// by (made at Build)
+	permSets  permSets
+	permSetIx *permSetIndex
 	// docHref: the address of a document of the documentation (doc_href.go)
 	docHref          func(node string) string
 	docData          func(node string) string
@@ -149,6 +153,8 @@ func New(i18nB *i18n.Builder) *Builder {
 	r.GetWebBuilder().RegisterEventHandler(LinkCardSearchEvent, web.EventFunc(r.linkCardSearch))
 	// the words of the vuetifyx components: the page's vue-i18n's (vx)
 	r.registerVxMessages()
+	// the sets of permissions every admin has (perm_sets.go)
+	r.RegisterPermSets(defaultPermSets()...)
 	r.layoutFunc = r.DefaultLayout
 	r.detailLayoutFunc = r.DefaultLayout
 	r.pagesRegistrator = NewPagesRegistrator(
@@ -1528,6 +1534,9 @@ func (b *Builder) Build(mux ...*http.ServeMux) {
 
 	b.SetupRoutes(mx)
 	b.permissions = b.BuildPermissions()
+	// the sets of permissions given by the tree: the expander of the process
+	b.permSetIx = newPermSetIndex(b.permissions.Tree())
+	perm.SetSetExpander(b.expandSet)
 }
 
 func (b *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {

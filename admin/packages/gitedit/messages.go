@@ -95,6 +95,20 @@ type Messages struct {
 	PublicPreview            string `i18n:"hint='Title of the public preview of the draft (seen with no login).'"`
 	PublicPreviewAction      string `i18n:"hint='Action (and permission) that makes the preview of the draft public.'"`
 	PublicPreviewAction_Desc string `i18n:"hint='What making the preview public allows.'"`
+	SetReaders               string `i18n:"hint='Title of the set of permissions of the files: to see.'"`
+	SetReaders_Desc          string `i18n:"hint='What the set readers gives.'"`
+	SetAuthors               string `i18n:"hint='Title of the set of permissions of the files: to work on the draft.'"`
+	SetAuthors_Desc          string `i18n:"hint='What the set authors gives.'"`
+	SetPublishers            string `i18n:"hint='Title of the set of permissions of the files: to publish.'"`
+	SetPublishers_Desc       string `i18n:"hint='What the set publishers gives.'"`
+	SetDevelopers            string `i18n:"hint='Title of the set of permissions of the files: by git.'"`
+	SetDevelopers_Desc       string `i18n:"hint='What the set developers gives.'"`
+	SetSharers               string `i18n:"hint='Title of the set of permissions of the files: to share the draft.'"`
+	SetSharers_Desc          string `i18n:"hint='What the set sharers gives.'"`
+	SetReviewers             string `i18n:"hint='Title of the set of permissions of the files: every draft.'"`
+	SetReviewers_Desc        string `i18n:"hint='What the set reviewers gives.'"`
+	SetMaintainers           string `i18n:"hint='Title of the set of permissions of the files: the repository whole.'"`
+	SetMaintainers_Desc      string `i18n:"hint='What the set maintainers gives.'"`
 	PublicPreviewOffAction   string `i18n:"hint='Action that ends the public preview.'"`
 	PublicPreviewNone        string `i18n:"hint='Shown when the preview of the draft is not public.'"`
 	PublicPreviewOn          string `i18n:"hint='Shown when the preview of the draft is public.'"`
@@ -253,6 +267,20 @@ var Messages_en_US = &Messages{
 	PublicPreview:            "Public preview",
 	PublicPreviewAction:      "Make the preview public",
 	PublicPreviewAction_Desc: "Make the preview of your draft seen by anyone with its link, with no login — until the date you choose or until you end it.",
+	SetReaders:               "Reading",
+	SetReaders_Desc:          "to see the files, their history and the preview",
+	SetAuthors:               "Draft",
+	SetAuthors_Desc:          "to work on one's draft and save it, not to publish",
+	SetPublishers:            "Publishing",
+	SetPublishers_Desc:       "the draft, and to publish it",
+	SetDevelopers:            "Git",
+	SetDevelopers_Desc:       "to see the files and work by git and WebDAV (cloning asks to read them all)",
+	SetSharers:               "Sharing",
+	SetSharers_Desc:          "to show the draft to others, by a public link too",
+	SetReviewers:             "Every draft",
+	SetReviewers_Desc:        "to see the drafts of the other users",
+	SetMaintainers:           "Maintenance",
+	SetMaintainers_Desc:      "to start the repository and restore the default files",
 	PublicPreviewOffAction:   "End the public preview",
 	PublicPreviewNone:        "Only who logs in sees the preview of your draft. Make it public to show it to someone without an account.",
 	PublicPreviewOn:          "Anyone with the link sees the site as your draft makes it, with no login",
@@ -410,6 +438,20 @@ var Messages_pt_BR = &Messages{
 	PublicPreview:            "Preview público",
 	PublicPreviewAction:      "Tornar o preview público",
 	PublicPreviewAction_Desc: "Deixar o preview do seu rascunho visível a quem tiver o link, sem login — até a data escolhida ou até você encerrar.",
+	SetReaders:               "Leitura",
+	SetReaders_Desc:          "ver os arquivos, o histórico e a prévia",
+	SetAuthors:               "Rascunho",
+	SetAuthors_Desc:          "trabalhar no próprio rascunho e salvá-lo, sem levar ao ar",
+	SetPublishers:            "Publicação",
+	SetPublishers_Desc:       "o rascunho e levá-lo ao ar",
+	SetDevelopers:            "Git",
+	SetDevelopers_Desc:       "ver os arquivos e trabalhar pelo git e pelo WebDAV (clonar pede ler todos)",
+	SetSharers:               "Compartilhar",
+	SetSharers_Desc:          "mostrar o rascunho a outros, também por um link público",
+	SetReviewers:             "Rascunhos de todos",
+	SetReviewers_Desc:        "ver os rascunhos dos outros usuários",
+	SetMaintainers:           "Manutenção",
+	SetMaintainers_Desc:      "começar o repositório e restaurar os arquivos padrão",
 	PublicPreviewOffAction:   "Encerrar o preview público",
 	PublicPreviewNone:        "Só quem entra no admin vê o preview do seu rascunho. Torne-o público para mostrá-lo a quem não tem conta.",
 	PublicPreviewOn:          "Quem tiver o link vê o site como o seu rascunho o faz, sem login",

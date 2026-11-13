@@ -93,6 +93,9 @@ type PermTreeItem struct {
 	Error bool `json:"error,omitempty"`
 	// Expand: on the way to a line of its own — opened when shown
 	Expand bool `json:"expand,omitempty"`
+	// Lines: of a line of a set (PermKindSet), the lines it gives, after its
+	// resource; none, and Error, it gives nothing there — ignored
+	Lines []string `json:"lines,omitempty"`
 }
 
 // The kinds of the items of the tree (PermTreeItem.Kind).
@@ -108,6 +111,7 @@ const (
 	PermKindSection   = "section"   // a section of a detail
 	PermKindPage      = "page"      // a page
 	PermKindCheck     = "check"     // a permission of its own (a verifier)
+	PermKindSet       = "set"       // a set of permissions (%readers)
 )
 
 // PermKinds are the kinds of the items, in the order a filter offers them.

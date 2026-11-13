@@ -1,6 +1,8 @@
 package activity
 
 import (
+	"context"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,6 +34,10 @@ func (ab *Builder) Install(b *presets.Builder) error {
 	if permB := b.GetPermission(); permB != nil {
 		permB.CreatePolicies(ab.permPolicy)
 	}
+	// the set of permissions of the log of the records: "%historians"
+	b.RegisterPermSets(presets.NewPermSet("historians", "{model: <*>:!activity_log, singleton: !activity_log}",
+		func(ctx context.Context) string { return getMessages(ctx).SetHistorians },
+		func(ctx context.Context) string { return getMessages(ctx).SetHistorians_Desc }))
 	// the log is not looked in by the search of the top bar: its words are of
 	// other records
 	mb := b.Model(ab.logModel).MenuIcon("mdi-book-edit").GlobalSearch(false)

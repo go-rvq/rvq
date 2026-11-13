@@ -32,6 +32,8 @@ type Builder struct {
 	// systemRoles are the roles the application needs (SystemRoles)
 	systemRoles []SystemRole
 	pb          *presets.Builder
+	// permSetMb is the model of the sets of permissions (perm_sets.go)
+	permSetMb *presets.ModelBuilder
 	// permissionsHelp is the URL of the documentation of the permissions,
 	// opened by the help button of the form's permissions ("" none)
 	permissionsHelp func(ctx *web.EventContext) string
@@ -121,6 +123,10 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	b.roleMb = pb.Model(&Role{}, presets.ModelConfig().
 		SetModuleKey(MessagesKey)).
 		MenuIcon("mdi-account-key")
+	// the sets of permissions of the admin, beside the roles
+	if err = b.installPermSets(pb); err != nil {
+		return err
+	}
 
 	ed := b.roleMb.Editing(
 		"Name",

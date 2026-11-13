@@ -240,8 +240,9 @@ func UngroupPattern(p string) string {
 		return p
 	}
 	next := strings.TrimSuffix(segs[i], ":")
-	// a resource: a model, a page — not a verb, an action, a field, a record
-	if next == "" || !literal(next) || strings.ContainsAny(next[:1], "<@!#$&") {
+	// a resource: a model, a page — not a verb, an action, a field, a record,
+	// a set (given to the group, as written)
+	if next == "" || !literal(next) || strings.ContainsAny(next[:1], "<@!#$&%") {
 		return p
 	}
 	return segs[0] + strings.Join(segs[i:], "")

@@ -353,6 +353,7 @@ func PermInputKindLabels(ctx context.Context) map[string]string {
 	l[PermKindRecord] = m.PermKindRecord
 	l[PermKindAll] = m.PermKindAll
 	l[PermKindOther] = m.PermKindOther
+	l[PermKindSet] = m.PermKindSet
 	return l
 }
 
@@ -375,6 +376,7 @@ func permInputMessages(ctx context.Context) map[string]string {
 		"expandAll": m.PermTreeExpandAll, "collapseAll": m.PermTreeCollapseAll, "path": m.PermTreePath,
 		"description": m.PermTreeDescription, "active": m.PermTreeActive, "activeAll": m.PermTreeActiveAll,
 		"activeSome": m.PermTreeActiveSome, "activeNone": m.PermTreeActiveNone,
+		"sets": m.PermInputSets, "setGives": m.PermInputSetGives,
 	}
 }
 

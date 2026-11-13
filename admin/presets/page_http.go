@@ -34,6 +34,8 @@ type HttpPageBuilder struct {
 	// permActions are the actions of the page, each its permission
 	// ("!publish"): asked by ActionVerifier, listed in the dump
 	permActions []string
+	// permSets: the sets of permissions of its own (PermSet)
+	permSets map[string]*resourceSet
 	// permActionInfo are the titles and descriptions of permActions
 	permActionInfo map[string]permActionInfo
 	// verified says the handler checks the verifier itself

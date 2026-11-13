@@ -169,7 +169,17 @@ type Messages struct {
 	ErrRecordChangedUnknownWhen i18n.ErrorString `i18n:"hint='Error when someone else saved the record after the form was opened, when not known.'"`
 	ErrRecordStampMissing       i18n.ErrorString `i18n:"hint='Error of a form too old to be saved.'"`
 
-	CopiedToClipboard string `i18n:"hint='Shown once something was copied.'"`
+	CopiedToClipboard   string `i18n:"hint='Shown once something was copied.'"`
+	PermSetReaders      string `i18n:"hint='Title of the set of permissions readers: to see.'"`
+	PermSetReadersDesc  string `i18n:"hint='What the set readers gives.'"`
+	PermSetAuthors      string `i18n:"hint='Title of the set of permissions authors.'"`
+	PermSetAuthorsDesc  string `i18n:"hint='What the set authors gives.'"`
+	PermSetRemovers     string `i18n:"hint='Title of the set of permissions removers.'"`
+	PermSetRemoversDesc string `i18n:"hint='What the set removers gives.'"`
+	PermSetEditors      string `i18n:"hint='Title of the set of permissions editors.'"`
+	PermSetEditorsDesc  string `i18n:"hint='What the set editors gives.'"`
+	PermSetManagers     string `i18n:"hint='Title of the set of permissions managers.'"`
+	PermSetManagersDesc string `i18n:"hint='What the set managers gives.'"`
 }
 
 // FormatDateTime writes an instant the way this language does. Falls back to a
@@ -355,6 +365,16 @@ var Messages_en_US = &Messages{
 	ErrRecordStampMissing: "This form is out of date and cannot be saved. Reload it and make your changes again.",
 	ErrFieldRequired:      i18n.ErrorString(ErrFieldRequired.Error()),
 	CopiedToClipboard:     "Copied to clipboard",
+	PermSetReaders:        "Reading",
+	PermSetReadersDesc:    "to see: the listing and the records",
+	PermSetAuthors:        "Authoring",
+	PermSetAuthorsDesc:    "to see, create and edit; not to delete",
+	PermSetRemovers:       "Removal",
+	PermSetRemoversDesc:   "to delete, see the trash and bring back",
+	PermSetEditors:        "Editing",
+	PermSetEditorsDesc:    "authoring and removal",
+	PermSetManagers:       "Management",
+	PermSetManagersDesc:   "everything of the resource",
 }
 
 var DefaultMessages = Messages_en_US
@@ -363,6 +383,16 @@ var Messages_pt_BR = &Messages{
 	ModuleDescription:                  "As palavras de todas as páginas do admin: listagem, edição, filtros, ações e diálogos.",
 	YouAreHere:                         "Você está aqui",
 	CopiedToClipboard:                  "Copiado para a área de transferência!",
+	PermSetReaders:                     "Leitura",
+	PermSetReadersDesc:                 "ver: a listagem e os registros",
+	PermSetAuthors:                     "Autoria",
+	PermSetAuthorsDesc:                 "ver, criar e editar; não excluir",
+	PermSetRemovers:                    "Exclusão",
+	PermSetRemoversDesc:                "excluir, ver a lixeira e trazer de volta",
+	PermSetEditors:                     "Edição",
+	PermSetEditorsDesc:                 "autoria e exclusão",
+	PermSetManagers:                    "Gestão",
+	PermSetManagersDesc:                "tudo do recurso",
 	TheFemaleTitle:                     "A %s",
 	TheMaleTitle:                       "O %s",
 	SuccessfullyUpdated:                "Atualizado com Sucesso",

@@ -169,8 +169,9 @@ func TestPermChoicesOfActive(t *testing.T) {
 	allows := func(c PermCheck) bool { return st.Allows(c.Resource, c.Preferred, c.Action) }
 	inRequest(t, ib, func(ctx *web.EventContext) {
 		for path, want := range map[string][]string{
-			"admin:":       {"posts:", "*"},
-			"admin:posts:": {"@list", "<*>:", "*"},
+			"admin:": {"posts:", "*"},
+			// the sets of which it allows something (removers: nothing)
+			"admin:posts:": {"@list", "<*>:", "*", "%readers", "%authors", "%editors", "%managers"},
 			// the glob of the stack: <*> and * span the colons, the nested
 			// comments too
 			"admin:posts:<*>:": {"@get", "comments:", "*"},

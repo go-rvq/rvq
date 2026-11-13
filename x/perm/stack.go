@@ -250,6 +250,13 @@ type Line struct {
 	ExceptBy []int
 	// Except are the patterns of ExceptBy: what it no longer matches.
 	Except []string
+	// Via is the set the line comes of ("readers": a line "…:%readers"
+	// expanded, Stack.Add); "" none.
+	Via string
+	// Ignored, a line of a set that gives nothing there (no such set,
+	// nothing for its kind of resource): kept, to be shown, but it counts
+	// for nothing.
+	Ignored bool
 
 	g  glob.Glob
 	eg []glob.Glob
@@ -265,8 +272,9 @@ func (l *Line) Text() string {
 	return t + " [" + strings.Join(l.Actions, ", ") + "]"
 }
 
-// Active says whether the line counts: not replaced, and not a reset.
-func (l *Line) Active() bool { return l.ReplacedBy == 0 && l.Kind != LineReset }
+// Active says whether the line counts: not replaced, not a reset, not a set
+// that gives nothing (Ignored).
+func (l *Line) Active() bool { return l.ReplacedBy == 0 && l.Kind != LineReset && !l.Ignored }
 
 // Denies says whether the line, active, denies.
 func (l *Line) Denies() bool { return l.Kind == LineDeny }
@@ -354,7 +362,10 @@ type Stack struct {
 
 // Add adds the lines of origin, each expanded (ExpandLine), the blank ones
 // and those of a wrong prefix left out (a grammar odd decides as it always
-// did: CheckLine is for what is written now).
+// did: CheckLine is for what is written now). A line of a set ("…:%readers")
+// is the lines the set gives there (ExpandSet), each of it (Via), its kind
+// the line's unless its own says another (SetLineKind); a set that gives
+// nothing there, the line kept, ignored.
 func (s *Stack) Add(origin string, lines ...string) *Stack {
 	for _, l := range lines {
 		if checkPrefix(l) != nil {
@@ -362,6 +373,22 @@ func (s *Stack) Add(origin string, lines ...string) *Stack {
 		}
 		for _, e := range ExpandLine(l) {
 			k, p := ParseLine(e)
+			if res, name, ok := SetRef(p); ok {
+				got, ok := ExpandSet(res, name)
+				if !ok {
+					s.Lines = append(s.Lines, &Line{Index: len(s.Lines) + 1, Kind: k, Pattern: p, Origin: origin,
+						Via: name, Ignored: true})
+					continue
+				}
+				for _, g := range got {
+					for _, ge := range ExpandLine(g) {
+						gk, gp := ParseLine(ge)
+						s.Lines = append(s.Lines, &Line{Index: len(s.Lines) + 1, Kind: SetLineKind(k, gk), Pattern: gp,
+							Origin: origin, Via: name})
+					}
+				}
+				continue
+			}
 			s.Lines = append(s.Lines, &Line{Index: len(s.Lines) + 1, Kind: k, Pattern: p, Origin: origin})
 		}
 	}
@@ -380,7 +407,13 @@ func (s *Stack) AddLine(l *Line) *Stack {
 func (s *Stack) Resolve() *Stack {
 	for i, l := range s.Lines {
 		l.ReplacedBy, l.ExceptBy, l.Except = 0, nil, nil
+		if l.Ignored {
+			continue
+		}
 		for _, later := range s.Lines[i+1:] {
+			if later.Ignored {
+				continue
+			}
 			if later.replaces(l) && later.covers(l) {
 				l.ReplacedBy = later.Index
 				l.ExceptBy, l.Except = nil, nil

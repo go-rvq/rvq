@@ -55,7 +55,14 @@ function server(calls: any[]) {
           records: true,
           choices: [
             { segment: '@list', resource: 'admin:posts:@list', kind: 'verb', title: 'List' },
-            { segment: '@create', resource: 'admin:posts:@create', kind: 'verb', title: 'Create' }
+            { segment: '@create', resource: 'admin:posts:@create', kind: 'verb', title: 'Create' },
+            {
+              segment: '%readers',
+              resource: 'admin:posts:%readers',
+              kind: 'set',
+              title: 'Reading',
+              lines: ['@list', '<*>:@get']
+            }
           ]
         }
       case 'records':
@@ -206,6 +213,20 @@ describe('vx-permission-input', () => {
       resources: JSON.stringify(['admin:posts:@create', 'admin:posts:<7<Primeiro \\<post\\>>>:'])
     })
     expect(w.emitted('update:modelValue')!.at(-1)).toEqual(['admin:posts:{@list, @create}'])
+  })
+
+  it('offers the sets apart from the parts, with what they give', async () => {
+    const calls: any[] = []
+    const w = mountTemplate(PermissionInput, { modelValue: '', loader: server(calls) })
+    await flush()
+    const vm = w.vm as any
+    await vm.openAdd({ title: 'Posts', edit: 'admin:posts:', children: [] })
+    await flush()
+    expect(vm.shownParts.map((c: any) => c.segment)).toEqual(['@list', '@create'])
+    expect(vm.shownSets.map((c: any) => c.segment)).toEqual(['%readers'])
+    vm.toggle('admin:posts:%readers')
+    await vm.add()
+    expect(calls.at(-1)).toMatchObject({ op: 'add', resources: JSON.stringify(['admin:posts:%readers']) })
   })
 
   it('adds lines from a text, or says what is wrong with it', async () => {

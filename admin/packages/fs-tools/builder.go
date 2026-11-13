@@ -112,7 +112,11 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		Layout(b.pageFunc)
 	b.page = page
 	// the WebDAV: reading asks the page's @get, writing !write
-	page.Page().PermActions("!write")
+	page.Page().PermActions("!write").
+		// its sets of permissions: to read, to write (titled as the general
+		// ones)
+		PermSet("readers", "@get", nil, nil).
+		PermSet("authors", "{@get, !write}", nil, nil)
 
 	defer page.Build()
 	return

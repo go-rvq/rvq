@@ -221,9 +221,42 @@
               </template>
               <span
                 :class="{ 'text-error': item.error }"
-                :title="item.error ? msg.recordNotFound : ''"
+                :title="
+                  item.error ? (item.kind === 'set' ? item.description : msg.recordNotFound) : ''
+                "
                 >{{ item.title }}</span
               >
+              <!-- a line of a set: its name, what it gives opened from it -->
+              <v-menu v-if="item.kind === 'set'" open-on-hover :close-on-content-click="false">
+                <template #activator="{ props: p }">
+                  <v-chip
+                    v-bind="p"
+                    size="x-small"
+                    label
+                    variant="tonal"
+                    :color="item.error ? 'error' : 'secondary'"
+                    prepend-icon="mdi-shield-star-outline"
+                    :data-permission-set="item.subtitle"
+                    >{{ item.subtitle }}</v-chip
+                  >
+                </template>
+                <v-card density="compact" max-width="420" data-permission-set-lines>
+                  <v-card-text class="py-2">
+                    <div v-if="item.error" class="text-error text-caption">
+                      {{ item.description }}
+                    </div>
+                    <template v-else>
+                      <div class="text-caption text-medium-emphasis">{{ msg.setGives }}</div>
+                      <code
+                        v-for="(l, i) in item.lines || []"
+                        :key="i"
+                        class="d-block text-caption"
+                        >{{ l }}</code
+                      >
+                    </template>
+                  </v-card-text>
+                </v-card>
+              </v-menu>
               <v-icon
                 v-if="item.incomplete"
                 icon="mdi-alert-circle-outline"
@@ -402,14 +435,14 @@
 
           <div class="text-subtitle-2 text-medium-emphasis mt-1">{{ msg.children }}</div>
           <div
-            v-if="!dlg.loading && !shownChoices.length"
+            v-if="!dlg.loading && !shownParts.length"
             class="text-body-2 text-medium-emphasis py-2"
           >
             {{ msg.noChoices }}
           </div>
           <v-list density="compact" class="py-0">
             <v-list-item
-              v-for="c in shownChoices"
+              v-for="c in shownParts"
               :key="c.segment"
               :disabled="dlg.present.has(c.resource)"
               :data-permission-choice="c.segment"
@@ -432,6 +465,40 @@
               </v-list-item-subtitle>
             </v-list-item>
           </v-list>
+
+          <!-- the sets that give something there: what each gives -->
+          <template v-if="shownSets.length">
+            <div class="text-subtitle-2 text-medium-emphasis mt-3">{{ msg.sets }}</div>
+            <v-list density="compact" class="py-0" data-permission-sets>
+              <v-list-item
+                v-for="c in shownSets"
+                :key="c.segment"
+                :disabled="dlg.present.has(c.resource)"
+                :data-permission-choice="c.segment"
+                @click="toggle(c.resource)"
+              >
+                <template #prepend>
+                  <v-checkbox-btn
+                    :model-value="dlg.present.has(c.resource) || dlg.chosen.has(c.resource)"
+                    :disabled="dlg.present.has(c.resource)"
+                    density="compact"
+                    @click.stop="toggle(c.resource)"
+                  />
+                </template>
+                <v-list-item-title>
+                  {{ c.title }}
+                  <code class="text-caption text-medium-emphasis ms-1">{{ c.segment }}</code>
+                </v-list-item-title>
+                <v-list-item-subtitle v-if="c.description">{{
+                  c.description
+                }}</v-list-item-subtitle>
+                <div class="text-caption mt-1">
+                  <span class="text-medium-emphasis me-1">{{ msg.setGives }}:</span>
+                  <code v-for="(l, i) in c.lines || []" :key="i" class="me-2">{{ l }}</code>
+                </div>
+              </v-list-item>
+            </v-list>
+          </template>
 
           <template v-if="dlg.records">
             <div class="text-subtitle-2 text-medium-emphasis mt-3">{{ msg.record }}</div>
@@ -506,6 +573,8 @@ interface Choice {
   kind: string
   title: string
   description?: string
+  // of a set: the lines it gives there
+  lines?: string[]
 }
 
 const props = defineProps({
@@ -588,6 +657,8 @@ const msg = computed(() => ({
   byKind: 'By kind',
   expandAll: 'Open all',
   collapseAll: 'Close all',
+  sets: 'Sets of permissions',
+  setGives: 'Gives',
   ...(props.messages as Record<string, string>)
 }))
 
@@ -820,6 +891,10 @@ const shownChoices = computed(() => {
         ))
   )
 })
+
+// the parts that may follow, and the sets that give something there
+const shownParts = computed(() => shownChoices.value.filter((c) => c.kind !== 'set'))
+const shownSets = computed(() => shownChoices.value.filter((c) => c.kind === 'set'))
 
 // the lines of the value there are, of the children of a row (their
 // resources): offered checked, disabled

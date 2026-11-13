@@ -116,6 +116,7 @@ func PermValueTree(ctx *web.EventContext, p *presets.Builder, value string, o Pe
 	if !o.Groups {
 		v.groupLines(items)
 	}
+	v.sets(items)
 	SetActive(items, func(c PermCheck) bool { return (o.Base == nil || o.Base(c)) && effect(c) })
 	items = prune(items, func(it *PermTreeItem) bool {
 		return it.Explicit || !o.Only && (it.Active == PermActiveAll || it.Active == PermActiveSome)
@@ -405,12 +406,77 @@ func (v *valueTree) groupItem(group string) (found *PermTreeItem) {
 	return
 }
 
+// sets puts each line of a set under the item of its resource: a row of
+// the set ("Leitura", %readers), of the line's prefix, with the lines it
+// gives there — none, an error: it gives nothing there, ignored. A line of
+// a set of no item (a glob, a group) is of "Outras" (others).
+func (v *valueTree) sets(items []*PermTreeItem) {
+	for _, l := range v.lines {
+		if l.used {
+			continue
+		}
+		res, name, ok := perm.SetRef(l.key)
+		if !ok {
+			continue
+		}
+		var owner *PermTreeItem
+		walkItems(items, func(it *PermTreeItem) {
+			if owner == nil && it.Edit == res && it.Kind != PermKindRecord {
+				owner = it
+			}
+		})
+		if owner == nil {
+			continue
+		}
+		l.used = true
+		it := v.setItem(l, res, name)
+		it.Path = append(append([]PermPathPart{}, owner.Path...), PermPathPart{owner.Value, owner.Title})
+		owner.Children = append(owner.Children, it)
+	}
+}
+
+// setItem is the row of the line l of the set name given to res.
+func (v *valueTree) setItem(l *valueLine, res, name string) *PermTreeItem {
+	ctx := v.ctx.Context()
+	title := ""
+	if n := v.ix.byName[res]; n != nil {
+		for _, o := range v.p.PermSetsOf(ctx, n) {
+			if o.Name == name {
+				title = o.Title
+			}
+		}
+	}
+	if s := v.p.PermSet(name); title == "" && s != nil {
+		title = s.TitleOf(ctx)
+	}
+	if title == "" {
+		title = name
+	}
+	lines, ok := perm.ExpandSet(res, name)
+	it := &PermTreeItem{Title: title, Subtitle: perm.SetPrefix + name, Kind: PermKindSet, Value: l.key,
+		Resources: []string{l.pattern}, Edit: l.pattern, Set: l.pattern, Explicit: true, Prefix: prefixNames[l.kind],
+		Lines: relativeLines(res, lines), Error: !ok}
+	if s := v.p.PermSet(name); s != nil {
+		it.Description = s.DescriptionOf(ctx)
+	}
+	if !ok {
+		it.Description = fmt.Sprintf(v.t.msgs.PermInputSetIgnored, name)
+	}
+	return it
+}
+
 // others are the items, and a branch "Outras" of the lines that are of no
 // item (their own globs, resources there are no more).
 func (v *valueTree) others(items []*PermTreeItem) []*PermTreeItem {
 	var rows []*PermTreeItem
 	for _, l := range v.lines {
 		if l.used {
+			continue
+		}
+		if res, name, ok := perm.SetRef(l.key); ok {
+			it := v.setItem(l, res, name)
+			it.Title, it.Value = it.Title+" · "+l.pattern, "(others)"+l.key
+			rows = append(rows, it)
 			continue
 		}
 		rows = append(rows, &PermTreeItem{Title: l.pattern, Value: "(others)" + l.key, Resources: []string{l.pattern},

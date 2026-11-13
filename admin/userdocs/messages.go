@@ -170,6 +170,10 @@ type Messages struct {
 	PermInputOthers         string `i18n:"hint='A branch of the field of a permission: the lines that are of no part of the admin.'"`
 	PermInputOthersDesc     string `i18n:"hint='Description of the branch Others of the field of a permission.'"`
 	PermKindOther           string `i18n:"hint='Kind of a row of the field of a permission: a line of no part of the admin.'"`
+	PermKindSet             string `i18n:"hint='Kind of a row of the field of a permission: a set of permissions (%readers), a name for permissions given together.'"`
+	PermInputSets           string `i18n:"hint='Title of the section of the dialog of the field of a permission (its + button) of the sets of permissions that give something to the resource.'"`
+	PermInputSetGives       string `i18n:"hint='Before the lines a set of permissions gives to a resource, in the field of a permission.'"`
+	PermInputSetIgnored     string `i18n:"hint='Description of a row of a set of permissions that gives nothing to its resource (there is no such set, or none for its kind): the line is kept and ignored; %s is its name.'"`
 	HelpBar                 string `i18n:"hint='Title of the help bar: the panel at the right edge of the admin with the help of what is in focus.'"`
 	HelpFocusPage           string `i18n:"hint='Said by the help bar when the help shown is of the page.'"`
 	HelpFocusDrawer         string `i18n:"hint='Said by the help bar when the help shown is of the drawer open (a form, a detail).'"`
@@ -338,6 +342,10 @@ var Messages_en_US = &Messages{
 	PermInputOthers:         "Others",
 	PermInputOthersDesc:     "Lines of no part of the admin: their own globs, resources there are no more",
 	PermKindOther:           "Line",
+	PermKindSet:             "Set",
+	PermInputSets:           "Sets of permissions",
+	PermInputSetGives:       "Gives",
+	PermInputSetIgnored:     "The set %s gives nothing here (there is no such set, or none for this kind of resource): the line is kept and ignored",
 	HelpBar:                 "Help",
 	HelpFocusPage:           "Page",
 	HelpFocusDrawer:         "Drawer",
@@ -506,6 +514,10 @@ var Messages_pt_BR = &Messages{
 	PermInputOthers:         "Outras",
 	PermInputOthersDesc:     "Linhas que não caem numa parte do admin: globs próprios, recursos que não existem mais",
 	PermKindOther:           "Linha",
+	PermKindSet:             "Conjunto",
+	PermInputSets:           "Conjuntos de permissões",
+	PermInputSetGives:       "Concede",
+	PermInputSetIgnored:     "O conjunto %s não concede nada aqui (não existe, ou não tem nada para este tipo de recurso): a linha fica guardada e é ignorada",
 	HelpBar:                 "Ajuda",
 	HelpFocusPage:           "Página",
 	HelpFocusDrawer:         "Painel",
