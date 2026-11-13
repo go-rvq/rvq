@@ -770,14 +770,17 @@ func (b *ListingBuilder) doBulkAction(ctx *web.EventContext) (r web.EventRespons
 	}
 
 	if err1 != nil {
-		if _, ok := err1.(*web.ValidationErrors); !ok {
-			vErr := &web.ValidationErrors{}
+		// shown in the dialog, which stays open: a validation error as it
+		// is, any other as its global error
+		var vErr *web.ValidationErrors
+		if !errors.As(err1, &vErr) {
+			vErr = &web.ValidationErrors{}
 			vErr.GlobalError(err1.Error())
-			ctx.Flash = vErr
-
-			err = a.View(b.mb, processedSelectedIds, ctx, &r)
-			return
 		}
+		ctx.Flash = vErr
+
+		err = a.View(b.mb, processedSelectedIds, ctx, &r)
+		return
 	}
 
 	if ctx.Flash != nil {
