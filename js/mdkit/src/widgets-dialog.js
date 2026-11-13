@@ -102,8 +102,6 @@ export const ButtonsDialog = {
   data: () => ({ show: false, align: 'start', group: false, items: [], there: false, done: null }),
   computed: {
     value() { return { align: this.align, group: this.group, items: this.items.map((it) => this.clean(it)) } },
-    // links are the addresses of the preview, to open in a new tab
-    links() { return this.value.items.filter((it) => it.href).map((it) => ({ href: it.href, title: it.title || it.hint || it.href })) },
     previewHTML() { return buttonsHTML(this.value) },
   },
   watch: {
@@ -120,6 +118,8 @@ export const ButtonsDialog = {
         <div class="d-flex align-center ga-2">
           <v-icon icon="mdi-link-variant" size="small"></v-icon>
           <span class="text-body-2 text-truncate" style="flex:1 1 auto;min-width:0" data-widget-href>{{ it.href || w.noLink }}</span>
+          <v-btn icon="mdi-open-in-new" size="small" variant="text" :disabled="!it.href" :title="w.open"
+            @click="openLink(it.href)" data-widget-open></v-btn>
           <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-magnify" @click="pick(i)" data-widget-pick>{{ w.choose }}</v-btn>
           <v-btn icon="mdi-arrow-up" size="small" variant="text" :disabled="i === 0" :title="w.up" @click="move(items, i, -1)"></v-btn>
           <v-btn icon="mdi-arrow-down" size="small" variant="text" :disabled="i === items.length - 1" :title="w.down" @click="move(items, i, 1)"></v-btn>
@@ -136,23 +136,9 @@ export const ButtonsDialog = {
       </v-card>
       <v-btn class="mt-4" variant="tonal" prepend-icon="mdi-plus" @click="add" data-widget-add>{{ w.add }}</v-btn>
       <div class="text-caption text-medium-emphasis mt-4">{{ w.preview }}</div>
-      <div class="d-flex align-center ga-2">
-        <!-- a preview: its buttons not clicked (the dialog stays) -->
-        <div ref="preview" class="pa-3 border rounded flex-grow-1" style="min-width:0" @click.capture.prevent.stop
-          data-widget-preview></div>
-        <v-btn v-if="links.length === 1" icon="mdi-open-in-new" size="small" variant="text" :title="w.open"
-          @click="openLink(links[0].href)" data-widget-open></v-btn>
-        <v-menu v-else-if="links.length > 1">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" icon="mdi-open-in-new" size="small" variant="text" :title="w.open" data-widget-open></v-btn>
-          </template>
-          <v-list density="compact">
-            <v-list-subheader>{{ w.open }}</v-list-subheader>
-            <v-list-item v-for="(l, i) in links" :key="i" :title="l.title" :subtitle="l.href" append-icon="mdi-open-in-new"
-              @click="openLink(l.href)" :data-widget-open-link="l.href"></v-list-item>
-          </v-list>
-        </v-menu>
-      </div>
+      <!-- a preview: its buttons not clicked (the dialog stays); each
+           address opened from its item -->
+      <div ref="preview" class="pa-3 border rounded" @click.capture.prevent.stop data-widget-preview></div>
     </v-card-text>
     <v-divider></v-divider>
     <v-card-actions>
@@ -167,36 +153,41 @@ export const ButtonsDialog = {
 <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>`,
   methods: {
     ...methods,
-    // open shows the buttons of value (none: one to make), done given the
-    // value made or null
+    // open shows the buttons of value (none: an empty list, "Add" chooses
+    // the first), done given the value made or null
     open(value, done) {
       swatchStyle()
       this.align = (value && value.align) || 'start'
       this.group = !!(value && value.group)
-      this.items = value && value.items && value.items.length ? value.items.map((it) => ({ ...newButton(), ...it })) : [newButton()]
+      this.items = value && value.items && value.items.length ? value.items.map((it) => ({ ...newButton(), ...it })) : []
       this.there = !!(value && value.items && value.items.length)
       this.done = done
       this.show = true
-      if (!value || !value.items || !value.items.length) this.$nextTick(() => this.pick(0))
-      else this.$nextTick(() => this.drawPreview())
+      this.$nextTick(() => this.drawPreview())
     },
+    // add chooses a link (the link picker) and, chosen, adds its button; the
+    // picker closed without one, nothing
     add() {
-      this.items.push(newButton())
-      this.pick(this.items.length - 1)
+      this.choose(newButton(), (it) => this.items.push(it))
     },
-    // pick chooses the link of item i (the link picker): its address, its
-    // target (a card's: its title shown when it has none), its new tab
+    // pick chooses again the link of item i
     pick(i) {
-      const it = this.items[i]
+      this.choose(this.items[i])
+    },
+    // choose opens the link picker on the button it, and writes the link
+    // chosen in it — its address, its target (a card's: its title shown when
+    // it has none), its new tab —, then chosen(it); none chosen, nothing
+    choose(it, chosen) {
       this.$refs.links.open({ href: it.href, target: it.newTab ? '_blank' : '' }, (link) => {
         if (!link) return
         it.href = link.href
         it.target = cardTarget(link.href, typeof location !== 'undefined' ? location.origin : '') || ''
         it.newTab = link.target === '_blank'
         it.hint = link.title || ''
+        if (chosen) chosen(it)
       })
     },
-    // openLink opens the address of a button of the preview in a new tab
+    // openLink opens the address of a button in a new tab
     openLink(href) {
       if (href && typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
     },
