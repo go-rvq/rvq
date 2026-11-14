@@ -20,6 +20,9 @@
       "@rvq/portal": [
        "../portal/src/index.ts"
       ],
+      "@rvq/image-editor/orient": [
+       "../image-editor/src/core/orient.ts"
+      ],
       "@gad-lang/git-vuetify/diff": [
        "../../../../../../../gade/src/github.com/gad-lang/gad/web/git-vuetify/src/diff/index.ts"
       ],

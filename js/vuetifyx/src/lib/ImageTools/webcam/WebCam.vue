@@ -3,6 +3,7 @@
     class="video"
     ref="video"
     :class="[{ hidden: !deviceId }, ...classList.split(' ')]"
+    :style="{ transform: videoTransform }"
     autoplay
     v-bind="$attrs"
   />
@@ -46,7 +47,8 @@
 
 <script setup lang="ts">
 import {drawRotated, screenRotation} from './utils'
-import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, onMounted, type PropType, ref, watch} from 'vue'
+import {oriented, type Orientation} from '@rvq/image-editor/orient'
 
 
 class Local {
@@ -106,7 +108,21 @@ const props = defineProps({
   shutterEffect: {
     type: Boolean,
     default: true
+  },
+  // the image turned and mirrored (the image editor's orientation): the
+  // preview and the photo alike
+  orientation: {
+    type: Object as PropType<Orientation>,
+    default: () => ({ rotate: 0, flipH: false })
   }
+})
+
+// videoTransform is the orientation of the preview (the order of oriented:
+// turned, then mirrored)
+const videoTransform = computed(() => {
+  const { rotate, flipH } = props.orientation
+  if (!rotate && !flipH) return undefined
+  return `rotate(${rotate}deg) scaleX(${flipH ? -1 : 1})`
 })
 
 const $emit = defineEmits([
@@ -325,12 +341,15 @@ function resume() {
 async function  takePhoto() {
   let v = video.value as HTMLVideoElement
   let cv = canvas.value as HTMLCanvasElement
-  cv.height = v.videoHeight
-  cv.width = v.videoWidth
+  // the frame as the preview shows it: turned and mirrored
+  const { rotate, flipH } = props.orientation
+  const src: HTMLVideoElement | HTMLCanvasElement = rotate || flipH ? oriented(v, rotate, flipH) : v
+  cv.height = src instanceof HTMLVideoElement ? src.videoHeight : src.height
+  cv.width = src instanceof HTMLVideoElement ? src.videoWidth : src.width
   let ctx = cv.getContext('2d') as CanvasRenderingContext2D
 
   drawRotated(
-    v,
+    src,
     cv,
     ctx,
     props.tryToRotateImage ? screenRotation() : 0

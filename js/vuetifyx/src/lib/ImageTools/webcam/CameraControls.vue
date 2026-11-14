@@ -4,7 +4,6 @@
       <span class="text-subtitle-2">{{ words.cameraControls }}</span>
       <v-spacer />
       <v-btn
-        v-if="groups.length"
         size="x-small"
         variant="text"
         prepend-icon="mdi-restore"
@@ -12,6 +11,32 @@
         @click="reset"
         >{{ words.cameraReset }}</v-btn
       >
+    </div>
+    <!-- the image mirrored (the image editor's buttons): of every camera -->
+    <div class="mb-3" data-camera-group="flip">
+      <div class="text-caption text-medium-emphasis mb-1">{{ words.cameraFlip }}</div>
+      <div class="d-flex ga-1">
+        <v-btn
+          icon="mdi-flip-horizontal"
+          size="small"
+          :variant="mirroredH ? 'tonal' : 'text'"
+          :title="words.cameraFlipHorizontal"
+          :aria-label="words.cameraFlipHorizontal"
+          :color="mirroredH ? 'primary' : undefined"
+          data-camera-flip-h
+          @click="mirror('h')"
+        />
+        <v-btn
+          icon="mdi-flip-vertical"
+          size="small"
+          :variant="mirroredV ? 'tonal' : 'text'"
+          :title="words.cameraFlipVertical"
+          :aria-label="words.cameraFlipVertical"
+          :color="mirroredV ? 'primary' : undefined"
+          data-camera-flip-v
+          @click="mirror('v')"
+        />
+      </div>
     </div>
     <div v-if="!groups.length" class="text-caption text-medium-emphasis" data-camera-no-controls>
       {{ words.cameraNoControls }}
@@ -69,8 +94,19 @@
 import {computed, ref, shallowRef, watch} from 'vue'
 import {useVxMessages} from '@/lib/locale'
 import {type Control, type Group, constraintFor, controlsOf, initialOf, isAuto} from './controls'
+import {flipped, type Orientation} from '@rvq/image-editor/orient'
 
 const props = defineProps<{track: MediaStreamTrack | null}>()
+
+// the orientation of the image (the image editor's): mirrored as it is seen
+const orientation = defineModel<Orientation>('orientation', {default: () => ({rotate: 0, flipH: false})})
+// mirrored horizontally: once, not turned; vertically: turned 180°, once —
+// both, turned 180° alone
+const mirroredH = computed(() => (orientation.value.flipH && orientation.value.rotate === 0) || (!orientation.value.flipH && orientation.value.rotate === 180))
+const mirroredV = computed(() => orientation.value.rotate === 180)
+function mirror(axis: 'h' | 'v') {
+  orientation.value = flipped(orientation.value.rotate, orientation.value.flipH, axis)
+}
 
 const words = useVxMessages()
 const groups = shallowRef<Group[]>([])
@@ -134,7 +170,8 @@ function set(c: Control, v: any) {
 }
 
 function reset() {
-  apply(initial)
+  orientation.value = {rotate: 0, flipH: false}
+  if (groups.value.length) apply(initial)
 }
 
 const LABELS: Record<string, keyof typeof words.value> = {

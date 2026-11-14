@@ -12,6 +12,10 @@ import type {Colors} from './colors'
 import {applyColors, isNeutral, neutral} from './colors'
 import type {Annotation} from './annotations'
 import {drawAll} from './annotations'
+import {canvas, oriented, type Rotation} from './orient'
+
+// the orientation (turn and mirror): of the editor and of the camera
+export {canvas, flipped, oriented, sizeOf} from './orient'
 
 export type CropMode = 'fixo' | 'retangulo' | 'perspectiva' | 'livre'
 export type Tab = 'recortar' | 'cores' | 'anotar'
@@ -19,7 +23,7 @@ export type Tab = 'recortar' | 'cores' | 'anotar'
 export interface Edit {
   version: 1
   // the image turned (clockwise) and mirrored, before anything
-  rotate: 0 | 90 | 180 | 270
+  rotate: Rotation
   flipH: boolean
   mode: CropMode
   // the fixed crop: a rectangle (of the size's ratio, when it has one)
@@ -51,15 +55,6 @@ export function parseEdit(v: unknown, mode: CropMode = 'fixo'): Edit {
     colors: {...e.colors, ...(o.colors || {})},
     annotations: Array.isArray(o.annotations) ? o.annotations : [],
   }
-}
-
-// flipped: the turn of an image (rotate, flipH) mirrored as it is seen —
-// horizontally (h: left and right swapped) or vertically (v: top and
-// bottom) —, whatever it was turned: the mirror is applied after the turn.
-export function flipped(rotate: Edit['rotate'], flipH: boolean, axis: 'h' | 'v'): {rotate: Edit['rotate']; flipH: boolean} {
-  // H·R(r)·F = R(-r)·H·F; V = R(180)·H
-  const r = axis === 'h' ? 360 - rotate : 180 - rotate
-  return {rotate: ((r % 360) + 360) % 360 as Edit['rotate'], flipH: !flipH}
 }
 
 // geometryOf: whether the crop changes the image — the mode's shape is set
@@ -105,31 +100,6 @@ export function normalized(e: Edit, w: number, h: number): Edit {
 // --- the canvas (the browser) ---
 
 export type Source = CanvasImageSource & {width: number; height: number}
-
-export function canvas(w: number, h: number): HTMLCanvasElement {
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.round(w))
-  c.height = Math.max(1, Math.round(h))
-  return c
-}
-
-function sizeOf(s: CanvasImageSource): {width: number; height: number} {
-  const any = s as any
-  return {width: any.naturalWidth || any.videoWidth || any.width, height: any.naturalHeight || any.videoHeight || any.height}
-}
-
-// oriented: the image turned and mirrored.
-export function oriented(src: CanvasImageSource, rotate: number, flipH: boolean): HTMLCanvasElement {
-  const {width: w, height: h} = sizeOf(src)
-  const swap = rotate === 90 || rotate === 270
-  const c = canvas(swap ? h : w, swap ? w : h)
-  const ctx = c.getContext('2d')!
-  ctx.translate(c.width / 2, c.height / 2)
-  ctx.rotate((rotate * Math.PI) / 180)
-  if (flipH) ctx.scale(-1, 1)
-  ctx.drawImage(src, -w / 2, -h / 2)
-  return c
-}
 
 function pixelsOf(c: HTMLCanvasElement): Pixels {
   const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height)

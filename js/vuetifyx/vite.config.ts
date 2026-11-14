@@ -108,6 +108,9 @@ export default ({mode}) => {
         // <rvq-portal> and the compilation of templates: the portal package's
         // source (js/portal)
         {find: '@rvq/portal', replacement: resolve(__dirname, '../portal/src/index.ts')},
+        // the orientation of an image (turn, mirror): the image editor's source
+        // (js/image-editor), of the camera
+        {find: '@rvq/image-editor/orient', replacement: resolve(__dirname, '../image-editor/src/core/orient.ts')},
         // the editors of a text and their builders (the plugins of the
         // TipTap, the MarkdownBuilder): the mdkit package's source (js/mdkit)
         {find: '@rvq/mdkit', replacement: resolve(__dirname, '../mdkit/src/index.js')},

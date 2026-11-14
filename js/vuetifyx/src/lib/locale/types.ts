@@ -153,6 +153,9 @@ export interface VxMessages {
   cameraControls: string
   /** Button that puts the controls of the camera back as they were. */
   cameraReset: string
+  cameraFlip: string
+  cameraFlipHorizontal: string
+  cameraFlipVertical: string
   /** Said when the camera offers no control. */
   cameraNoControls: string
   /** Switch of a control of the camera: automatic. */

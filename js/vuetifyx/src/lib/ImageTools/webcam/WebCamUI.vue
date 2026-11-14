@@ -72,6 +72,7 @@
         @photoTaken="photoTakenEvent"
         @track="track = $event"
         :shutterEffect="fullscreen"
+        :orientation="orientation"
       />
     </v-card-text>
     <!-- the camera's own controls (exposure, white balance, focus…) -->
@@ -83,7 +84,7 @@
         :class="{overlay: mobile}"
         data-camera-controls-panel
       >
-        <CameraControls :track="track" />
+        <CameraControls :track="track" v-model:orientation="orientation" />
       </v-sheet>
     </template>
     </div>
@@ -124,7 +125,8 @@
 
 <script lang="ts" setup>
 import {fmt, useVxMessages} from '@/lib/locale'
-import {computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch} from 'vue'
+import type {Orientation} from '@rvq/image-editor/orient'
 import {Translator} from './translator'
 import IconButton from '../IconButton.vue'
 import {Picture} from './types.js'
@@ -291,6 +293,32 @@ onBeforeUnmount(() => {
     clearInterval(reloadCamInterval.value as number)
   }
   exit()
+})
+
+// the orientation of the image (mirrored), remembered by camera — none at
+// first, a front camera's too
+const orientation = ref<Orientation>({rotate: 0, flipH: false})
+const orientationKey = (id: string) => `_vwl_orientation:${id}`
+function rememberedOrientation(id: string): Orientation {
+  try {
+    const o = JSON.parse(window.localStorage.getItem(orientationKey(id)) || 'null')
+    if (o && [0, 90, 180, 270].includes(o.rotate) && typeof o.flipH === 'boolean') return {rotate: o.rotate, flipH: o.flipH}
+  } catch {
+    /* no storage (a private window), or not ours */
+  }
+  return {rotate: 0, flipH: false}
+}
+watch(deviceId, (id) => {
+  orientation.value = id ? rememberedOrientation(id) : {rotate: 0, flipH: false}
+})
+watch(orientation, (o) => {
+  if (!deviceId.value) return
+  try {
+    if (o.rotate || o.flipH) window.localStorage.setItem(orientationKey(deviceId.value), JSON.stringify(o))
+    else window.localStorage.removeItem(orientationKey(deviceId.value))
+  } catch {
+    /* no storage (a private window) */
+  }
 })
 
 // the words: the translate given, over the page's vue-i18n's (vx)

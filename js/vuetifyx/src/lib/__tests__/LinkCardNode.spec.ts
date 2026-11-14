@@ -46,7 +46,10 @@ describe('link card node', () => {
   it('puts a card by its command, a target a card may link only', () => {
     const e = make('<p>a</p>')
     expect((e.commands as any).insertLinkCard('admin:posts:<1>:')).toBe(true)
-    expect((e.commands as any).insertLinkCard('https://evil.com/')).toBe(false)
+    // another site's address may be a card (http, https); a host without its
+    // scheme or a script, not
+    expect((e.commands as any).insertLinkCard('//evil.com/')).toBe(false)
+    expect((e.commands as any).insertLinkCard('javascript:alert(1)')).toBe(false)
     // a card chosen (the one put): the next after it, not over it
     expect((e.commands as any).insertLinkCard('/en-us/about')).toBe(true)
     expect(e.getHTML().match(/mdkit-link-card/g)!.length).toBe(2)

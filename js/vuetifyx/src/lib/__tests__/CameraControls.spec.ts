@@ -50,7 +50,7 @@ it('the panel sets the camera (applyConstraints) and puts it back (Reset)', asyn
   }
   const w = mountTemplate(CameraControls, {track})
   await flushPromises()
-  expect(w.findAll('[data-camera-group]').map((g) => g.attributes('data-camera-group'))).toEqual(['exposure', 'whiteBalance', 'focus', 'image'])
+  expect(w.findAll('[data-camera-group]').map((g) => g.attributes('data-camera-group'))).toEqual(['flip', 'exposure', 'whiteBalance', 'focus', 'image'])
   const vm = w.vm as any
   // through the component's own setter, as a slider does
   const time = vm.groups[0].controls[1]
