@@ -113,23 +113,26 @@ func LocalizeRecords(db *gorm.DB, mb *presets.ModelBuilder, lb *Builder, ctx *we
 	if exp, err = expand(ctx, mb, mids, to); err != nil {
 		return
 	}
+	// what the switches take along: each distinct record asked once (the
+	// versions of a record in each language are one)
 	chosen := map[string]bool{}
 	for _, mid := range mids {
 		chosen[mid.String()] = true
 	}
+	var along model.IDSlice
 	for _, mid := range exp.IDs {
-		if chosen[mid.String()] {
-			continue
+		if !chosen[mid.String()] {
+			along = append(along, mid)
 		}
+	}
+	if denied := mb.Info().Permissioner().ObjectsDo(ctx.R, presets.PermUpdate, along); denied != nil {
 		obj := mb.NewModel()
-		if err = db_utils.ModelIdWhere(db.Session(&gorm.Session{}), mb.NewModel(), mid).First(obj).Error; err != nil {
-			return 0, fmt.Errorf("l10n: %s: %w", mid, err)
+		if err = db_utils.ModelIdWhere(db.Session(&gorm.Session{}), mb.NewModel(), *denied).First(obj).Error; err != nil {
+			return 0, fmt.Errorf("l10n: %s: %w", denied, err)
 		}
-		if mb.Info().Permissioner().ReqObjectUpdater(ctx.R, obj).Denied() {
-			var vErr web.ValidationErrors
-			vErr.GlobalError(fmt.Sprintf(MustGetMessages(ctx.Context()).ErrLocalizeDenied, mb.RecordTitle(obj, ctx)))
-			return 0, &vErr
-		}
+		var vErr web.ValidationErrors
+		vErr.GlobalError(fmt.Sprintf(MustGetMessages(ctx.Context()).ErrLocalizeDenied, mb.RecordTitle(obj, ctx)))
+		return 0, &vErr
 	}
 	if o := OptionsOf(mb); o != nil && o.Do != nil {
 		if err = o.Do(ctx, exp.IDs, to); err != nil {

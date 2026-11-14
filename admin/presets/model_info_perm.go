@@ -225,6 +225,35 @@ func (p *ModelPermissioner) ObjectDo(r *http.Request, action string, id ID, pare
 	return p.Objector(r, id, parentID...).Do(action)
 }
 
+// ObjectsDo asks action of the records ids, each distinct resource once, in
+// their order: the first id denied, nil when every one is allowed. The
+// versions of a record in each language are one resource (its id, not its
+// locale): one question.
+func (p *ModelPermissioner) ObjectsDo(r *http.Request, action string, ids []ID, parentID ...ID) *ID {
+	type ask struct {
+		v  *perm.Verifier
+		at int
+	}
+	var (
+		asks []ask
+		seen = map[string]bool{}
+	)
+	// the distinct resources, in order — then each asked
+	for i := range ids {
+		v := p.ObjectDo(r, action, ids[i], parentID...)
+		if res := v.Resource(); !seen[res] {
+			seen[res] = true
+			asks = append(asks, ask{v, i})
+		}
+	}
+	for _, a := range asks {
+		if a.v.Denied() {
+			return &ids[a.at]
+		}
+	}
+	return nil
+}
+
 func (p *ModelPermissioner) List(r *http.Request, parentID ...ID) *perm.Verifier {
 	return p.ListVerifier(parentID...).WithReq(r)
 }

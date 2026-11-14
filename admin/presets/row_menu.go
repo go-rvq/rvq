@@ -72,6 +72,7 @@ type RowMenuItemBuilder struct {
 	icon       string
 	clickF     RowMenuItemClickFunc
 	compF      RecordMenuItemFunc
+	compOf     func(ctx *web.EventContext) RecordMenuItemFunc
 	permAction string
 	eventID    string
 	title      func(ctx context.Context) string
@@ -215,12 +216,23 @@ func (b *RowMenuItemBuilder) ComponentFunc(v RecordMenuItemFunc) *RowMenuItemBui
 	return b
 }
 
+// ComponentFuncOf: f runs once per menu built (of the listing, of a detail)
+// and gives the function of its rows — what the item decides of them all (a
+// permission of the model) decided once —; nil, the item is in no row.
+func (b *RowMenuItemBuilder) ComponentFuncOf(f func(ctx *web.EventContext) RecordMenuItemFunc) *RowMenuItemBuilder {
+	b.compOf = f
+	return b
+}
+
 func (b *RowMenuItemBuilder) PermAction(v string) *RowMenuItemBuilder {
 	b.permAction = v
 	return b
 }
 
-func (b *RowMenuItemBuilder) getComponentFunc(_ *web.EventContext) RecordMenuItemFunc {
+func (b *RowMenuItemBuilder) getComponentFunc(ctx *web.EventContext) RecordMenuItemFunc {
+	if b.compOf != nil {
+		return b.compOf(ctx)
+	}
 	if b.compF != nil {
 		return b.compF
 	}

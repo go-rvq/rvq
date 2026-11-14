@@ -2,6 +2,7 @@ package l10n
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/perm"
 )
 
 func localizeSetModel(t *testing.T) *presets.ModelBuilder {
@@ -98,4 +100,44 @@ func TestLocalizeRecordsExpands(t *testing.T) {
 
 func testMID() model.ID {
 	return model.ID{Fields: model.Fields{model.SingleField("ID"), model.SingleField("LocaleCode")}, Values: []any{1, "en-US"}}
+}
+
+// What the switches take along is asked @edit once by record: its versions
+// in each language one question.
+func TestLocalizeRecordsAsksOnce(t *testing.T) {
+	var asked []string
+	pb := presets.New(i18n.New())
+	pb.Permission(perm.New().AllowAll().OnAsk(func(a perm.Asked) { asked = append(asked, a.Resource) }).
+		SubjectsFunc(func(*http.Request) []string { return []string{"editor"} }))
+	m := pb.Model(&localeTestRecord{})
+	b := New(nil).DefaultLocaleCode("en-US")
+	b.RegisterLocale("en-US", "en-us", "English")
+	if err := b.ModelInstall(pb, m); err != nil {
+		t.Fatal(err)
+	}
+	id := func(n int, loc string) model.ID {
+		return model.ID{Fields: model.Fields{model.SingleField("ID"), model.SingleField("LocaleCode")}, Values: []any{n, loc}}
+	}
+	ModelWithOptions(m, &ModelLocalizeOptions{
+		Expand: func(_ *web.EventContext, mids model.IDSlice, _ []string, _ map[string]bool) (*Expansion, error) {
+			// the parent 2, in two languages, and 3
+			return &Expansion{IDs: append(model.IDSlice{id(2, "en-US"), id(2, "pt-BR"), id(3, "en-US")}, mids...)}, nil
+		},
+		Do: func(*web.EventContext, model.IDSlice, []string) error { return nil },
+	})
+	ctx := &web.EventContext{R: httptest.NewRequest("POST", "/", nil)}
+	if _, err := LocalizeRecords(nil, m, nil, ctx, model.IDSlice{id(1, "en-US")}, []string{"zz"}); err != nil {
+		t.Fatal(err)
+	}
+	count := func(suffix string) (n int) {
+		for _, a := range asked {
+			if strings.HasSuffix(a, suffix) {
+				n++
+			}
+		}
+		return
+	}
+	if n2, n3, n1 := count(":<2>:@edit"), count(":<3>:@edit"), count(":<1>:@edit"); n2 != 1 || n3 != 1 || n1 != 0 {
+		t.Errorf("@edit asked: <2> %d, <3> %d, <1> %d — %v", n2, n3, n1, asked)
+	}
 }
