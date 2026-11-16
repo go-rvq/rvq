@@ -1,7 +1,7 @@
 // bun test: the facets of the search of the links — their values, the ones
 // no longer there, their items in groups — and the answers read.
 import { expect, test } from 'bun:test'
-import { facetValues, itemsOf, pruneValues, resultOf } from './link-search.js'
+import { countText, facetValues, foundOf, itemsOf, pruneValues, resultOf, tabOf } from './link-search.js'
 
 const facets = [
   { key: 'kind', kind: 'chips', default: ['pages', 'posts'], items: [{ value: 'pages', title: 'Pages' }, { value: 'posts', title: 'Posts' }] },
@@ -40,4 +40,14 @@ test('flatten and isTree: the options of a tree by their targets; a group a tree
   expect(isTree({ items })).toBe(true)
   expect(isTree({ kind: 'tree', items: [{ target: '/x' }] })).toBe(true)
   expect(isTree({ kind: 'posts', items: [{ target: '/x' }] })).toBe(false)
+})
+
+test('foundOf and countText: the count, else the options found (not those holding others); + of more', () => {
+  expect(foundOf({ count: 5, items: [{}] })).toBe(5)
+  const tree = { items: [{ context: true, children: [{ title: 'a' }, { title: 'b', children: [{ title: 'c' }] }] }] }
+  expect(foundOf(tree)).toBe(3)
+  expect(countText({ count: 8, more: true, items: [] })).toBe('8+')
+  expect(countText({ items: [{}, {}] })).toBe('2')
+  expect(tabOf({ kind: 'files', title: 'Arquivos' })).toBe('files')
+  expect(tabOf({ title: 'Users' })).toBe('Users')
 })

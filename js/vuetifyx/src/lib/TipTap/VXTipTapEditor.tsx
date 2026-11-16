@@ -8,7 +8,7 @@ import {type DensityProps, makeDensityProps} from 'vuetify/lib/composables/densi
 import {makeThemeProps} from 'vuetify/lib/composables/theme'
 import {useI18n} from '@/lib/locale'
 import {mdkitWords} from '@/lib/locale/mdkit'
-import {HelpDialog, withCodeMirror} from '@rvq/mdkit'
+import {HelpDialog, LinkIcon, withCodeMirror} from '@rvq/mdkit'
 import {tiptapPlugins} from './plugins'
 
 import {Heading as TiptapHeading, Level as TiptapHeadingLevel} from '@tiptap/extension-heading'
@@ -266,6 +266,8 @@ export const VXTipTapEditor = genericComponent<new <T extends readonly any[]>(
         Link.configure({
           dialogComponent: () => LinkDialog
         }),
+        // the icon of a link (data-icon: rvq mdkit's)
+        LinkIcon,
         Image.configure({
           imageTabs: imageTabs,
           width: 500,

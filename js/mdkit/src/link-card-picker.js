@@ -80,12 +80,14 @@ export default {
         prepend-inner-icon="mdi-magnify" :loading="loading || reading" :disabled="reading"
         :placeholder="words.search || 'Search, or type an address (/…, https://…)'"
         @update:model-value="runSearch()" @keydown.enter.prevent="enter" data-link-card-q></v-text-field>
-      <mdkit-link-facets v-if="!typed" :facets="facets" v-model="values"></mdkit-link-facets>
-      <v-list v-if="typed || groups.length" density="compact" class="mt-2" data-link-card-options>
-        <v-list-item v-if="typed" prepend-icon="mdi-link-variant" :title="(words.useAddress || 'Use the address') + ' ' + typed"
-          @click="pick(typed)" data-link-card-typed></v-list-item>
-        <mdkit-link-options :groups="groups" :words="words" @pick="(it) => pick(it.target)"></mdkit-link-options>
-      </v-list>
+      <mdkit-link-facets v-if="!typed" :facets="facets" :words="words" v-model="values"></mdkit-link-facets>
+      <mdkit-link-results v-if="typed || groups.length" :groups="typed ? [] : groups" :words="words" @pick="(it) => pick(it.target)"
+        data-link-card-options>
+        <template #before>
+          <v-list-item v-if="typed" prepend-icon="mdi-link-variant" :title="(words.useAddress || 'Use the address') + ' ' + typed"
+            @click="pick(typed)" data-link-card-typed></v-list-item>
+        </template>
+      </mdkit-link-results>
       <div v-else-if="searched && !loading" class="text-body-2 text-medium-emphasis mt-3" data-link-card-none>
         {{ words.none || 'Nothing found.' }}
       </div>

@@ -94,3 +94,19 @@ func TestCellPlace(t *testing.T) {
 		}
 	}
 }
+
+// The icon of a link kept and shown (its classes); one that is no icon, or a
+// class of its own, out.
+func TestLinkIcon(t *testing.T) {
+	got := Render(Rich, `<p><a href="/system/files/x" data-icon="mdi-file-pdf-box" class="evil">Report</a> <a href="/a" data-icon="javascript:x">A</a></p>`)
+	if !strings.Contains(got, `class="mdi mdi-file-pdf-box"`) || !strings.Contains(got, `data-icon="mdi-file-pdf-box"`) {
+		t.Errorf("the icon: %s", got)
+	}
+	if strings.Contains(got, "evil") || strings.Contains(got, "javascript") {
+		t.Errorf("kept what is not an icon: %s", got)
+	}
+	md := Render("markdown", `See <a href="/system/files/y" data-icon="mdi-file-excel">the sheet</a>.`)
+	if !strings.Contains(md, `class="mdi mdi-file-excel"`) {
+		t.Errorf("the icon of a link of Markdown: %s", md)
+	}
+}

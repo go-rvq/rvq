@@ -39,7 +39,8 @@ export * as widgets from './widgets-model.js'
 export { drawButtons, drawTabs } from './widgets.js'
 export { default as LinkCardPicker, metaSearch } from './link-card-picker.js'
 export { default as LinkPicker, LinkForm, hrefOf } from './link-picker.js'
-export { LinkFacets } from './link-search.js'
+export { LinkIcon, validIcon as validLinkIcon, iconLinkHTML, iconLinkOf } from './link-icon.js'
+export { LinkFacets, LinkResults, countText, foundOf } from './link-search.js'
 
 // components are the components, by their names after the prefix
 export const components = {

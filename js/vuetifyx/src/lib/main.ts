@@ -21,6 +21,7 @@ import TreeDraggable from '@/lib/TreeDraggable.vue'
 import EditorJS from '@/lib/EditorJS/EditorJS.vue'
 
 import WebCamUI from '@/lib/ImageTools/webcam/WebCamUI.vue'
+import FileUpload from '@/lib/upload/FileUpload.vue'
 import {install as installLightbox} from '@/lib/Lightbox/lightbox'
 import LayoutWatch from '@/lib/LayoutWatch.vue'
 import NavigationDrawer from '@/lib/NavigationDrawer.vue'
@@ -53,6 +54,7 @@ import TagChips from '@/lib/TagChips'
 const vuetifyx = {
   install: (app: App) => {
     app.component('vx-datepicker', Datepicker)
+    app.component('vx-file-upload', FileUpload)
     app.component('vx-datetimepicker', Datetimepicker)
     app.component('vx-monthpicker', Monthpicker)
     app.component('vx-advanced-select', AdvancedSelect)

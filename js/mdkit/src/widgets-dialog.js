@@ -184,6 +184,11 @@ export const ButtonsDialog = {
         it.target = cardTarget(link.href, typeof location !== 'undefined' ? location.origin : '') || ''
         it.newTab = link.target === '_blank'
         it.hint = link.title || ''
+        // the icon of what was chosen (a file's: of its extension) on the
+        // left, in place of none or of the one a choice before put — not of
+        // one written
+        if (link.pickedIcon && (!it.iconLeft || it.iconLeft === it.pickedIcon)) it.iconLeft = link.pickedIcon
+        it.pickedIcon = link.pickedIcon || ''
         if (chosen) chosen(it)
       })
     },

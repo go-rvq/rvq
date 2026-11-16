@@ -335,6 +335,12 @@ type Messages struct {
 	MdkitLinkTitle              string `json:"mdkitLinkTitle" i18n:"hint='Editors of a text (mdkit), link: title.'"`
 	MdkitLinkAddress            string `json:"mdkitLinkAddress" i18n:"hint='Editors of a text (mdkit), link: address.'"`
 	MdkitLinkSearch             string `json:"mdkitLinkSearch" i18n:"hint='Editors of a text (mdkit), link: search.'"`
+	MdkitFacetChoose            string `json:"mdkitFacetChoose" i18n:"hint='Editors of a text (mdkit), the filters of the search of a link or a card: the button that opens the dialog of a filter.'"`
+	MdkitFacetSearch            string `json:"mdkitFacetSearch" i18n:"hint='Editors of a text (mdkit), the dialog of a filter of the search: its search field.'"`
+	MdkitFacetClear             string `json:"mdkitFacetClear" i18n:"hint='Editors of a text (mdkit), the dialog of a filter of the search: unchecks all.'"`
+	MdkitLinkIcon               string `json:"mdkitLinkIcon" i18n:"hint='Editors of a text (mdkit), link: the icon before its text (mdi-…).'"`
+	MdkitSearchResults          string `json:"mdkitSearchResults" i18n:"hint='Editors of a text (mdkit), the search of a link or a card: the title of the card of its results.'"`
+	MdkitRecent                 string `json:"mdkitRecent" i18n:"hint='Editors of a text (mdkit), the search of a link or a card: the title of the card of its results when nothing was typed (the latest pages, posts and files).'"`
 	MdkitLinkText               string `json:"mdkitLinkText" i18n:"hint='Editors of a text (mdkit), link: the text of the link.'"`
 	MdkitLinkTextHint           string `json:"mdkitLinkTextHint" i18n:"hint='Editors of a text (mdkit), link: what the text is when left empty.'"`
 	MdkitLinkNewTab             string `json:"mdkitLinkNewTab" i18n:"hint='Editors of a text (mdkit), link: newTab.'"`
@@ -712,6 +718,12 @@ var Messages_en_US = &Messages{
 	MdkitLinkTitle:              "Link",
 	MdkitLinkAddress:            "Address",
 	MdkitLinkSearch:             "Search a page or a record",
+	MdkitFacetChoose:            "Choose",
+	MdkitFacetSearch:            "Search",
+	MdkitFacetClear:             "Clear",
+	MdkitLinkIcon:               "Icon",
+	MdkitSearchResults:          "Search results",
+	MdkitRecent:                 "Recent",
 	MdkitLinkText:               "Link text",
 	MdkitLinkTextHint:           "Empty: the title of the page or post",
 	MdkitLinkNewTab:             "Open in a new tab",
@@ -1089,6 +1101,12 @@ var Messages_pt_BR = &Messages{
 	MdkitLinkTitle:              "Link",
 	MdkitLinkAddress:            "Endereço",
 	MdkitLinkSearch:             "Buscar uma página ou um registro",
+	MdkitFacetChoose:            "Escolher",
+	MdkitFacetSearch:            "Pesquisar",
+	MdkitFacetClear:             "Limpar",
+	MdkitLinkIcon:               "Ícone",
+	MdkitSearchResults:          "Resultados da busca",
+	MdkitRecent:                 "Recentes",
 	MdkitLinkText:               "Texto do link",
 	MdkitLinkTextHint:           "Vazio: o título da página ou postagem",
 	MdkitLinkNewTab:             "Abrir em nova aba",

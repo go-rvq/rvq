@@ -21,6 +21,7 @@
 // Its words: `words` (the page's markdown words) and `barWords` (the rich
 // text editor's: bold, italic, …, notImage, uploadError).
 import EasyMDE from 'easymde'
+import { iconLinkHTML, iconLinkOf } from './link-icon.js'
 import css from './vendor/easymde-css.js'
 import TableBuilder from './table-builder.js'
 import FootnoteBuilder from './footnote-builder.js'
@@ -197,7 +198,7 @@ const MarkdownEditor = {
   <mdkit-table-builder ref="tables" :image="canImage ? imageText : null" :render="preview ? renderHTML : null"
     :footnote="footnotePick"></mdkit-table-builder>
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
-  <mdkit-link-picker ref="links" :words="linkWords" :targets="false"></mdkit-link-picker>
+  <mdkit-link-picker ref="links" :words="linkWords" :targets="false" icons></mdkit-link-picker>
   <mdkit-footnote-builder ref="footnotes" :render="preview ? renderHTML : null"></mdkit-footnote-builder>
   <mdkit-help-dialog ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
   <mdkit-buttons-dialog ref="buttons" :words="widgetWords" :link-words="linkWords"></mdkit-buttons-dialog>
@@ -661,12 +662,16 @@ const MarkdownEditor = {
       const from = cm.getCursor('from')
       const to = cm.getCursor('to')
       const text = cm.getRange(from, to)
-      // a link chosen whole: its address there
+      // a link chosen whole: its address there (of an icon: HTML, Markdown
+      // has none)
       const m = /^\[([^\]]*)\]\(([^)\s]*)\)$/.exec(text)
-      this.$refs.links.open({ href: m ? m[2] : '', text: m ? m[1] : text }, (link) => {
+      const h = iconLinkOf(text)
+      const attrs = h ? { href: h.href, text: h.text, icon: h.icon } : { href: m ? m[2] : '', text: m ? m[1] : text }
+      this.$refs.links.open(attrs, (link) => {
         if (!link) return
         const label = link.text || link.title || link.href
-        cm.replaceRange('[' + label.replace(/[[\]]/g, '') + '](' + link.href.replace(/[\s)]/g, (c) => encodeURIComponent(c)) + ')', from, to)
+        const html = iconLinkHTML(link.href, label, link.icon)
+        cm.replaceRange(html || '[' + label.replace(/[[\]]/g, '') + '](' + link.href.replace(/[\s)]/g, (c) => encodeURIComponent(c)) + ')', from, to)
         cm.focus()
       })
     },

@@ -12,6 +12,7 @@ import { config, wordsOf } from './config.js'
 import { metaResolver } from './link-cards.js'
 import { metaSearch } from './link-card-picker.js'
 import { searchMixin } from './link-search.js'
+import { validIcon } from './link-icon.js'
 
 // hrefOf is the address a link of target has: a path of the site as it is; a
 // record path, its address (resolve: the cards'); '', none.
@@ -76,10 +77,14 @@ export const LinkForm = {
     // titleOf: the title of a page of another site (a promise); by default
     // the page's meta's (metaTitle)
     titleOf: { type: Function, default: null },
+    // icon: the icon of the link there; icons: whether it is asked (a text
+    // link's: the icon before it) — a file chosen gives its own
+    icon: { type: String, default: '' },
+    icons: { type: Boolean, default: false },
   },
   emits: ['apply', 'remove', 'cancel'],
   data() {
-    return { url: this.href || '', blank: this.target === '_blank', busy: false, title: '', label: this.text || '' }
+    return { url: this.href || '', blank: this.target === '_blank', busy: false, title: '', label: this.text || '', iconName: this.icon || '', picked: '', lastPicked: '' }
   },
   computed: {
     finder() { return this.search || config.cardSearch || metaSearch() },
@@ -99,13 +104,14 @@ export const LinkForm = {
     prepend-inner-icon="mdi-format-text" :label="words.text || 'Link text'"
     :placeholder="title || words.textHint || 'Empty: the title of the page or post'" persistent-placeholder
     @keydown.enter.prevent="apply" data-link-text></v-text-field>
+  <v-text-field v-if="icons" v-model.trim="iconName" density="compact" variant="outlined" hide-details clearable class="mt-3"
+    :prepend-inner-icon="validIcon(iconName) || 'mdi-shape-outline'" :label="words.icon || 'Icon'" placeholder="mdi-…"
+    data-link-icon></v-text-field>
   <v-text-field v-if="finder" v-model="q" density="compact" variant="outlined" hide-details clearable class="mt-3"
     prepend-inner-icon="mdi-magnify" :loading="loading" :label="words.search || 'Search a page or a record'"
     @update:model-value="runSearch()" data-link-q></v-text-field>
-  <mdkit-link-facets v-if="finder" :facets="facets" v-model="values"></mdkit-link-facets>
-  <div v-if="groups.length" class="mt-1" style="max-height:20rem;overflow:auto">
-    <mdkit-link-options :groups="groups" :words="words" @pick="pick"></mdkit-link-options>
-  </div>
+  <mdkit-link-facets v-if="finder" :facets="facets" :words="words" v-model="values"></mdkit-link-facets>
+  <mdkit-link-results v-if="groups.length" :groups="groups" :words="words" @pick="pick"></mdkit-link-results>
   <div v-else-if="searched && !loading" class="text-body-2 text-medium-emphasis mt-2" data-link-none>
     {{ words.none || 'Nothing found.' }}
   </div>
@@ -129,7 +135,13 @@ export const LinkForm = {
       this.groups = []
       this.q = ''
       this.title = it.title
+      // its icon (a file's: of its extension), in place of none or of the
+      // one a choice before put — not of one written
+      this.picked = validIcon(it.icon)
+      if (this.picked && (!this.iconName || this.iconName === this.lastPicked)) this.iconName = this.picked
+      this.lastPicked = this.picked
     },
+    validIcon,
     async apply() {
       const href = this.url.trim()
       if (!href || this.busy) return
@@ -146,7 +158,8 @@ export const LinkForm = {
         }
       }
       const text = (this.label || '').trim() || title || href
-      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title, text })
+      this.$emit('apply', { href, target: this.targets && this.blank ? '_blank' : null, title, text,
+        icon: this.icons ? validIcon(this.iconName) || null : null, pickedIcon: this.picked || '' })
     },
   },
 }
@@ -157,15 +170,17 @@ export default {
   props: {
     words: { type: Object, default: () => wordsOf('link') },
     targets: { type: Boolean, default: true },
+    // icons: the icon of the link asked (a text link's)
+    icons: { type: Boolean, default: false },
   },
-  data: () => ({ show: false, href: '', target: '', text: '', linked: false, done: null, key: 0 }),
+  data: () => ({ show: false, href: '', target: '', text: '', icon: '', linked: false, done: null, key: 0 }),
   template: `
 <v-dialog v-model="show" max-width="560" scrollable data-link-picker>
   <v-card>
     <v-card-title class="d-flex align-center ga-2"><v-icon icon="mdi-link-variant"></v-icon>{{ words.title || 'Link' }}</v-card-title>
     <v-card-text>
       <mdkit-link-form :key="key" :href="href" :target="target" :text="text" :targets="targets" :linked="linked" :words="words"
-        @apply="finish" @remove="finish(null)" @cancel="show = false"></mdkit-link-form>
+        :icon="icon" :icons="icons" @apply="finish" @remove="finish(null)" @cancel="show = false"></mdkit-link-form>
     </v-card-text>
   </v-card>
 </v-dialog>`,
@@ -176,6 +191,7 @@ export default {
       this.href = (attrs && attrs.href) || ''
       this.target = (attrs && attrs.target) || ''
       this.text = (attrs && attrs.text) || ''
+      this.icon = (attrs && attrs.icon) || ''
       this.linked = !!this.href
       this.done = done
       this.key++

@@ -33,6 +33,7 @@ declare module 'vue' {
     DragListener: typeof import('./src/lib/DragListener.vue')['default']
     DragListenerExample: typeof import('./src/demo/components/DragListenerExample.vue')['default']
     EditorJS: typeof import('./src/lib/EditorJS/EditorJS.vue')['default']
+    FileUpload: typeof import('./src/lib/upload/FileUpload.vue')['default']
     Filter: typeof import('./src/lib/Filter/index.vue')['default']
     FilterButton: typeof import('./src/lib/Filter/components/FilterButton.vue')['default']
     FilterButtonBody: typeof import('./src/lib/Filter/components/FilterButtonBody.vue')['default']

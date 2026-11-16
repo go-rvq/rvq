@@ -26,6 +26,9 @@ type LinkCard struct {
 	Title   string `json:"title"`
 	Cover   string `json:"cover,omitempty"`
 	Summary string `json:"summary,omitempty"`
+	// Icon, when it has no cover, is its icon (mdi-…: a file's, of its
+	// extension).
+	Icon string `json:"icon,omitempty"`
 }
 
 // LinkCardCoverer is a record with a cover for its card (an address).
@@ -143,23 +146,40 @@ const LinkCardSearchEvent = "presets_LinkCardSearch"
 // LinkCardOption is what a link card may link: its title, its target (a path
 // of the site, a record path), where it is (sub), its icon; in a tree, the
 // options under it (Children: a page's pages and posts) — one there only to
-// hold them, not found itself, is Context —.
+// hold them, not found itself, is Context —; what is said of it beside
+// where it is, short (Info: its dates).
 type LinkCardOption struct {
 	Title    string            `json:"title"`
 	Target   string            `json:"target"`
 	Sub      string            `json:"sub,omitempty"`
 	Icon     string            `json:"icon,omitempty"`
 	Context  bool              `json:"context,omitempty"`
+	Info     []LinkCardInfo    `json:"info,omitempty"`
 	Children []*LinkCardOption `json:"children,omitempty"`
 }
 
+// LinkCardInfo is a short thing said of an option: its icon and its value
+// (a date: "16/11/2026"), what it is in its hint ("Created on 16/11/2026
+// 14:30", the value's tooltip).
+type LinkCardInfo struct {
+	Icon string `json:"icon,omitempty"`
+	Text string `json:"text"`
+	Hint string `json:"hint,omitempty"`
+}
+
 // LinkCardOptionGroup is a group of options: its title, or its kind (the
-// picker's word of it: pages, posts).
+// picker's word of it: pages, posts); how many were found (Count — 0, its
+// options, not those only holding others —) and whether more were than
+// shown (More); Recent, not found by a text but the latest (a search
+// without one).
 type LinkCardOptionGroup struct {
-	Kind  string           `json:"kind,omitempty"`
-	Title string           `json:"title"`
-	Icon  string           `json:"icon,omitempty"`
-	Items []LinkCardOption `json:"items"`
+	Kind   string           `json:"kind,omitempty"`
+	Title  string           `json:"title"`
+	Icon   string           `json:"icon,omitempty"`
+	Items  []LinkCardOption `json:"items"`
+	Count  int              `json:"count,omitempty"`
+	More   bool             `json:"more,omitempty"`
+	Recent bool             `json:"recent,omitempty"`
 }
 
 // LinkCardSearcher is the application's options matching q — and the

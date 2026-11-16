@@ -60,6 +60,7 @@ function style() {
     '.mdkit-card{display:flex;gap:.75rem;align-items:stretch;max-width:36rem;border:1px solid rgba(128,128,128,.35);border-radius:8px;' +
     'overflow:hidden;text-decoration:none!important;color:inherit!important;background:rgba(128,128,128,.04)}' +
     '.mdkit-card:hover{border-color:rgba(37,99,235,.6);background:rgba(37,99,235,.05)}' +
+    '.mdkit-card-icon{flex:0 0 4.5rem;display:flex;align-items:center;justify-content:center;font-size:2.4rem;color:rgba(37,99,235,.85)}' +
     '.mdkit-card-cover{flex:0 0 7rem;width:7rem;min-height:5rem;object-fit:cover;display:block;margin:0!important;border-radius:0!important}' +
     '.mdkit-card-body{padding:.6rem .75rem .6rem 0;min-width:0;display:flex;flex-direction:column;justify-content:center}' +
     '.mdkit-card-body:first-child{padding-left:.75rem}' +
@@ -92,6 +93,12 @@ export function drawCard(el, card) {
     img.alt = ''
     img.loading = 'lazy'
     a.append(img)
+  } else if (/^mdi-[a-z0-9-]+$/.test(card.icon || '')) {
+    // no cover: its icon (a file's: of its extension)
+    const i = doc.createElement('span')
+    i.className = 'mdkit-card-icon mdi ' + card.icon
+    i.setAttribute('aria-hidden', 'true')
+    a.append(i)
   }
   const body = doc.createElement('span')
   body.className = 'mdkit-card-body'

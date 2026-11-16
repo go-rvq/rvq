@@ -37,6 +37,8 @@ declare module '@rvq/mdkit' {
   export const CODE_LANGUAGES: [string, string][]
   export const LinkPicker: any
   export const LinkForm: any
+  export const LinkIcon: any
+  export function validLinkIcon(name: string): string
   export function hrefOf(target: string): Promise<string>
   export function cardTarget(text: string, origin?: string): string
   export function metaSearch(doc?: Document): ((q: string, values?: Record<string, string[]>) => Promise<any>) | null

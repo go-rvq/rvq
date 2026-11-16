@@ -156,6 +156,11 @@ export interface VxMessages {
   cameraFlip: string
   cameraFlipHorizontal: string
   cameraFlipVertical: string
+  uploadDrop: string
+  uploadHashing: string
+  uploadChecking: string
+  uploadExists: string
+  uploadReused: string
   /** Said when the camera offers no control. */
   cameraNoControls: string
   /** Switch of a control of the camera: automatic. */
@@ -618,6 +623,12 @@ export interface VxMessages {
   mdkitLinkAddress: string
   /** Editors of a text (mdkit), link: search. */
   mdkitLinkSearch: string
+  mdkitFacetChoose: string
+  mdkitFacetSearch: string
+  mdkitFacetClear: string
+  mdkitLinkIcon: string
+  mdkitSearchResults: string
+  mdkitRecent: string
   mdkitLinkText: string
   mdkitLinkTextHint: string
   /** Editors of a text (mdkit), link: newTab. */

@@ -52,8 +52,34 @@ var policy = func() *bluemonday.Policy {
 	p.AllowAttrs("data-latex").Matching(regexp.MustCompile(`^[^\x00]*$`)).OnElements("span", "div")
 	// the buttons and the tabs (widgets.go)
 	allowWidgets(p)
+	// the icon of a link (an icon of Material Design: linkIcons)
+	p.AllowAttrs("data-icon").Matching(linkIconRe).OnElements("a")
 	return p
 }()
+
+// linkIconRe is the icon of a link: mdi-….
+var linkIconRe = regexp.MustCompile(`^mdi-[a-z0-9-]+$`)
+
+// linkIconTagRe is the tag of a link with an icon, after the policy (its
+// class, when it has one, a footnote's).
+var linkIconTagRe = regexp.MustCompile(`<a ([^>]*?)data-icon="(mdi-[a-z0-9-]+)"([^>]*)>`)
+
+// linkIcons shows the icon of each link that has one (data-icon): the
+// classes of the font of the icons (mdi mdi-…: the icon its ::before, its
+// text as it is), after the policy, which keeps no other class.
+func linkIcons(html string) string {
+	if !strings.Contains(html, "data-icon=") {
+		return html
+	}
+	return linkIconTagRe.ReplaceAllStringFunc(html, func(tag string) string {
+		m := linkIconTagRe.FindStringSubmatch(tag)
+		cls := "mdi " + m[2]
+		if strings.Contains(tag, ` class="`) {
+			return strings.Replace(tag, ` class="`, ` class="`+cls+" ", 1)
+		}
+		return strings.Replace(tag, "<a ", `<a class="`+cls+`" `, 1)
+	})
+}
 
 // footnoteClassRe are the classes of the footnotes (goldmark's, and the rich
 // text editor's, the same HTML): a reference, the way back, the notes.
@@ -81,13 +107,13 @@ var md = goldmark.New(
 // policy of user content (bluemonday).
 func Render(format, body string) string {
 	if format == Rich {
-		return policy.Sanitize(body)
+		return linkIcons(policy.Sanitize(body))
 	}
 	var buf bytes.Buffer
 	if err := md.Convert([]byte(linkCards(inlineMath(mathBlocks(body)))), &buf); err != nil {
 		return policy.Sanitize("<p>" + stdhtml.EscapeString(body) + "</p>")
 	}
-	return policy.Sanitize(buf.String())
+	return linkIcons(policy.Sanitize(buf.String()))
 }
 
 // footnoteIDRe is an id of a footnote, or a link to one, in HTML rendered —

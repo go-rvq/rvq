@@ -7,6 +7,7 @@
 import type {Editor} from '@tiptap/vue-3'
 import {ref, watch} from 'vue'
 import {LinkForm} from '@rvq/mdkit'
+import {computed} from 'vue'
 import {useI18n} from '@/lib/locale'
 import {mdkitWords} from '@/lib/locale/mdkit'
 
@@ -29,6 +30,8 @@ const dialog = ref<boolean>(false)
 // selected is the text of the link there (its whole mark), else the one
 // chosen: the text of the link, as the form opens
 const selected = ref<string>('')
+// icon is the icon of the link there
+const icon = computed<string>(() => (dialog.value && props.editor.getAttributes('link').icon) || '')
 
 watch(dialog, (open) => {
   if (!open) return
@@ -39,8 +42,8 @@ watch(dialog, (open) => {
 
 // apply links the text: the one there, as it is (its marks kept); another
 // — typed, or the title of the page or post chosen —, in its place
-function apply(link: { href: string, target: string | null, text?: string }) {
-  const attrs = {href: link.href, target: link.target}
+function apply(link: { href: string, target: string | null, text?: string, icon?: string | null }) {
+  const attrs = {href: link.href, target: link.target, icon: link.icon || null}
   const chain = props.editor.chain().focus().extendMarkRange('link')
   if (link.text && link.text !== selected.value) {
     chain.insertContent({type: 'text', text: link.text, marks: [{type: 'link', attrs}]}).run()
@@ -70,6 +73,7 @@ function close() {
       </VCardTitle>
       <VCardText>
         <LinkForm v-if="dialog" :href="value || ''" :target="value ? (target || '') : '_blank'" :text="selected" :linked="!!value" :words="words"
+                  :icon="icon" icons
                   @apply="apply" @remove="remove" @cancel="close"/>
       </VCardText>
     </VCard>

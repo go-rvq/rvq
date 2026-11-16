@@ -31,6 +31,7 @@ import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
 import { FootnoteRef, Footnotes, numbers } from './footnote-tiptap.js'
 import { LinkCard } from './link-card-tiptap.js'
+import { LinkIcon } from './link-icon.js'
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
 import { BlockMath, InlineMath, MathCommands } from './math-tiptap.js'
 import { Diagram } from './diagram-tiptap.js'
@@ -208,7 +209,7 @@ const RichEditor = {
   template: `
 <v-theme-provider theme="light" with-background class="mdkit-rich-editor" data-rich-editor>
   <mdkit-link-card-picker ref="cards" :words="cardWords"></mdkit-link-card-picker>
-  <mdkit-link-picker ref="links" :words="linkWords"></mdkit-link-picker>
+  <mdkit-link-picker ref="links" :words="linkWords" icons></mdkit-link-picker>
   <mdkit-block-dialog ref="blocks" :words="blockWords"></mdkit-block-dialog>
   <mdkit-help-dialog v-if="helpSrc" ref="help" :href="helpHref" :words="helpWords"></mdkit-help-dialog>
   <mdkit-buttons-dialog ref="buttons" :words="widgetWords" :link-words="linkWords"></mdkit-buttons-dialog>
@@ -277,6 +278,8 @@ const RichEditor = {
       editable: !this.disabled,
       extensions: [
         StarterKit.configure({ link: { openOnClick: false, autolink: true }, codeBlock: false }),
+        // the icon of a link (data-icon)
+        LinkIcon,
         // its code blocks edited by CodeMirror, their language chosen
         withCodeMirror(CodeBlock),
         SizedImage,
@@ -419,10 +422,10 @@ const RichEditor = {
     // openLink picks the link of the text chosen (the picker: an address, a
     // page found; a new tab or not), or takes it out
     openLink() {
-      const { href, target } = this.editor.getAttributes('link')
-      this.$refs.links.open({ href, target }, (link) => {
+      const { href, target, icon } = this.editor.getAttributes('link')
+      this.$refs.links.open({ href, target, icon }, (link) => {
         const c = this.editor.chain().focus().extendMarkRange('link')
-        ;(link ? c.setLink({ href: link.href, target: link.target }) : c.unsetLink()).run()
+        ;(link ? c.setLink({ href: link.href, target: link.target, icon: link.icon }) : c.unsetLink()).run()
       })
     },
     // mark sets what is on, and the sizes of the picture selected
