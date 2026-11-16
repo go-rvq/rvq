@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
+	"github.com/go-rvq/rvq/x/appconfig"
 	"github.com/go-rvq/rvq/x/features"
 	"github.com/go-rvq/rvq/x/osenv"
 	"github.com/go-rvq/rvq/x/security"
@@ -168,6 +169,8 @@ func init() {
 					return err
 				}
 				security.Load(sec)
+				// the sections of the packages (fstools: …), read by them
+				appconfig.Load(content)
 				return features.Load(feats)
 			}
 

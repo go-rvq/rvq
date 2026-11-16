@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.4
+	github.com/creack/pty v1.1.24
 	github.com/disintegration/imaging v1.6.2
 	github.com/documize/html-diff v0.0.0-20160503140253-f61c192c7796
 	github.com/dustin/go-humanize v1.0.1
@@ -33,6 +34,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/gosimple/slug v1.14.0
 	github.com/gosimple/unidecode v1.0.1
 	github.com/hack-pad/hackpadfs v0.2.4
@@ -196,10 +198,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
-	golang.org/x/image v0.17.0 // indirect
+	golang.org/x/image v0.17.0
 	golang.org/x/net v0.40.0
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sys v0.42.0
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/grpc v1.72.1 // indirect
