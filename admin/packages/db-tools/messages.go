@@ -100,6 +100,10 @@ type Messages struct {
 	BackupMethod                         string              `i18n:"hint='Title of how the backups are made (the method), and the label of its field.'"`
 	ConfigureBackupMethod                string              `i18n:"hint='Action that chooses how the backups are made.'"`
 	BackupMethodNotAvailable             string              `i18n:"hint='Said of a backup method that cannot be used now, before why.'"`
+	AutoBackupOn                         string              `i18n:"label='Automatic backup: on', hint='Said of the automatic backup when it runs.', fields=(;'%s'='when: its cron spec')"`
+	AutoBackupOff                        string              `i18n:"label='Automatic backup: off', hint='Said of the automatic backup when it was turned off.'"`
+	ConfigureAutoBackup                  string              `i18n:"label='Configure the automatic backup', hint='Action that turns the automatic backup on or off.'"`
+	AutoFormDisabled                     string              `i18n:"label='Automatic backup: disabled', hint='Label of the switch that turns the automatic backup off.'"`
 	CreateDatabaseBackup                 string              `i18n:"hint='Title of the job that makes a database backup.'"`
 	DatabaseOlderBackupsRemover          string              `i18n:"label='Older backups remover', hint='Title of the job that removes the backups no longer kept.'"`
 	BackupStartedInBackgroundJobTemplate string              `i18n:"label='Backup started', hint='Shown once a backup job was started.'"`
@@ -154,6 +158,10 @@ var (
 		BackupMethod:                         "Backup method",
 		ConfigureBackupMethod:                "Choose the backup method",
 		BackupMethodNotAvailable:             "not available",
+		AutoBackupOn:                         "On (%s)",
+		AutoBackupOff:                        "Off",
+		ConfigureAutoBackup:                  "Configure the automatic backup",
+		AutoFormDisabled:                     "Turn the automatic backup off",
 		Persistence: MessagesPersistence{
 			Enabled:     "<b class='text-primary'>ENABLED</b>",
 			Disabled:    "<b class='text-warning'>NOT ENABLED</b>",
@@ -181,6 +189,10 @@ var (
 		BackupMethod:                         "Método de backup",
 		ConfigureBackupMethod:                "Escolher o método de backup",
 		BackupMethodNotAvailable:             "indisponível",
+		AutoBackupOn:                         "Ativado (%s)",
+		AutoBackupOff:                        "Desativado",
+		ConfigureAutoBackup:                  "Configurar o backup automático",
+		AutoFormDisabled:                     "Desativar o backup automático",
 		CreateDatabaseBackup:                 "Criar Cópia de Segurança do Banco de Dados",
 		DatabaseOlderBackupsRemover:          "Remover Cópias de Segurança antigas do Banco de Dados",
 		BackupStartedInBackgroundJobTemplate: `A Cópia de Segurança está sendo gerada em segundo plano. Acesse {link} para acompanhar.`,

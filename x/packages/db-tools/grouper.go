@@ -148,7 +148,7 @@ func GroupByWithFilter(items []time.Time, end time.Time, key func(t time.Time) t
 func TimesAt(items []time.Time, at time.Time) (filtered, other []time.Time) {
 	for i, item := range items {
 		if !item.Before(at) {
-			return items[:i-1], items[i:]
+			return items[:i], items[i:]
 		}
 	}
 	return items, nil

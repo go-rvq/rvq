@@ -3,6 +3,8 @@ package db_tools
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ const (
 	actionCreateBackup    = "createBackup"
 	actionConfigureBackup = "configureBackup"
 	actionConfigureMethod = "configureBackupMethod"
+	actionConfigureAuto   = "configureAutoBackup"
 
 	eventRemoveBackup        = "removeBackup"
 	eventRemoveBackupConfirm = "removeBackupConfirm"
@@ -46,6 +49,14 @@ type Builder struct {
 	backupCronSpec           string
 	page                     *presets.PageBuilder
 	methods                  *db_tools.BackupMethods
+	// defaultRetentionDays: the days a configuration without a retention is
+	// given (0: none given)
+	defaultRetentionDays int
+}
+
+// AutoForm is the form of the automatic backup.
+type AutoForm struct {
+	Disabled bool
 }
 
 // MethodForm is the form of the backup method.
@@ -66,9 +77,45 @@ func New(db *gorm.DB, i18nB *i18n.Builder, wb *worker.Builder) *Builder {
 	ConfigureMessages(i18nB)
 
 	return &Builder{
-		db: db,
-		wb: wb,
+		db:                   db,
+		wb:                   wb,
+		defaultRetentionDays: DefaultRetentionDays,
 	}
+}
+
+// DefaultRetentionDays are the days of backups kept by default.
+const DefaultRetentionDays = 30
+
+// DefaultRetention is how many days of backups (one a day) a configuration
+// without a retention keeps: given at Install, when the backups are
+// automatic and there is a controller; 0, none given.
+func (b *Builder) DefaultRetention(days int) *Builder {
+	b.defaultRetentionDays = days
+	return b
+}
+
+// ensureRetention gives the configuration without a retention (none yet, or
+// empty) the default one: a day each, for defaultRetentionDays.
+func (b *Builder) ensureRetention() error {
+	if b.defaultRetentionDays <= 0 {
+		return nil
+	}
+	cfg, err := b.GetConfig()
+	if err != nil {
+		return err
+	}
+	if !cfg.Persistence.Data.IsZero() {
+		return nil
+	}
+	cfg.Persistence.Data = &db_tools.Persistence{Enabled: true, Days: b.defaultRetentionDays}
+	if cfg.ID == uuid.Nil {
+		cfg.ID = uuid.New()
+	}
+	if err = b.db.Session(&gorm.Session{}).Save(cfg).Error; err != nil {
+		return err
+	}
+	log.Printf("db-tools: the backups of the database kept by default: the newest of each of the %d most recent days with backups", b.defaultRetentionDays)
+	return nil
 }
 
 func (b *Builder) DailyBackup() *Builder {
@@ -256,6 +303,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	b.setupCreateAction(p, page)
 	b.setupConfigureBackupAction(p, page)
 	b.setupConfigureMethodAction(p, page)
+	b.setupConfigureAutoAction(p, page)
 	if err = b.applyMethod(); err != nil {
 		return
 	}
@@ -283,6 +331,9 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		})
 
 	if b.backupController != nil && b.backupCronSpec != "" {
+		if err = b.ensureRetention(); err != nil {
+			return
+		}
 		b.wb.NewJob(JobAutoBackup).
 			Title(func(ctx *web.EventContext) string {
 				return GetMessages(ctx.Context()).DatabaseAutoBackup
@@ -290,6 +341,14 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 			System(true).
 			CronConfig(worker.JobCronConfig{Spec: b.backupCronSpec, Once: true}).
 			Handler(func(ctx context.Context, job worker.JobInterface) (err error) {
+				var cfg *DbBackupConfig
+				if cfg, err = b.GetConfig(); err != nil {
+					return
+				}
+				if cfg.AutoDisabled {
+					job.AddLog("the automatic backup is off")
+					return
+				}
 				job.AddLog("starting")
 				defer job.AddLog("done")
 				var bkp db_tools.Backuper
@@ -425,6 +484,51 @@ func (b *Builder) setupConfigureMethodAction(p *presets.Builder, page *presets.P
 		return nil
 	}).
 		Build()
+}
+
+// setupConfigureAutoAction is the action that turns the automatic backup on
+// or off (DbBackupConfig.AutoDisabled).
+func (b *Builder) setupConfigureAutoAction(p *presets.Builder, page *presets.PageBuilder) {
+	action := page.PrivateAction(actionConfigureAuto, func(v *perm.Verifier) *perm.Verifier {
+		return v.Do(actionConfigureBackup)
+	}).
+		SetEnabled(func(id string, ctx *web.EventContext) (ok bool, err error) {
+			return b.backupController != nil && b.backupCronSpec != "", nil
+		}).
+		SetI18nLabel(func(ctx context.Context) string {
+			return GetMessages(ctx).ConfigureAutoBackup
+		})
+	mb := presets.NewModelBuilder(p, &AutoForm{}, presets.ModelConfig().SetModuleKey(MessagesKey))
+	mb.Editing("Disabled")
+	mb.Editing().Field("Disabled").SetI18nLabel(func(ctx context.Context) string { return GetMessages(ctx).AutoFormDisabled })
+	presets.ActionForm[*AutoForm](action, mb.Editing(), func(ctx *presets.ActionFormContext[*AutoForm]) (err error) {
+		var cfg *DbBackupConfig
+		if cfg, err = b.GetConfig(); err != nil {
+			return
+		}
+		cfg.AutoDisabled = ctx.Form.Disabled
+		if cfg.ID == uuid.Nil {
+			cfg.ID = uuid.New()
+		}
+		return b.db.Session(&gorm.Session{}).Save(cfg).Error
+	}).InitForm(func(fctx *presets.ActionFormContext[*AutoForm]) (err error) {
+		var cfg *DbBackupConfig
+		if cfg, err = b.GetConfig(); err != nil {
+			return
+		}
+		fctx.Form = &AutoForm{Disabled: cfg.AutoDisabled}
+		return nil
+	}).
+		Build()
+}
+
+// autoText is the automatic backup, as the page says it: on (when), or off.
+func (b *Builder) autoText(ctx context.Context, cfg *DbBackupConfig) string {
+	m := GetMessages(ctx)
+	if b.backupCronSpec == "" || cfg.AutoDisabled {
+		return m.AutoBackupOff
+	}
+	return fmt.Sprintf(m.AutoBackupOn, b.backupCronSpec)
 }
 
 // BackupController is the controller of the backups (nil: none).
@@ -572,6 +676,19 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 									VListItemTitle(h.Text(m.Persistence.Title)),
 									VListItemSubtitle(persistence),
 								).Class("pa-0"),
+								VListItem(
+									web.Slot(
+										VBtn("").
+											Icon("mdi-cog").
+											Density(DensityCompact).
+											Attr("@click", web.GET().URL(ctx.R.URL.Path).
+												EventFunc(actions.Action).
+												Query(presets.ParamAction, actionConfigureAuto).
+												Query(presets.ParamTargetPortal, uid).Go()),
+									).Name("append"),
+									VListItemTitle(h.Text(m.AutoBackup)),
+									VListItemSubtitle(h.Text(b.autoText(ctx.Context(), &config))),
+								).Class("pa-0").Attr("data-db-tools-auto", true),
 								h.Iff(b.methods != nil, func() h.HTMLComponent {
 									return VListItem(
 										web.Slot(
