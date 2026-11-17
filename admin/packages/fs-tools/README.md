@@ -142,7 +142,7 @@ answers 403. In code: `fs_tools.TerminalFeature.Enabled()`.
 fstools:
   terminal:
     sandbox: auto    # auto | bwrap | landlock | off (The sandbox)
-    network: false   # the shell reaches the network (TCP)
+    network: false   # the shell reaches the network (below)
     shell: ""        # its program: default /bin/bash, else /bin/sh
     limits:          # 0 or "": none
       cpu: 10m       # time of CPU (a Go duration)
@@ -157,6 +157,36 @@ Every key optional: the values above are the defaults. Read at the start (a
 change needs a restart); a wrong value turns the terminal off, the reason in
 the log and in the WebDAV drawer.
 
+| Key | Default | What |
+| --- | --- | --- |
+| `sandbox` | `auto` | how the shell is kept apart: [The sandbox](#the-sandbox) |
+| `network` | `false` | the shell reaches the network — below |
+| `shell` | `""` | its program: `/bin/bash`, else `/bin/sh` |
+| `limits.cpu` | `10m` | CPU time of the session's processes (a Go duration: `90s`, `10m`, `1h`); `0`: none |
+| `limits.memory` | `2G` | virtual memory of each process (`512M`, `2G`; K, M, G, T of 1024; bytes alone); `0`: none |
+| `limits.file_size` | `1G` | the largest file written; `0`: none |
+| `limits.processes` | `0` | RLIMIT_NPROC — it counts every process and thread of the server's user, the server's too: high, or `0` (none) |
+| `idle` | `30m` | with no input for so long, the session closes |
+
+#### `network`
+
+Off (`false`, the default), the shell reaches no other machine:
+
+- `landlock`: no TCP connection and no port opened (Linux ≥ 6.7, Landlock
+  ABI 4; below it Landlock cannot block TCP — use `bwrap`, or keep the
+  terminal off). UDP is not covered (DNS answers, but nothing reaches a
+  service over TCP). A Unix socket reached by its path is not covered by
+  ABI 4: a database's local socket in a folder the shell sees answers.
+- `bwrap`: a network of its own, with nothing in it.
+
+On (`true`), the shell reaches what the server reaches: every TCP host and
+port (`landlock`), the server's network (`bwrap`). Its environment still
+has none of the server's secrets — a `pg_dump` to the database needs its
+own credentials (a `.pgpass` in a folder of the user, typed).
+
+The chip of the terminal (beside its state) says whether the network is on;
+off, it tells the user to ask the server's administrator.
+
 ### What the shell sees
 
 - `$FILES_ROOT`: a folder of links, one per folder the user reaches at its
@@ -168,6 +198,12 @@ the log and in the WebDAV drawer.
 - the system's programs and libraries (`/usr`, `/bin`, `/lib*`, `/etc`,
   `/opt`), only read; not the server's working directory, not `/proc`
   (Landlock), not the other users' folders.
+
+The chip beside the terminal's state says how it is kept apart
+(**Isolated · Landlock**, **Not isolated**); a click shows the details of
+the session: the sandbox and what it covers, the folders and whether each
+is written, the network (on, or off — ask the server's administrator), the
+limits, when it closes idle.
 
 Closing the page hangs the shell up (SIGHUP, then SIGKILL) and kills what it
 left in its session (a program that made a session of its own escapes
@@ -225,7 +261,13 @@ the OS.
 - **`<vx-terminal>`** — `ws-url`, `vendor`, `root-var`, `recorded`, `keep`,
   `fill`. Its websocket: binary messages are the bytes of the session; it
   sends `{"resize":[cols,rows]}`; the server ends with `{"exit":"…"}`; `cols`
-  and `rows` in the query of the first request.
+  and `rows` in the query of the first request. A text message
+  `{"info": {label, icon, color, details: [{label, values: [{text, warn}]}]}}`
+  — fs-tools sends it first, in the user's language — is the chip beside the
+  state and its details; a server that sends none has no chip.
+- **Their words** are the namespace `vxFiles` of the page's vue-i18n
+  (`FilesMessages`, en and pt-BR, registered by `UseAssets`): in the user's
+  language, translatable as any module's messages.
 
 ## Tests
 

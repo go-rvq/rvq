@@ -1,6 +1,8 @@
 // vx-terminal: a terminal (xterm.js, loaded of vendor when first used) on a
 // websocket — its binary messages the bytes of the session, a text one
-// {"exit": …} its end; sent {"resize": [cols, rows]} —: the shell of a user
+// {"exit": …} its end, {"info": {label, icon, color, details}} how it is
+// kept apart (a chip beside its state; its details on a click); sent
+// {"resize": [cols, rows]} —: the shell of a user
 // of the OS in senir, the sandboxed one of the file system in HermonCMS.
 (function () {
   'use strict';
@@ -35,10 +37,17 @@
   }
 
   const VxTerminal = {
+    // the words: the namespace vxFiles of the page's vue-i18n (fs-tools'
+    // FilesMessages, in the user's language)
+    setup: function () {
+      let i18n = null;
+      try { i18n = window.VueI18n.useI18n({ useScope: 'global' }); } catch (e) { }
+      return { i18n: i18n };
+    },
     props: { wsUrl: String, vendor: String, keep: Boolean, fill: Boolean,
       // rootVar: the variable of the root of the files in the shell (cd rooted); recorded: the session is recorded (said)
       rootVar: { type: String, default: 'FILES_ROOT' }, recorded: Boolean },
-    data: function () { return { state: 'connecting', exit: '', fontSize: 12, expanded: false }; },
+    data: function () { return { state: 'connecting', exit: '', fontSize: 12, expanded: false, info: null }; },
     mounted: function () {
       const self = this;
       Promise.all([
@@ -59,6 +68,7 @@
         const self = this;
         this.state = 'connecting';
         this.exit = '';
+        this.info = null;
         const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const term = new window.Terminal({
           cursorBlink: true, fontSize: this.fontSize, scrollback: 5000, allowProposedApi: true,
@@ -98,11 +108,13 @@
           if (typeof ev.data === 'string') {
             const m = JSON.parse(ev.data);
             if (m.exit !== undefined) { self.exit = m.exit; self.state = 'closed'; }
+            // how the session is kept apart (the server's, translated): the chip beside the state
+            if (m.info && typeof m.info === 'object') self.info = m.info;
             return;
           }
           term.write(new Uint8Array(ev.data));
         };
-        ws.onclose = function () { if (self.state !== 'closed') { self.state = 'closed'; self.exit = self.exit || 'conexão encerrada'; } };
+        ws.onclose = function () { if (self.state !== 'closed') { self.state = 'closed'; self.exit = self.exit || self.w('connClosed'); } };
         term.onData(function (d) { if (ws.readyState === 1) ws.send(enc.encode(d)); });
         term.onBinary(function (d) {
           if (ws.readyState !== 1) return;
@@ -130,8 +142,15 @@
         this.fontSize = Math.max(9, Math.min(28, this.fontSize + d));
         if (this.term) { this.term.options.fontSize = this.fontSize; this.fit.fit(); }
       },
+      // w is the word of key (vxFiles), its placeholders ({exit}) of params;
+      // the key when there is none
+      w: function (key, params) {
+        const k = 'vxFiles.' + key;
+        try { if (this.i18n && this.i18n.te(k)) return this.i18n.t(k, params || {}); } catch (e) { }
+        return key;
+      },
       find: function () {
-        const q = window.prompt('Buscar no terminal:');
+        const q = window.prompt(this.w('searchPrompt'));
         if (q && this.search) this.search.findNext(q);
       },
       reopen: function () {
@@ -156,22 +175,39 @@
 <div class="vx-terminal" :class="{ 'vx-term-expanded': expanded, 'vx-term-fill': fill }">
   <div class="d-flex align-center ga-2" :class="fill ? 'vx-term-bar' : 'mb-2'">
     <v-chip size="small" :color="state === 'open' ? 'success' : (state === 'closed' ? 'grey' : 'warning')" variant="tonal">
-      {{ state === 'open' ? 'conectado' : (state === 'closed' ? 'encerrado' : 'conectando…') }}
+      {{ w(state === 'open' ? 'connected' : (state === 'closed' ? 'closed' : 'connecting')) }}
     </v-chip>
-    <v-chip v-if="keep" size="small" variant="tonal" prepend-icon="mdi-layers-outline">tmux (a sessão continua ao fechar)</v-chip>
-    <v-chip v-if="recorded" size="small" variant="tonal" color="info" prepend-icon="mdi-record-rec">gravado</v-chip>
+    <v-menu v-if="info" location="bottom start" :close-on-content-click="false">
+      <template v-slot:activator="{ props }">
+        <v-chip v-bind="props" size="small" variant="tonal" :color="info.color || undefined" :prepend-icon="info.icon || undefined"
+          class="vx-term-info" :title="info.label" data-vx-term-info>{{ info.label }}</v-chip>
+      </template>
+      <v-card max-width="560" class="vx-term-info-card">
+        <v-card-text class="pa-3">
+          <table class="vx-term-info-table">
+            <tr v-for="(d, i) in info.details || []" :key="i">
+              <th>{{ d.label }}</th>
+              <td><div v-for="(v, j) in d.values || []" :key="j" :class="{ 'text-warning': v.warn }">
+                <v-icon v-if="v.warn" size="x-small" icon="mdi-alert-outline" class="me-1"></v-icon>{{ v.text }}</div></td>
+            </tr>
+          </table>
+        </v-card-text>
+      </v-card>
+    </v-menu>
+    <v-chip v-if="keep" size="small" variant="tonal" prepend-icon="mdi-layers-outline">{{ w('tmux') }}</v-chip>
+    <v-chip v-if="recorded" size="small" variant="tonal" color="info" prepend-icon="mdi-record-rec">{{ w('recorded') }}</v-chip>
     <v-spacer></v-spacer>
-    <v-btn size="small" variant="text" icon="mdi-magnify" title="Buscar" @click="find"></v-btn>
-    <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" title="Diminuir a fonte" @click="zoom(-1)">A-</v-btn>
-    <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" title="Aumentar a fonte" @click="zoom(1)">A+</v-btn>
-    <v-btn v-if="fill && state === 'closed'" size="small" variant="text" icon="mdi-restart" title="Reabrir" @click="reopen"></v-btn>
+    <v-btn size="small" variant="text" icon="mdi-magnify" :title="w('search')" @click="find"></v-btn>
+    <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" :title="w('fontDown')" @click="zoom(-1)">A-</v-btn>
+    <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" :title="w('fontUp')" @click="zoom(1)">A+</v-btn>
+    <v-btn v-if="fill && state === 'closed'" size="small" variant="text" icon="mdi-restart" :title="w('reopen')" @click="reopen"></v-btn>
     <v-btn size="small" variant="text" :icon="expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
-      :title="expanded ? 'Voltar ao tamanho de antes' : 'Expandir o terminal (a janela toda)'" @click="toggleExpand"></v-btn>
+      :title="w(expanded ? 'restore' : 'expand')" @click="toggleExpand"></v-btn>
   </div>
   <div ref="el" class="vx-term-box"></div>
   <v-alert v-if="state === 'closed' && !fill" type="info" density="compact" class="mt-2">
-    Sessão encerrada: {{ exit }}
-    <template v-slot:append><v-btn size="small" variant="tonal" @click="reopen">Reabrir</v-btn></template>
+    {{ w('sessionEnded', { exit: exit }) }}
+    <template v-slot:append><v-btn size="small" variant="tonal" @click="reopen">{{ w('reopen') }}</v-btn></template>
   </v-alert>
 </div>`,
   };

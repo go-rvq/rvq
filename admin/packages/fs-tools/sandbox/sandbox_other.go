@@ -30,5 +30,5 @@ func Start(m Mode, s Spec) (*Proc, error) {
 	return nil, fmt.Errorf("%w: only on Linux", ErrUnavailable)
 }
 
-// Describe says m.
-func Describe(m Mode) string { return string(m) }
+// CoverageOf: nothing kept apart but on Linux.
+func CoverageOf(m Mode) Coverage { return Coverage{Mode: m} }

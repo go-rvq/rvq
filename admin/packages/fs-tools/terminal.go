@@ -191,7 +191,8 @@ func (b *Builder) mountTerminal(prefix string, mux *http.ServeMux) {
 	} else {
 		b.log.Info("terminal on", "sandbox", sandbox.Describe(b.term.mode))
 	}
-	mux.Handle(prefix+terminalPath, b.recordAccess(http.HandlerFunc(b.serveTerminal), AccessTerminal))
+	// in the user's language: what it tells of the session (info)
+	mux.Handle(prefix+terminalPath, b.recordAccess(b.p.I18n().EnsureLanguage(http.HandlerFunc(b.serveTerminal)), AccessTerminal))
 }
 
 var upgrader = websocket.Upgrader{
@@ -221,6 +222,15 @@ var upgrader = websocket.Upgrader{
 type session struct {
 	dir, root, tmp string
 	paths          []sandbox.Path
+	// folders are the folders it reaches: their place in FILES_ROOT, written
+	folders []sessionFolder
+}
+
+// sessionFolder is a folder a session reaches: its place in FILES_ROOT
+// ("files", "a/b"), whether it is written.
+type sessionFolder struct {
+	At    string
+	Write bool
 }
 
 // newSession is the session of r; none when r reaches no folder of the OS.
@@ -271,6 +281,7 @@ func (b *Builder) newSession(r *http.Request) (*session, error) {
 			return nil, err
 		}
 		s.paths = append(s.paths, sandbox.Path{Path: l.local, Write: l.write})
+		s.folders = append(s.folders, sessionFolder{At: l.at, Write: l.write})
 	}
 	if err = os.MkdirAll(s.tmp, 0o700); err != nil {
 		s.close()
@@ -355,6 +366,10 @@ func (b *Builder) runTerminal(w http.ResponseWriter, r *http.Request) {
 	}
 	who := whoOf(r)
 	b.log.Info("terminal opened", "user", who, "dir", q.Get("dir"), "sandbox", string(t.mode))
+	// how it is kept apart: the chip beside its state (before its output)
+	if p, err := json.Marshal(map[string]any{"info": t.info(GetMessages(r.Context()), sess)}); err == nil {
+		_ = write(websocket.TextMessage, p)
+	}
 
 	// pty → page
 	outDone := make(chan struct{})

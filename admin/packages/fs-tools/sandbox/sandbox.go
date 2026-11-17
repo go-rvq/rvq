@@ -15,6 +15,7 @@ package sandbox
 import (
 	"errors"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -67,3 +68,40 @@ var ErrUnavailable = errors.New("sandbox unavailable")
 // SystemPaths are what every program reads: its libraries, its
 // configuration.
 var SystemPaths = []string{"/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/etc", "/opt"}
+
+// Coverage is what a mode keeps apart here: the files (only the paths
+// given), TCP (no connection, no port opened, unless Spec.Network), the
+// signals (no process out of the sandbox signaled). ABI is Landlock's
+// version (ModeLandlock).
+type Coverage struct {
+	Mode                Mode
+	Files, TCP, Signals bool
+	ABI                 int
+}
+
+// Isolated: something is kept apart (not ModeOff).
+func (c Coverage) Isolated() bool { return c.Files || c.TCP || c.Signals }
+
+// String says it, for the log: "landlock ABI 4: files, TCP (signals not
+// isolated: Linux < 6.12)".
+func (c Coverage) String() string {
+	switch c.Mode {
+	case ModeBwrap:
+		return "bwrap: namespaces of mounts, processes, network"
+	case ModeLandlock:
+		s := "landlock ABI " + strconv.Itoa(c.ABI) + ": files"
+		if c.TCP {
+			s += ", TCP"
+		}
+		if c.Signals {
+			s += ", signals"
+		} else {
+			s += " (signals not isolated: Linux < 6.12)"
+		}
+		return s
+	}
+	return string(c.Mode)
+}
+
+// Describe says what m keeps apart here (for the log).
+func Describe(m Mode) string { return CoverageOf(m).String() }

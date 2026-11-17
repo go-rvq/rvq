@@ -47,18 +47,33 @@
     return LANGS.includes(l) ? l : '';
   }
 
-  function size(n) {
+  function size(n, loc) {
     if (n < 1024) return n + ' B';
     const u = ['kB', 'MB', 'GB', 'TB'];
     let i = -1;
     do { n /= 1000; i++; } while (n >= 1000 && i < u.length - 1);
-    return n.toFixed(n < 10 ? 1 : 0).replace('.', ',') + ' ' + u[i];
+    const d = n < 10 ? 1 : 0;
+    let t;
+    try { t = n.toLocaleString(loc || undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); } catch (e) { t = n.toFixed(d); }
+    return t + ' ' + u[i];
   }
 
   // The sending of a large file (sendParts): its parts' size, how many at
 // once, the tries of each.
 const UPLOAD_PART = 8 << 20, UPLOAD_PARALLEL = 3, UPLOAD_TRIES = 4;
 
+// words is the word of key of the namespace vxFiles of i18n (the page's
+// vue-i18n), its placeholders of params; the key when there is none
+function words(i18n, key, params) {
+  const k = 'vxFiles.' + key;
+  try { if (i18n && i18n.te(k)) return i18n.t(k, params || {}); } catch (e) { }
+  return key;
+}
+// locOf is the locale of i18n as the browser names it ("pt-BR")
+function locOf(i18n) {
+  const l = i18n && i18n.locale ? String(i18n.locale.value || i18n.locale) : '';
+  return (l || (navigator.language || 'en')).replace('_', '-');
+}
 function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '/'); }
   function parent(p) { const s = p.replace(/\/+$/, '').split('/'); s.pop(); return s.join('/') || '/'; }
 
@@ -99,6 +114,13 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
   }
 
   const VxFiles = {
+    // the words: the namespace vxFiles of the page's vue-i18n (fs-tools'
+    // FilesMessages, in the user's language)
+    setup: function () {
+      let i18n = null;
+      try { i18n = window.VueI18n.useI18n({ useScope: 'global' }); } catch (e) { }
+      return { i18n: i18n };
+    },
     props: { base: String, ideUrl: String, start: String, title: String, gitBase: String, terminal: Boolean, vendor: String,
       // the terminal: its address (by default base + 'terminal'), the variable of the root of the files in its shell, whether it is recorded
       terminalUrl: String, termRootVar: { type: String, default: 'FILES_ROOT' }, termRecorded: Boolean,
@@ -141,9 +163,9 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       tb: function () { return { size: 'small', variant: 'text', density: 'comfortable' }; },
       views: function () {
         return [
-          { value: 'list', icon: 'mdi-view-list', title: 'Lista' },
-          { value: 'tree', icon: 'mdi-file-tree-outline', title: 'Árvore' },
-          { value: 'grid', icon: 'mdi-view-grid-outline', title: 'Ícones' },
+          { value: 'list', icon: 'mdi-view-list', title: this.w('viewList') },
+          { value: 'tree', icon: 'mdi-file-tree-outline', title: this.w('viewTree') },
+          { value: 'grid', icon: 'mdi-view-grid-outline', title: this.w('viewIcons') },
         ];
       },
       // what is shown: the folder's entries, filtered and sorted — in the
@@ -178,7 +200,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       },
       crumbs: function () {
         const parts = this.path.split('/').filter(Boolean);
-        const out = [{ name: this.title || 'Início', path: '/' }];
+        const out = [{ name: this.title || this.w('home'), path: '/' }];
         let acc = '';
         parts.forEach(function (p) { acc += '/' + p; out.push({ name: p, path: acc }); });
         return out;
@@ -208,13 +230,13 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
     },
     methods: {
       api: function (op, params, init) {
-        const q = new URLSearchParams();
+        const self = this, q = new URLSearchParams();
         Object.keys(params || {}).forEach(function (k) {
           const v = params[k];
           (Array.isArray(v) ? v : [v]).forEach(function (x) { if (x !== undefined && x !== null) q.append(k, x); });
         });
         return fetch(this.base + 'api/fs/' + op + '?' + q.toString(), init || {}).then(function (r) {
-          if (r.status === 403) throw new Error('A página expirou: recarregue-a.');
+          if (r.status === 403) throw new Error(self.w('expired'));
           const ct = r.headers.get('Content-Type') || '';
           if (!ct.includes('json')) {
             if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -436,16 +458,16 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         if (!p) return;
         p.then(function (j) {
           self.dialog = '';
-          self.toast({ mkdir: 'Pasta criada.', newfile: 'Arquivo criado.', rename: 'Renomeado.', copy: 'Copiado.', move: 'Movido.',
-            delete: 'Excluído.', extract: 'Extraído' + (j && j.files !== undefined ? ' (' + j.files + ' arquivos).' : '.'),
-            fetch: 'Baixado' + (j && j.path ? ': ' + j.path : '.') }[k]);
+          self.toast({ mkdir: self.w('doneMkdir'), newfile: self.w('doneNewfile'), rename: self.w('doneRename'), copy: self.w('doneCopy'), move: self.w('doneMove'),
+            delete: self.w('doneDelete'), extract: j && j.files !== undefined ? self.w('doneExtractN', { n: j.files }) : self.w('doneExtract'),
+            fetch: j && j.path ? self.w('doneFetchPath', { path: j.path }) : self.w('doneFetch') }[k]);
           return self.refresh();
         }).catch(this.failed);
       },
       download: function (e) {
         const a = document.createElement('a');
         a.href = this.base + 'api/fs/download?path=' + encodeURIComponent(join(this.path, e.name));
-        const base = (e.base || e.name || 'pasta').split('/').pop();
+        const base = (e.base || e.name || this.w('zipName')).split('/').pop();
         a.download = e.dir ? base + '.zip' : base;
         document.body.appendChild(a);
         a.click();
@@ -465,7 +487,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       // copyClone copies the clone URL of e (none: the folder open)
       copyClone: function (e) {
         const self = this, url = this.cloneURL(e ? join(this.path, e.name) : this.path);
-        const done = function () { self.toast('URL de clone copiada: ' + url); };
+        const done = function () { self.toast(self.w('cloneCopied', { url: url })); };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(done).catch(function () { self.toast(url, 'info'); });
         } else {
@@ -492,7 +514,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         this.post('write', { path: this.editor.path }, this.editor.content).then(function () {
           self.editor.orig = self.editor.content;
           self.editor.editing = false;
-          self.toast('Salvo.');
+          self.toast(self.w('saved'));
           self.refresh();
         }).catch(this.failed).finally(function () { self.editor.saving = false; });
       },
@@ -646,9 +668,9 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
               self.dialog = 'replace';
             });
           } else if (self.upload.failed.length) {
-            self.toast('Não enviados: ' + self.upload.failed.slice(0, 5).join(', ') + (self.upload.failed.length > 5 ? '…' : ''), 'error');
+            self.toast(self.w('notSent', { list: self.upload.failed.slice(0, 5).join(', ') + (self.upload.failed.length > 5 ? '…' : '') }), 'error');
           } else {
-            self.toast(list.length === 1 ? 'Arquivo enviado.' : list.length + ' arquivos enviados.');
+            self.toast(list.length === 1 ? self.w('sentOne') : self.w('sentMany', { n: list.length }));
           }
           self.refresh();
         });
@@ -692,15 +714,15 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       timeDiff: function (r) {
         if (!r.oldTime || !r.newTime) return '';
         const d = r.newTime - r.oldTime, a = Math.abs(d) / 1000;
-        if (a < 60) return 'mesmo horário';
-        const n = a < 3600 ? Math.round(a / 60) + ' min' : a < 86400 ? Math.round(a / 3600) + ' h' : Math.round(a / 86400) + (Math.round(a / 86400) === 1 ? ' dia' : ' dias');
-        return (d > 0 ? 'mais novo ' : 'mais antigo ') + n;
+        if (a < 60) return this.w('sameTime');
+        const n = a < 3600 ? Math.round(a / 60) + ' min' : a < 86400 ? Math.round(a / 3600) + ' h' : Math.round(a / 86400) + ' ' + (Math.round(a / 86400) === 1 ? this.w('day') : this.w('days'));
+        return this.w(d > 0 ? 'newer' : 'older', { n: n });
       },
       // sizeDiff says how the one sent is of the one there in size
       sizeDiff: function (r) {
         if (r.oldSize === undefined || r.oldSize === null) return '';
         const d = r.newSize - r.oldSize;
-        return d === 0 ? 'mesmo tamanho' : (d > 0 ? '+' : '−') + size(Math.abs(d));
+        return d === 0 ? this.w('sameSize') : (d > 0 ? '+' : '−') + size(Math.abs(d), this.loc());
       },
       // moving by dragging: the files selected onto a folder
       dragStart: function (e, ev) {
@@ -717,15 +739,15 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         const self = this, here = this.path, names = JSON.parse(data).filter(function (n) { return n !== target.name; });
         names.reduce(function (acc, n) {
           return acc.then(function () { return self.post('rename', { path: join(here, n), to: join(join(here, target.name), n.split('/').pop()) }); });
-        }, Promise.resolve()).then(function () { self.toast('Movido para ' + target.name + '.'); self.refresh(); }).catch(this.failed);
+        }, Promise.resolve()).then(function () { self.toast(self.w('movedTo', { name: target.name })); self.refresh(); }).catch(this.failed);
       },
       dropOver: function (target, ev) {
         if (!target.dir) return;
         const types = Array.from((ev.dataTransfer && ev.dataTransfer.types) || []);
         if (types.includes('application/x-vx-files') || types.includes('Files')) { ev.preventDefault(); }
       },
-      date: function (s) { const d = new Date(s); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString().slice(0, 5); },
-      fmtSize: size,
+      date: function (s) { const d = new Date(s), l = this.loc(); return d.toLocaleDateString(l) + ' ' + d.toLocaleTimeString(l, { hour: '2-digit', minute: '2-digit' }); },
+      fmtSize: function (n) { return size(n, this.loc()); },
       icon: iconOf,
       iconClass: function (e) { return 'vx-files-ic vx-files-ic-' + kindOf(e); },
       isArchive: function (e) { return e && !e.dir && ARCHIVE.test(e.name); },
@@ -733,14 +755,18 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       // paths, for the template (no regular expression there: a "\\/" of
       // this file's template string would be "//", a comment, in its code)
       parentOf: function (p) { return parent(p); },
+      // w is the word of key (vxFiles), its placeholders ({n}) of params
+      w: function (key, params) { return words(this.i18n, key, params); },
+      // loc is the locale of the page ("pt-BR"): its dates and numbers
+      loc: function () { return locOf(this.i18n); },
       childOf: function (name) { return join(this.path, name); },
     },
     template: `
 <div class="vx-files" tabindex="0" @keydown="key" @dragenter="dragEnter" @dragleave="dragLeave" @dragover="dragOver" @drop="drop($event)">
   <div class="d-flex flex-wrap align-center ga-1 mb-2">
-    <v-btn icon="mdi-arrow-left" v-bind="tb" :disabled="!back.length" title="Voltar" @click="goBack"></v-btn>
-    <v-btn icon="mdi-arrow-right" v-bind="tb" :disabled="!fwd.length" title="Avançar" @click="goFwd"></v-btn>
-    <v-btn icon="mdi-arrow-up" v-bind="tb" :disabled="path === '/'" title="Subir (Backspace)" @click="up"></v-btn>
+    <v-btn icon="mdi-arrow-left" v-bind="tb" :disabled="!back.length" :title="w('back')" @click="goBack"></v-btn>
+    <v-btn icon="mdi-arrow-right" v-bind="tb" :disabled="!fwd.length" :title="w('forward')" @click="goFwd"></v-btn>
+    <v-btn icon="mdi-arrow-up" v-bind="tb" :disabled="path === '/'" :title="w('up')" @click="up"></v-btn>
     <div class="vx-files-path flex-grow-1" @dblclick="editPath">
       <v-text-field v-if="editingPath" v-model="pathText" density="compact" hide-details variant="outlined" autofocus
         @keydown.enter="submitPath" @keydown.esc="editingPath = false" @blur="editingPath = false"></v-text-field>
@@ -750,38 +776,38 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
           <v-btn size="small" variant="text" class="text-none px-2" :prepend-icon="i ? undefined : 'mdi-home-outline'"
             @click="go(c.path)" @dragover="dropOver({dir: true, name: ''}, $event)">{{ c.name }}</v-btn>
         </template>
-        <v-btn icon="mdi-pencil-outline" size="x-small" variant="text" title="Digitar o caminho (Ctrl+L)" @click="editPath"></v-btn>
+        <v-btn icon="mdi-pencil-outline" size="x-small" variant="text" :title="w('typePath')" @click="editPath"></v-btn>
       </div>
     </div>
     <v-text-field v-model="filter" density="compact" hide-details variant="outlined" prepend-inner-icon="mdi-magnify"
-      placeholder="Filtrar" clearable style="max-width: 200px"></v-text-field>
-    <v-btn icon="mdi-refresh" v-bind="tb" title="Atualizar" :loading="loading" @click="refresh"></v-btn>
+      :placeholder="w('filter')" clearable style="max-width: 200px"></v-text-field>
+    <v-btn icon="mdi-refresh" v-bind="tb" :title="w('refresh')" :loading="loading" @click="refresh"></v-btn>
     <v-menu>
-      <template #activator="{ props }"><v-btn v-bind="Object.assign({}, tb, props)" icon="mdi-plus" title="Novo"></v-btn></template>
+      <template #activator="{ props }"><v-btn v-bind="Object.assign({}, tb, props)" icon="mdi-plus" :title="w('new')"></v-btn></template>
       <v-list density="compact">
-        <v-list-item prepend-icon="mdi-folder-plus-outline" title="Pasta" @click="ask('mkdir')"></v-list-item>
-        <v-list-item prepend-icon="mdi-file-plus-outline" title="Arquivo de texto" @click="ask('newfile')"></v-list-item>
+        <v-list-item prepend-icon="mdi-folder-plus-outline" :title="w('folder')" @click="ask('mkdir')"></v-list-item>
+        <v-list-item prepend-icon="mdi-file-plus-outline" :title="w('textFile')" @click="ask('newfile')"></v-list-item>
         <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-upload" title="Enviar arquivos" @click="pick(false)"></v-list-item>
-        <v-list-item prepend-icon="mdi-folder-upload-outline" title="Enviar uma pasta" @click="pick(true)"></v-list-item>
-        <v-list-item v-if="fetch" prepend-icon="mdi-web" title="Baixar da internet" @click="ask('fetch')"></v-list-item>
+        <v-list-item prepend-icon="mdi-upload" :title="w('uploadFiles')" @click="pick(false)"></v-list-item>
+        <v-list-item prepend-icon="mdi-folder-upload-outline" :title="w('uploadFolder')" @click="pick(true)"></v-list-item>
+        <v-list-item v-if="fetch" prepend-icon="mdi-web" :title="w('fetch')" @click="ask('fetch')"></v-list-item>
       </v-list>
     </v-menu>
-    <div class="vx-files-views" role="group" aria-label="Visão">
+    <div class="vx-files-views" role="group" :aria-label="w('view')">
       <v-btn v-for="v in views" :key="v.value" :icon="v.icon" v-bind="on(view === v.value)" :title="v.title"
         :aria-pressed="view === v.value" @click="setView(v.value)"></v-btn>
     </div>
     <v-btn v-if="terminal" icon="mdi-console" v-bind="on(term.open)"
-      :title="term.open ? 'Fechar o terminal (F4)' : 'Terminal nesta pasta (F4)'" @click="toggleTerm"></v-btn>
+      :title="w(term.open ? 'termClose' : 'termOpen')" @click="toggleTerm"></v-btn>
     <v-btn icon="mdi-image-outline" v-bind="on(thumbs)"
-      :title="thumbs ? 'Não mostrar as imagens' : 'Mostrar as imagens'" @click="toggleThumbs"></v-btn>
+      :title="w(thumbs ? 'thumbsHide' : 'thumbsShow')" @click="toggleThumbs"></v-btn>
     <v-btn icon="mdi-eye-outline" v-bind="on(hidden)"
-      :title="hidden ? 'Esconder os ocultos' : 'Mostrar os ocultos'" @click="toggleHidden"></v-btn>
+      :title="w(hidden ? 'hiddenHide' : 'hiddenShow')" @click="toggleHidden"></v-btn>
     <template v-if="repo">
-      <v-btn :href="gitHere()" icon="mdi-source-branch" v-bind="tb" title="Abrir este repositório no Git"></v-btn>
-      <v-btn icon="mdi-git" v-bind="tb" title="Copiar a URL de clone (git)" @click="copyClone()"></v-btn>
+      <v-btn :href="gitHere()" icon="mdi-source-branch" v-bind="tb" :title="w('gitOpen')"></v-btn>
+      <v-btn icon="mdi-git" v-bind="tb" :title="w('cloneCopy')" @click="copyClone()"></v-btn>
     </template>
-    <v-btn v-if="ideUrl" :href="ideHere()" icon="mdi-code-braces" v-bind="tb" title="Abrir esta pasta na IDE"></v-btn>
+    <v-btn v-if="ideUrl" :href="ideHere()" icon="mdi-code-braces" v-bind="tb" :title="w('ideOpen')"></v-btn>
     <slot name="toolbar"></slot>
     <input ref="files" type="file" multiple hidden @change="picked">
     <input ref="folder" type="file" webkitdirectory hidden @change="picked">
@@ -789,26 +815,26 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
 
   <v-alert v-if="error" type="error" density="compact" class="mb-2">{{ error }}</v-alert>
   <v-progress-linear v-if="upload.busy" :model-value="upload.bytes ? upload.sent / upload.bytes * 100 : 0" color="primary" height="18" rounded class="mb-2">
-    <span class="text-caption">Enviando {{ upload.done }}/{{ upload.total }} · {{ fmtSize(upload.sent) }} de {{ fmtSize(upload.bytes) }}</span>
+    <span class="text-caption">{{ w('uploading', { done: upload.done, total: upload.total, sent: fmtSize(upload.sent), bytes: fmtSize(upload.bytes) }) }}</span>
   </v-progress-linear>
 
   <div ref="area" class="vx-files-area" :class="{ 'vx-files-dropping': dropping > 0 }" :style="areaH ? { height: areaH + 'px', overflow: 'auto', minHeight: 0 } : {}"
     @contextmenu.prevent="ctx(null, $event)" @click.self="selected = []">
-    <div v-if="dropping > 0" class="vx-files-drophint"><v-icon size="48">mdi-tray-arrow-down</v-icon><div>Solte para enviar a {{ path }}</div></div>
+    <div v-if="dropping > 0" class="vx-files-drophint"><v-icon size="48">mdi-tray-arrow-down</v-icon><div>{{ w('dropHere', { path: path }) }}</div></div>
     <v-table v-if="view === 'list' || view === 'tree'" density="compact" hover class="vx-files-table" fixed-header>
       <thead><tr>
-        <th @click="setSort('name')">Nome <v-icon v-if="sortBy === 'name'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
-        <th class="text-end" @click="setSort('size')" style="width: 110px">Tamanho <v-icon v-if="sortBy === 'size'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
-        <th v-if="cols.dims" class="text-end" style="width: 120px">Dimensões</th>
-        <th @click="setSort('mtime')" style="width: 170px">Modificado <v-icon v-if="sortBy === 'mtime'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
-        <th style="width: 150px" @contextmenu.prevent.stop>Permissões
+        <th @click="setSort('name')">{{ w('name') }} <v-icon v-if="sortBy === 'name'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
+        <th class="text-end" @click="setSort('size')" style="width: 110px">{{ w('size') }} <v-icon v-if="sortBy === 'size'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
+        <th v-if="cols.dims" class="text-end" style="width: 120px">{{ w('dimensions') }}</th>
+        <th @click="setSort('mtime')" style="width: 170px">{{ w('modified') }} <v-icon v-if="sortBy === 'mtime'" size="x-small">{{ sortAsc ? 'mdi-arrow-up' : 'mdi-arrow-down' }}</v-icon></th>
+        <th style="width: 150px" @contextmenu.prevent.stop>{{ w('permissions') }}
           <v-menu location="bottom end">
             <template #activator="{ props }"><v-btn v-bind="props" icon="mdi-table-cog" size="x-small" variant="text" density="comfortable"
-              class="float-end" title="Colunas" @click.stop></v-btn></template>
+              class="float-end" :title="w('columns')" @click.stop></v-btn></template>
             <v-list density="compact">
-              <v-list-subheader>Colunas</v-list-subheader>
+              <v-list-subheader>{{ w('columns') }}</v-list-subheader>
               <v-list-item :prepend-icon="cols.dims ? 'mdi-checkbox-marked-outline' : 'mdi-checkbox-blank-outline'"
-                title="Dimensões das imagens" @click="toggleCol('dims')"></v-list-item>
+                :title="w('imageDims')" @click="toggleCol('dims')"></v-list-item>
             </v-list>
           </v-menu>
         </th>
@@ -820,14 +846,14 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
           <td :style="view === 'tree' ? { paddingLeft: (8 + e.depth * 18) + 'px' } : undefined"><template v-if="view === 'tree'"><v-icon v-if="e.dir" size="small" class="vx-files-twisty"
               @click.stop="toggleNode(e)" @dblclick.stop>{{ opened[e.name] ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon><span v-else class="vx-files-twisty"></span></template><span v-if="thumbs && isImage(e)" class="vx-files-thumb vx-files-thumb-sm me-2"><v-icon size="small" :class="[iconClass(e), { 'vx-files-thumb-off': thumbOk[e.name] }]">{{ icon(e) }}</v-icon><img
               :class="{ 'vx-files-thumb-on': thumbOk[e.name] }" :src="imageURL(e.name)" loading="lazy" alt="" draggable="false" @load="thumbOk[e.name] = true"></span><v-icon v-else size="small" class="me-2" :class="iconClass(e)">{{ icon(e) }}</v-icon>{{ e.base || e.name }}
-            <v-icon v-if="e.repo" size="x-small" color="deep-orange" class="ms-1" title="Repositório git">mdi-git</v-icon>
+            <v-icon v-if="e.repo" size="x-small" color="deep-orange" class="ms-1" :title="w('gitRepo')">mdi-git</v-icon>
             <span v-if="e.link" class="text-caption text-medium-emphasis"> → {{ e.link }}</span></td>
           <td class="text-end text-medium-emphasis">{{ e.dir ? '' : fmtSize(e.size) }}</td>
           <td v-if="cols.dims" class="text-end text-medium-emphasis">{{ dims(e) }}</td>
           <td class="text-medium-emphasis">{{ date(e.mtime) }}</td>
           <td class="text-medium-emphasis vx-files-mode">{{ e.mode }}</td>
         </tr>
-        <tr v-if="!shown.length && !loading"><td :colspan="cols.dims ? 5 : 4" class="text-center text-medium-emphasis py-6">{{ filter ? 'Nada com esse filtro.' : 'Pasta vazia. Arraste arquivos ou pastas para cá.' }}</td></tr>
+        <tr v-if="!shown.length && !loading"><td :colspan="cols.dims ? 5 : 4" class="text-center text-medium-emphasis py-6">{{ w(filter ? 'noMatch' : 'emptyFolder') }}</td></tr>
       </tbody>
     </v-table>
     <div v-else class="vx-files-grid">
@@ -838,26 +864,26 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
           <v-icon size="48" :class="[iconClass(e), { 'vx-files-thumb-off': thumbOk[e.name] }]">{{ icon(e) }}</v-icon>
           <img :class="{ 'vx-files-thumb-on': thumbOk[e.name] }" :src="imageURL(e.name)" loading="lazy" alt="" draggable="false" @load="thumbOk[e.name] = true">
         </div>
-        <v-badge v-else-if="e.repo" icon="mdi-git" color="deep-orange" location="bottom end" title="Repositório git">
+        <v-badge v-else-if="e.repo" icon="mdi-git" color="deep-orange" location="bottom end" :title="w('gitRepo')">
           <v-icon size="48" :class="iconClass(e)">{{ icon(e) }}</v-icon>
         </v-badge>
         <v-icon v-else size="48" :class="iconClass(e)">{{ icon(e) }}</v-icon>
         <div class="vx-files-name">{{ e.name }}</div>
       </div>
-      <div v-if="!shown.length && !loading" class="text-center text-medium-emphasis py-6 w-100">{{ filter ? 'Nada com esse filtro.' : 'Pasta vazia. Arraste arquivos ou pastas para cá.' }}</div>
+      <div v-if="!shown.length && !loading" class="text-center text-medium-emphasis py-6 w-100">{{ w(filter ? 'noMatch' : 'emptyFolder') }}</div>
     </div>
   </div>
 
   <div class="d-flex text-caption text-medium-emphasis mt-1 vx-files-status">
-    <span>{{ shown.length }} itens</span>
-    <span v-if="sel.length" class="ms-2">· {{ sel.length }} selecionados{{ selSize ? ' (' + fmtSize(selSize) + ')' : '' }}</span>
+    <span>{{ shown.length === 1 ? w('itemsOne') : w('itemsMany', { n: shown.length }) }}</span>
+    <span v-if="sel.length" class="ms-2">· {{ w('selected', { n: sel.length }) }}{{ selSize ? ' (' + fmtSize(selSize) + ')' : '' }}</span>
     <v-spacer></v-spacer>
-    <span>Arraste arquivos ou pastas para enviar · duplo clique abre · botão direito: mais</span>
+    <span>{{ w('hint') }}</span>
   </div>
 
   <div v-if="terminal && term.open" class="vx-files-sash" :class="{ active: term.dragging }" role="separator"
-    aria-orientation="horizontal" tabindex="0" :aria-valuenow="term.height" aria-label="Altura do terminal"
-    title="Arraste para mudar a altura do terminal (duplo clique: a altura padrão; ↑ ↓ pelo teclado)"
+    aria-orientation="horizontal" tabindex="0" :aria-valuenow="term.height" :aria-label="w('termHeight')"
+    :title="w('termSash')"
     @pointerdown="termDrag" @dblclick="termResize(260)"
     @keydown.up.prevent="termResize(term.height + 20)" @keydown.down.prevent="termResize(term.height - 20)"><span></span></div>
   <div v-if="terminal && term.open" class="vx-files-term" :style="{ height: term.height + 'px' }">
@@ -867,62 +893,62 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
   <v-menu v-model="menu.open" :target="[menu.x, menu.y]" location="bottom start">
     <v-list density="compact" min-width="220">
       <template v-if="sel.length">
-        <v-list-item v-if="one" prepend-icon="mdi-open-in-app" :title="one.dir ? 'Abrir' : (extract && isArchive(one) ? 'Extrair…' : 'Abrir')" @click="open(one)"></v-list-item>
-        <v-list-item v-if="one && !one.dir && !isArchive(one) && !isImage(one)" prepend-icon="mdi-pencil-outline" title="Editar" @click="edit(one, true)"></v-list-item>
-        <v-list-item v-if="one && one.dir" prepend-icon="mdi-code-braces" title="Abrir na IDE" :href="ideHere(childOf(one.name))"></v-list-item>
-        <v-list-item v-if="one && one.repo" prepend-icon="mdi-source-branch" title="Abrir no Git" :href="gitHere(childOf(one.name))"></v-list-item>
-        <v-list-item v-if="one && one.repo" prepend-icon="mdi-git" title="Copiar a URL de clone (git)" @click="copyClone(one)"></v-list-item>
-        <v-list-item prepend-icon="mdi-download" :title="sel.length > 1 ? 'Baixar (' + sel.length + ')' : (one.dir ? 'Baixar (zip)' : 'Baixar')" @click="downloadSel"></v-list-item>
-        <v-list-item v-if="extract && isArchive(one)" prepend-icon="mdi-package-variant" title="Extrair…" @click="ask('extract')"></v-list-item>
+        <v-list-item v-if="one" prepend-icon="mdi-open-in-app" :title="one.dir ? w('open') : (extract && isArchive(one) ? w('extractDots') : w('open'))" @click="open(one)"></v-list-item>
+        <v-list-item v-if="one && !one.dir && !isArchive(one) && !isImage(one)" prepend-icon="mdi-pencil-outline" :title="w('edit')" @click="edit(one, true)"></v-list-item>
+        <v-list-item v-if="one && one.dir" prepend-icon="mdi-code-braces" :title="w('openIde')" :href="ideHere(childOf(one.name))"></v-list-item>
+        <v-list-item v-if="one && one.repo" prepend-icon="mdi-source-branch" :title="w('openGit')" :href="gitHere(childOf(one.name))"></v-list-item>
+        <v-list-item v-if="one && one.repo" prepend-icon="mdi-git" :title="w('cloneCopy')" @click="copyClone(one)"></v-list-item>
+        <v-list-item prepend-icon="mdi-download" :title="sel.length > 1 ? w('downloadN', { n: sel.length }) : (one.dir ? w('downloadZip') : w('download'))" @click="downloadSel"></v-list-item>
+        <v-list-item v-if="extract && isArchive(one)" prepend-icon="mdi-package-variant" :title="w('extractDots')" @click="ask('extract')"></v-list-item>
         <v-divider></v-divider>
-        <v-list-item v-if="one" prepend-icon="mdi-form-textbox" title="Renomear (F2)" @click="ask('rename')"></v-list-item>
-        <v-list-item prepend-icon="mdi-content-copy" title="Copiar para…" @click="ask('copy')"></v-list-item>
-        <v-list-item prepend-icon="mdi-file-move-outline" title="Mover para…" @click="ask('move')"></v-list-item>
+        <v-list-item v-if="one" prepend-icon="mdi-form-textbox" :title="w('renameF2')" @click="ask('rename')"></v-list-item>
+        <v-list-item prepend-icon="mdi-content-copy" :title="w('copyTo')" @click="ask('copy')"></v-list-item>
+        <v-list-item prepend-icon="mdi-file-move-outline" :title="w('moveTo')" @click="ask('move')"></v-list-item>
         <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-delete-outline" base-color="error" title="Excluir (Delete)" @click="ask('delete')"></v-list-item>
+        <v-list-item prepend-icon="mdi-delete-outline" base-color="error" :title="w('deleteKey')" @click="ask('delete')"></v-list-item>
       </template>
       <template v-else>
-        <v-list-item prepend-icon="mdi-folder-plus-outline" title="Nova pasta" @click="ask('mkdir')"></v-list-item>
-        <v-list-item prepend-icon="mdi-file-plus-outline" title="Novo arquivo de texto" @click="ask('newfile')"></v-list-item>
-        <v-list-item prepend-icon="mdi-upload" title="Enviar arquivos" @click="pick(false)"></v-list-item>
-        <v-list-item prepend-icon="mdi-folder-upload-outline" title="Enviar uma pasta" @click="pick(true)"></v-list-item>
-        <v-list-item v-if="fetch" prepend-icon="mdi-web" title="Baixar da internet" @click="ask('fetch')"></v-list-item>
-        <v-list-item prepend-icon="mdi-download" title="Baixar esta pasta (zip)" @click="download({ dir: true, name: '' })"></v-list-item>
-        <v-list-item prepend-icon="mdi-select-all" title="Selecionar tudo (Ctrl+A)" @click="selectAll"></v-list-item>
+        <v-list-item prepend-icon="mdi-folder-plus-outline" :title="w('newFolder')" @click="ask('mkdir')"></v-list-item>
+        <v-list-item prepend-icon="mdi-file-plus-outline" :title="w('newTextFile')" @click="ask('newfile')"></v-list-item>
+        <v-list-item prepend-icon="mdi-upload" :title="w('uploadFiles')" @click="pick(false)"></v-list-item>
+        <v-list-item prepend-icon="mdi-folder-upload-outline" :title="w('uploadFolder')" @click="pick(true)"></v-list-item>
+        <v-list-item v-if="fetch" prepend-icon="mdi-web" :title="w('fetch')" @click="ask('fetch')"></v-list-item>
+        <v-list-item prepend-icon="mdi-download" :title="w('downloadFolder')" @click="download({ dir: true, name: '' })"></v-list-item>
+        <v-list-item prepend-icon="mdi-select-all" :title="w('selectAll')" @click="selectAll"></v-list-item>
       </template>
     </v-list>
   </v-menu>
 
   <v-dialog :model-value="!!dialog && dialog !== 'replace'" max-width="520" @update:model-value="v => { if (!v) dialog = '' }">
     <v-card>
-      <v-card-title class="text-subtitle-1">{{ { mkdir: 'Nova pasta', newfile: 'Novo arquivo', rename: 'Renomear', copy: 'Copiar para', move: 'Mover para', delete: 'Excluir', extract: 'Extrair', fetch: 'Baixar da internet' }[dialog] }}</v-card-title>
+      <v-card-title class="text-subtitle-1">{{ w({ mkdir: 'newFolder', newfile: 'newFile', rename: 'rename', copy: 'copyToTitle', move: 'moveToTitle', delete: 'delete', extract: 'extract', fetch: 'fetch' }[dialog] || 'new') }}</v-card-title>
       <v-card-text>
-        <v-text-field v-if="['mkdir', 'newfile', 'rename'].includes(dialog)" v-model="form.name" label="Nome" autofocus density="compact" @keydown.enter="form.name && run()"></v-text-field>
+        <v-text-field v-if="['mkdir', 'newfile', 'rename'].includes(dialog)" v-model="form.name" :label="w('name')" autofocus density="compact" @keydown.enter="form.name && run()"></v-text-field>
         <template v-if="dialog === 'copy' || dialog === 'move' || dialog === 'extract'">
           <div class="text-caption mb-2" v-if="dialog !== 'extract'">{{ form.confirm.join(', ') }}</div>
-          <v-text-field v-model="form.to" label="Para a pasta" hint="Um caminho desta raiz, como /a/b" persistent-hint autofocus density="compact" @keydown.enter="run()"></v-text-field>
+          <v-text-field v-model="form.to" :label="w('toFolder')" :hint="w('toFolderHint')" persistent-hint autofocus density="compact" @keydown.enter="run()"></v-text-field>
         </template>
         <template v-if="dialog === 'fetch'">
-          <v-text-field v-model="form.url" label="Endereço (http, https)" autofocus density="compact" placeholder="https://…"></v-text-field>
-          <v-text-field v-model="form.name" label="Salvar como (opcional)" density="compact" :hint="'Em ' + path" persistent-hint @keydown.enter="form.url && run()"></v-text-field>
+          <v-text-field v-model="form.url" :label="w('address')" autofocus density="compact" placeholder="https://…"></v-text-field>
+          <v-text-field v-model="form.name" :label="w('saveAs')" density="compact" :hint="w('inPath', { path: path })" persistent-hint @keydown.enter="form.url && run()"></v-text-field>
         </template>
-        <div v-if="dialog === 'delete'">Excluir {{ form.confirm.length === 1 ? form.confirm[0] : form.confirm.length + ' itens' }}? As pastas vão com tudo o que têm. Não dá para desfazer.</div>
+        <div v-if="dialog === 'delete'">{{ w('deleteConfirm', { what: form.confirm.length === 1 ? form.confirm[0] : w('itemsMany', { n: form.confirm.length }) }) }}</div>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn variant="text" @click="dialog = ''">Cancelar</v-btn>
-        <v-btn :color="dialog === 'delete' ? 'error' : 'primary'" variant="flat" @click="run">{{ { delete: 'Excluir', fetch: 'Baixar', extract: 'Extrair', copy: 'Copiar', move: 'Mover', rename: 'Renomear' }[dialog] || 'Criar' }}</v-btn>
+        <v-btn variant="text" @click="dialog = ''">{{ w('cancel') }}</v-btn>
+        <v-btn :color="dialog === 'delete' ? 'error' : 'primary'" variant="flat" @click="run">{{ w({ delete: 'delete', fetch: 'download', extract: 'extract', copy: 'copy', move: 'move', rename: 'rename' }[dialog] || 'create') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
   <v-dialog :model-value="dialog === 'replace'" max-width="860" scrollable @update:model-value="v => { if (!v) keepTheirs() }">
     <v-card>
-      <v-card-title class="text-subtitle-1">Arquivos que já existem</v-card-title>
+      <v-card-title class="text-subtitle-1">{{ w('existTitle') }}</v-card-title>
       <v-card-text>
-        <div class="mb-2">{{ upload.pending ? upload.pending.list.length : 0 }} arquivo(s) já existem em {{ upload.pending && upload.pending.dir }}. Substituir?</div>
+        <div class="mb-2">{{ w('existText', { n: upload.pending ? upload.pending.list.length : 0, dir: upload.pending && upload.pending.dir }) }}</div>
         <v-table density="compact" class="vx-files-conflicts">
-          <thead><tr><th>Arquivo</th><th>Lá</th><th>Enviado</th><th>Diferença</th></tr></thead>
+          <thead><tr><th>{{ w('colFile') }}</th><th>{{ w('colThere') }}</th><th>{{ w('colSent') }}</th><th>{{ w('colDiff') }}</th></tr></thead>
           <tbody>
             <tr v-for="r in (upload.pending && upload.pending.rows) || []" :key="r.path">
               <td class="text-no-wrap"><code>{{ r.path }}</code></td>
@@ -937,8 +963,8 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         </v-table>
       </v-card-text>
       <v-card-actions><v-spacer></v-spacer>
-        <v-btn variant="text" @click="keepTheirs">Manter os de lá</v-btn>
-        <v-btn color="warning" variant="flat" @click="replaceAll">Substituir</v-btn>
+        <v-btn variant="text" @click="keepTheirs">{{ w('keepTheirs') }}</v-btn>
+        <v-btn color="warning" variant="flat" @click="replaceAll">{{ w('replace') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -946,18 +972,18 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
   <v-dialog v-model="editor.open" fullscreen persistent>
     <v-card class="d-flex flex-column" @keydown="editorKey">
       <v-toolbar density="compact">
-        <v-btn icon="mdi-close" title="Fechar (Esc)" @click="closeEditor"></v-btn>
-        <v-toolbar-title class="text-subtitle-1">{{ editor.path }}<span v-if="dirty" title="Alterado"> •</span></v-toolbar-title>
-        <v-chip size="small" variant="tonal" class="me-2">{{ editor.language || 'texto' }}</v-chip>
+        <v-btn icon="mdi-close" :title="w('closeEsc')" @click="closeEditor"></v-btn>
+        <v-toolbar-title class="text-subtitle-1">{{ editor.path }}<span v-if="dirty" :title="w('changed')"> •</span></v-toolbar-title>
+        <v-chip size="small" variant="tonal" class="me-2">{{ editor.language || w('text') }}</v-chip>
         <v-chip size="small" variant="tonal" class="me-2">{{ fmtSize(editor.size) }}</v-chip>
-        <v-chip v-if="editor.truncated" size="small" color="warning" class="me-2">só os primeiros 2 MB</v-chip>
-        <v-chip v-else-if="!editor.writable" size="small" color="grey" prepend-icon="mdi-lock-outline" class="me-2">sem permissão de escrita</v-chip>
+        <v-chip v-if="editor.truncated" size="small" color="warning" class="me-2">{{ w('truncated') }}</v-chip>
+        <v-chip v-else-if="!editor.writable" size="small" color="grey" prepend-icon="mdi-lock-outline" class="me-2">{{ w('noWrite') }}</v-chip>
         <template v-if="editor.editing">
-          <v-btn variant="text" :disabled="editor.saving" @click="cancelEdit">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" prepend-icon="mdi-content-save-outline" class="me-2" :loading="editor.saving" :disabled="!dirty" @click="save">Salvar (Ctrl+S)</v-btn>
+          <v-btn variant="text" :disabled="editor.saving" @click="cancelEdit">{{ w('cancel') }}</v-btn>
+          <v-btn color="primary" variant="flat" prepend-icon="mdi-content-save-outline" class="me-2" :loading="editor.saving" :disabled="!dirty" @click="save">{{ w('saveCtrlS') }}</v-btn>
         </template>
-        <v-btn v-else-if="editor.writable" color="primary" variant="tonal" prepend-icon="mdi-pencil-outline" class="me-2" title="Editar (Ctrl+E)" @click="startEdit">Editar</v-btn>
-        <v-btn :href="ideHere(parentOf(editor.path))" prepend-icon="mdi-code-braces" variant="text" class="me-2" title="Abrir a pasta na IDE">IDE</v-btn>
+        <v-btn v-else-if="editor.writable" color="primary" variant="tonal" prepend-icon="mdi-pencil-outline" class="me-2" :title="w('editCtrlE')" @click="startEdit">{{ w('edit') }}</v-btn>
+        <v-btn :href="ideHere(parentOf(editor.path))" prepend-icon="mdi-code-braces" variant="text" class="me-2" :title="w('ideFolder')">IDE</v-btn>
       </v-toolbar>
       <div class="flex-grow-1 vx-files-viewer" :class="{ 'vx-files-viewer-edit': editor.editing }">
         <vx-codemirror v-if="editor.open" v-model="editor.content" :language="editor.language" :readonly="!editor.editing"
@@ -969,28 +995,28 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
   <v-dialog v-model="image.open" fullscreen>
     <div class="vx-files-image" tabindex="0" @keydown="imageKey" ref="imageBox">
       <div class="vx-files-image-bar">
-        <v-btn icon="mdi-close" variant="text" color="white" title="Fechar (Esc)" @click="image.open = false"></v-btn>
+        <v-btn icon="mdi-close" variant="text" color="white" :title="w('closeEsc')" @click="image.open = false"></v-btn>
         <div class="text-subtitle-1 text-truncate flex-grow-1">{{ image.name }}</div>
         <span class="text-caption me-3">{{ fmtSize(imageEntry().size) }} · {{ images().findIndex(e => e.name === image.name) + 1 }}/{{ images().length }}</span>
         <v-btn :icon="image.actual ? 'mdi-fit-to-screen-outline' : 'mdi-magnify-plus-outline'" variant="text" color="white"
-          :title="image.actual ? 'Ajustar à tela' : 'Tamanho real'" @click="image.actual = !image.actual"></v-btn>
-        <v-btn icon="mdi-download" variant="text" color="white" title="Baixar" @click="download(imageEntry())"></v-btn>
+          :title="w(image.actual ? 'fitScreen' : 'actualSize')" @click="image.actual = !image.actual"></v-btn>
+        <v-btn icon="mdi-download" variant="text" color="white" :title="w('download')" @click="download(imageEntry())"></v-btn>
       </div>
-      <v-btn v-if="images().length > 1" class="vx-files-image-prev" icon="mdi-chevron-left" variant="tonal" color="white" title="Anterior (←)" @click="imageStep(-1)"></v-btn>
+      <v-btn v-if="images().length > 1" class="vx-files-image-prev" icon="mdi-chevron-left" variant="tonal" color="white" :title="w('prev')" @click="imageStep(-1)"></v-btn>
       <div class="vx-files-image-stage" :class="{ 'vx-files-image-actual': image.actual }" @click.self="image.open = false">
         <img :src="imageURL(image.name)" :alt="image.name" @click="image.actual = !image.actual">
       </div>
-      <v-btn v-if="images().length > 1" class="vx-files-image-next" icon="mdi-chevron-right" variant="tonal" color="white" title="Próxima (→)" @click="imageStep(1)"></v-btn>
+      <v-btn v-if="images().length > 1" class="vx-files-image-next" icon="mdi-chevron-right" variant="tonal" color="white" :title="w('next')" @click="imageStep(1)"></v-btn>
     </div>
   </v-dialog>
 
   <v-dialog v-model="editor.confirm" max-width="460">
     <v-card>
-      <v-card-title class="text-subtitle-1">Descartar as alterações?</v-card-title>
-      <v-card-text>{{ editor.path }} tem alterações que não foram salvas.</v-card-text>
+      <v-card-title class="text-subtitle-1">{{ w('discardTitle') }}</v-card-title>
+      <v-card-text>{{ w('discardText', { path: editor.path }) }}</v-card-text>
       <v-card-actions><v-spacer></v-spacer>
-        <v-btn variant="text" @click="editor.confirm = false">Continuar editando</v-btn>
-        <v-btn color="error" variant="flat" @click="cancelEdit(); closeEditor(true)">Descartar</v-btn>
+        <v-btn variant="text" @click="editor.confirm = false">{{ w('keepEditing') }}</v-btn>
+        <v-btn color="error" variant="flat" @click="cancelEdit(); closeEditor(true)">{{ w('discard') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

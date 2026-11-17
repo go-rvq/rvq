@@ -31,6 +31,28 @@ type Messages struct {
 	KeyPermRead                   string    `i18n:"label='Read by the key', hint='What the action @get allows through the WebDAV.'"`
 	KeyPermWrite                  string    `i18n:"label='Write by the key', hint='What the action !write allows through the WebDAV.'"`
 	KeyPermExample                string    `i18n:"label='A key only to read', hint='Introduces the line that makes a key only read the files.'"`
+	TermIsolated                  string    `i18n:"label='Isolated', hint='The chip of the terminal kept apart by a sandbox.', fields=(;'%s'='the sandbox: Landlock, bubblewrap')"`
+	TermNotIsolated               string    `i18n:"label='Not isolated', hint='The chip of a terminal with no sandbox.'"`
+	TermIsolation                 string    `i18n:"label='Isolation', hint='Label of the line saying how the terminal is kept apart.'"`
+	TermLandlock                  string    `i18n:"label='Landlock coverage', hint='What Landlock keeps apart.', fields=(;'%d'='its version (ABI)', '%s'='what it covers: files, TCP, signals')"`
+	TermCovFiles                  string    `i18n:"label='Files (covered)', hint='Landlock keeps the files apart.'"`
+	TermCovSignals                string    `i18n:"label='Signals (covered)', hint='Landlock keeps the signals apart.'"`
+	TermBwrap                     string    `i18n:"label='bubblewrap coverage', hint='What bubblewrap keeps apart.'"`
+	TermSignalsWarn               string    `i18n:"label='Signals not isolated', hint='Warns that the shell may signal the server.'"`
+	TermOffWarn                   string    `i18n:"label='No isolation', hint='Warns that the shell reaches what the server does.'"`
+	TermFolders                   string    `i18n:"label='Folders of the terminal', hint='Label of the folders the terminal reaches.'"`
+	TermNetwork                   string    `i18n:"label='Network', hint='Label of whether the terminal reaches the network.'"`
+	TermNetOn                     string    `i18n:"label='Network on', hint='The terminal reaches the network.'"`
+	TermNetOff                    string    `i18n:"label='Network off', hint='The terminal does not reach the network; the server administrator turns it on.'"`
+	TermLimits                    string    `i18n:"label='Limits', hint='Label of the limits of the terminal.'"`
+	TermMemory                    string    `i18n:"label='Memory (limit)', hint='The limit of memory, in the limits line.'"`
+	TermFileSize                  string    `i18n:"label='File (limit)', hint='The limit of the size of a file, in the limits line.'"`
+	TermProcesses                 string    `i18n:"label='Processes (limit)', hint='The limit of processes, in the limits line.'"`
+	TermNone                      string    `i18n:"label='No limit', hint='Said when there is no limit.'"`
+	TermIdle                      string    `i18n:"label='Idle', hint='Label of when the idle terminal closes.'"`
+	TermIdleCloses                string    `i18n:"label='Closes when idle', hint='When the idle terminal closes.', fields=(;'%s'='the time: 30 min')"`
+	TermSession                   string    `i18n:"label='Session', hint='Label of what the session keeps.'"`
+	TermSessionTemp               string    `i18n:"label='Temporary session', hint='Says HOME and /tmp are removed at the end.'"`
 }
 
 func (m *Messages) WebDavAccess(url string) h.RawHTML {
@@ -55,9 +77,31 @@ var (
 		KeyPermissions:    "Permissions of the access key",
 		KeyPermissionsHint: "A key only denies, on top of what you may: a key with no line of permissions reaches what you reach. " +
 			"For the WebDAV, its lines must not deny this page's resource:",
-		KeyPermRead:    "read and download the files",
-		KeyPermWrite:   "upload, change, move and delete",
-		KeyPermExample: "A key that only reads the files:",
+		KeyPermRead:     "read and download the files",
+		KeyPermWrite:    "upload, change, move and delete",
+		KeyPermExample:  "A key that only reads the files:",
+		TermIsolated:    "Isolated · %s",
+		TermNotIsolated: "Not isolated",
+		TermIsolation:   "Isolation",
+		TermLandlock:    "Landlock (ABI %d): %s",
+		TermCovFiles:    "files",
+		TermCovSignals:  "signals",
+		TermBwrap:       "bubblewrap: mounts, processes and network of its own",
+		TermSignalsWarn: "signals not isolated (Linux < 6.12): it may signal the server's processes",
+		TermOffWarn:     "no sandbox: the shell reaches what the server reaches",
+		TermFolders:     "Folders",
+		TermNetwork:     "Network",
+		TermNetOn:       "on",
+		TermNetOff:      "off — to use it, ask the server's administrator",
+		TermLimits:      "Limits",
+		TermMemory:      "memory",
+		TermFileSize:    "file",
+		TermProcesses:   "processes",
+		TermNone:        "none",
+		TermIdle:        "Idle",
+		TermIdleCloses:  "closes after %s",
+		TermSession:     "Session",
+		TermSessionTemp: "HOME and /tmp temporary, removed when it closes",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -77,9 +121,31 @@ var (
 		KeyPermissions:    "Permissões da chave de acesso",
 		KeyPermissionsHint: "Uma chave só nega, sobre o que você pode: uma chave sem nenhuma linha de permissão alcança o que você alcança. " +
 			"Para o WebDAV, as linhas dela não podem negar o recurso desta página:",
-		KeyPermRead:    "ler e baixar os arquivos",
-		KeyPermWrite:   "enviar, mudar, mover e apagar",
-		KeyPermExample: "Uma chave que só lê os arquivos:",
+		KeyPermRead:     "ler e baixar os arquivos",
+		KeyPermWrite:    "enviar, mudar, mover e apagar",
+		KeyPermExample:  "Uma chave que só lê os arquivos:",
+		TermIsolated:    "Isolado · %s",
+		TermNotIsolated: "Sem isolamento",
+		TermIsolation:   "Isolamento",
+		TermLandlock:    "Landlock (ABI %d): %s",
+		TermCovFiles:    "arquivos",
+		TermCovSignals:  "sinais",
+		TermBwrap:       "bubblewrap: montagens, processos e rede próprios",
+		TermSignalsWarn: "sinais não isolados (Linux < 6.12): pode sinalizar os processos do servidor",
+		TermOffWarn:     "sem sandbox: o shell alcança o que o servidor alcança",
+		TermFolders:     "Pastas",
+		TermNetwork:     "Rede",
+		TermNetOn:       "ativada",
+		TermNetOff:      "desativada — para usá-la, consulte o administrador do servidor",
+		TermLimits:      "Limites",
+		TermMemory:      "memória",
+		TermFileSize:    "arquivo",
+		TermProcesses:   "processos",
+		TermNone:        "nenhum",
+		TermIdle:        "Inativo",
+		TermIdleCloses:  "fecha após %s",
+		TermSession:     "Sessão",
+		TermSessionTemp: "HOME e /tmp temporários, apagados ao fechar",
 	}
 )
 

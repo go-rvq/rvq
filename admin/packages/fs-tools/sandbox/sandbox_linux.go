@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -355,23 +354,15 @@ func landlock(s Spec) error {
 	return nil
 }
 
-// Describe says what m keeps apart here (for the log).
-func Describe(m Mode) string {
+// CoverageOf is what m keeps apart here.
+func CoverageOf(m Mode) Coverage {
+	c := Coverage{Mode: m}
 	switch m {
 	case ModeLandlock:
-		v := LandlockABI()
-		s := "landlock ABI " + strconv.Itoa(v) + ": files"
-		if v >= 4 {
-			s += ", TCP"
-		}
-		if v >= 6 {
-			s += ", signals"
-		} else {
-			s += " (signals not isolated: Linux < 6.12)"
-		}
-		return s
+		c.ABI = LandlockABI()
+		c.Files, c.TCP, c.Signals = c.ABI > 0, c.ABI >= 4, c.ABI >= 6
 	case ModeBwrap:
-		return "bwrap: namespaces of mounts, processes, network"
+		c.Files, c.TCP, c.Signals = true, true, true
 	}
-	return string(m)
+	return c
 }

@@ -70,3 +70,8 @@
 .vx-files-thumb img { position: absolute; inset: 0; margin: auto; opacity: 0; transition: opacity .15s; }
 .vx-files-thumb img.vx-files-thumb-on { opacity: 1; }
 .vx-files-thumb .vx-files-thumb-off { visibility: hidden; }
+/* the chip of how the terminal is kept apart (vx-terminal), its details */
+.vx-term-info { cursor: pointer; }
+.vx-term-info-table { border-collapse: collapse; font-size: 13px; }
+.vx-term-info-table th { text-align: left; vertical-align: top; padding: 3px 14px 3px 0; font-weight: 600; white-space: nowrap; }
+.vx-term-info-table td { vertical-align: top; padding: 3px 0; }

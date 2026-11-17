@@ -77,6 +77,7 @@ func TestTerminal(t *testing.T) {
 	}
 	var out strings.Builder
 	var exit string
+	var info *termInfo
 	_ = c.SetReadDeadline(time.Now().Add(20 * time.Second))
 	for exit == "" {
 		mt, p, err := c.ReadMessage()
@@ -84,12 +85,28 @@ func TestTerminal(t *testing.T) {
 			t.Fatal(err, out.String())
 		}
 		if mt == websocket.TextMessage {
-			var m struct{ Exit string }
+			var m struct {
+				Exit string
+				Info *termInfo
+			}
 			_ = json.Unmarshal(p, &m)
+			if m.Info != nil {
+				// the first message, before the shell's output
+				if out.Len() > 0 || info != nil {
+					t.Error("info not first")
+				}
+				info = m.Info
+			}
 			exit = m.Exit
 			continue
 		}
 		out.Write(p)
+	}
+	if info == nil || info.Label == "" || len(info.Details) < 2 {
+		t.Fatalf("no info: %+v", info)
+	}
+	if got := info.Details[1].Values; len(got) != 1 || got[0].Text != "$FILES_ROOT/data — "+Messages_en_US.ReadWrite {
+		t.Errorf("folders %+v", got)
 	}
 	got := out.String()
 	for _, want := range []string{"/root/data/sub", "root /", "written", "refused"} {
@@ -119,3 +136,62 @@ func (u unwrapOnly) Header() http.Header         { return u.w.Header() }
 func (u unwrapOnly) Write(p []byte) (int, error) { return u.w.Write(p) }
 func (u unwrapOnly) WriteHeader(code int)        { u.w.WriteHeader(code) }
 func (u unwrapOnly) Unwrap() http.ResponseWriter { return u.w }
+
+func TestTermInfo(t *testing.T) {
+	m := Messages_en_US
+	s := &session{folders: []sessionFolder{{At: "files", Write: true}, {At: "docs"}}}
+	off := (&terminal{mode: sandbox.ModeOff, idle: 30 * time.Minute}).info(m, s)
+	if off.Label != m.TermNotIsolated || off.Color != "warning" || !off.Details[0].Values[0].Warn {
+		t.Errorf("off: %+v", off)
+	}
+	if v := off.Details[1].Values; len(v) != 2 || v[1].Text != "$FILES_ROOT/docs — "+m.ReadOnly {
+		t.Errorf("folders: %+v", v)
+	}
+	tm := &terminal{mode: sandbox.ModeLandlock, idle: 30 * time.Minute,
+		limits: sandbox.Limits{CPU: 10 * time.Minute, Memory: 2 << 30, FileSize: 1536 << 20}}
+	in := tm.info(m, s)
+	if in.Label != "Isolated · Landlock" || in.Color != "info" {
+		t.Errorf("landlock: %+v", in)
+	}
+	var limits, idle string
+	for _, d := range in.Details {
+		switch d.Label {
+		case m.TermLimits:
+			limits = d.Values[0].Text
+		case m.TermIdle:
+			idle = d.Values[0].Text
+		}
+	}
+	if limits != "CPU 10 min · memory 2 GiB · file 1.5 GiB" || idle != "closes after 30 min" {
+		t.Errorf("%q %q", limits, idle)
+	}
+	// the network: on, or off and who turns it on
+	network := func(in termInfo) string {
+		for _, d := range in.Details {
+			if d.Label == m.TermNetwork {
+				return d.Values[0].Text
+			}
+		}
+		return ""
+	}
+	if got := network(in); got != m.TermNetOff {
+		t.Errorf("network off: %q", got)
+	}
+	tm.net = true
+	if got := network(tm.info(m, s)); got != m.TermNetOn {
+		t.Errorf("network on: %q", got)
+	}
+}
+
+func TestFmt(t *testing.T) {
+	for d, want := range map[time.Duration]string{45 * time.Second: "45 s", 10 * time.Minute: "10 min", time.Hour: "1 h", 90 * time.Minute: "1 h 30 min"} {
+		if got := fmtDuration(d); got != want {
+			t.Errorf("%v: %q", d, got)
+		}
+	}
+	for n, want := range map[int64]string{512: "512 B", 512 << 20: "512 MiB", 2 << 30: "2 GiB", 1536 << 20: "1.5 GiB"} {
+		if got := fmtSize(n); got != want {
+			t.Errorf("%d: %q", n, got)
+		}
+	}
+}

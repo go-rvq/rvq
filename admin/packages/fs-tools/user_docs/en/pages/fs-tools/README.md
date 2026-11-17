@@ -36,6 +36,12 @@ list and the terminal is dragged to change its height (a double click: the
 default height; ↑ ↓ by the keyboard), kept in the browser; the terminal's
 expand button puts it over the whole window, and gives it back.
 
+Beside the state of the connection, a chip says how the shell is kept apart
+(**Isolated · Landlock**, or **Not isolated**); a click shows the details of
+the session — the isolation, the folders and whether each is written, the
+network (on, or off: to use it, ask the server's administrator), the
+limits, when it closes unused.
+
 It runs apart from the rest of the server:
 
 - it sees only the folders of the file system, in `$FILES_ROOT`
@@ -87,7 +93,7 @@ optional; here, the defaults):
 fstools:
   terminal:
     sandbox: auto    # auto, bwrap, landlock or off (no isolation)
-    network: false   # the shell reaches the network
+    network: false   # the shell reaches the network (below)
     shell: ""        # default: /bin/bash, else /bin/sh
     limits:
       cpu: 10m
@@ -102,3 +108,22 @@ Landlock; with neither, the terminal is off and the WebDAV panel says why.
 With Landlock before Linux 6.12, the shell may still signal the processes of
 the server's user: run the server as a user of its own, or turn the terminal
 off where that matters.
+
+### The terminal's network
+
+`network: false` (the default): the shell reaches no other machine — with
+Landlock, no TCP connection and no port opened (Linux 6.7 or newer; before
+it Landlock does not block TCP); with bubblewrap, a network of its own,
+empty. The chip shows the network off and tells the user to ask the
+administrator.
+
+`network: true`: the shell reaches what the server reaches — the database
+for a `pg_dump`, say. The server's passwords stay out of the shell's
+environment: the tool needs its own (a `.pgpass` in a folder of the user,
+or typed).
+
+```yaml
+fstools:
+  terminal:
+    network: true
+```

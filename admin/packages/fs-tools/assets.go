@@ -1,6 +1,7 @@
 package fs_tools
 
 import (
+	"context"
 	"embed"
 	"io/fs"
 	"net/http"
@@ -31,6 +32,10 @@ func UseAssets(p *presets.Builder) {
 		return
 	}
 	assetsUsed[p] = true
+	// their words, in the user's language: the namespace vxFiles of the
+	// page's vue-i18n
+	ConfigureFilesMessages(p.I18n())
+	p.VueI18nMessages(VueI18nNamespace, func(ctx context.Context) any { return GetFilesMessages(ctx) })
 	read := func(name string) web.ComponentsPack {
 		b, err := assetsFS.ReadFile("assets/" + name)
 		if err != nil {
@@ -48,6 +53,10 @@ func UseAssets(p *presets.Builder) {
 }
 
 const vendorPath = "/fs-tools/vendor"
+
+// VueI18nNamespace is the namespace of the vue-i18n where <vx-files> and
+// <vx-terminal> read their words (FilesMessages).
+const VueI18nNamespace = "vxFiles"
 
 // VendorPath is where xterm is (the vendor of <vx-terminal>).
 func VendorPath(p *presets.Builder) string { return p.GetURIPrefix() + vendorPath }

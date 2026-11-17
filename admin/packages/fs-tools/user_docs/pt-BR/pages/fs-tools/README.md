@@ -38,6 +38,12 @@ o terminal se arrasta para mudar a altura dele (duplo clique: a altura
 padrão; ↑ ↓ pelo teclado), guardada no navegador; o botão de expandir do
 terminal o põe na janela toda, e o devolve.
 
+Ao lado do estado da conexão, um chip diz como o shell está isolado
+(**Isolado · Landlock**, ou **Sem isolamento**); um clique mostra os detalhes
+da sessão — o isolamento, as pastas e se cada uma é escrita, a rede
+(ativada, ou desativada: para usá-la, consulte o administrador do servidor),
+os limites, quando fecha sem uso.
+
 Ele roda isolado do resto do servidor:
 
 - vê só as pastas do sistema de arquivos, em `$FILES_ROOT`
@@ -89,7 +95,7 @@ chaves opcionais; aqui, os padrões):
 fstools:
   terminal:
     sandbox: auto    # auto, bwrap, landlock ou off (sem isolamento)
-    network: false   # o shell alcança a rede
+    network: false   # o shell alcança a rede (abaixo)
     shell: ""        # padrão: /bin/bash, senão /bin/sh
     limits:
       cpu: 10m
@@ -104,3 +110,22 @@ Linux; sem nenhum, o terminal fica desligado e o painel do WebDAV diz por
 quê. Com o Landlock antes do Linux 6.12, o shell ainda pode mandar sinais aos
 processos do usuário do servidor: rode o servidor com um usuário só dele, ou
 desligue o terminal se isso importa.
+
+### A rede do terminal
+
+`network: false` (o padrão): o shell não alcança outra máquina — com o
+Landlock, nenhuma conexão TCP nem porta aberta (Linux 6.7 ou mais novo; antes
+dele o Landlock não bloqueia o TCP); com o bubblewrap, uma rede só dele,
+vazia. O chip mostra a rede como desativada e diz ao usuário para consultar o
+administrador.
+
+`network: true`: o shell alcança o que o servidor alcança — por exemplo, o
+banco de dados para um `pg_dump`. As senhas do servidor continuam fora do
+ambiente do shell: a ferramenta precisa das suas (um `.pgpass` numa pasta do
+usuário, ou digitadas).
+
+```yaml
+fstools:
+  terminal:
+    network: true
+```
