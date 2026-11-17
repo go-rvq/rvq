@@ -75,7 +75,12 @@ type Messages struct {
 	NotReady                    string `i18n:"hint='The download of a state not ready yet. {status}.'"`
 	NotDownloadable             string `i18n:"hint='The download of a state that failed or was canceled.'"`
 	ManifestLink                string `i18n:"hint='Link to download the manifest of a state.'"`
-	ClientURL                   string `i18n:"hint='Label of the address the client downloads from.'"`
+	ClientURL                   string `i18n:"hint='Label of the routes the client downloads by.'"`
+	ClientRoutes                string `i18n:"hint='Says the client’s routes are not the admin’s pages.'"`
+	RouteLatest                 string `i18n:"hint='What the route !latest gives.'"`
+	RouteSession                string `i18n:"hint='What the route !session gives.'"`
+	RouteManifest               string `i18n:"hint='What the route !manifest gives.'"`
+	RouteFiles                  string `i18n:"hint='What the route !files gives.'"`
 	StateIDLabel                string `i18n:"hint='Label of the id of the state, for the client.'"`
 	KeyNeeded                   string `i18n:"hint='Says what an access key needs to download.'"`
 	PartialWarning              string `i18n:"hint='Warning of a partial state.'"`
@@ -143,7 +148,12 @@ var Messages_en_US = &Messages{
 	NotReady:                    "Not ready to download: {status}.",
 	NotDownloadable:             "This state cannot be downloaded.",
 	ManifestLink:                "Download the manifest",
-	ClientURL:                   "Address of the client",
+	ClientURL:                   "Routes of the client",
+	ClientRoutes:                "Out of the admin's pages and of its login: an access key opens a session (its token for the others).",
+	RouteLatest:                 "the id of the newest state ready and whole",
+	RouteSession:                "a session: its token (the access key)",
+	RouteManifest:               "the manifest (the token)",
+	RouteFiles:                  "a file of the manifest (the token; Range, If-Match)",
 	StateIDLabel:                "State",
 	KeyNeeded:                   "The client opens a session with an access key (your profile › Access keys) that does not deny this page's Download permission.",
 	PartialWarning:              "Partial: some sources were left out — it does not start the application alone.",
@@ -211,7 +221,12 @@ var Messages_pt_BR = &Messages{
 	NotReady:                    "Ainda não pode ser baixado: {status}.",
 	NotDownloadable:             "Este state não pode ser baixado.",
 	ManifestLink:                "Baixar o manifesto",
-	ClientURL:                   "Endereço do cliente",
+	ClientURL:                   "Rotas do cliente",
+	ClientRoutes:                "Fora das páginas do admin e do seu login: uma chave de acesso abre uma sessão (o token dela vale para as outras).",
+	RouteLatest:                 "o id do state pronto e completo mais novo",
+	RouteSession:                "uma sessão: o seu token (pela chave de acesso)",
+	RouteManifest:               "o manifesto (pelo token)",
+	RouteFiles:                  "um arquivo do manifesto (pelo token; Range, If-Match)",
 	StateIDLabel:                "State",
 	KeyNeeded:                   "O cliente abre uma sessão com uma chave de acesso (o seu perfil › Chaves de acesso) que não negue a permissão Baixar desta página.",
 	PartialWarning:              "Parcial: algumas fontes ficaram de fora — não sobe a aplicação sozinho.",

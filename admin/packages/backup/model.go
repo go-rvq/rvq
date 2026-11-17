@@ -92,7 +92,7 @@ func statusChip(s *BackupState, ctx *web.EventContext) h.HTMLComponent {
 
 // poller reloads the page every 5 s while it is shown (a state queued or
 // being made); one a page, whatever the rows that draw it; the page not
-// seen, or a login up, not then.
+// seen, a login up, or a menu or a dialog open, not then.
 func poller() h.HTMLComponent {
 	return h.Tag("user-component").
 		Attr(":setup", `[({inject, window}) => {
@@ -100,6 +100,9 @@ func poller() h.HTMLComponent {
 	const plaid = inject('plaid');
 	window.__rvqBackupPoll = window.setInterval(() => {
 		if (window.document.hidden || (window.__goplaid && window.__goplaid.loginPending)) return;
+		// a menu, a dialog open (the cancel of a row, the confirm of a delete):
+		// not under the user's hand
+		if (window.document.querySelector('.v-overlay--active')) return;
 		plaid().reload().go();
 	}, 5000);
 }]`).
@@ -173,7 +176,7 @@ func (b *Builder) configureModel(mb *presets.ModelBuilder) {
 
 	// the sessions of a state: who downloaded it, from where, what
 	sessions := presets.NewModelBuilder(b.p, &BackupSession{}, presets.ModelConfig().SetId("backup_sessions").SetModuleKey(MessagesKey))
-	sessions.Label("BackupSession").SetPluralLabel("BackupSessions")
+	sessions.Label("BackupSession").SetPluralLabel("BackupSessions").MenuIcon("mdi-download-network-outline")
 	mb.AddChild(sessions)
 	b.configureSessions(sessions)
 }
@@ -336,11 +339,21 @@ func (b *Builder) downloadSection(s *BackupState, ctx *web.EventContext) h.HTMLC
 		return nil
 	}
 	manifest := strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/!backup-manifest/" + s.ID
+	base := clientBase(ctx.R) + b.ClientPath()
 	return h.Div(
 		v.VBtn(m.ManifestLink).Href(manifest).PrependIcon("mdi-download").Variant(v.VariantTonal).Size(v.SizeSmall).
 			Attr("download", true).Attr("data-backup-manifest", true),
 		h.Div(h.Strong(m.StateIDLabel+": "), h.Code(s.ID)).Class("mt-3"),
-		h.Div(h.Strong(m.ClientURL+": "), h.Code(clientBase(ctx.R)+b.ClientPath())).Class("mt-1"),
+		// the client's routes of this state: out of the admin's pages (and
+		// of its login), at ClientPath
+		h.Div(h.Strong(m.ClientURL)).Class("mt-3"),
+		h.Div(h.Text(m.ClientRoutes)).Class("text-caption mb-1"),
+		v.VTable(h.Tbody(
+			routeRow("GET", base+"/!latest", m.RouteLatest),
+			routeRow("POST", base+"/"+s.ID+"/!session", m.RouteSession),
+			routeRow("GET", base+"/"+s.ID+"/!manifest", m.RouteManifest),
+			routeRow("GET", base+"/"+s.ID+"/!files/<path>", m.RouteFiles),
+		)).Density(v.DensityCompact).Attr("data-backup-routes", true),
 		h.Div(h.Text(m.KeyNeeded)).Class("mt-2 text-caption"),
 	).Attr("data-backup-download", true)
 }
@@ -368,4 +381,9 @@ func (b *Builder) configureSessions(mb *presets.ModelBuilder) {
 	})
 	mb.Detailing("CreatedAt", "UserName", "IP", "UserAgent", "ExpiresAt", "Files", "Bytes")
 	mb.SetCreatingDisabled(true).SetEditingDisabled(true).SetDeletingDisabled(true)
+}
+
+// routeRow is a route of the client: its method, its address, what it is.
+func routeRow(method, url, what string) h.HTMLComponent {
+	return h.Tr(h.Td(h.Code(method)), h.Td(h.Code(url)).Style("word-break: break-all"), h.Td(h.Text(what)).Class("text-caption"))
 }
