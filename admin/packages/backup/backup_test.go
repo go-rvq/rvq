@@ -224,6 +224,18 @@ func TestRetainAndRecover(t *testing.T) {
 	if left, _ := filepath.Glob(filepath.Join(b.core.Dir(), ".building-*")); len(left) != 0 {
 		t.Errorf("left %v", left)
 	}
+
+	// ready, its folder gone: failed
+	os.RemoveAll(filepath.Join(b.core.Dir(), ids[2]))
+	if err := b.recover(); err != nil {
+		t.Fatal(err)
+	}
+	if g := reload(t, b, ids[2]); g.Status != StatusFailed || g.Error != Messages_en_US.Gone {
+		t.Errorf("gone %+v", g)
+	}
+	if k := reload(t, b, ids[0]); k.Status != StatusReady {
+		t.Errorf("kept %+v", k)
+	}
 }
 
 func TestToken(t *testing.T) {

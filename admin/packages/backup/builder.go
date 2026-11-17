@@ -11,8 +11,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -148,9 +150,27 @@ func (b *Builder) recover() error {
 		b.log.Warn("cleaning the states left", "err", err)
 	}
 	now := time.Now()
-	return b.db.Model(&BackupState{}).Where("status = ?", StatusBuilding).Updates(map[string]any{
+	err := b.db.Model(&BackupState{}).Where("status = ?", StatusBuilding).Updates(map[string]any{
 		"status": StatusFailed, "error": Messages_en_US.Interrupted, "finished_at": now,
 	}).Error
+	if err != nil {
+		return err
+	}
+	// ready, but their files gone (another machine, a folder removed): not
+	// downloadable
+	var ready []BackupState
+	if err := b.db.Select("id").Where("status = ?", StatusReady).Find(&ready).Error; err != nil {
+		return err
+	}
+	for _, s := range ready {
+		if _, err := os.Stat(b.core.ManifestPath(s.ID)); errors.Is(err, fs.ErrNotExist) {
+			if err := b.db.Model(&BackupState{}).Where("id = ?", s.ID).Updates(map[string]any{
+				"status": StatusFailed, "error": Messages_en_US.Gone}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (b *Builder) flushLoop() {

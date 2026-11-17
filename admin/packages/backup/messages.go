@@ -87,6 +87,7 @@ type Messages struct {
 	ErrInProgress               string `i18n:"hint='Error: a state being made cannot be removed.'"`
 	ErrNoSource                 string `i18n:"hint='Error: no source chosen.'"`
 	Interrupted                 string `i18n:"hint='Error of a state whose making the restart of the application interrupted.'"`
+	Gone                        string `i18n:"hint='Error of a state ready whose files are gone (its folder removed).'"`
 	Canceled                    string `i18n:"hint='Flash after a state is canceled.'"`
 }
 
@@ -154,6 +155,7 @@ var Messages_en_US = &Messages{
 	ErrInProgress:               "A state being made cannot be removed: cancel it first.",
 	ErrNoSource:                 "Choose at least one source.",
 	Interrupted:                 "interrupted by a restart of the application",
+	Gone:                        "its files are gone (its folder was removed)",
 	Canceled:                    "Canceled.",
 }
 
@@ -221,5 +223,6 @@ var Messages_pt_BR = &Messages{
 	ErrInProgress:               "Um state sendo gerado não pode ser excluído: cancele-o antes.",
 	ErrNoSource:                 "Escolha ao menos uma fonte.",
 	Interrupted:                 "interrompido por um reinício da aplicação",
+	Gone:                        "os seus arquivos sumiram (a pasta foi removida)",
 	Canceled:                    "Cancelado.",
 }
