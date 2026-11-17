@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	stdhtml "html"
 	"net/http"
@@ -110,6 +112,15 @@ type extraAsset struct {
 	contentType string
 	body        web.ComponentsPack
 	refTag      string
+	// version is of its body (a hash): in the address the pages use, so a
+	// browser never keeps an old one
+	version string
+}
+
+// assetVersion is the version of body: the start of its sha256.
+func assetVersion(body web.ComponentsPack) string {
+	sum := sha256.Sum256([]byte(body))
+	return hex.EncodeToString(sum[:6])
 }
 
 const (
@@ -412,6 +423,7 @@ func (b *Builder) ExtraAsset(path string, contentType string, body web.Component
 		theOne.contentType = contentType
 		theOne.body = body
 	}
+	theOne.version = assetVersion(body)
 
 	if len(refTag) > 0 {
 		theOne.refTag = refTag[0]
@@ -1473,11 +1485,11 @@ func (b *Builder) InjectExtraAssets(ctx *web.EventContext) {
 		}
 
 		if strings.HasSuffix(ea.path, "css") {
-			ctx.Injector.HeadHTML(fmt.Sprintf("<link rel=\"stylesheet\" href=\"%s\">", b.extraFullPath(ea)))
+			ctx.Injector.HeadHTML(fmt.Sprintf("<link rel=\"stylesheet\" href=\"%s\">", b.extraRef(ea)))
 			continue
 		}
 
-		ctx.Injector.HeadHTML(fmt.Sprintf("<script src=\"%s\"></script>", b.extraFullPath(ea)))
+		ctx.Injector.HeadHTML(fmt.Sprintf("<script src=\"%s\"></script>", b.extraRef(ea)))
 	}
 }
 
@@ -1516,6 +1528,11 @@ func (b *Builder) SkipNotFoundHandlerFunc(f func(r *http.Request) bool) *Builder
 
 func (b *Builder) extraFullPath(ea *extraAsset) string {
 	return b.prefix + "/extra" + ea.path
+}
+
+// extraRef is the address of ea in a page: its path and its version.
+func (b *Builder) extraRef(ea *extraAsset) string {
+	return b.extraFullPath(ea) + "?v=" + ea.version
 }
 
 func (b *Builder) Build(mux ...*http.ServeMux) {
