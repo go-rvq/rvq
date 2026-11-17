@@ -141,17 +141,21 @@ type Result struct {
 	Bytes              int64
 	Partial            bool
 	Sources            []SourceResult
+	// Meta is what the sources told the client (FS.Meta).
+	Meta map[string]string
 	// ManifestSize and ManifestSum are of the manifest's file.
 	ManifestSize int64
 	ManifestSum  Sum
 }
 
-// SourceResult is what a source registered.
+// SourceResult is what a source registered, and what it warns of (files
+// of a repository not committed, say).
 type SourceResult struct {
 	Name     string
 	Files    int
 	Bytes    int64
 	Duration time.Duration
+	Warnings []string
 }
 
 var idRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
@@ -202,7 +206,7 @@ func (b *Builder) BuildState(ctx context.Context, st *State) (err error) {
 	}()
 	fsys := &FS{b: b, st: st, ctx: ctx, snap: filepath.Join(work, filesDir), entries: map[string]Entry{}, origins: map[string]string{}}
 	st.FS = fsys
-	st.Result = Result{Partial: len(sel) < len(all)}
+	st.Result = Result{Partial: len(sel) < len(all), Meta: map[string]string{}}
 	for _, s := range b.sourcesOf(sel) {
 		if err = ctx.Err(); err != nil {
 			return err
@@ -409,16 +413,43 @@ func (f *FS) AddGenerated(p string, mode fs.FileMode, write func(w io.Writer) er
 		MTime: fi.ModTime(), Size: fi.Size(), Sum: h.sum()}, "")
 }
 
-// AddTree registers p (of the root) and all under it: folders, files,
-// links (not followed). exclude are patterns of path.Match of the paths
-// under p ("cache/*"); one with no "/" is of a name too (".git", "*.tmp"):
-// an excluded folder is left whole.
-func (f *FS) AddTree(p string, exclude ...string) error {
-	rel, err := f.relTree(p)
-	if err != nil {
-		return err
+// Meta tells the client name of this source (stored as
+// "<source>.<name>" in the manifest's header): where its repository is,
+// where its dump.
+func (f *FS) Meta(name, value string) error {
+	k := f.source.Name + "." + name
+	if !metaKeyRe.MatchString(k) {
+		return fmt.Errorf("backup: invalid meta %q", k)
 	}
-	return f.AddTreeFrom(rel, filepath.Join(f.b.root, filepath.FromSlash(rel)), exclude...)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.st.Result.Meta[k] = value
+	return nil
+}
+
+// Warn notes what the state should say of this source (its files of a
+// repository not committed): the state is made all the same.
+func (f *FS) Warn(format string, args ...any) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.source.Warnings = append(f.source.Warnings, fmt.Sprintf(format, args...))
+}
+
+// TreeOptions of AddTreeWith.
+type TreeOptions struct {
+	// Exclude are patterns of path.Match of the paths under the tree
+	// ("cache/*"); one with no "/" is of a name too (".git", "*.tmp"): an
+	// excluded folder is left whole.
+	Exclude []string
+	// Sum, when it knows it, is the sha256 of the file at rel (of the
+	// tree) — a file stored by its hash —: it is not read.
+	Sum func(rel string, fi fs.FileInfo) (Sum, bool)
+}
+
+// AddTree registers p (of the root) and all under it: folders, files,
+// links (not followed), but what exclude says (TreeOptions.Exclude).
+func (f *FS) AddTree(p string, exclude ...string) error {
+	return f.AddTreeWith(p, "", TreeOptions{Exclude: exclude})
 }
 
 // relTree is rel, "." (the root itself) allowed.
@@ -432,12 +463,20 @@ func (f *FS) relTree(p string) (string, error) {
 // AddTreeFrom registers src and all under it at p of the state ("." the
 // root).
 func (f *FS) AddTreeFrom(p, src string, exclude ...string) error {
-	rel := path.Clean(filepath.ToSlash(p))
-	if rel != "." {
-		if err := CheckPath(rel); err != nil {
-			return err
-		}
+	return f.AddTreeWith(p, src, TreeOptions{Exclude: exclude})
+}
+
+// AddTreeWith registers the tree at p (of the root, "." the root itself):
+// from src ("": p's own folder), as o says.
+func (f *FS) AddTreeWith(p, src string, o TreeOptions) error {
+	rel, err := f.relTree(p)
+	if err != nil {
+		return err
 	}
+	if src == "" {
+		src = filepath.Join(f.b.root, filepath.FromSlash(rel))
+	}
+	exclude := o.Exclude
 	for _, pat := range exclude {
 		if _, err := path.Match(pat, ""); err != nil {
 			return fmt.Errorf("backup: exclude %q: %w", pat, err)
@@ -468,6 +507,11 @@ func (f *FS) AddTreeFrom(p, src string, exclude ...string) error {
 		fi, err := d.Info()
 		if err != nil {
 			return err
+		}
+		if o.Sum != nil && fi.Mode().IsRegular() {
+			if s, ok := o.Sum(sub, fi); ok {
+				return f.addInfo(at, name, fi, &s)
+			}
 		}
 		return f.addInfo(at, name, fi, nil)
 	})
@@ -571,7 +615,7 @@ func (f *FS) put(e Entry, origin string) error {
 
 // finish writes the manifest and the origins of the state into work.
 func (f *FS) finish(work string, sources []string) error {
-	m := &Manifest{Header: Header{Version: ManifestVersion, ID: f.st.ID, Created: f.st.Created, Sources: sources, Partial: f.st.Result.Partial}}
+	m := &Manifest{Header: Header{Version: ManifestVersion, ID: f.st.ID, Created: f.st.Created, Sources: sources, Partial: f.st.Result.Partial, Meta: f.st.Result.Meta}}
 	for _, e := range f.entries {
 		m.Entries = append(m.Entries, e)
 	}

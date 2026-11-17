@@ -5,10 +5,12 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,8 +20,15 @@ import (
 // ManifestVersion is the version of the format of the manifest.
 const ManifestVersion = 1
 
-// manifestMagic opens the first line of a manifest.
-const manifestMagic = "#backup-manifest"
+// manifestMagic opens the first line of a manifest; metaMagic, a line of
+// the sources' meta.
+const (
+	manifestMagic = "#backup-manifest"
+	metaMagic     = "#meta"
+)
+
+// metaKeyRe is a key of the meta: "<source>.<name>".
+var metaKeyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
 // Type is the kind of an entry: a file, a folder, a link.
 type Type byte
@@ -56,6 +65,19 @@ func (s Sum) String() string { return base64.RawURLEncoding.EncodeToString(s[:])
 // IsZero says s is no sum (a folder, a link).
 func (s Sum) IsZero() bool { return s == Sum{} }
 
+// SumFromHex reads s, the sha256 in hex (as sha256sum writes it).
+func SumFromHex(s string) (sum Sum, err error) {
+	b, err := hex.DecodeString(s)
+	if err != nil || len(b) != len(sum) {
+		return sum, fmt.Errorf("invalid sha256 %q", s)
+	}
+	copy(sum[:], b)
+	return sum, nil
+}
+
+// Hex is s in hex.
+func (s Sum) Hex() string { return hex.EncodeToString(s[:]) }
+
 // ParseSum reads s, base64url with no padding.
 func ParseSum(s string) (sum Sum, err error) {
 	b, err := base64.RawURLEncoding.DecodeString(s)
@@ -67,13 +89,16 @@ func ParseSum(s string) (sum Sum, err error) {
 }
 
 // Header is the first line of the manifest: of which state, when, its
-// sources and whether some were left out (Partial).
+// sources and whether some were left out (Partial) — and what the sources
+// tell the client (Meta: "site-files.git" the repository, "db.dump" the
+// dump), a line each after it.
 type Header struct {
 	Version int
 	ID      string
 	Created time.Time
 	Sources []string
 	Partial bool
+	Meta    map[string]string
 }
 
 // Manifest is a state's files: its header and its entries, by path.
@@ -94,6 +119,7 @@ func (m *Manifest) Find(p string) (Entry, bool) {
 // The manifest, in gzip, line by line, "\t" apart:
 //
 //	#backup-manifest <version> <id> <created RFC3339Nano> <sources, ","> <partial 0|1>
+//	#meta <key> <value>                (sorted by key; the value quoted as a path)
 //	<sha256 | -> <mode octal> <mtime unix ns> <size> <f|d|l> <path> [<link target>]
 //
 // sorted by path. A path or a target with a tab, a line break, a
@@ -115,6 +141,17 @@ func WriteManifest(w io.Writer, m *Manifest) error {
 	}
 	fmt.Fprintf(bw, "%s\t%d\t%s\t%s\t%s\t%s\n", manifestMagic, ManifestVersion, h.ID,
 		h.Created.UTC().Format(time.RFC3339Nano), strings.Join(h.Sources, ","), partial)
+	keys := make([]string, 0, len(h.Meta))
+	for k := range h.Meta {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if !metaKeyRe.MatchString(k) {
+			return fmt.Errorf("manifest: invalid meta key %q", k)
+		}
+		fmt.Fprintf(bw, "%s\t%s\t%s\n", metaMagic, k, quotePath(h.Meta[k]))
+	}
 	for _, e := range m.Entries {
 		sum := "-"
 		if e.Type == TypeFile {
@@ -149,6 +186,24 @@ func ReadManifest(r io.Reader) (*Manifest, error) {
 		return nil, err
 	}
 	for n := 2; sc.Scan(); n++ {
+		if line := sc.Text(); strings.HasPrefix(line, metaMagic+"\t") {
+			if len(m.Entries) > 0 {
+				return nil, fmt.Errorf("manifest: line %d: meta after the entries", n)
+			}
+			f := strings.SplitN(line, "\t", 3)
+			if len(f) != 3 || !metaKeyRe.MatchString(f[1]) {
+				return nil, fmt.Errorf("manifest: line %d: meta", n)
+			}
+			v, err := unquotePath(f[2])
+			if err != nil {
+				return nil, fmt.Errorf("manifest: line %d: %w", n, err)
+			}
+			if m.Header.Meta == nil {
+				m.Header.Meta = map[string]string{}
+			}
+			m.Header.Meta[f[1]] = v
+			continue
+		}
 		e, err := parseEntry(sc.Text())
 		if err != nil {
 			return nil, fmt.Errorf("manifest: line %d: %w", n, err)

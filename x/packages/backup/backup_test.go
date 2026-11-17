@@ -386,3 +386,95 @@ func TestOpenFile(t *testing.T) {
 		t.Errorf("out: %v", err)
 	}
 }
+
+// The meta and the warnings of the sources; a tree whose sums its source
+// knows (files named by their hash) is not read.
+func TestSourceMetaWarnSums(t *testing.T) {
+	root := t.TempDir()
+	h := sumOf("jpeg").Hex()
+	write(t, filepath.Join(root, "data/system/files", h[:2], h[2:4], h), "jpeg", 0o640)
+	write(t, filepath.Join(root, "data/system/media/a.png"), "png", 0o640)
+	cache := &countingCache{m: map[CacheKey]Sum{}}
+	b, _ := New(Options{Root: root, Dir: filepath.Join(root, "data/backup"), Cache: cache})
+	b.Source("uploads", func(ctx context.Context, st *State) error {
+		st.FS.Warn("%d things", 2)
+		if err := st.FS.Meta("dir", "data/system"); err != nil {
+			return err
+		}
+		if err := st.FS.Meta("Bad Key", "x"); err == nil {
+			t.Error("a bad key")
+		}
+		return st.FS.AddTreeWith("data/system", "", TreeOptions{Sum: func(rel string, fi fs.FileInfo) (Sum, bool) {
+			if !strings.HasPrefix(rel, "files/") {
+				return Sum{}, false
+			}
+			s, err := SumFromHex(filepath.Base(rel))
+			return s, err == nil
+		}})
+	})
+	st := &State{ID: "m"}
+	if err := b.BuildState(context.Background(), st); err != nil {
+		t.Fatal(err)
+	}
+	if cache.misses.Load() != 1 { // a.png alone
+		t.Errorf("read %d", cache.misses.Load())
+	}
+	if w := st.Result.Sources[0].Warnings; len(w) != 1 || w[0] != "2 things" {
+		t.Errorf("warnings %v", w)
+	}
+	m, _ := b.Manifest("m")
+	if m.Header.Meta["uploads.dir"] != "data/system" {
+		t.Errorf("meta %v", m.Header.Meta)
+	}
+	if e, ok := m.Find("data/system/files/" + h[:2] + "/" + h[2:4] + "/" + h); !ok || e.Sum != sumOf("jpeg") {
+		t.Errorf("hashed %+v", e)
+	}
+}
+
+func TestAppSource(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "bin/app"), "binary", 0o755)
+	write(t, filepath.Join(root, "app.yml"), "env: {}", 0o600)
+	write(t, filepath.Join(root, ".secure_key"), "secret", 0o600)
+	outside := filepath.Join(t.TempDir(), "other-app")
+	write(t, outside, "other", 0o755)
+	for _, c := range []struct{ bin, at string }{{filepath.Join(root, "bin/app"), "bin/app"}, {outside, "app"}} {
+		b, _ := New(Options{Root: root, Dir: filepath.Join(t.TempDir(), "states"), Cache: &countingCache{m: map[CacheKey]Sum{}}})
+		b.Source("app", AppSource(AppOptions{Binary: c.bin, Config: []string{"app.yml", "app.yaml", ".secure_key"}}))
+		if err := b.BuildState(context.Background(), &State{ID: "a"}); err != nil {
+			t.Fatal(err)
+		}
+		m, _ := b.Manifest("a")
+		if e, ok := m.Find(c.at); !ok || e.Mode != 0o755 {
+			t.Errorf("%s: binary %+v", c.at, e)
+		}
+		if _, ok := m.Find(".secure_key"); ok {
+			t.Error("the secure key in the state")
+		}
+		if m.Header.Meta["app.binary"] != c.at || m.Header.Meta["app.config"] != "app.yml" {
+			t.Errorf("meta %v", m.Header.Meta)
+		}
+	}
+}
+
+func TestManifestMeta(t *testing.T) {
+	m := &Manifest{Header: Header{ID: "s", Created: time.Unix(1, 0), Meta: map[string]string{"db.dump": "data/db.pg", "x.path": "a\tb"}}}
+	var buf bytes.Buffer
+	if err := WriteManifest(&buf, m); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadManifest(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Header.Meta["db.dump"] != "data/db.pg" || got.Header.Meta["x.path"] != "a\tb" {
+		t.Errorf("meta %v", got.Header.Meta)
+	}
+	m.Header.Meta = map[string]string{"Bad": "x"}
+	if err := WriteManifest(&bytes.Buffer{}, m); err == nil {
+		t.Error("a bad key written")
+	}
+	if s, err := SumFromHex(sumOf("a").Hex()); err != nil || s != sumOf("a") {
+		t.Error("hex")
+	}
+}
