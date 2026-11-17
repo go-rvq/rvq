@@ -17,6 +17,7 @@ import (
 	"github.com/go-rvq/rvq/x/login"
 	"github.com/go-rvq/rvq/x/osenv"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
+	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/hack-pad/hackpadfs"
 	"golang.org/x/net/webdav"
 )
@@ -95,20 +96,13 @@ func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, e
 const explorerPath = "/fs-tools/"
 
 // pageFunc is the page of the files: the explorer (<vx-files>) over the
-// file system the WebDAV serves, and how to reach it by WebDAV (a panel; a
-// button of the explorer's bar opens it whole).
+// file system the WebDAV serves; how to reach it by WebDAV, a drawer at the
+// right opened by an icon of the explorer's bar.
 func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error) {
 	m := GetMessages(ctx.Context())
 	r.PageTitle = m.FileSystem
-	info := b.davInfo(ctx)
 	term := b.terminalOn(ctx.R)
 	r.Body = web.Scope(VContainer(
-		VExpansionPanels(
-			VExpansionPanel(
-				VExpansionPanelTitle(h.Div(VIcon("mdi-folder-network-outline").Size(SizeSmall).Class("me-2"), h.Text(m.WebDavProtocolTitle)).Class("d-flex align-center")),
-				VExpansionPanelText(info),
-			),
-		).Class("mb-2").Attr("data-fs-tools-webdav", true),
 		h.Tag("vx-files").Attr("base", b.p.GetURIPrefix()+explorerPath).Attr("title", m.FileSystem).
 			Attr(":fetch", "false").Attr(":extract", "true").
 			Attr(":terminal", h.JSONString(term)).Attr("terminal-url", b.p.GetURIPrefix()+terminalPath).
@@ -117,17 +111,25 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 			Attr("start", ctx.R.URL.Query().Get("dir")).
 			Children(
 				h.Template(
-					VBtn("").Icon("mdi-folder-network-outline").Variant(VariantText).Size(SizeSmall).
-						Attr("title", m.WebDavProtocolTitle).Attr("@click", "locals.dav = true").Attr("data-fs-tools-webdav-open", true),
+					VBtn("").Icon("mdi-folder-network-outline").Size(SizeSmall).
+						Attr(":variant", `locals.dav ? "tonal" : "text"`).
+						Attr("title", m.WebDavProtocolTitle).Attr("aria-label", m.WebDavProtocolTitle).
+						Attr("@click", "locals.dav = !locals.dav").Attr("data-fs-tools-webdav-open", true),
 				).Attr("#toolbar", true),
 			),
-		VDialog(
-			VCard(
-				VCardTitle(h.Text(m.WebDavProtocolTitle)),
-				VCardText(info),
-				VCardActions(VSpacer(), VBtn(m.Close).Variant(VariantText).Attr("@click", "locals.dav = false")),
-			),
-		).Attr("v-model", "locals.dav").MaxWidth("640"),
+		vx.VXNavigationDrawer(h.Div(b.davInfo(ctx)).Class("pa-4")).
+			Title(m.WebDavProtocolTitle).
+			Location(LocationRight).
+			Temporary(true).
+			Closable(true).
+			Expandable(true).
+			Width("440").
+			// its edge drags its width, kept in the browser
+			Resizable("rvq.fstools.webdav.width").
+			MinWidth(320).
+			MaxWidth(900).
+			Attr("v-model", "locals.dav").
+			Attr("data-fs-tools-webdav", true),
 	).Fluid(true).Class("pa-2")).LocalsInit(`{dav: false}`).Slot("{ locals }")
 	return
 }
@@ -170,10 +172,40 @@ func (b *Builder) davInfo(ctx *web.EventContext) h.HTMLComponent {
 	return h.Div(
 		h.Div(m.WebDavAccess(url)),
 		h.Div(h.Text(m.WebDavCredentials)).Class("mt-2"),
+		b.keyPermissions(ctx),
 		folders,
 		h.Div(m.WebDavProtocolSoftwareExample).Class("mt-2"),
 		off,
 	).Attr("data-fs-tools-webdav-info", true)
+}
+
+// keyPermissions is what an access key needs to reach the WebDAV: its
+// lines (denies, on top of what its user may) must not deny the page's
+// resource @get (reading) nor !write (writing).
+func (b *Builder) keyPermissions(ctx *web.EventContext) h.HTMLComponent {
+	if b.page == nil {
+		return nil
+	}
+	ver := b.page.Page().ActionVerifier(ctx.R, "@get")
+	if ver == nil {
+		return nil
+	}
+	res := ver.PreferredResource()
+	if res == "" {
+		res = ver.Resource()
+	}
+	m := GetMessages(ctx.Context())
+	return h.Div(
+		h.Div(h.Strong(m.KeyPermissions)).Class("mb-1"),
+		h.Div(h.Text(m.KeyPermissionsHint)),
+		h.Div(h.Code(res)).Class("my-1"),
+		VTable(h.Tbody(
+			h.Tr(h.Td(h.Code("@get")), h.Td(h.Text(m.KeyPermRead))),
+			h.Tr(h.Td(h.Code("!write")), h.Td(h.Text(m.KeyPermWrite))),
+		)).Density(DensityCompact),
+		h.Div(h.Text(m.KeyPermExample)).Class("mt-2"),
+		h.Div(h.Code("deny "+res+"!write")).Class("mt-1"),
+	).Class("mt-3").Attr("data-fs-tools-key-permissions", true)
 }
 
 // rootFolders are the names at the root of the file system of r: the

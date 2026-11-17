@@ -6,6 +6,7 @@
 .vx-files-area { position: relative; min-height: 50vh; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; }
 .vx-files-dropping { outline: 2px dashed rgb(var(--v-theme-primary)); outline-offset: -4px; }
 .vx-files-drophint { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; background: rgba(var(--v-theme-surface), .85); color: rgb(var(--v-theme-primary)); pointer-events: none; }
 .vx-files-table th { cursor: pointer; user-select: none; white-space: nowrap; }
 .vx-files-table tbody tr { cursor: default; user-select: none; }
 .vx-files-sel, .vx-files-table tbody tr.vx-files-sel td { background: rgba(var(--v-theme-primary), .14) !important; }
@@ -21,6 +22,7 @@
 .vx-files-image-bar { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: rgba(0, 0, 0, .6); }
 .vx-files-image-stage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .vx-files-image-stage img { max-width: 100%; max-height: calc(100vh - 56px); object-fit: contain; cursor: zoom-in;
+  background: repeating-conic-gradient(#2a2a2a 0 25%, #333 0 50%) 50% / 16px 16px; }
 .vx-files-image-actual { overflow: auto; align-items: flex-start; justify-content: flex-start; }
 .vx-files-image-actual img { max-width: none; max-height: none; cursor: zoom-out; }
 .vx-files-image-prev, .vx-files-image-next { position: absolute; top: 50%; z-index: 2; }
@@ -31,9 +33,12 @@
 .vx-term-fill .vx-term-bar .v-chip { height: 20px; font-size: 11px; }
 .vx-term-fill .vx-term-box { flex: 1 1 auto; height: auto; min-height: 0; border-radius: 0; }
 .vx-files-twisty { display: inline-block; width: 20px; margin-right: 2px; cursor: pointer; vertical-align: middle; }
-.vx-files-term { position: relative; margin-top: 6px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
-.vx-files-term-sash { position: absolute; top: 0; left: 0; right: 0; height: 6px; cursor: ns-resize; z-index: 2; }
-.vx-files-term-sash:hover { background: rgba(var(--v-theme-primary), .35); }
+.vx-files-term { position: relative; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+/* the bar between the files and the terminal: dragged, its height */
+.vx-files-sash { height: 10px; margin-top: 4px; display: flex; align-items: center; justify-content: center; cursor: row-resize; touch-action: none; border-radius: 4px; outline: none; }
+.vx-files-sash span { width: 56px; height: 4px; border-radius: 2px; background: rgba(var(--v-theme-on-surface), .25); transition: background .15s, width .15s; }
+.vx-files-sash:hover, .vx-files-sash.active, .vx-files-sash:focus-visible { background: rgba(var(--v-theme-primary), .08); }
+.vx-files-sash:hover span, .vx-files-sash.active span, .vx-files-sash:focus-visible span { background: rgb(var(--v-theme-primary)); width: 96px; }
 .vx-files-term .vx-terminal { flex: 1 1 auto; min-height: 0; }
 .vx-term-font { font-weight: 600; letter-spacing: 0; }
 .vx-files-views { display: inline-flex; gap: 0; }
@@ -59,6 +64,8 @@
 .vx-files-thumb-sm img { width: 20px; height: 20px; }
 .vx-files-thumb-lg { width: 64px; height: 56px; }
 .vx-files-thumb-lg img { max-width: 64px; max-height: 56px; object-fit: contain; }
+/* while it loads, the image is there but unseen (a lazy one hidden by
+   display: none would never load), the icon over it */
 .vx-files-thumb { position: relative; }
 .vx-files-thumb img { position: absolute; inset: 0; margin: auto; opacity: 0; transition: opacity .15s; }
 .vx-files-thumb img.vx-files-thumb-on { opacity: 1; }

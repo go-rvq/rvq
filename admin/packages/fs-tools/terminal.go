@@ -154,7 +154,13 @@ const terminalPath = explorerPath + "terminal"
 // terminalOn says r may open the terminal: it is on (feature, sandbox) and
 // r has the page's !terminal.
 func (b *Builder) terminalOn(r *http.Request) bool {
-	return b.term != nil && b.term.off == nil && b.terminalAllowed(r)
+	return b.term != nil && b.term.off == nil && b.hasFolders() && b.terminalAllowed(r)
+}
+
+// hasFolders: there are folders of the system to open the terminal in
+// (RVQ_FSTOOLS_DIRS, the mounts).
+func (b *Builder) hasFolders() bool {
+	return strings.TrimSpace(EnvDirs) != "" || len(b.mounts) > 0
 }
 
 // terminalAllowed: r has the page's !terminal (a shell: no permissions
@@ -410,6 +416,8 @@ func (b *Builder) runTerminal(w http.ResponseWriter, r *http.Request) {
 		status = err.Error()
 	}
 	b.log.Info("terminal closed", "user", who, "exit", status)
+	// its folders gone before its end is told
+	sess.close()
 	exit(status)
 }
 

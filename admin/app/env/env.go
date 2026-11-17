@@ -43,8 +43,10 @@ var PKG_DIR = func() string {
 var InitialUserPasswordFile = osenv.Get("RVQ_LOGIN_INITIAL_USER_PASSWORD_FILE", "Initial user password file", filepath.Join(PKG_DIR, ".initial_user_password"))
 
 // APP_YML is the configuration of the application: its environment (`env:`),
-// the features it turns on (`features:`, package features) and what it
-// allows past its login (`security:`, package security). APP_YAML is the
+// the features it turns on (`features:`, package features), what it
+// allows past its login (`security:`, package security) and the sections of
+// the packages that have their own (`fstools:` of fs-tools, …: package
+// appconfig, each read by its package). APP_YAML is the
 // same, by the other extension; with both, APP_YML is read.
 const (
 	APP_YML  = "app.yml"

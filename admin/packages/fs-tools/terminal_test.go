@@ -103,11 +103,12 @@ func TestTerminal(t *testing.T) {
 	if b, err := os.ReadFile(filepath.Join(data, "w")); err != nil || string(b) != "hi\n" {
 		t.Error("not written", err)
 	}
-	// the session's folder gone
+	// the session's folder gone (before the end was told)
 	if m, _ := filepath.Glob(filepath.Join(os.TempDir(), "rvq-terminal-*", "root", "data")); len(m) > 0 {
-		time.Sleep(200 * time.Millisecond)
-		if m, _ := filepath.Glob(filepath.Join(os.TempDir(), "rvq-terminal-*", "root", "data")); len(m) > 0 {
-			t.Error("left", m)
+		for _, p := range m {
+			if l, _ := os.Readlink(p); l == data {
+				t.Error("left", p)
+			}
 		}
 	}
 }

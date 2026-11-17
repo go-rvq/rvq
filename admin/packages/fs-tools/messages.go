@@ -25,8 +25,12 @@ type Messages struct {
 	Folders                       string    `i18n:"hint='Title of the folders of the file system (in the WebDAV panel).'"`
 	ReadOnly                      string    `i18n:"label='Read only', hint='Said of a folder that is only read.'"`
 	ReadWrite                     string    `i18n:"label='Read and write', hint='Said of a folder that is read and written.'"`
-	Close                         string    `i18n:"hint='Button that closes a dialog.'"`
 	TerminalOff                   string    `i18n:"label='Terminal off', hint='Why the terminal is not available.', fields=(;'%s'='the reason')"`
+	KeyPermissions                string    `i18n:"label='Permissions of the access key', hint='Title of what an access key needs to reach the WebDAV.'"`
+	KeyPermissionsHint            string    `i18n:"label='How the key is limited', hint='Says that a key only denies, on top of what its user may, and what it must not deny.'"`
+	KeyPermRead                   string    `i18n:"label='Read by the key', hint='What the action @get allows through the WebDAV.'"`
+	KeyPermWrite                  string    `i18n:"label='Write by the key', hint='What the action !write allows through the WebDAV.'"`
+	KeyPermExample                string    `i18n:"label='A key only to read', hint='Introduces the line that makes a key only read the files.'"`
 }
 
 func (m *Messages) WebDavAccess(url string) h.RawHTML {
@@ -47,8 +51,13 @@ var (
 		Folders:           "Folders",
 		ReadOnly:          "read only",
 		ReadWrite:         "read and write",
-		Close:             "Close",
 		TerminalOff:       "The terminal is off: %s",
+		KeyPermissions:    "Permissions of the access key",
+		KeyPermissionsHint: "A key only denies, on top of what you may: a key with no line of permissions reaches what you reach. " +
+			"For the WebDAV, its lines must not deny this page's resource:",
+		KeyPermRead:    "read and download the files",
+		KeyPermWrite:   "upload, change, move and delete",
+		KeyPermExample: "A key that only reads the files:",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -64,8 +73,13 @@ var (
 		Folders:           "Pastas",
 		ReadOnly:          "só leitura",
 		ReadWrite:         "leitura e escrita",
-		Close:             "Fechar",
 		TerminalOff:       "O terminal está desligado: %s",
+		KeyPermissions:    "Permissões da chave de acesso",
+		KeyPermissionsHint: "Uma chave só nega, sobre o que você pode: uma chave sem nenhuma linha de permissão alcança o que você alcança. " +
+			"Para o WebDAV, as linhas dela não podem negar o recurso desta página:",
+		KeyPermRead:    "ler e baixar os arquivos",
+		KeyPermWrite:   "enviar, mudar, mover e apagar",
+		KeyPermExample: "Uma chave que só lê os arquivos:",
 	}
 )
 

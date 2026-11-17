@@ -131,7 +131,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         // the tree: the folders open (by their path of here) and what they have
         opened: {}, kids: {},
         // the terminal below (as Dolphin's, F4): open, its height
-        term: { open: termOpen && this.terminal, height: termHeight, key: 0 },
+        term: { open: termOpen && this.terminal, height: termHeight, key: 0, dragging: false },
         // the height of the files' area: to the window's bottom (the
         // terminal's room below it taken)
         areaH: 0,
@@ -292,7 +292,8 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         const el = this.$refs.area;
         if (!el) return;
         const top = el.getBoundingClientRect().top + window.scrollY;
-        const below = 28 + (this.term.open ? this.term.height + 6 : 0);
+        // the terminal and the bar above it (vx-files-sash: 10px, 4 of margin)
+        const below = 28 + (this.term.open ? this.term.height + 14 : 0);
         this.areaH = Math.max(200, window.innerHeight - top - below - 8);
       },
       toggleTerm: function () {
@@ -305,17 +306,32 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         const t = this.$refs.term;
         if (t && t.cd) t.cd(this.path, true);
       },
+      // the bar between the files and the terminal, dragged (a mouse, a
+      // finger): the terminal's height, kept in the browser
       termDrag: function (ev) {
-        const self = this, y0 = ev.clientY, h0 = this.term.height;
+        if (ev.button !== undefined && ev.button !== 0) return;
+        const self = this, y0 = ev.clientY, h0 = this.term.height, bar = ev.currentTarget;
         ev.preventDefault();
-        const move = function (e) { self.term.height = Math.max(120, Math.min(window.innerHeight - 160, h0 + y0 - e.clientY)); };
+        try { bar.setPointerCapture(ev.pointerId); } catch (e) { }
+        this.term.dragging = true;
+        document.body.style.userSelect = 'none';
+        const move = function (e) { self.term.height = self.termClamp(h0 + y0 - e.clientY); };
         const up = function () {
-          window.removeEventListener('pointermove', move);
-          window.removeEventListener('pointerup', up);
-          try { localStorage.setItem('vx-files-term-h', String(self.term.height)); } catch (e) { }
+          bar.removeEventListener('pointermove', move);
+          bar.removeEventListener('pointerup', up);
+          bar.removeEventListener('pointercancel', up);
+          self.term.dragging = false;
+          document.body.style.userSelect = '';
+          self.termResize(self.term.height);
         };
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', up);
+        bar.addEventListener('pointermove', move);
+        bar.addEventListener('pointerup', up);
+        bar.addEventListener('pointercancel', up);
+      },
+      termClamp: function (h) { return Math.round(Math.max(120, Math.min(window.innerHeight - 160, h))); },
+      termResize: function (h) {
+        this.term.height = this.termClamp(h);
+        try { localStorage.setItem('vx-files-term-h', String(this.term.height)); } catch (e) { }
       },
       editPath: function () { this.pathText = this.path; this.editingPath = true; },
       submitPath: function () { this.editingPath = false; this.go(this.pathText); },
@@ -839,8 +855,12 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
     <span>Arraste arquivos ou pastas para enviar · duplo clique abre · botão direito: mais</span>
   </div>
 
+  <div v-if="terminal && term.open" class="vx-files-sash" :class="{ active: term.dragging }" role="separator"
+    aria-orientation="horizontal" tabindex="0" :aria-valuenow="term.height" aria-label="Altura do terminal"
+    title="Arraste para mudar a altura do terminal (duplo clique: a altura padrão; ↑ ↓ pelo teclado)"
+    @pointerdown="termDrag" @dblclick="termResize(260)"
+    @keydown.up.prevent="termResize(term.height + 20)" @keydown.down.prevent="termResize(term.height - 20)"><span></span></div>
   <div v-if="terminal && term.open" class="vx-files-term" :style="{ height: term.height + 'px' }">
-    <div class="vx-files-term-sash" title="Arraste para mudar a altura" @pointerdown="termDrag"></div>
     <vx-terminal ref="term" :ws-url="termURL()" :vendor="vendor" :root-var="termRootVar" :recorded="termRecorded" fill></vx-terminal>
   </div>
 

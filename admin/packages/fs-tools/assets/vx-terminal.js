@@ -114,8 +114,9 @@
         this.ro = new ResizeObserver(function () { try { fit.fit(); } catch (e) { } });
         this.ro.observe(this.$refs.el);
       },
-      // expand: the terminal over the whole window, the same button gives
-      // the page back (Esc stays the terminal's); the session goes on
+      // expand: the terminal over the whole window — in a page or in a
+      // panel (fill) —, the same button gives it back (Esc stays the
+      // terminal's); the session goes on
       toggleExpand: function () {
         const self = this;
         this.expanded = !this.expanded;
@@ -164,8 +165,8 @@
     <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" title="Diminuir a fonte" @click="zoom(-1)">A-</v-btn>
     <v-btn size="small" variant="text" class="text-none px-1 vx-term-font" min-width="0" title="Aumentar a fonte" @click="zoom(1)">A+</v-btn>
     <v-btn v-if="fill && state === 'closed'" size="small" variant="text" icon="mdi-restart" title="Reabrir" @click="reopen"></v-btn>
-    <v-btn v-if="!fill" size="small" variant="text" :icon="expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
-      :title="expanded ? 'Voltar ao tamanho da página' : 'Expandir o terminal'" @click="toggleExpand"></v-btn>
+    <v-btn size="small" variant="text" :icon="expanded ? 'mdi-arrow-collapse' : 'mdi-arrow-expand'"
+      :title="expanded ? 'Voltar ao tamanho de antes' : 'Expandir o terminal (a janela toda)'" @click="toggleExpand"></v-btn>
   </div>
   <div ref="el" class="vx-term-box"></div>
   <v-alert v-if="state === 'closed' && !fill" type="info" density="compact" class="mt-2">

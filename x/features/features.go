@@ -39,6 +39,20 @@
 // The constant false, what is only reached by Enabled is no code of the
 // binary: the compiler drops the branch, the linker what only it called.
 //
+// A feature every binary should have unless it asks otherwise is compiled
+// by the absence of a tag of its own, and on by default (DefaultOn) — the
+// terminal of fs-tools:
+//
+//	// terminal_compiled.go
+//	//go:build !rvq.fstools.noterminal
+//	const terminalCompiled = true
+//
+//	var TerminalFeature = features.Register("rvq.fstools.terminal", …).
+//		CompiledIf(terminalCompiled).DefaultOn()
+//
+// The configuration turns it off (`rvq.fstools.terminal: false`); the tag
+// rvq.fstools.noterminal leaves it out of the binary.
+//
 // A feature the binary has not — or one it depends on has not — is as if it
 // were never declared: never on, never listed (All), never named; the
 // configuration that turns it on has a key of no feature (Unknown).

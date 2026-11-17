@@ -1,6 +1,24 @@
 // Package appconfig is the app.yml as read (admin/app/env): the sections of
 // the packages that have their own (`fstools:`), each read by its package
 // when it needs it (Section).
+//
+// A package names its section by itself (its module, short: `fstools`),
+// keeps its defaults in the struct it reads into — the file says only what
+// changes — and reads it once the configuration is loaded (in Install, not
+// in an init: env loads the app.yml in its own init, which may run after):
+//
+//	var cfg struct {
+//		Terminal TerminalConfig `yaml:"terminal"`
+//	}
+//	cfg.Terminal = DefaultTerminalConfig()
+//	if _, err := appconfig.Section("fstools", &cfg); err != nil {
+//		// a wrong value: say it, keep what is safe
+//	}
+//
+// A section is the package's to document: its keys, its defaults, what a
+// wrong value does. The keys of the app.yml env does not know (`env:`,
+// `features:`, `security:` aside) are the packages'; a section nobody reads
+// is silently ignored.
 package appconfig
 
 import (
