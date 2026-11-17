@@ -294,6 +294,20 @@ func (b *Builder) OpenFile(id string, e Entry) (*os.File, error) {
 	return f, nil
 }
 
+// Clean removes what states being made left (their folders beside, of a
+// process stopped while it made them).
+func (b *Builder) Clean() error {
+	left, err := filepath.Glob(filepath.Join(b.dir, ".building-*"))
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, d := range left {
+		errs = append(errs, os.RemoveAll(d))
+	}
+	return errors.Join(errs...)
+}
+
 // Remove removes the state id: its manifest and its snapshot.
 func (b *Builder) Remove(id string) error {
 	if !idRe.MatchString(id) {
