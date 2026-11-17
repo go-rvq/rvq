@@ -39,6 +39,28 @@ Um state sendo gerado não pode ser excluído: cancele-o antes. Um state cujos
 arquivos sumiram (a pasta removida no servidor) é marcado como falho ao
 reiniciar a aplicação.
 
+## Os arquivos de um state
+
+**Arquivos**, no detalhe de um state pronto, abre os seus arquivos no
+explorador, só para leitura: navegue pelas pastas, veja um texto ou uma
+imagem e baixe.
+
+- O ícone de download da barra baixa a pasta aberta em `.tar.gz`; com
+  itens selecionados, o que estiver selecionado.
+- Um arquivo vem como ele é; uma pasta, num `.tar.gz`.
+- Mais de um item: um menu deixa escolher entre **um `.tar.gz`** com todos
+  e **um a um**.
+- O menu de contexto (clique direito) faz o mesmo: na área vazia, a pasta
+  aberta; num item ou na seleção, o que estiver selecionado.
+
+Quem pode ver o state pode ler todos os seus arquivos.
+
+## Um link para baixar tudo
+
+**Link de download (.tar.gz)**, no detalhe, cria um link de 24 horas que
+baixa o state inteiro sem login (veja a ação). Os links criados ficam em
+**Links**, onde podem ser revogados.
+
 ## Baixar um state
 
 Um programa baixa um state com uma **chave de acesso** (o seu perfil ›
@@ -73,10 +95,11 @@ tipo (`f` arquivo, `d` pasta, `l` link) e o caminho.
 
 ## Permissões
 
-- **Ver** a página: a lista, o detalhe, o manifesto pelo admin.
+- **Ver** a página: a lista, o detalhe, a página **Arquivos** (ler e baixar os arquivos de um state), o manifesto pelo admin.
 - **Criar**, **Editar** (a descrição, **Manter**), **Excluir**, **Cancelar**.
-- **Baixar** (`!download`): o manifesto e os arquivos de um state — todos os
-  dados e segredos da aplicação. Dê-a com cuidado.
+- **Baixar** (`!download`): o cliente (o manifesto e os arquivos por uma
+  chave de acesso) e o **Link de download** — todos os dados e segredos da
+  aplicação. Dê-a com cuidado.
 
 ## Caminhos estáveis
 
@@ -90,8 +113,10 @@ menu. `<admin>` é o endereço do admin.
 | POST | `<admin>/!backup/{id}/session` | chave de acesso, ou o token (renova) | uma sessão: o seu token, os endereços do manifesto e dos arquivos |
 | GET | `<admin>/!backup/{id}/manifest` | token, ou a sessão do admin | o manifesto |
 | GET | `<admin>/!backup/{id}/files/{caminho}` | token | um arquivo do manifesto (Range, If-Match) |
+| GET | `<admin>/!backup/{id}/archive/{token}.tar.gz` | link | o state inteiro em `.tar.gz` (24 horas; sem Range) |
+| GET | `<admin>/!backup/{id}/fs/api/fs/{op}?path=…` | sessão | o explorador da página Arquivos: listar, ler, baixar (só leitura) |
 
-Sem o cabeçalho `Authorization`, um pedido vai ao admin: pela sessão do
+O link de download não pede `Authorization`: o próprio link é o acesso. Nos outros caminhos, sem o cabeçalho `Authorization`, um pedido vai ao admin: pela sessão do
 admin, só o manifesto (o link do detalhe). Respostas de erro são JSON
 (`{"error": "…"}`): 401 sem chave ou com uma recusada, 403 se a chave não
 pode baixar, 404 se o state não existe, 409 se ainda não está pronto.

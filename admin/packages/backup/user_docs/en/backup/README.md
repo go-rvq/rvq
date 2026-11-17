@@ -41,6 +41,27 @@ A state being built cannot be deleted: cancel it first. A state whose files
 are gone (its folder removed on the server) is marked failed when the
 application restarts.
 
+## The files of a state
+
+**Files**, in the detail of a ready state, opens its files in the explorer,
+read only: browse the folders, see a text or an image, and download.
+
+- The download icon of the bar downloads the folder open as `.tar.gz`;
+  with items selected, what is selected.
+- A file comes as it is; a folder, in a `.tar.gz`.
+- More than one item: a menu lets you choose between **one `.tar.gz`** of
+  them all and **one by one**.
+- The context menu (right click) does the same: on the empty area, the
+  folder open; on an item or the selection, what is selected.
+
+Whoever can see the state can read all of its files.
+
+## A link to download it all
+
+**Download link (.tar.gz)**, in the detail, makes a link of 24 hours that
+downloads the whole state with no login (see the action). The links made
+are in **Links**, where they can be revoked.
+
 ## Downloading a state
 
 A program downloads a state with an **access key** (your profile › **Access
@@ -75,10 +96,11 @@ file, `d` folder, `l` link) and the path.
 
 ## Permissions
 
-- **View** the page: the list, the detail, the manifest through the admin.
+- **View** the page: the list, the detail, the page **Files** (read and download a state's files), the manifest through the admin.
 - **Create**, **Edit** (the description, **Keep**), **Delete**, **Cancel**.
-- **Download** (`!download`): the manifest and the files of a state — all
-  the data and secrets of the application. Grant it with care.
+- **Download** (`!download`): the client (the manifest and the files by an
+  access key) and the **Download link** — all the data and secrets of the
+  application. Grant it with care.
 
 ## Stable paths
 
@@ -92,8 +114,10 @@ change with the menu. `<admin>` is the address of the admin.
 | POST | `<admin>/!backup/{id}/session` | access key, or the token (renews) | a session: its token, the addresses of the manifest and the files |
 | GET | `<admin>/!backup/{id}/manifest` | token, or the admin's session | the manifest |
 | GET | `<admin>/!backup/{id}/files/{path}` | token | a file of the manifest (Range, If-Match) |
+| GET | `<admin>/!backup/{id}/archive/{token}.tar.gz` | link | the whole state as `.tar.gz` (24 hours; no Range) |
+| GET | `<admin>/!backup/{id}/fs/api/fs/{op}?path=…` | session | the explorer of the page Files: list, read, download (read only) |
 
-With no `Authorization` header a request goes to the admin: by the admin's
+The download link asks no `Authorization`: the link itself is the access. On the other paths, with no `Authorization` header a request goes to the admin: by the admin's
 session, only the manifest (the link of the detail). Errors are JSON
 (`{"error": "…"}`): 401 with no key or a refused one, 403 when the key may
 not download, 404 when the state does not exist, 409 when it is not ready

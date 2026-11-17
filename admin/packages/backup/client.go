@@ -55,7 +55,14 @@ func (b *Builder) ClientHandler(admin http.Handler) http.Handler {
 	mux.HandleFunc("POST "+base+"/{id}/session", b.serveSession)
 	mux.HandleFunc("GET "+base+"/{id}/manifest", b.withToken(b.serveManifest))
 	mux.HandleFunc("GET "+base+"/{id}/files/{path...}", b.withToken(b.serveFile))
+	// a download link: the link is its access (no Authorization)
+	archive := http.NewServeMux()
+	archive.HandleFunc("GET "+base+"/{id}/archive/{file}", b.serveArchive)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, pattern := archive.Handler(r); pattern != "" {
+			archive.ServeHTTP(w, r)
+			return
+		}
 		if r.Header.Get("Authorization") == "" && admin != nil {
 			admin.ServeHTTP(w, r)
 			return

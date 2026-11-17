@@ -1,8 +1,10 @@
 package explorer
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -77,11 +79,19 @@ func TestExplorer(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(root, "a", "up", "f.txt")); string(b) != "up" {
 		t.Fatalf("uploaded: %q", b)
 	}
-	// a folder downloaded: a zip
+	// a folder downloaded: a tar.gz of it, under its name
 	_, _, zb := call(t, x, "GET", "download", url.Values{"path": {"a"}}, nil, "")
-	zr, err := zip.NewReader(bytes.NewReader(zb), int64(len(zb)))
-	if err != nil || len(zr.File) != 2 {
-		t.Fatalf("zip: %v %d", err, len(zr.File))
+	if names := tarNames(t, zb); strings.Join(names, ",") != "a/,a/b/,a/b/c.txt,a/up/,a/up/f.txt" {
+		t.Fatalf("folder: %v", names)
+	}
+	// items of a folder: one tar.gz, their names under it
+	_, _, zb = call(t, x, "GET", "download", url.Values{"path": {"a/b", "a/up"}}, nil, "")
+	if names := tarNames(t, zb); strings.Join(names, ",") != "b/,b/c.txt,up/,up/f.txt" {
+		t.Fatalf("items: %v", names)
+	}
+	// items of different folders: refused
+	if c, _, _ := call(t, x, "GET", "download", url.Values{"path": {"a/b", "e"}}, nil, ""); c != 400 {
+		t.Errorf("items of different folders: %d", c)
 	}
 	if c, _, _ := call(t, x, "POST", "delete", url.Values{"path": {"e", "a/up"}}, nil, ""); c != 200 {
 		t.Fatal("delete")
@@ -115,6 +125,21 @@ func TestExplorerAllow(t *testing.T) {
 	}})
 	if _, m, _ := call(t, x, "GET", "read", url.Values{"path": {"ro/f.txt"}}, nil, ""); m["content"] != "x" || m["writable"] != false {
 		t.Errorf("read only, read: %v", m)
+	}
+	// a folder mounted read only: not written, whoever asks
+	xr := New(webdav.Dir(root), Options{ReadOnly: func(p string) bool { return strings.HasPrefix(p, "/ro") }})
+	if _, m, _ := call(t, xr, "GET", "list", url.Values{"path": {"ro"}}, nil, ""); m["can"].(map[string]any)["write"] != false {
+		t.Errorf("can, mounted read only: %v", m["can"])
+	}
+	if code, _, _ := call(t, xr, "POST", "write", url.Values{"path": {"ro/f.txt"}}, strings.NewReader("y"), ""); code != http.StatusForbidden {
+		t.Errorf("write, mounted read only: %d", code)
+	}
+	// what may be done in a folder: list's can
+	if _, m, _ := call(t, x, "GET", "list", url.Values{"path": {"ro"}}, nil, ""); m["can"].(map[string]any)["write"] != false || m["can"].(map[string]any)["read"] != true {
+		t.Errorf("can, read only: %v", m["can"])
+	}
+	if _, m, _ := call(t, x, "GET", "list", url.Values{"path": {"/"}}, nil, ""); m["can"].(map[string]any)["write"] != true {
+		t.Errorf("can: %v", m["can"])
 	}
 	for _, c := range []struct {
 		method, op string
@@ -201,5 +226,26 @@ func TestExplorerExtract(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, "evil.txt")); !os.IsNotExist(err) {
 		t.Errorf("out of the folder: %v", err)
+	}
+}
+
+// tarNames are the names in the tar.gz of b, in order.
+func tarNames(t *testing.T, b []byte) []string {
+	t.Helper()
+	gz, err := gzip.NewReader(bytes.NewReader(b))
+	if err != nil {
+		t.Fatalf("gzip: %v (%q)", err, b)
+	}
+	tr := tar.NewReader(gz)
+	var out []string
+	for {
+		hd, err := tr.Next()
+		if err == io.EOF {
+			return out
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, hd.Name)
 	}
 }

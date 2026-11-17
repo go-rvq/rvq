@@ -1,8 +1,8 @@
 // vx-files: the explorer of files (fs-tools; the files of a user of the OS
 // in senir, the file system of the admin in HermonCMS), as a
 // file manager (Nautilus): the folders by a path, a list or a grid, the
-// files sent (a button, or dropped — folders too), downloaded (a folder as a
-// zip), from the internet, extracted, renamed, copied, moved, deleted, a
+// files sent (a button, or dropped — folders too), downloaded (a folder, or
+// several items, as a tar.gz — or each by itself), from the internet, extracted, renamed, copied, moved, deleted, a
 // text edited; its folder in the IDE (ide-url). Its API is fs-tools/explorer
 // at base (base + 'api/fs/…'); its terminal (F4), <vx-terminal>.
 (function () {
@@ -138,6 +138,9 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       } catch (e) { }
       return {
         path: '/', repo: false, entries: [], loading: false,
+        // what may be done in the folder (list's can): reading — the
+        // downloads, offered whenever it may —, writing — the rest
+        can: { read: true, write: true },
         // the images drawn (their thumbnails): on, and those loaded
         thumbs: thumbs, thumbOk: {},
         // the columns that may be shown (list, tree): the images' dimensions
@@ -259,6 +262,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
           if (moved) { self.opened = {}; self.kids = {}; self.thumbOk = {}; }
           self.path = j.path;
           self.repo = !!j.repo;
+          self.can = Object.assign({ read: true, write: true }, j.can || {});
           self.entries = j.entries;
           // the terminal follows the folder: only when it changed
           if (moved) self.termCd();
@@ -391,7 +395,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       selectAll: function () { this.selected = this.shown.map(function (x) { return x.name; }); },
       open: function (e) {
         if (e.dir) { this.go(join(this.path, e.name)); return; }
-        if (this.extract && ARCHIVE.test(e.name)) { this.selected = [e.name]; this.ask('extract'); return; }
+        if (this.extract && this.can.write && ARCHIVE.test(e.name)) { this.selected = [e.name]; this.ask('extract'); return; }
         if (IMAGE.test(e.name)) { this.image = { open: true, name: e.name, actual: false }; return; }
         this.edit(e);
       },
@@ -420,8 +424,8 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       key: function (ev) {
         if (this.dialog || this.editor.open) return;
         if (ev.target && /INPUT|TEXTAREA/.test(ev.target.tagName)) return;
-        if (ev.key === 'Delete' && this.sel.length) { ev.preventDefault(); this.ask('delete'); }
-        else if (ev.key === 'F2' && this.one) { ev.preventDefault(); this.ask('rename'); }
+        if (ev.key === 'Delete' && this.sel.length && this.can.write) { ev.preventDefault(); this.ask('delete'); }
+        else if (ev.key === 'F2' && this.one && this.can.write) { ev.preventDefault(); this.ask('rename'); }
         else if (ev.key === 'Enter' && this.one) { ev.preventDefault(); this.open(this.one); }
         else if (ev.key === 'Backspace' || (ev.altKey && ev.key === 'ArrowUp')) { ev.preventDefault(); this.up(); }
         else if ((ev.ctrlKey || ev.metaKey) && ev.key === 'a') { ev.preventDefault(); this.selectAll(); }
@@ -464,16 +468,36 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
           return self.refresh();
         }).catch(this.failed);
       },
-      download: function (e) {
+      // fetched: the address of the download of paths (of the file system),
+      // saved as name
+      fetchDownload: function (paths, name) {
         const a = document.createElement('a');
-        a.href = this.base + 'api/fs/download?path=' + encodeURIComponent(join(this.path, e.name));
-        const base = (e.base || e.name || this.w('zipName')).split('/').pop();
-        a.download = e.dir ? base + '.zip' : base;
+        a.href = this.base + 'api/fs/download?' + paths.map(function (p) { return 'path=' + encodeURIComponent(p); }).join('&');
+        a.download = name;
         document.body.appendChild(a);
         a.click();
         a.remove();
       },
-      downloadSel: function () { const self = this; this.sel.forEach(function (e) { self.download(e); }); },
+      // download: the item e — a file as it is, a folder as a tar.gz ({dir:
+      // true, name: ''}: the folder open)
+      download: function (e) {
+        const base = (e.base || e.name || (this.path === '/' ? this.w('archiveName') : this.path.split('/').pop())).split('/').pop();
+        this.fetchDownload([join(this.path, e.name)], e.dir ? base + '.tar.gz' : base);
+      },
+      // downloadSel: the items selected — one by itself; several, in one
+      // tar.gz (each: false) or each by itself (each: true)
+      downloadSel: function (each) {
+        const self = this;
+        if (this.sel.length === 1 || each) { this.sel.forEach(function (e, i) { setTimeout(function () { self.download(e); }, i * 300); }); return; }
+        const name = (this.path === '/' ? this.w('archiveName') : this.path.split('/').pop()) + '.tar.gz';
+        this.fetchDownload(this.sel.map(function (e) { return join(self.path, e.name); }), name);
+      },
+      // the title of the download of the selection (or of the folder open)
+      downloadTitle: function () {
+        if (!this.sel.length) return this.w('downloadFolder');
+        if (this.sel.length > 1) return this.w('downloadN', { n: this.sel.length });
+        return this.one.dir ? this.w('downloadTgz') : this.w('download');
+      },
       ideHere: function (sub) { return this.ideUrl + '?dir=' + encodeURIComponent(sub || this.path); },
       // the repository at sub (the folder open) in Git: the IDE with its
       // Changes and Git panels alone
@@ -537,14 +561,14 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         this.send(list, false);
       },
       dragOver: function (ev) {
-        if (!ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
+        if (!this.can.write || !ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
         ev.preventDefault();
         ev.dataTransfer.dropEffect = 'copy';
       },
-      dragEnter: function (ev) { if (ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) this.dropping++; },
+      dragEnter: function (ev) { if (this.can.write && ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) this.dropping++; },
       dragLeave: function () { if (this.dropping > 0) this.dropping--; },
       drop: function (ev, into) {
-        if (!ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
+        if (!this.can.write || !ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
         ev.preventDefault();
         this.dropping = 0;
         const self = this, dir = into ? join(this.path, into.name) : this.path;
@@ -731,6 +755,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         ev.dataTransfer.effectAllowed = 'move';
       },
       dropOn: function (target, ev) {
+        if (!this.can.write) return;
         const data = ev.dataTransfer && ev.dataTransfer.getData('application/x-vx-files');
         if (!data) { this.drop(ev, target); return; }
         ev.preventDefault();
@@ -742,7 +767,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         }, Promise.resolve()).then(function () { self.toast(self.w('movedTo', { name: target.name })); self.refresh(); }).catch(this.failed);
       },
       dropOver: function (target, ev) {
-        if (!target.dir) return;
+        if (!target.dir || !this.can.write) return;
         const types = Array.from((ev.dataTransfer && ev.dataTransfer.types) || []);
         if (types.includes('application/x-vx-files') || types.includes('Files')) { ev.preventDefault(); }
       },
@@ -782,7 +807,17 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
     <v-text-field v-model="filter" density="compact" hide-details variant="outlined" prepend-inner-icon="mdi-magnify"
       :placeholder="w('filter')" clearable style="max-width: 200px"></v-text-field>
     <v-btn icon="mdi-refresh" v-bind="tb" :title="w('refresh')" :loading="loading" @click="refresh"></v-btn>
-    <v-menu>
+    <template v-if="can.read">
+      <v-menu v-if="sel.length > 1">
+        <template #activator="{ props }"><v-btn v-bind="Object.assign({}, tb, props)" icon="mdi-download" :title="downloadTitle()"></v-btn></template>
+        <v-list density="compact">
+          <v-list-item prepend-icon="mdi-folder-zip-outline" :title="w('downloadNTgz', { n: sel.length })" @click="downloadSel(false)"></v-list-item>
+          <v-list-item prepend-icon="mdi-download-multiple" :title="w('downloadNEach', { n: sel.length })" @click="downloadSel(true)"></v-list-item>
+        </v-list>
+      </v-menu>
+      <v-btn v-else icon="mdi-download" v-bind="tb" :title="downloadTitle()" @click="sel.length ? downloadSel() : download({ dir: true, name: '' })"></v-btn>
+    </template>
+    <v-menu v-if="can.write">
       <template #activator="{ props }"><v-btn v-bind="Object.assign({}, tb, props)" icon="mdi-plus" :title="w('new')"></v-btn></template>
       <v-list density="compact">
         <v-list-item prepend-icon="mdi-folder-plus-outline" :title="w('folder')" @click="ask('mkdir')"></v-list-item>
@@ -840,7 +875,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
         </th>
       </tr></thead>
       <tbody>
-        <tr v-for="e in shown" :key="e.name" :class="{ 'vx-files-sel': isSel(e) }" draggable="true"
+        <tr v-for="e in shown" :key="e.name" :class="{ 'vx-files-sel': isSel(e) }" :draggable="can.write"
           @click="click(e, $event)" @dblclick="open(e)" @contextmenu.prevent.stop="ctx(e, $event)"
           @dragstart="dragStart(e, $event)" @dragover="dropOver(e, $event)" @drop="e.dir && dropOn(e, $event)">
           <td :style="view === 'tree' ? { paddingLeft: (8 + e.depth * 18) + 'px' } : undefined"><template v-if="view === 'tree'"><v-icon v-if="e.dir" size="small" class="vx-files-twisty"
@@ -857,7 +892,7 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
       </tbody>
     </v-table>
     <div v-else class="vx-files-grid">
-      <div v-for="e in shown" :key="e.name" class="vx-files-cell" :class="{ 'vx-files-sel': isSel(e) }" draggable="true" :title="e.name"
+      <div v-for="e in shown" :key="e.name" class="vx-files-cell" :class="{ 'vx-files-sel': isSel(e) }" :draggable="can.write" :title="e.name"
         @click="click(e, $event)" @dblclick="open(e)" @contextmenu.prevent.stop="ctx(e, $event)"
         @dragstart="dragStart(e, $event)" @dragover="dropOver(e, $event)" @drop="e.dir && dropOn(e, $event)">
         <div v-if="thumbs && isImage(e)" class="vx-files-thumb vx-files-thumb-lg">
@@ -894,26 +929,36 @@ function join(a, b) { return (a.replace(/\/+$/, '') + '/' + b).replace(/\/+/g, '
     <v-list density="compact" min-width="220">
       <template v-if="sel.length">
         <v-list-item v-if="one" prepend-icon="mdi-open-in-app" :title="one.dir ? w('open') : (extract && isArchive(one) ? w('extractDots') : w('open'))" @click="open(one)"></v-list-item>
-        <v-list-item v-if="one && !one.dir && !isArchive(one) && !isImage(one)" prepend-icon="mdi-pencil-outline" :title="w('edit')" @click="edit(one, true)"></v-list-item>
+        <v-list-item v-if="can.write && one && !one.dir && !isArchive(one) && !isImage(one)" prepend-icon="mdi-pencil-outline" :title="w('edit')" @click="edit(one, true)"></v-list-item>
         <v-list-item v-if="one && one.dir" prepend-icon="mdi-code-braces" :title="w('openIde')" :href="ideHere(childOf(one.name))"></v-list-item>
         <v-list-item v-if="one && one.repo" prepend-icon="mdi-source-branch" :title="w('openGit')" :href="gitHere(childOf(one.name))"></v-list-item>
         <v-list-item v-if="one && one.repo" prepend-icon="mdi-git" :title="w('cloneCopy')" @click="copyClone(one)"></v-list-item>
-        <v-list-item prepend-icon="mdi-download" :title="sel.length > 1 ? w('downloadN', { n: sel.length }) : (one.dir ? w('downloadZip') : w('download'))" @click="downloadSel"></v-list-item>
-        <v-list-item v-if="extract && isArchive(one)" prepend-icon="mdi-package-variant" :title="w('extractDots')" @click="ask('extract')"></v-list-item>
-        <v-divider></v-divider>
-        <v-list-item v-if="one" prepend-icon="mdi-form-textbox" :title="w('renameF2')" @click="ask('rename')"></v-list-item>
-        <v-list-item prepend-icon="mdi-content-copy" :title="w('copyTo')" @click="ask('copy')"></v-list-item>
-        <v-list-item prepend-icon="mdi-file-move-outline" :title="w('moveTo')" @click="ask('move')"></v-list-item>
-        <v-divider></v-divider>
-        <v-list-item prepend-icon="mdi-delete-outline" base-color="error" :title="w('deleteKey')" @click="ask('delete')"></v-list-item>
+        <template v-if="can.read">
+          <template v-if="sel.length > 1">
+            <v-list-item prepend-icon="mdi-folder-zip-outline" :title="w('downloadNTgz', { n: sel.length })" @click="downloadSel(false)"></v-list-item>
+            <v-list-item prepend-icon="mdi-download-multiple" :title="w('downloadNEach', { n: sel.length })" @click="downloadSel(true)"></v-list-item>
+          </template>
+          <v-list-item v-else prepend-icon="mdi-download" :title="downloadTitle()" @click="downloadSel()"></v-list-item>
+        </template>
+        <template v-if="can.write">
+          <v-list-item v-if="extract && isArchive(one)" prepend-icon="mdi-package-variant" :title="w('extractDots')" @click="ask('extract')"></v-list-item>
+          <v-divider></v-divider>
+          <v-list-item v-if="one" prepend-icon="mdi-form-textbox" :title="w('renameF2')" @click="ask('rename')"></v-list-item>
+          <v-list-item prepend-icon="mdi-content-copy" :title="w('copyTo')" @click="ask('copy')"></v-list-item>
+          <v-list-item prepend-icon="mdi-file-move-outline" :title="w('moveTo')" @click="ask('move')"></v-list-item>
+          <v-divider></v-divider>
+          <v-list-item prepend-icon="mdi-delete-outline" base-color="error" :title="w('deleteKey')" @click="ask('delete')"></v-list-item>
+        </template>
       </template>
       <template v-else>
-        <v-list-item prepend-icon="mdi-folder-plus-outline" :title="w('newFolder')" @click="ask('mkdir')"></v-list-item>
-        <v-list-item prepend-icon="mdi-file-plus-outline" :title="w('newTextFile')" @click="ask('newfile')"></v-list-item>
-        <v-list-item prepend-icon="mdi-upload" :title="w('uploadFiles')" @click="pick(false)"></v-list-item>
-        <v-list-item prepend-icon="mdi-folder-upload-outline" :title="w('uploadFolder')" @click="pick(true)"></v-list-item>
-        <v-list-item v-if="fetch" prepend-icon="mdi-web" :title="w('fetch')" @click="ask('fetch')"></v-list-item>
-        <v-list-item prepend-icon="mdi-download" :title="w('downloadFolder')" @click="download({ dir: true, name: '' })"></v-list-item>
+        <template v-if="can.write">
+          <v-list-item prepend-icon="mdi-folder-plus-outline" :title="w('newFolder')" @click="ask('mkdir')"></v-list-item>
+          <v-list-item prepend-icon="mdi-file-plus-outline" :title="w('newTextFile')" @click="ask('newfile')"></v-list-item>
+          <v-list-item prepend-icon="mdi-upload" :title="w('uploadFiles')" @click="pick(false)"></v-list-item>
+          <v-list-item prepend-icon="mdi-folder-upload-outline" :title="w('uploadFolder')" @click="pick(true)"></v-list-item>
+          <v-list-item v-if="fetch" prepend-icon="mdi-web" :title="w('fetch')" @click="ask('fetch')"></v-list-item>
+        </template>
+        <v-list-item v-if="can.read" prepend-icon="mdi-download" :title="w('downloadFolder')" @click="download({ dir: true, name: '' })"></v-list-item>
         <v-list-item prepend-icon="mdi-select-all" :title="w('selectAll')" @click="selectAll"></v-list-item>
       </template>
     </v-list>

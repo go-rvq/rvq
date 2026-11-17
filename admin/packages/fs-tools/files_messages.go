@@ -66,15 +66,17 @@ type FilesMessages struct {
 	OpenIde           string `json:"openIde" i18n:"hint='Item of the menu of a folder: the IDE in it.'"`
 	OpenGit           string `json:"openGit" i18n:"hint='Item of the menu of a repository: its Git page.'"`
 	Download          string `json:"download" i18n:"hint='Item of the menu of a file, button of the image viewer and of the fetch dialog.'"`
-	DownloadN         string `json:"downloadN" i18n:"hint='Item of the menu of several files: download them.', fields=(;'{n}'='n')"`
-	DownloadZip       string `json:"downloadZip" i18n:"hint='Item of the menu of a folder: download it as zip.'"`
+	DownloadN         string `json:"downloadN" i18n:"hint='Title of the button of the download of several items selected (it opens a menu).', fields=(;'{n}'='n')"`
+	DownloadNTgz      string `json:"downloadNTgz" i18n:"hint='Item of the menu of several items: download them in one tar.gz.', fields=(;'{n}'='n')"`
+	DownloadNEach     string `json:"downloadNEach" i18n:"hint='Item of the menu of several items: download each by itself.', fields=(;'{n}'='n')"`
+	DownloadTgz       string `json:"downloadTgz" i18n:"hint='Item of the menu of a folder: download it as tar.gz.'"`
 	RenameF2          string `json:"renameF2" i18n:"hint='Item of the menu of a file: rename it.'"`
 	CopyTo            string `json:"copyTo" i18n:"hint='Item of the menu of the files: copy them (a dialog follows).'"`
 	MoveTo            string `json:"moveTo" i18n:"hint='Item of the menu of the files: move them (a dialog follows).'"`
 	DeleteKey         string `json:"deleteKey" i18n:"hint='Item of the menu of the files: delete them.'"`
 	NewFolder         string `json:"newFolder" i18n:"hint='Item of the menu of the folder, and title of its dialog.'"`
 	NewTextFile       string `json:"newTextFile" i18n:"hint='Item of the menu of the folder: a text file.'"`
-	DownloadFolder    string `json:"downloadFolder" i18n:"hint='Item of the menu of the folder: download it as zip.'"`
+	DownloadFolder    string `json:"downloadFolder" i18n:"hint='Item of the menu of the folder open (and title of the download button with nothing selected): download it as tar.gz.'"`
 	SelectAll         string `json:"selectAll" i18n:"hint='Item of the menu of the folder: select every file.'"`
 	NewFile           string `json:"newFile" i18n:"hint='Title of the dialog of a new text file.'"`
 	Rename            string `json:"rename" i18n:"hint='Title and button of the dialog that renames.'"`
@@ -139,7 +141,7 @@ type FilesMessages struct {
 	Days              string `json:"days" i18n:"hint='Days, in a difference of time (3 days).'"`
 	SameSize          string `json:"sameSize" i18n:"hint='Difference of size of a file uploaded and the one there: none.'"`
 	MovedTo           string `json:"movedTo" i18n:"hint='Message after files are dragged into a folder.', fields=(;'{name}'='name')"`
-	ZipName           string `json:"zipName" i18n:"hint='Name of the zip of the root folder.'"`
+	ArchiveName       string `json:"archiveName" i18n:"hint='Name of the tar.gz of the root folder.'"`
 	Connected         string `json:"connected" i18n:"hint='Chip of the terminal: connected.'"`
 	Closed            string `json:"closed" i18n:"hint='Chip of the terminal: the session ended.'"`
 	Connecting        string `json:"connecting" i18n:"hint='Chip of the terminal: connecting.'"`
@@ -209,14 +211,16 @@ var FilesMessages_en_US = &FilesMessages{
 	OpenGit:           "Open in Git",
 	Download:          "Download",
 	DownloadN:         "Download ({n})",
-	DownloadZip:       "Download (zip)",
+	DownloadNTgz:      "Download {n} items in one .tar.gz",
+	DownloadNEach:     "Download {n} items one by one",
+	DownloadTgz:       "Download (.tar.gz)",
 	RenameF2:          "Rename (F2)",
 	CopyTo:            "Copy to…",
 	MoveTo:            "Move to…",
 	DeleteKey:         "Delete (Delete)",
 	NewFolder:         "New folder",
 	NewTextFile:       "New text file",
-	DownloadFolder:    "Download this folder (zip)",
+	DownloadFolder:    "Download this folder (.tar.gz)",
 	SelectAll:         "Select all (Ctrl+A)",
 	NewFile:           "New file",
 	Rename:            "Rename",
@@ -281,7 +285,7 @@ var FilesMessages_en_US = &FilesMessages{
 	Days:              "days",
 	SameSize:          "same size",
 	MovedTo:           "Moved to {name}.",
-	ZipName:           "folder",
+	ArchiveName:       "folder",
 	Connected:         "connected",
 	Closed:            "closed",
 	Connecting:        "connecting…",
@@ -351,14 +355,16 @@ var FilesMessages_pt_BR = &FilesMessages{
 	OpenGit:           "Abrir no Git",
 	Download:          "Baixar",
 	DownloadN:         "Baixar ({n})",
-	DownloadZip:       "Baixar (zip)",
+	DownloadNTgz:      "Baixar {n} itens num .tar.gz",
+	DownloadNEach:     "Baixar {n} itens um a um",
+	DownloadTgz:       "Baixar (.tar.gz)",
 	RenameF2:          "Renomear (F2)",
 	CopyTo:            "Copiar para…",
 	MoveTo:            "Mover para…",
 	DeleteKey:         "Excluir (Delete)",
 	NewFolder:         "Nova pasta",
 	NewTextFile:       "Novo arquivo de texto",
-	DownloadFolder:    "Baixar esta pasta (zip)",
+	DownloadFolder:    "Baixar esta pasta (.tar.gz)",
 	SelectAll:         "Selecionar tudo (Ctrl+A)",
 	NewFile:           "Novo arquivo",
 	Rename:            "Renomear",
@@ -423,7 +429,7 @@ var FilesMessages_pt_BR = &FilesMessages{
 	Days:              "dias",
 	SameSize:          "mesmo tamanho",
 	MovedTo:           "Movido para {name}.",
-	ZipName:           "pasta",
+	ArchiveName:       "pasta",
 	Connected:         "conectado",
 	Closed:            "encerrado",
 	Connecting:        "conectando…",

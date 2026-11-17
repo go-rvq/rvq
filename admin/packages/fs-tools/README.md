@@ -92,7 +92,7 @@ The page's sets of permissions: `readers` (`@get`), `authors` (`@get`,
 
 The explorer (`<vx-files>`) over the WebDAV's files: list, tree and icons;
 upload by dragging files and folders (large files in parts); edit a
-text, rename, copy, delete; download a file, or a folder as zip; extract an
+text, rename, copy, delete; download a file, or a folder or several items as tar.gz; extract an
 archive (zip, tar, gz). `?dir=/media/x` opens that folder; the address
 follows the folder open.
 

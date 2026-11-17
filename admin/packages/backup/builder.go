@@ -55,7 +55,9 @@ type Builder struct {
 	running map[string]context.CancelFunc
 
 	manifests sync.Map
-	usage     usage
+	// stateFSs are the states' file systems (stateFSOf)
+	stateFSs sync.Map
+	usage    usage
 	// allowDownload replaces the permission's check, clientBase the client's
 	// path (tests)
 	allowDownload func(r *http.Request) bool
@@ -107,9 +109,9 @@ func (b *Builder) Core() *backup.Builder { return b.core }
 // ModelBuilder is the model of the states.
 func (b *Builder) ModelBuilder() *presets.ModelBuilder { return b.mb }
 
-// AutoMigrate makes the tables of the states and of their sessions.
+// AutoMigrate makes the tables of the states, of their sessions and links.
 func (b *Builder) AutoMigrate() error {
-	return b.db.AutoMigrate(&BackupState{}, &BackupSession{})
+	return b.db.AutoMigrate(&BackupState{}, &BackupSession{}, &BackupLink{})
 }
 
 // Install registers the model, its jobs, the permission of downloading, the
@@ -330,8 +332,12 @@ func (b *Builder) Remove(id string) error {
 		return err
 	}
 	b.manifests.Delete(id)
+	b.stateFSs.Delete(id)
 	return b.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("state_id = ?", id).Delete(&BackupSession{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("state_id = ?", id).Delete(&BackupLink{}).Error; err != nil {
 			return err
 		}
 		return tx.Delete(&BackupState{}, "id = ?", id).Error
@@ -412,6 +418,9 @@ func (b *Builder) registerService(p *presets.Builder) {
 		Route("POST", "/{id}/session", presets.ServiceAuthAccessKey+", "+presets.ServiceAuthToken, m(func(m *Messages) string { return m.RouteSession })).
 		Route("GET", "/{id}/manifest", presets.ServiceAuthToken+", "+presets.ServiceAuthSession, m(func(m *Messages) string { return m.RouteManifest })).
 		Route("GET", "/{id}/files/{path}", presets.ServiceAuthToken, m(func(m *Messages) string { return m.RouteFiles })).
+		Route("GET", "/{id}/archive/{token}.tar.gz", presets.ServiceAuthSignedLink, m(func(m *Messages) string { return m.RouteArchive })).
+		Route("GET", "/{id}/fs/api/fs/{op}?path=…", presets.ServiceAuthSession, m(func(m *Messages) string { return m.RouteFs })).
 		Handle("GET /{id}/manifest", http.HandlerFunc(b.adminManifest)).
+		Handle("/{id}/fs/", b.fsHandler()).
 		Outer(b.ClientHandler)
 }

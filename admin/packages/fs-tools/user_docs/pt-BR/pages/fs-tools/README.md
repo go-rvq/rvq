@@ -2,11 +2,24 @@
 
 Os arquivos do servidor que o site guarda: navegue pelas pastas, envie
 arquivos e pastas (arraste-os para a lista), crie, edite, renomeie, copie e
-apague; baixe um arquivo, ou uma pasta como zip; extraia um arquivo
+apague; baixe um arquivo, ou uma pasta e vários itens em .tar.gz; extraia um arquivo
 compactado (zip, tar, gz).
 
 O endereço acompanha a pasta aberta (`?dir=/pasta`): um link abre a página
 nela.
+
+## Baixar
+
+- **Um arquivo**: clique duplo (ou o menu) e **Baixar**; vem como ele é.
+- **Uma pasta**: vem num `.tar.gz`, que mantém as permissões e as datas.
+- **A pasta aberta**: o ícone de download da barra, sem nada selecionado, ou
+  o clique direito na área vazia, **Baixar esta pasta (.tar.gz)**.
+- **Vários itens selecionados**: o ícone da barra e o clique direito abrem um
+  menu — **Baixar N itens num .tar.gz** (um arquivo só) ou **Baixar N itens
+  um a um** (um download por item; cada pasta, o seu `.tar.gz`).
+
+Baixar aparece para quem pode ler a pasta; criar, enviar, renomear, mover e
+apagar, só para quem pode escrever nela.
 
 ## WebDAV
 
@@ -64,7 +77,7 @@ programa pode guardá-los. `<admin>` é o endereço do admin
 | Método | Caminho | Acesso | O que dá |
 | --- | --- | --- | --- |
 | GET | `<admin>/!fs-tools/api/fs/list?path=…` | sessão | o conteúdo de uma pasta |
-| GET | `<admin>/!fs-tools/api/fs/download?path=…` | sessão | um arquivo, ou uma pasta como zip |
+| GET | `<admin>/!fs-tools/api/fs/download?path=…` | sessão | um arquivo; uma pasta, ou vários itens (`path` repetido), num `.tar.gz` |
 | POST | `<admin>/!fs-tools/api/fs/{op}?path=…` | sessão | uma operação do explorador (criar, enviar, renomear, copiar, mover, apagar, extrair) |
 | GET | `<admin>/!fs-tools/terminal?dir=…` | sessão, `!terminal` | o terminal (WebSocket) |
 | GET | `<admin>/!fs-tools/vendor/{arquivo}` | público | os componentes da página (scripts, estilos) |

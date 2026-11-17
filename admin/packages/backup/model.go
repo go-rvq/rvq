@@ -179,6 +179,9 @@ func (b *Builder) configureModel(mb *presets.ModelBuilder) {
 	sessions.Label("BackupSession").SetPluralLabel("BackupSessions").MenuIcon("mdi-download-network-outline")
 	mb.AddChild(sessions)
 	b.configureSessions(sessions)
+
+	// the links of downloading it whole, the page of its files
+	b.configureLinks(mb)
 }
 
 func originText(m *Messages, o string) string {
@@ -335,14 +338,18 @@ func (b *Builder) downloadSection(s *BackupState, ctx *web.EventContext) h.HTMLC
 	case s.Status != StatusReady:
 		return h.Div(h.Text(m.NotDownloadable)).Class("text-medium-emphasis")
 	}
+	// its files, in the explorer (whoever sees the state)
+	files := v.VBtn(m.FilesPage).Href(b.mb.Info().DetailingHref(s.ID)+FilesPath).PrependIcon("mdi-folder-open-outline").
+		Variant(v.VariantTonal).Size(v.SizeSmall).Attr("data-backup-files", true)
 	if b.mb.Permissioner().ReqListDo(ctx.R, PermDownload).Denied() {
-		return nil
+		return files
 	}
 	base := clientBase(ctx.R) + b.ClientPath()
 	manifest := b.ClientPath() + "/" + s.ID + "/manifest"
 	return h.Div(
-		v.VBtn(m.ManifestLink).Href(manifest).PrependIcon("mdi-download").Variant(v.VariantTonal).Size(v.SizeSmall).
-			Attr("download", true).Attr("data-backup-manifest", true),
+		h.Div(files,
+			v.VBtn(m.ManifestLink).Href(manifest).PrependIcon("mdi-download").Variant(v.VariantTonal).Size(v.SizeSmall).
+				Attr("download", true).Attr("data-backup-manifest", true)).Class("d-flex flex-wrap ga-2"),
 		h.Div(h.Strong(m.StateIDLabel+": "), h.Code(s.ID)).Class("mt-3"),
 		// the client's routes of this state: out of the admin's pages (and
 		// of its login), at ClientPath
@@ -360,7 +367,18 @@ func (b *Builder) downloadSection(s *BackupState, ctx *web.EventContext) h.HTMLC
 
 // configureSessions: the history of the downloads of a state, read only.
 func (b *Builder) configureSessions(mb *presets.ModelBuilder) {
-	// of the state above: its id the last of the parents
+	b.scopeToState(mb)
+	mb.Listing("CreatedAt", "UserName", "IP", "UserAgent", "ExpiresAt", "Files", "Bytes").OrderBy("created_at DESC")
+	mb.Listing().Field("Bytes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		return h.Td(h.Text(Size(field.Obj.(*BackupSession).Bytes)))
+	})
+	mb.Detailing("CreatedAt", "UserName", "IP", "UserAgent", "ExpiresAt", "Files", "Bytes")
+	mb.SetCreatingDisabled(true).SetEditingDisabled(true).SetDeletingDisabled(true)
+}
+
+// scopeToState lists, of a child of a state, the records of the state above:
+// its id the last of the parents.
+func (b *Builder) scopeToState(mb *presets.ModelBuilder) {
 	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
 		return do.(*gorm2op.DataOperatorBuilder).
 			WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
@@ -375,12 +393,6 @@ func (b *Builder) configureSessions(mb *presets.ModelBuilder) {
 				})
 			})
 	})
-	mb.Listing("CreatedAt", "UserName", "IP", "UserAgent", "ExpiresAt", "Files", "Bytes").OrderBy("created_at DESC")
-	mb.Listing().Field("Bytes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
-		return h.Td(h.Text(Size(field.Obj.(*BackupSession).Bytes)))
-	})
-	mb.Detailing("CreatedAt", "UserName", "IP", "UserAgent", "ExpiresAt", "Files", "Bytes")
-	mb.SetCreatingDisabled(true).SetEditingDisabled(true).SetDeletingDisabled(true)
 }
 
 // routeRow is a route of the client: its method, its address, what it is.

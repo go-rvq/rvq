@@ -145,15 +145,10 @@ func (b *Builder) davInfo(ctx *web.EventContext) h.HTMLComponent {
 	}
 	url := fmt.Sprintf("%v://%v%v", scheme, ctx.R.Host, b.davPath)
 	// the folders of RVQ_FSTOOLS_DIRS only read (r,…)
-	ro := map[string]bool{}
-	dirs, _ := fs.Dirs(EnvDirs)
-	for _, d := range dirs {
-		ro[d.Mount] = d.ReadOnly
-	}
 	var rows []h.HTMLComponent
 	for _, d := range b.rootFolders(ctx.R) {
 		mode := m.ReadOnly
-		if !ro[d] && b.allowed(ctx.R, "/"+d, "", true) {
+		if !readOnlyDir("/"+d) && b.allowed(ctx.R, "/"+d, "", true) {
 			mode = m.ReadWrite
 		}
 		rows = append(rows, h.Tr(h.Td(h.Code("/"+d)), h.Td(h.Text(mode))))
@@ -227,6 +222,18 @@ func (b *Builder) rootFolders(r *http.Request) (out []string) {
 	return
 }
 
+// readOnlyDir says p is in a folder of RVQ_FSTOOLS_DIRS only read (r,…).
+func readOnlyDir(p string) bool {
+	dirs, _ := fs.Dirs(EnvDirs)
+	p = strings.Trim(p, "/")
+	for _, d := range dirs {
+		if d.ReadOnly && (p == d.Mount || strings.HasPrefix(p, d.Mount+"/")) {
+			return true
+		}
+	}
+	return false
+}
+
 // fileSystem is the file system of the WebDAV and of the explorer.
 func (b *Builder) fileSystem() webdav.FileSystem {
 	return &mountedFS{b: b, base: fs.NewWebDavFS(b.fs)}
@@ -237,9 +244,10 @@ func (b *Builder) fileSystem() webdav.FileSystem {
 // a mount's); what changes, told OnAccess (AccessFiles).
 func (b *Builder) explorerHandler() http.Handler {
 	x := explorer.New(b.fileSystem(), explorer.Options{
-		Allow:   func(r *http.Request, p string, write bool) bool { return b.allowed(r, p, "", write) },
-		Extract: true,
-		Changed: func(r *http.Request, op, p string) { b.log.Info("files", "op", op, "path", p, "user", whoOf(r)) },
+		Allow:    func(r *http.Request, p string, write bool) bool { return b.allowed(r, p, "", write) },
+		ReadOnly: readOnlyDir,
+		Extract:  true,
+		Changed:  func(r *http.Request, op, p string) { b.log.Info("files", "op", op, "path", p, "user", whoOf(r)) },
 	})
 	prefix := b.p.GetURIPrefix() + strings.TrimSuffix(explorerPath, "/")
 	h := http.StripPrefix(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -4,9 +4,10 @@
 // each operation as Allow says. The paths in the query (path, to) are of the
 // file system ("/" its root):
 //
-//	GET  list?path[&dims=1]   {path, entries: [{name, dir, size, mode, mtime, …}], repo}
+//	GET  list?path[&dims=1]   {path, entries: [{name, dir, size, mode, mtime, …}], repo, can: {read, write}}
 //	GET  read?path            {content, size, binary, truncated, writable}: a text, up to MaxRead
-//	GET  download?path[&inline=1]  the file (inline: shown, nothing of it running); a folder, a zip
+//	GET  download?path[&inline=1]  the file (inline: shown, nothing of it running); a folder, a tar.gz;
+//	     path repeated (the items of a folder), one tar.gz of them
 //	POST write?path           the body, the file's new content (made when not there)
 //	POST mkdir?path           a folder (and its parents)
 //	POST rename?path&to       renamed or moved
@@ -22,8 +23,9 @@
 package explorer
 
 import (
-	"archive/zip"
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -78,6 +80,14 @@ type Options struct {
 	Symlink func(p, target string) error
 	// Changed is told of each change (its operation and path): a log.
 	Changed func(r *http.Request, op, p string)
+	// ReadOnly says the path p is only read whoever asks (a folder mounted
+	// read only): writing it is not allowed, and list's can and read's
+	// writable say so; nil, none.
+	ReadOnly func(p string) bool
+	// Archive writes the tar.gz of paths (of the file system), its names
+	// those under base (the folder they are in); nil, the files and the
+	// folders read of the file system (writeTarGz).
+	Archive func(w io.Writer, r *http.Request, base string, paths []string) error
 }
 
 // Explorer serves the explorer of FS.
@@ -134,7 +144,7 @@ func Fail(w http.ResponseWriter, status int, err error) {
 func Rel(p string) string { return path.Clean("/" + strings.ReplaceAll(p, `\`, "/")) }
 
 func (x *Explorer) allow(r *http.Request, p string, write bool) error {
-	if x.Opts.Allow != nil && !x.Opts.Allow(r, Rel(p), write) {
+	if (write && x.Opts.ReadOnly != nil && x.Opts.ReadOnly(Rel(p))) || (x.Opts.Allow != nil && !x.Opts.Allow(r, Rel(p), write)) {
 		return fmt.Errorf("%s: %w", Rel(p), ErrNotAllowed)
 	}
 	return nil
@@ -162,7 +172,7 @@ func (x *Explorer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case op == "read" && get:
 		x.read(w, r, p)
 	case op == "download" && get:
-		x.download(w, r, p)
+		x.download(w, r, q["path"])
 	case op == "write" && !get:
 		x.write(w, r, p)
 	case op == "mkdir" && !get:
@@ -286,7 +296,10 @@ func (x *Explorer) list(w http.ResponseWriter, r *http.Request, p string, dims b
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
 	repo := x.Opts.IsRepo != nil && x.Opts.IsRepo(dir)
-	writeJSON(w, map[string]any{"path": dir, "entries": out, "repo": repo})
+	// what r may do in it: the explorer shows what it may (reading — the
+	// downloads —, writing)
+	can := map[string]bool{"read": true, "write": x.allow(r, dir, true) == nil}
+	writeJSON(w, map[string]any{"path": dir, "entries": out, "repo": repo, "can": can})
 }
 
 func (x *Explorer) read(w http.ResponseWriter, r *http.Request, p string) {
@@ -336,13 +349,20 @@ func trimRune(b []byte) []byte {
 	return b
 }
 
-func (x *Explorer) download(w http.ResponseWriter, r *http.Request, p string) {
-	if err := x.allow(r, p, false); err != nil {
-		Fail(w, http.StatusForbidden, err)
-		return
+func (x *Explorer) download(w http.ResponseWriter, r *http.Request, ps []string) {
+	if len(ps) == 0 {
+		ps = []string{"/"}
+	}
+	var files []string
+	for _, p := range ps {
+		if err := x.allow(r, p, false); err != nil {
+			Fail(w, http.StatusForbidden, err)
+			return
+		}
+		files = append(files, Rel(p))
 	}
 	ctx := r.Context()
-	file := Rel(p)
+	file := files[0]
 	st, err := x.FS.Stat(ctx, file)
 	if err != nil {
 		Fail(w, http.StatusBadRequest, err)
@@ -352,7 +372,7 @@ func (x *Explorer) download(w http.ResponseWriter, r *http.Request, p string) {
 	if file == "/" {
 		name = "files"
 	}
-	if !st.IsDir() {
+	if len(files) == 1 && !st.IsDir() {
 		f, err := x.FS.OpenFile(ctx, file, os.O_RDONLY, 0)
 		if err != nil {
 			Fail(w, http.StatusBadRequest, err)
@@ -371,29 +391,72 @@ func (x *Explorer) download(w http.ResponseWriter, r *http.Request, p string) {
 		http.ServeContent(w, r, name, st.ModTime(), f)
 		return
 	}
-	// a folder: a zip of it, made as it is sent
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name+".zip"))
-	zw := zip.NewWriter(w)
-	_ = x.walk(ctx, file, func(fp string, fi fs.FileInfo) error {
-		if fi.IsDir() || !fi.Mode().IsRegular() {
-			return nil
+	// a folder, or the items of one: a tar.gz, made as it is sent — named
+	// as the folder; the items' names under the folder they are in
+	base := path.Dir(file)
+	if file == "/" {
+		base = "/"
+	}
+	for _, f := range files[1:] {
+		if path.Dir(f) != base {
+			Fail(w, http.StatusBadRequest, fmt.Errorf("%s: not in %s", f, base))
+			return
 		}
-		hd, _ := zip.FileInfoHeader(fi)
-		hd.Name, hd.Method = strings.TrimPrefix(strings.TrimPrefix(fp, file), "/"), zip.Deflate
-		zf, err := zw.CreateHeader(hd)
+		if _, err := x.FS.Stat(ctx, f); err != nil {
+			Fail(w, http.StatusBadRequest, err)
+			return
+		}
+	}
+	if len(files) > 1 {
+		if name = path.Base(base); base == "/" {
+			name = "files"
+		}
+	}
+	w.Header().Set("Content-Type", "application/gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name+".tar.gz"))
+	if x.Opts.Archive != nil {
+		_ = x.Opts.Archive(w, r, base, files)
+		return
+	}
+	_ = x.writeTarGz(ctx, w, base, files)
+}
+
+// writeTarGz writes the tar.gz of paths, read of the file system — the
+// folders and the regular files, their permissions and times —, the names
+// those under base.
+func (x *Explorer) writeTarGz(ctx context.Context, w io.Writer, base string, paths []string) error {
+	gz := gzip.NewWriter(w)
+	tw := tar.NewWriter(gz)
+	for _, p := range paths {
+		err := x.walk(ctx, p, func(fp string, fi fs.FileInfo) error {
+			name := strings.TrimPrefix(strings.TrimPrefix(fp, base), "/")
+			if name == "" || !(fi.IsDir() || fi.Mode().IsRegular()) {
+				return nil
+			}
+			hd := &tar.Header{Name: name, Mode: int64(fi.Mode().Perm()), ModTime: fi.ModTime(), Typeflag: tar.TypeReg, Size: fi.Size(), Format: tar.FormatPAX}
+			if fi.IsDir() {
+				hd.Name, hd.Typeflag, hd.Size = name+"/", tar.TypeDir, 0
+				return tw.WriteHeader(hd)
+			}
+			f, err := x.FS.OpenFile(ctx, fp, os.O_RDONLY, 0)
+			if err != nil {
+				return nil
+			}
+			defer f.Close()
+			if err := tw.WriteHeader(hd); err != nil {
+				return err
+			}
+			_, err = io.CopyN(tw, f, fi.Size())
+			return err
+		})
 		if err != nil {
 			return err
 		}
-		f, err := x.FS.OpenFile(ctx, fp, os.O_RDONLY, 0)
-		if err != nil {
-			return nil
-		}
-		defer f.Close()
-		_, err = io.Copy(zf, f)
+	}
+	if err := tw.Close(); err != nil {
 		return err
-	})
-	_ = zw.Close()
+	}
+	return gz.Close()
 }
 
 // walk calls fn of p and of every file under it (a folder before its

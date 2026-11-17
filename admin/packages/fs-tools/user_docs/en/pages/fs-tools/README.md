@@ -2,10 +2,24 @@
 
 The files of the server the site keeps: browse the folders, upload files and
 folders (drag them onto the list), create, edit, rename, copy and delete;
-download a file, or a folder as zip; extract an archive (zip, tar, gz).
+download a file, or a folder and several items as .tar.gz; extract an archive (zip, tar, gz).
 
 The address follows the folder open (`?dir=/folder`): a link opens the page
 there.
+
+## Downloading
+
+- **A file**: double click (or the menu) and **Download**; it comes as it is.
+- **A folder**: it comes in a `.tar.gz`, which keeps the permissions and the
+  times.
+- **The folder open**: the download icon of the bar, with nothing selected,
+  or the right click on the empty area, **Download this folder (.tar.gz)**.
+- **Several items selected**: the icon of the bar and the right click open a
+  menu — **Download N items in one .tar.gz** (one file) or **Download N
+  items one by one** (a download each; each folder, its own `.tar.gz`).
+
+Downloading is shown to whoever can read the folder; creating, uploading,
+renaming, moving and deleting, only to whoever can write in it.
 
 ## WebDAV
 
@@ -62,7 +76,7 @@ a program can keep them. `<admin>` is the address of the admin
 | Method | Path | Access | What it gives |
 | --- | --- | --- | --- |
 | GET | `<admin>/!fs-tools/api/fs/list?path=…` | session | the content of a folder |
-| GET | `<admin>/!fs-tools/api/fs/download?path=…` | session | a file, or a folder as zip |
+| GET | `<admin>/!fs-tools/api/fs/download?path=…` | session | a file; a folder, or several items (`path` repeated), in a `.tar.gz` |
 | POST | `<admin>/!fs-tools/api/fs/{op}?path=…` | session | an operation of the explorer (create, upload, rename, copy, move, delete, extract) |
 | GET | `<admin>/!fs-tools/terminal?dir=…` | session, `!terminal` | the terminal (WebSocket) |
 | GET | `<admin>/!fs-tools/vendor/{file}` | public | the components of the page (scripts, styles) |
