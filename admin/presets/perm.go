@@ -340,6 +340,9 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 		}
 		for _, a := range mb.listing.actions {
 			action := a
+			if !action.HasPerm() {
+				continue
+			}
 			n.Actions = append(n.Actions, &PermNodeAction{Name: action.PermName(),
 				Title:       func(ctx context.Context) string { return action.RequestTitle(mb, ctx) },
 				Description: func(ctx context.Context) string { return action.RequestDescription(mb, ctx) }})
@@ -376,6 +379,9 @@ func (b *Builder) modelPermNode(mb *ModelBuilder) *PermNode {
 	actions := append(append([]*ActionBuilder{}, mb.detailing.actions...), mb.listing.itemActions...)
 	for _, a := range actions {
 		action := a
+		if !action.HasPerm() {
+			continue
+		}
 		record.Actions = append(record.Actions, &PermNodeAction{Name: action.PermName(),
 			Title:       func(ctx context.Context) string { return action.RequestTitle(mb, ctx) },
 			Description: func(ctx context.Context) string { return action.RequestDescription(mb, ctx) }})

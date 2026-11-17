@@ -182,30 +182,23 @@ func (b *Builder) filesPage(ctx *web.EventContext, obj any, _ model.ID, r *web.P
 func (b *Builder) configureLinks(mb *presets.ModelBuilder) {
 	fs_tools.UseAssets(b.p)
 
-	// a new link: the dialog says what it gives; made, the dialog shows it
-	// (once: only its sum is kept) — the flash of the action, a component:
-	// the form shows it as its notice
-	mb.Detailing().Action("archive_link").Icon("mdi-link-variant").
-		SetVerifier(func(ctx *web.EventContext) *perm.Verifier {
-			return mb.Permissioner().ReqListDo(ctx.R, PermDownload)
-		}).
+	// a new link: an action of the menu of a ready state, its dialog the link
+	// made as it opens — nothing to run (no button), shown once: only its
+	// sum is kept. No permission of its own (NoPerm): it asks the record's,
+	// and it is there for who may download (PermDownload)
+	mb.Detailing().Action("archive_link").Icon("mdi-link-variant").NoPerm().
 		SetEnabledObj(func(obj any, id string, ctx *web.EventContext) (bool, error) {
 			return obj.(*BackupState).Status == StatusReady && b.mayDownload(ctx.R), nil
 		}).
 		ComponentFunc(func(id string, ctx *web.EventContext) (h.HTMLComponent, error) {
-			if _, ok := ctx.Flash.(*linkMade); ok {
-				return h.Div(), nil
+			if !b.mayDownload(ctx.R) {
+				return nil, perm.PermissionDenied
 			}
-			m := GetMessages(ctx.Context())
-			return h.P(h.Text(fill(m.LinkText, "expires", time.Now().Add(LinkTTL).Local().Format("2006-01-02 15:04")))), nil
-		}).
-		UpdateFunc(func(id string, ctx *web.EventContext) error {
 			tok, l, err := b.NewLink(ctx.R, id)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			ctx.Flash = newLinkMade(GetMessages(ctx.Context()), clientBase(ctx.R)+b.LinkPath(id, tok), l.ExpiresAt)
-			return nil
+			return newLinkMade(GetMessages(ctx.Context()), clientBase(ctx.R)+b.LinkPath(id, tok), l.ExpiresAt), nil
 		})
 
 	// the page of the files: under the detailing; its link, in the detailing
@@ -238,8 +231,8 @@ func (b *Builder) configureLinks(mb *presets.ModelBuilder) {
 	links.Listing().AppendItemAction(revoke)
 }
 
-// linkMade is a link just made, shown in the dialog of the action: its
-// address, copied or opened.
+// linkMade is a link just made, shown in its dialog: its address, copied or
+// opened.
 type linkMade struct{ h.HTMLComponent }
 
 func newLinkMade(m *Messages, url string, expires time.Time) *linkMade {

@@ -64,6 +64,9 @@ type ActionBuilder struct {
 	// permName is the permission it asks (SetPermName); "": its own
 	// (ActionPerm of its name)
 	permName string
+	// noPerm: no permission of its own (NoPerm) — not in the permissions;
+	// it asks its parent's
+	noPerm bool
 	// toolbar: a button of the detailing's toolbar (ToolbarButton)
 	toolbar     bool
 	toolbarLook ActionToolbarLookFunc
@@ -606,11 +609,33 @@ func (b *ActionBuilder) content(mb *ModelBuilder, id string, overlay actions.Ove
 // PermName is the permission of the action: its own, "!publish"
 // (ActionPerm), unless set (SetPermName).
 func (b *ActionBuilder) PermName() string {
+	if b.noPerm {
+		if b.typ == ActionTypeList {
+			return PermList
+		}
+		return PermGet
+	}
 	if b.permName != "" {
 		return b.permName
 	}
 	return ActionPerm(b.name)
 }
+
+// NoPerm takes the action out of the permissions: it is no permission of
+// the tree (the roles, the permission sets, the documentation do not show
+// it), and it asks its parent's, not one of its name — of an action of a
+// record (the detailing, a row of the listing), reading the record
+// (PermGet); of the listing, listing (PermList); of a page, the page. For an
+// action that only shows what its parent shows (a dialog); what else it
+// asks, its verifier (SetVerifier) and its enabled (SetEnabled,
+// SetEnabledObj) say.
+func (b *ActionBuilder) NoPerm() *ActionBuilder {
+	b.noPerm = true
+	return b
+}
+
+// HasPerm says the action is a permission of its own (not NoPerm).
+func (b *ActionBuilder) HasPerm() bool { return !b.noPerm }
 
 // SetPermName sets the permission the action asks — a verb of the record,
 // say ("@restore") —, in place of its own ("!restore").

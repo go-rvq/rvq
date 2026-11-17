@@ -166,12 +166,21 @@ func (r *renderer) modelPermissions(mb *presets.ModelBuilder) string {
 	// the actions: of a record, of the listing, in bulk
 	var acts [][]string
 	for _, a := range detailingActions(mb) {
+		if !a.HasPerm() {
+			continue
+		}
 		acts = append(acts, []string{a.RequestTitle(mb, ctx.Context()), code(record), code(a.PermName())})
 	}
 	for _, a := range mb.Listing().GetItemActions() {
+		if !a.HasPerm() {
+			continue
+		}
 		acts = append(acts, []string{a.RequestTitle(mb, ctx.Context()), code(record), code(a.PermName())})
 	}
 	for _, a := range mb.Listing().GetActions() {
+		if !a.HasPerm() {
+			continue
+		}
 		acts = append(acts, []string{a.RequestTitle(mb, ctx.Context()), code(base), code(a.PermName())})
 	}
 	for _, a := range mb.Listing().GetBulkActions() {

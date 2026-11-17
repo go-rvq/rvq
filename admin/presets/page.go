@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/presets/actions"
@@ -241,8 +242,16 @@ func (b *PageBuilder) Private(md ...RequestPermVerifierMiddleware) *PageBuilder 
 
 func (b *PageBuilder) Build() {
 	// the actions with no verifier of their own ask the page's permission of
-	// them
+	// them; one with no permission of its own (NoPerm), the page's — and it
+	// is no action of the page's permissions
 	for _, a := range b.actions {
+		if !a.HasPerm() {
+			b.page.permActions = slices.DeleteFunc(b.page.permActions, func(p string) bool { return p == ActionPerm(a.name) })
+			if a.verifier == nil && b.page.verififer != nil {
+				a.SetVerifier(func(ctx *web.EventContext) *perm.Verifier { return b.page.Verifier(ctx.R) })
+			}
+			continue
+		}
 		if a.verifier == nil && b.page.verififer != nil {
 			name := ActionPerm(a.name)
 			a.SetVerifier(func(ctx *web.EventContext) *perm.Verifier { return b.page.ActionVerifier(ctx.R, name) })

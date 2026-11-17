@@ -86,6 +86,9 @@ func ActionNodes(mb *presets.ModelBuilder) (out []ActionNode) {
 		return
 	}
 	for _, a := range mb.Detailing().GetActions() {
+		if !a.HasPerm() {
+			continue
+		}
 		out = append(out, ActionNode{Name: a.Name(), Verb: a.PermName()})
 	}
 	return

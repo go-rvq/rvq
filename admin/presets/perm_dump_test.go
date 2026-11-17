@@ -50,12 +50,16 @@ func dumpApp(t *testing.T) *Builder {
 	l.BulkAction("Archive")
 	l.Action("Import")
 	l.ItemAction("Duplicate")
+	// no permission of their own (NoPerm): out of the dump
+	l.Action("Refresh").NoPerm()
+	l.ItemAction("Peek").NoPerm()
 	l.PagesRegistrator().AddHttpPage(HttpPage("/export").Handler(nopHandler()).AutoPerm())
 	// actions no builder knows (a worker's jobs)
 	posts.AppendListPermActions(func() []*PermNodeAction { return []*PermNodeAction{{Name: ActionPerm("ReindexPosts")}} })
 	posts.Editing("Title", "Body")
 	d := posts.Detailing("Title", "Body")
 	d.Action("Publish")
+	d.Action("Share").NoPerm()
 	d.Section("Main").Editing("Body")
 	d.PagesRegistrator().AddHttpPage(HttpPage("/report").Handler(nopHandler()).AutoPerm().Methods("GET", "POST"))
 	comments := NewModelBuilder(b, &dumpComment{}, ModelConfig().SetId("comments"))
@@ -139,6 +143,14 @@ func TestPermissionsDump(t *testing.T) {
 	if slices.Contains(actionNames(record), PermList) {
 		t.Error("the record is asked @list")
 	}
+	// the actions with no permission of their own: in no node
+	for _, e := range tree.Zip() {
+		for _, a := range e.Actions {
+			if slices.Contains([]string{"!refresh", "!peek", "!share"}, a.Name) {
+				t.Errorf("%s: %s, an action with no permission of its own", e.Resource, a.Name)
+			}
+		}
+	}
 	// the fields, the section, the pages
 	want("admin:site/:content/:posts:<*>:#Title:", "admin:posts:<*>:#Title:", PermGet, PermUpdate)
 	// a new record's fields and the listing's columns: of the model
@@ -204,5 +216,24 @@ func TestPagePermActionInfo(t *testing.T) {
 	}
 	if reset == nil || reset.Title != nil {
 		t.Errorf("!reset: %+v", reset)
+	}
+}
+
+// An action with no permission of its own (NoPerm) asks its parent's: of
+// the listing, listing; of a record, reading it.
+func TestActionNoPerm(t *testing.T) {
+	b := New(i18n.New().SupportLanguages(language.English))
+	mb := b.Model(&permTitleThing{})
+	if p := mb.Listing().Action("refresh").NoPerm().PermName(); p != PermList {
+		t.Errorf("of the listing: %s", p)
+	}
+	if p := mb.Listing().ItemAction("peek").NoPerm().PermName(); p != PermGet {
+		t.Errorf("of a row: %s", p)
+	}
+	if p := mb.Detailing().Action("share").NoPerm().PermName(); p != PermGet {
+		t.Errorf("of the detailing: %s", p)
+	}
+	if a := mb.Detailing().Action("publish"); !a.HasPerm() || a.PermName() != "!publish" {
+		t.Errorf("an action of its own: %s", a.PermName())
 	}
 }
