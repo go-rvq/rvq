@@ -46,9 +46,14 @@ fsb.OnAccess(func(r *http.Request, kind string) { … }) // webdav, git, files, 
 err = fsb.Install(presets)
 ```
 
-`Install` adds the page, its explorer's API (`<prefix>/fs-tools/api/fs/…`),
-its terminal (`<prefix>/fs-tools/terminal`), the components (`UseAssets`) and
+`Install` adds the page, its explorer's API (`<prefix>/!fs-tools/api/fs/…`),
+its terminal (`<prefix>/!fs-tools/terminal`), the components (`UseAssets`) and
 the WebDAV (`<prefix>/!webdav`).
+
+These are services (`presets.Service`, `admin/PATHS.md`): `fs-tools`,
+`webdav` and `git` — whose repositories are at git's protocol path,
+`<prefix>/<name>.git/`, mounted on it. The user documentation lists them,
+in its section **Stable paths**.
 
 ## The folders
 
@@ -133,7 +138,7 @@ The terminal is a feature (`x/features`): **compiled and on by default**.
 | leave it out of the binary | build with the tag `rvq.fstools.noterminal` (`go build -tags rvq.fstools.noterminal`) |
 | see whether it is on | `app features` (on), `app features all` (compiled) — HermonCMS: Server operations' documentation |
 
-Off or not compiled, the button is not shown and `<prefix>/fs-tools/terminal`
+Off or not compiled, the button is not shown and `<prefix>/!fs-tools/terminal`
 answers 403. In code: `fs_tools.TerminalFeature.Enabled()`.
 
 ### Its configuration: `fstools.terminal` of the app.yml

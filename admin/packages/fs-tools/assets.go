@@ -47,12 +47,15 @@ func UseAssets(p *presets.Builder) {
 	p.ExtraAsset("/vx-terminal.js", "text/javascript", read("vx-terminal.js"))
 	p.ExtraAsset("/vx-files.css", "text/css", read("vx-files.css"))
 	vendor, _ := fs.Sub(assetsFS, "assets/vendor")
-	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		mux.Handle("GET "+prefix+vendorPath+"/", http.StripPrefix(prefix+vendorPath+"/", cacheFor(http.FileServer(http.FS(vendor)))))
-	})
+	svc := p.Service(ServiceName)
+	svc.Handle("GET /vendor/", http.StripPrefix(svc.Path()+"/vendor/", cacheFor(http.FileServer(http.FS(vendor)))))
 }
 
-const vendorPath = "/fs-tools/vendor"
+// ServiceName is the service of the file system (presets.Service): the
+// explorer's API, its terminal, its components' vendor.
+const ServiceName = "fs-tools"
+
+const vendorPath = "/" + presets.ServicePrefix + ServiceName + "/vendor"
 
 // VueI18nNamespace is the namespace of the vue-i18n where <vx-files> and
 // <vx-terminal> read their words (FilesMessages).

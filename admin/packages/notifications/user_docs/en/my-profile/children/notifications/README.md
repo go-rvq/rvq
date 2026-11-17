@@ -48,3 +48,16 @@ who made it.
 
 Deleting a notification sends it to the **Trash** of this page, where it can
 be restored.
+
+## Stable paths
+
+The attachments of a notification are served out of the pages of the menu,
+by the service `!notifications` (see the guide **Stable paths**). `<admin>`
+is the address of the admin.
+
+| Method | Path | Access | What it gives |
+| --- | --- | --- | --- |
+| GET | `<admin>/!notifications/files/{id}` | session | an attachment of a notification, to who received or sent it |
+
+The link of each attachment is in the notification itself; whoever cannot
+see it gets "not found".

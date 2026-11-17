@@ -23,7 +23,7 @@ describe('login once', () => {
         return Promise.resolve({
           ok: false,
           status: 401,
-          json: () => Promise.resolve({ loginURI: '/login-dialog?__execute_event__=login_dialog' })
+          json: () => Promise.resolve({ loginURI: '/!login/dialog?__execute_event__=login_dialog' })
         })
       }
       return Promise.resolve({ ok: true, status: 200, redirected: false, json: () => Promise.resolve({}) })

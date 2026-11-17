@@ -80,7 +80,7 @@ function interruptedRequest() {
 describe("session lost under an open page", () => {
   it("opens the login and replays the interrupted request", async () => {
     stubFetch([
-      { status: 401, body: { loginURI: "/admin/login-dialog" } },
+      { status: 401, body: { loginURI: "/admin/!login/dialog" } },
       // the dialog: its script is what the login calls once the session is back
       {
         status: 200,
@@ -102,7 +102,7 @@ describe("session lost under an open page", () => {
     expect(calls[0].url).toContain("__execute_event__=presets_Update");
 
     // 2) the login, at the address the 401 gave
-    expect(calls[1].url).toContain("/admin/login-dialog");
+    expect(calls[1].url).toContain("/admin/!login/dialog");
     expect(portalBodies["presets_LoginPortalName"]).toBe("<div>login</div>");
 
     // 3) the user's action goes through, unchanged
@@ -118,7 +118,7 @@ describe("session lost under an open page", () => {
       {
         status: 401,
         body: {
-          loginURI: "/admin/login-dialog",
+          loginURI: "/admin/!login/dialog",
           // a middleware has no business updating the page — and if it tries,
           // the page is not touched
           updatePortals: [{ name: "presets_LoginPortalName", body: "<div>nope</div>" }],

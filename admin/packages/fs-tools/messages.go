@@ -25,6 +25,19 @@ type Messages struct {
 	Folders                       string    `i18n:"hint='Title of the folders of the file system (in the WebDAV panel).'"`
 	ReadOnly                      string    `i18n:"label='Read only', hint='Said of a folder that is only read.'"`
 	ReadWrite                     string    `i18n:"label='Read and write', hint='Said of a folder that is read and written.'"`
+	ServiceFsTitle                string    `i18n:"hint='Title of the service of the file system (its stable paths).'"`
+	ServiceFsDesc                 string    `i18n:"hint='What the service of the file system serves.'"`
+	RouteFsList                   string    `i18n:"hint='What the route list of the explorer gives.'"`
+	RouteFsDownload               string    `i18n:"hint='What the route download of the explorer gives.'"`
+	RouteFsOp                     string    `i18n:"hint='What the routes of the explorer that change the files do.'"`
+	RouteFsTerminal               string    `i18n:"hint='What the route terminal gives.'"`
+	RouteFsVendor                 string    `i18n:"hint='What the route vendor gives.'"`
+	ServiceDavTitle               string    `i18n:"hint='Title of the service of the WebDAV.'"`
+	ServiceDavDesc                string    `i18n:"hint='What the service of the WebDAV serves.'"`
+	RouteDav                      string    `i18n:"hint='What the route of the WebDAV does.'"`
+	ServiceGitTitle               string    `i18n:"hint='Title of the service of the repositories of git.'"`
+	ServiceGitDesc                string    `i18n:"hint='What the service of the repositories serves.'"`
+	RouteGit                      string    `i18n:"hint='What the route of a repository does.'"`
 	TerminalOff                   string    `i18n:"label='Terminal off', hint='Why the terminal is not available.', fields=(;'%s'='the reason')"`
 	KeyPermissions                string    `i18n:"label='Permissions of the access key', hint='Title of what an access key needs to reach the WebDAV.'"`
 	KeyPermissionsHint            string    `i18n:"label='How the key is limited', hint='Says that a key only denies, on top of what its user may, and what it must not deny.'"`
@@ -74,6 +87,19 @@ var (
 		ReadOnly:          "read only",
 		ReadWrite:         "read and write",
 		TerminalOff:       "The terminal is off: %s",
+		ServiceFsTitle:    "File system",
+		ServiceFsDesc:     "The API of the explorer of the page File system, its terminal and the scripts of its components.",
+		RouteFsList:       "the files of a folder (JSON)",
+		RouteFsDownload:   "a file; a folder as zip",
+		RouteFsOp:         "write, mkdir, rename, copy, delete, upload, upload-part, upload-done, upload-abort, extract",
+		RouteFsTerminal:   "the terminal (a websocket), in the folder dir",
+		RouteFsVendor:     "xterm, the terminal's library (static)",
+		ServiceDavTitle:   "WebDAV",
+		ServiceDavDesc:    "The files of the file system by WebDAV: a network drive.",
+		RouteDav:          "WebDAV (PROPFIND, GET, PUT, MKCOL, MOVE, COPY, DELETE…): the account and its password, or an access key",
+		ServiceGitTitle:   "Repositories (git)",
+		ServiceGitDesc:    "The repositories of the admin (the site's files, the admin's) by git over HTTP: clone, pull, push. Their paths are of git's protocol, `<admin>/<name>.git`: the suffix tells them apart from a page's.",
+		RouteGit:          "git over HTTP (clone, fetch, push): the account and its password, or an access key",
 		KeyPermissions:    "Permissions of the access key",
 		KeyPermissionsHint: "A key only denies, on top of what you may: a key with no line of permissions reaches what you reach. " +
 			"For the WebDAV, its lines must not deny this page's resource:",
@@ -118,6 +144,19 @@ var (
 		ReadOnly:          "só leitura",
 		ReadWrite:         "leitura e escrita",
 		TerminalOff:       "O terminal está desligado: %s",
+		ServiceFsTitle:    "Sistema de arquivos",
+		ServiceFsDesc:     "A API do explorador da página Sistema de arquivos, o seu terminal e os scripts dos seus componentes.",
+		RouteFsList:       "os arquivos de uma pasta (JSON)",
+		RouteFsDownload:   "um arquivo; uma pasta em zip",
+		RouteFsOp:         "write, mkdir, rename, copy, delete, upload, upload-part, upload-done, upload-abort, extract",
+		RouteFsTerminal:   "o terminal (um websocket), na pasta dir",
+		RouteFsVendor:     "o xterm, a biblioteca do terminal (estático)",
+		ServiceDavTitle:   "WebDAV",
+		ServiceDavDesc:    "Os arquivos do sistema de arquivos por WebDAV: uma unidade de rede.",
+		RouteDav:          "WebDAV (PROPFIND, GET, PUT, MKCOL, MOVE, COPY, DELETE…): a conta e a sua senha, ou uma chave de acesso",
+		ServiceGitTitle:   "Repositórios (git)",
+		ServiceGitDesc:    "Os repositórios do admin (os arquivos do site, os do admin) por git sobre HTTP: clone, pull, push. Os seus caminhos são do protocolo do git, `<admin>/<nome>.git`: o sufixo os separa dos de uma página.",
+		RouteGit:          "git sobre HTTP (clone, fetch, push): a conta e a sua senha, ou uma chave de acesso",
 		KeyPermissions:    "Permissões da chave de acesso",
 		KeyPermissionsHint: "Uma chave só nega, sobre o que você pode: uma chave sem nenhuma linha de permissão alcança o que você alcança. " +
 			"Para o WebDAV, as linhas dela não podem negar o recurso desta página:",

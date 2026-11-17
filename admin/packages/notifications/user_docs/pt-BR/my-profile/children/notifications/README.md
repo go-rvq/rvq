@@ -49,3 +49,16 @@ diz quem a fez.
 
 Excluir uma notificação a manda para a **Lixeira** desta página, de onde
 ela pode ser restaurada.
+
+## Caminhos estáveis
+
+Os anexos de uma notificação são servidos fora das páginas do menu, pelo
+serviço `!notifications` (veja o guia **Caminhos estáveis**). `<admin>` é o
+endereço do admin.
+
+| Método | Caminho | Acesso | O que dá |
+| --- | --- | --- | --- |
+| GET | `<admin>/!notifications/files/{id}` | sessão | um anexo de uma notificação, a quem a recebeu ou enviou |
+
+O link de cada anexo está na própria notificação; quem não a pode ver recebe
+"não encontrado".

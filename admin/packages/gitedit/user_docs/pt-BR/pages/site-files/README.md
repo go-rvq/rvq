@@ -56,6 +56,24 @@ Em **Seu rascunho**:
 - Se um arquivo do site foi mudado fora deste editor, **Publicar** não
   sobrescreve nada e avisa.
 
+## Caminhos estáveis
+
+Os repositórios desta página ficam no endereço do protocolo do git — o
+`.git` no fim os distingue de uma página, sem o `!` dos outros serviços
+(veja o guia **Caminhos estáveis**) — e não mudam com o menu: um
+`git remote` os guarda. `<admin>` é o endereço do admin
+(`https://seu-site/admin`).
+
+| Método | Caminho | Acesso | O que é |
+| --- | --- | --- | --- |
+| GET, POST | `<admin>/site-files.git/…` | HTTP Basic, `!git` (e `!publish` para enviar) | o site: um push publica |
+| GET, POST | `<admin>/site-files-draft.git/…` | HTTP Basic, `!git` | o seu rascunho |
+| GET, POST | `<admin>/site-files-drafts/<chave>.git/…` | HTTP Basic, `!git` | o rascunho de outro usuário, pela chave do dono |
+| GET | `<admin>/…/site-files/commit-msg` | sessão | o hook `commit-msg` com o seu `Site-User:` (um caminho da própria página) |
+
+O login é o do próprio `git` (HTTP Basic): o seu e-mail do admin e uma chave
+de acesso no lugar da senha (veja **Pelo git**).
+
 ## Permissões
 
 Cada ação é uma permissão da página: vê-la (`@get`), mudar os arquivos do

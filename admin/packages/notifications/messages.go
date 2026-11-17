@@ -13,6 +13,9 @@ const MessagesKey i18n.ModuleKey = "admin/packages/notifications"
 // Messages are the words of the notification center.
 type Messages struct {
 	ModuleDescription        string `i18n:"hint='Says what the module is, for whoever translates its texts.'"`
+	ServiceTitle             string `i18n:"hint='Title of the service of the notifications (its stable paths).'"`
+	ServiceDesc              string `i18n:"hint='What the service of the notifications serves.'"`
+	ServiceFileRoute         string `i18n:"hint='What the route of an attachment of a notification serves.'"`
 	Notification             string `i18n:"hint='Name of a notification of the user (singular).'"`
 	Notifications            string `i18n:"label='My notifications', hint='The notifications of the user: the listing (plural).'"`
 	NotificationTitle        string `i18n:"label='Title', hint='Label of the title of a notification.'"`
@@ -61,6 +64,9 @@ type Messages struct {
 }
 
 var Messages_en_US = &Messages{
+	ServiceTitle:             "Notifications",
+	ServiceDesc:              "The attachments of the messages of the notifications, to who received or sent them.",
+	ServiceFileRoute:         "an attachment (by its id)",
 	ModuleDescription:        "The notification center of the users.",
 	Notification:             "Notification",
 	Notifications:            "Notifications",
@@ -110,6 +116,9 @@ var Messages_en_US = &Messages{
 }
 
 var Messages_pt_BR = &Messages{
+	ServiceTitle:             "Notificações",
+	ServiceDesc:              "Os anexos das mensagens das notificações, a quem as recebeu ou enviou.",
+	ServiceFileRoute:         "um anexo (pelo seu id)",
 	ModuleDescription:        "A central de notificações dos usuários.",
 	Notification:             "Notificação",
 	Notifications:            "Notificações",

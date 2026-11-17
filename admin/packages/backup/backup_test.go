@@ -269,9 +269,9 @@ func TestClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	queued := queue(t, b, &BackupState{})
-	base := "/admin/backup"
+	base := "/admin/!backup"
 	b.clientBase = base
-	srv := httptest.NewServer(b.ClientHandler())
+	srv := httptest.NewServer(b.ClientHandler(nil))
 	defer srv.Close()
 
 	do := func(method, path, auth string, hdr ...string) *http.Response {
@@ -295,26 +295,26 @@ func TestClient(t *testing.T) {
 		return string(b)
 	}
 
-	if res := do("GET", base+"/!latest", ""); res.StatusCode != 401 {
+	if res := do("GET", base+"/latest", ""); res.StatusCode != 401 {
 		t.Errorf("latest with no key: %d", res.StatusCode)
 	}
-	if res := do("GET", base+"/!latest", "rk_bad"); res.StatusCode != 401 {
+	if res := do("GET", base+"/latest", "rk_bad"); res.StatusCode != 401 {
 		t.Errorf("latest with a bad key: %d", res.StatusCode)
 	}
-	if got := body(do("GET", base+"/!latest", "rk_1")); !strings.Contains(got, ready.ID) {
+	if got := body(do("GET", base+"/latest", "rk_1")); !strings.Contains(got, ready.ID) {
 		t.Errorf("latest %s", got)
 	}
-	if res := do("POST", base+"/"+queued.ID+"/!session", "rk_1"); res.StatusCode != http.StatusConflict {
+	if res := do("POST", base+"/"+queued.ID+"/session", "rk_1"); res.StatusCode != http.StatusConflict {
 		t.Errorf("session of a queued: %d", res.StatusCode)
 	}
 	b.allowDownload = func(*http.Request) bool { return false }
-	if res := do("POST", base+"/"+ready.ID+"/!session", "rk_1"); res.StatusCode != http.StatusForbidden {
+	if res := do("POST", base+"/"+ready.ID+"/session", "rk_1"); res.StatusCode != http.StatusForbidden {
 		t.Errorf("session not allowed: %d", res.StatusCode)
 	}
 	b.allowDownload = func(*http.Request) bool { return true }
 
 	var sess struct{ Token, Manifest, Files string }
-	if err := json.Unmarshal([]byte(body(do("POST", base+"/"+ready.ID+"/!session", "rk_1"))), &sess); err != nil || sess.Token == "" {
+	if err := json.Unmarshal([]byte(body(do("POST", base+"/"+ready.ID+"/session", "rk_1"))), &sess); err != nil || sess.Token == "" {
 		t.Fatalf("session %+v %v", sess, err)
 	}
 	if b.keys.(*fakeKeys).served != 1 {
@@ -354,7 +354,7 @@ func TestClient(t *testing.T) {
 		t.Errorf("another state's token: %d", res.StatusCode)
 	}
 	// renewed by its token
-	if res := do("POST", base+"/"+ready.ID+"/!session", sess.Token); res.StatusCode != 200 {
+	if res := do("POST", base+"/"+ready.ID+"/session", sess.Token); res.StatusCode != 200 {
 		t.Errorf("renew: %d", res.StatusCode)
 	}
 	// the usage: written by flush
@@ -365,5 +365,26 @@ func TestClient(t *testing.T) {
 	b.db.First(&s, "state_id = ?", ready.ID)
 	if s.Files != 2 || s.Bytes != int64(len("hello world")+len("world")) || s.UserName != "ana" || strings.Contains(s.IP, ":") {
 		t.Errorf("session %+v", s)
+	}
+}
+
+// A request with no credential of the client's is the admin's (its login,
+// the manifest to its session).
+func TestClientFallsBackToAdmin(t *testing.T) {
+	b, _ := setup(t, nil)
+	b.clientBase = "/admin/!backup"
+	admin := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("admin")) })
+	h := b.ClientHandler(admin)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/admin/!backup/x/manifest", nil))
+	if w.Body.String() != "admin" {
+		t.Errorf("no credential: %q", w.Body.String())
+	}
+	r := httptest.NewRequest("GET", "/admin/!backup/x/manifest", nil)
+	r.Header.Set("Authorization", "Bearer nope")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("a bad token: %d", w.Code)
 	}
 }

@@ -122,6 +122,8 @@ func (b *Builder) AddGitRepo(repo *GitRepo) *Builder {
 		b.git = &gitServer{pending: map[string]*pendingPush{}}
 	}
 	b.git.repos = append(b.git.repos, repo)
+	// its path of git's protocol: the service's
+	b.p.Service(GitServiceName).Mount(b.gitMountPath(repo.Name))
 	return b
 }
 
@@ -137,6 +139,11 @@ func (b *Builder) GitRepos() []*GitRepo {
 func (b *Builder) GitPath(name string) string {
 	return strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/" + name + ".git"
 }
+
+// GitServiceName is the service of the repositories (presets.Service): at
+// their paths of git's protocol, <prefix>/<name>.git (Mount) — the suffix
+// tells them apart from a page's.
+const GitServiceName = "git"
 
 // GitHandler serves the repositories added (AddGitRepo), each at its path
 // (GitPath) — a mux of its own for the paths <admin>/<name>.git/…, each

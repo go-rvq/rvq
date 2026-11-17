@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -135,10 +134,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 		Label("BackupState").SetPluralLabel("BackupStates").MenuIcon("mdi-backup-restore")
 	b.configureModel(b.mb)
 	b.configureJobs()
-	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		// the manifest, to the admin (its session)
-		mux.HandleFunc("GET "+strings.TrimSuffix(prefix, "/")+"/!backup-manifest/{id}", b.adminManifest)
-	})
+	b.registerService(p)
 	go b.flushLoop()
 	return nil
 }
@@ -400,4 +396,22 @@ func (b *Builder) adminManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b.sendManifest(w, r, s)
+}
+
+// registerService registers the backup's service (/!backup): the client's
+// routes (Outer: an access key, a token), the manifest to the admin's
+// session (the same path, with no credential of the client's).
+func (b *Builder) registerService(p *presets.Builder) {
+	m := func(f func(m *Messages) string) func(context.Context) string {
+		return func(ctx context.Context) string { return f(GetMessages(ctx)) }
+	}
+	p.Service(ServiceName).
+		Title(m(func(m *Messages) string { return m.ServiceTitle })).
+		Description(m(func(m *Messages) string { return m.ServiceDesc })).
+		Route("GET", "/latest", presets.ServiceAuthAccessKey, m(func(m *Messages) string { return m.RouteLatest })).
+		Route("POST", "/{id}/session", presets.ServiceAuthAccessKey+", "+presets.ServiceAuthToken, m(func(m *Messages) string { return m.RouteSession })).
+		Route("GET", "/{id}/manifest", presets.ServiceAuthToken+", "+presets.ServiceAuthSession, m(func(m *Messages) string { return m.RouteManifest })).
+		Route("GET", "/{id}/files/{path}", presets.ServiceAuthToken, m(func(m *Messages) string { return m.RouteFiles })).
+		Handle("GET /{id}/manifest", http.HandlerFunc(b.adminManifest)).
+		Outer(b.ClientHandler)
 }

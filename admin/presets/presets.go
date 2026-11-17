@@ -70,20 +70,22 @@ type Builder struct {
 	listFieldDefaults                     *FieldDefaults
 	detailFieldDefaults                   *FieldDefaults
 	extraAssets                           []*extraAsset
-	assetFunc                             AssetFunc
-	menuTree                              *MenuGroupBuilder
-	menuItems                             map[string]*MenuItem
-	wrapHandlers                          map[string]func(in http.Handler) (out http.Handler)
-	timeLocationFunc                      func(r *http.Request) *time.Location
-	plugins                               []Plugin
-	ModelConfigurators                    ModelConfigurators
-	ModelSetupFactories                   ModelSetupFactories
-	skipNotFoundHandler                   func(r *http.Request) bool
-	muxSetup                              []func(prefix string, r *http.ServeMux)
-	permissions                           *PermMenu
-	verifiers                             perm.PermVerifiers
-	pagesRegistrator                      *PagesRegistrator
-	formSigner                            FormSigner
+	// services are the paths no page has (Service): /!<name>
+	services            []*ServiceBuilder
+	assetFunc           AssetFunc
+	menuTree            *MenuGroupBuilder
+	menuItems           map[string]*MenuItem
+	wrapHandlers        map[string]func(in http.Handler) (out http.Handler)
+	timeLocationFunc    func(r *http.Request) *time.Location
+	plugins             []Plugin
+	ModelConfigurators  ModelConfigurators
+	ModelSetupFactories ModelSetupFactories
+	skipNotFoundHandler func(r *http.Request) bool
+	muxSetup            []func(prefix string, r *http.ServeMux)
+	permissions         *PermMenu
+	verifiers           perm.PermVerifiers
+	pagesRegistrator    *PagesRegistrator
+	formSigner          FormSigner
 	// linkCardResolvers: the application's (link_cards.go)
 	linkCardResolvers []LinkCardResolver
 	// externalCards keeps the cards of pages of other sites (link_external.go)
@@ -1257,13 +1259,13 @@ const (
 	// LoginDoneURI is the tiny page the login lands on inside the dialog: it
 	// tells the page around it that the session is back, and that is the whole
 	// content — nothing heavy is loaded inside the frame.
-	LoginDoneURI = "/login-done"
+	LoginDoneURI = "/!login/done"
 
 	// LoginDialogURI answers with the dialog itself. It is what a page asks for
 	// after being told its session is gone (web.EventResponse.LoginURI), so it
 	// must be reachable WITHOUT a session — it is whitelisted in the login
 	// middleware.
-	LoginDialogURI = "/login-dialog"
+	LoginDialogURI = "/!login/dialog"
 )
 
 // LoginDialogVar is the layout variable that shows the login dialog.
@@ -1426,9 +1428,9 @@ func (b *Builder) FormatHtmlValue(v string) string {
 
 func (b *Builder) InjectAssets(ctx *web.EventContext) {
 	ctx.Injector.HeadHTML(b.FormatHtmlValue(`
-			<link rel="stylesheet" href="{{prefix}}/assets/main.css?{{exe_mtime}}" async>
-			<link rel="stylesheet" href="{{prefix}}/vuetify/assets/index.css?{{exe_mtime}}" async>
-			<script src="{{prefix}}/assets/vue.js?{{exe_mtime}}"></script>
+			<link rel="stylesheet" href="{{prefix}}/!assets/main.css?{{exe_mtime}}" async>
+			<link rel="stylesheet" href="{{prefix}}/!assets/vuetify/assets/index.css?{{exe_mtime}}" async>
+			<script src="{{prefix}}/!assets/vue.js?{{exe_mtime}}"></script>
 			<style>
 				[v-cloak] {
 					display: none;
@@ -1469,7 +1471,7 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 	b.InjectExtraAssets(ctx)
 
 	ctx.Injector.TailHTML(b.FormatHtmlValue(`
-			<script src="{{prefix}}/assets/main.js?{{exe_mtime}}"></script>
+			<script src="{{prefix}}/!assets/main.js?{{exe_mtime}}"></script>
 			`))
 
 	if b.assetFunc != nil {
@@ -1527,7 +1529,7 @@ func (b *Builder) SkipNotFoundHandlerFunc(f func(r *http.Request) bool) *Builder
 }
 
 func (b *Builder) extraFullPath(ea *extraAsset) string {
-	return b.prefix + "/extra" + ea.path
+	return b.ServicePath(AssetsService) + "/extra" + ea.path
 }
 
 // extraRef is the address of ea in a page: its path and its version.

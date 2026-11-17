@@ -42,13 +42,18 @@ func (b *Builder) installLoginDialog(pb *presets.Builder) {
 	doneURL := uriPrefix + presets.LoginDoneURI
 	dialogURL := uriPrefix + presets.LoginDialogURI
 
-	pb.MuxSetup(func(prefix string, mux *http.ServeMux) {
+	// a service (/!login): no page of the menu
+	m := presets.ServiceMessage
+	pb.Service("login").
+		Title(m(func(m *presets.Messages) string { return m.ServiceLoginTitle })).
+		Description(m(func(m *presets.Messages) string { return m.ServiceLoginDesc })).
+		Route("GET", "/dialog", presets.ServiceAuthPublic, m(func(m *presets.Messages) string { return m.RouteLoginDialog })).
+		Route("GET", "/done", presets.ServiceAuthPublic, m(func(m *presets.Messages) string { return m.RouteLoginDone })).
 		// the page the frame lands on when the login succeeds
-		mux.Handle(prefix+presets.LoginDoneURI, LoginDonePage())
-
+		Handle("/done", LoginDonePage()).
 		// The dialog itself. EnsureLanguage because this handler is not a page —
 		// nothing else would put the translations in its context.
-		mux.Handle(prefix+presets.LoginDialogURI, pb.I18n().EnsureLanguage(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Handle("/dialog", pb.I18n().EnsureLanguage(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// where the login goes when it succeeds
 			lb.SetContinueURL(w, doneURL)
 
@@ -61,7 +66,6 @@ func (b *Builder) installLoginDialog(pb *presets.Builder) {
 
 			writeEventResponse(w, r, &res)
 		})))
-	})
 
 	// Both are asked for exactly when there is no session — that is the whole
 	// point of them — so nothing may turn them away.

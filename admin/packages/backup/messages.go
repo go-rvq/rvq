@@ -75,6 +75,8 @@ type Messages struct {
 	NotReady                    string `i18n:"hint='The download of a state not ready yet. {status}.'"`
 	NotDownloadable             string `i18n:"hint='The download of a state that failed or was canceled.'"`
 	ManifestLink                string `i18n:"hint='Link to download the manifest of a state.'"`
+	ServiceTitle                string `i18n:"hint='Title of the backup’s service (its stable paths).'"`
+	ServiceDesc                 string `i18n:"hint='What the backup’s service serves.'"`
 	ClientURL                   string `i18n:"hint='Label of the routes the client downloads by.'"`
 	ClientRoutes                string `i18n:"hint='Says the client’s routes are not the admin’s pages.'"`
 	RouteLatest                 string `i18n:"hint='What the route !latest gives.'"`
@@ -148,6 +150,8 @@ var Messages_en_US = &Messages{
 	NotReady:                    "Not ready to download: {status}.",
 	NotDownloadable:             "This state cannot be downloaded.",
 	ManifestLink:                "Download the manifest",
+	ServiceTitle:                "Backup",
+	ServiceDesc:                 "The states of the backup to a client: by an access key, a session, its token; the manifest also to the admin's session.",
 	ClientURL:                   "Routes of the client",
 	ClientRoutes:                "Out of the admin's pages and of its login: an access key opens a session (its token for the others).",
 	RouteLatest:                 "the id of the newest state ready and whole",
@@ -221,6 +225,8 @@ var Messages_pt_BR = &Messages{
 	NotReady:                    "Ainda não pode ser baixado: {status}.",
 	NotDownloadable:             "Este state não pode ser baixado.",
 	ManifestLink:                "Baixar o manifesto",
+	ServiceTitle:                "Backup",
+	ServiceDesc:                 "Os states do backup a um cliente: por uma chave de acesso, uma sessão, o seu token; o manifesto também à sessão do admin.",
 	ClientURL:                   "Rotas do cliente",
 	ClientRoutes:                "Fora das páginas do admin e do seu login: uma chave de acesso abre uma sessão (o token dela vale para as outras).",
 	RouteLatest:                 "o id do state pronto e completo mais novo",

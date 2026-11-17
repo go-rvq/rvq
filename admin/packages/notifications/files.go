@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"fmt"
+	"github.com/go-rvq/rvq/admin/presets"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -115,8 +116,9 @@ func canSee(db *gorm.DB, uid, message uuid.UUID) bool {
 	return n > 0
 }
 
-// filesPath is where the attachments are served, under the admin's prefix.
-const filesPath = "/notifications/files/"
+// filesPath is where the attachments are served, under the admin's prefix:
+// the service notifications (presets.Service), no page of the menu.
+const filesPath = "/" + presets.ServicePrefix + "notifications/files/"
 
 // FileHandler serves the attachment of its id (the end of the path), of dir
 // (or of the database), to who received or sent its message; to anyone

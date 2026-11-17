@@ -180,6 +180,33 @@ type Messages struct {
 	PermSetEditorsDesc  string `i18n:"hint='What the set editors gives.'"`
 	PermSetManagers     string `i18n:"hint='Title of the set of permissions managers.'"`
 	PermSetManagersDesc string `i18n:"hint='What the set managers gives.'"`
+
+	// the services (Service): their titles, routes, how they are reached
+	ServiceAssetsTitle    string `i18n:"hint='Title of the service of the admin’s assets (its stable paths).'"`
+	ServiceAssetsDesc     string `i18n:"hint='What the service of the admin’s assets serves.'"`
+	RouteAssetsMainJS     string `i18n:"hint='What the route of the pages’ script gives.'"`
+	RouteAssetsVueJS      string `i18n:"hint='What the route of Vue gives.'"`
+	RouteAssetsMainCSS    string `i18n:"hint='What the route of the pages’ style gives.'"`
+	RouteAssetsVuetify    string `i18n:"hint='What the route of Vuetify’s assets gives.'"`
+	RouteAssetsExtra      string `i18n:"hint='What the route of a package’s asset gives.'"`
+	ServiceLoginTitle     string `i18n:"hint='Title of the service of the login dialog.'"`
+	ServiceLoginDesc      string `i18n:"hint='What the service of the login dialog serves.'"`
+	RouteLoginDialog      string `i18n:"hint='What the route of the login dialog gives.'"`
+	RouteLoginDone        string `i18n:"hint='What the route where the login lands gives.'"`
+	ServiceGadcodeTitle   string `i18n:"hint='Title of the service of the Gad code editor.'"`
+	ServiceGadcodeDesc    string `i18n:"hint='What the service of the Gad code editor serves.'"`
+	RouteGadcodeFormat    string `i18n:"hint='What the route that formats code gives.'"`
+	RouteGadcodeOutline   string `i18n:"hint='What the route of the code’s outline gives.'"`
+	RouteGadcodeDoc       string `i18n:"hint='What the route of a symbol’s documentation gives.'"`
+	ServiceUserDocsTitle  string `i18n:"hint='Title of the service of the user documentation’s pictures.'"`
+	ServiceUserDocsDesc   string `i18n:"hint='What the service of the user documentation serves.'"`
+	RouteUserDocsAsset    string `i18n:"hint='What the route of a document’s picture gives.'"`
+	ServiceAuthPublic     string `i18n:"hint='How a service’s route is reached: by anyone.'"`
+	ServiceAuthSession    string `i18n:"hint='How a service’s route is reached: the admin’s login.'"`
+	ServiceAuthSignedLink string `i18n:"hint='How a service’s route is reached: a link signed for the user.'"`
+	ServiceAuthAccessKey  string `i18n:"hint='How a service’s route is reached: an access key.'"`
+	ServiceAuthToken      string `i18n:"hint='How a service’s route is reached: a token given by the service.'"`
+	ServiceAuthBasic      string `i18n:"hint='How a service’s route is reached: HTTP Basic (login and password, or an access key).'"`
 }
 
 // FormatDateTime writes an instant the way this language does. Falls back to a
@@ -375,6 +402,31 @@ var Messages_en_US = &Messages{
 	PermSetEditorsDesc:    "authoring and removal",
 	PermSetManagers:       "Management",
 	PermSetManagersDesc:   "everything of the resource",
+	ServiceAssetsTitle:    "Assets of the admin",
+	ServiceAssetsDesc:     "The scripts, the styles and the icons of the admin’s pages, and the assets the packages add: static, of the program (a version in their address).",
+	RouteAssetsMainJS:     "the script of the pages",
+	RouteAssetsVueJS:      "Vue",
+	RouteAssetsMainCSS:    "the style of the pages",
+	RouteAssetsVuetify:    "Vuetify’s style and the Material Design Icons font",
+	RouteAssetsExtra:      "an asset of a package: ?v=<hash of its content>",
+	ServiceLoginTitle:     "Login dialog",
+	ServiceLoginDesc:      "The login asked again over the page whose session ended, in a dialog: the page is kept.",
+	RouteLoginDialog:      "the dialog: the login page in a frame",
+	RouteLoginDone:        "where the login in the frame lands: tells the page around it",
+	ServiceGadcodeTitle:   "Gad code",
+	ServiceGadcodeDesc:    "The operations of the editor of Gad code (format, outline, documentation), for the fields of code.",
+	RouteGadcodeFormat:    "the code formatted",
+	RouteGadcodeOutline:   "the outline of the code (its symbols)",
+	RouteGadcodeDoc:       "the documentation of a symbol",
+	ServiceUserDocsTitle:  "User documentation",
+	ServiceUserDocsDesc:   "The pictures of the documents of the user documentation.",
+	RouteUserDocsAsset:    "a picture of a document: of the package, in the language asked (or the default’s)",
+	ServiceAuthPublic:     "public",
+	ServiceAuthSession:    "session",
+	ServiceAuthSignedLink: "signed link",
+	ServiceAuthAccessKey:  "access key",
+	ServiceAuthToken:      "token",
+	ServiceAuthBasic:      "HTTP Basic",
 }
 
 var DefaultMessages = Messages_en_US
@@ -557,4 +609,29 @@ var Messages_pt_BR = &Messages{
 		"NewPassword":         "Nova Senha",
 		"ConfirmPassword":     "Repita a Nova Senha",
 	},
+	ServiceAssetsTitle:    "Recursos do admin",
+	ServiceAssetsDesc:     "Os scripts, os estilos e os ícones das páginas do admin, e os recursos que os pacotes acrescentam: estáticos, do programa (uma versão no endereço).",
+	RouteAssetsMainJS:     "o script das páginas",
+	RouteAssetsVueJS:      "o Vue",
+	RouteAssetsMainCSS:    "o estilo das páginas",
+	RouteAssetsVuetify:    "o estilo do Vuetify e a fonte Material Design Icons",
+	RouteAssetsExtra:      "um recurso de um pacote: ?v=<hash do conteúdo>",
+	ServiceLoginTitle:     "Diálogo de login",
+	ServiceLoginDesc:      "O login pedido de novo sobre a página cuja sessão terminou, num diálogo: a página é mantida.",
+	RouteLoginDialog:      "o diálogo: a página de login num quadro",
+	RouteLoginDone:        "onde o login do quadro chega: avisa a página em volta",
+	ServiceGadcodeTitle:   "Código Gad",
+	ServiceGadcodeDesc:    "As operações do editor de código Gad (formatar, estrutura, documentação), para os campos de código.",
+	RouteGadcodeFormat:    "o código formatado",
+	RouteGadcodeOutline:   "a estrutura do código (seus símbolos)",
+	RouteGadcodeDoc:       "a documentação de um símbolo",
+	ServiceUserDocsTitle:  "Documentação do usuário",
+	ServiceUserDocsDesc:   "As imagens dos documentos da documentação do usuário.",
+	RouteUserDocsAsset:    "uma imagem de um documento: do pacote, no idioma pedido (ou no padrão)",
+	ServiceAuthPublic:     "público",
+	ServiceAuthSession:    "sessão",
+	ServiceAuthSignedLink: "link assinado",
+	ServiceAuthAccessKey:  "chave de acesso",
+	ServiceAuthToken:      "token",
+	ServiceAuthBasic:      "HTTP Basic",
 }

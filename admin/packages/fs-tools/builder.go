@@ -79,7 +79,7 @@ func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, e
 	b = &Builder{
 		lb:      lb,
 		p:       p,
-		davPath: p.GetURIPrefix() + "/!webdav",
+		davPath: p.ServicePath("webdav"),
 		log:     web.NewLogger("fs-tools"),
 	}
 
@@ -92,8 +92,8 @@ func New(p *presets.Builder, ib *i18n.Builder, lb *login.Builder) (b *Builder, e
 	return
 }
 
-// explorerPath is where the explorer's API is: <prefix>/fs-tools/api/fs/….
-const explorerPath = "/fs-tools/"
+// explorerPath is where the explorer's API is: <prefix>/!fs-tools/api/fs/….
+const explorerPath = "/" + presets.ServicePrefix + ServiceName + "/"
 
 // pageFunc is the page of the files: the explorer (<vx-files>) over the
 // file system the WebDAV serves; how to reach it by WebDAV, a drawer at the
@@ -232,7 +232,7 @@ func (b *Builder) fileSystem() webdav.FileSystem {
 	return &mountedFS{b: b, base: fs.NewWebDavFS(b.fs)}
 }
 
-// explorerHandler is the explorer's API (<prefix>/fs-tools/api/fs/…) over
+// explorerHandler is the explorer's API (<prefix>/!fs-tools/api/fs/…) over
 // the WebDAV's file system, each operation by its permissions (the page's,
 // a mount's); what changes, told OnAccess (AccessFiles).
 func (b *Builder) explorerHandler() http.Handler {
@@ -266,10 +266,7 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	b.page = page
 	// the explorer: its API, its components
 	UseAssets(p)
-	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		mux.Handle(prefix+explorerPath+"api/fs/", b.explorerHandler())
-		b.mountTerminal(prefix, mux)
-	})
+	b.registerServices(p)
 	// the WebDAV: reading asks the page's @get, writing !write
 	page.Page().PermActions("!write", "!terminal").
 		// its sets of permissions: to read, to write (titled as the general

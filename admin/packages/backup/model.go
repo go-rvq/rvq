@@ -338,8 +338,8 @@ func (b *Builder) downloadSection(s *BackupState, ctx *web.EventContext) h.HTMLC
 	if b.mb.Permissioner().ReqListDo(ctx.R, PermDownload).Denied() {
 		return nil
 	}
-	manifest := strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/!backup-manifest/" + s.ID
 	base := clientBase(ctx.R) + b.ClientPath()
+	manifest := b.ClientPath() + "/" + s.ID + "/manifest"
 	return h.Div(
 		v.VBtn(m.ManifestLink).Href(manifest).PrependIcon("mdi-download").Variant(v.VariantTonal).Size(v.SizeSmall).
 			Attr("download", true).Attr("data-backup-manifest", true),
@@ -349,10 +349,10 @@ func (b *Builder) downloadSection(s *BackupState, ctx *web.EventContext) h.HTMLC
 		h.Div(h.Strong(m.ClientURL)).Class("mt-3"),
 		h.Div(h.Text(m.ClientRoutes)).Class("text-caption mb-1"),
 		v.VTable(h.Tbody(
-			routeRow("GET", base+"/!latest", m.RouteLatest),
-			routeRow("POST", base+"/"+s.ID+"/!session", m.RouteSession),
-			routeRow("GET", base+"/"+s.ID+"/!manifest", m.RouteManifest),
-			routeRow("GET", base+"/"+s.ID+"/!files/<path>", m.RouteFiles),
+			routeRow("GET", base+"/latest", m.RouteLatest),
+			routeRow("POST", base+"/"+s.ID+"/session", m.RouteSession),
+			routeRow("GET", base+"/"+s.ID+"/manifest", m.RouteManifest),
+			routeRow("GET", base+"/"+s.ID+"/files/<path>", m.RouteFiles),
 		)).Density(v.DensityCompact).Attr("data-backup-routes", true),
 		h.Div(h.Text(m.KeyNeeded)).Class("mt-2 text-caption"),
 	).Attr("data-backup-download", true)

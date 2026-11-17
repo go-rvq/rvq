@@ -83,7 +83,10 @@ func (b *Builder) Func(name string, f Func) *Builder {
 // registered on p's i18n.
 func New(p *presets.Builder, db *gorm.DB) *Builder {
 	ConfigureMessages(p.I18n())
-	b := &Builder{p: p, db: db, assetsPath: strings.TrimSuffix(p.GetURIPrefix(), "/") + "/user-docs/_assets"}
+	b := &Builder{p: p, db: db, assetsPath: p.ServicePath(ServiceName) + "/assets"}
+	b.registerService()
+	// admin.services(): the stable paths (guides/stable-paths)
+	b.Func("services", b.servicesFunc)
 	b.locales = func() []string {
 		var out []string
 		for _, t := range p.I18n().GetSupportLanguages() {
@@ -135,6 +138,21 @@ func (b *Builder) source(pkg string) *Source {
 		}
 	}
 	return nil
+}
+
+// ServiceName is the service of the documentation (presets.Service):
+// /!user-docs, the pictures of its documents.
+const ServiceName = "user-docs"
+
+// registerService serves the pictures of the documents under the admin's
+// login: /!user-docs/assets/<package>/<path>.
+func (b *Builder) registerService() {
+	m := presets.ServiceMessage
+	b.p.Service(ServiceName).
+		Title(m(func(m *presets.Messages) string { return m.ServiceUserDocsTitle })).
+		Description(m(func(m *presets.Messages) string { return m.ServiceUserDocsDesc })).
+		Route("GET", "/assets/{package}/{path...}?locale=…", presets.ServiceAuthSession, m(func(m *presets.Messages) string { return m.RouteUserDocsAsset })).
+		Handle("GET /assets/", b.AssetsHandler())
 }
 
 // AssetsPath is where the pictures of the documents are served

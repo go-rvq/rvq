@@ -110,6 +110,16 @@ Always run the full pipeline (Format + Test) automatically after any file edit, 
 * When changing `admin/packages/helper` or `admin/presets/gorm2op`, also build any
   downstream applications that consume them.
 
+## Paths of the admin
+
+Every path of the admin (after its prefix) is a model's, a menu group's or a
+page's, or a **service's**: `/!<name>/…`, or a path whose form tells its
+protocol (`<name>.git/…`), registered with `presets.Builder.Service` (its
+routes, its login: `Handle` under the admin's, `Outer` its own). Never a
+path of a package's own out of these. Each package documents its services
+in its user documentation, in a section **"Stable paths"** ("Caminhos
+estáveis"). The rule, the API, the services of rvq: `admin/PATHS.md`.
+
 ## Admin associations & list editor
 - **Never assume an integer `id` or a single-column key.** Record keys can be any
   type (int, UUID, string) and **composite** (two or more columns). Read keys from

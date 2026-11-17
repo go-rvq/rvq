@@ -78,7 +78,7 @@ func TestPresetsCommon(t *testing.T) {
 		{
 			Name: "javascript content type is still correct",
 			ReqFunc: func() *http.Request {
-				return httptest.NewRequest("GET", "/assets/main.js", nil)
+				return httptest.NewRequest("GET", "/!assets/main.js", nil)
 			},
 			ResponseMatch: func(t *testing.T, w *httptest.ResponseRecorder) {
 				if w.Code != http.StatusOK {

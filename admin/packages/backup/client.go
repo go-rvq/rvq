@@ -25,38 +25,43 @@ import (
 // the manifest and the files — all the application's data and secrets.
 const PermDownload = "!download"
 
-// ClientPath is where the client's routes are: <prefix>/backup.
+// ServiceName is the backup's service (presets.Service): <prefix>/!backup —
+// no page of the menu; its paths stable (a client keeps them).
+const ServiceName = "backup"
+
+// ClientPath is where the client's routes are: <prefix>/!backup.
 func (b *Builder) ClientPath() string {
 	if b.clientBase != "" {
 		return b.clientBase
 	}
-	return strings.TrimSuffix(b.p.GetURIPrefix(), "/") + "/backup"
+	return b.p.ServicePath(ServiceName)
 }
 
-// ClientHandler serves the client's routes, out of the admin's login (their
-// own: an access key, then a token):
+// ClientHandler serves the client's routes, out of the admin's login
+// (their own: an access key, then a token):
 //
-//	GET  <ClientPath>/!latest                 the id of the newest state ready and whole
-//	POST <ClientPath>/<id>/!session           an access key (or a token of it: renewed) → a token
-//	GET  <ClientPath>/<id>/!manifest          the manifest (token)
-//	GET  <ClientPath>/<id>/!files/<path>      a file (token): Range, If-Match (the ETag is its sha256)
+//	GET  <ClientPath>/latest                 the id of the newest state ready and whole
+//	POST <ClientPath>/<id>/session           an access key (or a token of it: renewed) → a token
+//	GET  <ClientPath>/<id>/manifest          the manifest (token)
+//	GET  <ClientPath>/<id>/files/<path>      a file (token): Range, If-Match (the ETag is its sha256)
 //
-// A state not ready: 409 (queued, building), 410 (failed, canceled).
-func (b *Builder) ClientHandler() http.Handler {
+// A state not ready: 409 (queued, building), 410 (failed, canceled). A
+// request with no credential of the client's (Authorization) is admin's:
+// the manifest by the admin's session, the login.
+func (b *Builder) ClientHandler(admin http.Handler) http.Handler {
 	base := b.ClientPath()
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET "+base+"/!latest", b.serveLatest)
-	mux.HandleFunc("POST "+base+"/{id}/!session", b.serveSession)
-	mux.HandleFunc("GET "+base+"/{id}/!manifest", b.withToken(b.serveManifest))
-	mux.HandleFunc("GET "+base+"/{id}/!files/{path...}", b.withToken(b.serveFile))
-	return mux
-}
-
-// ClientPatterns are the patterns of ClientHandler's routes, to mount it.
-func (b *Builder) ClientPatterns() []string {
-	base := b.ClientPath()
-	return []string{"GET " + base + "/!latest", "POST " + base + "/{id}/!session",
-		"GET " + base + "/{id}/!manifest", "GET " + base + "/{id}/!files/{path...}"}
+	mux.HandleFunc("GET "+base+"/latest", b.serveLatest)
+	mux.HandleFunc("POST "+base+"/{id}/session", b.serveSession)
+	mux.HandleFunc("GET "+base+"/{id}/manifest", b.withToken(b.serveManifest))
+	mux.HandleFunc("GET "+base+"/{id}/files/{path...}", b.withToken(b.serveFile))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" && admin != nil {
+			admin.ServeHTTP(w, r)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 func jsonError(w http.ResponseWriter, status int, msg string) {
@@ -175,8 +180,8 @@ func (b *Builder) answerSession(w http.ResponseWriter, session uuid.UUID, id str
 		"token":    signToken(b.secret, sessionToken{Session: session, State: id, Expires: exp}),
 		"expires":  exp.UTC(),
 		"state":    id,
-		"manifest": base + "/!manifest",
-		"files":    base + "/!files/",
+		"manifest": base + "/manifest",
+		"files":    base + "/files/",
 	})
 }
 
@@ -188,7 +193,7 @@ func (b *Builder) withToken(h func(w http.ResponseWriter, r *http.Request, s *Ba
 		t, err := parseToken(b.secret, strings.TrimSpace(tok), time.Now())
 		if !ok || err != nil || t.State != r.PathValue("id") {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="backup"`)
-			jsonError(w, http.StatusUnauthorized, "a token of this state is needed (!session)")
+			jsonError(w, http.StatusUnauthorized, "a token of this state is needed (session)")
 			return
 		}
 		s, ok := b.readyState(w, t.State)

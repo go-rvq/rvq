@@ -52,6 +52,38 @@ It runs apart from the rest of the server:
 - it has limits of CPU time, memory and file size;
 - it closes by itself after 30 minutes unused, and when the page closes.
 
+## Stable paths
+
+The addresses this package serves out of the pages of the menu — its
+services (see the guide **Stable paths**). They do not change with the menu:
+a program can keep them. `<admin>` is the address of the admin
+(`https://your-site/admin`).
+
+| Method | Path | Access | What it gives |
+| --- | --- | --- | --- |
+| GET | `<admin>/!fs-tools/api/fs/list?path=…` | session | the content of a folder |
+| GET | `<admin>/!fs-tools/api/fs/download?path=…` | session | a file, or a folder as zip |
+| POST | `<admin>/!fs-tools/api/fs/{op}?path=…` | session | an operation of the explorer (create, upload, rename, copy, move, delete, extract) |
+| GET | `<admin>/!fs-tools/terminal?dir=…` | session, `!terminal` | the terminal (WebSocket) |
+| GET | `<admin>/!fs-tools/vendor/{file}` | public | the components of the page (scripts, styles) |
+| all | `<admin>/!webdav/{path}` | HTTP Basic | the files by WebDAV |
+| GET, POST | `<admin>/{name}.git/…` | HTTP Basic | a repository by git (HTTP) |
+
+- **`!webdav`** and the **repositories** have their own login (HTTP Basic:
+  your admin e-mail and the password, or an access key in its place): the
+  program (the WebDAV client, `git`) uses them without the login screen.
+
+  ```
+  curl -u you@example.com -X PROPFIND -H 'Depth: 1' https://your-site/admin/!webdav/
+  ```
+
+- A **repository** is at the address of git's protocol, with no `!`: the
+  `.git` at the end already tells it from a page, and `git` needs it as it
+  is (`git clone https://your-site/admin/site-files.git`). The repositories
+  of each key are in a folder: `<admin>/<folder>/<key>.git`.
+- The paths of `!fs-tools` are the page's own (the explorer, the terminal):
+  they ask the admin's session and the page's permissions.
+
 ## Permissions
 
 This page's permissions hold for the explorer, the WebDAV and the terminal:

@@ -34,7 +34,7 @@ the two cases apart:
    field**:
 
    ```json
-   { "loginURI": "/admin/login-dialog" }
+   { "loginURI": "/admin/!login/dialog" }
    ```
 
    (`web.EventResponse.LoginURI`.) Nothing else: no portals, no script. The

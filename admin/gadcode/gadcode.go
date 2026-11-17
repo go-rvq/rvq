@@ -32,8 +32,9 @@ const (
 )
 
 // Path is where its operations are served, under the admin's prefix:
-// POST <prefix>/__gadcode/{format,outline,doc}.
-const Path = "/__gadcode/"
+// POST <prefix>/!gadcode/{format,outline,doc} — a service of the admin
+// (presets.Service): no page of the menu.
+const Path = "/" + presets.ServicePrefix + "gadcode/"
 
 // Code is the code an operation is asked of.
 type Code struct {
@@ -150,9 +151,14 @@ func Setup(p *presets.Builder) {
 	if _, ja := setup.LoadOrStore(p, true); ja {
 		return
 	}
-	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		mux.HandleFunc("POST "+prefix+Path+"{op}", serve)
-	})
+	m := presets.ServiceMessage
+	p.Service("gadcode").
+		Title(m(func(m *presets.Messages) string { return m.ServiceGadcodeTitle })).
+		Description(m(func(m *presets.Messages) string { return m.ServiceGadcodeDesc })).
+		Route("POST", "/format", presets.ServiceAuthSession, m(func(m *presets.Messages) string { return m.RouteGadcodeFormat })).
+		Route("POST", "/outline", presets.ServiceAuthSession, m(func(m *presets.Messages) string { return m.RouteGadcodeOutline })).
+		Route("POST", "/doc", presets.ServiceAuthSession, m(func(m *presets.Messages) string { return m.RouteGadcodeDoc })).
+		Handle("POST /{op}", http.HandlerFunc(serve))
 }
 
 // setup are the admins Setup served.

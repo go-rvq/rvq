@@ -54,6 +54,38 @@ Ele roda isolado do resto do servidor:
 - tem limites de tempo de CPU, memória e tamanho de arquivo;
 - fecha sozinho depois de 30 minutos sem uso, e ao fechar a página.
 
+## Caminhos estáveis
+
+Os endereços que este pacote serve fora das páginas do menu — os seus
+serviços (veja o guia **Caminhos estáveis**). Não mudam com o menu: um
+programa pode guardá-los. `<admin>` é o endereço do admin
+(`https://seu-site/admin`).
+
+| Método | Caminho | Acesso | O que dá |
+| --- | --- | --- | --- |
+| GET | `<admin>/!fs-tools/api/fs/list?path=…` | sessão | o conteúdo de uma pasta |
+| GET | `<admin>/!fs-tools/api/fs/download?path=…` | sessão | um arquivo, ou uma pasta como zip |
+| POST | `<admin>/!fs-tools/api/fs/{op}?path=…` | sessão | uma operação do explorador (criar, enviar, renomear, copiar, mover, apagar, extrair) |
+| GET | `<admin>/!fs-tools/terminal?dir=…` | sessão, `!terminal` | o terminal (WebSocket) |
+| GET | `<admin>/!fs-tools/vendor/{arquivo}` | público | os componentes da página (scripts, estilos) |
+| todos | `<admin>/!webdav/{caminho}` | HTTP Basic | os arquivos por WebDAV |
+| GET, POST | `<admin>/{nome}.git/…` | HTTP Basic | um repositório pelo git (HTTP) |
+
+- **`!webdav`** e os **repositórios** têm login próprio (HTTP Basic: o seu
+  e-mail do admin e a senha, ou uma chave de acesso no lugar dela): o
+  programa (o cliente de WebDAV, o `git`) os usa sem a tela de login.
+
+  ```
+  curl -u voce@exemplo.com -X PROPFIND -H 'Depth: 1' https://seu-site/admin/!webdav/
+  ```
+
+- Um **repositório** fica no endereço do protocolo do git, sem o `!`: o
+  `.git` no fim já o distingue de uma página, e o `git` precisa dele como é
+  (`git clone https://seu-site/admin/site-files.git`). Os repositórios de
+  cada chave ficam numa pasta: `<admin>/<pasta>/<chave>.git`.
+- Os caminhos de `!fs-tools` são os da própria página (o explorador, o
+  terminal): pedem a sessão do admin e as permissões da página.
+
 ## Permissões
 
 As permissões desta página valem para o explorador, o WebDAV e o terminal:

@@ -148,7 +148,7 @@ func ParseSize(v string) (int64, error) {
 	return n * mul, nil
 }
 
-// terminalPath is where the terminal is: <prefix>/fs-tools/terminal?dir=….
+// terminalPath is where the terminal is: <prefix>/!fs-tools/terminal?dir=….
 const terminalPath = explorerPath + "terminal"
 
 // terminalOn says r may open the terminal: it is on (feature, sandbox) and
@@ -182,9 +182,9 @@ func (b *Builder) terminalOff(r *http.Request) error {
 	return b.term.off
 }
 
-// mountTerminal serves the terminal (a websocket: binary frames, the bytes;
-// text, {"resize":[cols,rows]}; at its end {"exit":"…"}).
-func (b *Builder) mountTerminal(prefix string, mux *http.ServeMux) {
+// terminalHandler serves the terminal (a websocket: binary frames, the
+// bytes; text, {"resize":[cols,rows]}; at its end {"exit":"…"}).
+func (b *Builder) terminalHandler() http.Handler {
 	b.term = loadTerminal()
 	if b.term.off != nil {
 		b.log.Info("terminal off", "reason", b.term.off)
@@ -192,7 +192,7 @@ func (b *Builder) mountTerminal(prefix string, mux *http.ServeMux) {
 		b.log.Info("terminal on", "sandbox", sandbox.Describe(b.term.mode))
 	}
 	// in the user's language: what it tells of the session (info)
-	mux.Handle(prefix+terminalPath, b.recordAccess(b.p.I18n().EnsureLanguage(http.HandlerFunc(b.serveTerminal)), AccessTerminal))
+	return b.recordAccess(b.p.I18n().EnsureLanguage(http.HandlerFunc(b.serveTerminal)), AccessTerminal)
 }
 
 var upgrader = websocket.Upgrader{

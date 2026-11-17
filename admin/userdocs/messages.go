@@ -188,6 +188,14 @@ type Messages struct {
 	HelpCloseTab            string `i18n:"hint='Button of a tab of the help bar that closes it.'"`
 	HelpBack                string `i18n:"hint='Button of the help bar: the document shown before.'"`
 	HelpForward             string `i18n:"hint='Button of the help bar: the document shown after, gone back from.'"`
+	// the stable paths (admin.services())
+	ServicesMethod string `i18n:"hint='Header of the column of a service route’s HTTP method.'"`
+	ServicesPath   string `i18n:"hint='Header of the column of a service route’s path.'"`
+	ServicesAuth   string `i18n:"hint='Header of the column of how a service route is reached.'"`
+	ServicesWhat   string `i18n:"hint='Header of the column of what a service route gives.'"`
+	ServicesOuter  string `i18n:"hint='Says a service has a login of its own, checked before the admin’s.'"`
+	ServicesMounts string `i18n:"hint='Title of the list of the protocol paths a service serves.'"`
+	ServicesNone   string `i18n:"hint='Shown when no service is registered.'"`
 }
 
 var Messages_en_US = &Messages{
@@ -362,6 +370,13 @@ var Messages_en_US = &Messages{
 	HelpCloseTab:            "Close",
 	HelpBack:                "Back",
 	HelpForward:             "Forward",
+	ServicesMethod:          "Method",
+	ServicesPath:            "Path",
+	ServicesAuth:            "Access",
+	ServicesWhat:            "What it gives",
+	ServicesOuter:           "Its own login (before the admin’s): a client reaches it without the admin’s session.",
+	ServicesMounts:          "Paths of its protocol",
+	ServicesNone:            "No service.",
 }
 
 var Messages_pt_BR = &Messages{
@@ -536,6 +551,13 @@ var Messages_pt_BR = &Messages{
 	HelpCloseTab:            "Fechar",
 	HelpBack:                "Voltar",
 	HelpForward:             "Avançar",
+	ServicesMethod:          "Método",
+	ServicesPath:            "Caminho",
+	ServicesAuth:            "Acesso",
+	ServicesWhat:            "O que dá",
+	ServicesOuter:           "Login próprio (antes do do admin): um cliente o alcança sem a sessão do admin.",
+	ServicesMounts:          "Caminhos do seu protocolo",
+	ServicesNone:            "Nenhum serviço.",
 }
 
 // PackageMessages are the words of the documentation of a package: what its

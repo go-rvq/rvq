@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -232,9 +231,14 @@ func (b *Builder) Install(p *presets.Builder) error {
 		).Class("mt-4").Attr("data-notification-conversation", true)
 	})
 	// the attachments, to who received or sent their message
-	p.MuxSetup(func(prefix string, mux *http.ServeMux) {
-		mux.Handle("GET "+strings.TrimSuffix(prefix, "/")+filesPath+"{id}", FileHandler(b.db, b.FilesDir))
-	})
+	tr := func(f func(m *Messages) string) func(context.Context) string {
+		return func(ctx context.Context) string { return f(GetMessages(ctx)) }
+	}
+	p.Service("notifications").
+		Title(tr(func(m *Messages) string { return m.ServiceTitle })).
+		Description(tr(func(m *Messages) string { return m.ServiceDesc })).
+		Route("GET", "/files/{id}", presets.ServiceAuthSession, tr(func(m *Messages) string { return m.ServiceFileRoute })).
+		Handle("GET /files/{id}", FileHandler(b.db, b.FilesDir))
 	// the source: the user as a chip of their login, their id copied by its
 	// icon; the system, a chip; another, as it is
 	dt.Field("Source").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {

@@ -57,6 +57,24 @@ In **Your draft**:
 - If a file of the site was changed out of this editor, **Publish** overwrites
   nothing and says so.
 
+## Stable paths
+
+The repositories of this page are at git's protocol address — the `.git`
+at the end tells them from a page, with no `!` as the other services have
+(see the guide **Stable paths**) — and do not change with the menu: a
+`git remote` keeps them. `<admin>` is the address of the admin
+(`https://your-site/admin`).
+
+| Method | Path | Access | What it is |
+| --- | --- | --- | --- |
+| GET, POST | `<admin>/site-files.git/…` | HTTP Basic, `!git` (and `!publish` to push) | the site: a push publishes |
+| GET, POST | `<admin>/site-files-draft.git/…` | HTTP Basic, `!git` | your draft |
+| GET, POST | `<admin>/site-files-drafts/<key>.git/…` | HTTP Basic, `!git` | another user's draft, by its owner's key |
+| GET | `<admin>/…/site-files/commit-msg` | session | the hook `commit-msg` with your `Site-User:` (a path of the page itself) |
+
+The login is `git`'s own (HTTP Basic): your admin e-mail and an access key
+in place of the password (see **By git**).
+
 ## Permissions
 
 Each action is a permission of the page: seeing it (`@get`), changing the

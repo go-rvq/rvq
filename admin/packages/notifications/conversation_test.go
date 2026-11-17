@@ -103,7 +103,7 @@ func TestDeliverAnswer(t *testing.T) {
 	fid := files[copies[0].MessageID][0].ID
 	h := FileHandler(db, b.FilesDir)
 	get := func(u uuid.UUID) int {
-		r := httptest.NewRequest("GET", "/admin/notifications/files/"+fid.String(), nil)
+		r := httptest.NewRequest("GET", "/admin/!notifications/files/"+fid.String(), nil)
 		r.SetPathValue("id", fid.String())
 		r = r.WithContext(login.WithTrustedUser(r.Context(), &fakeUser{id: u}))
 		w := httptest.NewRecorder()

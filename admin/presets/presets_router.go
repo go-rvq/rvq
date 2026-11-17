@@ -24,8 +24,10 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 	}
 
 	ub := b.builder
+	b.registerAssetsService()
 
-	mainJSPath := b.prefix + "/assets/main.js"
+	assets := b.ServicePath(AssetsService)
+	mainJSPath := assets + "/main.js"
 	mux.Handle("GET "+mainJSPath,
 		ub.PacksHandler("text/javascript",
 			web.ComponentsPack(corejs.RegisterComponentWithDefaults(Vuetify())),
@@ -39,14 +41,14 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 		log.Println("mounted url:", mainJSPath)
 	}
 
-	vueJSPath := b.prefix + "/assets/vue.js"
+	vueJSPath := assets + "/vue.js"
 	mux.Handle("GET "+vueJSPath,
 		ub.PacksHandler("text/javascript",
 			web.JSVueComponentsPack(),
 		),
 	)
 
-	mux.Handle("GET "+b.prefix+"/assets/main.css",
+	mux.Handle("GET "+assets+"/main.css",
 		ub.PacksHandler("text/css",
 			web.ComponentsPack(fixLayoutCSS),
 			vuetifyx.CSSComponentsPack(),
@@ -54,7 +56,7 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 		),
 	)
 
-	HandleMaterialDesignIcons(b.prefix, mux)
+	HandleMaterialDesignIcons(assets, mux)
 
 	if routesDebug {
 		log.Println("mounted url:", vueJSPath)
@@ -94,6 +96,8 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 	for _, m := range b.models {
 		m.SetupRoutes(mux)
 	}
+
+	b.setupServices(mux)
 
 	for _, f := range b.muxSetup {
 		f(b.prefix, mux)
