@@ -226,7 +226,42 @@ describe('vx-permission-input', () => {
     expect(vm.shownSets.map((c: any) => c.segment)).toEqual(['%readers'])
     vm.toggle('admin:posts:%readers')
     await vm.add()
-    expect(calls.at(-1)).toMatchObject({ op: 'add', resources: JSON.stringify(['admin:posts:%readers']) })
+    expect(calls.at(-1)).toMatchObject({
+      op: 'add',
+      resources: JSON.stringify(['admin:posts:%readers'])
+    })
+  })
+
+  it('groups what the dialog offers by kind, in tabs: only those with something', async () => {
+    const calls: any[] = []
+    const w = mountTemplate(PermissionInput, {
+      modelValue: '',
+      loader: server(calls),
+      kindLabels: { verb: 'Permissão', set: 'Conjunto' }
+    })
+    await flush()
+    const vm = w.vm as any
+    await vm.openAdd({ title: 'Posts', edit: 'admin:posts:', children: [] })
+    await flush()
+    // the parts by kind, the sets after them, the records
+    expect(vm.dlgTabs.map((t: any) => [t.value, t.active, t.count])).toEqual([
+      ['verb', 0, 2],
+      ['set', 0, 1],
+      ['@records', 0, 0]
+    ])
+    // how many are active in each: chosen, or in the value
+    vm.toggle('admin:posts:@create')
+    vm.toggleRecord({ id: '7', label: 'x' })
+    await flush()
+    expect(vm.dlgTabs.map((t: any) => t.active)).toEqual([1, 0, 1])
+    expect(vm.dlg.tab).toBe('verb')
+    expect(vm.tabParts.map((c: any) => c.segment)).toEqual(['@list', '@create'])
+    // a search that leaves only a set: its tab alone, shown
+    vm.dlg.search = 'reading'
+    await flush()
+    expect(vm.dlgTabs.map((t: any) => t.value)).toEqual(['set', '@records'])
+    expect(vm.dlg.tab).toBe('set')
+    expect(vm.tabParts).toEqual([])
   })
 
   it('shows the sets of each permission, and a line of a set by its title', async () => {
@@ -274,7 +309,12 @@ describe('vx-permission-input', () => {
   })
 
   it('shows the rows in the order the server gives them (the order of the value)', async () => {
-    const child = (edit: string, title: string, kind = 'verb') => ({ title, kind, value: edit, edit })
+    const child = (edit: string, title: string, kind = 'verb') => ({
+      title,
+      kind,
+      value: edit,
+      edit
+    })
     const items = [
       {
         title: 'Admin',

@@ -401,13 +401,19 @@
     <div v-if="errorText" class="text-error text-caption mt-1">{{ errorText }}</div>
 
     <!-- what may follow a row: chosen, one line each -->
-    <v-dialog v-model="dlg.open" max-width="640" scrollable>
-      <v-card density="compact" data-permission-dialog>
-        <v-toolbar density="compact" color="primary">
-          <v-toolbar-title class="text-body-1">{{ dlg.title }}</v-toolbar-title>
-          <v-btn icon="mdi-close" variant="text" @click="dlg.open = false" />
-        </v-toolbar>
-        <v-card-text>
+    <vx-dialog
+      v-model="dlg.open"
+      :title="dlg.title"
+      :container-props="{ maxWidth: 640, height: '80vh' }"
+      :toolbar-props="{ color: 'primary' }"
+      density="compact"
+      expandable
+      closable
+      data-permission-dialog
+    >
+      <!-- the search and the tabs: fixed above what scrolls -->
+      <template #top>
+        <div class="px-4 pt-2" data-permission-dialog-head>
           <div class="d-flex ga-2 mb-2">
             <v-text-field
               v-model="dlg.search"
@@ -418,146 +424,155 @@
               hide-details
               clearable
             />
-            <v-select
-              v-if="dlgKinds.length > 1"
-              v-model="dlg.kinds"
-              :items="dlgKinds"
-              :label="msg.kinds"
-              density="compact"
-              variant="underlined"
-              hide-details
-              multiple
-              chips
-              closable-chips
-              clearable
-              style="max-width: 260px"
-            />
           </div>
           <v-progress-linear v-if="dlg.loading" indeterminate color="primary" />
           <v-alert v-if="dlg.error" type="error" density="compact">{{ msg.loadError }}</v-alert>
 
-          <div class="text-subtitle-2 text-medium-emphasis mt-1">{{ msg.children }}</div>
-          <div
-            v-if="!dlg.loading && !shownParts.length"
-            class="text-body-2 text-medium-emphasis py-2"
+          <!-- by kind, a tab each — only the kinds there are (the search too),
+             the sets and the records apart -->
+          <v-tabs
+            v-if="dlgTabs.length > 1"
+            v-model="dlg.tab"
+            density="compact"
+            color="primary"
+            show-arrows
+            class="mb-1"
+            data-permission-tabs
           >
-            {{ msg.noChoices }}
-          </div>
+            <v-tab
+              v-for="t in dlgTabs"
+              :key="t.value"
+              :value="t.value"
+              :data-permission-tab="t.value"
+              >{{ t.title }}
+              <v-chip
+                size="x-small"
+                class="ms-2"
+                :color="t.active ? 'primary' : undefined"
+                :variant="t.active ? 'flat' : 'tonal'"
+                :data-permission-tab-active="t.active"
+                >{{ t.count ? t.active + '/' + t.count : t.active }}</v-chip
+              ></v-tab
+            >
+          </v-tabs>
+        </div>
+      </template>
+      <template #body>
+        <div v-if="!dlg.loading && !dlgTabs.length" class="text-body-2 text-medium-emphasis py-2">
+          {{ msg.noChoices }}
+        </div>
+
+        <v-list v-if="tabParts.length" density="compact" class="py-0">
+          <v-list-item
+            v-for="c in tabParts"
+            :key="c.segment"
+            :disabled="dlg.present.has(c.resource)"
+            :data-permission-choice="c.segment"
+            @click="toggle(c.resource)"
+          >
+            <template #prepend>
+              <v-checkbox-btn
+                :model-value="dlg.present.has(c.resource) || dlg.chosen.has(c.resource)"
+                :disabled="dlg.present.has(c.resource)"
+                density="compact"
+                @click.stop="toggle(c.resource)"
+              />
+            </template>
+            <v-list-item-title>
+              {{ c.title }}
+              <code class="text-caption text-medium-emphasis ms-1">{{ c.segment }}</code>
+            </v-list-item-title>
+            <v-list-item-subtitle v-if="c.description">{{ c.description }}</v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+
+        <!-- the sets that give something there: what each gives -->
+        <v-list
+          v-if="dlg.tab === 'set' && shownSets.length"
+          density="compact"
+          class="py-0"
+          data-permission-sets
+        >
+          <v-list-item
+            v-for="c in shownSets"
+            :key="c.segment"
+            :disabled="dlg.present.has(c.resource)"
+            :data-permission-choice="c.segment"
+            @click="toggle(c.resource)"
+          >
+            <template #prepend>
+              <v-checkbox-btn
+                :model-value="dlg.present.has(c.resource) || dlg.chosen.has(c.resource)"
+                :disabled="dlg.present.has(c.resource)"
+                density="compact"
+                @click.stop="toggle(c.resource)"
+              />
+            </template>
+            <v-list-item-title>
+              {{ c.title }}
+              <code class="text-caption text-medium-emphasis ms-1">{{ c.segment }}</code>
+            </v-list-item-title>
+            <v-list-item-subtitle v-if="c.description">{{ c.description }}</v-list-item-subtitle>
+            <div class="text-caption mt-1">
+              <span class="text-medium-emphasis me-1">{{ msg.setGives }}:</span>
+              <code v-for="(l, i) in c.lines || []" :key="i" class="me-2">{{ l }}</code>
+            </div>
+          </v-list-item>
+        </v-list>
+
+        <template v-if="dlg.tab === recordsTab">
+          <v-text-field
+            v-model="dlg.recQ"
+            :label="msg.recordSearch"
+            prepend-inner-icon="mdi-database-search-outline"
+            density="compact"
+            variant="underlined"
+            hide-details
+            clearable
+            data-permission-record-search
+          />
           <v-list density="compact" class="py-0">
             <v-list-item
-              v-for="c in shownParts"
-              :key="c.segment"
-              :disabled="dlg.present.has(c.resource)"
-              :data-permission-choice="c.segment"
-              @click="toggle(c.resource)"
+              v-for="r in dlg.recResults"
+              :key="r.id"
+              :disabled="dlg.present.has(recordResource(r))"
+              :data-permission-record="r.id"
+              @click="toggleRecord(r)"
             >
               <template #prepend>
                 <v-checkbox-btn
-                  :model-value="dlg.present.has(c.resource) || dlg.chosen.has(c.resource)"
-                  :disabled="dlg.present.has(c.resource)"
+                  :model-value="dlg.present.has(recordResource(r)) || dlg.recChosen.has(r.id)"
+                  :disabled="dlg.present.has(recordResource(r))"
                   density="compact"
-                  @click.stop="toggle(c.resource)"
+                  @click.stop="toggleRecord(r)"
                 />
               </template>
-              <v-list-item-title>
-                {{ c.title }}
-                <code class="text-caption text-medium-emphasis ms-1">{{ c.segment }}</code>
-              </v-list-item-title>
-              <v-list-item-subtitle v-if="c.description || kindLabels[c.kind]">
-                {{ [kindLabels[c.kind], c.description].filter(Boolean).join(' · ') }}
-              </v-list-item-subtitle>
+              <v-list-item-title>{{ r.label }}</v-list-item-title>
+              <v-list-item-subtitle>{{ r.id }}</v-list-item-subtitle>
             </v-list-item>
           </v-list>
-
-          <!-- the sets that give something there: what each gives -->
-          <template v-if="shownSets.length">
-            <div class="text-subtitle-2 text-medium-emphasis mt-3">{{ msg.sets }}</div>
-            <v-list density="compact" class="py-0" data-permission-sets>
-              <v-list-item
-                v-for="c in shownSets"
-                :key="c.segment"
-                :disabled="dlg.present.has(c.resource)"
-                :data-permission-choice="c.segment"
-                @click="toggle(c.resource)"
-              >
-                <template #prepend>
-                  <v-checkbox-btn
-                    :model-value="dlg.present.has(c.resource) || dlg.chosen.has(c.resource)"
-                    :disabled="dlg.present.has(c.resource)"
-                    density="compact"
-                    @click.stop="toggle(c.resource)"
-                  />
-                </template>
-                <v-list-item-title>
-                  {{ c.title }}
-                  <code class="text-caption text-medium-emphasis ms-1">{{ c.segment }}</code>
-                </v-list-item-title>
-                <v-list-item-subtitle v-if="c.description">{{
-                  c.description
-                }}</v-list-item-subtitle>
-                <div class="text-caption mt-1">
-                  <span class="text-medium-emphasis me-1">{{ msg.setGives }}:</span>
-                  <code v-for="(l, i) in c.lines || []" :key="i" class="me-2">{{ l }}</code>
-                </div>
-              </v-list-item>
-            </v-list>
-          </template>
-
-          <template v-if="dlg.records">
-            <div class="text-subtitle-2 text-medium-emphasis mt-3">{{ msg.record }}</div>
-            <v-text-field
-              v-model="dlg.recQ"
-              :label="msg.recordSearch"
-              prepend-inner-icon="mdi-database-search-outline"
-              density="compact"
-              variant="underlined"
-              hide-details
-              clearable
-              data-permission-record-search
-            />
-            <v-list density="compact" class="py-0">
-              <v-list-item
-                v-for="r in dlg.recResults"
-                :key="r.id"
-                :disabled="dlg.present.has(recordResource(r))"
-                :data-permission-record="r.id"
-                @click="toggleRecord(r)"
-              >
-                <template #prepend>
-                  <v-checkbox-btn
-                    :model-value="dlg.present.has(recordResource(r)) || dlg.recChosen.has(r.id)"
-                    :disabled="dlg.present.has(recordResource(r))"
-                    density="compact"
-                    @click.stop="toggleRecord(r)"
-                  />
-                </template>
-                <v-list-item-title>{{ r.label }}</v-list-item-title>
-                <v-list-item-subtitle>{{ r.id }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </template>
-        </v-card-text>
-        <v-divider />
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="dlg.open = false">{{ msg.cancel }}</v-btn>
-          <v-btn
-            color="primary"
-            variant="flat"
-            prepend-icon="mdi-check"
-            :disabled="!dlg.chosen.size && !dlg.recChosen.size"
-            data-permission-ok
-            @click="add"
-            >{{ msg.ok }}</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </template>
+      </template>
+      <template #bottom>
+        <v-spacer />
+        <v-btn variant="text" @click="dlg.open = false">{{ msg.cancel }}</v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-check"
+          :disabled="!dlg.chosen.size && !dlg.recChosen.size"
+          data-permission-ok
+          @click="add"
+          >{{ msg.ok }}</v-btn
+        >
+      </template>
+    </vx-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, reactive, ref, watch } from 'vue'
+import VxDialog from '@/lib/Dialog.vue'
 import TreeDataTable from './TreeDataTable.vue'
 
 // vx-permission-input: the field of the permissions of a role, of an access
@@ -875,7 +890,8 @@ const dlg = reactive({
   choices: [] as Choice[],
   records: false,
   search: '',
-  kinds: [] as string[],
+  // the tab shown: a kind of the parts, 'set', or recordsTab
+  tab: '',
   present: new Set<string>(),
   chosen: new Set<string>(),
   recQ: '',
@@ -883,28 +899,67 @@ const dlg = reactive({
   recChosen: new Map<string, string>()
 })
 
-const dlgKinds = computed(() => {
-  const ks = [...new Set(dlg.choices.map((c) => c.kind))]
-  return ks.map((k) => ({ title: (props.kindLabels as any)[k] || k, value: k }))
-})
-
 const shownChoices = computed(() => {
   const q = (dlg.search || '').trim().toLowerCase()
   return dlg.choices.filter(
     (c) =>
-      (!dlg.kinds.length || dlg.kinds.includes(c.kind)) &&
-      (!q ||
-        [c.title, c.segment, c.description].some((s) =>
-          String(s || '')
-            .toLowerCase()
-            .includes(q)
-        ))
+      !q ||
+      [c.title, c.segment, c.description].some((s) =>
+        String(s || '')
+          .toLowerCase()
+          .includes(q)
+      )
   )
 })
 
 // the parts that may follow, and the sets that give something there
 const shownParts = computed(() => shownChoices.value.filter((c) => c.kind !== 'set'))
 const shownSets = computed(() => shownChoices.value.filter((c) => c.kind === 'set'))
+
+// the tab of the records of the path
+const recordsTab = '@records'
+
+// the tabs of the dialog: a kind of the parts each — in the order the
+// server gives them —, the sets, the records; only those with something (the
+// search too), each with how many it offers (count) and how many of them are
+// already active: in the value, or chosen (active; of the records, those of
+// the path in the value and chosen)
+const isActive = (resource: string) => dlg.present.has(resource) || dlg.chosen.has(resource)
+const dlgTabs = computed(() => {
+  const counts = new Map<string, { count: number; active: number }>()
+  shownChoices.value.forEach((c) => {
+    const n = counts.get(c.kind) || { count: 0, active: 0 }
+    n.count++
+    if (isActive(c.resource)) n.active++
+    counts.set(c.kind, n)
+  })
+  const tabs = [...counts].map(([value, n]) => ({
+    value,
+    ...n,
+    title: value === 'set' ? msg.value.sets : (props.kindLabels as any)[value] || value
+  }))
+  // the sets after the parts
+  tabs.sort((a, b) => (a.value === 'set' ? 1 : 0) - (b.value === 'set' ? 1 : 0))
+  if (dlg.records) {
+    const prefix = dlg.path + '<'
+    const present = [...dlg.present].filter((r) => r.startsWith(prefix)).length
+    tabs.push({
+      value: recordsTab,
+      count: 0,
+      active: present + dlg.recChosen.size,
+      title: msg.value.record
+    })
+  }
+  return tabs
+})
+
+// a tab gone (the search, a new path): the first there is
+watch(dlgTabs, (tabs) => {
+  if (!tabs.some((t) => t.value === dlg.tab)) dlg.tab = tabs.length ? tabs[0].value : ''
+})
+
+// the parts of the tab shown
+const tabParts = computed(() => shownParts.value.filter((c) => c.kind === dlg.tab))
 
 // the lines of the value there are, of the children of a row (their
 // resources): offered checked, disabled
@@ -926,7 +981,7 @@ function openAdd(item: any | null) {
   dlg.chosen = new Set()
   dlg.recChosen = new Map()
   dlg.search = ''
-  dlg.kinds = []
+  dlg.tab = ''
   dlg.recQ = ''
   dlg.recResults = []
   dlg.choices = []
@@ -982,7 +1037,8 @@ function toggleRecord(r: { id: string; label: string }) {
 function add() {
   const resources = [...dlg.chosen]
   for (const [id, label] of dlg.recChosen) resources.push(recordResource({ id, label }))
-  // a line of no prefix where the field takes one (an access key: deny)
+  // a line of no prefix: a grant where the field takes one (a role, an
+  // access key), else the first it takes
   const ps = props.prefixes as string[]
   const prefix = ps.includes('grant') ? 'grant' : ps[0] || ''
   dlg.open = false
