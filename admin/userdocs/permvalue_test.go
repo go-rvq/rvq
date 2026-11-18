@@ -83,13 +83,14 @@ func TestPermValueTree(t *testing.T) {
 	}
 }
 
-// of a key: kept to what its user may, its denies its effect
+// of a key: made of what its user may (the source), what its lines release
+// its effect — a grant of all of it, a deny taking a part
 func TestPermValueTreeBase(t *testing.T) {
 	base := (&perm.Stack{}).Add("user", "admin:posts:*").Resolve()
-	m := valueTreeOf(t, "deny admin:posts:@create", PermValueOptions{View: PermTreeByVerb,
+	m := valueTreeOf(t, "*\ndeny admin:posts:@create", PermValueOptions{View: PermTreeByVerb,
 		Base: func(c PermCheck) bool { return base.Allows(c.Resource, c.Preferred, c.Action) },
 		Effect: func(lines []string) func(PermCheck) bool {
-			st := (&perm.Stack{}).Add("key", append([]string{"*"}, lines...)...).Resolve()
+			st := (&perm.Stack{}).Add("key", lines...).Resolve()
 			return func(c PermCheck) bool { return st.Allows(c.Resource, c.Preferred, c.Action) }
 		}})
 	// denied, its fields still allowed (the glob): some

@@ -269,15 +269,16 @@ restricted: `WithRestriction(ctx, "key:<id>")`. The verifier decides as the
 user, then, when allowed, decides again as the restriction's subjects — an
 intersection.
 
-- A key's `Permissions` accept only `deny` lines (each line of it, its groups
-  broken: `admin:users:{deny @edit, @list}` is refused). They are applied on
-  top of what the user may: the key's stack is `*`, its denies, then
-  `ProtectedLines` (no key reaches the keys, theirs, their uses), registered
-  as `key:<id>` (`AccessKey.Stack`, version its update time and its lines).
-- No lines: everything the user may (but the keys).
-- A key of before (lines of no prefix, or policies made lines by
-  `accesskeys.MigrateLines`): its lines are what it reaches — kept until it
-  is saved again with denies only.
+- A key's `Permissions` are what it **releases** of what its user may:
+  grants (`admin:os_users:<id>:!ssh`; `*`, all the user may), denies that
+  take a part of a wider grant before them, allows that give it back; no
+  `reset`. The key's stack is its lines, then `ProtectedLines` (no key
+  reaches the keys, theirs, their uses), registered as `key:<id>`
+  (`AccessKey.Stack`, version its update time and its lines).
+- No lines: nothing.
+- The field of a key's lines is made of what its user may (`Base` of
+  `userdocs.PermValueOptions`, the owner's stack): what the user may not is
+  not there to release. A role's is made of all the permissions.
 
 ## Anonymous requests and code without stacks
 

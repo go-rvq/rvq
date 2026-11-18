@@ -22,37 +22,39 @@ sessão: cada requisição traz a chave.
 
 ## As permissões
 
-As permissões de uma chave **só negam**: um pedido feito pela chave pode
-**tudo o que você pode**, **menos o que a chave nega**. Uma chave nunca dá
-mais do que você tem — e, **sem nenhuma permissão, pode tudo o que você
-pode**.
+As permissões de uma chave dizem **o que ela libera do que você pode**: um
+pedido feito pela chave pode **só o que as linhas dela liberam**, e nunca
+mais do que você tem. **Sem nenhuma permissão, a chave não alcança nada.**
 
-São negações: `deny` **e um espaço**, e um recurso, escrito como os dos
-papéis (veja {%= admin.doc("guides/policies/01-permissions").link %}: `*`
-casa com qualquer coisa, `{a,b}` com uma das alternativas). Uma linha sem o
-`deny`, ou com `allow` ou `reset`, não é aceita — nem um grupo com uma
-alternativa que não negue (`admin:users:{deny @edit, @list}`).
+São linhas escritas como as dos papéis (veja
+{%= admin.doc("guides/policies/01-permissions").link %}: `*` casa com
+qualquer coisa, `{a,b}` com uma das alternativas):
 
-São editadas no **campo de permissões** (o mesmo dos papéis): a árvore do
-que **você** pode, cada linha com o prefixo **—** ou **NEGA**, e a coluna
-**Ativa** mostrando o que a chave ainda alcança.
+- um recurso, sem prefixo, **libera** o recurso (`admin:posts:*`; `*`: tudo
+  o que você pode);
+- `deny ` e um recurso tira uma parte de algo liberado antes
+  (`deny admin:posts:*:@delete`);
+- `allow ` e um recurso devolve uma parte negada antes;
+- `reset` não é aceito.
+
+São editadas no **campo de permissões** (o mesmo dos papéis), montado do
+**que você pode**: o que você não pode nem aparece para liberar. Cada linha
+tem o prefixo **CONCEDE** (libera), **NEGA** ou **LIBERA** (devolve), e a coluna **Ativa**
+mostra o que a chave alcança.
 
 Exemplos:
 
 | Permissões | Pode | Não pode |
 | --- | --- | --- |
-| (nenhuma) | tudo o que você pode | — |
-| `deny admin:users:*` | tudo, menos os usuários | os usuários |
-| `deny admin:users:{@edit,@delete}` | tudo, e ver os usuários | editar e excluir usuários |
-| `deny admin:/site-files:!publish` | tudo, e mudar o rascunho dos arquivos do site | publicar os arquivos do site |
-| `deny admin:{users,roles}:*`<br>`deny admin:/site-files:!publish` | tudo, menos usuários, papéis e publicar | usuários, papéis, publicar |
+| (nenhuma) | nada | — |
+| `*` | tudo o que você pode | — |
+| `admin:os_users:<id>:!ssh` | entrar no usuário do SO `<id>` por SSH | o resto |
+| `admin:posts:*`<br>`deny admin:posts:*:@delete` | os posts, menos excluir | excluir posts, o resto |
+| `*`<br>`deny admin:users:*` | tudo o que você pode, menos os usuários | os usuários |
+| `*`<br>`deny admin:/site-files:!publish` | tudo, e mudar o rascunho dos arquivos do site | publicar os arquivos do site |
 
 O `!` de uma ação dentro do recurso (`admin:/site-files:!publish`) é do
 recurso: o prefixo é só o `deny ` do começo da linha.
-
-Uma chave de antes das negações (com linhas sem prefixo — o que ela
-alcançava) continua alcançando só elas até ser salva de novo, então só com
-negações.
 
 ![Uma chave e as permissões dela](images/detail.png)
 

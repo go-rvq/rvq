@@ -89,7 +89,7 @@ type Messages struct {
 	Code            string `i18n:"hint='Label of the code of a key just made.'"`
 	ErrNameRequired string `i18n:"hint='Error: the key has no name.'"`
 	// %s: the permission written
-	ErrNotDeny    string `i18n:"hint='Error: a permission of a key that is not a deny (%s: the line).'"`
+	ErrKeyLine    string `i18n:"hint='Error: a permission of a key it does not take — a reset (%s: the line).'"`
 	NoPermissions string `i18n:"hint='Said of a key with no permission: it does nothing.'"`
 	ErrTooLong    string `i18n:"hint='Error: the key expires too far ahead.', fields=(;'%d'='the most days')"`
 }
@@ -162,7 +162,7 @@ var Messages_en_US = &Messages{
 	CodeOnce:        "Its code is shown this time only: copy it now and keep it in a safe place (a password manager). Once this message is closed it cannot be seen again — whoever has it acts in your name.",
 	Code:            "Code",
 	ErrNameRequired: "Give the key a name.",
-	ErrNotDeny:      "%q: a key's permissions are denies — \"deny \" and a resource (\"deny admin:users:*\"); it may what its user may, but them.",
+	ErrKeyLine:      "%q: a key's permissions release what you may — a resource (\"admin:posts:*\"; \"*\": all you may) —, deny a part of it (\"deny admin:posts:*:@delete\") or allow it back; no reset.",
 	NoPermissions:   "None: the key does nothing.",
 	ErrTooLong:      "A key lasts at most %d days.",
 }
@@ -235,7 +235,7 @@ var Messages_pt_BR = &Messages{
 	CodeOnce:        "O código dela aparece só esta vez: copie-o agora e guarde-o num lugar seguro (um gerenciador de senhas). Depois que este aviso for fechado, ele não pode ser visto de novo — quem o tiver age em seu nome.",
 	Code:            "Código",
 	ErrNameRequired: "Dê um nome à chave.",
-	ErrNotDeny:      "%q: as permissões de uma chave são negações — \"deny \" e um recurso (\"deny admin:users:*\"); ela pode o que o usuário pode, menos elas.",
+	ErrKeyLine:      "%q: as permissões de uma chave liberam o que você pode — um recurso (\"admin:posts:*\"; \"*\": tudo o que você pode) —, negam uma parte (\"deny admin:posts:*:@delete\") ou a devolvem (allow); reset não.",
 	NoPermissions:   "Nenhuma: a chave não faz nada.",
 	ErrTooLong:      "Uma chave dura no máximo %d dias.",
 }

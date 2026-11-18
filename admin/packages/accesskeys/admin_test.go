@@ -147,9 +147,8 @@ func TestMyKeys(t *testing.T) {
 }
 
 // The permissions as the form posts them — one value, several lines at its
-// root a group —: stored canonical, a line a scope; only
-// denies — a line that allows, resets, or a group of one that does not deny,
-// refused.
+// root a group —: stored canonical, a line a scope; grants, denies and
+// allows — a reset, an unset, a prefix with no resource, refused.
 func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
 	db, p, _, do := keysApp(t)
 	ana := uuid.New()
@@ -167,10 +166,18 @@ func TestKeyPermissionsAsTheFormPosts(t *testing.T) {
 	if got := strings.Join(k.Permissions, "|"); got != "deny admin:{pages:{@edit, @delete}, users:*}" {
 		t.Errorf("the denies: %q", got)
 	}
-	for i, bad := range []string{"admin:*", "allow admin:*", "reset admin:users:*", "deny", "denyadmin:users:*",
-		"admin:users:{deny @edit, @list}"} {
+	// grants, a deny that takes from one, an allow that gives back
+	post("grants", "admin:pages:*", "deny admin:pages:*:@delete", "allow admin:pages:p1:@delete")
+	var g AccessKey
+	if err := db.First(&g, "name = ?", "grants").Error; err != nil {
+		t.Fatalf("a key of grants not made: %v", err)
+	}
+	if l := strings.Join(g.Permissions, "|"); !strings.Contains(l, "admin:pages") || !strings.Contains(l, "deny") {
+		t.Errorf("the grants: %q", g.Permissions)
+	}
+	for i, bad := range []string{"reset admin:users:*", "unset admin:*", "deny", "allow"} {
 		name := fmt.Sprint("bad", i)
-		post(name, "deny admin:users:*", bad)
+		post(name, "admin:posts:*", bad)
 		if db.First(&AccessKey{}, "name = ?", name).Error == nil {
 			t.Errorf("a key of a line %q made", bad)
 		}
@@ -188,9 +195,9 @@ func (s userSource) StackOf(r *http.Request) (string, string, func() (*perm.Stac
 	return "user:" + u, "1", func() (*perm.Stack, error) { return (&perm.Stack{}).Add("role: R", s[u]...), nil }
 }
 
-// A request by a key: allowed what its user may, but what the key denies;
-// never a key, whatever the user may (ProtectedLines); a key of before the
-// denies, what its lines of no prefix reach, and its user may.
+// A request by a key: allowed what its user may and the key's lines release;
+// no line, nothing; never a key, whatever the user may and the key releases
+// (ProtectedLines).
 func TestKeyStackOfARequest(t *testing.T) {
 	pb := perm.New().Stacks(userSource{"all": {"*"}, "pages": {"admin:pages:*"}})
 	n := 0
@@ -213,20 +220,32 @@ func TestKeyStackOfARequest(t *testing.T) {
 		lines          []string
 		want           bool
 	}{
-		{"all", "users:@list", nil, true},
-		{"all", "users:@list", []string{"deny admin:users:*"}, false},
-		{"all", "pages:@list", []string{"deny admin:users:*"}, true},
-		{"all", "users:@edit", []string{"deny admin:users:{@edit,@delete}"}, false},
-		{"all", "users:@list", []string{"deny admin:users:{@edit,@delete}"}, true},
-		{"pages", "users:@list", nil, false},
-		{"pages", "pages:@list", nil, true},
-		{"all", MyKeysModelID + ":@list", nil, false},
-		{"all", "users:" + UserKeysModelID + ":@list", nil, false},
-		{"all", UsesModelID + ":@list", nil, false},
-		// of before the denies: its lines are what it reaches
-		{"all", "users:@list", []string{"admin:pages:*"}, false},
+		// no line: nothing
+		{"all", "users:@list", nil, false},
+		{"pages", "pages:@list", nil, false},
+		// "*": all the user may
+		{"all", "users:@list", []string{"*"}, true},
+		{"pages", "users:@list", []string{"*"}, false},
+		{"pages", "pages:@list", []string{"*"}, true},
+		{"all", "users:@list", []string{"*", "deny admin:users:*"}, false},
+		{"all", "pages:@list", []string{"*", "deny admin:users:*"}, true},
+		{"all", "users:@edit", []string{"*", "deny admin:users:{@edit,@delete}"}, false},
+		{"all", "users:@list", []string{"*", "deny admin:users:{@edit,@delete}"}, true},
+		// grants: only what they release, of what the user may
+		{"all", "os_users:a:!ssh", []string{"admin:os_users:a:!ssh"}, true},
+		{"all", "os_users:b:!ssh", []string{"admin:os_users:a:!ssh"}, false},
+		{"all", "users:@list", []string{"admin:os_users:a:!ssh"}, false},
 		{"all", "pages:@list", []string{"admin:pages:*"}, true},
+		{"all", "users:@list", []string{"admin:pages:*"}, false},
+		{"pages", "users:@list", []string{"admin:users:*"}, false},
 		{"pages", "users:@list", []string{"admin:*"}, false},
+		// a deny takes from a wider grant; an allow gives back
+		{"all", "pages:@delete", []string{"admin:pages:*", "deny admin:pages:*:@delete"}, false},
+		{"all", "pages:@list", []string{"admin:pages:*", "deny admin:pages:*:@delete"}, true},
+		// never the keys
+		{"all", MyKeysModelID + ":@list", []string{"*"}, false},
+		{"all", "users:" + UserKeysModelID + ":@list", []string{"admin:*"}, false},
+		{"all", UsesModelID + ":@list", []string{"*"}, false},
 	} {
 		if got := allowed(c.user, c.resource, c.lines...); got != c.want {
 			t.Errorf("%s, %s by %q: %v, want %v", c.user, c.resource, c.lines, got, c.want)
@@ -261,9 +280,6 @@ func TestMigrateLines(t *testing.T) {
 	db.First(&k, "id = ?", old.ID)
 	if got := strings.Join(k.Permissions, "|"); got != "admin:*|deny admin:users:*" && got != "deny admin:users:*|admin:*" {
 		t.Errorf("the lines of the key of before: %q", got)
-	}
-	if !k.legacy() {
-		t.Error("the key of before not of before")
 	}
 	var n int64
 	db.Model(&perm.DefaultDBPolicy{}).Where("refer_id = ?", old.ID.String()).Count(&n)

@@ -224,10 +224,10 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		"Permissions")
 	ed := mb.Editing("Name", "Description", "ExpiresAt", "Enabled", "Permissions")
 
-	// its lines, denies only, edited as one value — the tree of the
-	// permissions of the admin it touches (userdocs.PermissionInput) —, kept
-	// to what the key's user may, what the key allows its effect (all but its
-	// denies and the protected)
+	// its lines, edited as one value — the tree of the permissions
+	// (userdocs.PermissionInput) made of what the key's user may (Base: the
+	// source; what they may not is not there) —, what the key's lines
+	// release its effect (its stack: the lines and the protected)
 	event := mb.Info().URIName() + "_" + PermissionInputEvent
 	permOpts := func(ctx *web.EventContext) (userdocs.PermissionInputOptions, error) {
 		allows, err := b.ownerAllows(ctx, owner)
@@ -241,7 +241,7 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		}
 		return userdocs.PermissionInputOptions{URL: ctx.R.URL.Path, Event: event,
 			HelpURL: help, HelpTitle: GetMessages(ctx.Context()).PermissionsHelp,
-			Prefixes: []string{userdocs.PermPrefixDeny}, StringView: true,
+			Prefixes: []string{userdocs.PermPrefixGrant, userdocs.PermPrefixDeny, userdocs.PermPrefixAllow}, StringView: true,
 			Value: userdocs.PermValueOptions{Base: allows, Effect: func(lines []string) func(userdocs.PermCheck) bool {
 				st := (&AccessKey{Permissions: lines}).Stack().Resolve()
 				return func(c userdocs.PermCheck) bool { return st.Allows(c.Resource, c.Preferred, c.Action) }
@@ -261,15 +261,18 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		}
 	})
 
-	// the permissions in the detail: one a line, the denials marked
+	// the permissions in the detail: one a line, the grants and the denials
+	// marked
 	mb.Detailing().Field("Permissions").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		k := field.Obj.(*AccessKey)
 		m := GetMessages(ctx.Context())
 		var items []h.HTMLComponent
 		for _, p := range k.Permissions {
 			li := h.Li(h.Code(p))
-			if strings.HasPrefix(p, perm.PrefixDeny) {
+			if kind, _ := perm.ParseLine(p); kind == perm.LineDeny {
 				li.Class("text-error").Attr("data-deny", true)
+			} else {
+				li.Class("text-success").Attr("data-allow", true)
 			}
 			items = append(items, li)
 		}
@@ -287,10 +290,10 @@ func (b *Builder) configureKeys(mb *presets.ModelBuilder, owner func(r *http.Req
 		if k.Name == "" {
 			errs.FieldError("Name", m.ErrNameRequired)
 		}
-		// denies only: "deny " and a resource
+		// grants, denies, allows: no reset
 		for _, l := range k.Permissions {
 			if CheckLine(l) != nil {
-				errs.FieldError("Permissions", fmt.Sprintf(m.ErrNotDeny, strings.TrimSpace(l)))
+				errs.FieldError("Permissions", fmt.Sprintf(m.ErrKeyLine, strings.TrimSpace(l)))
 			}
 		}
 		now := time.Now()
@@ -456,7 +459,8 @@ func MigrateLines(db *gorm.DB) error {
 const PermissionInputEvent = "PermissionInput"
 
 // ownerAllows is what the stack of the user of the keys of the request
-// (owner) allows — what a key of it may deny —; nil when the permissions are
+// (owner) allows — the source of the tree of a key: what it may release —;
+// nil when the permissions are
 // not by stacks.
 func (b *Builder) ownerAllows(ctx *web.EventContext, owner func(r *http.Request) (uuid.UUID, bool)) (func(userdocs.PermCheck) bool, error) {
 	pb := b.p.GetPermission()

@@ -1,8 +1,9 @@
 // Package accesskeys is the access keys of the users: codes an automation —
 // git, WebDAV, a script — authenticates with in a user's name, each request
-// alone (no session). A key's permissions only restrict: a request by it is
-// allowed what the user is allowed but what the key denies (its lines,
-// perm.WithRestriction of the subject of its stack).
+// alone (no session). A key's permissions say what it releases of what its
+// user may: a request by it is allowed what both allow — the user and the
+// key's lines (perm.WithRestriction of the subject of its stack). A key with
+// no line reaches nothing.
 // Each request by a key is in its history (AccessKeyUse), and in the user's
 // access log.
 package accesskeys
@@ -52,12 +53,12 @@ type AccessKey struct {
 	// CreatedByID is who made it: the user, or an administrator.
 	CreatedByID model.UUID `gorm:"type:uuid"`
 
-	// Permissions restrict it: lines of denies (perm.Stack), "deny " and a
-	// resource each — "deny admin:users:*", "deny admin:users:{@edit,
-	// @delete}" —, on top of what its user may: a request by the key is
-	// allowed what the user may, but what they deny. No key reaches the keys
-	// (ProtectedLines). A key of before the denies keeps its lines of no
-	// prefix — what it may reach, alone —, until it is saved again.
+	// Permissions are what it releases of what its user may: lines of a
+	// stack (perm.Stack) — a grant ("admin:os_users:<id>:!ssh", "*": all
+	// the user may), a deny ("deny admin:users:*") that takes from a wider
+	// grant before it, an allow that gives back —; no reset. A request by
+	// the key is allowed what the user may and the lines allow; no line,
+	// nothing. No key reaches the keys (ProtectedLines).
 	Permissions pq.StringArray `gorm:"type:text[]"`
 	// Policies are the permissions of the keys of before the lines: the
 	// policies whose ReferID is its id — made lines once (MigrateLines).
@@ -170,46 +171,33 @@ var ProtectedLines = []string{
 }
 
 // Stack is the stack a request by k is restricted to (perm.WithRestriction
-// of its subject): all ("*"), its denies, and ProtectedLines — of a key of
-// before the denies, its lines of no prefix in the place of all.
+// of its subject): its lines, then ProtectedLines. Nothing else: what its
+// lines do not grant, it does not reach.
 func (k *AccessKey) Stack() *perm.Stack {
 	s := &perm.Stack{}
-	if !k.legacy() {
-		s.Add("key", "*")
-	}
 	s.Add("key: "+k.Name, k.Permissions...)
 	return s.Add("key: protected", ProtectedLines...)
 }
 
-// legacy says whether k is a key of before the denies: a line of no prefix
-// (what it may reach).
-func (k *AccessKey) legacy() bool {
-	for _, l := range k.Permissions {
-		for _, e := range perm.ExpandLine(l) {
-			if kind, _ := perm.ParseLine(e); kind != perm.LineDeny {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // CheckLine says what is wrong with a line of a key: nil when nothing is —
-// a deny (each line it is, its groups broken), or blank.
+// a grant, a deny or an allow (each line it is, its groups broken), or
+// blank.
 func CheckLine(l string) error {
 	if err := perm.CheckLine(l); err != nil {
 		return err
 	}
 	for _, e := range perm.ExpandLine(l) {
-		if kind, _ := perm.ParseLine(e); kind != perm.LineDeny {
-			return ErrNotDeny
+		switch kind, _ := perm.ParseLine(e); kind {
+		case perm.LineGrant, perm.LineDeny, perm.LineAllow:
+		default:
+			return ErrKeyLine
 		}
 	}
 	return nil
 }
 
-// ErrNotDeny is a line of a key that does not deny.
-var ErrNotDeny = errors.New(`a key's permissions are denies: "deny admin:users:*"`)
+// ErrKeyLine is a line a key does not take: a reset.
+var ErrKeyLine = errors.New(`a key's permissions grant ("admin:posts:*"), deny ("deny admin:users:*") or allow`)
 
 // cleanLines are lines without the blank ones, trimmed.
 func cleanLines(lines []string) (out pq.StringArray) {
