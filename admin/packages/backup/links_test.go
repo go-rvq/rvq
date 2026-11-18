@@ -67,7 +67,7 @@ func TestLink(t *testing.T) {
 		t.Error("a link of a state not ready")
 	}
 	tok, l, err := b.NewLink(httptest.NewRequest("GET", "/", nil), s.ID)
-	if err != nil || l.ExpiresAt.Sub(time.Now()) < LinkTTL-time.Minute {
+	if err != nil || time.Until(l.ExpiresAt) < LinkTTL-time.Minute {
 		t.Fatal(err, l)
 	}
 	var kept BackupLink

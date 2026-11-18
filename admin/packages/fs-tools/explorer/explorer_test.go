@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -230,6 +231,8 @@ func TestExplorerExtract(t *testing.T) {
 }
 
 // tarNames are the names in the tar.gz of b, in order.
+// tarNames are the names in the tar.gz b, sorted (the order of a folder's
+// entries is the file system's).
 func tarNames(t *testing.T, b []byte) []string {
 	t.Helper()
 	gz, err := gzip.NewReader(bytes.NewReader(b))
@@ -241,6 +244,7 @@ func tarNames(t *testing.T, b []byte) []string {
 	for {
 		hd, err := tr.Next()
 		if err == io.EOF {
+			sort.Strings(out)
 			return out
 		}
 		if err != nil {
