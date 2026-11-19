@@ -130,3 +130,55 @@ func TestRestoreRecords(t *testing.T) {
 		t.Error("the delete of a record shared without its restore")
 	}
 }
+
+type trashParent struct {
+	ID        uint
+	Name      string
+	DeletedAt gorm.DeletedAt
+	Kids      []*trashKid `gorm:"foreignKey:ParentID"`
+}
+
+type trashKid struct {
+	ID        uint
+	ParentID  uint
+	DeletedAt gorm.DeletedAt
+}
+
+// A record fetched by who may browse the trash: one deleted opens; one not
+// is read scoped — its preloads without its deleted children.
+func TestTrashFetchScoped(t *testing.T) {
+	db := sharedTestDB(t)
+	if err := db.AutoMigrate(&trashParent{}, &trashKid{}); err != nil {
+		t.Fatal(err)
+	}
+	db.Create(&trashParent{ID: 1, Name: "alive", Kids: []*trashKid{{ID: 1}, {ID: 2}}})
+	db.Create(&trashParent{ID: 2, Name: "gone"})
+	db.Delete(&trashKid{}, 2)
+	db.Delete(&trashParent{}, 2)
+	p := presets.New(i18n.New())
+	p.DataOperator(gorm2op.DataOperator(db))
+	p.Permission(perm.New().Stacks(linesSource{}))
+	AutoTrash(p, db)
+	mb := p.Model(&trashParent{}, presets.ModelWithID("parents"))
+	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {
+		return do.(*gorm2op.DataOperatorBuilder).WithReadCallbacks(func(cb *gorm2op.Callbacks[*gorm2op.DataOperatorBuilder]) {
+			cb.Pre(func(state *gorm2op.CallbackState) error {
+				state.DB = state.DB.Preload("Kids")
+				return nil
+			})
+		})
+	})
+	p.Build(http.NewServeMux())
+
+	ctx := ctxOf("admin:parents:@trash")
+	obj, err := mb.Detailing().Fetch("1", ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kids := obj.(*trashParent).Kids; len(kids) != 1 || kids[0].ID != 1 {
+		t.Errorf("the kids of a record not deleted: %d, want the one not deleted", len(kids))
+	}
+	if obj, err = mb.Detailing().Fetch("2", ctx); err != nil || obj.(*trashParent).Name != "gone" {
+		t.Errorf("a record of the trash: %v %v", obj, err)
+	}
+}

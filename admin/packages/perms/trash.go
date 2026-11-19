@@ -113,10 +113,11 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 					db = db.Unscoped().Where(opts.TableName + ".deleted_at IS NOT NULL")
 				}
 				// a record of the trash opens — its detail, its history, as
-				// the parent of its children —: fetched deleted or not, by who
-				// may see the trash
+				// the parent of its children —: fetched deleted, by who may
+				// see the trash. Only a deleted one: unscoped, its preloads
+				// would bring its deleted children too
 				if (mode.Has(gorm2op.Fetch) || mode.Has(gorm2op.FetchTitle)) && ctx != nil && ctx.R != nil &&
-					mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed() {
+					mb.Permissioner().ReqListDo(ctx.R, PermTrash).Allowed() && inTrash(db, mb, opts.TableName, id) {
 					db = db.Unscoped()
 				}
 				return db
@@ -213,6 +214,19 @@ func restoreRecords(ctx *web.EventContext, mb *presets.ModelBuilder, db *gorm.DB
 		return opts.OnRestore(ctx, ids)
 	}
 	return nil
+}
+
+// inTrash says whether the record id of mb (of the table) is deleted.
+func inTrash(db *gorm.DB, mb *presets.ModelBuilder, table string, id model.ID) bool {
+	if id.IsZero() || table == "" {
+		return false
+	}
+	obj := mb.NewModel()
+	id.SetTo(obj)
+	var n int64
+	db.Session(&gorm.Session{NewDB: true}).Unscoped().Table(table).Where(obj).
+		Where(table + ".deleted_at IS NOT NULL").Count(&n)
+	return n > 0
 }
 
 // trashOptionsOf are the options of the trash of mb (SetupTrash).
