@@ -3,6 +3,8 @@ package seo
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
 	"net/http"
 	"net/url"
 	"path"
@@ -80,13 +82,15 @@ func New(db *gorm.DB, ops ...Option) *Builder {
 		Component:   "vx-seo-var-zipcodes",
 	})
 
-	if err := db.AutoMigrate(&RvqSEOSetting{}, &SEOConfig{}); err != nil {
+	if err := migrate.Auto(db, Migrate); err != nil {
 		panic(err)
 	}
 
 	// NOTE: do not replace b.seoRoot.name with defaultGlobalSEOName.
 	// because the name of global seo may be changed by user through WithGlobalSEOName option.
-	if err := insertIfNotExists(db, b.seoRoot.name, b.locales); err != nil {
+	// the global SEO of each locale: as it is built, unless the graph runs
+	// the migrations (migrate.Manage) — then its node (Install)
+	if err := migrate.Auto(db, b.seedGlobal); err != nil {
 		panic(err)
 	}
 	return b
@@ -610,4 +614,13 @@ func insertIfNotExists(db *gorm.DB, seoName string, locales []string) error {
 		return err
 	}
 	return nil
+}
+
+// GlobalKey is the node of the global SEO of each locale (seedGlobal) in the
+// graphs of the commands.
+const GlobalKey lifecycle.Key = "rvq/seo/global"
+
+// seedGlobal makes the global SEO of each locale, when missing.
+func (b *Builder) seedGlobal(db *gorm.DB) error {
+	return insertIfNotExists(db, b.seoRoot.name, b.locales)
 }

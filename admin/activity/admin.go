@@ -26,6 +26,7 @@ const I18nActivityKey i18n.ModuleKey = "I18nActivityKey"
 const Timeline = "Timeline"
 
 func (ab *Builder) Install(b *presets.Builder) error {
+	ab.offerMigration(b)
 	b.I18n().
 		RegisterForModule(language.English, I18nActivityKey, Messages_en_US).
 		RegisterForModule(language.SimplifiedChinese, I18nActivityKey, Messages_zh_CN).

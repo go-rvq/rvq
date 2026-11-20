@@ -3,6 +3,7 @@ package note
 import (
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
+	"github.com/go-rvq/rvq/x/migrate"
 	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
@@ -29,10 +30,7 @@ func (b *Builder) AfterCreate(f AfterCreateFunc) (r *Builder) {
 
 func (b *Builder) Install(pb *presets.Builder) error {
 	db := b.db
-	if err := renameLegacy(db); err != nil {
-		return err
-	}
-	if err := db.AutoMigrate(Note{}, UserNote{}); err != nil {
+	if err := migrate.Auto(db, Migrate); err != nil {
 		return err
 	}
 

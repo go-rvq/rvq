@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"slices"
 	"strings"
 	"sync"
@@ -159,7 +160,7 @@ func New(o Options) (*Service, error) {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	if err := AutoMigrate(o.DB); err != nil {
+	if err := migrate.Auto(o.DB, AutoMigrate); err != nil {
 		return nil, err
 	}
 	return &Service{o: o, resources: map[string]*Resource{}}, nil

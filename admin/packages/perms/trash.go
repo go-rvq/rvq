@@ -3,6 +3,7 @@ package perms
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"net/http"
 	"reflect"
 	"strings"
@@ -86,9 +87,10 @@ func SetupTrash(mb *presets.ModelBuilder, db *gorm.DB, opts TrashOptions) {
 
 	// who deletes a record, and from where (softdelete.Deletion)
 	deletion := hasDeletion(mb.NewModel())
-	if err := MigrateDeleted(db, opts.TableName, mb.NewModel()); err != nil {
+	if err := migrate.Auto(db, func(db *gorm.DB) error { return MigrateDeleted(db, opts.TableName, mb.NewModel()) }); err != nil {
 		panic(err)
 	}
+	offerTrashMigration(mb.Builder(), opts.TableName, mb.NewModel())
 	installDeletedColumns(mb, db, opts.TableName)
 
 	mb.UpdateDataOperator(func(do presets.DataOperator) presets.DataOperator {

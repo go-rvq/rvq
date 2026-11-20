@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"reflect"
 
 	h "github.com/go-rvq/htmlgo"
@@ -77,7 +78,7 @@ func New(db *gorm.DB, logModel ...ActivityLogInterface) *Builder {
 		ab.logModel = &ActivityLog{}
 	}
 
-	if err := db.AutoMigrate(ab.logModel); err != nil {
+	if err := migrate.Auto(db, func(db *gorm.DB) error { return db.AutoMigrate(ab.logModel) }); err != nil {
 		panic(err)
 	}
 

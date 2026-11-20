@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/go-rvq/rvq/x/migrate"
 	"strings"
 
 	orgsadmin "github.com/go-rvq/rvq/admin/packages/orgs/admin"
@@ -74,10 +75,10 @@ func (b *Builder) Validators() []*validators.Validator {
 // document validators, ensures the orgs package is mounted, registers the i18n
 // messages and enum selects, and registers the (org-nested) Person resource.
 func (b *Builder) Install(pb *presets.Builder) error {
-	if err := models.AutoMigrate(b.db); err != nil {
+	if err := migrate.Auto(b.db, models.AutoMigrate); err != nil {
 		return err
 	}
-	if err := validators.AutoMigrate(b.db); err != nil {
+	if err := migrate.Auto(b.db, validators.AutoMigrate); err != nil {
 		return err
 	}
 	for _, v := range b.docValidators {

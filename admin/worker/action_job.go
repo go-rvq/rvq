@@ -284,7 +284,7 @@ func (b *Builder) eventActionJobProgressing(ctx *web.EventContext) (er web.Event
 		h.Div(VProgressLinear(
 			h.Strong(fmt.Sprintf("%d%%", inst.Progress)),
 		).ModelValue(int(inst.Progress)).Height(20)).Class("mb-5"),
-		h.If(config.displayLog, actionJobLog(*config.b, inst)),
+		h.If(config.displayLog, actionJobLog(config.b, inst)),
 		h.If(inst.ProgressText != "",
 			h.Div().Class("mb-3").Children(
 				h.RawHTML(inst.ProgressText),
@@ -300,7 +300,7 @@ func (b *Builder) eventActionJobProgressing(ctx *web.EventContext) (er web.Event
 	return er, nil
 }
 
-func actionJobLog(b Builder, inst *JobInstance) h.HTMLComponent {
+func actionJobLog(b *Builder, inst *JobInstance) h.HTMLComponent {
 	var logLines []h.HTMLComponent
 	logs := make([]string, 0, 100)
 

@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"io"
 	"io/fs"
 	"log"
 	"net"
@@ -16,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
 	"github.com/go-rvq/rvq/x/osenv"
 	rcron "github.com/robfig/cron/v3"
 	"gorm.io/gorm"
@@ -440,6 +443,30 @@ func (b *Builder) WarnSecureKeyMissing() {
 		"(it is ignored with any other mode) and send its content in the %s "+
 		"header:\n    (umask 177 && head -c 32 /dev/urandom | base64 | tr -d '=' > %s)",
 		abs, SecureKeyFileMode, SecureKeyHeader, abs)
+}
+
+// SecureKeyKey is the node of the renewal of the secure key
+// (SecureKeyRenewalNode).
+const SecureKeyKey lifecycle.Key = "rvq/login/secure-key"
+
+// SecureKeyRenewalNode is the renewal of the secure key as a node of a
+// command (x/lifecycle), after the migrations when the command runs them:
+// it warns of a key missing and schedules the renewal by the rule rule gives
+// then ("" none; a rule that does not parse logged, the command going on);
+// closed by StopSecureKeyRenewal.
+func (b *Builder) SecureKeyRenewalNode(rule func() string) lifecycle.Node {
+	return lifecycle.Node{
+		Key:      SecureKeyKey,
+		After:    []lifecycle.Key{migrate.Key},
+		Optional: []lifecycle.Key{migrate.Key},
+		Start: func(context.Context) (io.Closer, error) {
+			b.WarnSecureKeyMissing()
+			if err := b.RescheduleSecureKeyRenewal(rule()); err != nil {
+				log.Printf("ERROR: the renewal of the secure key: %v", err)
+			}
+			return lifecycle.CloserFunc(func() error { b.StopSecureKeyRenewal(); return nil }), nil
+		},
+	}
 }
 
 // StopSecureKeyRenewal stops the cron StartSecureKeyRenewal started. It does

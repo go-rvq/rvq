@@ -3,6 +3,7 @@ package microsite
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"io"
 	"path"
 	"strings"
@@ -24,7 +25,7 @@ func (mib *Builder) Install(b *presets.Builder) error {
 	storage := mib.storage
 	db := mib.db
 
-	err := db.AutoMigrate(&MicroSite{})
+	err := migrate.Auto(db, Migrate)
 	if err != nil {
 		panic(err)
 	}

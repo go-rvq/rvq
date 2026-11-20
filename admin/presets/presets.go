@@ -19,6 +19,7 @@ import (
 	"github.com/go-rvq/rvq/web/datafield"
 	"github.com/go-rvq/rvq/web/vue"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/lifecycle"
 	"github.com/go-rvq/rvq/x/perm"
 	"github.com/go-rvq/rvq/x/ui/mdkit"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
@@ -71,7 +72,11 @@ type Builder struct {
 	detailFieldDefaults                   *FieldDefaults
 	extraAssets                           []*extraAsset
 	// services are the paths no page has (Service): /!<name>
-	services            []*ServiceBuilder
+	services []*ServiceBuilder
+	// lifecycle are the nodes the packages offer the commands (Lifecycle)
+	lifecycle lifecycle.Nodes
+	// migrations are the application's migrations of the admin (Migrations)
+	migrations          lifecycle.Nodes
 	assetFunc           AssetFunc
 	menuTree            *MenuGroupBuilder
 	menuItems           map[string]*MenuItem

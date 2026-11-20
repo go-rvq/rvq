@@ -5,6 +5,7 @@ import (
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/packages/shared"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/migrate"
 	"gorm.io/gorm"
 )
 
@@ -39,7 +40,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	if OrganizacaoModel(pb) != nil {
 		return nil
 	}
-	if err := models.AutoMigrate(b.db); err != nil {
+	if err := migrate.Auto(b.db, models.AutoMigrate); err != nil {
 		return err
 	}
 	messages.Register(pb.I18n())

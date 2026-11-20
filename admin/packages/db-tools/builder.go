@@ -3,6 +3,7 @@ package db_tools
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"github.com/google/uuid"
 	"log"
 	"sort"
@@ -70,7 +71,7 @@ type MessageForm struct {
 
 func New(db *gorm.DB, i18nB *i18n.Builder, wb *worker.Builder) *Builder {
 	uuidkey.MustRegister(db) // its records have UUID keys
-	if err := db.AutoMigrate(&DbBackupConfig{}); err != nil {
+	if err := migrate.Auto(db, Migrate); err != nil {
 		panic(err)
 	}
 

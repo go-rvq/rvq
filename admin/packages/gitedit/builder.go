@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"github.com/go-rvq/rvq/x/timezone"
 	"io/fs"
 	"net/http"
@@ -346,7 +347,7 @@ func (b *Builder) Install(p *presets.Builder) error {
 	// (the preview, the public one)
 	defer b.installPermSets()
 	if b.DB != nil {
-		if err := b.DB.AutoMigrate(&DraftShare{}, &PublicPreview{}); err != nil {
+		if err := migrate.Auto(b.DB, Migrate); err != nil {
 			return err
 		}
 	}

@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/go-rvq/htmlgo"
@@ -19,6 +21,8 @@ import (
 	"github.com/go-rvq/rvq/admin/utils/uuidkey"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
 	. "github.com/go-rvq/rvq/x/ui/vuetify"
 	"github.com/go-rvq/rvq/x/ui/vuetifyx"
 	"github.com/google/uuid"
@@ -58,6 +62,34 @@ type Builder struct {
 	cron                 *rcron.Cron
 	cronContext          *web.EventContext
 	cronLogger           *slog.Logger
+	listenOnce           sync.Once
+	shutdownOnce         sync.Once
+	shutdownErr          error
+}
+
+// Key is the node of the worker (Node): its queue's workers and its cron.
+const Key lifecycle.Key = "rvq/worker"
+
+// Node is the worker as a node of a command (x/lifecycle): it starts the
+// queue's workers and the cron (Listen) after the migrations, if the command
+// runs them, and after the keys given; closed by Shutdown. Install offers it
+// (presets.Builder.Lifecycle).
+func (b *Builder) Node(after ...lifecycle.Key) lifecycle.Node {
+	return lifecycle.Node{
+		Key:      Key,
+		After:    append([]lifecycle.Key{migrate.Key}, after...),
+		Optional: []lifecycle.Key{migrate.Key},
+		Start: func(context.Context) (io.Closer, error) {
+			b.Listen()
+			return b, nil
+		},
+	}
+}
+
+// Close stops the cron and the queue's workers (Shutdown), without a
+// deadline.
+func (b *Builder) Close() error {
+	return b.Shutdown(context.Background())
 }
 
 func New(i18nB *i18n.Builder, db *gorm.DB, option ...NewOption) *Builder {
@@ -66,12 +98,7 @@ func New(i18nB *i18n.Builder, db *gorm.DB, option ...NewOption) *Builder {
 		panic("db can not be nil")
 	}
 
-	if err := renameLegacy(db); err != nil {
-		panic(err)
-	}
-
-	err := db.AutoMigrate(&Job{}, &JobInstance{}, &JobLog{}, &GoQueError{})
-	if err != nil {
+	if err := migrate.Auto(db, Migrate); err != nil {
 		panic(err)
 	}
 
@@ -189,6 +216,8 @@ func (b *Builder) URI() string {
 
 func (b *Builder) Install(pb *presets.Builder) error {
 	b.pb = pb
+	// started by the command that serves, not by building the admin
+	pb.Lifecycle().Add(b.Node())
 
 	ConfigureMessages(pb.I18n())
 
@@ -469,7 +498,13 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	return nil
 }
 
+// Listen starts the queue's workers, for the jobs registered by then, and
+// the cron; once — the node (Node) or the application, whichever first.
 func (b *Builder) Listen() {
+	b.listenOnce.Do(b.listen)
+}
+
+func (b *Builder) listen() {
 	var (
 		jds     []*JobDefinition
 		crons   []*JobBuilder
@@ -526,8 +561,14 @@ func (b *Builder) Listen() {
 }
 
 // Shutdown stops the cron — no job is created any more — and the queue's
-// workers, which hold connections of their own while they run.
+// workers, which hold connections of their own while they run; once (the
+// node, the application's Close).
 func (b *Builder) Shutdown(ctx context.Context) error {
+	b.shutdownOnce.Do(func() { b.shutdownErr = b.shutdown(ctx) })
+	return b.shutdownErr
+}
+
+func (b *Builder) shutdown(ctx context.Context) error {
 	if b.cron != nil {
 		select {
 		case <-b.cron.Stop().Done():

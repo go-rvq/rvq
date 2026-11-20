@@ -1,8 +1,12 @@
 package seo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
+	"gorm.io/gorm"
 	"net/http"
 	"reflect"
 	"strings"
@@ -43,6 +47,10 @@ func (mtd *myTd) Write(ctx *h.Context) (err error) {
 }
 
 func (b *Builder) Install(pb *presets.Builder) error {
+	if !pb.Migrations().Has(GlobalKey) {
+		pb.Migrations().Chain(lifecycle.Node{Key: GlobalKey, After: []lifecycle.Key{Key},
+			Start: migrate.Func(func(_ context.Context, db *gorm.DB) error { return b.seedGlobal(db) })})
+	}
 	// The registration of FieldDefaults for writing Setting here
 	// must be executed before `pb.Model(&RvqSEOSetting{})...`,
 	pb.FieldDefaults(presets.WRITE).

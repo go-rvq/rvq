@@ -3,6 +3,7 @@ package admin
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"github.com/go-rvq/rvq/x/migrate"
 	"log"
 	"net/http"
 	"reflect"
@@ -208,24 +209,15 @@ func (h *ModelHistory) Build() *ModelHistory {
 		panic("history: Model(mb) is required before Build()")
 	}
 	h.table = revisionTable(h.db, h.mb.NewModel())
-	if err := h.db.Table(h.table).AutoMigrate(&histmodels.Revision{}); err != nil {
+	if err := migrate.Auto(h.db, func(db *gorm.DB) error { return db.Table(h.table).AutoMigrate(&histmodels.Revision{}) }); err != nil {
 		panic(err)
 	}
 	h.resolved = h.resolveFields()
 	revisionsByTable[h.table] = h
-
-	// Migrate legacy rows: fill ChangedFields on revisions saved before the
-	// column existed. Idempotent and cheap when there is nothing to do; a failure
-	// must not block boot.
-	if err := h.Backfill(); err != nil {
-		log.Printf("history: backfill %s: %v", h.table, err)
-	}
-
-	// Seed the initial revision for records that predate history (a database
-	// populated before revisions were configured). Idempotent; must not block boot.
-	if err := h.SeedInitialRevisions(); err != nil {
-		log.Printf("history: seed %s: %v", h.table, err)
-	}
+	offerRevisionsMigration(h.mb.Builder(), h)
+	// its backfill and seed: as it is built, unless the graph runs the
+	// migrations (migrate.Manage) — then its node
+	_ = migrate.Auto(h.db, func(*gorm.DB) error { h.backfillAndSeed(); return nil })
 
 	h.mb.Editing().WrapSaveFunc(func(in presets.SaveFunc) presets.SaveFunc {
 		return func(obj interface{}, id model.ID, ctx *web.EventContext) error {
@@ -637,4 +629,17 @@ func (h *ModelHistory) createEventRevision(obj interface{}, event string, creato
 		return nil, false, err
 	}
 	return hash, true, nil
+}
+
+// backfillAndSeed fills ChangedFields on revisions saved before the column
+// existed (Backfill), and makes the initial revision of the records that
+// predate history (SeedInitialRevisions). Idempotent and cheap when there is
+// nothing to do; a failure is logged, never blocks.
+func (h *ModelHistory) backfillAndSeed() {
+	if err := h.Backfill(); err != nil {
+		log.Printf("history: backfill %s: %v", h.table, err)
+	}
+	if err := h.SeedInitialRevisions(); err != nil {
+		log.Printf("history: seed %s: %v", h.table, err)
+	}
 }

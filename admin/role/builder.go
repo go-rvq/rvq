@@ -1,7 +1,10 @@
 package role
 
 import (
+	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
 	"github.com/lib/pq"
 	"net/http"
 	"strings"
@@ -219,19 +222,34 @@ func (b *Builder) Install(pb *presets.Builder) (err error) {
 	b.roleMb.Detailing("Name", "SystemKey", "Permissions")
 	b.installSystem(b.roleMb)
 	// the roles of before the lines: their policies made lines, once
-	if err = MigrateLines(b.db); err != nil {
+	if err = migrate.Auto(b.db, MigrateLines); err != nil {
 		return err
 	}
 	// what was given to resources inside the groups of the menu: by their
 	// unique names; the placeholders out (perm.CleanLines)
-	if err = MigrateUngroup(b.db); err != nil {
+	if err = migrate.Auto(b.db, MigrateUngroup); err != nil {
 		return err
 	}
 	if len(b.systemRoles) > 0 {
-		if err = b.EnsureSystemRoles(); err != nil {
-			return err
+		// the roles the application needs: as it is built, unless the graph
+		// runs the migrations (migrate.Manage) — then a node of it
+		if migrate.Managed(b.db) {
+			if !pb.Migrations().Has(SystemRolesKey) {
+				pb.Migrations().Chain(lifecycle.Node{Key: SystemRolesKey, After: []lifecycle.Key{Key},
+					Start: migrate.Func(func(context.Context, *gorm.DB) error {
+						if err := b.EnsureSystemRoles(); err != nil {
+							return err
+						}
+						b.changed()
+						return nil
+					})})
+			}
+		} else {
+			if err = b.EnsureSystemRoles(); err != nil {
+				return err
+			}
+			b.changed()
 		}
-		b.changed()
 	}
 
 	if b.AfterInstallFunc != nil {
@@ -362,3 +380,7 @@ func Stack(pb *perm.Builder, subjects []string, roles []*Role) *perm.Stack {
 	}
 	return s
 }
+
+// SystemRolesKey is the node of the roles the application needs
+// (EnsureSystemRoles) in the graphs of the commands.
+const SystemRolesKey lifecycle.Key = "rvq/role/system"

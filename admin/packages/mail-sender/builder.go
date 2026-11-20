@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -58,22 +59,8 @@ func (b *Builder) MailLogs() *presets.ModelBuilder {
 }
 
 func (b *Builder) Install(p *presets.Builder) (err error) {
-	if err = b.db.AutoMigrate(
-		&MailSender{},
-		&MailLog{},
-	); err != nil {
+	if err = migrate.Auto(b.db, Migrate); err != nil {
 		return
-	}
-	// the old switch of the SMTP's login (UseSMTPLogin): its user and
-	// password (Reuse)
-	if m := b.db.Migrator(); m.HasColumn(&MailSender{}, "inbound__use_smtp_login") {
-		if err = b.db.Exec(`UPDATE mail_sender_settings SET inbound__reuse = ? WHERE inbound__use_smtp_login`,
-			SMTPReuseUser|SMTPReusePassword).Error; err != nil {
-			return
-		}
-		if err = m.DropColumn(&MailSender{}, "inbound__use_smtp_login"); err != nil {
-			return
-		}
 	}
 	mb := Model(p,
 		&MailSender{},

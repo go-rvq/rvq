@@ -11,6 +11,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -111,7 +114,7 @@ func (b *Builder) ModelBuilder() *presets.ModelBuilder { return b.mb }
 
 // AutoMigrate makes the tables of the states, of their sessions and links.
 func (b *Builder) AutoMigrate() error {
-	return b.db.AutoMigrate(&BackupState{}, &BackupSession{}, &BackupLink{})
+	return migrate.Auto(b.db, Migrate)
 }
 
 // Install registers the model, its jobs, the permission of downloading, the
@@ -129,7 +132,13 @@ func (b *Builder) Install(p *presets.Builder) error {
 	if err := b.AutoMigrate(); err != nil {
 		return err
 	}
-	if err := b.recover(); err != nil {
+	// the states a restart interrupted: failed — as the application is built,
+	// unless the graph runs the migrations (migrate.Manage): then as it
+	// serves, after them
+	if migrate.Managed(b.db) {
+		p.Lifecycle().Add(lifecycle.Node{Key: RecoverKey, After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+			Start: func(context.Context) (io.Closer, error) { return nil, b.recover() }})
+	} else if err := b.recover(); err != nil {
 		return err
 	}
 	b.mb = p.Model(&BackupState{}, presets.ModelConfig().SetId(ModelID).SetModuleKey(MessagesKey)).
@@ -424,3 +433,7 @@ func (b *Builder) registerService(p *presets.Builder) {
 		Handle("/{id}/fs/", b.fsHandler()).
 		Outer(b.ClientHandler)
 }
+
+// RecoverKey is the node that fails the states a restart interrupted
+// (recover), as the application serves.
+const RecoverKey lifecycle.Key = "rvq/backup/recover"

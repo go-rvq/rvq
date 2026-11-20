@@ -3,6 +3,7 @@ package worker
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,32 +19,33 @@ import (
 )
 
 type goque struct {
-	q   que.Queue
 	db  *gorm.DB
 	wks []*que.Worker
+
+	// q is the queue of the database, made on its first use (queue): its
+	// table too — building an application on a database touches nothing
+	once sync.Once
+	q    que.Queue
+	err  error
 }
 
 func NewGoQueQueue(db *gorm.DB) Queue {
 	if db == nil {
 		panic("db can not be nil")
 	}
+	return &goque{db: db}
+}
 
-	var q que.Queue
-	{
-		rdb, err := db.DB()
-		if err != nil {
-			panic(err)
+// queue is the queue of the database, made the first time (pg.New makes its
+// table).
+func (q *goque) queue() (que.Queue, error) {
+	q.once.Do(func() {
+		var rdb *sql.DB
+		if rdb, q.err = q.db.DB(); q.err == nil {
+			q.q, q.err = pg.New(rdb)
 		}
-		q, err = pg.New(rdb)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return &goque{
-		q:  q,
-		db: db,
-	}
+	})
+	return q.q, q.err
 }
 
 func (q *goque) Add(ctx context.Context, job QueJobInterface) error {
@@ -57,7 +59,11 @@ func (q *goque) Add(ctx context.Context, job QueJobInterface) error {
 		job.SetStatus(JobStatusScheduled)
 	}
 
-	_, err = q.q.Enqueue(ctx, nil, que.Plan{
+	qq, err := q.queue()
+	if err != nil {
+		return err
+	}
+	_, err = qq.Enqueue(ctx, nil, que.Plan{
 		Queue: "worker_" + jobInfo.JobName,
 		Args:  que.Args(jobInfo.JobID, jobInfo.Argument),
 		RunAt: runAt,
@@ -88,7 +94,11 @@ func (q *goque) Listen(jobDefs []*JobDefinition, getJob func(jobID uuid.UUID) (Q
 	// One mutex for all the workers: a mutex holds a connection of its own
 	// (its advisory locks live on it) for as long as it is busy, so one per
 	// job would take as many connections as there are jobs.
-	mutex := q.q.Mutex()
+	qq, err := q.queue()
+	if err != nil {
+		return err
+	}
+	mutex := qq.Mutex()
 	for i := range jobDefs {
 		jd := jobDefs[i]
 		if jd.Handler == nil {

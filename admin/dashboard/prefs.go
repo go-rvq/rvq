@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"errors"
+	"github.com/go-rvq/rvq/x/migrate"
 	"slices"
 	"time"
 
@@ -84,5 +85,5 @@ func (b *Builder) Migrate() error {
 	if b.db == nil {
 		return nil
 	}
-	return b.db.AutoMigrate(&Pref{})
+	return migrate.Auto(b.db, Migrate)
 }

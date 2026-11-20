@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"net/http"
 	"strings"
 	"time"
@@ -65,13 +66,7 @@ func (b *Builder) Authenticator() *Authenticator { return b.auth }
 
 // AutoMigrate makes the tables of the keys.
 func (b *Builder) AutoMigrate() error {
-	if err := b.db.AutoMigrate(&AccessKey{}, &AccessKeyUse{}); err != nil {
-		return err
-	}
-	if err := MigrateLines(b.db); err != nil {
-		return err
-	}
-	return MigrateUngroup(b.db)
+	return migrate.Auto(b.db, Migrate)
 }
 
 // MigrateUngroup cleans the lines of the keys (perm.CleanLines): what they

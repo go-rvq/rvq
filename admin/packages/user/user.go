@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"net/http"
 	"reflect"
 	"slices"
@@ -339,7 +340,7 @@ func New(db *gorm.DB, lb *login.Builder, mb *presets.ModelBuilder, loginInitialU
 	}
 	// the groups of the users, and their preferences: the admin in the
 	// user's default language when the request asks none
-	if err := AutoMigrateGroups(db); err != nil {
+	if err := migrate.Auto(db, AutoMigrateGroups); err != nil {
 		panic(err)
 	}
 	mb.Builder().I18n().DefaultLanguage(func(r *http.Request) string {

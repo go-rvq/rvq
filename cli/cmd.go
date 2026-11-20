@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
+
+	"github.com/go-rvq/rvq/x/lifecycle"
 )
 
 type CommandContext struct {
@@ -23,6 +27,21 @@ type CommandContext struct {
 	InputArgs []string
 	Args      Args
 	NamedArgs any
+
+	// plan is -plan of a command with a Lifecycle: its order, nothing run
+	plan bool
+	// lifecycle is the graph of this run (Lifecycle)
+	lifecycle *lifecycle.Graph
+}
+
+// Lifecycle is the graph of this run of the command, made on the first
+// call: the command's Lifecycle fills it, its Run started around by it.
+// A sub-command has a graph of its own.
+func (ctx *CommandContext) Lifecycle() *lifecycle.Graph {
+	if ctx.lifecycle == nil {
+		ctx.lifecycle = &lifecycle.Graph{}
+	}
+	return ctx.lifecycle
 }
 
 func (ctx *CommandContext) Name() string {
@@ -73,15 +92,51 @@ func (ctx *CommandContext) Value(name any) any {
 func (ctx *CommandContext) Fork() *CommandContext {
 	child := *ctx
 	child.parent = ctx
+	child.lifecycle = nil
+	child.plan = false
 	return &child
 }
 
+// Run runs the command: with a Lifecycle, its nodes started around its Run
+// (runLifecycle).
 func (ctx *CommandContext) Run() error {
+	if ctx.cmd.Lifecycle != nil {
+		if err := ctx.cmd.Lifecycle(ctx); err != nil {
+			return err
+		}
+		return ctx.runLifecycle(ctx.Lifecycle())
+	}
 	if ctx.cmd.Run == nil {
 		return nil
 	}
 
 	return ctx.cmd.Run(ctx)
+}
+
+// runLifecycle starts the nodes of g in order, runs the command's Run (nil:
+// none), waits for the waiters and closes the nodes in the inverse order
+// (lifecycle.Graph.Run); SIGINT and SIGTERM end it. With -plan, the order of
+// g, nothing run.
+func (ctx *CommandContext) runLifecycle(g *lifecycle.Graph) error {
+	if ctx.plan {
+		p, err := g.Plan()
+		if err != nil {
+			return err
+		}
+		_, err = io.WriteString(ctx.Out, p)
+		return err
+	}
+	c, stop := signal.NotifyContext(ctx.Context, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	var run func(context.Context) error
+	if ctx.cmd.Run != nil {
+		run = func(c context.Context) error {
+			rctx := *ctx
+			rctx.Context = c
+			return ctx.cmd.Run(&rctx)
+		}
+	}
+	return g.Run(c, run)
 }
 
 func (ctx *CommandContext) Help() (err error) {
@@ -97,6 +152,12 @@ type Command struct {
 	Help        func(ctx *CommandContext) (err error)
 	Run         func(ctx *CommandContext) (err error)
 	ParseArgs   func(ctx *CommandContext) (err error)
+	// Lifecycle fills the graph of the run (ctx.Lifecycle()) with the nodes
+	// the command starts around its Run and closes after it (x/lifecycle):
+	// called only when the command runs — the application wired by then.
+	// The command gets -plan (unless it has its own): the order, nothing
+	// run.
+	Lifecycle func(ctx *CommandContext) error
 }
 
 func (b *Command) Sub(cmd *Command) *Command {
@@ -148,6 +209,10 @@ parse:
 		}
 	}
 
+	if dot.Lifecycle != nil && ctx.flags.Lookup("plan") == nil {
+		ctx.flags.BoolVar(&ctx.plan, "plan", false, "print the order the command starts and closes, run nothing")
+	}
+
 	if err = ctx.flags.Parse(ctx.InputArgs); err != nil {
 		if err == flag.ErrHelp {
 			helpCmd := *dot
@@ -170,11 +235,13 @@ parse:
 		}
 	}
 
-	if ctx.Out, err = openWriterOrDefault(defaultFlags.Stdout, os.Stdout); err != nil {
+	// the writers the flags name; without them, the ones given (the
+	// parent's, os.Stdout and os.Stderr by default)
+	if ctx.Out, err = openWriterOrDefault(defaultFlags.Stdout, ctx.Out); err != nil {
 		return
 	}
 
-	if ctx.Err, err = openWriterOrDefault(defaultFlags.Stderr, os.Stderr); err != nil {
+	if ctx.Err, err = openWriterOrDefault(defaultFlags.Stderr, ctx.Err); err != nil {
 		return
 	}
 
@@ -222,10 +289,10 @@ func openWriter(name string) (f *os.File, err error) {
 	return
 }
 
-func openWriterOrDefault(name string, defaultf *os.File) (f *os.File, err error) {
+func openWriterOrDefault(name string, defaultw io.Writer) (io.Writer, error) {
 	switch name {
 	case "", "-":
-		return defaultf, nil
+		return defaultw, nil
 	default:
 		return openWriter(name)
 	}

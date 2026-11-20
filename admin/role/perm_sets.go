@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
+	"io"
 	"log"
 	"net/http"
 	"slices"
@@ -205,15 +208,27 @@ var permSetKinds = []string{string(presets.PermNodeModel), string(presets.PermNo
 // installPermSets is the model of the sets of the admin, beside the roles,
 // localized by the languages of the admin, and the source of the sets of pb.
 func (b *Builder) installPermSets(pb *presets.Builder) error {
-	if err := b.db.AutoMigrate(&PermSet{}); err != nil {
+	if err := migrate.Auto(b.db, func(db *gorm.DB) error { return db.AutoMigrate(&PermSet{}) }); err != nil {
 		return err
 	}
 	lb := l10n.NewAdmin(b.db, pb.I18n()).Activity(b.ab)
 	b.permSetL10n = lb
 	cache := &permSetCache{sync: func() error { return b.syncSystemPermSets(pb, lb) }}
 	pb.PermSetSource(func() []*presets.PermSet { return cache.get(b.db, lb.GetDefaultLocaleCode) })
-	// the sets of the code registered on boot, all of them there by then
-	pb.AfterBuild(func() { cache.get(b.db, lb.GetDefaultLocaleCode) })
+	// the sets of the code registered on boot, all of them there by then —
+	// as the application serves when the graph runs the migrations
+	// (migrate.Manage), after them
+	if migrate.Managed(b.db) {
+		pb.Lifecycle().Add(lifecycle.Node{
+			Key: PermSetsKey, After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+			Start: func(context.Context) (io.Closer, error) {
+				cache.get(b.db, lb.GetDefaultLocaleCode)
+				return nil, nil
+			},
+		})
+	} else {
+		pb.AfterBuild(func() { cache.get(b.db, lb.GetDefaultLocaleCode) })
+	}
 
 	mb := pb.Model(&PermSet{}, presets.ModelConfig().SetModuleKey(MessagesKey), presets.ModelWithID("perm_sets")).
 		MenuIcon("mdi-shield-star-outline")
@@ -445,3 +460,7 @@ func (b *Builder) LocalizePermSets(from, to string, translate func(texts []strin
 	}
 	return
 }
+
+// PermSetsKey is the node of the sets of permissions of the code written to
+// the database (the system's), as the application serves.
+const PermSetsKey lifecycle.Key = "rvq/role/perm-sets"

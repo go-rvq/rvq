@@ -3,6 +3,8 @@ package notifications
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
 	"log"
 	"net/url"
 	"strings"
@@ -88,14 +90,19 @@ func currentUser(ctx *web.EventContext) uuid.UUID {
 // their listing (My notifications: theirs only, read only).
 func (b *Builder) Install(p *presets.Builder) error {
 	b.p = p
-	if err := AutoMigrate(b.db); err != nil {
+	if err := migrate.Auto(b.db, AutoMigrate); err != nil {
 		return err
 	}
-	if b.FilesDir != "" {
-		if n, err := MoveFilesToDir(b.db, b.FilesDir); err != nil {
-			return fmt.Errorf("notifications: the attachments to %s: %w", b.FilesDir, err)
-		} else if n > 0 {
-			log.Printf("notifications: %d attachments moved to %s", n, b.FilesDir)
+	if dir := b.FilesDir; dir != "" {
+		if err := migrate.Offer(p.Migrations(), b.db, FilesKey, func(db *gorm.DB) error {
+			if n, err := MoveFilesToDir(db, dir); err != nil {
+				return fmt.Errorf("notifications: the attachments to %s: %w", dir, err)
+			} else if n > 0 {
+				log.Printf("notifications: %d attachments moved to %s", n, dir)
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 	ConfigureMessages(p.I18n())
@@ -475,3 +482,7 @@ func (b *Builder) bell(p *presets.Builder, ctx *web.EventContext) h.HTMLComponen
 	}
 	return v.VList(items...).Density(v.DensityCompact)
 }
+
+// FilesKey is the node of the attachments of before a directory moved to it
+// (MoveFilesToDir), in the graphs of the commands.
+const FilesKey lifecycle.Key = "rvq/notifications/files"

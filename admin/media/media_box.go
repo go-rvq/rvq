@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-rvq/rvq/x/migrate"
 	"math"
 	"path"
 	"strings"
@@ -30,7 +31,7 @@ const (
 )
 
 func configure(b *presets.Builder, mb *Builder, db *gorm.DB) {
-	err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{}, &MediaBoxUsage{})
+	err := migrate.Auto(db, Migrate)
 	if err != nil {
 		panic(err)
 	}

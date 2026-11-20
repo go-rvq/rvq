@@ -9,6 +9,7 @@ import (
 	histmodels "github.com/go-rvq/rvq/admin/packages/history/models"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/migrate"
 	"gorm.io/gorm"
 	"sync"
 )
@@ -91,7 +92,7 @@ func revisionDiff(table string, hash []byte, ctx *web.EventContext) h.HTMLCompon
 // Install satisfies presets.Plugin: it publishes the shared recorder and starts
 // its background flusher.
 func (b *Builder) Install(pb *presets.Builder) error {
-	if err := b.db.AutoMigrate(&AccessHour{}); err != nil {
+	if err := migrate.Auto(b.db, Migrate); err != nil {
 		return err
 	}
 	defaultRecorder = b.recorder

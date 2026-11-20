@@ -4,6 +4,7 @@ import (
 	vmessages "github.com/go-rvq/rvq/admin/packages/validators/messages"
 	vmodels "github.com/go-rvq/rvq/admin/packages/validators/models"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/x/migrate"
 	"gorm.io/gorm"
 )
 
@@ -42,7 +43,7 @@ func (b *Builder) ExposeCRUD(v bool) *Builder {
 // messages, seeds the registered validators and (optionally) registers the
 // Validator CRUD resource.
 func (b *Builder) Install(pb *presets.Builder) error {
-	if err := vmodels.AutoMigrate(b.db); err != nil {
+	if err := migrate.Auto(b.db, vmodels.AutoMigrate); err != nil {
 		return err
 	}
 	vmessages.Register(pb.I18n())
