@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
+	"io"
 	"net/http"
 	"slices"
 	"sort"
@@ -107,13 +110,17 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 		res.Name = mb.Info().URIName()
 	}
 	s.Register(res)
-	if err := RenameRoles(s.o.DB, uuid.Nil, res.Name, o.RenameRoles); err != nil {
-		return err
-	}
-	if err := RemoveRoles(s.o.DB, uuid.Nil, res.Name, o.RemoveRoles...); err != nil {
-		return err
-	}
-	if err := SeedRoles(s.o.DB, uuid.Nil, res.Name, o.Roles...); err != nil {
+	// the roles of the resource: renamed, removed, made — a migration, as the
+	// admin is built unless the graph runs them (migrate.Offer)
+	if err := migrate.Offer(mb.Builder().Migrations(), s.o.DB, RolesKey(res.Name), func(db *gorm.DB) error {
+		if err := RenameRoles(db, uuid.Nil, res.Name, o.RenameRoles); err != nil {
+			return err
+		}
+		if err := RemoveRoles(db, uuid.Nil, res.Name, o.RemoveRoles...); err != nil {
+			return err
+		}
+		return SeedRoles(db, uuid.Nil, res.Name, o.Roles...)
+	}); err != nil {
 		return err
 	}
 	// the policies of the permissions of the admin kept with the accesses:
@@ -167,7 +174,14 @@ func (s *Service) Install(mb *presets.ModelBuilder, o ModelOptions) error {
 	// the policies of the accesses of before, as they are made now — of a
 	// model under another, by SyncPolicies, once every model is in the admin
 	if mb.Parent() == nil && mb.Builder().GetPermission() != nil {
-		if err := s.syncPolicies(installedModel{mb: mb, resource: res.Name, policies: policies}); err != nil {
+		im := installedModel{mb: mb, resource: res.Name, policies: policies}
+		// as the application serves, when the graph runs the migrations
+		// (migrate.Manage): the policies are of the accesses' tables
+		if migrate.Managed(s.o.DB) {
+			mb.Builder().Lifecycle().Add(lifecycle.Node{Key: PoliciesKey(res.Name),
+				After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+				Start: func(context.Context) (io.Closer, error) { return nil, s.syncPolicies(im) }})
+		} else if err := s.syncPolicies(im); err != nil {
 			return err
 		}
 	}
@@ -1068,4 +1082,33 @@ func (s *Service) isShared(mb *presets.ModelBuilder) bool {
 		}
 	}
 	return false
+}
+
+// RolesKey is the node of the roles of a resource (SeedRoles) in the graphs
+// of the commands.
+func RolesKey(resource string) lifecycle.Key {
+	return lifecycle.Key("rvq/shared/roles/" + resource)
+}
+
+// PoliciesKey is the node of the policies of the accesses of a resource
+// (syncPolicies), made as the application serves.
+func PoliciesKey(resource string) lifecycle.Key {
+	return lifecycle.Key("rvq/shared/policies/" + resource)
+}
+
+// SyncPoliciesKey is the node of SyncPoliciesNode.
+const SyncPoliciesKey lifecycle.Key = "rvq/shared/policies"
+
+// SyncPoliciesNode is SyncPolicies as a node of the command that serves:
+// after the migrations, when it runs them.
+func (s *Service) SyncPoliciesNode() lifecycle.Node {
+	return lifecycle.Node{Key: SyncPoliciesKey, After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+		Start: func(context.Context) (io.Closer, error) { return nil, s.SyncPolicies() }}
+}
+
+// Managed tells whether the graph runs the migrations of the service's
+// database (migrate.Manage): then SyncPolicies is a node (SyncPoliciesNode),
+// not a call as the admin is built.
+func (s *Service) Managed() bool {
+	return migrate.Managed(s.o.DB)
 }

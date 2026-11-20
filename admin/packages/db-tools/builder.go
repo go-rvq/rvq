@@ -3,8 +3,10 @@ package db_tools
 import (
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
 	"github.com/go-rvq/rvq/x/migrate"
 	"github.com/google/uuid"
+	"io"
 	"log"
 	"sort"
 	"strings"
@@ -305,7 +307,12 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 	b.setupConfigureBackupAction(p, page)
 	b.setupConfigureMethodAction(p, page)
 	b.setupConfigureAutoAction(p, page)
-	if err = b.applyMethod(); err != nil {
+	// the method of the configuration: as the application serves, when the
+	// graph runs the migrations (migrate.Manage); else now
+	if migrate.Managed(b.db) {
+		p.Lifecycle().Add(lifecycle.Node{Key: MethodKey, After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+			Start: func(context.Context) (io.Closer, error) { return nil, b.applyMethod() }})
+	} else if err = b.applyMethod(); err != nil {
 		return
 	}
 
@@ -332,7 +339,8 @@ func (b *Builder) Install(p *presets.Builder) (err error) {
 		})
 
 	if b.backupController != nil && b.backupCronSpec != "" {
-		if err = b.ensureRetention(); err != nil {
+		// the retention by default: a migration (migrate.Offer)
+		if err = migrate.Offer(p.Migrations(), b.db, RetentionKey, func(*gorm.DB) error { return b.ensureRetention() }); err != nil {
 			return
 		}
 		b.wb.NewJob(JobAutoBackup).
@@ -776,3 +784,11 @@ func (b *Builder) pageFunc(ctx *web.EventContext) (r web.PageResponse, err error
 
 	return
 }
+
+// MethodKey is the node of the method of the backups set from the
+// configuration (applyMethod), as the application serves.
+const MethodKey lifecycle.Key = "rvq/db-tools/method"
+
+// RetentionKey is the node of the retention by default (ensureRetention) in
+// the graphs of the commands.
+const RetentionKey lifecycle.Key = "rvq/db-tools/retention"

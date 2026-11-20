@@ -48,12 +48,16 @@ func Auto(db *gorm.DB, f func(db *gorm.DB) error) error {
 // migrations of db (Manage): then f is offered to ms (presets.Builder.
 // Migrations), after the one offered before it (lifecycle.Nodes.Chain), and
 // runs there. A key offered already is not again.
-func Offer(ms *lifecycle.Nodes, db *gorm.DB, key lifecycle.Key, f func(db *gorm.DB) error) error {
+//
+// after are the keys it runs after besides (a package's migration whose
+// tables it writes: rvq/media's uses of a user saved), optional.
+func Offer(ms *lifecycle.Nodes, db *gorm.DB, key lifecycle.Key, f func(db *gorm.DB) error, after ...lifecycle.Key) error {
 	if !Managed(db) {
 		return f(db)
 	}
 	if !ms.Has(key) {
-		ms.Chain(lifecycle.Node{Key: key, Start: Func(func(_ context.Context, db *gorm.DB) error { return f(db) })})
+		ms.Chain(lifecycle.Node{Key: key, After: after, Optional: after,
+			Start: Func(func(_ context.Context, db *gorm.DB) error { return f(db) })})
 	}
 	return nil
 }

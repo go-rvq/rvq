@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-rvq/rvq/x/lifecycle"
+	"github.com/go-rvq/rvq/x/migrate"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -193,13 +196,50 @@ func (b *Builder) GetContextFunc() ContextFunc {
 // DBPolicy keeps the policies of the database in memory: reloaded every
 // LoadFrequency, or, with LoadFrequency(0), by whoever calls ReloadDBPolicies
 // (a LISTEN of the database announcing their changes).
+//
+// The reloading starts with the builder, unless the graph runs the
+// migrations of its database (migrate.Manage): then it is the node
+// DBPolicyNode, started as the application serves.
 func (b *Builder) DBPolicy(dpb *DBPolicyBuilder) (r *Builder) {
 	b.dbPolicy = dpb
 
-	if dpb.loadFrequency > 0 {
+	if dpb.loadFrequency > 0 && !migrate.Managed(dpb.db) {
 		go b.loopLoadDBPolicies(dpb.db, dpb.loadFrequency)
 	}
 	return b
+}
+
+// DBPolicyKey is the node of the policies of the database (DBPolicyNode).
+const DBPolicyKey lifecycle.Key = "rvq/perm/db-policies"
+
+// DBPolicyNode loads the policies of the database into memory as the
+// application serves — after the migrations, when it runs them — and
+// reloads them every LoadFrequency until it closes; nothing without a
+// DBPolicy or a frequency, or when the builder reloads them itself (a
+// database not managed: DBPolicy).
+func (b *Builder) DBPolicyNode() lifecycle.Node {
+	return lifecycle.Node{Key: DBPolicyKey, After: []lifecycle.Key{migrate.Key}, Optional: []lifecycle.Key{migrate.Key},
+		Start: func(ctx context.Context) (io.Closer, error) {
+			dpb := b.dbPolicy
+			if dpb == nil || dpb.loadFrequency <= 0 || !migrate.Managed(dpb.db) {
+				return nil, nil
+			}
+			now := time.Now()
+			b.LoadDBPoliciesToMemory(dpb.db, nil)
+			return lifecycle.Go(ctx, func(ctx context.Context) {
+				t := time.NewTicker(dpb.loadFrequency)
+				defer t.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case next := <-t.C:
+						b.LoadDBPoliciesToMemory(dpb.db, &now)
+						now = next
+					}
+				}
+			}), nil
+		}}
 }
 
 // ReloadDBPolicies loads every policy of the database into memory, and

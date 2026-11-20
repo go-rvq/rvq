@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/go-rvq/rvq/x/lifecycle"
 	"github.com/go-rvq/rvq/x/migrate"
 	"strings"
 
@@ -81,10 +82,17 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	if err := migrate.Auto(b.db, validators.AutoMigrate); err != nil {
 		return err
 	}
-	for _, v := range b.docValidators {
-		if err := validators.Seed(b.db, v); err != nil {
-			return err
+	// the validators of the documents: a migration, as the admin is built
+	// unless the graph runs them (migrate.Offer)
+	if err := migrate.Offer(pb.Migrations(), b.db, ValidatorsKey, func(db *gorm.DB) error {
+		for _, v := range b.docValidators {
+			if err := validators.Seed(db, v); err != nil {
+				return err
+			}
 		}
+		return nil
+	}); err != nil {
+		return err
 	}
 	// ensure the organization is mounted; Use is idempotent and also binds the
 	// org builder so MountUnderOrg works.
@@ -121,3 +129,7 @@ func (b *Builder) documentValidator() presets.FieldValidatorFunc {
 		return
 	}
 }
+
+// ValidatorsKey is the node of the validators of the documents (seeded) in
+// the graphs of the commands.
+const ValidatorsKey lifecycle.Key = "rvq/people/validators"
