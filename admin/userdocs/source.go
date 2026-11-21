@@ -79,6 +79,11 @@ type Source struct {
 	// translated — a language they are not written in reads them in their
 	// source's (a reference in one language: a language's documentation).
 	Raw bool
+	// Untranslated documents are read, in a language they are not written
+	// in, in their source's — still templates, not translated: a package
+	// written in one language only (pt-BR), its pages the same in every
+	// language of the admin.
+	Untranslated bool
 }
 
 // File is a document: its path under the language's directory, and its

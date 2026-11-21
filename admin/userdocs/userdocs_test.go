@@ -290,6 +290,28 @@ func TestSyncFromPortuguese(t *testing.T) {
 	}
 }
 
+// A source Untranslated: a language it is not written in reads its source's,
+// as written — no job.
+func TestSyncUntranslated(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := &Source{Package: "example.com/pkg", Untranslated: true,
+		FS: fstest.MapFS{"pt-BR/things/README.md": {Data: []byte("# Coisas\n")}}}
+	jobs, err := Sync(db, []*Source{src}, []string{"en", "pt-BR"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 0 {
+		t.Fatalf("jobs %+v", jobs)
+	}
+	en, _ := value(t, db, "en")
+	if en["things/README.md"] != "# Coisas\n" {
+		t.Errorf("en %q", en["things/README.md"])
+	}
+}
+
 // A form of a model without its own document: the documentation's.
 func TestDocFilesForm(t *testing.T) {
 	if got := DocFiles("posts/children/seo/forms/edit"); strings.Join(got, ",") != "posts/children/seo/forms/edit.md,forms/edit.md" {

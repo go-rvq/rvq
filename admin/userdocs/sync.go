@@ -135,7 +135,7 @@ func syncPackage(db *gorm.DB, src *Source, locale string, row *UserDocPackage) (
 		content, translated := f.Content, true
 		if c, ok := own[f.Path]; ok {
 			content = c
-		} else if !same && !src.Raw {
+		} else if !same && !src.Raw && !src.Untranslated {
 			if prev, ok := oldInitial[f.Path]; ok && hashes[f.Path] == h {
 				content = prev
 			} else {
