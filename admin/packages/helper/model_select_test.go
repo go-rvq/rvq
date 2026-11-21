@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/google/uuid"
 
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
@@ -257,6 +258,42 @@ func TestModelSelector_SingleReadsColumnKey(t *testing.T) {
 		}
 		if owner.TypeID != 2 {
 			t.Errorf("submitted as %q: owner.TypeID = %d, want 2", key, owner.TypeID)
+		}
+	}
+}
+
+// selUUIDType and selUUIDOwner: a belongs-to optional, its key a pointer to
+// a uuid (NULL when none).
+type selUUIDType struct {
+	ID   uuid.UUID `gorm:"primaryKey;type:uuid"`
+	Name string
+}
+
+type selUUIDOwner struct {
+	ID     uint `gorm:"primaryKey"`
+	Type   *selUUIDType
+	TypeID *uuid.UUID `gorm:"type:uuid"`
+}
+
+// None chosen — the key empty, or the zero key the component sends for none
+// — is no record: the foreign key nil (NULL), never a pointer to the zero
+// key, which a foreign key constraint refuses.
+func TestModelSelector_NoneIsNil(t *testing.T) {
+	db := newSelDB(t, &selUUIDType{}, &selUUIDOwner{})
+	b := presets.New(i18n.New()).DataOperator(gorm2op.DataOperator(db))
+	mb := b.Model(&selUUIDOwner{})
+	NewModelSelectorBuilder(mb, "Type").SetForeignModel(b.Model(&selUUIDType{})).Build()
+	mb.Editing().Only("Type")
+
+	chosen := uuid.New()
+	for _, sent := range []string{"", uuid.Nil.String()} {
+		ctx := &web.EventContext{R: postFormRequest(url.Values{"TypeID": {sent}})}
+		owner := &selUUIDOwner{ID: 10, TypeID: &chosen}
+		if vErr := mb.Editing().RunSetterFunc(&presets.FieldsSetterOptions{}, ctx, false, owner); vErr.HaveErrors() {
+			t.Fatalf("%q: setter: %s", sent, vErr.Error())
+		}
+		if owner.TypeID != nil {
+			t.Errorf("none sent as %q: owner.TypeID = %v, want nil", sent, *owner.TypeID)
 		}
 	}
 }

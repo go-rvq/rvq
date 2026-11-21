@@ -350,7 +350,15 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 			}
 			if len(v) > 0 {
 				var id presets.ID
-				if v[0] == "" {
+				if v[0] != "" {
+					if id, err = b.foreignModel.ParseRecordID(v[0]); err != nil {
+						return
+					}
+				}
+				// none chosen — empty, or the zero key the component sends
+				// for none ("00000000-…"): no record, the foreign key NULL, not
+				// a pointer to the zero key (a foreign key it breaks)
+				if id.IsZero() {
 					f := reflect.ValueOf(obj).Elem().FieldByName(field.Name)
 					f.Set(reflect.Zero(f.Type()))
 					// clear every foreign-key column (composite keys included)
@@ -360,15 +368,10 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 						}
 					}
 				} else {
-					if id, err = b.foreignModel.ParseRecordID(v[0]); err != nil {
-						return
-					}
-					if !id.IsZero() {
-						s, _ := b.foreignModel.CurrentDataOperator().Schema(obj)
-						// map the selected record's (possibly composite) key onto the
-						// owner's foreign-key columns, in related-primary-key order.
-						id.Related(s, foreignKeyFields...).SetTo(obj)
-					}
+					s, _ := b.foreignModel.CurrentDataOperator().Schema(obj)
+					// map the selected record's (possibly composite) key onto the
+					// owner's foreign-key columns, in related-primary-key order.
+					id.Related(s, foreignKeyFields...).SetTo(obj)
 				}
 			}
 		}

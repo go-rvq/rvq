@@ -103,7 +103,7 @@ func (mb *ModelBuilder) logTimeline(ctx *web.EventContext, logs []ActivityLogInt
 
 func (mb *ModelBuilder) logItem(ctx *web.EventContext, msgr *Messages, log ActivityLogInterface) h.HTMLComponent {
 	head := h.Div(
-		h.Strong(actionLabel(msgr, log.GetAction())),
+		h.Strong(actionLabel(ctx.Context(), msgr, log.GetAction())),
 		h.Span(" · "+log.GetCreator()).Class("text-medium-emphasis"),
 		h.Span(" · "+presets.InTimeLocation(ctx, log.GetCreatedAt()).Format("2006-01-02 15:04:05")).Class("text-medium-emphasis"),
 	)
@@ -140,20 +140,6 @@ func (mb *ModelBuilder) logItem(ctx *web.EventContext, msgr *Messages, log Activ
 
 func chip(text string) h.HTMLComponent {
 	return v.VChip(h.Text(text)).Size(v.SizeXSmall).Variant(v.VariantOutlined)
-}
-
-func actionLabel(msgr *Messages, action string) string {
-	switch action {
-	case ActivityCreate:
-		return msgr.ActionCreate
-	case ActivityEdit:
-		return msgr.ActionEdit
-	case ActivityDelete:
-		return msgr.ActionDelete
-	case ActivityView:
-		return msgr.ActionView
-	}
-	return action
 }
 
 func actionColor(action string) string {

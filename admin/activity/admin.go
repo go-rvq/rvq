@@ -204,7 +204,7 @@ func (ab *Builder) defaultLogModelInstall(mb *presets.ModelBuilder) error {
 					h.Tbody(
 						h.Tr(h.Td(h.Text(msgr.ModelCreator)), h.Td(h.Text(record.GetCreator()))),
 						h.Tr(h.Td(h.Text(msgr.ModelUserID)), h.Td(h.Text(fmt.Sprintf("%v", record.GetUserID())))),
-						h.Tr(h.Td(h.Text(msgr.ModelAction)), h.Td(h.Text(record.GetAction()))),
+						h.Tr(h.Td(h.Text(msgr.ModelAction)), h.Td(h.Text(ActionLabel(ctx.Context(), record.GetAction())))),
 						h.Tr(h.Td(h.Text(msgr.ModelName)), h.Td(h.Text(record.GetModelName()))),
 						h.Tr(h.Td(h.Text(msgr.ModelLabel)), h.Td(h.Text(record.GetModelLabel()))),
 						h.Tr(h.Td(h.Text(msgr.ModelKeys)), h.Td(h.Text(record.GetModelKeys()))),

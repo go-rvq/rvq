@@ -37,6 +37,18 @@ func TestUnmarshalFormUUID(t *testing.T) {
 	if err = (&web.EventContext{}).UnmarshalFormValues(url.Values{"None": {"not-a-uuid"}}, &v); err == nil {
 		t.Error("a bad UUID: no error")
 	}
+	// an optional foreign key sent empty: nil (NULL), not a pointer to the
+	// zero UUID
+	var w struct{ TypeID, OtherID *uuid.UUID }
+	if err = (&web.EventContext{}).UnmarshalFormValues(url.Values{"TypeID": {""}, "OtherID": {typeID.String()}}, &w); err != nil {
+		t.Fatal(err)
+	}
+	if w.TypeID != nil || w.OtherID == nil || *w.OtherID != typeID {
+		t.Errorf("the pointers: TypeID %v, OtherID %v", w.TypeID, w.OtherID)
+	}
+	if err = (&web.EventContext{}).UnmarshalFormValues(url.Values{"TypeID": {"not-a-uuid"}}, &w); err == nil {
+		t.Error("a bad UUID in a pointer: no error")
+	}
 }
 
 // A model.UUID (a foreign key whose zero is none) is read from its text;

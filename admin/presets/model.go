@@ -989,6 +989,35 @@ func (mb *ModelBuilder) RecordID(obj interface{}) (id ID, err error) {
 	return
 }
 
+// keepPrimaryKey keeps the primary key of obj as it is: the func given sets it
+// back (a creation that failed, after a hook gave it one).
+func (mb *ModelBuilder) keepPrimaryKey(obj any) (restore func()) {
+	s := mb.Schema()
+	rv := reflect.ValueOf(obj)
+	if s == nil || rv.Kind() != reflect.Pointer || rv.Elem().Kind() != reflect.Struct {
+		return func() {}
+	}
+	type kept struct {
+		field reflect.Value
+		value reflect.Value
+	}
+	var keys []kept
+	for _, f := range s.PrimaryFields() {
+		field := rv.Elem().FieldByName(f.Name())
+		if !field.IsValid() || !field.CanSet() {
+			continue
+		}
+		value := reflect.New(field.Type()).Elem()
+		value.Set(field)
+		keys = append(keys, kept{field, value})
+	}
+	return func() {
+		for _, k := range keys {
+			k.field.Set(k.value)
+		}
+	}
+}
+
 func (mb *ModelBuilder) MustRecordID(obj interface{}) ID {
 	id, err := mb.RecordID(obj)
 	if err != nil {

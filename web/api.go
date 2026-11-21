@@ -424,6 +424,9 @@ var FormTypeDecoders = []CustoFormTypeDecoder{
 	// its 16 bytes ([16]uint8) and fails — the record's key, a foreign key
 	// read as zero
 	{Decoder: decodeUUID, Types: []any{uuid.UUID{}}},
+	// a pointer to a UUID (an optional foreign key): "" is nil — NULL —,
+	// not a pointer to the zero UUID, which its foreign key refuses
+	{Decoder: decodeUUIDPtr, Types: []any{(*uuid.UUID)(nil)}},
 	// a UUID whose zero is none (model.UUID): "" is the zero, NULL in the
 	// database
 	{Decoder: decodeModelUUID, Types: []any{model.UUID{}}},
@@ -464,6 +467,17 @@ func decodeUUID(vals []string) (any, error) {
 		return uuid.Nil, nil
 	}
 	return uuid.Parse(strings.TrimSpace(vals[0]))
+}
+
+func decodeUUIDPtr(vals []string) (any, error) {
+	if len(vals) == 0 || strings.TrimSpace(vals[0]) == "" {
+		return (*uuid.UUID)(nil), nil
+	}
+	id, err := uuid.Parse(strings.TrimSpace(vals[0]))
+	if err != nil {
+		return nil, err
+	}
+	return &id, nil
 }
 
 func (ctx *EventContext) FormSliceValues(key string) (r []string) {

@@ -46,11 +46,12 @@ func gitTry(dir string, args ...string) (string, error) {
 		"-c", "user.name=Ana", "-c", "user.email=ana@x",
 		"-c", "protocol.version=2", "-c", "init.defaultBranch=main"}, args...)...)
 	cmd.Dir = dir
-	// never asks anyone: no terminal, no askpass, no credential helper
+	// never asks anyone: no terminal, no askpass, no credential helper; none
+	// of what git of another repository left in the environment (GIT_DIR,
+	// GIT_INDEX_FILE — a hook's: a commit by a pathspec has its own index)
 	var env []string
 	for _, kv := range os.Environ() {
-		if !strings.HasPrefix(kv, "SSH_ASKPASS=") && !strings.HasPrefix(kv, "GIT_ASKPASS=") &&
-			!strings.HasPrefix(kv, "GIT_CONFIG") {
+		if !strings.HasPrefix(kv, "SSH_ASKPASS=") && !strings.HasPrefix(kv, "GIT_") {
 			env = append(env, kv)
 		}
 	}

@@ -134,9 +134,13 @@ func (b *EditingBuilder) doCreate(
 	}
 
 	restore := RemoveEmptySliceItems(obj, ContextModifiedIndexesBuilder(ctx))
+	restoreKey := b.mb.keepPrimaryKey(obj)
 	err1 := b.Creator(obj, ctx)
 	if err1 != nil {
 		restore()
+		// not created: the key a hook gave it (BeforeCreate) was rolled
+		// back with it — the form stays a new one's
+		restoreKey()
 		b.UpdateOverlayContent(ctx, r, obj, "", err1)
 		return err1
 	}
