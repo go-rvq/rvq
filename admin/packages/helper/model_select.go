@@ -535,10 +535,13 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 	}
 
 	b.Model.WithEditingBuilders(func(e *presets.EditingBuilder) {
-		// the id: drawn by the selector (no column of a table either)
+		// the id: drawn and set by the selector (no column of a table
+		// either) — a field of its own disabled: not unmarshaled over what
+		// the selector set (an empty pointer made the zero key), no label
+		// asked for
 		e.Field(b.Field + "ID").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 			return nil
-		}).NoColumn(true)
+		}).NoColumn(true).SetDisabled(true)
 		e.Field(b.Field).
 			ComponentFunc(comp).
 			SetterFunc(setter).

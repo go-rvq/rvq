@@ -41,6 +41,11 @@ func (b *ListingBuilder) doDelete(ctx *web.EventContext) (r web.EventResponse, e
 	}
 
 	id.SetTo(obj)
+	// the record as it is: its restriction is of its fields (a draft only,
+	// …), not of a record made of its id alone
+	if err = b.fetchForDeletion(obj, id, ctx); err != nil {
+		return
+	}
 
 	if related {
 		if !b.DeletingWithRelatedRestriction.CanObj(obj, ctx) {
@@ -90,6 +95,9 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 	}
 
 	ido.SetTo(obj)
+	if err = b.fetchForDeletion(obj, ido, ctx); err != nil {
+		return
+	}
 
 	if b.relatedDeletionConfig != nil {
 		rdCtx := &RelatedDeletionContext{
@@ -197,4 +205,15 @@ func (b *ListingBuilder) deleteConfirmation(ctx *web.EventContext) (r web.EventR
 				Title(msgr.Delete),
 		).ScopeVar("cascade", "{value: false}"))
 	return
+}
+
+// fetchForDeletion reads the record of id into obj (its id set) by the data
+// operator of the model, the restrictions of the deletion then asked of it;
+// a model without one keeps obj as it is.
+func (b *ListingBuilder) fetchForDeletion(obj any, id ID, ctx *web.EventContext) error {
+	do := b.mb.CurrentDataOperator()
+	if do == nil {
+		return nil
+	}
+	return do.Fetch(obj, id, ctx)
 }

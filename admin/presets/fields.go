@@ -589,6 +589,11 @@ func (l FieldsLayout) ActiveNames(obj any, ctx *web.EventContext) (names []strin
 // tab of its detail open.
 func FieldsTabParam(name string) string { return "fields_tab." + name }
 
+// FieldsTabFormKey is the key of the form that holds the tab open of the
+// tabs name (FieldsGroup.Tabs) — set as the user changes it —: the form drawn
+// again (a row added, an error) opens it again.
+func FieldsTabFormKey(name string) string { return "__" + FieldsTabParam(name) }
+
 // NewFieldsTabs is a group drawn as tabs (FieldsGroup.Tabs): each of tabs a
 // tab.
 func NewFieldsTabs(name string, tabs ...*FieldsGroup) *FieldsGroup {
@@ -1634,8 +1639,14 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, 
 		return nil
 	}
 	if open < 0 {
-		// the tab the address asks for (FieldsTabParam), else the first
-		if want := ctx.R.URL.Query().Get(FieldsTabParam(g.Name)); want != "" {
+		// the tab the form was on (FieldsTabFormKey: the form drawn again —
+		// a row added —), else the one the address asks for
+		// (FieldsTabParam), else the first
+		want := ctx.R.FormValue(FieldsTabFormKey(g.Name))
+		if want == "" {
+			want = ctx.R.URL.Query().Get(FieldsTabParam(g.Name))
+		}
+		if want != "" {
 			for _, i := range drawn {
 				if tabs[i].name == want {
 					open = i
@@ -1647,9 +1658,20 @@ func (b *FieldsBuilder) tabsComponent(g *FieldsGroup, info *ModelInfo, obj any, 
 	if open < 0 {
 		open = drawn[0]
 	}
+	tabsHead := v.VTabs(heads...).Attr("v-model", "locals.tab").Color(v.ColorPrimary).Density(v.DensityCompact).
+		Class("border-b")
+	if inForm {
+		// the tab chosen goes with the form: drawn again by the server, it
+		// stays the open one
+		names := make([]string, len(tabs))
+		for i, t := range tabs {
+			names[i] = t.name
+		}
+		tabsHead.Attr("@update:model-value", fmt.Sprintf(`(typeof form !== "undefined") && (form[%q] = %s[$event])`,
+			FieldsTabFormKey(g.Name), h.JSONString(names)))
+	}
 	return web.Scope(h.Div(
-		v.VTabs(heads...).Attr("v-model", "locals.tab").Color(v.ColorPrimary).Density(v.DensityCompact).
-			Class("border-b"),
+		tabsHead,
 		v.VWindow(windows...).Attr("v-model", "locals.tab"),
 	).Class("mb-4").Attr("data-fields-tabs", g.Name)).
 		LocalsInit(fmt.Sprintf(`{tab: %d}`, open)).Slot("{ locals }")
