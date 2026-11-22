@@ -242,9 +242,9 @@ func itoa(v uint) string {
 	return strconv.FormatUint(uint64(v), 10)
 }
 
-// TestSaveHasManyAssociation_ChildOfAnotherRecord refuses an existing item
-// whose key is of a child of another record, and creates a new item even when
-// the form gives it the key of one: neither touches the other record's child.
+// TestSaveHasManyAssociation_ChildOfAnotherRecord refuses an item, existing or
+// new, whose key is of a child of another record: the other record's child is
+// left as it was.
 func TestSaveHasManyAssociation_ChildOfAnotherRecord(t *testing.T) {
 	db := newAssocDB(t)
 	a := &assocParent{Title: "a", Children: []*assocChild{{Name: "a1"}}}
@@ -283,13 +283,75 @@ func TestSaveHasManyAssociation_ChildOfAnotherRecord(t *testing.T) {
 		{ID: bChild, Name: "b1"},
 		{ID: aChild, Name: "b2"},
 	}}
-	if err := d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); err != nil {
-		t.Fatal(err)
+	if err := d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); !errors.Is(err, ErrNotAChild) {
+		t.Fatalf("new: err = %v, want ErrNotAChild", err)
 	}
 	if got := names(childrenOf(t, db, a.ID)); !equal(got, []string{"a1"}) {
 		t.Fatalf("children of a = %v, want [a1]", got)
 	}
-	if got := names(childrenOf(t, db, b.ID)); !equal(got, []string{"b1", "b2"}) {
-		t.Fatalf("children of b = %v, want [b1 b2]", got)
+	if got := names(childrenOf(t, db, b.ID)); !equal(got, []string{"b1"}) {
+		t.Fatalf("children of b = %v, want [b1]", got)
+	}
+}
+
+type nestToy struct {
+	ID    uint `gorm:"primarykey"`
+	KidID uint
+	Name  string
+}
+
+type nestKid struct {
+	ID       uint `gorm:"primarykey"`
+	ParentID uint
+	Name     string
+	Toys     []*nestToy `gorm:"foreignKey:KidID"`
+}
+
+type nestParent struct {
+	ID   uint       `gorm:"primarykey"`
+	Kids []*nestKid `gorm:"foreignKey:ParentID"`
+}
+
+// TestSaveHasManyAssociation_NestedOfAnotherRecord refuses a nested row (a
+// list of an item, saved with it by gorm) whose key is of a row of another
+// record: it would be re-parented.
+func TestSaveHasManyAssociation_NestedOfAnotherRecord(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&nestParent{}, &nestKid{}, &nestToy{}); err != nil {
+		t.Fatal(err)
+	}
+	a := &nestParent{Kids: []*nestKid{{Name: "ka", Toys: []*nestToy{{Name: "ta"}}}}}
+	b := &nestParent{Kids: []*nestKid{{Name: "kb"}}}
+	for _, p := range []*nestParent{a, b} {
+		if err = db.Create(p).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	ka, ta, kb := a.Kids[0].ID, a.Kids[0].Toys[0].ID, b.Kids[0].ID
+
+	d := SaveHasManyAssociation("Kids").Build(DataOperator(db).SetUpdator(func(*gorm.DB, interface{}, model.ID, *web.EventContext) error {
+		return nil
+	}))
+	vals := url.Values{
+		"Kids.__present": {"1"},
+		"Kids[0].ID":     {itoa(kb)},
+	}
+	for _, kid := range []*nestKid{
+		{ID: kb, ParentID: b.ID, Name: "kb", Toys: []*nestToy{{ID: ta, Name: "taken"}}},
+	} {
+		obj := &nestParent{ID: b.ID, Kids: []*nestKid{kid}}
+		if err = d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); !errors.Is(err, ErrNotAChild) {
+			t.Fatalf("err = %v, want ErrNotAChild", err)
+		}
+	}
+	var toy nestToy
+	if err = db.First(&toy, ta).Error; err != nil {
+		t.Fatal(err)
+	}
+	if toy.KidID != ka || toy.Name != "ta" {
+		t.Fatalf("toy of a = %+v, want kid %d, name ta", toy, ka)
 	}
 }

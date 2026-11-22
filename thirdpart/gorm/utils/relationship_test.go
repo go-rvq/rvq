@@ -210,3 +210,15 @@ func (ownerSchema) FieldsByName(names ...string) model.Fields {
 	}
 	return out
 }
+
+// TestPKMapKeyCompositeNoCollision keeps apart composite keys whose parts
+// joined by a space read the same.
+func TestPKMapKeyCompositeNoCollision(t *testing.T) {
+	type k struct{ A, B string }
+	names := []string{"A", "B"}
+	x := PKMapKey(reflect.ValueOf(k{"a b", "c"}), names)
+	y := PKMapKey(reflect.ValueOf(k{"a", "b c"}), names)
+	if x == y {
+		t.Fatalf("PKMapKey(%q) == PKMapKey(%q): %v", "a b|c", "a|b c", x)
+	}
+}

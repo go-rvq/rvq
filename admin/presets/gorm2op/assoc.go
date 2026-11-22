@@ -9,6 +9,7 @@ import (
 	gormutils "github.com/go-rvq/rvq/thirdpart/gorm/utils"
 	"github.com/go-rvq/rvq/web"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type SaveHasManyAssociationBuilder struct {
@@ -124,17 +125,38 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkNames); err != nil {
 			return
 		}
-		for _, item := range part.Others {
-			if !gormutils.PKAllZero(item, pkNames) {
-				if _, ok := oldByID[gormutils.PKMapKey(item, pkNames)]; !ok {
+		// a child of a has-many (has-one) is of one record only: a key of the
+		// form that is not of one of its children is of another record's — the
+		// update would change it and Replace re-parent it. (The rows of a
+		// many-to-many are shared: choosing one by its key is what the list
+		// does.)
+		if t := assoc.Relationship.Type; t == schema.HasMany || t == schema.HasOne {
+			for _, item := range part.Others {
+				if !gormutils.PKAllZero(item, pkNames) {
+					if _, ok := oldByID[gormutils.PKMapKey(item, pkNames)]; !ok {
+						return ErrNotAChild
+					}
+				}
+			}
+			for _, item := range part.New {
+				var taken bool
+				if taken, err = keyOfAnotherRecord(db, assoc.Relationship.FieldSchema, item, oldByID, pkNames); err != nil {
+					return
+				}
+				if taken {
 					return ErrNotAChild
 				}
 			}
 		}
-		// a new item is created: a key the form gave it would upsert (and
-		// re-parent) the row of that key
-		for _, item := range part.New {
-			zeroPK(item, pkNames)
+		// the nested lists of an item are saved with it (gorm upserts them, the
+		// foreign key included): a nested row of another record would be
+		// re-parented
+		for _, items := range [][]reflect.Value{part.Others, part.New} {
+			for _, item := range items {
+				if err = nestedOfAnotherRecord(db, assoc.Relationship.FieldSchema, item); err != nil {
+					return
+				}
+			}
 		}
 		kept := part.KeptSlice(sliceType)
 
@@ -240,18 +262,113 @@ func formValues(ctx *web.EventContext) url.Values {
 // key is not of a child of the record saved: refused.
 var ErrNotAChild = errors.New("gorm2op: an item of the list is not a child of the record saved")
 
-// zeroPK sets the primary key fields pkNames of the item (a struct or a
-// pointer to one) to their zero values.
-func zeroPK(item reflect.Value, pkNames []string) {
-	for item.Kind() == reflect.Pointer || item.Kind() == reflect.Interface {
-		if item.IsNil() {
-			return
-		}
-		item = item.Elem()
+// keyOfAnotherRecord tells whether the new item carries the whole primary
+// key of a persisted row that is not one of oldByID (the children of the
+// record saved): creating it would upsert that row.
+func keyOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value, oldByID map[any]any, pkNames []string) (bool, error) {
+	rv := indirectValue(item)
+	if !rv.IsValid() || rv.Kind() != reflect.Struct {
+		return false, nil
 	}
-	for _, n := range pkNames {
-		if f := item.FieldByName(n); f.IsValid() && f.CanSet() {
-			f.Set(reflect.Zero(f.Type()))
+	where := make(map[string]any, len(sch.PrimaryFields))
+	for _, f := range sch.PrimaryFields {
+		v, zero := f.ValueOf(db.Statement.Context, rv)
+		if zero {
+			return false, nil
+		}
+		where[f.DBName] = v
+	}
+	if _, ok := oldByID[gormutils.PKMapKey(item, pkNames)]; ok {
+		return false, nil
+	}
+	var n int64
+	err := db.Session(&gorm.Session{NewDB: true}).Unscoped().Table(sch.Table).Where(where).Count(&n).Error
+	return n > 0, err
+}
+
+// nestedOfAnotherRecord walks the has-many and has-one lists of the item (of
+// schema sch), deep: a nested row whose whole primary key is of a persisted
+// row must be a child of its parent item already — ErrNotAChild otherwise
+// (a new parent has no children yet). A row of a key not persisted is created.
+func nestedOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value) error {
+	rv := indirectValue(item)
+	if !rv.IsValid() || rv.Kind() != reflect.Struct {
+		return nil
+	}
+	ctx := db.Statement.Context
+	for _, rel := range sch.Relationships.Relations {
+		if (rel.Type != schema.HasMany && rel.Type != schema.HasOne) || len(rel.FieldSchema.PrimaryFields) == 0 {
+			continue
+		}
+		fv := indirectValue(rel.Field.ReflectValueOf(ctx, rv))
+		if !fv.IsValid() {
+			continue
+		}
+		var children []reflect.Value
+		if fv.Kind() == reflect.Slice || fv.Kind() == reflect.Array {
+			for i := 0; i < fv.Len(); i++ {
+				children = append(children, fv.Index(i))
+			}
+		} else {
+			children = append(children, fv)
+		}
+		for _, child := range children {
+			cv := indirectValue(child)
+			if !cv.IsValid() || cv.Kind() != reflect.Struct {
+				continue
+			}
+			pk := make(map[string]any, len(rel.FieldSchema.PrimaryFields))
+			for _, f := range rel.FieldSchema.PrimaryFields {
+				if v, zero := f.ValueOf(ctx, cv); !zero {
+					pk[f.DBName] = v
+				}
+			}
+			if len(pk) == len(rel.FieldSchema.PrimaryFields) {
+				of := make(map[string]any, len(pk)+len(rel.References))
+				for k, v := range pk {
+					of[k] = v
+				}
+				for _, ref := range rel.References {
+					switch {
+					case ref.OwnPrimaryKey:
+						v, _ := ref.PrimaryKey.ValueOf(ctx, rv)
+						of[ref.ForeignKey.DBName] = v
+					case ref.PrimaryValue != "":
+						of[ref.ForeignKey.DBName] = ref.PrimaryValue
+					}
+				}
+				var persisted, ofParent int64
+				q := func() *gorm.DB {
+					return db.Session(&gorm.Session{NewDB: true}).Unscoped().Table(rel.FieldSchema.Table)
+				}
+				if err := q().Where(pk).Count(&persisted).Error; err != nil {
+					return err
+				}
+				if persisted > 0 {
+					if err := q().Where(of).Count(&ofParent).Error; err != nil {
+						return err
+					}
+					if ofParent == 0 {
+						return ErrNotAChild
+					}
+				}
+			}
+			if err := nestedOfAnotherRecord(db, rel.FieldSchema, cv); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+// indirectValue dereferences pointers and interfaces: the invalid Value for a
+// nil one.
+func indirectValue(v reflect.Value) reflect.Value {
+	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
+		if v.IsNil() {
+			return reflect.Value{}
+		}
+		v = v.Elem()
+	}
+	return v
 }

@@ -111,7 +111,8 @@ func PKMapKey(item reflect.Value, pkNames []string) any {
 	for i, name := range pkNames {
 		parts[i] = NormalizeKey(reflect.Indirect(item).FieldByName(name))
 	}
-	return fmt.Sprintf("%v", parts)
+	// %#v quotes each part: ["a b", "c"] and ["a", "b c"] stay apart
+	return fmt.Sprintf("%#v", parts)
 }
 
 // NormalizeKey makes a primary-key value comparable as a map key regardless of
