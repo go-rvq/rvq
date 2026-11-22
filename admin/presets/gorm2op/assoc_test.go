@@ -1,6 +1,7 @@
 package gorm2op
 
 import (
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -239,4 +240,56 @@ func equal(a, b []string) bool {
 
 func itoa(v uint) string {
 	return strconv.FormatUint(uint64(v), 10)
+}
+
+// TestSaveHasManyAssociation_ChildOfAnotherRecord refuses an existing item
+// whose key is of a child of another record, and creates a new item even when
+// the form gives it the key of one: neither touches the other record's child.
+func TestSaveHasManyAssociation_ChildOfAnotherRecord(t *testing.T) {
+	db := newAssocDB(t)
+	a := &assocParent{Title: "a", Children: []*assocChild{{Name: "a1"}}}
+	b := &assocParent{Title: "b", Children: []*assocChild{{Name: "b1"}}}
+	for _, p := range []*assocParent{a, b} {
+		if err := db.Create(p).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	aChild, bChild := a.Children[0].ID, b.Children[0].ID
+	d := SaveHasManyAssociation("Children").Build(newAssocOperator(db))
+
+	vals := url.Values{
+		"Children.__present": {"1"},
+		"Children[0].ID":     {itoa(bChild)},
+		"Children[1].ID":     {itoa(aChild)},
+	}
+	obj := &assocParent{ID: b.ID, Title: "b", Children: []*assocChild{
+		{ID: bChild, Name: "b1"},
+		{ID: aChild, Name: "taken"},
+	}}
+	if err := d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); !errors.Is(err, ErrNotAChild) {
+		t.Fatalf("err = %v, want ErrNotAChild", err)
+	}
+	if got := names(childrenOf(t, db, a.ID)); !equal(got, []string{"a1"}) {
+		t.Fatalf("children of a = %v, want [a1]", got)
+	}
+
+	vals = url.Values{
+		"Children.__present": {"1"},
+		"Children[0].ID":     {itoa(bChild)},
+		"Children[1].ID":     {itoa(aChild)},
+		"Children[1].__new":  {"true"},
+	}
+	obj = &assocParent{ID: b.ID, Title: "b", Children: []*assocChild{
+		{ID: bChild, Name: "b1"},
+		{ID: aChild, Name: "b2"},
+	}}
+	if err := d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); err != nil {
+		t.Fatal(err)
+	}
+	if got := names(childrenOf(t, db, a.ID)); !equal(got, []string{"a1"}) {
+		t.Fatalf("children of a = %v, want [a1]", got)
+	}
+	if got := names(childrenOf(t, db, b.ID)); !equal(got, []string{"b1", "b2"}) {
+		t.Fatalf("children of b = %v, want [b1 b2]", got)
+	}
 }

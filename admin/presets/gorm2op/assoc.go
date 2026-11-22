@@ -1,6 +1,7 @@
 package gorm2op
 
 import (
+	"errors"
 	"net/url"
 	"reflect"
 
@@ -112,19 +113,32 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 		if part == nil {
 			return
 		}
-		kept := part.KeptSlice(sliceType)
-
 		auditor := AssociationAuditorFromContext(state.Ctx.R.Context())
 
-		// oldByID snapshots the persisted children in a single query. It powers
-		// both the update diff and the deletion log, and is only fetched when an
-		// auditor is present (otherwise the reads are pure overhead). The primary
-		// key is only consulted here, for auditing — never for classification.
+		// oldByID snapshots the persisted children of this record in a single
+		// query: an existing item of the form must be one of them — its key
+		// comes from the form, and a key of a child of another record would
+		// update (and Replace re-parent) that child —; it powers the update diff
+		// and the deletion log too.
 		var oldByID map[any]any
-		if auditor != nil {
-			if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkNames); err != nil {
-				return
+		if oldByID, err = b.snapshotExisting(db, state.Obj, sliceType, pkNames); err != nil {
+			return
+		}
+		for _, item := range part.Others {
+			if !gormutils.PKAllZero(item, pkNames) {
+				if _, ok := oldByID[gormutils.PKMapKey(item, pkNames)]; !ok {
+					return ErrNotAChild
+				}
 			}
+		}
+		// a new item is created: a key the form gave it would upsert (and
+		// re-parent) the row of that key
+		for _, item := range part.New {
+			zeroPK(item, pkNames)
+		}
+		kept := part.KeptSlice(sliceType)
+
+		if auditor != nil {
 			// keptIDs: primary keys of the existing children we keep, used to
 			// detect which persisted rows are being removed.
 			keptIDs := make(map[any]bool, len(part.Kept))
@@ -220,4 +234,24 @@ func (b *SaveHasManyAssociationBuilder) snapshotExisting(db *gorm.DB, obj any, s
 // persistence layer reads from the very same source as the list-editor render.
 func formValues(ctx *web.EventContext) url.Values {
 	return presets.ListEditorFormValues(ctx)
+}
+
+// ErrNotAChild: an item of the list of a form (a has-many) whose
+// key is not of a child of the record saved: refused.
+var ErrNotAChild = errors.New("gorm2op: an item of the list is not a child of the record saved")
+
+// zeroPK sets the primary key fields pkNames of the item (a struct or a
+// pointer to one) to their zero values.
+func zeroPK(item reflect.Value, pkNames []string) {
+	for item.Kind() == reflect.Pointer || item.Kind() == reflect.Interface {
+		if item.IsNil() {
+			return
+		}
+		item = item.Elem()
+	}
+	for _, n := range pkNames {
+		if f := item.FieldByName(n); f.IsValid() && f.CanSet() {
+			f.Set(reflect.Zero(f.Type()))
+		}
+	}
 }
