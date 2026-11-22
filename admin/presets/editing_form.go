@@ -133,6 +133,12 @@ func (b *EditingBuilder) formEdit(ctx *web.EventContext) (r web.EventResponse, e
 			err = ErrUpdateRecordNotAllowed
 			return
 		}
+		// its restriction (EditingRestriction: a draft only, …) before its
+		// form, not only at its save
+		if !b.CanEditObj(obj, ctx) {
+			err = perm.PermissionDenied
+			return
+		}
 	} else {
 		err = ErrRecordNotFound
 		return

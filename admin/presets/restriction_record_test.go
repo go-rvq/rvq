@@ -2,6 +2,7 @@ package presets_test
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -50,5 +51,38 @@ func TestDeletingRestrictionOfTheRecord(t *testing.T) {
 	db.Order("id").Find(&left)
 	if len(left) != 1 || left[0].ID != 2 {
 		t.Errorf("left: %+v; want the one done only", left)
+	}
+}
+
+// The form of the edit of a record its restriction refuses is not drawn —
+// it failed only at its save —; of one it lets, it is.
+func TestEditingRestrictionBeforeTheForm(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&statusThing{}); err != nil {
+		t.Fatal(err)
+	}
+	db.Create(&[]statusThing{{ID: 1, Status: "draft"}, {ID: 2, Status: "done"}})
+	b := presets.New(i18n.New()).URIPrefix("/admin").DataOperator(gorm2op.DataOperator(db))
+	mb := b.Model(&statusThing{}).URIName("things")
+	mb.Editing("Status")
+	mb.EditingRestriction.ObjHandler(presets.OkObjHandlerFunc(func(obj any, ctx *web.EventContext) (bool, bool) {
+		draft := obj.(*statusThing).Status == "draft"
+		return !draft, !draft
+	}))
+	b.Build()
+	edit := func(id string) string {
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, multipartestutils.NewMultipartBuilder().PageURL("/admin/things?id="+id).
+			EventFunc(actions.Edit).BuildEventFuncRequest())
+		return w.Body.String()
+	}
+	if body := edit("2"); strings.Contains(body, `form[\"Status\"]`) {
+		t.Error("the form of a record its restriction refuses drawn")
+	}
+	if body := edit("1"); !strings.Contains(body, `form[\"Status\"]`) {
+		t.Errorf("the form of a draft not drawn: %.200s", body)
 	}
 }

@@ -447,6 +447,12 @@ func (b *EditingBuilder) DefaultPageFuncMode(creating bool, ctx *web.EventContex
 			return b.mb.p.DefaultNotFoundPageFunc(ctx)
 		}
 
+		// its restriction (EditingRestriction) before its form
+		if !b.CanEditObj(obj, ctx) {
+			r.Body = h.Div(h.Text(perm.PermissionDenied.Error()))
+			return
+		}
+
 		r.PageTitle = msgr.DetailingObjectTitle(inflection.Singular(b.mb.label), b.mb.RecordTitle(obj, ctx))
 	}
 
