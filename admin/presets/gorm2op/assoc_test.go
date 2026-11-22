@@ -355,3 +355,101 @@ func TestSaveHasManyAssociation_NestedOfAnotherRecord(t *testing.T) {
 		t.Fatalf("toy of a = %+v, want kid %d, name ta", toy, ka)
 	}
 }
+
+type cpChild struct {
+	Code     string `gorm:"primaryKey"`
+	Ver      int    `gorm:"primaryKey;autoIncrement:false"`
+	ParentID uint
+	Name     string
+}
+
+type cpParent struct {
+	ID    uint       `gorm:"primarykey"`
+	Items []*cpChild `gorm:"foreignKey:ParentID"`
+}
+
+// TestSaveHasManyAssociation_CompositeZeroPart refuses a new item whose
+// composite key — a part of it zero, a value of the key — is of a row of
+// another record.
+func TestSaveHasManyAssociation_CompositeZeroPart(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&cpParent{}, &cpChild{}); err != nil {
+		t.Fatal(err)
+	}
+	a := &cpParent{Items: []*cpChild{{Code: "x", Name: "ax"}}}
+	b := &cpParent{}
+	for _, p := range []*cpParent{a, b} {
+		if err = db.Create(p).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	d := SaveHasManyAssociation("Items").Build(DataOperator(db).SetUpdator(func(*gorm.DB, interface{}, model.ID, *web.EventContext) error {
+		return nil
+	}))
+	vals := url.Values{
+		"Items.__present": {"1"},
+		"Items[0].__new":  {"true"},
+	}
+	obj := &cpParent{ID: b.ID, Items: []*cpChild{{Code: "x", Name: "taken"}}}
+	if err = d.Update(obj, model.NewID(b.ID), ctxWithForm(vals)); !errors.Is(err, ErrNotAChild) {
+		t.Fatalf("err = %v, want ErrNotAChild", err)
+	}
+	var row cpChild
+	if err = db.First(&row, "code = ? AND ver = 0", "x").Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.ParentID != a.ID || row.Name != "ax" {
+		t.Fatalf("row of a = %+v, want parent %d, name ax", row, a.ID)
+	}
+}
+
+type mmTag struct {
+	ID   uint `gorm:"primarykey"`
+	Name string
+}
+
+type mmPost struct {
+	ID   uint     `gorm:"primarykey"`
+	Tags []*mmTag `gorm:"many2many:mm_post_tags"`
+}
+
+// TestSaveHasManyAssociation_ManyToManyLinksOnly links a shared row chosen by
+// its key without changing its columns by the form.
+func TestSaveHasManyAssociation_ManyToManyLinksOnly(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.AutoMigrate(&mmPost{}, &mmTag{}); err != nil {
+		t.Fatal(err)
+	}
+	tag := &mmTag{Name: "go"}
+	post := &mmPost{}
+	if err = db.Create(tag).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Create(post).Error; err != nil {
+		t.Fatal(err)
+	}
+	d := SaveHasManyAssociation("Tags").Build(DataOperator(db).SetUpdator(func(*gorm.DB, interface{}, model.ID, *web.EventContext) error {
+		return nil
+	}))
+	vals := url.Values{
+		"Tags.__present": {"1"},
+		"Tags[0].ID":     {itoa(tag.ID)},
+	}
+	obj := &mmPost{ID: post.ID, Tags: []*mmTag{{ID: tag.ID, Name: "renamed"}}}
+	if err = d.Update(obj, model.NewID(post.ID), ctxWithForm(vals)); err != nil {
+		t.Fatal(err)
+	}
+	var got mmPost
+	if err = db.Preload("Tags").First(&got, post.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tags) != 1 || got.Tags[0].Name != "go" {
+		t.Fatalf("tags = %+v, want [go] linked, its name kept", got.Tags)
+	}
+}

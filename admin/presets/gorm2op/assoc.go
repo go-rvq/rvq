@@ -194,6 +194,11 @@ func (b *SaveHasManyAssociationBuilder) Build(ob *DataOperatorBuilder) *DataOper
 			if gormutils.PKAllZero(item, pkNames) {
 				continue
 			}
+			// a row of a many-to-many not linked to this record yet is shared:
+			// it is linked (Replace), its columns are not the form's to change
+			if _, linked := oldByID[gormutils.PKMapKey(item, pkNames)]; !linked {
+				continue
+			}
 			rec := item.Interface()
 			if err = up(db.Session(&gorm.Session{}).Model(rec), rec); err != nil {
 				return
@@ -262,21 +267,30 @@ func formValues(ctx *web.EventContext) url.Values {
 // key is not of a child of the record saved: refused.
 var ErrNotAChild = errors.New("gorm2op: an item of the list is not a child of the record saved")
 
-// keyOfAnotherRecord tells whether the new item carries the whole primary
-// key of a persisted row that is not one of oldByID (the children of the
+// pkWhere is the condition of the primary key of rv (of schema sch), every
+// field — a zero one too: it may be a value of the key —; set tells whether
+// any field is set (none: a row to create).
+func pkWhere(db *gorm.DB, sch *schema.Schema, rv reflect.Value) (where map[string]any, set bool) {
+	where = make(map[string]any, len(sch.PrimaryFields))
+	for _, f := range sch.PrimaryFields {
+		v, zero := f.ValueOf(db.Statement.Context, rv)
+		where[f.DBName] = v
+		set = set || !zero
+	}
+	return
+}
+
+// keyOfAnotherRecord tells whether the new item carries the primary key of a
+// persisted row that is not one of oldByID (the children of the
 // record saved): creating it would upsert that row.
 func keyOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value, oldByID map[any]any, pkNames []string) (bool, error) {
 	rv := indirectValue(item)
 	if !rv.IsValid() || rv.Kind() != reflect.Struct {
 		return false, nil
 	}
-	where := make(map[string]any, len(sch.PrimaryFields))
-	for _, f := range sch.PrimaryFields {
-		v, zero := f.ValueOf(db.Statement.Context, rv)
-		if zero {
-			return false, nil
-		}
-		where[f.DBName] = v
+	where, set := pkWhere(db, sch, rv)
+	if !set {
+		return false, nil
 	}
 	if _, ok := oldByID[gormutils.PKMapKey(item, pkNames)]; ok {
 		return false, nil
@@ -287,16 +301,29 @@ func keyOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value, old
 }
 
 // nestedOfAnotherRecord walks the has-many and has-one lists of the item (of
-// schema sch), deep: a nested row whose whole primary key is of a persisted
-// row must be a child of its parent item already — ErrNotAChild otherwise
-// (a new parent has no children yet). A row of a key not persisted is created.
+// schema sch), deep: a nested row whose primary key (a field of it set) is of
+// a persisted row must be a child of its parent item already — ErrNotAChild
+// otherwise (a new parent has no children yet). A row of a key not persisted
+// is created.
 func nestedOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value) error {
 	rv := indirectValue(item)
 	if !rv.IsValid() || rv.Kind() != reflect.Struct {
 		return nil
 	}
+	// the schema of the item's own type: the relations of a relationship's
+	// FieldSchema may hold the owner's
+	if sch == nil || sch.ModelType != rv.Type() {
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(reflect.New(rv.Type()).Interface()); err != nil {
+			return err
+		}
+		sch = stmt.Schema
+	}
 	ctx := db.Statement.Context
 	for _, rel := range sch.Relationships.Relations {
+		if rel.Field.Schema != sch && rel.Field.Schema != nil && rel.Field.Schema.ModelType != rv.Type() {
+			continue
+		}
 		if (rel.Type != schema.HasMany && rel.Type != schema.HasOne) || len(rel.FieldSchema.PrimaryFields) == 0 {
 			continue
 		}
@@ -317,13 +344,7 @@ func nestedOfAnotherRecord(db *gorm.DB, sch *schema.Schema, item reflect.Value) 
 			if !cv.IsValid() || cv.Kind() != reflect.Struct {
 				continue
 			}
-			pk := make(map[string]any, len(rel.FieldSchema.PrimaryFields))
-			for _, f := range rel.FieldSchema.PrimaryFields {
-				if v, zero := f.ValueOf(ctx, cv); !zero {
-					pk[f.DBName] = v
-				}
-			}
-			if len(pk) == len(rel.FieldSchema.PrimaryFields) {
+			if pk, set := pkWhere(db, rel.FieldSchema, cv); set {
 				of := make(map[string]any, len(pk)+len(rel.References))
 				for k, v := range pk {
 					of[k] = v
