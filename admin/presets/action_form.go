@@ -57,6 +57,7 @@ type ActionFormBuilder[T any] struct {
 	handlers    ActionFormBuilderHandlers[T]
 	initForm    func(fctx *ActionFormContext[T]) error
 	refresh     func(fctx *ActionFormContext[T]) error
+	rowAdded    func(fctx *ActionFormContext[T], formKey string, from int) error
 	decodedForm func(ctx *ActionFormContext[T]) (err error)
 }
 
@@ -80,6 +81,13 @@ func (b *ActionFormBuilder[T]) InitForm(f func(fctx *ActionFormContext[T]) error
 // again. The queries of the click are in fctx.Context.R.
 func (b *ActionFormBuilder[T]) Refresh(f func(fctx *ActionFormContext[T]) error) *ActionFormBuilder[T] {
 	b.refresh = f
+	return b
+}
+
+// RowAdded is called once the + added rows to the list formKey of the form,
+// from the index from: their defaults (a value computed from the form).
+func (b *ActionFormBuilder[T]) RowAdded(f func(fctx *ActionFormContext[T], formKey string, from int) error) *ActionFormBuilder[T] {
+	b.rowAdded = f
 	return b
 }
 
@@ -189,8 +197,14 @@ func (b *ActionFormBuilder[T]) Build() *ActionBuilder {
 		}
 		b.eb.RunSetterFunc(&FieldsSetterOptions{SkipPermVerify: true}, ctx, false, fctx.Form)
 		if formKey := ctx.R.FormValue(ParamActionFormAddRow); formKey != "" {
+			from := listSliceLen(fctx.Form, formKey)
 			if err = appendListEditorRows(ctx, fctx.Form, formKey); err != nil {
 				return
+			}
+			if b.rowAdded != nil {
+				if err = b.rowAdded(fctx, formKey, from); err != nil {
+					return
+				}
 			}
 		}
 		if ctx.R.FormValue(ParamActionFormRefresh) != "" && b.refresh != nil {

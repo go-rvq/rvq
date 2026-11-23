@@ -57,6 +57,13 @@ func TestActionFormListEditor(t *testing.T) {
 			got = ctx.Form
 			return nil
 		}).
+		// a row added: its default
+		RowAdded(func(fctx *presets.ActionFormContext[*afPedido], formKey string, from int) error {
+			for _, l := range fctx.Form.Linhas[from:] {
+				l.Obs = "nova-" + formKey
+			}
+			return nil
+		}).
 		// a choice fills the rows (the server's), the rows of before forgotten
 		Refresh(func(fctx *presets.ActionFormContext[*afPedido]) error {
 			if fctx.Context.R.FormValue("opcao") == "duas" {
@@ -99,7 +106,7 @@ func TestActionFormListEditor(t *testing.T) {
 	if got != nil {
 		t.Fatal("the + did the action")
 	}
-	if !strings.Contains(body, "Linhas[1]") || !strings.Contains(body, "pedido-1") {
+	if !strings.Contains(body, "Linhas[1]") || !strings.Contains(body, "pedido-1") || !strings.Contains(body, "nova-Linhas") {
 		t.Errorf("the row not added, or the form not kept: %.600s", body)
 	}
 
