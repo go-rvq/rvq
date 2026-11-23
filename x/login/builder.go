@@ -1403,6 +1403,36 @@ func (b *Builder) setContinueURL(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// setRedirectTo makes the login go, once it succeeds, to the redirect_to of
+// the request — a path of this site only (localRedirect): a link to the
+// login from a page, back to it.
+func (b *Builder) setRedirectTo(w http.ResponseWriter, r *http.Request) {
+	to := localRedirect(r.URL.Query().Get("redirect_to"))
+	if to == "" {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName(b.continueUrlCookieName),
+		Value:    to,
+		Path:     b.cookieConfig.Path,
+		Domain:   b.cookieConfig.Domain,
+		HttpOnly: true,
+	})
+}
+
+// localRedirect is s when it is a path of this site ("/…", not "//…" nor
+// "/\…", no scheme nor host): "" otherwise — never an open redirect.
+func localRedirect(s string) string {
+	if !strings.HasPrefix(s, "/") || strings.HasPrefix(s, "//") || strings.HasPrefix(s, "/\\") {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil || u.Scheme != "" || u.Host != "" {
+		return ""
+	}
+	return s
+}
+
 func (b *Builder) getContinueURL(w http.ResponseWriter, r *http.Request) string {
 	c, err := r.Cookie(cookieName(b.continueUrlCookieName))
 	if err != nil || c.Value == "" {

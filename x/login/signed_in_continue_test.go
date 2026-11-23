@@ -34,3 +34,38 @@ func TestSignedInLoginPageGoesToContinue(t *testing.T) {
 		t.Errorf("without: %d to %q", w.Code, w.Header().Get("Location"))
 	}
 }
+
+// The login page of a link (redirect_to): back to its page — a path of this
+// site only.
+func TestLoginRedirectTo(t *testing.T) {
+	b := New(i18n.New()).Secret("a secret worth at least this many bytes").SessionMaxAge(3600).TOTP(false).
+		HomeURLFunc(func(r *http.Request, user any) string { return "/home" })
+	handler := b.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	cookie := func(to string) string {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest("GET", b.loginPageURL+"?redirect_to="+to, nil))
+		for _, c := range w.Result().Cookies() {
+			if c.Name == cookieName(b.continueUrlCookieName) {
+				return c.Value
+			}
+		}
+		return ""
+	}
+	if got := cookie("/services/kitchen"); got != "/services/kitchen" {
+		t.Errorf("a page of the site: %q", got)
+	}
+	for _, bad := range []string{"https://evil.example", "//evil.example", "/%5Cevil.example", "javascript:alert(1)"} {
+		if got := cookie(bad); got != "" && got != "/" {
+			t.Errorf("%s: %q", bad, got)
+		}
+	}
+	// signed in already: there
+	claims := &UserClaims{UserID: "1", RegisteredClaims: b.genBaseSessionClaim("1", false)}
+	r := httptest.NewRequest("GET", b.loginPageURL+"?redirect_to=/about", nil)
+	r.AddCookie(&http.Cookie{Name: b.authCookieOf(r), Value: b.mustGetSessionToken(*claims)})
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	if w.Header().Get("Location") != "/about" {
+		t.Errorf("signed in: to %q", w.Header().Get("Location"))
+	}
+}

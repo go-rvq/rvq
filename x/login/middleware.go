@@ -287,6 +287,11 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 			)
 
 			if err != nil {
+				// the login page of a link (redirect_to): back to its page
+				// once in — whether a login is a must or not
+				if r.Method == http.MethodGet && path == b.loginPageURL {
+					b.setRedirectTo(w, r)
+				}
 				if !mustLogin {
 					next.ServeHTTP(w, r)
 					return
@@ -440,6 +445,10 @@ func (b *Builder) Middleware(cfgs ...MiddlewareConfig) func(next http.Handler) h
 					// continue URL — the end of the login dialog of the
 					// admin, which then closes it), else the home
 					if path == b.loginPageURL {
+						if to := localRedirect(r.URL.Query().Get("redirect_to")); to != "" {
+							http.Redirect(w, r, to, http.StatusFound)
+							return
+						}
 						if to := b.getContinueURL(w, r); to != "" {
 							http.Redirect(w, r, to, http.StatusFound)
 							return
