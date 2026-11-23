@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	h "github.com/go-rvq/htmlgo"
@@ -73,6 +74,38 @@ type ActionBuilder struct {
 	// inline: an icon of the row of the listing, at the left of its menu,
 	// not in it (Inline)
 	inline bool
+	// formAddRow adds a row to the list formKey of the form of the action
+	// (ActionFormBuilder, go-rvq/rvq#17)
+	formAddRow func(id, formKey string, ctx *web.EventContext) error
+}
+
+// ParamActionFormAddRow is the key of the list of the form of an action its
+// + adds a row to: the action draws its form again with it, not done.
+const ParamActionFormAddRow = "presets_actionFormAddRow"
+
+// doEvent is the event that does the action, by its type.
+func (b *ActionBuilder) doEvent() string {
+	switch b.typ {
+	case ActionTypeList:
+		return actions.DoListingAction
+	case ActionTypeListItem:
+		return actions.DoListingItemAction
+	}
+	return actions.DoAction
+}
+
+// actionRequestURI is the URI of r without the add-row of a list
+// (ParamActionFormAddRow): the action done, or the + again, from the form
+// drawn by one.
+func actionRequestURI(r *http.Request) string {
+	u := *r.URL
+	q := u.Query()
+	if !q.Has(ParamActionFormAddRow) {
+		return r.RequestURI
+	}
+	q.Del(ParamActionFormAddRow)
+	u.RawQuery = q.Encode()
+	return u.RequestURI()
 }
 
 // ActionToolbarLookFunc is the look of the button of an action in the
@@ -396,6 +429,15 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		}
 	}
 
+	// the + of a list of its form: the row added, the form again
+	if formKey := ctx.R.FormValue(ParamActionFormAddRow); formKey != "" && b.formAddRow != nil {
+		if err = b.formAddRow(id, formKey, ctx); err != nil {
+			return
+		}
+		err = b.respondForm(baseModel, id, ctx)
+		return
+	}
+
 	switch b.typ {
 	case ActionTypePage:
 		ctx.WithData(&PageDoActionOptions{})
@@ -422,23 +464,7 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		case string, *FlashMessage, FlashMessages:
 			goto done
 		default:
-			var comp h.HTMLComponent
-			if IsActionPage(ctx.R) {
-				// the form of the action's page, again, with its errors
-				if comp, err = b.PageComponent(baseModel, id, ctx); err != nil {
-					return
-				}
-				ctx.Resp.UpdatePortal(ActionPagePortalName, comp)
-				return
-			}
-			if comp, err = b.form(baseModel, id, ctx); err != nil {
-				return
-			}
-			p := b.p
-			if p == nil {
-				p = baseModel.p
-			}
-			p.DialogPortal(ctx.Param(ParamTargetPortal), b.dialogWidth).Respond(ctx, ctx.Resp, comp)
+			err = b.respondForm(baseModel, id, ctx)
 		}
 		return
 	} else {
@@ -562,7 +588,7 @@ func (b *ActionBuilder) content(mb *ModelBuilder, id string, overlay actions.Ove
 	if b.updateFunc != nil {
 		click := web.Plaid().
 			MergeQuery(true).
-			URL(ctx.R.RequestURI)
+			URL(actionRequestURI(ctx.R))
 
 		switch b.typ {
 		case ActionTypeList:
@@ -813,3 +839,25 @@ func (b *ListingBuilder) GetItemActions() []*ActionBuilder { return b.itemAction
 
 // GetActions returns the detailing's actions (read-only).
 func (b *DetailingBuilder) GetActions() []*ActionBuilder { return b.actions }
+
+// respondForm draws the form of the action again — with its errors, or a row
+// added to a list —: in its page, else in its dialog.
+func (b *ActionBuilder) respondForm(baseModel *ModelBuilder, id string, ctx *web.EventContext) (err error) {
+	var comp h.HTMLComponent
+	if IsActionPage(ctx.R) {
+		if comp, err = b.PageComponent(baseModel, id, ctx); err != nil {
+			return
+		}
+		ctx.Resp.UpdatePortal(ActionPagePortalName, comp)
+		return
+	}
+	if comp, err = b.form(baseModel, id, ctx); err != nil {
+		return
+	}
+	p := b.p
+	if p == nil {
+		p = baseModel.p
+	}
+	p.DialogPortal(ctx.Param(ParamTargetPortal), b.dialogWidth).Respond(ctx, ctx.Resp, comp)
+	return
+}

@@ -4,6 +4,7 @@ import (
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/datafield"
+	"reflect"
 )
 
 type ActionFormBuilderHandler[T any] func(ctx *ActionFormContext[T]) (err error)
@@ -88,6 +89,16 @@ func (b *ActionFormBuilder[T]) FetchObject(fctx *ActionFormContext[T]) (err erro
 }
 
 func (b *ActionFormBuilder[T]) RenderForm(fctx *ActionFormContext[T]) (_ h.HTMLComponent, err error) {
+	// its list editors: their + sends the action again (go-rvq/rvq#17)
+	fctx.Context.WithContextValue(ctxListEditorActionForm, &listEditorActionForm{
+		addRow: func(formKey string) *web.VueEventTagBuilder {
+			return web.Plaid().
+				MergeQuery(true).
+				URL(actionRequestURI(fctx.Context.R)).
+				EventFunc(b.action.doEvent()).
+				Query(ParamActionFormAddRow, formKey)
+		},
+	})
 	return b.eb.ToComponent(&ToComponentOptions{
 		SkipPermVerify: true,
 	}, fctx.Form, FieldModeStack{NEW}, fctx.Context), nil
@@ -130,6 +141,9 @@ func (b *ActionFormBuilder[T]) decodeForm(ctx *ActionFormContext[T]) (err error)
 		goto done
 	}
 
+	// its lists: the rows removed (__deleted) out, in their order
+	dropListEditorDeleted(&b.eb.FieldsBuilder, ctx.Context, ctx.Form)
+
 	if verr = b.eb.Validators.Validate(ctx.Form, FieldModeStack{NEW}, ctx.Context); verr.HaveErrors() {
 		goto done
 	}
@@ -156,6 +170,17 @@ done:
 
 func (b *ActionFormBuilder[T]) Build() *ActionBuilder {
 	b.handlers.Prepend(b.decodeForm)
+
+	// the + of a list of the form: its values decoded (not validated), the
+	// row added (go-rvq/rvq#17)
+	b.action.formAddRow = func(id, formKey string, ctx *web.EventContext) (err error) {
+		var fctx *ActionFormContext[T]
+		if fctx, err = b.GetOrCreateContext(id, ctx); err != nil {
+			return
+		}
+		b.eb.RunSetterFunc(&FieldsSetterOptions{SkipPermVerify: true}, ctx, false, fctx.Form)
+		return appendListEditorRows(ctx, fctx.Form, formKey)
+	}
 
 	if b.fetch {
 		b.handlers.Prepend(b.FetchObject)
@@ -205,5 +230,35 @@ func ActionForm[T any](action *ActionBuilder, eb *EditingBuilder, h ...ActionFor
 		action:   action,
 		eb:       eb,
 		handlers: h,
+	}
+}
+
+// dropListEditorDeleted takes out of each list (NestedSlice) of fb in obj the
+// rows its list editor flagged __deleted, the others in their __pos order
+// (PartitionListEditorItems): what a form of an action decodes is what was
+// left on it — an editing form leaves that to the save of the association.
+func dropListEditorDeleted(fb *FieldsBuilder, ctx *web.EventContext, obj any) {
+	vals := ListEditorFormValues(ctx)
+	rv := reflect.ValueOf(obj)
+	for rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return
+	}
+	for _, f := range fb.fields {
+		if _, ok := f.nested.(*NestedSliceBuilder); !ok {
+			continue
+		}
+		fv := rv.FieldByName(f.name)
+		if !fv.IsValid() || fv.Kind() != reflect.Slice || !fv.CanSet() {
+			continue
+		}
+		if part := PartitionListEditorItems(vals, f.name, fv); part != nil {
+			fv.Set(part.KeptSlice(fv.Type()))
+		}
 	}
 }

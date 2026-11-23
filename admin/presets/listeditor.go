@@ -542,6 +542,11 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 	if len(itemsState) < 2 {
 		haveSorterIcon = false
 	}
+	// in the form of an action: no sorting (go-rvq/rvq#17)
+	actionForm, _ := ctx.ContextValue(ctxListEditorActionForm).(*listEditorActionForm)
+	if actionForm != nil {
+		haveSorterIcon = false
+	}
 
 	if haveSorterIcon && isSortStart {
 		sorter = VCard(
@@ -572,6 +577,10 @@ func (b *ListEditorBuilder) BuildComponent(ctx *web.EventContext) h.HTMLComponen
 					URLValues())
 		scopeSetup strings.Builder
 	)
+	// in the form of an action: the + sends the action again, to add the row
+	if actionForm != nil {
+		addItemTb = actionForm.addRow(b.fieldContext.FormKey)
+	}
 
 	fmt.Fprintf(&scopeSetup, `({ scope }) => {
 			const formKey = "%s";
@@ -820,48 +829,8 @@ func addListItemRow(mb *ModelBuilder) web.EventFunc {
 			me = me.CreatingBuilder()
 		}
 		obj, _ := me.FetchAndUnmarshal(nil, mid, false, ctx)
-		formKey := ctx.R.FormValue(ParamAddRowFormKey)
-		t := reflectutils.GetType(obj, formKey+"[0]")
-
-		// items appended below land at indexes [startLen, newLen); they are flagged
-		// __new so the persistence layer treats them as creations without inspecting
-		// the primary key (which may be absent or pre-assigned).
-		startLen := listSliceLen(obj, formKey)
-
-		if jsonItems := ctx.R.FormValue(ListEditorAddRowParamJsonItems); len(jsonItems) > 0 {
-			// jsonItems is a JSON array of serialized items; decode them into the
-			// slice element type and append each to obj's slice.
-			itemsPtr := reflect.New(reflect.SliceOf(t))
-			if err = json.Unmarshal([]byte(jsonItems), itemsPtr.Interface()); err != nil {
-				return
-			}
-			items := itemsPtr.Elem()
-			for i := 0; i < items.Len(); i++ {
-				if err = reflectutils.Set(obj, formKey+"[]", items.Index(i).Interface()); err != nil {
-					return
-				}
-			}
-		} else {
-			if t.Kind() == reflect.Ptr {
-				t = t.Elem()
-			}
-			newVal := reflect.New(t).Interface()
-			if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
-				return
-			}
-		}
-
-		// flag the freshly appended rows as new, so the render seeds __new for them
-		// (and every later submit carries it, letting the persistence layer classify
-		// them as creations without inspecting the primary key). The flag must be set
-		// on the SAME values the render reads (ListEditorFormValues: the reindexed
-		// multipart values), not ctx.R.Form — otherwise the render never sees it. The
-		// appended rows land at slice indexes [startLen, newLen), which is where the
-		// render reads their flags.
-		if vals := ListEditorFormValues(ctx); vals != nil {
-			for i := startLen; i < listSliceLen(obj, formKey); i++ {
-				vals.Set(fmt.Sprintf("%s[%d].%s", formKey, i, ListEditorNewField), "true")
-			}
+		if err = appendListEditorRows(ctx, obj, ctx.R.FormValue(ParamAddRowFormKey)); err != nil {
+			return
 		}
 
 		return me.respondFormEdit(ctx, obj)
@@ -988,4 +957,64 @@ func RemoveEmptySliceItems(obj any, mib *ModifiedIndexesBuilder) func() {
 			}
 		}
 	}
+}
+
+// appendListEditorRows appends to the list formKey of obj the items of the
+// request (ListEditorAddRowParamJsonItems, a JSON array) or, without them, a
+// new item; the rows appended are flagged __new on the form values the render
+// reads. The add-row of an editing form (addListItemRow) and of the form of an
+// action (ActionForm, go-rvq/rvq#17) share it.
+func appendListEditorRows(ctx *web.EventContext, obj any, formKey string) (err error) {
+	t := reflectutils.GetType(obj, formKey+"[0]")
+
+	// items appended below land at indexes [startLen, newLen); they are flagged
+	// __new so the persistence layer treats them as creations without inspecting
+	// the primary key (which may be absent or pre-assigned).
+	startLen := listSliceLen(obj, formKey)
+
+	if jsonItems := ctx.R.FormValue(ListEditorAddRowParamJsonItems); len(jsonItems) > 0 {
+		// jsonItems is a JSON array of serialized items; decode them into the
+		// slice element type and append each to obj's slice.
+		itemsPtr := reflect.New(reflect.SliceOf(t))
+		if err = json.Unmarshal([]byte(jsonItems), itemsPtr.Interface()); err != nil {
+			return
+		}
+		items := itemsPtr.Elem()
+		for i := 0; i < items.Len(); i++ {
+			if err = reflectutils.Set(obj, formKey+"[]", items.Index(i).Interface()); err != nil {
+				return
+			}
+		}
+	} else {
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		newVal := reflect.New(t).Interface()
+		if err = reflectutils.Set(obj, formKey+"[]", newVal); err != nil {
+			return
+		}
+	}
+
+	// flag the freshly appended rows as new, so the render seeds __new for them
+	// (and every later submit carries it, letting the persistence layer classify
+	// them as creations without inspecting the primary key). The flag must be set
+	// on the SAME values the render reads (ListEditorFormValues: the reindexed
+	// multipart values), not ctx.R.Form — otherwise the render never sees it. The
+	// appended rows land at slice indexes [startLen, newLen), which is where the
+	// render reads their flags.
+	if vals := ListEditorFormValues(ctx); vals != nil {
+		for i := startLen; i < listSliceLen(obj, formKey); i++ {
+			vals.Set(fmt.Sprintf("%s[%d].%s", formKey, i, ListEditorNewField), "true")
+		}
+	}
+
+	return
+}
+
+// listEditorActionForm is what the list editors of the form of an action
+// (ActionForm) are drawn with: their + sends the action again with the key of
+// the list (ParamActionFormAddRow), which adds the row and draws the dialog
+// again, not the editing form of a model (go-rvq/rvq#17).
+type listEditorActionForm struct {
+	addRow func(formKey string) *web.VueEventTagBuilder
 }
