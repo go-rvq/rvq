@@ -96,7 +96,10 @@ func timeFieldValue(field *FieldContext) *time.Time {
 // defaultNowOf is now in the admin's time zone for a new record's empty
 // field DefaultNow with no error; nil otherwise.
 func defaultNowOf(field *FieldContext, ctx *web.EventContext) *time.Time {
-	if field.Field == nil || !field.Field.defaultNow || !field.Mode.Dot().Has(NEW) || len(field.Errors) > 0 {
+	// a new record: its global mode (a form of an action draws its fields
+	// NEW, EDIT)
+	novo := len(field.Mode) > 0 && (field.Mode.Global().Has(NEW) || field.Mode.Dot().Has(NEW))
+	if field.Field == nil || !field.Field.defaultNow || !novo || len(field.Errors) > 0 {
 		return nil
 	}
 	var p *Builder

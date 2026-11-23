@@ -60,13 +60,16 @@ func TestDefaultNow(t *testing.T) {
 	sp, _ := time.LoadLocation("America/Sao_Paulo")
 	r := httptest.NewRequest("POST", "/", nil)
 	ctx := &web.EventContext{R: r.WithContext(timezone.WithLocation(r.Context(), sp))}
-	render := func(name string, comp FieldComponentFunc, mode FieldMode, errs ...string) string {
+	render2 := func(name string, comp FieldComponentFunc, modes FieldModeStack, errs ...string) string {
 		f := &FieldBuilder{mode: ALL}
 		f.name = name
 		f.DefaultNow(true)
 		fc := &FieldContext{Field: f, Obj: &rec{}, Name: name, FormKey: name, EventContext: ctx,
-			ModelInfo: mb.Info(), Mode: FieldModeStack{mode}, Errors: errs}
+			ModelInfo: mb.Info(), Mode: modes, Errors: errs}
 		return h.MustString(comp(fc, ctx), context.Background())
+	}
+	render := func(name string, comp FieldComponentFunc, mode FieldMode, errs ...string) string {
+		return render2(name, comp, FieldModeStack{mode}, errs...)
 	}
 	if got := render("Em", DateTimeComponentFunc, NEW); !strings.Contains(got, "2026-06-15 22:30") {
 		t.Errorf("an instant: now in the admin's time zone: %s", got)
@@ -76,6 +79,10 @@ func TestDefaultNow(t *testing.T) {
 	}
 	if got := render("Em", DateTimeComponentFunc, NEW, "vazio"); strings.Contains(got, "2026-06-15 22:30") {
 		t.Errorf("refused with an error: not now again: %s", got)
+	}
+	// a new record's field drawn editable (the form of an action)
+	if got := render2("Em", DateTimeComponentFunc, FieldModeStack{NEW, EDIT}); !strings.Contains(got, "2026-06-15 22:30") {
+		t.Errorf("a new record, its field editable: now: %s", got)
 	}
 	if got := render("Em", DateTimeComponentFunc, EDIT); strings.Contains(got, "2026-06-15 22:30") {
 		t.Errorf("editing: not now: %s", got)
