@@ -93,6 +93,20 @@ func timeFieldValue(field *FieldContext) *time.Time {
 	return nil
 }
 
+// defaultNowOf is now in the admin's time zone for a new record's empty
+// field DefaultNow with no error; nil otherwise.
+func defaultNowOf(field *FieldContext, ctx *web.EventContext) *time.Time {
+	if field.Field == nil || !field.Field.defaultNow || !field.Mode.Dot().Has(NEW) || len(field.Errors) > 0 {
+		return nil
+	}
+	var p *Builder
+	if field.ModelInfo != nil && field.ModelInfo.mb != nil {
+		p = field.ModelInfo.mb.p
+	}
+	now := p.Now().In(TimeLocationOf(ctx))
+	return &now
+}
+
 // DateTimeComponentFunc is the input of an instant, in the time zone of the
 // admin (TimeLocationOf).
 func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLComponent {
@@ -100,6 +114,8 @@ func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCom
 	val := ""
 	if t := timeFieldValue(field); t != nil {
 		val = t.In(TimeLocationOf(ctx)).Format("2006-01-02 15:04")
+	} else if now := defaultNowOf(field, ctx); now != nil {
+		val = now.Format("2006-01-02 15:04")
 	}
 	return vx.VXDateTimePicker().
 		Label(field.InputLabel()).
@@ -151,6 +167,9 @@ func DateComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCompone
 	val := ""
 	if t := timeFieldValue(field); t != nil {
 		val = t.UTC().Format("2006-01-02")
+	} else if now := defaultNowOf(field, ctx); now != nil {
+		// today of the admin's time zone
+		val = now.Format("2006-01-02")
 	}
 	return FieldWithHint(field, VTextField().
 		Type("date").

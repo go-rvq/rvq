@@ -55,3 +55,19 @@ func TimeLocationOf(ctx *web.EventContext) *time.Location {
 func InTimeLocation(ctx *web.EventContext, t time.Time) time.Time {
 	return t.In(TimeLocationOf(ctx))
 }
+
+// NowFunc sets the clock of the admin: the current instant of what it does
+// by itself — the default of a field DefaultNow —; nil: time.Now. An
+// application of a fixed time (a demonstration, its pictures) gives its own.
+func (b *Builder) NowFunc(f func() time.Time) *Builder {
+	b.nowFunc = f
+	return b
+}
+
+// Now is the current instant of the admin (NowFunc).
+func (b *Builder) Now() time.Time {
+	if b != nil && b.nowFunc != nil {
+		return b.nowFunc()
+	}
+	return time.Now()
+}

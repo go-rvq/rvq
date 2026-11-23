@@ -76,12 +76,14 @@ type Builder struct {
 	// lifecycle are the nodes the packages offer the commands (Lifecycle)
 	lifecycle lifecycle.Nodes
 	// migrations are the application's migrations of the admin (Migrations)
-	migrations          lifecycle.Nodes
-	assetFunc           AssetFunc
-	menuTree            *MenuGroupBuilder
-	menuItems           map[string]*MenuItem
-	wrapHandlers        map[string]func(in http.Handler) (out http.Handler)
-	timeLocationFunc    func(r *http.Request) *time.Location
+	migrations       lifecycle.Nodes
+	assetFunc        AssetFunc
+	menuTree         *MenuGroupBuilder
+	menuItems        map[string]*MenuItem
+	wrapHandlers     map[string]func(in http.Handler) (out http.Handler)
+	timeLocationFunc func(r *http.Request) *time.Location
+	// nowFunc is the clock of the admin (NowFunc)
+	nowFunc             func() time.Time
 	plugins             []Plugin
 	ModelConfigurators  ModelConfigurators
 	ModelSetupFactories ModelSetupFactories

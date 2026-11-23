@@ -234,6 +234,9 @@ type FieldBuilder struct {
 	required         bool
 	// valueFunc reads the value of the field from its record (ValueFunc)
 	valueFunc func(obj any) any
+	// defaultNow: an instant (a day) of a new record, empty, is now
+	// (DefaultNow)
+	defaultNow bool
 
 	datafield.DataField[*FieldBuilder]
 }
@@ -639,6 +642,15 @@ func (b *FieldBuilder) SetRequired(v bool) *FieldBuilder {
 // read it. nil (the default): the struct field of its name.
 func (b *FieldBuilder) ValueFunc(f func(obj any) any) *FieldBuilder {
 	b.valueFunc = f
+	return b
+}
+
+// DefaultNow makes the input of an instant or of a day of a new record start
+// with the current one (Builder.Now) in the admin's time zone
+// (TimeLocationOf) when it is empty — not once the record was refused with
+// an error on it.
+func (b *FieldBuilder) DefaultNow(v bool) *FieldBuilder {
+	b.defaultNow = v
 	return b
 }
 

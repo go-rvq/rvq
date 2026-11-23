@@ -3,6 +3,8 @@ package presets
 import (
 	"context"
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/x/i18n"
+	"github.com/go-rvq/rvq/x/timezone"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -41,5 +43,41 @@ func TestDateTimeComponentFuncErrors(t *testing.T) {
 	html := h.MustString(DateTimeComponentFunc(fc, ctx), context.Background())
 	if !strings.Contains(html, "obrigatório") {
 		t.Errorf("the errors of the field not shown: %s", html)
+	}
+}
+
+// A field DefaultNow of a new record starts with the admin's clock, in the
+// admin's time zone (a day: the admin's day); not with an error, not editing.
+func TestDefaultNow(t *testing.T) {
+	type rec struct {
+		ID  uint
+		Em  time.Time
+		Dia time.Time
+	}
+	now := time.Date(2026, 6, 16, 1, 30, 0, 0, time.UTC) // 15/06 22:30 in São Paulo
+	p := New(i18n.New()).NowFunc(func() time.Time { return now })
+	mb := p.Model(&rec{})
+	sp, _ := time.LoadLocation("America/Sao_Paulo")
+	r := httptest.NewRequest("POST", "/", nil)
+	ctx := &web.EventContext{R: r.WithContext(timezone.WithLocation(r.Context(), sp))}
+	render := func(name string, comp FieldComponentFunc, mode FieldMode, errs ...string) string {
+		f := &FieldBuilder{mode: ALL}
+		f.name = name
+		f.DefaultNow(true)
+		fc := &FieldContext{Field: f, Obj: &rec{}, Name: name, FormKey: name, EventContext: ctx,
+			ModelInfo: mb.Info(), Mode: FieldModeStack{mode}, Errors: errs}
+		return h.MustString(comp(fc, ctx), context.Background())
+	}
+	if got := render("Em", DateTimeComponentFunc, NEW); !strings.Contains(got, "2026-06-15 22:30") {
+		t.Errorf("an instant: now in the admin's time zone: %s", got)
+	}
+	if got := render("Dia", DateComponentFunc, NEW); !strings.Contains(got, "2026-06-15") || strings.Contains(got, "2026-06-16") {
+		t.Errorf("a day: the admin's today: %s", got)
+	}
+	if got := render("Em", DateTimeComponentFunc, NEW, "vazio"); strings.Contains(got, "2026-06-15 22:30") {
+		t.Errorf("refused with an error: not now again: %s", got)
+	}
+	if got := render("Em", DateTimeComponentFunc, EDIT); strings.Contains(got, "2026-06-15 22:30") {
+		t.Errorf("editing: not now: %s", got)
 	}
 }
