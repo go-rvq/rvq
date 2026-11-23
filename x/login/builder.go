@@ -1420,17 +1420,31 @@ func (b *Builder) setRedirectTo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// localRedirect is s when it is a path of this site ("/…", not "//…" nor
-// "/\…", no scheme nor host): "" otherwise — never an open redirect.
+// localRedirect is s rebuilt from its parsed path and query when it is a path
+// of this site — starting with exactly one "/", no backslash nor control
+// character, no scheme nor host —: "" otherwise. Never an open redirect: the
+// value redirected to is the rebuilt one, not s.
 func localRedirect(s string) string {
-	if !strings.HasPrefix(s, "/") || strings.HasPrefix(s, "//") || strings.HasPrefix(s, "/\\") {
+	if !strings.HasPrefix(s, "/") || strings.ContainsAny(s, "\\") {
 		return ""
+	}
+	for _, c := range s {
+		if c < 0x20 || c == 0x7f {
+			return ""
+		}
 	}
 	u, err := url.Parse(s)
-	if err != nil || u.Scheme != "" || u.Host != "" {
+	if err != nil || u.Scheme != "" || u.Host != "" || u.User != nil {
 		return ""
 	}
-	return s
+	p := u.EscapedPath()
+	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") {
+		return ""
+	}
+	if u.RawQuery != "" {
+		p += "?" + u.RawQuery
+	}
+	return p
 }
 
 func (b *Builder) getContinueURL(w http.ResponseWriter, r *http.Request) string {

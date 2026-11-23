@@ -54,7 +54,8 @@ func TestLoginRedirectTo(t *testing.T) {
 	if got := cookie("/services/kitchen"); got != "/services/kitchen" {
 		t.Errorf("a page of the site: %q", got)
 	}
-	for _, bad := range []string{"https://evil.example", "//evil.example", "/%5Cevil.example", "javascript:alert(1)"} {
+	for _, bad := range []string{"https://evil.example", "//evil.example", "/%5Cevil.example", "javascript:alert(1)",
+		"/%09/evil.example", "/%2F/evil.example", "///evil.example"} {
 		if got := cookie(bad); got != "" && got != "/" {
 			t.Errorf("%s: %q", bad, got)
 		}
