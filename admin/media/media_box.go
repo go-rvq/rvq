@@ -439,6 +439,9 @@ func mediaBoxDrop(ctx *web.EventContext, field string, cfg *media_library.MediaB
 		EventFunc(chooseFileEvent).
 		Query("field", field).
 		Query("id", web.Var("boxes[0].ID")).
+		// dropped on the box: no chooser open to close (its closer would be
+		// the form's)
+		Query(chooseDroppedParam, "1").
 		FieldValue("cfg", h.JSONString(cfg)).
 		Go()
 	open := web.Plaid().EventFunc(openFileChooserEvent).

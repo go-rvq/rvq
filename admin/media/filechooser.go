@@ -765,10 +765,18 @@ func chooseFile(b *Builder) web.EventFunc {
 			mediaBoxThumbnailsPortalName(field),
 			mediaBoxThumbnails(ctx, &mediaBox, field, cfg, false, false),
 		)
-		r.RunScript = `closer.show = false`
+		// chosen in the chooser: it closes; dropped on the box, no chooser
+		// is open — the closer at hand is the form's, left open
+		if ctx.R.FormValue(chooseDroppedParam) == "" {
+			r.RunScript = `closer.show = false`
+		}
 		return
 	}
 }
+
+// chooseDroppedParam says the file was dropped on the media box (uploaded and
+// chosen at once): no chooser to close.
+const chooseDroppedParam = "dropped"
 
 func searchFile(mb *Builder) web.EventFunc {
 	return func(ctx *web.EventContext) (r web.EventResponse, err error) {

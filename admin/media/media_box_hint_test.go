@@ -189,7 +189,7 @@ func TestMediaBoxEmptyIsADrop(t *testing.T) {
 		return out
 	}
 	out := render(&media_library.MediaBox{}, &media_library.MediaBoxConfig{AllowType: "image"})
-	for _, want := range []string{`data-media-box-drop='Foto'`, `data-file-drop`, `@drop.prevent`, UploadMediaBoxesEvent, chooseFileEvent, openFileChooserEvent, "Drop the image here", `accept='image/*'`} {
+	for _, want := range []string{`data-media-box-drop='Foto'`, `data-file-drop`, `@drop.prevent`, UploadMediaBoxesEvent, chooseFileEvent, chooseDroppedParam, openFileChooserEvent, "Drop the image here", `accept='image/*'`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("an empty box: no %s", want)
 		}
