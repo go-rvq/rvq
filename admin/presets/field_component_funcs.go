@@ -111,6 +111,8 @@ func DateTimeComponentFunc(field *FieldContext, ctx *web.EventContext) h.HTMLCom
 		}).
 		Hint(field.GetOrLoadHint()).
 		PersistentHint(true).
+		ErrorMessages(field.Errors...).
+		Disabled(field.ReadOnly).
 		DialogWidth(640).
 		ClearText(msgr.Clear).
 		OkText(msgr.OK)

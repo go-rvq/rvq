@@ -129,6 +129,9 @@ func (fc *FieldContext) StringValue() (r string) {
 }
 
 func (fc *FieldContext) RawValue() (r interface{}) {
+	if fc.Field != nil && fc.Field.valueFunc != nil {
+		return fc.Field.valueFunc(fc.Obj)
+	}
 	fieldName := fc.Name
 	return reflectutils.MustGet(fc.Obj, fieldName)
 }
@@ -229,6 +232,8 @@ type FieldBuilder struct {
 	audited          bool
 	hint             bool
 	required         bool
+	// valueFunc reads the value of the field from its record (ValueFunc)
+	valueFunc func(obj any) any
 
 	datafield.DataField[*FieldBuilder]
 }
@@ -626,6 +631,15 @@ func (b *FieldBuilder) Required(v bool) *FieldBuilder {
 // (its Validate reports ErrFieldRequired when the value is empty).
 func (b *FieldBuilder) SetRequired(v bool) *FieldBuilder {
 	return b.Required(v)
+}
+
+// ValueFunc is how the value of the field is read from its record: a field
+// of no struct field of its name — a virtual one, of a component and a
+// setter of its own — gives it so, for its Required and its validators to
+// read it. nil (the default): the struct field of its name.
+func (b *FieldBuilder) ValueFunc(f func(obj any) any) *FieldBuilder {
+	b.valueFunc = f
+	return b
 }
 
 func (b *FieldBuilder) IsRequired() bool {

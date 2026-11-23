@@ -11,6 +11,7 @@
           :persistent-hint="persistentHint"
           v-model="formattedDatetime"
           :hide-details="hideDetails"
+          :error-messages="errorMessages"
           color="primary"
           variant="underlined"
           readonly
@@ -59,7 +60,7 @@
 import {useVxMessages} from '@/lib/locale'
 import {format, parse} from 'date-fns'
 
-import {computed, nextTick, onMounted, Ref, ref} from 'vue'
+import {computed, nextTick, onMounted, PropType, Ref, ref} from 'vue'
 
 const DEFAULT_TIME = '00:00:00'
 const DEFAULT_DATE_FORMAT = 'yyyy-MM-dd'
@@ -86,6 +87,11 @@ const props = defineProps({
   },
   persistentHint: {
     type: Boolean
+  },
+  // the errors of the field (its validation): shown under it
+  errorMessages: {
+    type: [String, Array] as PropType<string | string[]>,
+    default: undefined
   },
   dialogWidth: {
     type: Number,

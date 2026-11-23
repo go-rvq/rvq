@@ -93,3 +93,12 @@ func (b *VXDateTimePickerBuilder) PersistentHint(v bool) (r *VXDateTimePickerBui
 	}
 	return b
 }
+
+// ErrorMessages are the errors of the field (its validation), shown under
+// it.
+func (b *VXDateTimePickerBuilder) ErrorMessages(v ...string) (r *VXDateTimePickerBuilder) {
+	if len(v) > 0 {
+		b.Attr(":error-messages", h.JSONString(v))
+	}
+	return b
+}

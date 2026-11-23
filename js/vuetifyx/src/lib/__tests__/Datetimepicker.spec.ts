@@ -14,3 +14,13 @@ it('Datetimepicker modelValue', async () => {
   expect(wrapper.find('input').element.value).toContain('2023-10-01 22:11')
   expect(wrapper.find('input').element.value).not.toContain('2023-10-01 22:22')
 })
+
+it('Datetimepicker errorMessages', async () => {
+  const wrapper = mountTemplate(Datetimepicker, {
+    modelValue: '',
+    errorMessages: ['Este campo não pode ser vazio']
+  })
+  await nextTick()
+  await flushPromises()
+  expect(wrapper.text()).toContain('Este campo não pode ser vazio')
+})
