@@ -56,6 +56,14 @@ func TestActionFormListEditor(t *testing.T) {
 		func(ctx *presets.ActionFormContext[*afPedido]) error {
 			got = ctx.Form
 			return nil
+		}).
+		// a choice fills the rows (the server's), the rows of before forgotten
+		Refresh(func(fctx *presets.ActionFormContext[*afPedido]) error {
+			if fctx.Context.R.FormValue("opcao") == "duas" {
+				presets.ResetListEditorValues(fctx.Context, "Linhas")
+				fctx.Form.Linhas = []*afLinha{{Valor: "501"}, {Valor: "502"}}
+			}
+			return nil
 		}).Build()
 	p.Build()
 	db.Create(&afHost{ID: "h1", Text: "H"})
@@ -100,6 +108,14 @@ func TestActionFormListEditor(t *testing.T) {
 		AddField(presets.ListEditorAddRowParamJsonItems, `[{"Valor":"77"},{"Valor":"88"}]`))
 	if got != nil || !strings.Contains(body, "77") || !strings.Contains(body, "88") || !strings.Contains(body, "Linhas[2]") {
 		t.Errorf("the items given not added: %.600s", body)
+	}
+
+	// a refresh: the rows of the choice, no flag of a row of before
+	body = serve(acao().Query(presets.ParamActionFormRefresh, "1").Query("opcao", "duas").
+		AddField("Linhas[0]."+presets.ListEditorDeletedField, "true"))
+	if got != nil || !strings.Contains(body, "501") || !strings.Contains(body, "502") || !strings.Contains(body, "const deletedKeys = null") {
+		t.Errorf("the refresh: 501 %v, 502 %v, none deleted %v", strings.Contains(body, "501"), strings.Contains(body, "502"),
+			strings.Contains(body, "const deletedKeys = null"))
 	}
 
 	// done: the rows kept, in their order

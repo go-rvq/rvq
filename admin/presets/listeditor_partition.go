@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-rvq/rvq/web"
 )
@@ -134,4 +135,18 @@ func ListEditorItemFlag(values url.Values, fieldFormKey string, i int, field str
 		return true
 	}
 	return false
+}
+
+// ResetListEditorValues forgets the values posted of the rows of the list
+// formKey — theirs, their flags (__new, __deleted, __pos) —: a list filled
+// again by the server (a Refresh of the form of an action) is drawn from its
+// slice, no flag of a row of before left on a row of now.
+func ResetListEditorValues(ctx *web.EventContext, formKey string) {
+	vals := ListEditorFormValues(ctx)
+	prefix := formKey + "["
+	for k := range vals {
+		if strings.HasPrefix(k, prefix) {
+			delete(vals, k)
+		}
+	}
 }

@@ -56,6 +56,7 @@ type ActionFormBuilder[T any] struct {
 	fetch       bool
 	handlers    ActionFormBuilderHandlers[T]
 	initForm    func(fctx *ActionFormContext[T]) error
+	refresh     func(fctx *ActionFormContext[T]) error
 	decodedForm func(ctx *ActionFormContext[T]) (err error)
 }
 
@@ -71,6 +72,14 @@ func (b *ActionFormBuilder[T]) Fetch(v bool) *ActionFormBuilder[T] {
 
 func (b *ActionFormBuilder[T]) InitForm(f func(fctx *ActionFormContext[T]) error) *ActionFormBuilder[T] {
 	b.initForm = f
+	return b
+}
+
+// Refresh changes the form decoded for it to be drawn again
+// (ActionBuilder.FormRefresh): a choice that fills it, a total computed
+// again. The queries of the click are in fctx.Context.R.
+func (b *ActionFormBuilder[T]) Refresh(f func(fctx *ActionFormContext[T]) error) *ActionFormBuilder[T] {
+	b.refresh = f
 	return b
 }
 
@@ -171,15 +180,23 @@ done:
 func (b *ActionFormBuilder[T]) Build() *ActionBuilder {
 	b.handlers.Prepend(b.decodeForm)
 
-	// the + of a list of the form: its values decoded (not validated), the
-	// row added (go-rvq/rvq#17)
-	b.action.formAddRow = func(id, formKey string, ctx *web.EventContext) (err error) {
+	// the + of a list of the form, a refresh: its values decoded (not
+	// validated), the row added, the Refresh (go-rvq/rvq#17)
+	b.action.formRedraw = func(id string, ctx *web.EventContext) (err error) {
 		var fctx *ActionFormContext[T]
 		if fctx, err = b.GetOrCreateContext(id, ctx); err != nil {
 			return
 		}
 		b.eb.RunSetterFunc(&FieldsSetterOptions{SkipPermVerify: true}, ctx, false, fctx.Form)
-		return appendListEditorRows(ctx, fctx.Form, formKey)
+		if formKey := ctx.R.FormValue(ParamActionFormAddRow); formKey != "" {
+			if err = appendListEditorRows(ctx, fctx.Form, formKey); err != nil {
+				return
+			}
+		}
+		if ctx.R.FormValue(ParamActionFormRefresh) != "" && b.refresh != nil {
+			err = b.refresh(fctx)
+		}
+		return
 	}
 
 	if b.fetch {

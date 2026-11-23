@@ -74,14 +74,33 @@ type ActionBuilder struct {
 	// inline: an icon of the row of the listing, at the left of its menu,
 	// not in it (Inline)
 	inline bool
-	// formAddRow adds a row to the list formKey of the form of the action
+	// formRedraw decodes the form of the action and changes it — a row added
+	// to a list, a refresh — for it to be drawn again, not done
 	// (ActionFormBuilder, go-rvq/rvq#17)
-	formAddRow func(id, formKey string, ctx *web.EventContext) error
+	formRedraw func(id string, ctx *web.EventContext) error
 }
 
-// ParamActionFormAddRow is the key of the list of the form of an action its
-// + adds a row to: the action draws its form again with it, not done.
-const ParamActionFormAddRow = "presets_actionFormAddRow"
+const (
+	// ParamActionFormAddRow is the key of the list of the form of an action
+	// its + adds a row to: the action draws its form again with it, not
+	// done.
+	ParamActionFormAddRow = "presets_actionFormAddRow"
+	// ParamActionFormRefresh asks the form of an action drawn again with what
+	// it has — changed by its Refresh (ActionFormBuilder) —, not done.
+	ParamActionFormRefresh = "presets_actionFormRefresh"
+)
+
+// FormRefresh is the click that draws the form of the action again — its
+// values decoded, changed by its Refresh (ActionFormBuilder) —, not done:
+// a choice that fills the form, a total computed again. Its queries go
+// to the Refresh (ctx.R.FormValue).
+func (b *ActionBuilder) FormRefresh(ctx *web.EventContext) *web.VueEventTagBuilder {
+	return web.Plaid().
+		MergeQuery(true).
+		URL(actionRequestURI(ctx.R)).
+		EventFunc(b.doEvent()).
+		Query(ParamActionFormRefresh, "1")
+}
 
 // doEvent is the event that does the action, by its type.
 func (b *ActionBuilder) doEvent() string {
@@ -100,10 +119,11 @@ func (b *ActionBuilder) doEvent() string {
 func actionRequestURI(r *http.Request) string {
 	u := *r.URL
 	q := u.Query()
-	if !q.Has(ParamActionFormAddRow) {
+	if !q.Has(ParamActionFormAddRow) && !q.Has(ParamActionFormRefresh) {
 		return r.RequestURI
 	}
 	q.Del(ParamActionFormAddRow)
+	q.Del(ParamActionFormRefresh)
 	u.RawQuery = q.Encode()
 	return u.RequestURI()
 }
@@ -429,9 +449,9 @@ func (b *ActionBuilder) Do(baseModel *ModelBuilder, id string, ctx *web.EventCon
 		}
 	}
 
-	// the + of a list of its form: the row added, the form again
-	if formKey := ctx.R.FormValue(ParamActionFormAddRow); formKey != "" && b.formAddRow != nil {
-		if err = b.formAddRow(id, formKey, ctx); err != nil {
+	// the + of a list of its form, a refresh: the form changed, again
+	if b.formRedraw != nil && (ctx.R.FormValue(ParamActionFormAddRow) != "" || ctx.R.FormValue(ParamActionFormRefresh) != "") {
+		if err = b.formRedraw(id, ctx); err != nil {
 			return
 		}
 		err = b.respondForm(baseModel, id, ctx)
