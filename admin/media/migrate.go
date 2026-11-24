@@ -24,8 +24,17 @@ func init() {
 	})
 }
 
-// Migrate makes the tables of the media library, of the uses of its files
-// and of the usages of the media boxes.
+// Migrate makes the tables of the media library, of the uses of its files,
+// of the usages of the media boxes and of the formats of the images.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{}, &MediaBoxUsage{})
+	if err := db.AutoMigrate(&media_library.MediaLibrary{}, &MediaLibraryUse{}, &MediaBoxUsage{},
+		&MediaFormat{}, &MediaBoxUsageFormat{}); err != nil {
+		return err
+	}
+	// the formats of a field once a JSON of its own (never released): now
+	// MediaBoxUsageFormat
+	if m := db.Migrator(); m.HasColumn(&MediaBoxUsage{}, "formats") {
+		return m.DropColumn(&MediaBoxUsage{}, "formats")
+	}
+	return nil
 }

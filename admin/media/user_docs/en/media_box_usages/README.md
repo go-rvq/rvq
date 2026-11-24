@@ -22,15 +22,30 @@ for), a width and a height.
 
 ## Formats
 
-A field may offer **formats**: its sizes in another proportion — the cover
-of a page in portrait, when the others are landscape. Each format has a name
-(lower-case letters, digits, `-`), a label and its largest size; the other
-sizes follow its proportion. A format `portrait` of 1080×1440 in a field of
-1920×1080, 900×506 and 500×281 crops in 1080×1440, 506×675 and 281×375.
+A **format** is a proportion with a name — **Retrato 3:4**, **Quadrado
+1:1** — a record's image may be cropped in, instead of the field's sizes: the
+cover of a page in portrait, when the others are landscape.
 
+- **Image formats** lists the site's formats: a **label**, a **name**
+  (lower-case letters, digits, `-`: the suffix of the crops, as
+  `site.full_retrato`; not changed once made) and the **proportion**
+  (width:height). The ones **Of the code** come with the system and are not
+  deleted; a format a field offers is not either.
+- **Formats of the fields** says which formats each field offers: choose the
+  **Field** and the **Format** in the selectors, the **Position** among the
+  field's formats and, if you want, the **Width of the largest**. The column
+  **Sizes in the field** shows the crops the format will have there.
+- A format's sizes in a field are the field's in its proportion: each size
+  keeps its **shorter side**. In a field of 1920×1080, 900×506 and 500×281,
+  **Retrato 3:4** crops in 1080×1440, 506×675 and 281×375, **Quadrado 1:1**
+  in 1080×1080, 506×506 and 281×281. With a **Width of the largest**, the
+  largest size is that wide and the others follow its proportion.
 - In a record, the field's image shows **Format**: **Default** (the field's
-  sizes) or one of the formats. Choosing one crops the image in the format
-  again, at once.
+  sizes) or one of the formats the field offers. Choosing one crops the image
+  in it at once; save and publish the record.
 - The site asks for the same sizes as ever (`site.full`): a record of a
   format gets its crops. Nothing changes in the templates.
-- Saving new formats makes the crops of the field's files in the formats too.
+- Offering a format in a field, or changing a format's proportion, makes the
+  field's crops again in the background (the column **Crops** of **Image
+  sizes**). Taking a format off a field brings the records that used it back
+  to **Default** (publish them again for the site to show it).

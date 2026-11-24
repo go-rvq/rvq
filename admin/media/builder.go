@@ -19,6 +19,8 @@ type Builder struct {
 	// by their keys (*presets.ModelBuilder): what a recrop finds their
 	// records by, what the admin names them by
 	usageModels sync.Map
+	// codeFormats are the formats the code declares (Formats)
+	codeFormats []MediaFormat
 
 	base.WithConfigField
 }
