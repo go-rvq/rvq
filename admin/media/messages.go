@@ -33,6 +33,13 @@ type Messages struct {
 	MediaBoxUsageModel          string `i18n:"hint='Label of the model of a field of images.'"`
 	MediaBoxUsageLabel          string `i18n:"hint='Label of the name of a field of images.'"`
 	MediaBoxUsageSizes          string `i18n:"hint='Label of the sizes of the crops of a field of images.'"`
+	Format                      string `i18n:"hint='Label of the select of the format an image of a field is cropped in.'"`
+	FormatDefault               string `i18n:"hint='The format of a field of images that is its own sizes.'"`
+	MediaBoxUsageFormats        string `i18n:"hint='Label of the formats of a field of images: its sizes in other proportions.'"`
+	FormatsHint                 string `i18n:"hint='Hint of the formats of a field: what one is.'"`
+	FormatNameInvalid           string `i18n:"hint='Error: a format of a field with a name not of letters, digits and -.'"`
+	FormatTwice                 string `i18n:"hint='Error: two formats of a field of the same name.'"`
+	FormatNotPositive           string `i18n:"hint='Error: a format with no width or no height.'"`
 	MediaBoxUsageRecropState    string `i18n:"hint='Label of how the crops of a field are being made again.'"`
 	MediaBoxUsageRecropError    string `i18n:"hint='Label of what went wrong making the crops of a field again.'"`
 	MediaBoxUsageOriginal       string `i18n:"hint='Label of the largest an original image of a field is kept in.'"`
@@ -104,6 +111,13 @@ var Messages_en_US = &Messages{
 	MediaBoxUsageModel:          "Model",
 	MediaBoxUsageLabel:          "Field",
 	MediaBoxUsageSizes:          "Sizes",
+	Format:                      "Format",
+	FormatDefault:               "Default",
+	MediaBoxUsageFormats:        "Formats",
+	FormatsHint:                 "Other proportions of the sizes, one chosen in the image of a record (a portrait cover): a name (letters, digits, -), a label, and its largest size — the others in its proportion.",
+	FormatNameInvalid:           "The name of a format is letters, digits and - (%s).",
+	FormatTwice:                 "Two formats named %s.",
+	FormatNotPositive:           "The format %s needs a width and a height.",
 	MediaBoxUsageRecropState:    "Crops",
 	MediaBoxUsageRecropError:    "What went wrong",
 	MediaBoxUsageOriginal:       "Largest original",
@@ -176,6 +190,13 @@ var Messages_zh_CN = &Messages{
 	MediaBoxUsageModel:          "模型",
 	MediaBoxUsageLabel:          "字段",
 	MediaBoxUsageSizes:          "尺寸",
+	Format:                      "格式",
+	FormatDefault:               "默认",
+	MediaBoxUsageFormats:        "格式",
+	FormatsHint:                 "尺寸的其他比例，在记录的图片中选择：名称（字母、数字、-）、标签及其最大尺寸。",
+	FormatNameInvalid:           "格式名称只能包含字母、数字和 -（%s）。",
+	FormatTwice:                 "两个名为 %s 的格式。",
+	FormatNotPositive:           "格式 %s 需要宽度和高度。",
 	MediaBoxUsageRecropState:    "裁剪",
 	MediaBoxUsageRecropError:    "出错原因",
 	MediaBoxUsageOriginal:       "原图最大尺寸",
@@ -237,6 +258,13 @@ var Messages_ja_JP = &Messages{
 	MediaBoxUsageModel:          "モデル",
 	MediaBoxUsageLabel:          "フィールド",
 	MediaBoxUsageSizes:          "サイズ",
+	Format:                      "フォーマット",
+	FormatDefault:               "デフォルト",
+	MediaBoxUsageFormats:        "フォーマット",
+	FormatsHint:                 "サイズの別の比率。レコードの画像で選択：名前（英数字と-）、ラベル、最大サイズ。",
+	FormatNameInvalid:           "フォーマット名は英数字と - のみです（%s）。",
+	FormatTwice:                 "%s という名前のフォーマットが2つあります。",
+	FormatNotPositive:           "フォーマット %s には幅と高さが必要です。",
 	MediaBoxUsageRecropState:    "トリミング",
 	MediaBoxUsageRecropError:    "エラーの内容",
 	MediaBoxUsageOriginal:       "元画像の最大サイズ",
@@ -298,6 +326,13 @@ var Messages_pt_BR = &Messages{
 	MediaBoxUsageModel:          "Modelo",
 	MediaBoxUsageLabel:          "Campo",
 	MediaBoxUsageSizes:          "Tamanhos",
+	Format:                      "Formato",
+	FormatDefault:               "Padrão",
+	MediaBoxUsageFormats:        "Formatos",
+	FormatsHint:                 "Outras proporções dos tamanhos, uma escolhida na imagem de um registro (uma capa em retrato): um nome (letras, dígitos, -), um rótulo e o seu maior tamanho — os outros na proporção dele.",
+	FormatNameInvalid:           "O nome de um formato é de letras, dígitos e - (%s).",
+	FormatTwice:                 "Dois formatos com o nome %s.",
+	FormatNotPositive:           "O formato %s precisa de largura e altura.",
 	MediaBoxUsageRecropState:    "Recortes",
 	MediaBoxUsageRecropError:    "O que deu errado",
 	MediaBoxUsageOriginal:       "Original máximo",

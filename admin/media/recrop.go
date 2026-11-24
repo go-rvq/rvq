@@ -55,11 +55,12 @@ func (b *Builder) recrop(key string) (err error) {
 	if u == nil {
 		return fmt.Errorf("media: no field %s", key)
 	}
-	sizes := u.EffectiveSizes()
+	// the field's and its formats': a box of a format shows its crops
+	sizes := u.AllSizes()
 	finish := func(state string, errs []string) {
 		up := map[string]any{"recrop_state": state, "recrop_error": strings.Join(errs, "\n")}
 		if state == RecropDone {
-			up["applied_sizes"] = encodeSizes(sizes)
+			up["applied_sizes"] = encodeSizes(u.EffectiveSizes())
 		}
 		b.db.Model(&MediaBoxUsage{}).Where("usage_key = ?", key).Updates(up)
 	}

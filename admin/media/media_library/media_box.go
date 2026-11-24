@@ -23,6 +23,10 @@ type MediaBox struct {
 	FileName    string
 	Description string
 	FileSizes   map[string]int `json:",omitempty"`
+	// Format is the format of the field (MediaBoxConfig.Formats) the image
+	// is cropped in: its sizes are FormatSizeName(size, Format); "", the
+	// field's own sizes.
+	Format string `json:",omitempty"`
 	// for default image
 	Width  int `json:",omitempty"`
 	Height int `json:",omitempty"`
@@ -82,6 +86,11 @@ type MediaBoxConfig struct {
 	// whose sizes (the admin's, else the code's) the server reads: the
 	// sizes the browser sends back are not the ones it trusts.
 	Usage string `json:",omitempty"`
+	// Format is the format the box's image is cropped in (MediaBox.Format);
+	// Formats, the ones its field offers (its use's: the server's) — a
+	// format, the field's sizes in another proportion.
+	Format  string         `json:",omitempty"`
+	Formats []FormatOption `json:",omitempty"`
 }
 
 // DefaultOriginalMax is the largest an image's original is kept in, in a box
@@ -155,7 +164,25 @@ func (mediaBox *MediaBox) IsSVG() bool {
 	return base.IsSVGFormat(mediaBox.Url)
 }
 
+// FormatOption is a format a field of images offers: its name, and how a
+// person reads it.
+type FormatOption struct {
+	Name  string
+	Label string
+}
+
+// FormatSizeName is the name of the size size in the format format: the crop
+// of the size in the proportion of the format.
+func FormatSizeName(size, format string) string { return size + "_" + format }
+
+// URL is the address of the file, of its size styles[0] when given — in the
+// box's format, when it has the crop of it.
 func (mediaBox *MediaBox) URL(styles ...string) string {
+	if mediaBox.Format != "" && len(styles) > 0 && styles[0] != "" {
+		if fs := FormatSizeName(styles[0], mediaBox.Format); mediaBox.FileSizes[fs] > 0 {
+			styles = append([]string{fs}, styles[1:]...)
+		}
+	}
 	if mediaBox.Url != "" && len(styles) > 0 {
 		ext := path.Ext(mediaBox.Url)
 		return fmt.Sprintf("%v.%v%v", strings.TrimSuffix(mediaBox.Url, ext), styles[0], ext)

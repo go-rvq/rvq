@@ -42,6 +42,10 @@ type MediaBoxUsage struct {
 	// AppliedSizes are the sizes the crops were last made in (Recrop); none
 	// when they never were here.
 	AppliedSizes string `gorm:"type:text"`
+	// Formats are the admin's formats of the field (JSON of []UsageFormat):
+	// its sizes in other proportions, one chosen in a record's box
+	// (MediaBox.Format) — a portrait cover among landscape ones.
+	Formats string `gorm:"type:text"`
 	// DefaultOriginalWidth × DefaultOriginalHeight is the code's limit of
 	// the original of an image (MediaBoxConfig.OriginalLimit; 0: the media
 	// library's), OriginalWidth × OriginalHeight the admin's (0: the code's):
@@ -199,6 +203,18 @@ func (b *Builder) withUsage(cfg *media_library.MediaBoxConfig) *media_library.Me
 	c := *cfg
 	if l := u.EffectiveSizes(); len(l) > 0 {
 		c.Sizes = sizesOf(l, cfg.Sizes)
+	}
+	// its formats, the one of the box: its sizes the box's
+	c.Formats = nil
+	for _, f := range u.UsageFormats() {
+		c.Formats = append(c.Formats, media_library.FormatOption{Name: f.Name, Label: f.Label})
+	}
+	if f := u.format(c.Format); f != nil {
+		if l := u.FormatSizes(*f); len(l) > 0 {
+			c.Sizes = sizesOf(l, nil)
+		}
+	} else {
+		c.Format = ""
 	}
 	c.OriginalMax = u.EffectiveOriginalMax()
 	c.ThumbMax = u.EffectiveThumbMax()
@@ -405,4 +421,79 @@ func (b *Builder) uploadConfig(cfg *media_library.MediaBoxConfig) *base.Config {
 // imagesOf says the box of cfg takes images (its type an image's, or any).
 func imagesOf(cfg *media_library.MediaBoxConfig) bool {
 	return cfg.AllowType == "" || cfg.AllowType == media_library.ALLOW_TYPE_IMAGE
+}
+
+// UsageFormat is a format of a field of images: its name (the suffix of its
+// sizes: FormatSizeName), its label, and the largest of its sizes — the
+// field's others in its proportion, scaled by their widths (FormatSizes).
+type UsageFormat struct {
+	Name   string `json:"name"`
+	Label  string `json:"label"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
+
+func encodeFormats(l []UsageFormat) string {
+	if len(l) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(l)
+	return string(b)
+}
+
+func decodeFormats(s string) []UsageFormat {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	var l []UsageFormat
+	if json.Unmarshal([]byte(s), &l) != nil {
+		return nil
+	}
+	return l
+}
+
+// UsageFormats are the formats of the field.
+func (u *MediaBoxUsage) UsageFormats() []UsageFormat { return decodeFormats(u.Formats) }
+
+// FormatSizes are the sizes of the field in the format f: each of its sizes
+// (EffectiveSizes) in the proportion of f, the largest f's own size, the
+// others scaled as their widths are to its; named FormatSizeName.
+func (u *MediaBoxUsage) FormatSizes(f UsageFormat) []UsageSize {
+	sizes := u.EffectiveSizes()
+	maxW := 0
+	for _, s := range sizes {
+		maxW = max(maxW, s.Width)
+	}
+	if maxW == 0 || f.Width <= 0 || f.Height <= 0 {
+		return nil
+	}
+	out := make([]UsageSize, 0, len(sizes))
+	for _, s := range sizes {
+		out = append(out, UsageSize{
+			Name:   media_library.FormatSizeName(s.Name, f.Name),
+			Width:  int(math.Round(float64(f.Width) * float64(s.Width) / float64(maxW))),
+			Height: int(math.Round(float64(f.Height) * float64(s.Width) / float64(maxW))),
+		})
+	}
+	return out
+}
+
+// format is the format of the field named name; nil when it has none.
+func (u *MediaBoxUsage) format(name string) *UsageFormat {
+	for _, f := range u.UsageFormats() {
+		if f.Name == name {
+			return &f
+		}
+	}
+	return nil
+}
+
+// AllSizes are the sizes of the field and of each of its formats: what the
+// crops of its files are made in (Recrop).
+func (u *MediaBoxUsage) AllSizes() []UsageSize {
+	l := u.EffectiveSizes()
+	for _, f := range u.UsageFormats() {
+		l = append(l, u.FormatSizes(f)...)
+	}
+	return l
 }

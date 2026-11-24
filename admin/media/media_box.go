@@ -83,10 +83,13 @@ func mediaBoxComponentFunc(db *gorm.DB, mb *Builder, readonly bool) presets.Fiel
 		if !ok {
 			cfg = &media_library.MediaBoxConfig{}
 		}
-		if mb != nil {
-			cfg = mb.fieldUsage(field, cfg)
-		}
 		mediaBox := field.Value().(media_library.MediaBox)
+		if mb != nil {
+			// the box's format: its sizes the field's in it
+			c := *cfg
+			c.Format = mediaBox.Format
+			cfg = mb.fieldUsage(field, &c)
+		}
 		if cfg.DescriptionField != "" {
 			// shown as the box's, kept in the record's field
 			mediaBox.Description = MediaBoxDescription(field, cfg)

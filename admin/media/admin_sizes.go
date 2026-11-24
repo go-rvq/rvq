@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,21 @@ const sizesSchema = `class Size {
 [layout={name: "table", columns: [#name, #width, #height]}]
 export type default []Size`
 
+// formatsSchema is the form of the formats of a field: a table of a name, a
+// label, a width and a height (the largest size of the format).
+const formatsSchema = `class Format {
+	name str
+	label str
+	[min=1] width int
+	[min=1] height int
+}
+
+[layout={name: "table", columns: [#name, #label, #width, #height]}]
+export type default []Format`
+
+// formatNameRe is a format's name: the suffix of its sizes' names.
+var formatNameRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+
 // configSizes is the admin of the sizes of the fields of images
 // (MediaBoxUsage): their list — the code's or the admin's, how their crops
 // are —, the form of a field's sizes, and the action that makes its crops
@@ -41,6 +57,10 @@ export type default []Size`
 func configSizes(pb *presets.Builder, mb *Builder) {
 	sf := schemaform.New()
 	schema, err := sf.Parse(sizesSchema)
+	if err != nil {
+		panic(err)
+	}
+	fschema, err := sf.Parse(formatsSchema)
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +103,7 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 	})
 	l.Field("RecropState").ComponentFunc(status)
 
-	d := m.Detailing("Model", "Label", "Sizes", "Original", "Thumb", "RecropState", "RecropError")
+	d := m.Detailing("Model", "Label", "Sizes", "Formats", "Original", "Thumb", "RecropState", "RecropError")
 	labeled := func(label, text string) h.HTMLComponent {
 		return h.Div(h.Div(h.Text(label)).Class("text-caption text-medium-emphasis"), h.Div(h.Text(text))).Class("mb-4")
 	}
@@ -98,6 +118,14 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 	d.Field("Sizes").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return h.Div(h.Div(h.Text(field.Label)).Class("text-caption text-medium-emphasis"),
 			h.Div(h.Text(sizesText(GetMessages(ctx.Context()), field.Obj.(*MediaBoxUsage))))).Class("mb-4")
+	})
+	// the formats: each its label, its name and its largest size
+	d.Field("Formats").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		var l []string
+		for _, f := range field.Obj.(*MediaBoxUsage).UsageFormats() {
+			l = append(l, fmt.Sprintf("%s (%s) %d×%d", f.Label, f.Name, f.Width, f.Height))
+		}
+		return labeled(field.Label, strings.Join(l, ", "))
 	})
 	d.Field("Original").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
 		return labeled(field.Label, original(field, ctx))
@@ -133,7 +161,37 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 		return
 	})
 
-	ed := m.Editing("Sizes", []string{"OriginalWidth", "OriginalHeight"}, []string{"ThumbWidth", "ThumbHeight"})
+	ed := m.Editing("Sizes", "Formats", []string{"OriginalWidth", "OriginalHeight"}, []string{"ThumbWidth", "ThumbHeight"})
+	// the formats: the sizes in other proportions, one chosen in a record's
+	// image (MediaBox.Format)
+	ed.Field("Formats").ComponentFunc(func(field *presets.FieldContext, ctx *web.EventContext) h.HTMLComponent {
+		u := field.Obj.(*MediaBoxUsage)
+		value, _ := sf.DecodeValue(u.Formats)
+		form := vue.UserComponent(sf.ComponentFunc(fschema)(field, ctx)).Assign("form", field.FormKey, fschema.Filled(value))
+		var errs h.HTMLComponents
+		for _, e := range field.Errors {
+			errs = append(errs, h.Div(h.Text(e)).Class("text-error text-body-2 mb-2").Attr("data-formats-error", true))
+		}
+		return h.Div(
+			errs, form,
+			h.Div(h.Text(GetMessages(ctx.Context()).FormatsHint)).Class("text-caption text-medium-emphasis mt-1 mb-3"),
+		).Attr("data-media-formats", true)
+	}).SetterFunc(func(obj any, field *presets.FieldContext, ctx *web.EventContext) error {
+		value, err := sf.DecodeForm(ctx, fschema, ctx.R.Form, field.FormKey)
+		if err != nil {
+			return err
+		}
+		b, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		var l []UsageFormat
+		if err = json.Unmarshal(b, &l); err != nil {
+			return err
+		}
+		obj.(*MediaBoxUsage).Formats = encodeFormats(l)
+		return nil
+	})
 	// the limits of the original and of the thumbnail: the admin's; empty
 	// (0), the code's — said as the hint
 	for _, f := range []string{"OriginalWidth", "OriginalHeight", "ThumbWidth", "ThumbHeight"} {
@@ -231,6 +289,18 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 			}
 			seen[s.Name] = true
 		}
+		formats := map[string]bool{}
+		for _, f := range u.UsageFormats() {
+			switch {
+			case !formatNameRe.MatchString(f.Name):
+				errs.FieldError("Formats", fmt.Sprintf(msgs.FormatNameInvalid, f.Name))
+			case formats[f.Name]:
+				errs.FieldError("Formats", fmt.Sprintf(msgs.FormatTwice, f.Name))
+			case f.Width <= 0 || f.Height <= 0:
+				errs.FieldError("Formats", fmt.Sprintf(msgs.FormatNotPositive, f.Name))
+			}
+			formats[f.Name] = true
+		}
 		if u.OriginalWidth < 0 || u.OriginalHeight < 0 || (u.OriginalWidth > 0) != (u.OriginalHeight > 0) {
 			errs.FieldError("OriginalWidth", msgs.OriginalBoth)
 		}
@@ -246,12 +316,12 @@ func configSizes(pb *presets.Builder, mb *Builder) {
 		u := obj.(*MediaBoxUsage)
 		before := mb.usage(u.Key)
 		if err := mb.db.Model(&MediaBoxUsage{}).Where("usage_key = ?", u.Key).
-			Updates(map[string]any{"sizes": u.Sizes, "original_width": u.OriginalWidth, "original_height": u.OriginalHeight,
+			Updates(map[string]any{"sizes": u.Sizes, "formats": u.Formats, "original_width": u.OriginalWidth, "original_height": u.OriginalHeight,
 				"thumb_width": u.ThumbWidth, "thumb_height": u.ThumbHeight}).Error; err != nil {
 			return err
 		}
 		// sizes of other measures: the crops made again in them
-		if before == nil || encodeSizes(before.EffectiveSizes()) != encodeSizes(u.EffectiveSizes()) {
+		if before == nil || encodeSizes(before.AllSizes()) != encodeSizes(u.AllSizes()) {
 			mb.StartRecrop(u.Key)
 		}
 		return nil

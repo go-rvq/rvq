@@ -710,6 +710,15 @@ func chooseFile(b *Builder) web.EventFunc {
 		// file being picked.
 		id := ctx.R.FormValue("id")
 		cfg := b.cfgOf(ctx.R.FormValue("cfg"))
+		// a format chosen in the box: its sizes (withUsage) the crops'
+		if f, ok := ctx.R.Form[chooseFormatParam]; ok {
+			c := stringToCfg(ctx.R.FormValue("cfg"))
+			c.Format = ""
+			if len(f) > 0 {
+				c.Format = f[0]
+			}
+			cfg = b.withUsage(c)
+		}
 
 		var m media_library.MediaLibrary
 		// First, not Find: Find leaves the record zeroed and reports no error
@@ -759,6 +768,7 @@ func chooseFile(b *Builder) web.EventFunc {
 			FileSizes:   m.File.FileSizes,
 			Width:       m.File.Width,
 			Height:      m.File.Height,
+			Format:      cfg.Format,
 		}
 
 		r.UpdatePortal(
@@ -773,6 +783,10 @@ func chooseFile(b *Builder) web.EventFunc {
 		return
 	}
 }
+
+// chooseFormatParam is the format chosen in the box (MediaBox.Format): the
+// box's file cropped in it; "" the field's own sizes.
+const chooseFormatParam = "format"
 
 // chooseDroppedParam says the file was dropped on the media box (uploaded and
 // chosen at once): no chooser to close.

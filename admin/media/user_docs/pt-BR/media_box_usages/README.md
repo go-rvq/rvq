@@ -22,3 +22,20 @@ site pedem), uma largura e uma altura.
 - Para voltar aos tamanhos do site, deixe a tabela como a do site; quando os
   tamanhos do próprio site mudam numa versão nova, os recortes são refeitos
   sozinhos.
+
+## Formatos
+
+Um campo pode oferecer **formatos**: os seus tamanhos em outra proporção — a
+capa de uma página em retrato, quando as outras são em paisagem. Cada formato
+tem um nome (letras minúsculas, dígitos, `-`), um rótulo e o seu maior
+tamanho; os outros tamanhos seguem a proporção dele. Um formato `retrato` de
+1080×1440 num campo de 1920×1080, 900×506 e 500×281 recorta em 1080×1440,
+506×675 e 281×375.
+
+- No registro, a imagem do campo mostra **Formato**: **Padrão** (os tamanhos
+  do campo) ou um dos formatos. Escolher um refaz os recortes da imagem no
+  formato, na hora.
+- O site pede os mesmos tamanhos de sempre (`site.full`): o registro de um
+  formato recebe os recortes dele. Nada muda nos templates.
+- Salvar formatos novos refaz os recortes dos arquivos do campo também nos
+  formatos.

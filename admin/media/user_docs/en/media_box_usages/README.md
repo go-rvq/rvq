@@ -19,3 +19,18 @@ for), a width and a height.
   used in both would otherwise be cropped in one, then the other.
 - Back to the site's sizes: set the table as the site's again; when the site's
   own sizes change in a new version, the crops are made again by themselves.
+
+## Formats
+
+A field may offer **formats**: its sizes in another proportion — the cover
+of a page in portrait, when the others are landscape. Each format has a name
+(lower-case letters, digits, `-`), a label and its largest size; the other
+sizes follow its proportion. A format `portrait` of 1080×1440 in a field of
+1920×1080, 900×506 and 500×281 crops in 1080×1440, 506×675 and 281×375.
+
+- In a record, the field's image shows **Format**: **Default** (the field's
+  sizes) or one of the formats. Choosing one crops the image in the format
+  again, at once.
+- The site asks for the same sizes as ever (`site.full`): a record of a
+  format gets its crops. Nothing changes in the templates.
+- Saving new formats makes the crops of the field's files in the formats too.

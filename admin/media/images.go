@@ -172,6 +172,33 @@ func imageCard(ctx *web.EventContext, mbx *media_library.MediaBox, field string,
 		image,
 		h.Div(h.Text(mbx.FileName)).Class("text-caption text-truncate mt-1").Attr("title", mbx.FileName),
 	).Attr("data-image-card", true)
+	// the formats of the field: the one its image is cropped in — chosen,
+	// its crops made in it (the file chosen again, in the format)
+	if single && isImage && len(cfg.Formats) > 0 && !cfg.DisableCrop {
+		items := []map[string]string{{"title": msgr.FormatDefault, "value": ""}}
+		for _, f := range cfg.Formats {
+			label := f.Label
+			if label == "" {
+				label = f.Name
+			}
+			items = append(items, map[string]string{"title": label, "value": f.Name})
+		}
+		sel := v.VSelect().Label(msgr.Format).Items(items).ItemTitle("title").ItemValue("value").
+			ModelValue(mbx.Format).Density(v.DensityCompact).HideDetails(true).Variant(v.FieldVariantUnderlined).
+			Class("mt-2").Attr("data-media-format", field)
+		if readonly || disabled {
+			sel.Disabled(true)
+		} else {
+			sel.Attr("@update:model-value", web.Plaid().EventFunc(chooseFileEvent).
+				Query("field", field).
+				Query("id", fmt.Sprint(mbx.ID)).
+				Query(chooseDroppedParam, "1").
+				Query(chooseFormatParam, web.Var("$event")).
+				FieldValue("cfg", h.JSONString(cfg)).
+				Go())
+		}
+		card.AppendChildren(sel)
+	}
 	if !cfg.DisableDescription || cfg.DescriptionField != "" {
 		key := MediaBoxDescriptionKey(field, cfg)
 		description := ctx.R.FormValue(key)
