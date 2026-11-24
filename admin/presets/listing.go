@@ -391,7 +391,7 @@ func (b *ListingBuilder) defaultPageFunc(ctx *web.EventContext) (r web.PageRespo
 
 	// the page of an action of the listing (".../action:<name>")
 	if ok, aerr := actionPage(ctx, &r, b.mb, b.actions, "", func(a *ActionBuilder) bool {
-		return !b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied()
+		return !b.mb.permissioner.ReqListActioner(ctx.R, a.PermName()).Denied()
 	}); ok {
 		if errors.Is(aerr, errNoActionPage) {
 			return b.mb.p.DefaultNotFoundPageFunc(ctx)
@@ -835,7 +835,7 @@ func (b *ListingBuilder) openActionDialogInternal(actionList []*ActionBuilder, c
 		return
 	}
 
-	if b.mb.permissioner.ReqListActioner(ctx.R, action.name).Denied() {
+	if b.mb.permissioner.ReqListActioner(ctx.R, action.PermName()).Denied() {
 		err = perm.PermissionDenied
 		return
 	}

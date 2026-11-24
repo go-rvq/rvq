@@ -3,7 +3,13 @@ package presets
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
+
+	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/presets/actions"
+	"github.com/go-rvq/rvq/web"
 
 	"github.com/go-rvq/rvq/x/i18n"
 	"github.com/go-rvq/rvq/x/perm"
@@ -107,5 +113,33 @@ func TestGroupPermPart(t *testing.T) {
 	}
 	if ActionPerm("Publish") != "!publish" || PermUpdate != "@edit" {
 		t.Errorf("the verbs %q, %q", ActionPerm("Publish"), PermUpdate)
+	}
+}
+
+// An action of the listing has its dialog opened by its permission
+// (ActionPerm: "!export") — the one its doing asks, the one the roles give —,
+// not by its bare name.
+func TestListingActionByItsPermission(t *testing.T) {
+	pode := perm.PolicyFor("a").WhoAre(perm.Allowed).ToDo(PermList, ActionPerm("export")).On("admin:posts:*")
+	nome := perm.PolicyFor("b").WhoAre(perm.Allowed).ToDo(PermList, "export").On("admin:posts:*")
+	for _, c := range []struct {
+		role   string
+		denied bool
+	}{{"a", false}, {"b", true}} {
+		roles := []string{c.role}
+		b := New(i18n.New()).URIPrefix("/admin")
+		b.Permission(perm.New().Policies(pode, nome).SubjectsFunc(func(*http.Request) []string { return roles }))
+		posts := b.Model(&uniquePost{}, ModelWithID("posts"))
+		posts.Listing().Action("export").ComponentFunc(func(id string, ctx *web.EventContext) (h.HTMLComponent, error) {
+			return h.Div(h.Text("the export")), nil
+		})
+		b.Build()
+		q := url.Values{"__execute_event__": {actions.OpenActionDialog}, ParamAction: {"export"}, ParamOverlay: {string(actions.Dialog)}}
+		r := httptest.NewRequest("POST", "/admin/posts?"+q.Encode(), nil)
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, r)
+		if got := strings.Contains(w.Body.String(), "the export"); got == c.denied {
+			t.Errorf("role %s: the dialog %v — %.300s", c.role, got, w.Body.String())
+		}
 	}
 }

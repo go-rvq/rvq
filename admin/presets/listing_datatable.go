@@ -651,7 +651,7 @@ func (lcb *ListingComponentBuilder) actionsComponent(
 
 	// Render actions
 	for _, a := range b.actions {
-		if b.mb.permissioner.ReqListActioner(ctx.R, a.name).Denied() || !a.trash.Available(inTrash) {
+		if b.mb.permissioner.ReqListActioner(ctx.R, a.PermName()).Denied() || !a.trash.Available(inTrash) {
 			continue
 		}
 		// one off (SetEnabled) is not offered
