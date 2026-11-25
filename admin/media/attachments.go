@@ -250,18 +250,30 @@ func (a *AttachmentsBuilder) Kept(ctx *web.EventContext, key string, current any
 }
 
 // Save makes the attachments of the owner ownerID (its field ownerField in
-// the record of an attachment) kept: those of before removed, each of kept
-// (Kept) created in its order — its position 1, 2, 3… —, and set (set, nil
-// none: the organization of a record, say) before.
+// the record of an attachment) kept (SaveOf).
 func (a *AttachmentsBuilder) Save(tx *gorm.DB, ownerField string, ownerID any, kept []any, set func(obj any)) error {
-	column := tx.NamingStrategy.ColumnName("", ownerField)
-	if err := tx.Where(column+" = ?", ownerID).Delete(reflect.New(reflect.TypeOf(a.model).Elem()).Interface()).Error; err != nil {
+	return a.SaveOf(tx, map[string]any{ownerField: ownerID}, kept, set)
+}
+
+// SaveOf makes the attachments of the owner — its fields in the record of an
+// attachment and their values (one: its id; two of a polymorphic owner: its
+// id and its kind) — kept (Kept): those of before removed, each of kept
+// created in its order — its position 1, 2, 3…, the fields of the owner —,
+// and set (set, nil none: the organization of a record, say) before.
+func (a *AttachmentsBuilder) SaveOf(tx *gorm.DB, owner map[string]any, kept []any, set func(obj any)) error {
+	q := tx.Session(&gorm.Session{NewDB: true})
+	for f, v := range owner {
+		q = q.Where(tx.NamingStrategy.ColumnName("", f)+" = ?", v)
+	}
+	if err := q.Delete(reflect.New(reflect.TypeOf(a.model).Elem()).Interface()).Error; err != nil {
 		return err
 	}
 	for i, obj := range kept {
 		rv := reflect.Indirect(reflect.ValueOf(obj))
-		if f := rv.FieldByName(ownerField); f.IsValid() && f.CanSet() {
-			f.Set(reflect.ValueOf(ownerID).Convert(f.Type()))
+		for f, v := range owner {
+			if fv := rv.FieldByName(f); fv.IsValid() && fv.CanSet() {
+				fv.Set(reflect.ValueOf(v).Convert(fv.Type()))
+			}
 		}
 		if f := rv.FieldByName(a.position); f.IsValid() && f.CanSet() {
 			f.SetInt(int64(i + 1))
@@ -269,7 +281,7 @@ func (a *AttachmentsBuilder) Save(tx *gorm.DB, ownerField string, ownerID any, k
 		if set != nil {
 			set(obj)
 		}
-		if err := tx.Create(obj).Error; err != nil {
+		if err := tx.Session(&gorm.Session{NewDB: true}).Create(obj).Error; err != nil {
 			return err
 		}
 	}

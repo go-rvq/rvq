@@ -49,6 +49,15 @@ func TestAttachmentsSave(t *testing.T) {
 	if n != 1 {
 		t.Errorf("another owner's: %d", n)
 	}
+	// of a polymorphic owner: its id and its kind
+	if err := a.SaveOf(db, map[string]any{"DonoID": uint(3), "Org": "beta"}, []any{&anexo{Descricao: "c"}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	var c anexo
+	db.Where("dono_id = ? AND org = ?", 3, "beta").First(&c)
+	if c.Descricao != "c" || c.Posicao != 1 {
+		t.Errorf("of the owner of two fields: %+v", c)
+	}
 	// the model, its fields: the table of the files
 	if a.Model() == nil || a.Nested() == nil {
 		t.Fatal("no model")
