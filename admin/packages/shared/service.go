@@ -217,7 +217,11 @@ func (s *Service) chainIn(db *gorm.DB, resource, id string) ([]level, error) {
 			Pluck(r.ParentColumn, &parents).Error; err != nil {
 			return nil, err
 		}
-		if len(parents) == 0 || parents[0] == nil || *parents[0] == "" {
+		// the record is gone (deleted for good): no chain of it
+		if len(parents) == 0 {
+			return nil, ErrNoRecord
+		}
+		if parents[0] == nil || *parents[0] == "" {
 			break
 		}
 		resource, id = r.Parent, *parents[0]

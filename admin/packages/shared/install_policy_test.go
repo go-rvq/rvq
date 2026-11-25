@@ -247,6 +247,19 @@ func TestInstallParentRead(t *testing.T) {
 	if got := resources("caio"); !slices.Equal(got, want) {
 		t.Errorf("synced again: %q", got)
 	}
+	// an access of a document deleted for good: synced again all the same,
+	// the others kept
+	gone := sharedtest.NewDocumento(f.db, pasta, "Apagado")
+	f.share("admin_docs", gone.ID, shared.UserSubject("bia"), "Viewer", "ana")
+	if err := f.db.Exec("DELETE FROM sharedtest_documentos WHERE id = ?", gone.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := f.s.SyncPolicies(); err != nil {
+		t.Fatalf("an access of a record gone: %v", err)
+	}
+	if got := resources("caio"); !slices.Equal(got, want) {
+		t.Errorf("synced with a record gone: %q", got)
+	}
 	f.share("admin_docs", doc.ID, shared.UserSubject("dani"), "Viewer", "ana", shared.NoParentRead())
 	if got := resources("dani"); len(got) != 3 {
 		t.Errorf("NoParentRead: %q", got)

@@ -2,11 +2,13 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/x/lifecycle"
 	"github.com/go-rvq/rvq/x/migrate"
 	"io"
+	"log"
 	"net/http"
 	"slices"
 	"sort"
@@ -1032,6 +1034,12 @@ func (s *Service) syncPolicies(m installedModel) error {
 	for i := range accesses {
 		a := &accesses[i]
 		if err := m.policies(s.o.DB, a, a.Role, false); err != nil {
+			// an access of a record deleted for good: no policies, and the
+			// admin starts all the same
+			if errors.Is(err, ErrNoRecord) {
+				log.Printf("shared: the access %s of %s %s: the record is gone", a.ID, m.resource, a.RecordID)
+				continue
+			}
 			return fmt.Errorf("shared: the policies of %s %s: %w", m.resource, a.RecordID, err)
 		}
 	}
