@@ -17,6 +17,13 @@ type Messages struct {
 	EditImage                     string `i18n:"hint='Title of the editor of an image (crop, colors, annotations), and of the click on a thumbnail that opens it.'"`
 	EditBeforeUpload              string `i18n:"hint='Switch of the upload: the images chosen open in the editor before they are sent.'"`
 	DropImages                    string `i18n:"hint='Placeholder of the place to drop the images of a list on.'"`
+	DropFiles                     string `i18n:"hint='Placeholder of the place to drop the files of a list on.'"`
+	AttachmentImages              string `i18n:"hint='Label of the images attached to a record.'"`
+	AttachmentFiles               string `i18n:"hint='Label of the files attached to a record.'"`
+	AttachmentImage               string `i18n:"hint='Label of an image attached to a record.'"`
+	AttachmentName                string `i18n:"hint='Column of the name of a file attached to a record.'"`
+	AttachmentDescription         string `i18n:"hint='Column of the description of a file attached to a record.'"`
+	AttachmentSize                string `i18n:"hint='Column of the size of a file attached to a record.'"`
 	DropFile                      string `i18n:"hint='Placeholder of an empty field of a file: drop it here, or click to choose it.'"`
 	DropImage                     string `i18n:"hint='Placeholder of an empty field of an image: drop it here, or click to choose it.'"`
 	ImageDescription              string `i18n:"hint='Placeholder of the description of an image of a list.'"`
@@ -122,6 +129,13 @@ var Messages_en_US = &Messages{
 	EditImage:                     "Edit image",
 	EditBeforeUpload:              "Edit before uploading",
 	DropImages:                    "Drop the images here or click to choose",
+	DropFiles:                     "Drop the files here or click to choose",
+	AttachmentImages:              "Images",
+	AttachmentFiles:               "Files",
+	AttachmentImage:               "Image",
+	AttachmentName:                "Name",
+	AttachmentDescription:         "Description",
+	AttachmentSize:                "Size",
 	DropFile:                      "Drop the file here or click to choose",
 	DropImage:                     "Drop the image here or click to choose",
 	ImageDescription:              "Description",
@@ -225,6 +239,13 @@ var Messages_zh_CN = &Messages{
 	EditImage:                     "编辑图片",
 	EditBeforeUpload:              "上传前编辑",
 	DropImages:                    "将图片拖放到此处或点击选择",
+	DropFiles:                     "将文件拖放到此处或点击选择",
+	AttachmentImages:              "图片",
+	AttachmentFiles:               "文件",
+	AttachmentImage:               "图片",
+	AttachmentName:                "名称",
+	AttachmentDescription:         "描述",
+	AttachmentSize:                "大小",
 	DropFile:                      "将文件拖放到此处或点击选择",
 	DropImage:                     "将图片拖放到此处或点击选择",
 	ImageDescription:              "描述",
@@ -317,6 +338,13 @@ var Messages_ja_JP = &Messages{
 	EditImage:                     "画像を編集",
 	EditBeforeUpload:              "アップロード前に編集",
 	DropImages:                    "ここに画像をドロップするか、クリックして選択",
+	DropFiles:                     "ここにファイルをドロップするか、クリックして選択",
+	AttachmentImages:              "画像",
+	AttachmentFiles:               "ファイル",
+	AttachmentImage:               "画像",
+	AttachmentName:                "名前",
+	AttachmentDescription:         "説明",
+	AttachmentSize:                "サイズ",
 	DropFile:                      "ここにファイルをドロップするか、クリックして選択",
 	DropImage:                     "ここに画像をドロップするか、クリックして選択",
 	ImageDescription:              "説明",
@@ -409,6 +437,13 @@ var Messages_pt_BR = &Messages{
 	EditImage:                     "Editar imagem",
 	EditBeforeUpload:              "Editar antes de enviar",
 	DropImages:                    "Solte as imagens aqui ou clique para escolher",
+	DropFiles:                     "Solte os arquivos aqui ou clique para escolher",
+	AttachmentImages:              "Imagens",
+	AttachmentFiles:               "Arquivos",
+	AttachmentImage:               "Imagem",
+	AttachmentName:                "Nome",
+	AttachmentDescription:         "Descrição",
+	AttachmentSize:                "Tamanho",
 	DropFile:                      "Solte o arquivo aqui ou clique para escolher",
 	DropImage:                     "Solte a imagem aqui ou clique para escolher",
 	ImageDescription:              "Descrição",
