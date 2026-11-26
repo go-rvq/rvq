@@ -58,6 +58,8 @@ func findOld(obj interface{}, db *gorm.DB) (interface{}, bool) {
 	if db.Where(strings.Join(sqls, " AND "), vars...).First(old).Error != nil {
 		return nil, false
 	}
+	// the lists obj carries, as they are before it is saved (diff_relations.go)
+	loadOldRelations(db, old, obj, stmt.Schema.Relationships.Relations)
 
 	return old, true
 }

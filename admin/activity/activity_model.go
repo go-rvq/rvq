@@ -323,7 +323,7 @@ func (mb *ModelBuilder) addDiff(action string, creator, old, now interface{}, db
 }
 
 func (mb *ModelBuilder) addDiffWithInfo(info *RequestInfo, action string, creator, old, now interface{}, db *gorm.DB) error {
-	diffs, err := mb.Diff(old, now)
+	diffs, err := NewDiffBuilder(mb).diffRecord(db, old, now)
 	if err != nil {
 		return err
 	}

@@ -1,12 +1,15 @@
 package activity
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
 	"time"
 
 	"github.com/go-rvq/rvq/admin/media/media_library"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 var (
@@ -62,12 +65,29 @@ type Diff struct {
 type DiffBuilder struct {
 	mb    *ModelBuilder
 	diffs []Diff
+
+	ctx context.Context
+	// rels are the relations of the record (diff_relations.go): its lists
+	// compared by key, the others not diffed; skip, relations not diffed —
+	// both of the struct at the prefix root.
+	rels map[string]*schema.Relationship
+	skip map[string]*schema.Relationship
+	root string
 }
 
 func NewDiffBuilder(mb *ModelBuilder) *DiffBuilder {
 	return &DiffBuilder{
-		mb: mb,
+		mb:  mb,
+		ctx: context.Background(),
 	}
+}
+
+// diffRecord is Diff of a record of before (old) and now, its relations by
+// its model (db): its lists compared by key — when old has them, as findOld
+// loads them before the save —, the others not diffed (diff_relations.go).
+func (db *DiffBuilder) diffRecord(gdb *gorm.DB, old, now interface{}) ([]Diff, error) {
+	db.rels = relationsOf(gdb, now)
+	return db.Diff(old, now)
 }
 
 func (db *DiffBuilder) Diff(old, now interface{}) ([]Diff, error) {
@@ -133,6 +153,14 @@ func (db *DiffBuilder) diffLoop(old, now reflect.Value, prefixField string) erro
 			}
 
 			newPrefixField := formatFieldByDot(prefixField, field.Name)
+			if prefixField == db.root {
+				if db.skip[field.Name] != nil {
+					continue
+				}
+				if db.relationDiff(field.Name, old.Field(i), now.Field(i)) {
+					continue
+				}
+			}
 			if f := DefaultTypeHandles[field.Type]; f != nil {
 				db.diffs = append(db.diffs, f(old.Field(i).Interface(), now.Field(i).Interface(), newPrefixField)...)
 				continue
@@ -150,6 +178,10 @@ func (db *DiffBuilder) diffLoop(old, now reflect.Value, prefixField string) erro
 		}
 	case reflect.Array, reflect.Slice:
 		if now.Kind() == reflect.Slice {
+			// none, nil or empty, the same
+			if old.Len() == 0 && now.Len() == 0 {
+				return nil
+			}
 			if handleNil() {
 				return nil
 			}
@@ -188,14 +220,14 @@ func (db *DiffBuilder) diffLoop(old, now reflect.Value, prefixField string) erro
 		if added {
 			for i := minLen; i < nowLen; i++ {
 				newPrefixField := formatFieldByDot(prefixField, strconv.Itoa(i))
-				db.diffs = append(db.diffs, Diff{Field: newPrefixField, Old: "", Now: fmt.Sprintf("%+v", now.Index(i).Interface())})
+				db.diffs = append(db.diffs, Diff{Field: newPrefixField, Old: "", Now: valueString(now.Index(i))})
 			}
 		}
 
 		if deleted {
 			for i := minLen; i < oldLen; i++ {
 				newPrefixField := formatFieldByDot(prefixField, strconv.Itoa(i))
-				db.diffs = append(db.diffs, Diff{Field: newPrefixField, Old: fmt.Sprintf("%+v", old.Index(i).Interface()), Now: ""})
+				db.diffs = append(db.diffs, Diff{Field: newPrefixField, Old: valueString(old.Index(i)), Now: ""})
 			}
 		}
 	case reflect.Map:
