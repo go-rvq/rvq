@@ -303,6 +303,21 @@ func (mb *ModelBuilder) AddEditRecordWithOldCtx(ctx context.Context, old, now in
 	return mb.addDiffWithInfo(info, ActivityEdit, creator, old, now, db)
 }
 
+// AddDiffsRecordCtx logs an edit of obj made of diffs (none: nothing) —
+// what the diff of the record does not see (its attachments, say) —,
+// resolving creator, db and request info from ctx.
+func (mb *ModelBuilder) AddDiffsRecordCtx(ctx context.Context, obj interface{}, diffs []Diff) error {
+	if len(diffs) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(diffs)
+	if err != nil {
+		return err
+	}
+	return mb.saveWithInfo(RequestInfoFromContext(ctx), mb.activity.getCreatorFromContext(ctx), ActivityEdit, obj,
+		mb.activity.getDBFromContext(ctx), string(b), nil)
+}
+
 func (mb *ModelBuilder) addDiff(action string, creator, old, now interface{}, db *gorm.DB) error {
 	return mb.addDiffWithInfo(nil, action, creator, old, now, db)
 }

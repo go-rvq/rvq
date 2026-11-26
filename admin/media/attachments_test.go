@@ -58,6 +58,19 @@ func TestAttachmentsSave(t *testing.T) {
 	if c.Descricao != "c" || c.Posicao != 1 {
 		t.Errorf("of the owner of two fields: %+v", c)
 	}
+	// the changes: one described again, one removed, one added
+	var bs []anexo
+	db.Where("dono_id = ?", 1).Order("posicao").Find(&bs)
+	bs[0].Descricao = "b!"
+	bs[0].Midia = media_library.MediaBox{FileName: "b.pdf"}
+	chs, err := a.SaveOfChanges(db, map[string]any{"DonoID": uint(1)}, []any{&bs[0], &anexo{Descricao: "novo", Midia: media_library.MediaBox{FileName: "n.pdf"}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chs) != 3 || chs[0] != (AttachmentChange{AttachmentDescribed, "b.pdf", "b", "b!"}) ||
+		chs[1] != (AttachmentChange{AttachmentAdded, "n.pdf", "", "novo"}) || chs[2].Kind != AttachmentRemoved || chs[2].Old != "a" {
+		t.Errorf("the changes: %+v", chs)
+	}
 	// the model, its fields: the table of the files
 	if a.Model() == nil || a.Nested() == nil {
 		t.Fatal("no model")

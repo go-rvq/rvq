@@ -288,6 +288,80 @@ func (a *AttachmentsBuilder) SaveOf(tx *gorm.DB, owner map[string]any, kept []an
 	return nil
 }
 
+// The kinds of a change of the attachments of an owner (AttachmentChange).
+const (
+	AttachmentAdded     = "added"
+	AttachmentRemoved   = "removed"
+	AttachmentDescribed = "described"
+)
+
+// AttachmentChange is a change of the attachments of an owner
+// (SaveOfChanges): one added (Now its description), removed (Old its
+// description) or described again (Old, Now) — Name its file's name.
+type AttachmentChange struct {
+	Kind, Name, Old, Now string
+}
+
+// SaveOfChanges is SaveOf, and the changes it made to the attachments of the
+// owner: of the ones stored before — an attachment by its ID —, those that
+// left, those that came, those of another description; in their order.
+func (a *AttachmentsBuilder) SaveOfChanges(tx *gorm.DB, owner map[string]any, kept []any, set func(obj any)) ([]AttachmentChange, error) {
+	q := tx.Session(&gorm.Session{NewDB: true})
+	for f, v := range owner {
+		q = q.Where(tx.NamingStrategy.ColumnName("", f)+" = ?", v)
+	}
+	olds := reflect.New(reflect.SliceOf(reflect.TypeOf(a.model)))
+	if err := q.Order(tx.NamingStrategy.ColumnName("", a.position)).Find(olds.Interface()).Error; err != nil {
+		return nil, err
+	}
+	field := func(obj any, name string) reflect.Value {
+		return reflect.Indirect(reflect.ValueOf(obj)).FieldByName(name)
+	}
+	idOf := func(obj any) string {
+		if f := field(obj, "ID"); f.IsValid() && !f.IsZero() {
+			return fmt.Sprint(f.Interface())
+		}
+		return ""
+	}
+	text := func(obj any, name string) string {
+		if f := field(obj, name); f.IsValid() {
+			if mbx, ok := f.Interface().(media_library.MediaBox); ok {
+				return mbx.FileName
+			}
+			return fmt.Sprint(f.Interface())
+		}
+		return ""
+	}
+	before := map[string]any{}
+	var order []string
+	for i := 0; i < olds.Elem().Len(); i++ {
+		o := olds.Elem().Index(i).Interface()
+		before[idOf(o)] = o
+		order = append(order, idOf(o))
+	}
+	var changes []AttachmentChange
+	seen := map[string]bool{}
+	for _, k := range kept {
+		id := idOf(k)
+		o, ok := before[id]
+		if id == "" || !ok {
+			changes = append(changes, AttachmentChange{Kind: AttachmentAdded, Name: text(k, a.media), Now: text(k, a.description)})
+			continue
+		}
+		seen[id] = true
+		if od, nd := text(o, a.description), text(k, a.description); od != nd {
+			changes = append(changes, AttachmentChange{Kind: AttachmentDescribed, Name: text(k, a.media), Old: od, Now: nd})
+		}
+	}
+	for _, id := range order {
+		if !seen[id] {
+			o := before[id]
+			changes = append(changes, AttachmentChange{Kind: AttachmentRemoved, Name: text(o, a.media), Old: text(o, a.description)})
+		}
+	}
+	return changes, a.SaveOf(tx, owner, kept, set)
+}
+
 // FileIcon is the icon (MDI) of a file by its name's extension.
 func FileIcon(name string) string {
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))

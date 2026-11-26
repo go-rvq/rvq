@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -411,3 +412,25 @@ func TestMutliModelBuilder(t *testing.T) {
 type testCtxKey string
 
 const creatorKey testCtxKey = "creator"
+
+// An edit of what the diff of the record does not see, its diffs given: one
+// log of the record with them; none, nothing.
+func TestAddDiffsRecordCtx(t *testing.T) {
+	freshPresets()
+	builder := New(db, &TestActivityLog{})
+	builder.Install(pb)
+	mb := builder.RegisterModel(pageModel)
+	resetDB()
+	ctx := ContextWithDB(context.Background(), db)
+	if err := mb.AddDiffsRecordCtx(ctx, Page{ID: 7}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := mb.AddDiffsRecordCtx(ctx, Page{ID: 7}, []Diff{{Field: "Arquivos", Now: "contrato.pdf"}}); err != nil {
+		t.Fatal(err)
+	}
+	var logs []TestActivityLog
+	db.Find(&logs)
+	if len(logs) != 1 || logs[0].Action != ActivityEdit || logs[0].ModelKeys != "7" || !strings.Contains(logs[0].ModelDiffs, "contrato.pdf") {
+		t.Errorf("the logs: %+v", logs)
+	}
+}
