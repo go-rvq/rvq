@@ -24,6 +24,8 @@ func (b *Builder) SetupRoutes(mux *http.ServeMux) {
 	}
 
 	ub := b.builder
+	// the page of each group of the menu with no page of its own: its index
+	b.setupGroupPages()
 	b.registerAssetsService()
 
 	assets := b.ServicePath(AssetsService)

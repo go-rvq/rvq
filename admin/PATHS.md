@@ -7,6 +7,11 @@ Every path of the admin — what follows its prefix (`/admin`) — is one of:
    (`PagesRegistrator`): `/admin/<model>`, `/admin/<model>/<id>`,
    `/admin/<page>`. A model hidden from the menu (`InMenu(false)`)
    is still a model: its paths are of this kind.
+   A menu group's path (`/admin/<group>`, `/admin/orgs/{id}/<group>`
+   under a record) is its page: the page it is made of
+   (`PageMenuGroup`: the group's name, title and icon the page's), else its
+   index — the items the user sees, a tree with their icons and
+   descriptions —; a page already at that path keeps it (go-rvq/rvq#19).
 2. **A service's**: a path no page has — of a program, a download, an API,
    a protocol, the assets of the pages —, **registered** with
    `presets.Builder.Service`, in one of two forms:

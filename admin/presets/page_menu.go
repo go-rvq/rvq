@@ -35,11 +35,7 @@ var pathParam = regexp.MustCompile(`\{([^{}.]+)(\.\.\.)?\}`)
 // (their titles), and the pages it is under (Sub) — their titles, linked,
 // the parameters of their paths the request's.
 func (m *HttpPageBuilder) trail(ctx *web.EventContext, bc *BreadcrumbsBuilder) {
-	if g := m.GetMenuGroupBuilder(); g != nil {
-		for _, g := range append(g.Ancestors(), g) {
-			bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
-		}
-	}
+	appendRootGroups(ctx, bc, m.GetMenuGroupBuilder())
 	var parents []*HttpPageBuilder
 	for p := m.parent; p != nil; p = p.parent {
 		parents = append([]*HttpPageBuilder{p}, parents...)

@@ -155,6 +155,12 @@ func pushPeriod(key string, customize bool) *web.VueEventTagBuilder {
 }
 
 func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, period Period, customize bool) h.HTMLComponent {
+	return b.headerWith(ctx, msgs, prefs, period, customize, true)
+}
+
+// headerWith is the top of a dashboard: the period; withTools, the tools of
+// the dashboard's (customize) — none on a page of a group (GroupPanel).
+func (b *Builder) headerWith(ctx *web.EventContext, msgs *Messages, prefs *Prefs, period Period, customize, withTools bool) h.HTMLComponent {
 	// the period: a select of the periods — the custom one shows its dates
 	var periods []map[string]string
 	for _, k := range Periods {
@@ -198,6 +204,9 @@ func (b *Builder) header(ctx *web.EventContext, msgs *Messages, prefs *Prefs, pe
 	tools := h.Div(
 		v.VBtn(label).PrependIcon(icon).Variant(v.VariantTonal).Size(v.SizeSmall).Attr("@click", cust.Go()).Attr("data-dashboard-customize", true),
 	).Class("d-flex align-center ga-2")
+	if !withTools {
+		tools = h.Div()
+	}
 	if customize {
 		var items []map[string]string
 		for _, k := range Periods {
@@ -462,8 +471,11 @@ func (b *Builder) card(ctx *web.EventContext, msgs *Messages, w *Widget, prefs *
 }
 
 // cacheKey is a user's widget over a period.
-func cacheKey(u uuid.UUID, w string, p Period, full bool) string {
-	return strings.Join([]string{w, u.String(), p.Key, p.From.Format(time.RFC3339), p.To.Format(time.RFC3339), strconv.FormatBool(full)}, "|")
+// cacheKey is the key of the blocks of the widget w for the user u over p,
+// on the page at path — the same widget on another page (a group's panel, of
+// an organization) may show other things: its load reads the page's.
+func cacheKey(u uuid.UUID, w, path string, p Period, full bool) string {
+	return strings.Join([]string{w, u.String(), path, p.Key, p.From.Format(time.RFC3339), p.To.Format(time.RFC3339), strconv.FormatBool(full)}, "|")
 }
 
 type cached struct {
@@ -474,7 +486,7 @@ type cached struct {
 // blocks are w's blocks over p for the request's user: the cache's while its
 // TTL lasts, unless refresh.
 func (b *Builder) blocks(ctx *web.EventContext, w *Widget, p Period, refresh bool) ([]Block, time.Time, error) {
-	key := cacheKey(userID(ctx.R), w.ID, p, IsFull(ctx))
+	key := cacheKey(userID(ctx.R), w.ID, ctx.R.URL.Path, p, IsFull(ctx))
 	ttl := cmp.Or(w.TTL, time.Minute)
 	for _, d := range w.Live {
 		// reloaded every d: new blocks each time

@@ -112,6 +112,9 @@ func (pr *PagesRegistrator) AddHttpPage(page ...*HttpPageBuilder) {
 // have a page of the same path.
 func (pr *PagesRegistrator) registerMenu(page *HttpPageBuilder) {
 	if pr.mb != nil {
+		// a page of the model's records (its detail's): a group of the
+		// menu under a record may be it (PageMenuGroup)
+		page.owner = pr.mb
 		return
 	}
 	page.registerMenu(pr.b)

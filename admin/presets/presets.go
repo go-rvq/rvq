@@ -71,6 +71,9 @@ type Builder struct {
 	listFieldDefaults                     *FieldDefaults
 	detailFieldDefaults                   *FieldDefaults
 	extraAssets                           []*extraAsset
+	// groupPagesSet: the indexes of the menu groups registered
+	// (setupGroupPages)
+	groupPagesSet bool
 	// services are the paths no page has (Service): /!<name>
 	services []*ServiceBuilder
 	// lifecycle are the nodes the packages offer the commands (Lifecycle)
@@ -853,6 +856,7 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 		if p.menuIcon != "" {
 			props["prependIcon"] = p.menuIcon
 		}
+		describe(ctx.Context(), props, p.TDescription(ctx.Context()))
 		node := &MenuNode{Title: p.TTitle(ctx.Context()), Value: p.fullPath, Props: props}
 		// its sub-pages in the menu (Sub, InMenu): its children — the one
 		// shown active, after it (its path is under the page's)
@@ -903,6 +907,7 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 			Value: href,
 			Props: map[string]any{"href": href, "prependIcon": icon},
 		}
+		describe(ctx.Context(), node.Props, m.TDescription(ctx.Context()))
 		if m.menuChildren != nil {
 			if m.isMenuItemActive(ctx) {
 				// its page shown: its children with it, the one shown active
@@ -946,6 +951,17 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 		if len(children) == 0 {
 			return nil, false
 		}
+		props := map[string]any{"prependIcon": groupIcon}
+		describe(ctx.Context(), props, v.TDescription(ctx.Context()))
+		// its title a link to its page (its own, or its index); there, the
+		// group active
+		if href := v.rootHref(); href != "" {
+			props["groupHref"] = href
+			if strings.TrimSuffix(ctx.R.URL.Path, "/") == href {
+				activated = []string{menuKey(MenuItemGroup, v.name)}
+				active = true
+			}
+		}
 		if active {
 			// opened is keyed by the item value, which for a group is its key.
 			openedGroups = append(openedGroups, menuKey(MenuItemGroup, v.name))
@@ -953,7 +969,7 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 		return &MenuNode{
 			Title:    title,
 			Value:    menuKey(MenuItemGroup, v.name),
-			Props:    map[string]any{"prependIcon": groupIcon},
+			Props:    props,
 			Children: children,
 		}, active
 	}
@@ -1080,6 +1096,8 @@ func (b *Builder) CreateMenus(ctx *web.EventContext) (r h.HTMLComponent) {
 		h.Template(
 			h.Div(menuChip()).Class("d-flex align-center").
 				Attr("v-if", "item.props && item.props.chip && item.props.chip.inline"),
+			// a group with a page (its own, or its index): its title the link
+			groupLink().Attr("v-else-if", "item.props && item.props.groupHref"),
 			h.Template(h.Text("{{ item.title }}")).Attr("v-else", true),
 		).Attr("v-slot:title", "{ item }"),
 		// at the right of the item: its chip (MenuNode.Chip), or, the chip

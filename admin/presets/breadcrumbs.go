@@ -117,16 +117,28 @@ func menuGroupsOf(mb *ModelBuilder) []*MenuGroupBuilder {
 
 // appendMenuGroups appends to bc the menu groups of mb that its parent has
 // not (a child of the organization in Financeiro: Financeiro, between the
-// organization and it).
-func appendMenuGroups(ctx *web.EventContext, bc *BreadcrumbsBuilder, parent, mb *ModelBuilder) {
+// organization and it), each a link to its page — of the record parentID
+// of the parent (its parents parentParents).
+func appendMenuGroups(ctx *web.EventContext, bc *BreadcrumbsBuilder, parent, mb *ModelBuilder, parentID string, parentParents IDSlice) {
 	have := map[*MenuGroupBuilder]bool{}
 	for _, g := range menuGroupsOf(parent) {
 		have[g] = true
 	}
 	for _, g := range menuGroupsOf(mb) {
 		if !have[g] {
-			bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
+			bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context()), URI: g.recordHref(parent, parentID, parentParents)})
 		}
+	}
+}
+
+// appendRootGroups appends to bc the group g and the ones above it, each a
+// link to its page (rootHref).
+func appendRootGroups(ctx *web.EventContext, bc *BreadcrumbsBuilder, g *MenuGroupBuilder) {
+	if g == nil {
+		return
+	}
+	for _, g := range append(g.Ancestors(), g) {
+		bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context()), URI: g.rootHref()})
 	}
 }
 
@@ -135,16 +147,12 @@ func AddModelsTreeToBreadcrumb(rooted bool, ctx *web.EventContext, parents []*Mo
 	records = make([]any, len(parentsID))
 
 	if rooted {
-		if g := parents[0].MenuGroup(); g != nil {
-			for _, g := range append(g.Ancestors(), g) {
-				bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
-			}
-		}
+		appendRootGroups(ctx, bc, parents[0].MenuGroup())
 	}
 
 	for i, id := range parentsID {
 		if i > 0 {
-			appendMenuGroups(ctx, bc, parents[i-1], parents[i])
+			appendMenuGroups(ctx, bc, parents[i-1], parents[i], parentsID[i-1].String(), parentsID[:i-1])
 		}
 		if parents[i].singleton {
 			bc.Append(&Breadcrumb{

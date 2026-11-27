@@ -807,18 +807,14 @@ func (mb *ModelBuilder) LoadBreadCrumbs(ctx *web.EventContext) (records []any, e
 	parentsID := ParentsModelID(ctx.R)
 
 	if len(parentsID) == 0 {
-		if g := mb.Root().MenuGroup(); g != nil {
-			for _, g := range append(g.Ancestors(), g) {
-				bc.Append(&Breadcrumb{Label: g.TTitle(ctx.Context())})
-			}
-		}
+		appendRootGroups(ctx, bc, mb.Root().MenuGroup())
 	} else {
 		parents := mb.Parents()
 		if records, err = AddModelsTreeToBreadcrumb(true, ctx, parents, parentsID, bc); err != nil {
 			return
 		}
 		// its own menu groups, the ones its parent has not
-		appendMenuGroups(ctx, bc, mb.parent, mb)
+		appendMenuGroups(ctx, bc, mb.parent, mb, parentsID[len(parentsID)-1].String(), parentsID[:len(parentsID)-1])
 	}
 
 	if !mb.singleton {

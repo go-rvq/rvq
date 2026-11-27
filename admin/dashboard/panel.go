@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"cmp"
+	"sort"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/web"
@@ -57,4 +58,31 @@ func (b *Builder) panelCard(ctx *web.EventContext, msgs *Messages, w *Widget, pe
 		).Class("d-flex align-center px-4 pt-3"),
 		v.VCardText(web.Portal().Name(PortalName(w.ID)).Loader(b.loadEvent(ctx.R, w, period))).Class("pt-2"),
 	).Variant(v.VariantOutlined).Class("h-100").Attr("data-dashboard-widget", w.ID)
+}
+
+// GroupPanel draws the widgets of the group group — those visible for the
+// request, in the group's order — on a page of their own: the dashboard of
+// an area (the page of a group of the menu, presets.PageMenuGroup), the
+// period chosen at its top (the dashboard's chips, in the URL). Each card
+// loads as on the dashboard, and its menu adds it to the user's dashboard
+// while it is not there (Panel).
+func (b *Builder) GroupPanel(ctx *web.EventContext, group string) h.HTMLComponent {
+	msgs := MessagesOf(ctx.Context())
+	prefs := b.LoadPrefs(userID(ctx.R))
+	period := PeriodOf(ctx.R, b.Now(), cmp.Or(prefs.Period, PeriodDefault))
+	var ws []*Widget
+	for _, w := range b.all() {
+		if w.Group == group {
+			ws = append(ws, w)
+		}
+	}
+	sort.SliceStable(ws, func(i, j int) bool { return ws[i].Order < ws[j].Order })
+	ids := make([]string, len(ws))
+	for i, w := range ws {
+		ids[i] = w.ID
+	}
+	return h.Div(
+		b.headerWith(ctx, msgs, &prefs, period, false, false),
+		h.Div(b.Panel(ctx, ids...)).Class("mt-3"),
+	).Class("dashboard pa-4").Attr("data-dashboard-group-panel", group)
 }

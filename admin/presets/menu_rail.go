@@ -69,14 +69,20 @@ func railLeaf(n *MenuNode, active bool) h.HTMLComponent {
 	).Text(n.Title).Location(LocationEnd)
 }
 
-// railGroup: a group: its icon opens, under the mouse, its items.
+// railGroup: a group: its icon opens, under the mouse, its items; a group
+// with a page (its own, or its index: groupHref), clicked, opens it, its
+// title in the floating menu a link to it.
 func railGroup(n *MenuNode, activated []string, active bool) h.HTMLComponent {
+	btn := railButton(n, active).Attr("v-bind", "props")
+	var title h.HTMLComponent = h.Text(n.Title)
+	if href, _ := n.Props["groupHref"].(string); href != "" {
+		btn.Href(href)
+		title = h.A(h.Text(n.Title)).Href(href).Class("text-decoration-none").Style("color: inherit")
+	}
 	return VMenu(
-		web.Slot(
-			railButton(n, active).Attr("v-bind", "props"),
-		).Name("activator").Scope("{ props }"),
+		web.Slot(btn).Name("activator").Scope("{ props }"),
 		VCard(
-			VCardTitle(h.Text(n.Title)).Class("text-subtitle-2 font-weight-bold py-2"),
+			VCardTitle(title).Class("text-subtitle-2 font-weight-bold py-2"),
 			VDivider(),
 			VList(railItems(n.Children, activated, 0)...).Density(DensityCompact),
 		).Class("rvq-nav-rail__flyout").MinWidth(220).MaxWidth(320),

@@ -79,6 +79,13 @@ type MenuGroupBuilder struct {
 	items       []*MenuItem
 	// uriName is the group's segment in its models' URIs; nil is its name.
 	uriName *string
+	// page: the group is this page (PageMenuGroup) — its name, title and
+	// icon are the page's
+	page *HttpPageBuilder
+	// indexRoot: its index is a page of the root (setupGroupPages);
+	// indexRecords, of the records of these models
+	indexRoot    bool
+	indexRecords map[*ModelBuilder]bool
 
 	// b is the builder the group belongs to; it owns the key registry, so the
 	// group needs it to resolve the names its sub-items refer to.
@@ -104,11 +111,13 @@ func (b *MenuGroupBuilder) Parent() *MenuGroupBuilder {
 }
 
 func (b *MenuGroupBuilder) TitleFunc(f func(ctx context.Context) string) *MenuGroupBuilder {
+	b.notOfPage("TitleFunc")
 	b.title = f
 	return b
 }
 
 func (b *MenuGroupBuilder) Title(s string) *MenuGroupBuilder {
+	b.notOfPage("Title")
 	b.title = func(context.Context) string {
 		return s
 	}
@@ -118,6 +127,9 @@ func (b *MenuGroupBuilder) Title(s string) *MenuGroupBuilder {
 func (b *MenuGroupBuilder) TTitle(ctx context.Context) string {
 	if b == nil {
 		return ""
+	}
+	if b.page != nil {
+		return b.page.TTitle(ctx)
 	}
 	if b.title != nil {
 		return b.title(ctx)
@@ -146,10 +158,17 @@ func (b *MenuGroupBuilder) TDescription(ctx context.Context) string {
 	return b.description(ctx)
 }
 
-// GetIcon is the icon of the group ("" none).
-func (b *MenuGroupBuilder) GetIcon() string { return b.icon }
+// GetIcon is the icon of the group ("" none): of a group of a page, the
+// page's.
+func (b *MenuGroupBuilder) GetIcon() string {
+	if b.page != nil {
+		return b.page.GetMenuIcon()
+	}
+	return b.icon
+}
 
 func (b *MenuGroupBuilder) Icon(v string) (r *MenuGroupBuilder) {
+	b.notOfPage("Icon")
 	b.icon = v
 	return b
 }
@@ -179,6 +198,7 @@ func (b *MenuGroupBuilder) PathNames() (r []string) {
 // those of its parent's. Only the URIs change: the group's name, its key in
 // the menu and the permissions' resources stay its name.
 func (b *MenuGroupBuilder) URIName(v string) *MenuGroupBuilder {
+	b.notOfPage("URIName")
 	b.uriName = &v
 	return b
 }

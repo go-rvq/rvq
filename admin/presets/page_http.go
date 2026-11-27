@@ -42,6 +42,9 @@ type HttpPageBuilder struct {
 	// (HandlerFromPageFunc); a plain Handler is wrapped in the check on Build
 	verified  bool
 	notInMenu bool
+	// owner is the model whose pages it is of (its detail's: a record's), nil
+	// a page of the builder
+	owner *ModelBuilder
 	// menuVisible, when set, says whether the page is in the menu of the
 	// request (a sub-page's: a part the user reaches)
 	menuVisible func(r *http.Request) bool

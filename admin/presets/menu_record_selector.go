@@ -386,6 +386,7 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 	if !mb.HasMenuRecordSelector() {
 		n = &MenuNode{Title: mb.TTitlePlural(ctx.Context()), Value: listHref,
 			Props: map[string]any{"href": listHref, "prependIcon": icon}}
+		describe(ctx.Context(), n.Props, mb.TDescription(ctx.Context()))
 		if isActive(listHref) {
 			active = listHref
 		}
@@ -400,6 +401,7 @@ func (mb *ModelBuilder) MenuNodeOf(ctx *web.EventContext, parents IDSlice) (n *M
 		Value: "g:menu-records:" + mb.uriName + ":" + parents.String(),
 		Props: map[string]any{"prependIcon": icon},
 	}
+	describe(ctx.Context(), n.Props, mb.TDescription(ctx.Context()))
 	// the selector: a record to choose — the only one chosen already
 	// (menuRecordChosen), of several the user's choice —; none, the listing
 	// alone, where the first is made
@@ -494,6 +496,15 @@ func (mb *ModelBuilder) menuRecordSelectorNode(ctx *web.EventContext, parents ID
 				}
 				gn = &MenuNode{Title: g.TTitle(ctx.Context()), Value: selector.Value + ":" + g.Name(),
 					Props: map[string]any{"prependIcon": gi}}
+				describe(ctx.Context(), gn.Props, g.TDescription(ctx.Context()))
+				// its title a link to its page (its own, or its index)
+				if href := g.recordHref(mb, mid.String(), parents); href != "" {
+					gn.Props["groupHref"] = href
+					if path == href {
+						active = gn.Value
+						opened = append(opened, gn.Value)
+					}
+				}
 				groups[g] = gn
 				selector.Children = append(selector.Children, gn)
 			}
@@ -522,8 +533,9 @@ func (mb *ModelBuilder) menuRecordSelectorNode(ctx *web.EventContext, parents ID
 		if isActive(href) {
 			active = href
 		}
-		return &MenuNode{Title: page.TTitle(ctx.Context()), Value: href,
-			Props: map[string]any{"href": href, "prependIcon": pi}}
+		props := map[string]any{"href": href, "prependIcon": pi}
+		describe(ctx.Context(), props, page.TDescription(ctx.Context()))
+		return &MenuNode{Title: page.TTitle(ctx.Context()), Value: href, Props: props}
 	}
 	for _, p := range mb.MenuRecordSelectorConfig().Pages {
 		if pn := pageNode(p); pn != nil {
