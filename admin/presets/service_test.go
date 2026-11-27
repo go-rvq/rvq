@@ -78,7 +78,7 @@ func TestServiceRoutes(t *testing.T) {
 func TestServiceMessages(t *testing.T) {
 	for _, m := range []*Messages{Messages_en_US, Messages_pt_BR} {
 		for _, v := range []string{m.ServiceAssetsTitle, m.ServiceLoginTitle, m.ServiceGadcodeTitle, m.ServiceUserDocsTitle,
-			m.RouteAssetsExtra, m.RouteLoginDone, m.RouteGadcodeDoc, m.RouteUserDocsAsset, m.ServiceAuthBasic, m.ServiceAuthSignedLink} {
+			m.RouteAssetsExtra, m.RouteLoginDone, m.RouteGadcodeDoc, m.RouteUserDocsAsset, m.ServiceChartsTitle, m.RouteChartsScript, m.ServiceAuthBasic, m.ServiceAuthSignedLink} {
 			if v == "" {
 				t.Fatal("a text of the services is empty")
 			}

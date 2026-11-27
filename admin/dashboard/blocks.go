@@ -63,6 +63,7 @@ func (rc *renderCtx) action(a *Action) h.HTMLComponent {
 		Query("period", rc.period.Key).
 		Query("from", rc.ctx.R.FormValue("from")).
 		Query("to", rc.ctx.R.FormValue("to")).
+		Query("trail", rc.ctx.R.FormValue("trail")).
 		Go()
 	click := ev
 	if a.Removes {
@@ -167,14 +168,23 @@ type Series struct {
 }
 
 // Chart draws Series: by step (line, bars, stacked: Labels the steps'), or
-// by label (hbars, donut: Labels the parts', one series).
+// by label (hbars, donut: Labels the parts', one series). It is a vx-chart
+// (ECharts: a tooltip at each point, a range zoomed, a point opened); the
+// SVG of before, only on paper (printed).
 type Chart struct {
 	Kind   ChartKind
 	Title  string
 	Labels []string
 	Series []Series
 	// Colors are the donut's parts' (default the palette).
-	Colors   []string
+	Colors []string
+	// Hints are the full label of each point, the tooltip's title (a
+	// period's: Period.Hints).
+	Hints []string
+	// Drill is the period of each point, opened when it is clicked — the
+	// widget loaded again with it, a way back above (a period's:
+	// Period.Drill); nil: not opened.
+	Drill    []*Period
 	Link     string
 	LinkText string
 }
@@ -207,6 +217,20 @@ func (c *Chart) render(rc *renderCtx) h.HTMLComponent {
 	if empty {
 		return h.Components(h.Div(h.Text(rc.msgs.NoData)).Class("text-medium-emphasis text-body-2 py-6 text-center").Attr("data-dashboard-empty", true), link(c.Link, lt))
 	}
+	paper := c.paper(rc)
+	if rc.b == nil || rc.b.p == nil {
+		return h.Components(paper, link(c.Link, lt))
+	}
+	return h.Components(
+		h.Div(rc.vxChart(c)).Class("d-print-none"),
+		h.Div(paper).Class("d-none d-print-block"),
+		link(c.Link, lt),
+	)
+}
+
+// paper is the chart drawn on the server (SVG, bars of HTML): what is
+// printed.
+func (c *Chart) paper(rc *renderCtx) h.HTMLComponent {
 	switch c.Kind {
 	case ChartHBars:
 		var rows h.HTMLComponents
@@ -226,7 +250,7 @@ func (c *Chart) render(rc *renderCtx) h.HTMLComponent {
 				h.Div(h.Text(formatNumber(val))).Class("text-caption text-medium-emphasis text-end").Style("width:52px"),
 			).Class("d-flex align-center ga-2 mb-1").Attr("data-dashboard-bar", true))
 		}
-		return h.Div(rows...).AppendChildren(link(c.Link, lt))
+		return h.Div(rows...)
 	case ChartDonut:
 		var legend h.HTMLComponents
 		var s Series
@@ -246,11 +270,11 @@ func (c *Chart) render(rc *renderCtx) h.HTMLComponent {
 		return h.Div(
 			h.Div(h.RawHTML(donutSVG(c))).Class("flex-shrink-0"),
 			h.Div(legend...).Class("ms-4"),
-		).Class("d-flex align-center flex-wrap").AppendChildren(link(c.Link, lt))
+		).Class("d-flex align-center flex-wrap")
 	case ChartBars, ChartStacked:
-		return h.Components(c.legend(), h.Div(h.RawHTML(barsSVG(c))).Class("dashboard-chart"), link(c.Link, lt))
+		return h.Components(c.legend(), h.Div(h.RawHTML(barsSVG(c))).Class("dashboard-chart"))
 	default:
-		return h.Components(c.legend(), h.Div(h.RawHTML(lineSVG(c))).Class("dashboard-chart"), link(c.Link, lt))
+		return h.Components(c.legend(), h.Div(h.RawHTML(lineSVG(c))).Class("dashboard-chart"))
 	}
 }
 

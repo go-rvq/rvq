@@ -46,6 +46,7 @@ import SeoVarZipcodes from '@/lib/SeoVarZipcodes.vue'
 import AddressField from '@/lib/AddressField.vue'
 import MapsKeyTest from '@/lib/MapsKeyTest.vue'
 import GadIde from '@/lib/GadIde'
+import VXChart from '@/lib/VXChart'
 import GadCode from '@/lib/GadCode'
 import ThemeToggle from '@/lib/ThemeToggle'
 import ThemeSelect from '@/lib/ThemeSelect'
@@ -104,6 +105,8 @@ const vuetifyx = {
     app.component('vx-seo-vars', SeoVars)
     app.component('vx-seo-var-zipcodes', SeoVarZipcodes)
     app.component('vx-gad-ide', GadIde)
+    // a chart drawn by ECharts (loaded once, from its src): the dashboard's
+    app.component('vx-chart', VXChart)
     app.component('vx-gad-code', GadCode)
     app.component('vx-theme-toggle', ThemeToggle)
     app.component('vx-theme-select', ThemeSelect)

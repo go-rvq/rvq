@@ -12,6 +12,7 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
+	"github.com/go-rvq/rvq/admin/charts"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -48,6 +49,8 @@ func (b *Builder) Install() error {
 	wb.RegisterEventFunc(EventPref, b.eventPref)
 	b.p.HomePageFunc(b.Page)
 	b.installWidgetPage()
+	// the code of the charts (vx-chart), loaded the first time one is shown
+	charts.Setup(b.p)
 	return nil
 }
 
@@ -515,6 +518,8 @@ func (b *Builder) Render(ctx *web.EventContext, w *Widget, p Period, refresh boo
 	}
 	rc := &renderCtx{b: b, w: w, ctx: ctx, msgs: msgs, period: p}
 	out := h.Div().Attr("data-dashboard-body", w.ID)
+	// opened at a point of a chart: the way back
+	out.AppendChildren(rc.crumbs())
 	for _, bl := range bs {
 		if bl != nil {
 			out.AppendChildren(bl.render(rc))

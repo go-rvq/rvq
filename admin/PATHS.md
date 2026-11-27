@@ -72,6 +72,7 @@ p.Service("git").MountOnly().Mount("/admin/site-files.git/")
 | `/!assets` | presets | public (static) | the scripts, styles, icons of the pages; the packages' extra assets |
 | `/!login` | admin/login | public | the login dialog over a page whose session ended |
 | `/!gadcode` | admin/gadcode | session | the operations of the editor of Gad code |
+| `/!charts` | admin/charts | session | the code of the interactive charts (ECharts), loaded by vx-chart the first time a page shows one |
 | `/!notifications` | packages/notifications | session | the attachments of the notifications |
 | `/!fs-tools` | packages/fs-tools | session | the explorer's API, its terminal, its vendor |
 | `/!webdav` | packages/fs-tools | HTTP Basic (own) | the file system by WebDAV |

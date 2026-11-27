@@ -57,9 +57,25 @@ func stepOf(span time.Duration) time.Duration {
 	}
 }
 
-// NewPeriod is the period of key ending at now; Custom is from..to (days,
-// "2006-01-02", to included). An unknown key is the default.
+// The layouts of a custom period's bounds: days (to included), or times
+// (to excluded: a point of a day opened, its hour).
+const (
+	dayLayout  = "2006-01-02"
+	timeLayout = "2006-01-02T15:04"
+)
+
+// NewPeriod is the period of key ending at now; Custom is from..to — days
+// ("2006-01-02", to included) or times ("2006-01-02T15:04", to excluded).
+// An unknown key is the default.
 func NewPeriod(key string, now time.Time, from, to string) Period {
+	if key == PeriodCustom && strings.Contains(from, "T") {
+		f, err1 := time.ParseInLocation(timeLayout, from, now.Location())
+		t, err2 := time.ParseInLocation(timeLayout, to, now.Location())
+		if err1 == nil && err2 == nil && t.After(f) {
+			return Period{Key: key, From: f, To: t, Step: stepOf(t.Sub(f))}
+		}
+		key = PeriodDefault
+	}
 	if key == PeriodCustom {
 		f, err1 := time.ParseInLocation("2006-01-02", from, now.Location())
 		t, err2 := time.ParseInLocation("2006-01-02", to, now.Location())
@@ -90,6 +106,87 @@ func PeriodOf(r *http.Request, now time.Time, def string) Period {
 		key = def
 	}
 	return NewPeriod(key, now, r.FormValue("from"), r.FormValue("to"))
+}
+
+// Bounds are the from and to of a custom period, as its request says them:
+// days ("2006-01-02", to included) when it is of whole days, else times
+// ("2006-01-02T15:04", to excluded). Of another period, empty.
+func (p Period) Bounds() (from, to string) {
+	if p.Key != PeriodCustom {
+		return "", ""
+	}
+	if wholeDay(p.From) && wholeDay(p.To) {
+		return p.From.Format(dayLayout), p.To.AddDate(0, 0, -1).Format(dayLayout)
+	}
+	return p.From.Format(timeLayout), p.To.Format(timeLayout)
+}
+
+func wholeDay(t time.Time) bool {
+	return t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 && t.Nanosecond() == 0
+}
+
+// Hints are the full label of each bucket (a chart's tooltip): its day
+// ("02/01/2006") by day; its day and hours ("02/01 15:00–16:00") within.
+func (p Period) Hints() []string {
+	bs := p.Buckets()
+	out := make([]string, len(bs))
+	for i, t := range bs {
+		t = t.In(p.From.Location())
+		if p.Step >= 24*time.Hour {
+			out[i] = t.Format("02/01/2006")
+			continue
+		}
+		out[i] = t.Format("02/01 15:04") + "–" + t.Add(p.Step).Format("15:04")
+	}
+	return out
+}
+
+// Drill is the period of each bucket, opened (a point of a chart clicked):
+// a day, by its hours; an hour, by its 5 minutes. A step of 5 minutes or
+// less is not opened: none (nil).
+func (p Period) Drill() []*Period {
+	bs := p.Buckets()
+	if p.Step <= 5*time.Minute {
+		return nil
+	}
+	out := make([]*Period, len(bs))
+	for i, t := range bs {
+		end := t.Add(p.Step)
+		if p.Step == 24*time.Hour {
+			y, m, d := t.Date()
+			end = time.Date(y, m, d+1, 0, 0, 0, 0, t.Location())
+		}
+		out[i] = &Period{Key: PeriodCustom, From: t, To: end, Step: stepOf(end.Sub(t))}
+	}
+	return out
+}
+
+// Label names the period: its chip's words, or a custom one's range ("30/10",
+// "30/10 14:00–15:00", "01/10–15/10").
+func (p Period) Label(m *Messages) string {
+	switch p.Key {
+	case Period1h:
+		return m.Period1h
+	case Period12h:
+		return m.Period12h
+	case Period24h:
+		return m.Period24h
+	case Period7d:
+		return m.Period7d
+	case Period30d:
+		return m.Period30d
+	case Period90d:
+		return m.Period90d
+	}
+	from, to := p.From.In(p.From.Location()), p.To.In(p.From.Location())
+	if wholeDay(from) && wholeDay(to) {
+		last := to.AddDate(0, 0, -1)
+		if last.Equal(from) {
+			return from.Format("02/01")
+		}
+		return from.Format("02/01") + "–" + last.Format("02/01")
+	}
+	return from.Format("02/01 15:04") + "–" + to.Format("15:04")
 }
 
 // Previous is the period of the same length just before (for the deltas).

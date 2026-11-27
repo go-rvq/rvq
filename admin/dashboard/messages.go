@@ -41,6 +41,7 @@ type Messages struct {
 	DefaultPeriod     string `i18n:"hint='Label of the period the dashboard opens with, for the user.'"`
 	FollowsPeriod     string `i18n:"hint='Tooltip of a widget whose numbers follow the period chosen.'"`
 	NoData            string `i18n:"hint='Said by a widget with nothing in the period.'"`
+	ResetZoom         string `i18n:"hint='Button of a chart zoomed in a range: all of it again.'"`
 	NoWidgets         string `i18n:"hint='Said by a dashboard with no widget for the user.'"`
 	New               string `i18n:"hint='Delta of a number that was zero in the previous period.'"`
 	VsPrevious        string `i18n:"hint='Tooltip of the delta of a number.'"`
@@ -107,6 +108,7 @@ var Messages_en_US = &Messages{
 	DefaultPeriod:     "Default period",
 	FollowsPeriod:     "Follows the period chosen",
 	NoData:            "Nothing in this period.",
+	ResetZoom:         "Show it all",
 	NoWidgets:         "There is no widget for you yet.",
 	New:               "new",
 	VsPrevious:        "Compared with the previous period",
@@ -173,6 +175,7 @@ var Messages_pt_BR = &Messages{
 	DefaultPeriod:     "Período padrão",
 	FollowsPeriod:     "Segue o período escolhido",
 	NoData:            "Nada neste período.",
+	ResetZoom:         "Mostrar tudo",
 	NoWidgets:         "Ainda não há widget para você.",
 	New:               "novo",
 	VsPrevious:        "Comparado com o período anterior",

@@ -1,0 +1,12 @@
+{
+  "name": "@go-rvq/echarts",
+  "private": true,
+  "description": "Apache ECharts with only what the admin's charts (vuetifyx vx-chart) draw — line, bar, pie; tooltip, legend, dataZoom, grid, toolbox; the SVG renderer —, as window.RvqECharts: dist/echarts.min.js, loaded by vx-chart the first time a chart is shown.",
+  "type": "module",
+  "scripts": {
+    "build": "sh build.sh"
+  },
+  "dependencies": {
+    "echarts": "^5.6.0"
+  }
+}
