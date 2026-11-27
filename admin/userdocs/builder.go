@@ -402,6 +402,26 @@ func (b *Builder) find(locale, node string) (file string, src *Source, content s
 	return "", nil, "", nil
 }
 
+// HasDoc says some source has the document of node (DocFiles), in its own
+// files — the language it is written in —: what a part of the admin
+// registered (a widget of the dashboard, say) must have.
+func (b *Builder) HasDoc(node string) bool {
+	files := DocFiles(node)
+	for _, s := range b.sources {
+		own, err := s.Files()
+		if err != nil {
+			continue
+		}
+		byPath := filesByPath(own)
+		for _, f := range files {
+			if _, ok := byPath[f]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // DocFiles are the files the document of node is looked for in, in order:
 // its own (DocFile); for an action, actions/NAME.md — the one of whatever
 // package explains it in general —; for a form, forms/NAME.md (the
