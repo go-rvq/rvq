@@ -20,7 +20,9 @@ import (
 // request url.
 func renderIn(t *testing.T, url string, bs ...Block) string {
 	t.Helper()
-	b := &Builder{p: presets.New(i18n.New()).URIPrefix("/admin"), Now: func() time.Time { return now }}
+	p := presets.New(i18n.New()).URIPrefix("/admin")
+	InstallCharts(p)
+	b := &Builder{p: p, Now: func() time.Time { return now }}
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", url, nil)}
 	rc := &renderCtx{b: b, w: &Widget{ID: "w"}, ctx: ctx, msgs: Messages_en_US, period: b.eventPeriod(ctx)}
 	out := []h.HTMLComponent{rc.crumbs()}
@@ -51,7 +53,7 @@ func TestChartVX(t *testing.T) {
 		if got := attr(t, s, "kind"); got != string(k) {
 			t.Errorf("%s: kind %q", k, got)
 		}
-		if !strings.Contains(attr(t, s, "src"), "/admin/!charts/echarts.js?v=") {
+		if !strings.Contains(attr(t, s, "src"), "/admin/!assets/extra/echarts.js?v=") {
 			t.Errorf("%s: src %s", k, attr(t, s, "src"))
 		}
 		var labels, hints, colors []string

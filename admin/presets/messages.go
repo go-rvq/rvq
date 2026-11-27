@@ -198,9 +198,6 @@ type Messages struct {
 	RouteGadcodeFormat    string `i18n:"hint='What the route that formats code gives.'"`
 	RouteGadcodeOutline   string `i18n:"hint='What the route of the code’s outline gives.'"`
 	RouteGadcodeDoc       string `i18n:"hint='What the route of a symbol’s documentation gives.'"`
-	ServiceChartsTitle    string `i18n:"hint='Title of the service of the charts’ code (ECharts).'"`
-	ServiceChartsDesc     string `i18n:"hint='What the service of the charts serves.'"`
-	RouteChartsScript     string `i18n:"hint='What the route of the charts’ script gives.'"`
 	ServiceUserDocsTitle  string `i18n:"hint='Title of the service of the user documentation’s pictures.'"`
 	ServiceUserDocsDesc   string `i18n:"hint='What the service of the user documentation serves.'"`
 	RouteUserDocsAsset    string `i18n:"hint='What the route of a document’s picture gives.'"`
@@ -421,9 +418,6 @@ var Messages_en_US = &Messages{
 	RouteGadcodeFormat:    "the code formatted",
 	RouteGadcodeOutline:   "the outline of the code (its symbols)",
 	RouteGadcodeDoc:       "the documentation of a symbol",
-	ServiceChartsTitle:    "Charts",
-	ServiceChartsDesc:     "The code of the interactive charts (Apache ECharts), loaded by a page the first time it shows one.",
-	RouteChartsScript:     "the script of the charts (window.RvqECharts)",
 	ServiceUserDocsTitle:  "User documentation",
 	ServiceUserDocsDesc:   "The pictures of the documents of the user documentation.",
 	RouteUserDocsAsset:    "a picture of a document: of the package, in the language asked (or the default’s)",
@@ -631,9 +625,6 @@ var Messages_pt_BR = &Messages{
 	RouteGadcodeFormat:    "o código formatado",
 	RouteGadcodeOutline:   "a estrutura do código (seus símbolos)",
 	RouteGadcodeDoc:       "a documentação de um símbolo",
-	ServiceChartsTitle:    "Gráficos",
-	ServiceChartsDesc:     "O código dos gráficos interativos (Apache ECharts), carregado por uma página na primeira vez que ela mostra um.",
-	RouteChartsScript:     "o script dos gráficos (window.RvqECharts)",
 	ServiceUserDocsTitle:  "Documentação do usuário",
 	ServiceUserDocsDesc:   "As imagens dos documentos da documentação do usuário.",
 	RouteUserDocsAsset:    "uma imagem de um documento: do pacote, no idioma pedido (ou no padrão)",

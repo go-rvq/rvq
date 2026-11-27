@@ -28,7 +28,7 @@ const once = (src: string): Promise<void> =>
 export default defineComponent({
   name: 'VxChart',
   props: {
-    // the charts' code (admin/charts: …/!charts/echarts.js)
+    // the charts' code (x/ui/echarts: …/!assets/extra/echarts.js?v=…)
     src: { type: String, required: true },
     kind: { type: String as PropType<ChartKind>, default: 'line' },
     labels: { type: Array as PropType<string[]>, default: () => [] },

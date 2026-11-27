@@ -12,7 +12,7 @@ import (
 // legend turns a series off; a range dragged zooms in it (↺ back to all); a
 // point with a drill (Drill), clicked, emits point with it ("@point"). Its
 // code is loaded from Src the first time a chart is shown (rvq
-// admin/charts.Src).
+// x/ui/echarts, a lazy extra asset of the admin).
 type VXChartBuilder struct {
 	v.VTagBuilder[*VXChartBuilder]
 }
@@ -38,7 +38,8 @@ func VXChart() *VXChartBuilder {
 	return v.VTag(&VXChartBuilder{}, "vx-chart")
 }
 
-// Src is where its code is: admin/charts.Src(the admin).
+// Src is where its code is: p.ExtraAssetRef(echarts.Path), the admin p
+// serving it (LazyExtraAsset).
 func (b *VXChartBuilder) Src(v string) *VXChartBuilder { return b.Attr("src", v) }
 
 // Kind is line, bars, stacked, hbars or donut.

@@ -124,6 +124,9 @@ type extraAsset struct {
 	// version is of its body (a hash): in the address the pages use, so a
 	// browser never keeps an old one
 	version string
+	// lazy: served, not in the pages' head — a component loads it when it
+	// needs it (LazyExtraAsset)
+	lazy bool
 }
 
 // assetVersion is the version of body: the start of its sha256.
@@ -413,6 +416,34 @@ func (b *Builder) AssetFunc(v AssetFunc) (r *Builder) {
 }
 
 func (b *Builder) ExtraAsset(path string, contentType string, body web.ComponentsPack, refTag ...string) (r *Builder) {
+	b.extraAsset(path, contentType, body, refTag...).lazy = false
+	return b
+}
+
+// LazyExtraAsset serves body at the address of an extra asset (ExtraAsset)
+// — its version in it, compressed, public —, but no page loads it in its
+// head: a component does, the first time it needs it, from ExtraAssetRef
+// (a large library only some pages use: the charts' ECharts).
+func (b *Builder) LazyExtraAsset(path string, contentType string, body web.ComponentsPack) (r *Builder) {
+	b.extraAsset(path, contentType, body).lazy = true
+	return b
+}
+
+// ExtraAssetRef is the address of the extra asset path, its version in it
+// ("/admin/!assets/extra/echarts.js?v=…"); "" when there is none.
+func (b *Builder) ExtraAssetRef(path string) string {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	for _, ea := range b.extraAssets {
+		if ea.path == path {
+			return b.extraRef(ea)
+		}
+	}
+	return ""
+}
+
+func (b *Builder) extraAsset(path string, contentType string, body web.ComponentsPack, refTag ...string) *extraAsset {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
@@ -438,7 +469,7 @@ func (b *Builder) ExtraAsset(path string, contentType string, body web.Component
 		theOne.refTag = refTag[0]
 	}
 
-	return b
+	return theOne
 }
 
 func (b *Builder) FieldDefaults(v FieldMode) (r *FieldDefaults) {
@@ -1488,6 +1519,9 @@ func (b *Builder) InjectAssets(ctx *web.EventContext) {
 
 func (b *Builder) InjectExtraAssets(ctx *web.EventContext) {
 	for _, ea := range b.extraAssets {
+		if ea.lazy {
+			continue
+		}
 		if len(ea.refTag) > 0 {
 			ctx.Injector.HeadHTML(ea.refTag)
 			continue

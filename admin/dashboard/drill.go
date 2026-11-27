@@ -5,8 +5,9 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/charts"
+	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
+	"github.com/go-rvq/rvq/x/ui/echarts"
 	vx "github.com/go-rvq/rvq/x/ui/vuetifyx"
 )
 
@@ -93,7 +94,7 @@ func (rc *renderCtx) vxChart(c *Chart) h.HTMLComponent {
 	for i, s := range c.Series {
 		series[i] = vx.VXChartSeries{Name: s.Name, Color: s.Color, Values: s.Values}
 	}
-	ch := vx.VXChart().Src(charts.Src(rc.b.p)).Kind(string(c.Kind)).Title(c.Title).
+	ch := vx.VXChart().Src(rc.b.p.ExtraAssetRef(echarts.Path)).Kind(string(c.Kind)).Title(c.Title).
 		Labels(c.Labels).Series(series...).Hints(c.Hints).Colors(c.Colors).ResetLabel(rc.msgs.ResetZoom)
 	if len(c.Drill) > 0 {
 		drill := make([]any, len(c.Drill))
@@ -110,6 +111,13 @@ func (rc *renderCtx) vxChart(c *Chart) h.HTMLComponent {
 			Query("trail", trail).Go())
 	}
 	return ch
+}
+
+// InstallCharts serves the code of the charts (x/ui/echarts) in the admin
+// p, lazy: vx-chart loads it the first time a page shows a chart (Install
+// does it).
+func InstallCharts(p *presets.Builder) {
+	p.LazyExtraAsset(echarts.Path, "text/javascript", echarts.JSComponentsPack())
 }
 
 // now is the clock of the dashboard.

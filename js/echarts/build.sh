@@ -1,6 +1,7 @@
 #!/bin/sh
 # The ECharts of the admin's charts: dist/echarts.min.js (window.RvqECharts),
-# embedded in the binary (rvq js.ECharts) and served by admin/charts. Vue
+# embedded in the binary (rvq js.ECharts) and served as an extra asset of the
+# admin (x/ui/echarts: /!assets/extra/echarts.js, lazy). Vue
 # and Vuetify are the page's, not in it. Run when src/ or its dependencies
 # change:
 #   sh js/echarts/build.sh

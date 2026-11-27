@@ -12,7 +12,6 @@ import (
 	"time"
 
 	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/charts"
 	"github.com/go-rvq/rvq/admin/packages/user"
 	"github.com/go-rvq/rvq/admin/presets"
 	"github.com/go-rvq/rvq/web"
@@ -49,8 +48,9 @@ func (b *Builder) Install() error {
 	wb.RegisterEventFunc(EventPref, b.eventPref)
 	b.p.HomePageFunc(b.Page)
 	b.installWidgetPage()
-	// the code of the charts (vx-chart), loaded the first time one is shown
-	charts.Setup(b.p)
+	// the code of the charts (vx-chart): served, loaded the first time one is
+	// shown
+	InstallCharts(b.p)
 	return nil
 }
 

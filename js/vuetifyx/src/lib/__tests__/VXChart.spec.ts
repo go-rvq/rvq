@@ -126,7 +126,7 @@ describe('vx-chart', () => {
 
   it('draws, zooms by a range, resets; a point opened emits its drill', async () => {
     const w = mountTemplate(VXChart, {
-      src: '/admin/!charts/echarts.js?v=1',
+      src: '/admin/!assets/extra/echarts.js?v=1',
       ...two,
       drill: [{ from: '2026-11-01', to: '2026-11-01' }, null, { from: '2026-11-03', to: '2026-11-03' }]
     })
