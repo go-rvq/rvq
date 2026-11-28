@@ -12,6 +12,7 @@ import (
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/orgs/models"
 	"github.com/go-rvq/rvq/admin/presets"
+	"github.com/go-rvq/rvq/admin/presets/actions"
 	"github.com/go-rvq/rvq/admin/presets/gorm2op"
 	"github.com/go-rvq/rvq/web"
 	"github.com/go-rvq/rvq/web/multipartestutils"
@@ -237,9 +238,27 @@ func TestCatalogRecords(t *testing.T) {
 	if !strings.Contains(body, `.url("`+samplePage+`")`) {
 		t.Errorf("of a sample: its page %s not in %.2000s", samplePage, body)
 	}
-	// in its dialog
-	if !strings.Contains(body, "dialog") {
-		t.Error("the select of a record not in its dialog")
+	// a sample of another organization under the user's: not chosen — not
+	// its title, no preview (the read scoped by the parents given)
+	theirs := &sampleModel{OrganizacaoID: other.ID, Nome: "Obra alheia"}
+	db.Create(theirs)
+	if body := get(page + "?scope=samples&rec=" + org.ID.String() + "/" + theirs.ID.String()); strings.Contains(body, "Obra alheia") ||
+		strings.Contains(body, "data-dashboard-widget='fin/saldo'") || !strings.Contains(body, "data-dashboard-catalog-choose") {
+		t.Error("a sample of another organization chosen under the user's")
+	}
+
+	// in its dialog; the one chosen a chip, its text a link to its detail
+	// (clicked in a dialog: the event of the detail at its listing)
+	if !strings.Contains(body, "dialog") || !strings.Contains(body, "chips") {
+		t.Error("the select of a record not in its dialog, not a chip")
+	}
+	for _, want := range []string{"item-href='/admin/orgs/{id}'", "item-href='/admin/orgs/" + org.ID.String() + "/finance/samples/{id}'",
+		`.eventFunc("` + actions.Detailing + `")`, `.query("id", $event.ID)`,
+		// the tooltips of its icons, the language's (pt-BR, the first)
+		"open-text='Abrir'", "remove-text='Remover'"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the link of the one chosen: no %s", want)
+		}
 	}
 	// one who may not list the samples: no select of them, no widget
 	r0 := httptest.NewRequest("GET", page+"?scope=samples&rec="+org.ID.String()+"/"+s.ID.String(), nil)

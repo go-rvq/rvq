@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 
 	h "github.com/go-rvq/htmlgo"
@@ -12,7 +13,11 @@ import (
 )
 
 // RecordSelectBuilder is the choice of a record of a model out of a form —
-// the select of a ModelSelectorBuilder with no field, in its dialog (the
+// the select of a ModelSelectorBuilder with no field, the one chosen a chip
+// (its text, clicked, changes it; on its right its open — its detail:
+// clicked in a dialog, its middle button in a new tab — and its removal,
+// their tooltips the language's; Readonly: its open alone),
+// in its dialog (the
 // search, the list, the pages: as the menu's choice of an organization):
 // its records searched by the model's listing (the ListData event at its
 // address, under the parents given: the records the user may list, as the
@@ -26,6 +31,7 @@ type RecordSelectBuilder struct {
 	parents  []model.ID
 	value    string
 	onChange string
+	readonly bool
 	attrs    []any
 }
 
@@ -56,6 +62,13 @@ func (b *RecordSelectBuilder) Value(id string) *RecordSelectBuilder {
 // $event ("" none).
 func (b *RecordSelectBuilder) OnChange(js string) *RecordSelectBuilder {
 	b.onChange = js
+	return b
+}
+
+// Readonly shows the one chosen alone: no change, no removal, no choice
+// (its link to its detail still).
+func (b *RecordSelectBuilder) Readonly(v bool) *RecordSelectBuilder {
+	b.readonly = v
 	return b
 }
 
@@ -91,12 +104,28 @@ func (b *RecordSelectBuilder) Component(ctx *web.EventContext) *vx.VXAdvancedSel
 	msgs := GetMessages(ctx.Context())
 	sel := vx.VXSelectOne().Label(label).ItemValue("ID").ItemText("Text").ItemsSearcher(searcher).
 		Dialog(true).DialogTexts(label, msgs.SelectorSelect, msgs.SelectorChange, msgs.SelectorSearch,
-		msgs.SelectorNoItems, msgs.SelectorClose)
+		msgs.SelectorNoItems, msgs.SelectorClose).
+		ItemTexts(msgs.SelectorOpen, msgs.SelectorRemove).
+		// the one chosen a chip: its change and its removal on its right
+		Chips(true)
 	if configuror != nil {
 		configuror(sel)
 	}
 	if itemText := sel.GetAttr("item-text"); itemText != nil {
 		searcher.Query(presets.ParamsItemTextKey, itemText.Value.(string))
+	}
+	if b.readonly {
+		sel.Readonly(true)
+	}
+	if b.mb.Info().HasDetailing() {
+		// the text of the one chosen a link to its detail: clicked, in a
+		// dialog (as DetailingLink); its middle button, in a new tab
+		sel.ItemHref(b.mb.Info().DetailingHref("{id}", b.parents...)).
+			Attr("@open-item", web.Plaid().URL(b.mb.Info().ListingHref(b.parents...)).
+				EventFunc(actions.Detailing).
+				Query(presets.ParamID, web.Var("$event.ID")).
+				Query(presets.ParamOverlay, actions.Dialog).
+				Query(presets.ParamTargetPortal, actions.Dialog.PortalName()).Go())
 	}
 	value := b.chosen(ctx, sel, enc)
 	sel.Attr(":model-value", h.JSONString(value))
@@ -117,11 +146,19 @@ func (b *RecordSelectBuilder) Chosen(ctx *web.EventContext) (string, any) {
 		return "", nil
 	}
 	id, err := b.mb.ParseRecordID(b.value)
-	if err != nil || b.mb.Permissioner().Reader(ctx.R, id, b.parents...).Denied() {
+	if err != nil {
+		return "", nil
+	}
+	// read and fetched under the parents given, as at their address: the
+	// model's scope of reading filters by them (a child's parent from the
+	// request's parents — none, no filter: a record of another's)
+	pctx := *ctx
+	pctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), presets.ParentsModelIDKey, model.IDSlice(b.parents)))
+	if b.mb.Permissioner().Reader(pctx.R, id, b.parents...).Denied() {
 		return "", nil
 	}
 	rec := b.mb.NewModel()
-	if fetch := b.mb.Detailing().GetFetchFunc(); fetch == nil || fetch(rec, id, ctx) != nil {
+	if fetch := b.mb.Detailing().GetFetchFunc(); fetch == nil || fetch(rec, id, &pctx) != nil {
 		return "", nil
 	}
 	return id.String(), rec

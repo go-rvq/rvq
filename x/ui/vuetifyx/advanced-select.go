@@ -66,6 +66,25 @@ func (b *VXAdvancedSelectBuilder) DialogTexts(title, sel, change, search, noItem
 		"search-text", search, "no-items-text", noItems, "close-text", close)
 }
 
+// ItemHref is the address of the page of a record chosen, "{id}" its value:
+// its open, an icon on its right in place of its change (its text, clicked,
+// changes it) — clicked, the event "open-item" (the record: its detail in a
+// dialog, say); its middle button, the address in a new tab.
+func (b *VXAdvancedSelectBuilder) ItemHref(v string) *VXAdvancedSelectBuilder {
+	return b.Attr("item-href", v)
+}
+
+// ItemTexts are the tooltips of the icons beside a record chosen: its open
+// (ItemHref) and its removal (its change: DialogTexts).
+func (b *VXAdvancedSelectBuilder) ItemTexts(open, remove string) *VXAdvancedSelectBuilder {
+	return b.Attr("open-text", open, "remove-text", remove)
+}
+
+// Readonly shows the ones chosen alone: no change, no removal, no choice.
+func (b *VXAdvancedSelectBuilder) Readonly(v bool) *VXAdvancedSelectBuilder {
+	return b.Attr(":readonly", v)
+}
+
 func (b *VXAdvancedSelectBuilder) Chips(v bool) *VXAdvancedSelectBuilder {
 	b.chips = v
 	return b

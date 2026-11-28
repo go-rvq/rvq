@@ -23,6 +23,8 @@ type Messages struct {
 	SelectorSearch  string `i18n:"hint='The search field of the dialog of a selector.'"`
 	SelectorNoItems string `i18n:"hint='The list of the dialog of a selector when nothing is found.'"`
 	SelectorClose   string `i18n:"hint='The button that closes the dialog of a selector.'"`
+	SelectorOpen    string `i18n:"hint='Tooltip of the icon beside the record chosen in a selector that opens its detail (a dialog; a new tab by the middle button).'"`
+	SelectorRemove  string `i18n:"hint='Tooltip of the icon beside the record chosen in a selector that removes it from the choice.'"`
 }
 
 func (m *Messages) FromError(err error) error {
@@ -43,6 +45,8 @@ var (
 		SelectorSearch:    "Search",
 		SelectorNoItems:   "Nothing found",
 		SelectorClose:     "Close",
+		SelectorOpen:      "Open",
+		SelectorRemove:    "Remove",
 	}
 
 	Messages_pt_BR = &Messages{
@@ -53,6 +57,8 @@ var (
 		SelectorSearch:    "Pesquisar",
 		SelectorNoItems:   "Nada encontrado",
 		SelectorClose:     "Fechar",
+		SelectorOpen:      "Abrir",
+		SelectorRemove:    "Remover",
 	}
 )
 

@@ -15,27 +15,61 @@
       class="mb-2 vx-advanced-select"
     >
       <template v-if="chips">
-        <v-chip-group column>
-          <v-chip v-for="item in internalSelectedItems">
-            {{ item[itemText] }}
+        <div class="d-flex flex-wrap ga-2 pa-1">
+          <!-- the text of the one chosen: clicked, the choice again (its
+               dialog); its open (itemHref) and its removal on its right -->
+          <v-chip
+            v-for="item in internalSelectedItems"
+            :color="chipColor"
+            variant="tonal"
+            class="vx-advanced-select__chip"
+            :class="{ 'cursor-pointer': canChange }"
+          >
+            <span class="vx-advanced-select__item-text me-2" @click="canChange && openDialog()">{{
+              item[itemText]
+            }}</span>
             <template v-slot:append>
               <v-btn
-                v-if="dialog && !many"
+                v-if="itemHref"
                 density="compact"
                 variant="text"
-                icon="mdi-swap-horizontal"
-                :title="changeText"
-                @click="openDialog"
-              ></v-btn>
+                icon
+                size="small"
+                :href="hrefOf(item)"
+                :aria-label="openText"
+                class="vx-advanced-select__item-link"
+                @click.prevent.stop="openItem(item)"
+              >
+                <v-icon icon="mdi-open-in-new" />
+                <v-tooltip activator="parent" location="top">{{ openText }}</v-tooltip>
+              </v-btn>
               <v-btn
+                v-else-if="canChange && !many"
                 density="compact"
                 variant="text"
-                icon="mdi-delete"
+                icon
+                class="vx-advanced-select__change"
+                @click="openDialog"
+                :aria-label="changeText"
+              >
+                <v-icon icon="mdi-swap-horizontal" />
+                <v-tooltip activator="parent" location="top">{{ changeText }}</v-tooltip>
+              </v-btn>
+              <v-btn
+                v-if="!readonly"
+                density="compact"
+                variant="text"
+                icon
+                class="vx-advanced-select__remove"
                 @click="removeItem(item[itemValue])"
-              ></v-btn>
+                :aria-label="removeText"
+              >
+                <v-icon icon="mdi-close" color="error" />
+                <v-tooltip activator="parent" location="top">{{ removeText }}</v-tooltip>
+              </v-btn>
             </template>
           </v-chip>
-        </v-chip-group>
+        </div>
       </template>
 
       <v-list v-else density="compact" style="padding: 0">
@@ -47,35 +81,58 @@
           handle=".handle"
         >
           <template #item="{ element }">
-            <v-list-item
-              :prepend-avatar="element[itemImage]"
-              :title="element[itemText]"
-              animation="300"
-            >
-              <template v-if="dialog && !many" v-slot:append>
-                <!-- the change of the one chosen: on its right -->
+            <v-list-item :prepend-avatar="element[itemImage]" animation="300">
+              <!-- its text: clicked, the choice again (its dialog) -->
+              <v-list-item-title
+                class="vx-advanced-select__item-text"
+                :class="{ 'cursor-pointer': canChange }"
+                @click="canChange && openDialog()"
+                >{{ element[itemText] }}</v-list-item-title
+              >
+              <!-- on its right: its open (itemHref) — else its change —
+                   beside its removal -->
+              <template v-slot:append>
                 <v-btn
+                  v-if="itemHref"
                   variant="text"
-                  icon="mdi-swap-horizontal"
+                  icon
                   density="compact"
-                  :title="changeText"
+                  size="small"
+                  :href="hrefOf(element)"
+                  :aria-label="openText"
+                  class="vx-advanced-select__item-link"
+                  @click.prevent.stop="openItem(element)"
+                >
+                  <v-icon icon="mdi-open-in-new" />
+                  <v-tooltip activator="parent" location="top">{{ openText }}</v-tooltip>
+                </v-btn>
+                <v-btn
+                  v-else-if="canChange && !many"
+                  variant="text"
+                  icon
+                  density="compact"
                   class="vx-advanced-select__change"
                   @click="openDialog"
-                ></v-btn>
-              </template>
-              <template v-slot:prepend>
-                <v-icon
-                  v-if="many"
-                  density="compact"
-                  icon="mdi-drag"
-                  class="handle mx-2 cursor-grab"
-                ></v-icon>
+                  :aria-label="changeText"
+                >
+                  <v-icon icon="mdi-swap-horizontal" />
+                  <v-tooltip activator="parent" location="top">{{ changeText }}</v-tooltip>
+                </v-btn>
                 <v-btn
+                  v-if="!readonly"
                   @click="removeItem(element[itemValue])"
                   variant="text"
-                  icon="mdi-delete"
+                  icon
                   density="compact"
-                ></v-btn>
+                  class="vx-advanced-select__remove"
+                  :aria-label="removeText"
+                >
+                  <v-icon icon="mdi-close" color="error" />
+                  <v-tooltip activator="parent" location="top">{{ removeText }}</v-tooltip>
+                </v-btn>
+              </template>
+              <template v-if="many && !readonly" v-slot:prepend>
+                <v-icon density="compact" icon="mdi-drag" class="handle mx-2 cursor-grab"></v-icon>
               </template>
             </v-list-item>
           </template>
@@ -86,7 +143,7 @@
     <template v-if="dialog">
       <!-- the selector in a dialog: the search, the list, the pages -->
       <v-chip
-        v-if="many || !internalSelectedItems.length"
+        v-if="!readonly && (many || !internalSelectedItems.length)"
         class="vx-advanced-select__open mb-2"
         prepend-icon="mdi-magnify"
         variant="outlined"
@@ -95,8 +152,14 @@
         @click="openDialog"
         >{{ selectText }}</v-chip
       >
-      <div v-if="errorMessages.length" class="v-messages" style="opacity: 1; color: rgb(var(--v-theme-error))">
-        <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">{{ item }}</div>
+      <div
+        v-if="errorMessages.length"
+        class="v-messages"
+        style="opacity: 1; color: rgb(var(--v-theme-error))"
+      >
+        <div role="alert" v-for="(item, i) in errorMessages" class="v-messages__message">
+          {{ item }}
+        </div>
       </div>
       <vx-dialog
         v-model="dialogOpen"
@@ -148,7 +211,7 @@
               color="primary"
               @click="pick(item)"
             >
-              <template v-if="many" v-slot:prepend>
+              <template v-if="many && !readonly" v-slot:prepend>
                 <v-checkbox-btn :model-value="isSelected(item)" density="compact" />
               </template>
             </v-list-item>
@@ -167,7 +230,7 @@
     </template>
 
     <v-autocomplete
-      v-else-if="selecting"
+      v-else-if="selecting && !readonly"
       :item-value="itemValue"
       :item-title="itemText"
       :items="internalItems"
@@ -215,8 +278,8 @@
 import draggable from 'vuedraggable'
 import VxDialog from '@/lib/Dialog.vue'
 
-import {computed, isReactive, onMounted, ref, toRaw, watch} from 'vue'
-import {itemsTree} from './advancedSelectTree'
+import { computed, isReactive, onMounted, ref, toRaw, watch } from 'vue'
+import { itemsTree } from './advancedSelectTree'
 
 const props = defineProps({
   hint: {
@@ -304,7 +367,18 @@ const props = defineProps({
   changeText: { type: String, default: 'Change' },
   searchText: { type: String, default: 'Search' },
   noItemsText: { type: String, default: 'No items' },
-  closeText: { type: String, default: 'Close' }
+  closeText: { type: String, default: 'Close' },
+  // readonly: the ones chosen shown alone — no change, no removal, no choice
+  readonly: { type: Boolean, default: false },
+  // itemHref: the address of the page of a record chosen, "{id}" its value —
+  // its open, on its right in place of its change (its text, clicked,
+  // changes it): clicked, "openItem" (the record: its detail in a dialog,
+  // say); its middle button, the address in a new tab
+  itemHref: { type: String, default: '' },
+  openText: { type: String, default: 'Open' },
+  // chipColor: the color of the chip of a record chosen (chips)
+  chipColor: { type: String, default: 'primary' },
+  removeText: { type: String, default: 'Remove' }
 })
 
 const modelValue = defineModel()
@@ -320,6 +394,13 @@ const selecting = ref(false)
 const updating = { v: false }
 
 const emit = defineEmits()
+
+// hrefOf is the address of the page of the record item (itemHref)
+const hrefOf = (item: any) =>
+  props.itemHref.split('{id}').join(encodeURIComponent(item[props.itemValue]))
+const openItem = (item: any) => emit('openItem', item)
+// canChange: the one chosen changed by its dialog (its text clicked)
+const canChange = computed(() => props.dialog && !props.readonly)
 
 const modelValueArray = (modelValue: any): any[] => {
   if (!modelValue) {
@@ -522,7 +603,11 @@ const loadDialog = () => {
     const k = keyword.toLowerCase()
     p = Promise.resolve({
       Records: (props.items as any[]).filter(
-        (i: any) => !k || String(i[props.itemText] ?? '').toLowerCase().includes(k)
+        (i: any) =>
+          !k ||
+          String(i[props.itemText] ?? '')
+            .toLowerCase()
+            .includes(k)
       )
     })
   }
@@ -557,9 +642,17 @@ const openDialog = () => {
 // pick chooses item: one, the dialog closes; many, it is marked or unmarked
 // the dialog's items as a tree (itemParent), and the values chosen
 const dialogTree = computed(() =>
-  itemsTree(dialogItems.value, props.itemValue, props.itemParent, props.itemNodeText, props.itemText)
+  itemsTree(
+    dialogItems.value,
+    props.itemValue,
+    props.itemParent,
+    props.itemNodeText,
+    props.itemText
+  )
 )
-const selectedValues = computed(() => internalSelectedItems.value.map((it: any) => String(it[props.itemValue])))
+const selectedValues = computed(() =>
+  internalSelectedItems.value.map((it: any) => String(it[props.itemValue]))
+)
 // pickValue picks the item of the value activated in the tree
 const pickValue = (values: any[]) => {
   const v = values && values.length ? String(values[values.length - 1]) : ''

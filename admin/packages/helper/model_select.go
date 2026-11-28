@@ -475,7 +475,8 @@ func (b *ModelSelectorBuilder) Build() *ModelSelectorBuilder {
 		if b.selectMode == SelectDialog {
 			msgs := GetMessages(ctx.Context())
 			selector.Dialog(true).DialogTexts(field.Label, msgs.SelectorSelect, msgs.SelectorChange,
-				msgs.SelectorSearch, msgs.SelectorNoItems, msgs.SelectorClose)
+				msgs.SelectorSearch, msgs.SelectorNoItems, msgs.SelectorClose).
+				ItemTexts(msgs.SelectorOpen, msgs.SelectorRemove)
 		}
 
 		configureSelector(field, selector)
