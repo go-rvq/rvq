@@ -20,6 +20,8 @@ var Messages_en_US = &Messages{
 	DocumentTypeCPF:    "CPF",
 	DocumentTypeCNPJ:   "CNPJ",
 	DocumentTypeOther:  "Other",
+	PersonsCaption:     "active people",
+	NoPersons:          "No people registered.",
 
 	ErrInvalidCPF:          "Invalid CPF.",
 	ErrInvalidCNPJ:         "Invalid CNPJ.",

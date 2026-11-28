@@ -40,18 +40,39 @@ func WidgetPageURL(prefix, id string, r *http.Request) string {
 	return prefix + WidgetPagePath + "?" + q.Encode()
 }
 
+// widgetPageURL is the address of the page of the widget id of the panel,
+// keeping the period of the request and the panel's record.
+func (b *Panel) widgetPageURL(ctx *web.EventContext, id string) string {
+	u := WidgetPageURL(b.uriPrefix(), id, ctx.R)
+	if b.id != PanelHome {
+		u += "&" + paramPanel + "=" + url.QueryEscape(b.id)
+	}
+	if r := ScopeOf(ctx).Record; r != "" {
+		u += "&" + paramRecord + "=" + url.QueryEscape(r)
+	}
+	return u
+}
+
 // installWidgetPage registers the page of the widgets.
 func (b *Builder) installWidgetPage() {
 	b.p.PagesRegistrator().New(
 		presets.HttpPage(WidgetPagePath).InMenu(false).
 			TitleFunc(func(ctx context.Context) string { return MessagesOf(ctx).Dashboard })).
-		Layout(b.widgetPage).
+		Layout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
+			// of the panel of its query (the home's by default), in its scope
+			pn := b.panelOf(ctx.R)
+			if pn == nil {
+				return b.p.DefaultNotFoundPageFunc(ctx)
+			}
+			ctx = pn.scoped(ctx)
+			return pn.in(ctx).widgetPage(ctx)
+		}).
 		Build()
 }
 
 // widgetPage is the page of the widget of the query's id: not one, or not
 // the user's, not found.
-func (b *Builder) widgetPage(ctx *web.EventContext) (r web.PageResponse, err error) {
+func (b *Panel) widgetPage(ctx *web.EventContext) (r web.PageResponse, err error) {
 	msgs := MessagesOf(ctx.Context())
 	w := b.widget(ctx.R.FormValue("id"))
 	if w == nil || !w.visible(ctx.R) {
@@ -100,14 +121,14 @@ func (b *Builder) widgetPage(ctx *web.EventContext) (r web.PageResponse, err err
 }
 
 // fullLoadEvent is the load of w on its page: its full version.
-func (b *Builder) fullLoadEvent(r *http.Request, w *Widget, p Period) *web.VueEventTagBuilder {
+func (b *Panel) fullLoadEvent(r *http.Request, w *Widget, p Period) *web.VueEventTagBuilder {
 	return b.loadEvent(r, w, p).Query(paramFull, "1")
 }
 
 // pageBtn is the button of a widget's header that opens its page.
-func (b *Builder) pageBtn(ctx *web.EventContext, msgs *Messages, w *Widget) h.HTMLComponent {
+func (b *Panel) pageBtn(ctx *web.EventContext, msgs *Messages, w *Widget) h.HTMLComponent {
 	return v.VBtn("").Icon("mdi-arrow-top-right").Variant(v.VariantText).Size(v.SizeXSmall).Density(v.DensityComfortable).
-		Href(WidgetPageURL(b.uriPrefix(), w.ID, ctx.R)).
+		Href(b.widgetPageURL(ctx, w.ID)).
 		Attr("title", msgs.OpenPage, "aria-label", msgs.OpenPage, "data-dashboard-page", w.ID)
 }
 

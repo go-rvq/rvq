@@ -105,7 +105,8 @@ func TestMenuGroupPages(t *testing.T) {
 	page := presets.HttpPage("/painel").TitleFunc(func(context.Context) string { return "Painel" }).MenuIcon("mdi-view-dashboard")
 	org.Detailing().PagesRegistrator().New(page).
 		RecordLayout(func(ctx *web.EventContext, mid model.ID, _ []model.ID, _ func() (any, error)) (r web.PageResponse, err error) {
-			r.Body = h.Div(h.Text("o painel de "+mid.String())).Attr("data-painel", true)
+			// with the index of another group of the organization's
+			r.Body = h.Div(h.Text("o painel de "+mid.String()), b.MenuGroup("fin").RecordIndex(ctx, org)).Attr("data-painel", true)
 			return
 		}).Build()
 	b.PageMenuGroup(page)
@@ -135,8 +136,9 @@ func TestMenuGroupPages(t *testing.T) {
 	}
 
 	// a group that is a page: the page
-	if body, code := get("/admin/orgs/1/painel"); code != 200 || !strings.Contains(body, "o painel de 1") {
-		t.Errorf("the page of the group painel: %d %.300s", code, body)
+	if body, code := get("/admin/orgs/1/painel"); code != 200 || !strings.Contains(body, "o painel de 1") ||
+		!strings.Contains(body, `data-menu-group-index='fin'`) || !strings.Contains(body, `"href":"/admin/orgs/1/fin/carteiras"`) {
+		t.Errorf("the page of the group painel, the index of fin in it (RecordIndex): %d %.300s", code, body)
 	}
 
 	// the index of a group of the root
@@ -157,5 +159,48 @@ func TestMenuGroupPages(t *testing.T) {
 	// the menu's nodes carry no descriptions (only an index's)
 	if strings.Contains(body, `"subtitle":"as contas e os caixas"`) {
 		t.Error("descriptions in the side menu")
+	}
+}
+
+// A group that is a page in another group: the page at the group's path
+// (under the other's), its sub-pages in the menu (InMenu) the group's
+// children, at their paths under it; made before the build (BeforeBuild).
+func TestNestedPageMenuGroup(t *testing.T) {
+	b := presets.New(i18n.New()).URIPrefix("/admin")
+	title := func(s string) func(context.Context) string { return func(context.Context) string { return s } }
+	layout := func(s string) func(*web.EventContext) (web.PageResponse, error) {
+		return func(*web.EventContext) (r web.PageResponse, err error) {
+			r.Body = h.Div(h.Text(s))
+			return
+		}
+	}
+	b.BeforeBuild(func() {
+		page := b.PagesRegistrator().New(presets.HttpPage("/widgets-fin").TitleFunc(title("Financeiro"))).Layout(layout("a página do grupo"))
+		page.SubPage("/pending").InMenu(true).Title(title("Pendências")).Layout(layout("a página do widget")).Build()
+		page.Build()
+		g := b.PageMenuGroup(page.Page())
+		b.MenuGroup("widgets").Title("Widgets").Add(presets.GroupItem(g.Name()))
+		b.MenuGroup("ui").Title("UI").Add(presets.GroupItem("widgets"))
+	})
+	b.Build()
+
+	get := func(url string) (string, int) {
+		t.Helper()
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		return html.UnescapeString(strings.NewReplacer("\\u003c", "<", "\\u003e", ">", "\\u0026", "&", `\"`, `"`).Replace(w.Body.String())), w.Code
+	}
+	if body, code := get("/admin/ui/widgets/widgets-fin"); code != 200 || !strings.Contains(body, "a página do grupo") {
+		t.Fatalf("the page of the group: %d %.300s", code, body)
+	}
+	body, code := get("/admin/ui/widgets/widgets-fin/pending")
+	if code != 200 || !strings.Contains(body, "a página do widget") {
+		t.Fatalf("the sub-page: %d %.300s", code, body)
+	}
+	for _, want := range []string{`"groupHref":"/admin/ui/widgets/widgets-fin"`, `"href":"/admin/ui/widgets/widgets-fin/pending"`,
+		`"groupHref":"/admin/ui/widgets"`, "Pendências"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the menu has no %s", want)
+		}
 	}
 }

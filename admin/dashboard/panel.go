@@ -9,11 +9,10 @@ import (
 	v "github.com/go-rvq/rvq/x/ui/vuetify"
 )
 
-// Panel draws the widgets ids — those visible for the request, known (Widget
-// or Dynamic) — on a page of their own: a record's dashboard. Each card loads
-// as on the dashboard (its period the user's), and its menu adds it to the
-// user's dashboard while it is not there.
-func (b *Builder) Panel(ctx *web.EventContext, ids ...string) h.HTMLComponent {
+// cards are the cards of the widgets ids of the panel — those visible for
+// the request — loaded as on the panel (its period the user's); the menu of
+// one adds it to the user's layout of the panel while it is not there.
+func (b *Panel) cards(ctx *web.EventContext, ids ...string) h.HTMLComponent {
 	msgs := MessagesOf(ctx.Context())
 	prefs := b.LoadPrefs(userID(ctx.R))
 	period := PeriodOf(ctx.R, b.Now(), cmp.Or(prefs.Period, PeriodDefault))
@@ -30,12 +29,12 @@ func (b *Builder) Panel(ctx *web.EventContext, ids ...string) h.HTMLComponent {
 	return h.Div(v.VRow(cols...).Dense(true)).Class("dashboard").Attr("data-dashboard-panel", true)
 }
 
-func (b *Builder) panelCard(ctx *web.EventContext, msgs *Messages, w *Widget, period Period, onDashboard bool) h.HTMLComponent {
+func (b *Panel) panelCard(ctx *web.EventContext, msgs *Messages, w *Widget, period Period, onDashboard bool) h.HTMLComponent {
 	title := w.Title(ctx.Context())
 	items := h.HTMLComponents{}
 	if !onDashboard {
 		items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.AddToDashboard))).PrependIcon("mdi-view-dashboard-edit-outline").
-			Attr("@click", prefEvent("add", w.ID)).Attr("data-dashboard-panel-add", w.ID))
+			Attr("@click", b.prefEvent("add", w.ID)).Attr("data-dashboard-panel-add", w.ID))
 	} else {
 		items = append(items, v.VListItem(v.VListItemTitle(h.Text(msgs.OnDashboard))).PrependIcon("mdi-check").Disabled(true))
 	}
@@ -60,13 +59,12 @@ func (b *Builder) panelCard(ctx *web.EventContext, msgs *Messages, w *Widget, pe
 	).Variant(v.VariantOutlined).Class("h-100").Attr("data-dashboard-widget", w.ID)
 }
 
-// GroupPanel draws the widgets of the group group — those visible for the
-// request, in the group's order — on a page of their own: the dashboard of
-// an area (the page of a group of the menu, presets.PageMenuGroup), the
-// period chosen at its top (the dashboard's chips, in the URL). Each card
-// loads as on the dashboard, and its menu adds it to the user's dashboard
-// while it is not there (Panel).
-func (b *Builder) GroupPanel(ctx *web.EventContext, group string) h.HTMLComponent {
+// GroupPage draws the widgets of the group group of the panel — those
+// visible for the request, in the group's order — in a page of their own
+// (the page of a group of the menu, presets.PageMenuGroup: an area's), the
+// period chosen at its top (in the URL), in the panel's scope.
+func (b *Panel) GroupPage(ctx *web.EventContext, group string) h.HTMLComponent {
+	ctx = b.scoped(ctx)
 	msgs := MessagesOf(ctx.Context())
 	prefs := b.LoadPrefs(userID(ctx.R))
 	period := PeriodOf(ctx.R, b.Now(), cmp.Or(prefs.Period, PeriodDefault))
@@ -83,6 +81,6 @@ func (b *Builder) GroupPanel(ctx *web.EventContext, group string) h.HTMLComponen
 	}
 	return h.Div(
 		b.headerWith(ctx, msgs, &prefs, period, false, false),
-		h.Div(b.Panel(ctx, ids...)).Class("mt-3"),
+		h.Div(b.cards(ctx, ids...)).Class("mt-3"),
 	).Class("dashboard pa-4").Attr("data-dashboard-group-panel", group)
 }

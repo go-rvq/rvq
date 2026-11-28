@@ -25,6 +25,10 @@ type Messages struct {
 	DocumentTypeCNPJ   string `i18n:"label='CNPJ', hint='Document type: the Brazilian company taxpayer number.'"`
 	DocumentTypeOther  string `i18n:"hint='Document type: any other document.'"`
 
+	// the widget of the people of an organization
+	PersonsCaption string `i18n:"label='people', hint='Under the number of the active people of an organization (its widget).'"`
+	NoPersons      string `i18n:"hint='Shown in the widget of the people when the organization has none.'"`
+
 	// validation error messages
 	ErrInvalidCPF          string `i18n:"label='Invalid CPF', hint='Error of a CPF that is not valid.'"`
 	ErrInvalidCNPJ         string `i18n:"label='Invalid CNPJ', hint='Error of a CNPJ that is not valid.'"`

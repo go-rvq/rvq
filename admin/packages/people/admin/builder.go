@@ -29,6 +29,9 @@ type Builder struct {
 	// OrganizationBuilder is the orgs plugin the Person resource is nested under.
 	// When nil a default one is used. It is ensured (installed) on Install.
 	OrganizationBuilder *orgsadmin.Builder
+
+	// personMB is the Person resource (Install)
+	personMB *presets.ModelBuilder
 }
 
 var _ presets.Plugin = (*Builder)(nil)
@@ -102,7 +105,7 @@ func (b *Builder) Install(pb *presets.Builder) error {
 	pb.Use(b.OrganizationBuilder)
 	messages.Register(pb.I18n())
 	registerEnumSelects(pb)
-	b.configurePerson(pb)
+	b.personMB = b.configurePerson(pb)
 	return nil
 }
 

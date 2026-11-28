@@ -15,6 +15,7 @@
 | --- | --- |
 | `New(db, mgr *login_session.Manager, lb *login.Builder, userMb *presets.ModelBuilder) *Builder` | Construct the profile builder. |
 | `(*Builder) Install(p *presets.Builder) error` | Register the `my-profile` singleton resource. |
+| `(*Builder) Dashboard(d *dashboard.Builder) *dashboard.Panel` | The panel `PanelProfile` on the top of the profile, with the group `GroupProfile` (made here); customized by each user. |
 | `(*Builder) Brand(p *presets.Builder) func(ctx) h.HTMLComponent` | Sidebar account widget. |
 | `(*Builder) ProfilePage(p *presets.Builder) http.Handler` | Standalone profile page. |
 | `(*Builder) NotificationComponentFunc()` / `SetNotificationComponentFunc(fn)` | Get/set the notification slot rendered in the brand widget. |

@@ -15,18 +15,18 @@ import (
 // portal; its footer with the seconds; its blocks kept at most half the
 // shortest interval.
 func TestLive(t *testing.T) {
-	w := &Widget{ID: "cpu", Title: func(context.Context) string { return "CPU" }, Live: []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second},
+	w := &Widget{ID: "sys/cpu", Group: "sys", Name: "cpu", Title: func(context.Context) string { return "CPU" }, Live: []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second},
 		Load: func(*web.EventContext, Period) ([]Block, error) { return []Block{&Note{Text: "x"}}, nil }}
 	sel := h.MustString(liveSelector(Messages_en_US, w), context.Background())
-	for _, want := range []string{`data-dashboard-live='cpu'`, `data-dashboard-live-choice='2000'`, `data-dashboard-live-choice='5000'`,
-		`data-dashboard-live-choice='10000'`, `every: 2000`, PortalName("cpu"), "rvq-dash-live:", Messages_en_US.LiveEvery} {
+	for _, want := range []string{`data-dashboard-live='sys/cpu'`, `data-dashboard-live-choice='2000'`, `data-dashboard-live-choice='5000'`,
+		`data-dashboard-live-choice='10000'`, `every: 2000`, PortalName("sys/cpu"), "rvq-dash-live:", Messages_en_US.LiveEvery} {
 		if !strings.Contains(sel, want) {
 			t.Errorf("the selector has no %q:\n%s", want, sel)
 		}
 	}
 
 	// on the dashboard and on a record's panel
-	b0 := &Builder{Now: func() time.Time { return now }}
+	_, b0 := newTest()
 	ctx0 := &web.EventContext{R: httptest.NewRequest("GET", "/", nil)}
 	p0 := NewPeriod(Period7d, now, "", "")
 	for name, c := range map[string]h.HTMLComponent{
@@ -34,17 +34,18 @@ func TestLive(t *testing.T) {
 		"panel": b0.panelCard(ctx0, Messages_en_US, w, p0, false),
 	} {
 		s := h.MustString(c, context.Background())
-		if !strings.Contains(s, `data-dashboard-live='cpu'`) {
+		if !strings.Contains(s, `data-dashboard-live='sys/cpu'`) {
 			t.Errorf("%s: no selector", name)
 		}
 		// the button of its page
-		if !strings.Contains(s, `data-dashboard-page='cpu'`) || !strings.Contains(s, WidgetPagePath+"?id=cpu") {
+		if !strings.Contains(s, `data-dashboard-page='sys/cpu'`) || !strings.Contains(s, WidgetPagePath+"?id=sys%2Fcpu") {
 			t.Errorf("%s: no button of its page", name)
 		}
 	}
 
 	clock := now
-	b := &Builder{Now: func() time.Time { return clock }}
+	bd, b := newTest()
+	bd.Now = func() time.Time { return clock }
 	n := 0
 	w.Load = func(*web.EventContext, Period) ([]Block, error) { n++; return nil, nil }
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/", nil)}

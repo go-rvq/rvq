@@ -203,6 +203,10 @@ func msgs(ctx context.Context) *Messages {
 	return i18n.MustGetModuleMessages(ctx, I18nSharedKey, Messages_en_US).(*Messages)
 }
 
+// EventLabel is the name of the event e of the history in the language of
+// ctx (e itself when unknown).
+func EventLabel(ctx context.Context, e string) string { return msgs(ctx).EventName(e) }
+
 // EventName is the name of the event e of the history (e itself when
 // unknown).
 func (m *Messages) EventName(e string) string {

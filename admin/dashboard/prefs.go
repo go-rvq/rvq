@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/go-rvq/rvq/x/migrate"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,12 +32,37 @@ type Prefs struct {
 	Hidden    []string  `json:"hidden,omitempty"`
 	Order     []string  `json:"order,omitempty"`
 	Collapsed []string  `json:"collapsed,omitempty"`
-	// Added are the opt-in widgets the user added (Widget.OptIn).
+	// Sizes are the widths the user gave the widgets (resized), by id
+	Sizes map[string]Size `json:"sizes,omitempty"`
+	// Added: of before (the opt-in widgets added), read and not used
 	Added  []string `json:"added,omitempty"`
 	Period string   `json:"period,omitempty"`
 }
 
 func (p *Prefs) collapsed(id string) bool { return slices.Contains(p.Collapsed, id) }
+
+// MinSize is the narrowest a widget is resized to.
+const MinSize Size = 2
+
+// sizeOf is the width of w for the user: theirs (resized), else its own.
+func (p *Prefs) sizeOf(w *Widget) Size {
+	if n, ok := p.Sizes[w.ID]; ok && n >= MinSize && n <= Full {
+		return n
+	}
+	return w.Size
+}
+
+// resize gives the widget id the width n (its own: n is forgotten).
+func (p *Prefs) resize(w *Widget, n Size) {
+	if n == w.Size {
+		delete(p.Sizes, w.ID)
+		return
+	}
+	if p.Sizes == nil {
+		p.Sizes = map[string]Size{}
+	}
+	p.Sizes[w.ID] = n
+}
 
 func toggle(list []string, id string, on bool) []string {
 	list = slices.DeleteFunc(list, func(s string) bool { return s == id })
@@ -46,25 +72,51 @@ func toggle(list []string, id string, on bool) []string {
 	return list
 }
 
-// LoadPrefs are the choices of user (none: empty).
-func (b *Builder) LoadPrefs(user uuid.UUID) (p Prefs) {
+// The choices of a user are kept a row (Pref), its Data the ones of each
+// panel: {"panels": {"<panel>": Prefs}}. A row of before — one Prefs, of the
+// dashboard alone — is the home's, its widgets' ids of before (a name alone)
+// made "<group>/<name>" (normalize).
+
+// storedPrefs are the choices of a user, by panel.
+type storedPrefs struct {
+	Panels map[string]Prefs `json:"panels"`
+}
+
+// loadAll are the choices of user, by panel (none: empty).
+func (b *Builder) loadAll(user uuid.UUID) map[string]Prefs {
+	all := map[string]Prefs{}
 	if b.db == nil || user == uuid.Nil {
-		return
+		return all
 	}
 	var row Pref
 	if err := b.db.Where("user_id = ?", user).First(&row).Error; err != nil {
-		return
+		return all
 	}
-	_ = json.Unmarshal([]byte(row.Data), &p)
-	return
+	var raw map[string]json.RawMessage
+	if json.Unmarshal([]byte(row.Data), &raw) != nil {
+		return all
+	}
+	if _, ok := raw["panels"]; ok {
+		var st storedPrefs
+		if json.Unmarshal([]byte(row.Data), &st) == nil && st.Panels != nil {
+			return st.Panels
+		}
+		return all
+	}
+	// of before: the home's
+	var p Prefs
+	if json.Unmarshal([]byte(row.Data), &p) == nil {
+		all[PanelHome] = p
+	}
+	return all
 }
 
-// SavePrefs keeps the choices of user.
-func (b *Builder) SavePrefs(user uuid.UUID, p Prefs) error {
+// saveAll keeps the choices of user, by panel.
+func (b *Builder) saveAll(user uuid.UUID, all map[string]Prefs) error {
 	if b.db == nil || user == uuid.Nil {
 		return errors.New("dashboard: no user")
 	}
-	data, err := json.Marshal(p)
+	data, err := json.Marshal(storedPrefs{Panels: all})
 	if err != nil {
 		return err
 	}
@@ -72,12 +124,53 @@ func (b *Builder) SavePrefs(user uuid.UUID, p Prefs) error {
 	return b.db.Save(&row).Error
 }
 
-// ResetPrefs drops the choices of user.
-func (b *Builder) ResetPrefs(user uuid.UUID) error {
-	if b.db == nil {
+// LoadPrefs are the choices of user of the panel (none: empty — everything
+// shown).
+func (b *Panel) LoadPrefs(user uuid.UUID) (p Prefs) {
+	p = b.loadAll(user)[b.id]
+	b.normalize(&p)
+	return
+}
+
+// normalize makes the ids of before (a widget's name alone) of p the ids of
+// the panel's widgets of that name ("<group>/<name>"), when one only.
+func (b *Panel) normalize(p *Prefs) {
+	byName := map[string][]string{}
+	for _, w := range b.all() {
+		byName[w.Name] = append(byName[w.Name], w.ID)
+	}
+	fix := func(ids []string) []string {
+		for i, id := range ids {
+			if !strings.Contains(id, "/") && len(byName[id]) == 1 {
+				ids[i] = byName[id][0]
+			}
+		}
+		return ids
+	}
+	for i := range p.Sections {
+		p.Sections[i].Widgets = fix(p.Sections[i].Widgets)
+	}
+	p.Removed, p.Disabled, p.Hidden, p.Order = fix(p.Removed), fix(p.Disabled), fix(p.Hidden), fix(p.Order)
+}
+
+// SavePrefs keeps the choices of user of the panel.
+func (b *Panel) SavePrefs(user uuid.UUID, p Prefs) error {
+	all := b.loadAll(user)
+	all[b.id] = p
+	return b.saveAll(user, all)
+}
+
+// ResetPrefs drops the choices of user of the panel.
+func (b *Panel) ResetPrefs(user uuid.UUID) error {
+	if b.db == nil || user == uuid.Nil {
 		return nil
 	}
-	return b.db.Where("user_id = ?", user).Delete(&Pref{}).Error
+	all := b.loadAll(user)
+	delete(all, b.id)
+	if len(all) == 0 {
+		return b.db.Where("user_id = ?", user).Delete(&Pref{}).Error
+	}
+	return b.saveAll(user, all)
 }
 
 // Migrate creates the table of the preferences.

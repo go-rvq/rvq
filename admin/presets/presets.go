@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -109,6 +110,8 @@ type Builder struct {
 	permSetIx *permSetIndex
 	// afterBuild are called at the end of Build (AfterBuild)
 	afterBuild []func()
+	// beforeBuild are called at the start of Build (BeforeBuild)
+	beforeBuild []func()
 	// docHref: the address of a document of the documentation (doc_href.go)
 	docHref          func(node string) string
 	docData          func(node string) string
@@ -948,6 +951,19 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 		title := v.TTitle(ctx.Context())
 
 		children, active := itemNodes(v.items)
+		// a group that is a page (PageMenuGroup): its page's sub-pages in
+		// the menu (Sub, InMenu), its children too
+		if v.page != nil && v.page.owner == nil {
+			for _, sub := range b.pagesRegistrator.httpPages {
+				if sub.parent != v.page {
+					continue
+				}
+				if child := pageNode(sub); child != nil {
+					children = append(children, child)
+					active = active || slices.Contains(activated, child.Value)
+				}
+			}
+		}
 		if len(children) == 0 {
 			return nil, false
 		}
@@ -1597,6 +1613,10 @@ func (b *Builder) extraRef(ea *extraAsset) string {
 }
 
 func (b *Builder) Build(mux ...*http.ServeMux) {
+	for _, f := range b.beforeBuild {
+		f()
+	}
+	b.beforeBuild = nil
 	var (
 		mx    *http.ServeMux
 		names = make(map[string]any)
@@ -1625,6 +1645,14 @@ func (b *Builder) Build(mux ...*http.ServeMux) {
 	for _, f := range b.afterBuild {
 		f()
 	}
+}
+
+// BeforeBuild adds f to what is called at the start of Build, before the
+// routes and the menu's pages: what a package registers once every other
+// one registered theirs (a catalog of them in the menu).
+func (b *Builder) BeforeBuild(f func()) *Builder {
+	b.beforeBuild = append(b.beforeBuild, f)
+	return b
 }
 
 // AfterBuild adds f to what is called at the end of Build: the routes, the

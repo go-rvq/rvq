@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	h "github.com/go-rvq/htmlgo"
-	"github.com/go-rvq/rvq/admin/dashboard"
 	"github.com/go-rvq/rvq/admin/media/media_library"
 	"github.com/go-rvq/rvq/admin/model"
 	"github.com/go-rvq/rvq/admin/packages/login_session"
@@ -41,9 +40,6 @@ type Builder struct {
 	notificationComponentFunc func(ctx *web.EventContext, u user.User) h.HTMLComponent
 	// mb is the model of the profile (Model), once installed
 	mb *presets.ModelBuilder
-	// dash holds the widgets of the profile (Dashboard)
-	dash    *dashboard.Builder
-	widgets []string
 }
 
 // Model is the model of the profile of the user (my_profile), once

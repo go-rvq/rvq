@@ -20,6 +20,8 @@ var Messages_pt_BR = &Messages{
 	DocumentTypeCPF:    "CPF",
 	DocumentTypeCNPJ:   "CNPJ",
 	DocumentTypeOther:  "Outro",
+	PersonsCaption:     "pessoas ativas",
+	NoPersons:          "Nenhuma pessoa cadastrada.",
 
 	ErrInvalidCPF:          "CPF inválido.",
 	ErrInvalidCNPJ:         "CNPJ inválido.",

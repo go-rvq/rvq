@@ -56,7 +56,7 @@ func section(ss []Section, id string) *Section {
 // groups, their widgets in the old order), every group a section, every
 // widget known in one — a new one at the end of its group's — but the
 // removed; the ids no longer known out.
-func (b *Builder) layout(p *Prefs) []Section {
+func (b *Panel) layout(p *Prefs) []Section {
 	known := map[string]*Widget{}
 	all := b.all()
 	for _, w := range all {
@@ -95,9 +95,8 @@ func (b *Builder) layout(p *Prefs) []Section {
 		}
 		return len(p.Order)
 	}
-	// an opt-in widget only when added
 	rest := slices.DeleteFunc(slices.Clone(all), func(w *Widget) bool {
-		return placed[w.ID] || p.removed(w.ID) || (w.OptIn && !slices.Contains(p.Added, w.ID))
+		return placed[w.ID] || p.removed(w.ID)
 	})
 	slices.SortStableFunc(rest, func(a, c *Widget) int {
 		return cmp.Or(cmp.Compare(pos(a.ID), pos(c.ID)), cmp.Compare(a.Order, c.Order))
@@ -142,42 +141,24 @@ func children(ss []Section, id string) []Section {
 	return out
 }
 
-// groupOf is the group id, or nil.
-func (b *Builder) groupOf(id string) *Group {
-	for _, g := range b.groups {
-		if g.ID == id {
-			return g
-		}
-	}
-	return nil
-}
-
 // remove takes the widgets ids out of the layout, removed.
-func (b *Builder) remove(p *Prefs, ids ...string) {
+func (b *Panel) remove(p *Prefs, ids ...string) {
 	ss := b.layout(p)
 	for i := range ss {
 		ss[i].Widgets = slices.DeleteFunc(ss[i].Widgets, func(id string) bool { return slices.Contains(ids, id) })
 	}
 	p.Sections = ss
 	for _, id := range ids {
-		if w := b.widget(id); w != nil && w.OptIn {
-			// an opt-in one leaves: added no more
-			p.Added = toggle(p.Added, id, false)
-			continue
-		}
 		p.Removed = toggle(p.Removed, id, true)
 	}
 }
 
 // add puts the removed widgets ids back, each at the end of its group's
 // section (layout places a widget in no section there).
-func (b *Builder) add(p *Prefs, ids ...string) {
+func (b *Panel) add(p *Prefs, ids ...string) {
 	for _, id := range ids {
 		p.Removed = toggle(p.Removed, id, false)
 		p.Hidden = toggle(p.Hidden, id, false)
-		if w := b.widget(id); w != nil && w.OptIn {
-			p.Added = toggle(p.Added, id, true)
-		}
 	}
 	p.Sections = b.layout(p)
 }
@@ -186,7 +167,7 @@ func (b *Builder) add(p *Prefs, ids ...string) {
 // section's widgets as given — only the widgets known, each once; those of
 // the old layout the user does not see (not allowed) kept where they were —;
 // the sections in the order given, their titles the layout's.
-func (b *Builder) arrange(p *Prefs, given []Section) {
+func (b *Panel) arrange(p *Prefs, given []Section) {
 	old := b.layout(p)
 	seen := map[string]bool{}
 	var out []Section
@@ -226,7 +207,7 @@ func (b *Builder) arrange(p *Prefs, given []Section) {
 // saveSection makes a section of the user's own (id "": a new one, last),
 // or changes its title and icon; a section (its own, or a group's) put in
 // parent ("" at the top; not in itself nor under itself).
-func (b *Builder) saveSection(p *Prefs, id, title, icon, parent string) string {
+func (b *Panel) saveSection(p *Prefs, id, title, icon, parent string) string {
 	ss := b.layout(p)
 	title = strings.TrimSpace(title)
 	if !strings.HasPrefix(icon, "mdi-") {
@@ -250,7 +231,7 @@ func (b *Builder) saveSection(p *Prefs, id, title, icon, parent string) string {
 
 // deleteSection deletes the section of the user's own id: its widgets back
 // to their groups' sections, its sections in its parent.
-func (b *Builder) deleteSection(p *Prefs, id string) {
+func (b *Panel) deleteSection(p *Prefs, id string) {
 	ss := b.layout(p)
 	s := section(ss, id)
 	if s == nil || !s.Custom {
@@ -275,7 +256,7 @@ func (b *Builder) deleteSection(p *Prefs, id string) {
 
 // moveSection moves the section id by delta among its siblings (the
 // sections of its parent).
-func (b *Builder) moveSection(p *Prefs, id string, delta int) {
+func (b *Panel) moveSection(p *Prefs, id string, delta int) {
 	ss := b.layout(p)
 	defer func() { p.Sections = ss }()
 	s := section(ss, id)
@@ -295,7 +276,7 @@ func (b *Builder) moveSection(p *Prefs, id string, delta int) {
 }
 
 // moveWidget moves the widget id by delta in its section.
-func (b *Builder) moveWidget(p *Prefs, id string, delta int) {
+func (b *Panel) moveWidget(p *Prefs, id string, delta int) {
 	ss := b.layout(p)
 	for k := range ss {
 		ws := ss[k].Widgets
@@ -313,7 +294,7 @@ func (b *Builder) moveWidget(p *Prefs, id string, delta int) {
 // moveTo puts the widgets ids in the section target, last, enabled — those
 // removed back in the dashboard, the others out of the section they were
 // in.
-func (b *Builder) moveTo(p *Prefs, target string, ids ...string) bool {
+func (b *Panel) moveTo(p *Prefs, target string, ids ...string) bool {
 	ss := b.layout(p)
 	t := section(ss, target)
 	if t == nil {
@@ -326,9 +307,6 @@ func (b *Builder) moveTo(p *Prefs, target string, ids ...string) bool {
 		p.Removed = toggle(p.Removed, id, false)
 		p.Hidden = toggle(p.Hidden, id, false)
 		p.Disabled = toggle(p.Disabled, id, false)
-		if w := b.widget(id); w.OptIn {
-			p.Added = toggle(p.Added, id, true)
-		}
 		for i := range ss {
 			ss[i].Widgets = slices.DeleteFunc(ss[i].Widgets, func(x string) bool { return x == id })
 		}

@@ -45,6 +45,8 @@ type HttpPageBuilder struct {
 	// owner is the model whose pages it is of (its detail's: a record's), nil
 	// a page of the builder
 	owner *ModelBuilder
+	// group is the group of the menu the page is (PageMenuGroup)
+	group *MenuGroupBuilder
 	// menuVisible, when set, says whether the page is in the menu of the
 	// request (a sub-page's: a part the user reaches)
 	menuVisible func(r *http.Request) bool
@@ -100,6 +102,14 @@ func (b *HttpPageBuilder) Sub(sub string) *HttpPageBuilder {
 	p.notInMenu = true
 	return p
 }
+
+// Owner is the model whose record's detail the page is of
+// (Detailing().PagesRegistrator()), nil a page of the builder.
+func (b *HttpPageBuilder) Owner() *ModelBuilder { return b.owner }
+
+// GroupOfPage is the group of the menu the page is (PageMenuGroup), nil
+// none.
+func (b *HttpPageBuilder) GroupOfPage() *MenuGroupBuilder { return b.group }
 
 // Parent is the page this one is under (Sub); nil for a page of its own.
 func (b *HttpPageBuilder) Parent() *HttpPageBuilder { return b.parent }

@@ -58,6 +58,17 @@ func (b *Builder) uriNodes(u *url.URL) (nodes []string) {
 	segs := splitPath(p)
 	mb, rest := b.modelOfPath(segs)
 	if mb == nil {
+		// a page of the builder at its address: of a group of the menu that
+		// is it, the group's
+		for _, page := range b.p.PagesRegistrator().HttpPages() {
+			if page.Owner() != nil || page.FullPath() != p {
+				continue
+			}
+			if g := page.GroupOfPage(); g != nil {
+				nodes = append(nodes, "groups/"+g.Name())
+			}
+			nodes = append(nodes, "pages/"+strings.Trim(page.Path(), "/"))
+		}
 		// a page of the menu
 		prefix := strings.Trim(b.p.GetURIPrefix(), "/")
 		page := strings.Trim(p, "/")

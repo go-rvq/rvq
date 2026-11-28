@@ -57,7 +57,7 @@ func (rc *renderCtx) trail() []crumb { return parseTrail(rc.ctx.R.FormValue("tra
 // reload is the event that loads the widget again with the period c, the
 // way back trail.
 func (rc *renderCtx) reload(c crumb, trail []crumb) *web.VueEventTagBuilder {
-	ev := web.Plaid().EventFunc(EventLoad).Query("widget", rc.w.ID).Query("refresh", "1").Query("period", c.key)
+	ev := rc.b.event(EventLoad).Query("widget", rc.w.ID).Query("refresh", "1").Query("period", c.key)
 	if c.key == PeriodCustom {
 		ev.Query("from", c.from).Query("to", c.to)
 	}
@@ -106,7 +106,7 @@ func (rc *renderCtx) vxChart(c *Chart) h.HTMLComponent {
 			drill[i] = map[string]string{"from": from, "to": to}
 		}
 		trail := encodeTrail(append(rc.trail(), crumbOf(rc.period)))
-		ch.Drill(drill).Attr("@point", web.Plaid().EventFunc(EventLoad).Query("widget", rc.w.ID).Query("refresh", "1").
+		ch.Drill(drill).Attr("@point", rc.b.event(EventLoad).Query("widget", rc.w.ID).Query("refresh", "1").
 			Query("period", PeriodCustom).Query("from", web.Var("$event.from")).Query("to", web.Var("$event.to")).
 			Query("trail", trail).Go())
 	}

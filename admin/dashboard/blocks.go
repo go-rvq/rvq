@@ -18,7 +18,7 @@ type Block interface {
 // renderCtx is what a block is drawn with: the widget (its actions), the
 // event, the words.
 type renderCtx struct {
-	b      *Builder
+	b      *Panel
 	w      *Widget
 	ctx    *web.EventContext
 	msgs   *Messages
@@ -56,7 +56,7 @@ func (rc *renderCtx) action(a *Action) h.HTMLComponent {
 	if a == nil {
 		return nil
 	}
-	ev := web.Plaid().EventFunc(EventAction).
+	ev := rc.b.event(EventAction).
 		Query("widget", rc.w.ID).
 		Query("action", a.Name).
 		Query("arg", a.Arg).

@@ -22,9 +22,11 @@ func renderIn(t *testing.T, url string, bs ...Block) string {
 	t.Helper()
 	p := presets.New(i18n.New()).URIPrefix("/admin")
 	InstallCharts(p)
-	b := &Builder{p: p, Now: func() time.Time { return now }}
+	bd := New(p, nil)
+	bd.Now = func() time.Time { return now }
+	b := bd.Panel(PanelHome).AllGroups()
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", url, nil)}
-	rc := &renderCtx{b: b, w: &Widget{ID: "w"}, ctx: ctx, msgs: Messages_en_US, period: b.eventPeriod(ctx)}
+	rc := &renderCtx{b: b, w: &Widget{ID: "g/w"}, ctx: ctx, msgs: Messages_en_US, period: b.eventPeriod(ctx)}
 	out := []h.HTMLComponent{rc.crumbs()}
 	for _, bl := range bs {
 		out = append(out, bl.render(rc))

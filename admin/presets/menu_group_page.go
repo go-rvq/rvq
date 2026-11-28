@@ -48,13 +48,13 @@ func (b *Builder) PageMenuGroup(page *HttpPageBuilder) *MenuGroupBuilder {
 			case g.title != nil || g.icon != "" || g.uriName != nil:
 				panic(fmt.Sprintf("presets: the menu group %q has a title, an icon or an URI name of its own: of a page, they are the page's", name))
 			}
-			g.page = page
+			g.page, page.group = page, g
 			page.notInMenu = true
 			return g
 		}
 	}
 	g := b.MenuGroup(name)
-	g.page = page
+	g.page, page.group = page, g
 	// the group is the page: no entry of its own
 	page.notInMenu = true
 	return g
@@ -81,7 +81,8 @@ func (b *MenuGroupBuilder) rootHref() string {
 		if b.page.owner != nil {
 			return ""
 		}
-		return strings.TrimSuffix(b.b.prefix, "/") + b.page.path
+		// in the groups the group is in (setupGroupPages: the page with it)
+		return strings.TrimSuffix(b.b.prefix, "/") + "/" + b.URIPath()
 	}
 	if !b.indexRoot {
 		return ""
@@ -117,6 +118,14 @@ func (b *Builder) setupGroupPages() {
 	}
 	b.groupPagesSet = true
 	b.MenuTree()
+	// a group of the root that is a page, in another group: the page in
+	// that group, its URL the group's path (under the other's)
+	for _, it := range b.menuItems {
+		if g := it.Group(); g != nil && g.page != nil && g.page.owner == nil && g.page.parent == nil &&
+			g.page.GetMenuGroupBuilder() != g.Parent() {
+			g.page.SetMenuGroup(g.Parent())
+		}
+	}
 	for _, it := range b.menuItems {
 		g := it.Group()
 		if g == nil || g.page != nil || g.URIPath() == "" {
@@ -220,14 +229,36 @@ func findMenuNode(nodes []*MenuNode, is func(n *MenuNode) bool) *MenuNode {
 	return nil
 }
 
+// indexNode is the node of the group in the menu of the request (is), its
+// items with their descriptions; nil none.
+func (b *MenuGroupBuilder) indexNode(ctx *web.EventContext, is func(n *MenuNode) bool) *MenuNode {
+	dctx := *ctx
+	dctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), menuDescribedKey{}, true))
+	nodes, _, _ := b.b.menuNodes(&dctx)
+	return findMenuNode(nodes, is)
+}
+
+// RecordIndex is the index of the items of the group under the record of
+// the request of mb (a page of its detail: the group's own, PageMenuGroup) —
+// those the user may see, as a tree, with their icons and descriptions, as
+// the index of a group with no page; nil none.
+func (b *MenuGroupBuilder) RecordIndex(ctx *web.EventContext, mb *ModelBuilder) h.HTMLComponent {
+	suffix := ":" + b.name
+	key := mb.menuRecordKey(ParentsModelID(ctx.R))
+	n := b.indexNode(ctx, func(n *MenuNode) bool {
+		return strings.HasPrefix(n.Value, key) && strings.HasSuffix(n.Value, suffix)
+	})
+	if n == nil || len(n.Children) == 0 {
+		return nil
+	}
+	return h.Div(MenuIndexTree(n.Children)).Attr("data-menu-group-index", b.name)
+}
+
 // index is the page of the group with no page of its own: its node of the
 // menu of the request (is), its items — the menu's, the ones the user may
 // see — as a tree, their descriptions under their titles; none, not found.
 func (b *MenuGroupBuilder) index(ctx *web.EventContext, is func(n *MenuNode) bool) (r web.PageResponse, err error) {
-	dctx := *ctx
-	dctx.R = ctx.R.WithContext(context.WithValue(ctx.R.Context(), menuDescribedKey{}, true))
-	nodes, _, _ := b.b.menuNodes(&dctx)
-	n := findMenuNode(nodes, is)
+	n := b.indexNode(ctx, is)
 	if n == nil || len(n.Children) == 0 {
 		return b.b.DefaultNotFoundPageFunc(ctx)
 	}

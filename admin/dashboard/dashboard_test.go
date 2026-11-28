@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 	"net/http/httptest"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -60,44 +61,51 @@ func TestPeriods(t *testing.T) {
 // changed, moved and deleted (their widgets back to their groups); a widget
 // registered later in its group's.
 func TestLayout(t *testing.T) {
-	b := &Builder{}
-	b.Group(&Group{ID: "g1", Order: 1}).Group(&Group{ID: "g2", Order: 2})
-	b.Widget(&Widget{ID: "a", Group: "g1", Order: 1}, &Widget{ID: "b", Group: "g1", Order: 2},
-		&Widget{ID: "c", Group: "g1", Order: 3}, &Widget{ID: "d", Group: "g2", Order: 1})
+	bd, b := newTest()
+	g1 := bd.Group("g1").Order(1).
+		Widget("a", func(w *WidgetBuilder) { w.Order(1) }).
+		Widget("b", func(w *WidgetBuilder) { w.Order(2) }).
+		Widget("c", func(w *WidgetBuilder) { w.Order(3) })
+	bd.Group("g2").Order(2).Widget("d", func(w *WidgetBuilder) { w.Order(1) })
+	// the widgets' names in the layout (their ids "<group>/<name>")
 	str := func(ss []Section) string {
 		var out []string
 		for _, s := range ss {
-			out = append(out, s.ID+":"+strings.Join(s.Widgets, ","))
+			var ws []string
+			for _, id := range s.Widgets {
+				ws = append(ws, path.Base(id))
+			}
+			out = append(out, s.ID+":"+strings.Join(ws, ","))
 		}
 		return strings.Join(out, " ")
 	}
 
-	p := Prefs{Order: []string{"c"}, Hidden: []string{"b"}}
+	p := Prefs{Order: []string{"g1/c"}, Hidden: []string{"g1/b"}}
 	if got := str(b.layout(&p)); got != "g1:c,a g2:d" {
 		t.Fatalf("first layout %q", got)
 	}
-	b.add(&p, "b")
-	if got := str(b.layout(&p)); got != "g1:c,a,b g2:d" || p.removed("b") {
+	b.add(&p, "g1/b")
+	if got := str(b.layout(&p)); got != "g1:c,a,b g2:d" || p.removed("g1/b") {
 		t.Errorf("b added back %q", got)
 	}
-	b.remove(&p, "a")
-	if got := str(b.layout(&p)); got != "g1:c,b g2:d" || !p.removed("a") {
+	b.remove(&p, "g1/a")
+	if got := str(b.layout(&p)); got != "g1:c,b g2:d" || !p.removed("g1/a") {
 		t.Errorf("a removed %q", got)
 	}
 
 	// dragged: b to g2 before d, a removed and x unknown left out, c twice
-	b.arrange(&p, []Section{{ID: "g2", Widgets: []string{"b", "d", "x", "a"}}, {ID: "g1", Widgets: []string{"c", "c"}}})
+	b.arrange(&p, []Section{{ID: "g2", Widgets: []string{"g1/b", "g2/d", "x", "g1/a"}}, {ID: "g1", Widgets: []string{"g1/c", "g1/c"}}})
 	if got := str(b.layout(&p)); got != "g2:b,d g1:c" {
 		t.Errorf("arranged %q", got)
 	}
 	// a section not sent and its widgets: kept
-	b.arrange(&p, []Section{{ID: "g1", Widgets: []string{"c"}}})
+	b.arrange(&p, []Section{{ID: "g1", Widgets: []string{"g1/c"}}})
 	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
 		t.Errorf("arranged, g2 not sent %q", got)
 	}
 
 	id := b.saveSection(&p, "", " Mine ", "mdi-star", "")
-	b.arrange(&p, []Section{{ID: id, Widgets: []string{"d"}}, {ID: "g1", Widgets: []string{"c"}}, {ID: "g2", Widgets: []string{"b"}}})
+	b.arrange(&p, []Section{{ID: id, Widgets: []string{"g2/d"}}, {ID: "g1", Widgets: []string{"g1/c"}}, {ID: "g2", Widgets: []string{"g1/b"}}})
 	if got := str(b.layout(&p)); got != id+":d g1:c g2:b" {
 		t.Errorf("own section %q", got)
 	}
@@ -112,15 +120,15 @@ func TestLayout(t *testing.T) {
 	if got := str(b.layout(&p)); got != "g1:c "+id+":d g2:b" {
 		t.Errorf("moved %q", got)
 	}
-	b.moveWidget(&p, "c", 1)
+	b.moveWidget(&p, "g1/c", 1)
 	b.deleteSection(&p, "g1") // a group's: not deleted
 	b.deleteSection(&p, id)
 	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
 		t.Errorf("own deleted %q", got)
 	}
 
-	p.Disabled = toggle(p.Disabled, "c", true)
-	if !p.disabled("c") || str(b.layout(&p)) != "g1:c g2:b,d" {
+	p.Disabled = toggle(p.Disabled, "g1/c", true)
+	if !p.disabled("g1/c") || str(b.layout(&p)) != "g1:c g2:b,d" {
 		t.Errorf("disabled stays in its place")
 	}
 
@@ -149,23 +157,23 @@ func TestLayout(t *testing.T) {
 
 	// into a section (its +): a removed one back there, another out of
 	// where it was, a disabled one enabled; no such section, nothing
-	b.remove(&p, "b")
-	if !b.moveTo(&p, "g1", "b", "d", "c") || b.moveTo(&p, "nope", "c") {
+	b.remove(&p, "g1/b")
+	if !b.moveTo(&p, "g1", "g1/b", "g2/d", "g1/c") || b.moveTo(&p, "nope", "g1/c") {
 		t.Fatal("moveTo")
 	}
-	if got := str(b.layout(&p)); got != "g1:b,d,c g2:" || p.removed("b") || p.disabled("c") {
+	if got := str(b.layout(&p)); got != "g1:b,d,c g2:" || p.removed("g1/b") || p.disabled("g1/c") {
 		t.Errorf("moved to g1 %q", got)
 	}
-	if s := sectionOf(b.layout(&p), "d"); s == nil || s.ID != "g1" {
+	if s := sectionOf(b.layout(&p), "g2/d"); s == nil || s.ID != "g1" {
 		t.Errorf("sectionOf d %+v", s)
 	}
-	b.moveTo(&p, "g2", "b", "d")
+	b.moveTo(&p, "g2", "g1/b", "g2/d")
 	if got := str(b.layout(&p)); got != "g1:c g2:b,d" {
 		t.Errorf("moved back %q", got)
 	}
 
 	// a widget registered later: last in its group's
-	b.Widget(&Widget{ID: "e", Group: "g1", Order: 0})
+	g1.Widget("e", nil)
 	if got := str(b.layout(&p)); got != "g1:c,e g2:b,d" {
 		t.Errorf("new widget %q", got)
 	}
@@ -174,7 +182,8 @@ func TestLayout(t *testing.T) {
 func render(t *testing.T, bs ...Block) string {
 	t.Helper()
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/?period=7d", nil)}
-	rc := &renderCtx{w: &Widget{ID: "w"}, ctx: ctx, msgs: Messages_en_US, period: NewPeriod(Period7d, now, "", "")}
+	_, pn := newTest()
+	rc := &renderCtx{b: pn, w: &Widget{ID: "g/w"}, ctx: ctx, msgs: Messages_en_US, period: NewPeriod(Period7d, now, "", "")}
 	var out []h.HTMLComponent
 	for _, b := range bs {
 		out = append(out, b.render(rc))
@@ -232,9 +241,9 @@ func TestFormat(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	b := &Builder{Now: func() time.Time { return now }}
+	bd, b := newTest()
 	n := 0
-	w := &Widget{ID: "w", Load: func(*web.EventContext, Period) ([]Block, error) { n++; return nil, nil }}
+	w := &Widget{ID: "g/w", Load: func(*web.EventContext, Period) ([]Block, error) { n++; return nil, nil }}
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/", nil)}
 	p := NewPeriod(Period7d, now, "", "")
 	b.blocks(ctx, w, p, false)
@@ -246,12 +255,12 @@ func TestCache(t *testing.T) {
 	if n != 2 {
 		t.Errorf("refresh skips the cache: loads %d", n)
 	}
-	b.Now = func() time.Time { return now.Add(2 * time.Minute) }
+	bd.Now = func() time.Time { return now.Add(2 * time.Minute) }
 	b.blocks(ctx, w, p, false)
 	if n != 3 {
 		t.Errorf("ttl: loads %d", n)
 	}
-	b.Invalidate("w")
+	b.Invalidate("g/w")
 	b.blocks(ctx, w, p, false)
 	if n != 4 {
 		t.Errorf("invalidate: loads %d", n)

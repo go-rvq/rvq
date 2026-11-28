@@ -557,6 +557,24 @@ func (s *Service) HistoryOf(ctx context.Context, subject string) ([]Event, error
 		Order("at DESC").Find(&out).Error
 }
 
+// SubjectName is the name of the subject (a user, a group).
+func (s *Service) SubjectName(ctx context.Context, subject string) string {
+	return s.subjectName(ctx, subject)
+}
+
+// Pending are what of the record waits: the requests for its owner's
+// confirmation and the invites for whom they invite, the newest first.
+func (s *Service) Pending(ctx context.Context, resource, id string) (reqs []Request, invs []AccessInvite, err error) {
+	db := s.o.DB.WithContext(ctx)
+	if err = db.Where("resource = ? AND record_id = ? AND state = ?", resource, id, StatePending).
+		Order("created_at DESC").Find(&reqs).Error; err != nil {
+		return
+	}
+	err = db.Where("resource = ? AND record_id = ? AND state = ?", resource, id, StatePending).
+		Order("created_at DESC").Find(&invs).Error
+	return
+}
+
 // --- the flows ---
 
 // Origin is where an action came from (the history's IP and browser).

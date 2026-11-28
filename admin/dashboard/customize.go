@@ -19,7 +19,7 @@ const customizeLocals = `{secOpen: false, secId: "", secCustom: true, secTitle: 
 
 // customizeTools are the tools of the customize mode, its dialogs and its
 // script.
-func (b *Builder) customizeTools(ctx *web.EventContext, msgs *Messages, prefs *Prefs, layout []Section) h.HTMLComponent {
+func (b *Panel) customizeTools(ctx *web.EventContext, msgs *Messages, prefs *Prefs, layout []Section) h.HTMLComponent {
 	return h.Div(
 		h.Tag("component").Attr(":is", "'style'").Children(h.RawHTML(dashStyle)),
 		h.Tag("user-component").Attr(":setup", "[("+dashScript()+")]"),
@@ -39,8 +39,8 @@ func (b *Builder) customizeTools(ctx *web.EventContext, msgs *Messages, prefs *P
 
 // sectionDialog makes or changes a section of the user's own: its title and
 // icon.
-func (b *Builder) sectionDialog(msgs *Messages) h.HTMLComponent {
-	save := web.Plaid().EventFunc(EventPref).Query("op", "section").
+func (b *Panel) sectionDialog(msgs *Messages) h.HTMLComponent {
+	save := b.event(EventPref).Query("op", "section").
 		Query("arg", web.Var("locals.secId")).Query("title", web.Var("locals.secTitle")).Query("icon", web.Var("locals.secIcon")).
 		Query("parent", web.Var("locals.secParent")).Go()
 	return v.VDialog(
@@ -78,7 +78,7 @@ func (b *Builder) sectionDialog(msgs *Messages) h.HTMLComponent {
 // target (a section's +: locals.addTarget) also the others not in it — a
 // disabled one marked, an enabled one saying the section it is in and its
 // original —, all moved into the target, enabled.
-func (b *Builder) addDialog(ctx *web.EventContext, msgs *Messages, prefs *Prefs, layout []Section) h.HTMLComponent {
+func (b *Panel) addDialog(ctx *web.EventContext, msgs *Messages, prefs *Prefs, layout []Section) h.HTMLComponent {
 	var groups h.HTMLComponents
 	anyRemoved := false
 	for _, g := range b.sortedGroups() {
@@ -130,7 +130,7 @@ func (b *Builder) addDialog(ctx *web.EventContext, msgs *Messages, prefs *Prefs,
 			h.Div(boxes...),
 		).Attr("v-if", strings.Join(shows, " || ")).Attr("data-dashboard-removed-group", g.ID))
 	}
-	add := web.Plaid().EventFunc(EventPref).Query("op", web.Var(`locals.addTarget ? "add-to" : "add"`)).
+	add := b.event(EventPref).Query("op", web.Var(`locals.addTarget ? "add-to" : "add"`)).
 		Query("section", web.Var("locals.addTarget")).Query("arg", web.Var("locals.add.join(',')")).Go()
 	return v.VDialog(
 		v.VCard(
@@ -160,19 +160,26 @@ const dashStyle = `
 .dashboard .dashboard-row { min-height: 96px; border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 8px; padding: 4px; }
 .dashboard .dashboard-row.dashboard-drop { border-color: rgb(var(--v-theme-primary)); background: rgba(var(--v-theme-primary), .05); }
 .dashboard [data-dashboard-col] { cursor: grab; }
-.dashboard [data-dashboard-col].dashboard-dragging { opacity: .4; }
+.dashboard [data-dashboard-col].dashboard-dragging, .dashboard [data-dashboard-group].dashboard-dragging { opacity: .4; }
+.dashboard .dashboard-section-handle { cursor: grab; }
+.dashboard .dashboard-col { position: relative; }
+.dashboard .dashboard-resize { position: absolute; top: 8px; bottom: 8px; right: 0; width: 8px; cursor: ew-resize; border-radius: 4px; touch-action: none; }
+.dashboard .dashboard-resize:hover, .dashboard .dashboard-resizing .dashboard-resize { background: rgba(var(--v-theme-primary), .35); }
 .dashboard .dashboard-disabled { border-color: rgb(var(--v-theme-warning)) !important; border-style: dashed !important;
   background: repeating-linear-gradient(-45deg, rgba(var(--v-theme-warning), .07) 0 10px, transparent 10px 20px) !important; }
 `
 
-// dashScript is the dragging of the widgets (window.__rvqDash, the events
-// of the template call it): a widget dragged over a section goes before the
-// widget under the pointer (or last), and dropped the layout is kept — the
-// sections and their widgets as the page has them.
+// dashScript is the dragging of the customize mode (window.__rvqDash, the
+// events of the template call it). A widget dragged over a section — of any
+// group — goes before the widget under the pointer (or last). A section
+// dragged by its handle goes before or after the section under the pointer
+// among its siblings only: never into another (its parent kept). Dropped,
+// the layout is kept — the sections and their widgets in the page's order —
+// in the panel of the page (data-dashboard).
 func dashScript() string {
 	return `({window}) => {
 	const w = window, d = w.document;
-	let dragged = null;
+	let dragged = null, sec = null;
 	const place = (row, e) => {
 		for (const c of row.querySelectorAll(":scope > [data-dashboard-col]")) {
 			if (c === dragged) continue;
@@ -188,18 +195,26 @@ func dashScript() string {
 		if (before) { if (before !== dragged.nextSibling) row.insertBefore(dragged, before); }
 		else if (row.lastElementChild !== dragged) row.appendChild(dragged);
 	};
+	// sibling is the section under the pointer that is a sibling of the one
+	// dragged (the one it is in, up to that level), null none
+	const sibling = (e) => {
+		let t = e.target.closest && e.target.closest("[data-dashboard-group]");
+		while (t && t.parentElement !== sec.parentElement) t = t.parentElement.closest("[data-dashboard-group]");
+		return t === sec ? null : t;
+	};
+	const clear = () => d.querySelectorAll(".dashboard-drop, .dashboard-dragging").forEach((x) => x.classList.remove("dashboard-drop", "dashboard-dragging"));
 	const dash = w.__rvqDash = {
 		start(e) {
 			const col = e.target.closest && e.target.closest("[data-dashboard-col]");
-			if (!col) return;
+			if (!col || sec) return;
 			dragged = col;
 			e.dataTransfer.effectAllowed = "move";
 			e.dataTransfer.setData("text/plain", col.getAttribute("data-dashboard-col"));
 			col.classList.add("dashboard-dragging");
 		},
 		end() {
-			if (dragged) dragged.classList.remove("dashboard-dragging");
-			d.querySelectorAll(".dashboard-drop").forEach((x) => x.classList.remove("dashboard-drop"));
+			clear();
+			dragged = sec = null;
 		},
 		over(e) {
 			if (!dragged) return;
@@ -216,18 +231,80 @@ func dashScript() string {
 			// where it was dropped (a quick drag may have been over another
 			// section last)
 			put(e.currentTarget, e);
+			const el = dragged;
 			dash.end();
-			dragged = null;
-			dash.save();
+			dash.save(el);
 		},
-		layout() {
-			return [...d.querySelectorAll("[data-dashboard-row]")].map((r) => ({
+		// a section, by its handle
+		secStart(e) {
+			e.stopPropagation();
+			const box = e.target.closest("[data-dashboard-group]");
+			if (!box) return;
+			sec = box;
+			e.dataTransfer.effectAllowed = "move";
+			e.dataTransfer.setData("text/plain", box.getAttribute("data-dashboard-group"));
+			e.dataTransfer.setDragImage(box, 16, 16);
+			box.classList.add("dashboard-dragging");
+		},
+		secOver(e) {
+			if (!sec || e.__rvqSec) return;
+			e.__rvqSec = true;
+			const t = sibling(e);
+			if (!t) return;
+			e.preventDefault();
+			const r = t.getBoundingClientRect();
+			const at = e.clientY < r.top + r.height / 2 ? t : t.nextSibling;
+			if (at !== sec && at !== sec.nextSibling) t.parentElement.insertBefore(sec, at);
+		},
+		secDrop(e) {
+			if (!sec || e.__rvqSec) return;
+			e.__rvqSec = true;
+			e.preventDefault();
+			const el = sec;
+			dash.end();
+			dash.save(el);
+		},
+		// a widget's width, by its right edge: in columns of the grid of 12
+		// of its row, MinSize the least; let go, kept
+		resizeStart(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			const col = e.target.closest("[data-dashboard-col]");
+			if (!col) return;
+			const unit = col.parentElement.getBoundingClientRect().width / 12;
+			const from = +col.getAttribute("data-dashboard-size"), x0 = e.clientX;
+			let n = from;
+			col.setAttribute("draggable", "false");
+			col.classList.add("dashboard-resizing");
+			const move = (ev) => {
+				n = Math.max(` + strconv.Itoa(int(MinSize)) + `, Math.min(12, from + Math.round((ev.clientX - x0) / unit)));
+				col.style.flex = "0 0 " + (n / 12 * 100) + "%";
+				col.style.maxWidth = (n / 12 * 100) + "%";
+			};
+			const up = () => {
+				w.removeEventListener("pointermove", move);
+				w.removeEventListener("pointerup", up);
+				col.classList.remove("dashboard-resizing");
+				col.setAttribute("draggable", "true");
+				if (n === from) return;
+				col.setAttribute("data-dashboard-size", n);
+				const root = col.closest("[data-dashboard]") || d;
+				plaid().eventFunc(` + strconv.Quote(EventPref) + `).query("panel", root.getAttribute("data-dashboard") || "home").
+					query("op", "size").query("arg", col.getAttribute("data-dashboard-col")).query("size", String(n)).go();
+			};
+			w.addEventListener("pointermove", move);
+			w.addEventListener("pointerup", up);
+		},
+		layout(root) {
+			return [...root.querySelectorAll("[data-dashboard-row]")].map((r) => ({
 				id: r.getAttribute("data-dashboard-row"),
 				widgets: [...r.querySelectorAll(":scope > [data-dashboard-col]")].map((c) => c.getAttribute("data-dashboard-col")),
 			}));
 		},
-		save() {
-			plaid().eventFunc(` + strconv.Quote(EventPref) + `).query("op", "layout").query("arg", JSON.stringify(dash.layout())).go();
+		save(el) {
+			const root = el.closest("[data-dashboard]") || d;
+			plaid().eventFunc(` + strconv.Quote(EventPref) + `).query("panel", root.getAttribute("data-dashboard") || "home").
+				query("op", "layout").query("arg", JSON.stringify(dash.layout(root))).go();
 		},
 	};
 }`

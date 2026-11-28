@@ -17,20 +17,22 @@ import (
 // query full=1, IsFull for its Load), with the way back; another id, not
 // found.
 func TestWidgetPage(t *testing.T) {
-	b := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
-	b.Now = func() time.Time { return now }
+	bd := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
+	bd.Now = func() time.Time { return now }
+	b := bd.Panel(PanelHome).AllGroups()
 	var full bool
-	b.Widget(&Widget{ID: "mem", Title: func(context.Context) string { return "Memory" }, Periodic: true,
-		Live: []time.Duration{2 * time.Second},
-		Load: func(ctx *web.EventContext, _ Period) ([]Block, error) { full = IsFull(ctx); return nil, nil }})
+	bd.Group("sys").Widget("mem", func(w *WidgetBuilder) {
+		w.Title(titled("Memory")).Periodic().Live(2 * time.Second).
+			Load(func(ctx *web.EventContext, _ Period) ([]Block, error) { full = IsFull(ctx); return nil, nil })
+	})
 
-	ctx := &web.EventContext{R: httptest.NewRequest("GET", WidgetPagePath+"?id=mem&period=7d", nil), W: web.WrapResponseWriter(httptest.NewRecorder())}
+	ctx := &web.EventContext{R: httptest.NewRequest("GET", WidgetPagePath+"?id=sys/mem&period=7d", nil), W: web.WrapResponseWriter(httptest.NewRecorder())}
 	r, err := b.widgetPage(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := h.MustString(r.Body, context.Background())
-	for _, want := range []string{`data-dashboard-widget-page='mem'`, `data-dashboard-back`, PortalName("mem"), `full`, `data-dashboard-live='mem'`, `data-dashboard-period='7d'`} {
+	for _, want := range []string{`data-dashboard-widget-page='sys/mem'`, `data-dashboard-back`, PortalName("sys/mem"), `full`, `data-dashboard-live='sys/mem'`, `data-dashboard-period='7d'`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("no %q:\n%s", want, body)
 		}
@@ -40,8 +42,8 @@ func TestWidgetPage(t *testing.T) {
 	}
 
 	// its load, as the page asks it: the full version
-	ctx.R = httptest.NewRequest("POST", "/?widget=mem&period=7d&full=1", nil)
-	b.Render(ctx, b.widget("mem"), NewPeriod(Period7d, now, "", ""), true)
+	ctx.R = httptest.NewRequest("POST", "/?widget=sys/mem&period=7d&full=1", nil)
+	b.Render(ctx, b.widget("sys/mem"), NewPeriod(Period7d, now, "", ""), true)
 	if !full {
 		t.Error("the load of the page not full")
 	}
@@ -53,20 +55,22 @@ func TestWidgetPage(t *testing.T) {
 	}
 }
 
-// The panel of a group (the page of an area): its widgets alone, in its
+// The page of a group (the page of an area): its widgets alone, in its
 // order, the period at its top, no tools of the dashboard's.
-func TestGroupPanel(t *testing.T) {
-	b := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
-	b.Now = func() time.Time { return now }
+func TestGroupPage(t *testing.T) {
+	bd := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
+	bd.Now = func() time.Time { return now }
 	load := func(*web.EventContext, Period) ([]Block, error) { return nil, nil }
-	title := func(context.Context) string { return "w" }
-	b.Widget(&Widget{ID: "fin-b", Group: "fin", Order: 2, Title: title, Load: load},
-		&Widget{ID: "fin-a", Group: "fin", Order: 1, Title: title, Load: load},
-		&Widget{ID: "other", Group: "sys", Title: title, Load: load})
+	w := func(order int) func(*WidgetBuilder) {
+		return func(w *WidgetBuilder) { w.Order(order).Title(titled("w")).Load(load) }
+	}
+	fin := bd.Group("fin").Widget("b", w(2)).Widget("a", w(1))
+	bd.Group("sys").Widget("other", w(0))
+	b := bd.Panel("org").Group(fin)
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/admin/orgs/1/fin?period=7d", nil)}
-	body := h.MustString(b.GroupPanel(ctx, "fin"), context.Background())
-	a, bb := strings.Index(body, `data-dashboard-widget='fin-a'`), strings.Index(body, `data-dashboard-widget='fin-b'`)
-	if a < 0 || bb < a || strings.Contains(body, `data-dashboard-widget='other'`) {
+	body := h.MustString(b.GroupPage(ctx, "fin"), context.Background())
+	a, bb := strings.Index(body, `data-dashboard-widget='fin/a'`), strings.Index(body, `data-dashboard-widget='fin/b'`)
+	if a < 0 || bb < a || strings.Contains(body, `data-dashboard-widget='sys/other'`) {
 		t.Errorf("the widgets of fin, in its order:\n%s", body)
 	}
 	if !strings.Contains(body, `data-dashboard-period='7d'`) || strings.Contains(body, "data-dashboard-customize") ||
@@ -78,17 +82,19 @@ func TestGroupPanel(t *testing.T) {
 // The blocks of a widget are kept by the page they are of: the same widget
 // on another page (the panel of an organization's group) loads its own.
 func TestCacheByPage(t *testing.T) {
-	b := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
-	b.Now = func() time.Time { return now }
+	bd := New(presets.New(i18n.New()).URIPrefix("/admin"), nil)
+	bd.Now = func() time.Time { return now }
+	b := bd.Panel(PanelHome).AllGroups()
 	var loads []string
-	b.Widget(&Widget{ID: "w", TTL: time.Hour, Title: func(context.Context) string { return "w" },
-		Load: func(ctx *web.EventContext, _ Period) ([]Block, error) {
+	bd.Group("g").Widget("w", func(w *WidgetBuilder) {
+		w.TTL(time.Hour).Title(titled("w")).Load(func(ctx *web.EventContext, _ Period) ([]Block, error) {
 			loads = append(loads, ctx.R.URL.Path)
 			return nil, nil
-		}})
+		})
+	})
 	p := NewPeriod(Period7d, now, "", "")
 	for _, path := range []string{"/admin", "/admin/orgs/1/finance", "/admin", "/admin/orgs/1/finance"} {
-		b.Render(&web.EventContext{R: httptest.NewRequest("POST", path, nil)}, b.widget("w"), p, false)
+		b.Render(&web.EventContext{R: httptest.NewRequest("POST", path, nil)}, b.widget("g/w"), p, false)
 	}
 	if strings.Join(loads, " ") != "/admin /admin/orgs/1/finance" {
 		t.Errorf("the loads: %v", loads)

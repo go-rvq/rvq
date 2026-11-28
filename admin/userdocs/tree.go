@@ -1,6 +1,7 @@
 package userdocs
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/go-rvq/rvq/admin/presets"
@@ -50,7 +51,20 @@ func (b *Builder) groupNodes(g *presets.MenuGroupBuilder, ctx *web.EventContext)
 				continue
 			}
 			children := b.groupNodes(sub, ctx)
-			if len(children) == 0 {
+			// a group that is a page of the builder: its page's sub-pages in
+			// the menu, its children too
+			page := sub.GetPage()
+			if page != nil && page.Owner() == nil {
+				for _, p := range b.p.PagesRegistrator().HttpPages() {
+					if p.Parent() != page || !p.IsInMenu() {
+						continue
+					}
+					id := "pages/" + strings.Trim(p.Path(), "/")
+					children = append(children, &Node{ID: id, Title: p.TTitle(ctx.Context()), Icon: cmp.Or(p.GetMenuIcon(), "mdi-file-document-outline"),
+						Children: []*Node{permissionsNode(id, GetMessages(ctx.Context()))}})
+				}
+			}
+			if len(children) == 0 && page == nil {
 				continue
 			}
 			// its permissions, after what it holds
