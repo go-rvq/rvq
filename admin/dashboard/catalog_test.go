@@ -22,7 +22,7 @@ func TestCatalog(t *testing.T) {
 	}
 	load := func(*web.EventContext, Period) ([]Block, error) { return []Block{&Note{Text: "loaded"}}, nil }
 	d.Catalog(p.MenuGroup("ui").Title("UI"))
-	d.Group("fin").Title(titled("Financeiro")).Description(titled("o dinheiro")).
+	d.Group("fin").Title(titled("Financeiro")).Icon("mdi-finance").Description(titled("o dinheiro")).
 		Widget("due", func(w *WidgetBuilder) { w.Title(titled("A vencer")).Size(Half).Load(load) })
 	d.Group("sys").Title(titled("Sistema")).Widget("cpu", func(w *WidgetBuilder) { w.Title(titled("CPU")).Load(load) })
 	d.Panel(PanelHome).Title(titled("Início")).AllGroups().WithoutGroup(d.GetGroup("sys"))
@@ -45,7 +45,9 @@ func TestCatalog(t *testing.T) {
 		t.Fatalf("the page of the widget: %d %.500s", code, body)
 	}
 	for _, want := range []string{`"groupHref":"/admin/ui/widgets"`, `"groupHref":"/admin/ui/widgets/widgets-fin"`,
-		`"groupHref":"/admin/ui/widgets/widgets-sys"`, `"href":"/admin/ui/widgets/widgets-sys/cpu"`} {
+		`"groupHref":"/admin/ui/widgets/widgets-sys"`, `"href":"/admin/ui/widgets/widgets-sys/cpu"`,
+		// each group's icon, its widgets' its group's
+		`"groupHref":"/admin/ui/widgets/widgets-fin","prependIcon":"mdi-finance"`, `"href":"/admin/ui/widgets/widgets-fin/due","prependIcon":"mdi-finance"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the menu has no %s", want)
 		}

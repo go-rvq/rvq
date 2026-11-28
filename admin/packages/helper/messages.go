@@ -67,6 +67,10 @@ var (
 )
 
 // ensureMessages registers the messages of the package in b once.
+// EnsureMessages registers the messages of the selectors in b once (a
+// RecordSelect's: before the admin serves).
+func EnsureMessages(b *i18n.Builder) { ensureMessages(b) }
+
 func ensureMessages(b *i18n.Builder) {
 	if b == nil {
 		return

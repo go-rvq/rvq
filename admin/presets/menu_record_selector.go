@@ -298,6 +298,18 @@ type menuRecordChoice struct {
 	fromURI bool
 }
 
+// MenuRecordChosen is the id of the record of mb chosen in the menu, of the
+// parents (menuRecordChosen: the page's, the tab's, the only one, the
+// default), one the user reads; ok false none — a record selector of mb
+// (MenuRecordSelector) only.
+func (mb *ModelBuilder) MenuRecordChosen(ctx *web.EventContext, parents IDSlice) (id ID, ok bool) {
+	if !mb.HasMenuRecordSelector() {
+		return
+	}
+	c := mb.menuRecordChosen(ctx, parents)
+	return c.id, c.obj != nil
+}
+
 // menuRecordChosen is the record of mb chosen, of the parents: the one of
 // the page (its URI), else the one of this tab (MenuRecordsHeader: none,
 // cleared), else the only one, else the default; nil, none.

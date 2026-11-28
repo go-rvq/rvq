@@ -50,7 +50,11 @@ func WidgetPageURL(prefix, id string, r *http.Request) string {
 // record's page (its path the record's: WidgetSubPath).
 func (b *Panel) widgetPageURL(ctx *web.EventContext, id string) string {
 	if b.record != nil {
-		base := b.record.Info().DetailingHref(ScopeOf(ctx).Record, presets.ParentsModelID(ctx.R)...) + b.path + WidgetSubPath
+		base := b.at
+		if base == "" {
+			base = b.record.Info().DetailingHref(ScopeOf(ctx).Record, presets.ParentsModelID(ctx.R)...) + b.path
+		}
+		base += WidgetSubPath
 		u := WidgetPageURL("", id, ctx.R)
 		return base + u[strings.Index(u, "?"):]
 	}

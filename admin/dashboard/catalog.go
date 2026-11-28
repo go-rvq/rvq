@@ -4,6 +4,9 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"github.com/go-rvq/rvq/admin/model"
+	"github.com/go-rvq/rvq/admin/packages/helper"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -41,6 +44,8 @@ func (b *Builder) Catalog(parent *presets.MenuGroupBuilder) *Builder {
 }
 
 func (b *Builder) catalog(parent *presets.MenuGroupBuilder) {
+	// the selects of the records of the widgets' pages (catalogScope)
+	helper.EnsureMessages(b.p.I18n())
 	menu := b.p.MenuGroup(MenuGroupWidgets).Icon("mdi-widgets-outline").
 		TitleFunc(func(ctx context.Context) string { return MessagesOf(ctx).Widgets }).
 		DescriptionFunc(func(ctx context.Context) string { return MessagesOf(ctx).WidgetsDescription })
@@ -54,8 +59,9 @@ func (b *Builder) catalog(parent *presets.MenuGroupBuilder) {
 			continue
 		}
 		g := g
+		icon := cmp.Or(g.g.Icon, "mdi-view-grid-outline")
 		page := b.p.PagesRegistrator().New(presets.HttpPage(CatalogPath(g.ID())).
-			TitleFunc(g.title).DescriptionFunc(g.description).MenuIcon(cmp.Or(g.g.Icon, "mdi-view-grid-outline"))).
+			TitleFunc(g.title).DescriptionFunc(g.description).MenuIcon(icon)).
 			Layout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
 				r.PageTitle = g.title(ctx.Context())
 				r.Body = b.catalogGroup(ctx, g)
@@ -63,12 +69,13 @@ func (b *Builder) catalog(parent *presets.MenuGroupBuilder) {
 			})
 		for _, w := range g.widgets {
 			w := w.w
-			page.SubPage("/" + w.Name).InMenu(true).Title(w.title).
-				Layout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
-					r.PageTitle = w.title(ctx.Context())
-					r.Body = b.catalogWidget(ctx, w)
-					return
-				}).Build()
+			sub := page.SubPage("/" + w.Name).InMenu(true).Title(w.title)
+			sub.Page().MenuIcon(icon)
+			sub.Layout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
+				r.PageTitle = w.title(ctx.Context())
+				r.Body = b.catalogWidget(ctx, w)
+				return
+			}).Build()
 		}
 		page.Build()
 		mg := b.p.PageMenuGroup(page.Page())
@@ -134,7 +141,12 @@ func (b *Builder) catalogGroup(ctx *web.EventContext, g *GroupBuilder) h.HTMLCom
 func (b *Builder) panelTitles(c context.Context, msgs *Messages, w *Widget) string {
 	var ts []string
 	for _, pn := range b.panelsOf(w) {
-		ts = append(ts, pn.TTitle(c))
+		t := pn.TTitle(c)
+		if pn.record != nil {
+			// of whom: "Painel (Organização)"
+			t += " (" + pn.record.TTitle(c) + ")"
+		}
+		ts = append(ts, t)
 	}
 	if len(ts) == 0 {
 		return msgs.InNoPanel
@@ -150,10 +162,10 @@ func (b *Builder) catalogHref(group, name string) string {
 	return ""
 }
 
-// catalogWidget is the page of the widget w in the catalog: its group, its
-// width, how it loads, the panels that take it, its documentation; a
-// preview when a panel of no record takes it (else the panel of each record
-// shows it, for its record).
+// catalogWidget is the page of the widget w in the catalog: at its top, the
+// choice of its scope (catalogScope: the record it is loaded for, when it
+// needs one) and its preview there; its group, its width, how it loads, the
+// panels that take it, its documentation.
 func (b *Builder) catalogWidget(ctx *web.EventContext, w *Widget) h.HTMLComponent {
 	msgs := MessagesOf(ctx.Context())
 	c := ctx.Context()
@@ -168,22 +180,161 @@ func (b *Builder) catalogWidget(ctx *web.EventContext, w *Widget) h.HTMLComponen
 	if len(w.Live) > 0 {
 		fact(msgs.LiveEvery, w.Live[0].String())
 	}
-	body := h.Div(v.VList(facts...).Density(v.DensityCompact)).Class("pa-4").Attr("data-dashboard-catalog", w.ID)
+	body := h.Div().Class("pa-4").Attr("data-dashboard-catalog", w.ID)
+	body.AppendChildren(b.catalogScope(ctx, w)...)
+	body.AppendChildren(v.VList(facts...).Density(v.DensityCompact).Class("mt-4"))
 	if b.docs != nil {
 		if href := b.docs(ctx, cmp.Or(w.Doc, w.ID)); href != "" {
 			body.AppendChildren(v.VBtn(msgs.Help).Href(href).Variant(v.VariantTonal).PrependIcon("mdi-help-circle-outline").
 				Class("my-2").Attr("data-dashboard-catalog-doc", w.ID))
 		}
 	}
-	for _, pn := range b.panelsOf(w) {
-		if pn.record != nil {
+	return body
+}
+
+// The query of the page of a widget in the catalog: the scope chosen (""
+// global, else the URI name of the model of the record) and the records
+// chosen, from the root of its parents down ("<org>/<project>").
+const (
+	paramScope = "scope"
+	paramRec   = "rec"
+)
+
+// catalogScope is the top of the page of the widget w in the catalog: of a
+// widget of records, the kind of scope (when more than one: Consolidated,
+// Organization, Project…), the selects of its record, cascaded by its
+// parents (Organization › Project: each in a dialog, the records the user
+// lists under the ones chosen above — none they do not reach, and no select
+// of a model they may not list —; the first the one chosen in the menu at
+// first), then its preview, when each one chosen is read and the widget is
+// the user's (else not drawn) — loaded by its panel at the page of the record (Panel.at:
+// its record the path's there, read again); a global one, its preview.
+func (b *Builder) catalogScope(ctx *web.EventContext, w *Widget) (out h.HTMLComponents) {
+	msgs := MessagesOf(ctx.Context())
+	sc := b.scopeOf(w)
+	type kind struct {
+		key, title string
+		mb         *presets.ModelBuilder
+	}
+	var kinds []kind
+	if sc.Global {
+		kinds = append(kinds, kind{title: msgs.Consolidated})
+	}
+	for _, mb := range sc.Records {
+		// of a model whose records the user may list (from the root of its
+		// parents): else not offered
+		if root := mb.Root(); root.Permissioner().Lister(ctx.R).Denied() {
 			continue
 		}
-		ctx, _ = pn.scoped(ctx) // of no record: always
-		return body.AppendChildren(
-			h.Div(h.Text(msgs.Preview)).Class("text-subtitle-1 font-weight-bold mt-4 mb-2"),
-			pn.cards(ctx, w.ID),
-		)
+		kinds = append(kinds, kind{key: mb.Info().URIName(), title: mb.TTitle(ctx.Context()), mb: mb})
 	}
-	return body.AppendChildren(v.VAlert(h.Text(msgs.PreviewOfRecord)).Type("info").Variant(v.VariantTonal).Class("mt-4"))
+	noAccess := func() h.HTMLComponent {
+		return v.VAlert(h.Text(msgs.NoAccess)).Type("warning").Variant(v.VariantTonal).Attr("data-dashboard-catalog-no-access", true)
+	}
+	if len(kinds) == 0 || !w.visible(ctx.R) {
+		// nothing the user may choose, or the widget not theirs: not drawn
+		return append(out, noAccess())
+	}
+	cur := kinds[0]
+	for _, k := range kinds {
+		if k.key == ctx.R.FormValue(paramScope) {
+			cur = k
+		}
+	}
+	base := b.catalogHref(w.Group, w.Name)
+	href := func(key, rec string) string {
+		q := url.Values{}
+		if key != "" {
+			q.Set(paramScope, key)
+		}
+		if rec != "" {
+			q.Set(paramRec, rec)
+		}
+		if len(q) == 0 {
+			return base
+		}
+		return base + "?" + q.Encode()
+	}
+	preview := func(c h.HTMLComponent) h.HTMLComponents {
+		return h.HTMLComponents{h.Div(h.Text(msgs.Preview)).Class("text-subtitle-1 font-weight-bold mt-2 mb-2"), c}
+	}
+	if len(kinds) > 1 {
+		var btns h.HTMLComponents
+		for _, k := range kinds {
+			btn := v.VBtn(k.title).Href(href(k.key, "")).Size(v.SizeSmall).Class("me-2").
+				Attr("data-dashboard-catalog-scope", cmp.Or(k.key, "global"))
+			if k.key == cur.key {
+				btn.Variant(v.VariantFlat).Color(v.ColorPrimary)
+			} else {
+				btn.Variant(v.VariantTonal)
+			}
+			btns = append(btns, btn)
+		}
+		out = append(out, h.Div(btns...).Class("mb-3"))
+	}
+	if cur.mb == nil {
+		for _, pn := range b.panelsOf(w) {
+			if pn.record == nil {
+				ctx, _ = pn.scoped(ctx) // of no record: always
+				return append(out, preview(pn.cards(ctx, w.ID))...)
+			}
+		}
+		return append(out, v.VAlert(h.Text(msgs.InNoPanel)).Type("info").Variant(v.VariantTonal))
+	}
+	// the selects, from the root of the parents of the model down: each the
+	// one chosen (when the user reads it, under the ones above), the next
+	// only once one is
+	chain := append(cur.mb.Parents(), cur.mb)
+	given := strings.Split(ctx.R.FormValue(paramRec), "/")
+	_, asked := ctx.R.Form[paramRec]
+	var (
+		ids     []model.ID
+		titles  []string
+		selects h.HTMLComponents
+	)
+	for i, mb := range chain {
+		titles = append(titles, mb.TTitle(ctx.Context()))
+		val := ""
+		if i < len(given) {
+			val = given[i]
+		}
+		if val == "" && !asked {
+			// at first, the one chosen in the menu
+			if id, ok := mb.MenuRecordChosen(ctx, ids); ok {
+				val = id.String()
+			}
+		}
+		prefix := ""
+		for _, id := range ids {
+			prefix += id.String() + "/"
+		}
+		rs := helper.RecordSelect(mb).Label(mb.TTitle(ctx.Context())).Parents(ids...).Value(val).
+			OnChange(fmt.Sprintf("plaid().vars(vars).pushStateURL(%s + ($event ? encodeURIComponent($event) : '')).go()",
+				h.JSONString(href(cur.key, "")+map[bool]string{true: "?", false: "&"}[cur.key == ""]+paramRec+"="+url.QueryEscape(prefix))))
+		comp := rs.Component(ctx)
+		if comp == nil {
+			// records the user may not list: nothing to choose, no widget
+			out = append(out, v.VRow(selects...).Dense(true))
+			return append(out, noAccess())
+		}
+		chosen, _ := rs.Chosen(ctx)
+		selects = append(selects, v.VCol(comp.Attr("data-dashboard-catalog-record", mb.Info().URIName())).Cols(12).Md(6))
+		if chosen == "" {
+			out = append(out, v.VRow(selects...).Dense(true))
+			return append(out, v.VAlert(h.Text(fmt.Sprintf(msgs.ChooseRecord, strings.Join(titles[i:], " › ")))).
+				Type("info").Variant(v.VariantTonal).Attr("data-dashboard-catalog-choose", true))
+		}
+		id, _ := mb.ParseRecordID(chosen)
+		ids = append(ids, id)
+	}
+	out = append(out, v.VRow(selects...).Dense(true))
+	for _, pn := range b.panelsOf(w) {
+		if pn.record == cur.mb {
+			last := ids[len(ids)-1]
+			pn = pn.atRecord(last.String(), ids[:len(ids)-1]...)
+			ctx.R = WithScope(ctx.R, Scope{Panel: pn.id, Record: last.String()})
+			return append(out, preview(pn.cards(ctx, w.ID))...)
+		}
+	}
+	return append(out, v.VAlert(h.Text(msgs.InNoPanel)).Type("info").Variant(v.VariantTonal))
 }

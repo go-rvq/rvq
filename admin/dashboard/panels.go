@@ -39,6 +39,10 @@ type Panel struct {
 	// panel (Record: readable)
 	readable func(ctx *web.EventContext, id string) bool
 	path     string
+	// at: the page of the panel of a record, when drawn in another page
+	// (the catalog's preview, atRecord): its events go there, where the
+	// record is the path's
+	at string
 }
 
 // Panel makes the panel id, its owner's: made twice is an error.
@@ -159,6 +163,16 @@ func (pn *Panel) Record(mb *presets.ModelBuilder, path string) *Panel {
 	page.SubPage(WidgetSubPath).RecordLayout(layout(pn.recordWidgetPage)).Build()
 	page.RecordLayout(layout(pn.Page)).Build()
 	return pn
+}
+
+// atRecord is the panel of a record drawn in another page for the record
+// id of its model, under the parents: a copy whose events go to the panel's
+// page of the record (its record and its parents the path's there, read
+// again) — the preview of a widget in the catalog.
+func (pn *Panel) atRecord(id string, parents ...model.ID) *Panel {
+	c := *pn
+	c.at = pn.record.Info().DetailingHref(id, parents...) + pn.path
+	return &c
 }
 
 // RecordPage is the page of the panel of a record (Record), nil none.

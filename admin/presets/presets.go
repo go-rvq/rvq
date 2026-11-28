@@ -944,7 +944,8 @@ func (b *Builder) menuNodes(ctx *web.EventContext) (nodes []*MenuNode, openedGro
 		itemNodes func(items []*MenuItem) (nodes []*MenuNode, active bool)
 	)
 	groupNode = func(v *MenuGroupBuilder) (node *MenuNode, active bool) {
-		groupIcon := v.icon
+		// its own, or its page's (PageMenuGroup)
+		groupIcon := v.GetIcon()
 		if groupIcon == "" {
 			groupIcon = defaultMenuIcon(v.name)
 		}

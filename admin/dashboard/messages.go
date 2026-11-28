@@ -43,7 +43,9 @@ type Messages struct {
 	Width              string `i18n:"hint='Label of the width of a widget (in the catalog).'"`
 	WidthColumns       string `i18n:"hint='The width of a widget in columns; %s is the number.'"`
 	Preview            string `i18n:"hint='Title of the widget drawn as it is on its dashboard, in the catalog.'"`
-	PreviewOfRecord    string `i18n:"hint='Said in the catalog of a widget shown only on the dashboard of each record (an organization): no preview here.'"`
+	Consolidated       string `i18n:"hint='Choice of the scope of a widget in the catalog: of no record, what it shows of every one the user reaches.'"`
+	NoAccess           string `i18n:"hint='Said in the catalog of a widget when the user may not see it or choose the records it is loaded for.'"`
+	ChooseRecord       string `i18n:"hint='Said in the catalog of a widget of a record until one is chosen; %s is what to choose (Organization › Project).'"`
 	DragSection        string `i18n:"hint='Handle that drags a section of the dashboard among the sections beside it, to reorder them.'"`
 	Resize             string `i18n:"hint='Handle on the right edge of a widget that, dragged, makes it wider or narrower.'"`
 	MoveDown           string `i18n:"hint='Button that moves a widget after the next one.'"`
@@ -122,7 +124,9 @@ var Messages_en_US = &Messages{
 	Width:              "Width",
 	WidthColumns:       "%s of 12 columns",
 	Preview:            "Preview",
-	PreviewOfRecord:    "Shown on the dashboard of each record, for that record: open it there.",
+	Consolidated:       "Consolidated",
+	NoAccess:           "You have no access to this widget or to the records it shows.",
+	ChooseRecord:       "Choose %s to see the widget.",
 	Resize:             "Drag to resize",
 	MoveDown:           "Move down",
 	Collapse:           "Collapse",
@@ -200,7 +204,9 @@ var Messages_pt_BR = &Messages{
 	Width:              "Largura",
 	WidthColumns:       "%s de 12 colunas",
 	Preview:            "Prévia",
-	PreviewOfRecord:    "Mostrado no painel de cada registro, para aquele registro: abra-o lá.",
+	Consolidated:       "Consolidado",
+	NoAccess:           "Você não tem acesso a este widget nem aos registros que ele mostra.",
+	ChooseRecord:       "Escolha %s para ver o widget.",
 	Resize:             "Arraste para redimensionar",
 	MoveDown:           "Mover para baixo",
 	Collapse:           "Recolher",

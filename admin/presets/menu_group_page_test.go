@@ -175,8 +175,10 @@ func TestNestedPageMenuGroup(t *testing.T) {
 		}
 	}
 	b.BeforeBuild(func() {
-		page := b.PagesRegistrator().New(presets.HttpPage("/widgets-fin").TitleFunc(title("Financeiro"))).Layout(layout("a página do grupo"))
-		page.SubPage("/pending").InMenu(true).Title(title("Pendências")).Layout(layout("a página do widget")).Build()
+		page := b.PagesRegistrator().New(presets.HttpPage("/widgets-fin").TitleFunc(title("Financeiro")).MenuIcon("mdi-finance")).Layout(layout("a página do grupo"))
+		sub := page.SubPage("/pending").InMenu(true).Title(title("Pendências")).Layout(layout("a página do widget"))
+		sub.Page().MenuIcon("mdi-alert")
+		sub.Build()
 		page.Build()
 		g := b.PageMenuGroup(page.Page())
 		b.MenuGroup("widgets").Title("Widgets").Add(presets.GroupItem(g.Name()))
@@ -198,7 +200,9 @@ func TestNestedPageMenuGroup(t *testing.T) {
 		t.Fatalf("the sub-page: %d %.300s", code, body)
 	}
 	for _, want := range []string{`"groupHref":"/admin/ui/widgets/widgets-fin"`, `"href":"/admin/ui/widgets/widgets-fin/pending"`,
-		`"groupHref":"/admin/ui/widgets"`, "Pendências"} {
+		`"groupHref":"/admin/ui/widgets"`, "Pendências",
+		// the group's icon its page's; the sub-page's its own
+		`"groupHref":"/admin/ui/widgets/widgets-fin","prependIcon":"mdi-finance"`, `"href":"/admin/ui/widgets/widgets-fin/pending","prependIcon":"mdi-alert"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the menu has no %s", want)
 		}

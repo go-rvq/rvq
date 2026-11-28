@@ -77,6 +77,13 @@ func (b *Builder) onPanel(f func(pn *Panel, ctx *web.EventContext) (web.EventRes
 			http.NotFound(ctx.W, ctx.R)
 			return r, nil
 		}
+		if pn.record != nil && ctx.R.FormValue(paramAt) == "1" {
+			// of a page that is not the record's (the catalog's preview): its
+			// next events to this one, the record's (just read)
+			c := *pn
+			c.at = ctx.R.URL.Path
+			pn = &c
+		}
 		return f(pn, ctx)
 	}
 }
@@ -156,6 +163,10 @@ func (b *Panel) Body(ctx *web.EventContext) h.HTMLComponent {
 	return r.Body
 }
 
+// paramAt, in an event of a panel of a record: it is of a page that is not
+// the record's (Panel.at).
+const paramAt = "at"
+
 func (b *Panel) prefEvent(op, arg string) string {
 	return b.event(EventPref).Query("op", op).Query("arg", arg).Go()
 }
@@ -163,7 +174,13 @@ func (b *Panel) prefEvent(op, arg string) string {
 // event is the event name of the panel (its query's panel): of a record's
 // panel at a page of its own (a widget's), its record too.
 func (b *Panel) event(name string) *web.VueEventTagBuilder {
-	return web.Plaid().EventFunc(name).Query(paramPanel, b.id)
+	ev := web.Plaid().EventFunc(name).Query(paramPanel, b.id)
+	if b.at != "" {
+		// to the page of the record; what it answers drawn for another page
+		// too (paramAt)
+		ev.URL(b.at).Query(paramAt, "1")
+	}
+	return ev
 }
 
 // pushPeriod is the event that opens the dashboard with key (custom: the
