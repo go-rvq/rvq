@@ -39,9 +39,6 @@ type Panel struct {
 	// panel (Record: readable)
 	readable func(ctx *web.EventContext, id string) bool
 	path     string
-	// recordParam: the record of the request out of a page of the record
-	// (the page of a widget: its query's), given to its events (event)
-	recordParam string
 }
 
 // Panel makes the panel id, its owner's: made twice is an error.
@@ -147,14 +144,20 @@ func (pn *Panel) Home() *Panel {
 }
 
 // Record makes the panel a page of the detail of the records of mb, at path
-// ("/painel"): its scope the record of the page (ScopeOf). Its page is
-// returned by RecordPage (for the menu: a group's page, the selector's).
+// ("/painel"): its scope the record of the page (ScopeOf) — only from the
+// path —, its widgets those of a record of mb (Scopes); the page of one of
+// its widgets under it (path+WidgetSubPath). Its page is returned by
+// RecordPage (for the menu: a group's page, the selector's).
 func (pn *Panel) Record(mb *presets.ModelBuilder, path string) *Panel {
 	pn.record, pn.path, pn.readable = mb, path, readable(mb)
-	mb.Detailing().PagesRegistrator().New(presets.HttpPage(path).TitleFunc(pn.TTitle).MenuIcon("mdi-view-dashboard-outline")).
-		RecordLayout(func(ctx *web.EventContext, _ model.ID, _ []model.ID, _ func() (any, error)) (r web.PageResponse, err error) {
-			return pn.Page(ctx)
-		}).Build()
+	layout := func(f func(ctx *web.EventContext) (web.PageResponse, error)) func(*web.EventContext, model.ID, []model.ID, func() (any, error)) (web.PageResponse, error) {
+		return func(ctx *web.EventContext, _ model.ID, _ []model.ID, _ func() (any, error)) (web.PageResponse, error) {
+			return f(ctx)
+		}
+	}
+	page := mb.Detailing().PagesRegistrator().New(presets.HttpPage(path).TitleFunc(pn.TTitle).MenuIcon("mdi-view-dashboard-outline"))
+	page.SubPage(WidgetSubPath).RecordLayout(layout(pn.recordWidgetPage)).Build()
+	page.RecordLayout(layout(pn.Page)).Build()
 	return pn
 }
 
@@ -166,15 +169,24 @@ func (pn *Panel) RecordPage() *presets.HttpPageBuilder {
 	return pn.record.Detailing().PagesRegistrator().GetHttpPage(pn.path)
 }
 
-// takes says the panel takes the widget w.
+// takes says the panel takes the widget w: of its scope (Scopes), and of
+// the groups or the widgets it takes.
 func (pn *Panel) takes(w *Widget) bool {
-	if slices.Contains(pn.without, w.ID) {
+	if !pn.scopeOf(w).accepts(pn.record) || slices.Contains(pn.without, w.ID) {
 		return false
 	}
 	if slices.Contains(pn.widgetIDs, w.ID) || slices.Contains(pn.groupIDs, w.Group) {
 		return true
 	}
 	return pn.allGroups && !slices.Contains(pn.withoutGroup, w.Group)
+}
+
+// scopeOf is the scope of the widget w: its own, else its group's.
+func (b *Builder) scopeOf(w *Widget) Scopes {
+	if w.Scope != nil {
+		return *w.Scope
+	}
+	return b.GetGroup(w.Group).g.Scope
 }
 
 // all are the widgets of the panel (the dynamic too), of the groups made.
@@ -265,16 +277,13 @@ func WithScope(r *http.Request, s Scope) *http.Request {
 }
 
 // scoped is ctx in the scope of the panel: its record the page's (the
-// {id} of its path — the events are at the page's URL), else the query's (a
-// widget's page). ok false: a panel of a record with none, or one the user
-// may not read — nothing of it is shown (not found).
+// {id} of its path — the events are at the page's URL; never a query's).
+// ok false: a panel of a record with none, or one the user may not read —
+// nothing of it is shown (not found).
 func (pn *Panel) scoped(ctx *web.EventContext) (_ *web.EventContext, ok bool) {
 	s := Scope{Panel: pn.id}
 	if pn.record != nil {
 		s.Record = ctx.R.PathValue(presets.ParamID)
-		if s.Record == "" {
-			s.Record = ctx.R.FormValue(paramRecord)
-		}
 		if s.Record == "" || !pn.readable(ctx, s.Record) {
 			return ctx, false
 		}
@@ -297,22 +306,6 @@ func readable(mb *presets.ModelBuilder) func(ctx *web.EventContext, id string) b
 		fetch := mb.Detailing().GetFetchFunc()
 		return fetch != nil && fetch(mb.NewModel(), mid, ctx) == nil
 	}
-}
-
-// paramRecord is the record of a panel's request out of a page of the record
-// (the page of a widget).
-const paramRecord = "record"
-
-// in is the panel for the request of ctx: a copy whose events carry its
-// record when the request is not at a page of it (a widget's page).
-func (pn *Panel) in(ctx *web.EventContext) *Panel {
-	s := ScopeOf(ctx)
-	if pn.record == nil || s.Record == "" || ctx.R.PathValue(presets.ParamID) != "" {
-		return pn
-	}
-	c := *pn
-	c.recordParam = s.Record
-	return &c
 }
 
 // paramPanel is the panel of an event (its query).
@@ -342,5 +335,24 @@ func (b *Builder) check() {
 		if !pn.made {
 			panic(fmt.Sprintf("dashboard: the panel %q is referred to (GetPanel) but never made (Panel)", pn.id))
 		}
+		// what it takes by name: of its scope (AllGroups skips the others)
+		for _, id := range pn.groupIDs {
+			if !b.GetGroup(id).g.Scope.accepts(pn.record) {
+				panic(fmt.Sprintf("dashboard: the panel %q takes the group %q, not of its scope (%s)", pn.id, id, pn.scopeName()))
+			}
+		}
+		for _, id := range pn.widgetIDs {
+			if w := b.widget(id); w != nil && !b.scopeOf(w).accepts(pn.record) {
+				panic(fmt.Sprintf("dashboard: the panel %q takes the widget %q, not of its scope (%s)", pn.id, id, pn.scopeName()))
+			}
+		}
 	}
+}
+
+// scopeName says the scope of the panel: global, or the model of its record.
+func (pn *Panel) scopeName() string {
+	if pn.record == nil {
+		return "global"
+	}
+	return "a record of " + pn.record.Info().URIName()
 }

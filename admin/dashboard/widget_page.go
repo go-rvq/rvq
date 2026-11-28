@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 
 	h "github.com/go-rvq/htmlgo"
 	"github.com/go-rvq/rvq/admin/presets"
@@ -20,6 +21,10 @@ import (
 // WidgetPagePath is the path of the page of a widget (under the admin's
 // prefix), the widget its query's id.
 const WidgetPagePath = "/dashboard/widget"
+
+// WidgetSubPath is the page of a widget of a panel of a record, under the
+// panel's page (/orgs/{id}/painel/widget?id=…): the record its path's.
+const WidgetSubPath = "/widget"
 
 // paramFull, in the events of a widget's page: its full version.
 const paramFull = "full"
@@ -41,16 +46,29 @@ func WidgetPageURL(prefix, id string, r *http.Request) string {
 }
 
 // widgetPageURL is the address of the page of the widget id of the panel,
-// keeping the period of the request and the panel's record.
+// keeping the period of the request: of a panel of a record, under the
+// record's page (its path the record's: WidgetSubPath).
 func (b *Panel) widgetPageURL(ctx *web.EventContext, id string) string {
+	if b.record != nil {
+		base := b.record.Info().DetailingHref(ScopeOf(ctx).Record, presets.ParentsModelID(ctx.R)...) + b.path + WidgetSubPath
+		u := WidgetPageURL("", id, ctx.R)
+		return base + u[strings.Index(u, "?"):]
+	}
 	u := WidgetPageURL(b.uriPrefix(), id, ctx.R)
 	if b.id != PanelHome {
 		u += "&" + paramPanel + "=" + url.QueryEscape(b.id)
 	}
-	if r := ScopeOf(ctx).Record; r != "" {
-		u += "&" + paramRecord + "=" + url.QueryEscape(r)
-	}
 	return u
+}
+
+// recordWidgetPage is the page of a widget of the panel of a record, under
+// the record's page: its record the path's; one not read, not found.
+func (b *Panel) recordWidgetPage(ctx *web.EventContext) (r web.PageResponse, err error) {
+	ctx, ok := b.scoped(ctx)
+	if !ok {
+		return b.p.DefaultNotFoundPageFunc(ctx)
+	}
+	return b.widgetPage(ctx)
 }
 
 // installWidgetPage registers the page of the widgets.
@@ -59,16 +77,17 @@ func (b *Builder) installWidgetPage() {
 		presets.HttpPage(WidgetPagePath).InMenu(false).
 			TitleFunc(func(ctx context.Context) string { return MessagesOf(ctx).Dashboard })).
 		Layout(func(ctx *web.EventContext) (r web.PageResponse, err error) {
-			// of the panel of its query (the home's by default), in its scope
+			// of the panel of its query (the home's by default), in its scope;
+			// a panel of a record has its own, under the record's page
 			pn := b.panelOf(ctx.R)
-			if pn == nil {
+			if pn == nil || pn.record != nil {
 				return b.p.DefaultNotFoundPageFunc(ctx)
 			}
 			ctx, ok := pn.scoped(ctx)
 			if !ok {
 				return b.p.DefaultNotFoundPageFunc(ctx)
 			}
-			return pn.in(ctx).widgetPage(ctx)
+			return pn.widgetPage(ctx)
 		}).
 		Build()
 }

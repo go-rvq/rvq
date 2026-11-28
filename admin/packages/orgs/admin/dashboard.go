@@ -18,8 +18,9 @@ const (
 	PanelOrg = "org"
 	// PainelPath is the path of the panel in the detail of an organization.
 	PainelPath = "/painel"
-	// GroupOrg is the group of the widgets of an organization — other
-	// packages add theirs (d.GetGroup(GroupOrg)): the people's.
+	// GroupOrg is the group of the widgets of an organization, of its panel
+	// alone (Records) — other packages add theirs (d.GetGroup(GroupOrg)):
+	// the people's.
 	GroupOrg = "orgs"
 	// WidgetMembers: who the organization is shared with, their roles.
 	WidgetMembers = "members"
@@ -40,7 +41,8 @@ const activityRows = 8
 // or in the group. After Install.
 func (b *Builder) Dashboard(d *dashboard.Builder) *dashboard.Panel {
 	mb := b.OrganizacaoModel()
-	g := d.Group(GroupOrg).Icon("mdi-domain").Order(-10).
+	// of an organization alone: only on its panel (never the home's)
+	g := d.Group(GroupOrg).Records(mb).Icon("mdi-domain").Order(-10).
 		Title(func(ctx context.Context) string { return messages.Get(ctx).WidgetsGroup })
 	if s := b.sharing; s != nil {
 		orgWidgets(g, mb, s)

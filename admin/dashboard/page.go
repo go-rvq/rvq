@@ -163,11 +163,7 @@ func (b *Panel) prefEvent(op, arg string) string {
 // event is the event name of the panel (its query's panel): of a record's
 // panel at a page of its own (a widget's), its record too.
 func (b *Panel) event(name string) *web.VueEventTagBuilder {
-	ev := web.Plaid().EventFunc(name).Query(paramPanel, b.id)
-	if r := b.recordParam; r != "" {
-		ev.Query(paramRecord, r)
-	}
-	return ev
+	return web.Plaid().EventFunc(name).Query(paramPanel, b.id)
 }
 
 // pushPeriod is the event that opens the dashboard with key (custom: the

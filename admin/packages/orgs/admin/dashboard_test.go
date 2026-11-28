@@ -54,6 +54,7 @@ func TestOrgPanel(t *testing.T) {
 			})
 	})
 	pn := ob.Dashboard(d)
+	d.Panel(dashboard.PanelHome).AllGroups()
 	if pn.ID() != PanelOrg || pn.RecordPage() == nil {
 		t.Fatal("the panel of the organizations")
 	}
@@ -84,6 +85,26 @@ func TestOrgPanel(t *testing.T) {
 	}
 	if scope.Panel != PanelOrg || scope.Record != org.ID.String() {
 		t.Errorf("the scope of the widget: %+v", scope)
+	}
+
+	// the page of a widget: under the organization's page; not the global
+	// one (the record of a query)
+	w = httptest.NewRecorder()
+	b.ServeHTTP(w, as(httptest.NewRequest("GET", page+"/widget?id=orgs/probe", nil)))
+	if body := w.Body.String(); w.Code != 200 || !strings.Contains(body, "data-dashboard-widget-page") {
+		t.Errorf("the page of the widget under the organization: %d %.300s", w.Code, body)
+	}
+	w = httptest.NewRecorder()
+	b.ServeHTTP(w, as(httptest.NewRequest("GET", "/admin/dashboard/widget?id=orgs/probe&panel=org&record="+org.ID.String(), nil)))
+	if strings.Contains(w.Body.String(), "data-dashboard-widget-page") {
+		t.Error("the global page of a widget of an organization")
+	}
+	// the home takes no widget of an organization
+	home := d.GetPanel(dashboard.PanelHome)
+	for _, w := range home.Widgets() {
+		if w.Group == GroupOrg {
+			t.Errorf("the home has %s", w.ID)
+		}
 	}
 
 	// another's organization (the user does not read it): nothing of it,

@@ -68,6 +68,31 @@ type Group struct {
 	// Untitled: its section on a panel has no heading (a strip of numbers)
 	// but while customizing; its title is the catalog's, the help's
 	Untitled bool
+	// Scope is what its widgets are loaded for (GroupBuilder.Global,
+	// Records): none declared, global
+	Scope Scopes
+}
+
+// Scopes are the scopes a widget is loaded for, as the URI gives them: Global
+// — a panel of no record (the home, the profile's) —, and Records — a panel
+// of a record of one of these models (Panel.Record: its page). A panel takes
+// only the widgets of its scope.
+type Scopes struct {
+	Global  bool
+	Records []*presets.ModelBuilder
+}
+
+// accepts says the scopes take a panel of a record of mb (nil: of none).
+func (s Scopes) accepts(mb *presets.ModelBuilder) bool {
+	if mb == nil {
+		return s.Global
+	}
+	return slices.Contains(s.Records, mb)
+}
+
+// scopes is the declared (Global, Records) as Scopes: none declared, global.
+func scopes(global bool, records []*presets.ModelBuilder) Scopes {
+	return Scopes{Global: global || len(records) == 0, Records: records}
 }
 
 // Widget is a card of the dashboard, of a group: made by
@@ -92,6 +117,9 @@ type Widget struct {
 	// TTL is how long its blocks are kept for a user and a period (default
 	// a minute); its refresh button skips it.
 	TTL time.Duration
+	// Scope, when given, is what it is loaded for, in place of its group's
+	// (WidgetBuilder.Global, Records).
+	Scope *Scopes
 	// Load is what it shows (ScopeOf: the panel and the record it is of).
 	Load func(ctx *web.EventContext, p Period) ([]Block, error)
 	// Actions are what its blocks' buttons do (Action.Name), the argument
@@ -178,7 +206,7 @@ func (b *Builder) GetGroup(id string) *GroupBuilder {
 			return g
 		}
 	}
-	g := &GroupBuilder{b: b, g: &Group{ID: id}}
+	g := &GroupBuilder{b: b, g: &Group{ID: id, Scope: scopes(false, nil)}}
 	b.groups = append(b.groups, g)
 	return g
 }
@@ -212,6 +240,8 @@ type GroupBuilder struct {
 	made    bool
 	widgets []*WidgetBuilder
 	dynamic func() []*WidgetBuilder
+	global  bool
+	records []*presets.ModelBuilder
 }
 
 // ID is the group's id.
@@ -232,6 +262,23 @@ func (g *GroupBuilder) Description(f func(ctx context.Context) string) *GroupBui
 
 func (g *GroupBuilder) Icon(v string) *GroupBuilder {
 	g.g.Icon = v
+	return g
+}
+
+// Records says its widgets are loaded for a record of one of mbs: only on
+// the panels of their records (Panel.Record), never on the home nor on the
+// profile's — unless Global too.
+func (g *GroupBuilder) Records(mbs ...*presets.ModelBuilder) *GroupBuilder {
+	g.records = append(g.records, mbs...)
+	g.g.Scope = scopes(g.global, g.records)
+	return g
+}
+
+// Global says its widgets are loaded for a panel of no record too (with
+// Records: what they show of every record the user reaches, consolidated).
+func (g *GroupBuilder) Global() *GroupBuilder {
+	g.global = true
+	g.g.Scope = scopes(g.global, g.records)
 	return g
 }
 
@@ -294,7 +341,29 @@ func (g *GroupBuilder) Dynamic(f func() []*WidgetBuilder) *GroupBuilder {
 }
 
 // WidgetBuilder is a widget: what of it is set.
-type WidgetBuilder struct{ w *Widget }
+type WidgetBuilder struct {
+	w       *Widget
+	global  bool
+	records []*presets.ModelBuilder
+}
+
+// Records says it is loaded for a record of one of mbs, in place of its
+// group's scope (GroupBuilder.Records).
+func (w *WidgetBuilder) Records(mbs ...*presets.ModelBuilder) *WidgetBuilder {
+	w.records = append(w.records, mbs...)
+	sc := scopes(w.global, w.records)
+	w.w.Scope = &sc
+	return w
+}
+
+// Global says it is loaded for a panel of no record, in place of its
+// group's scope (GroupBuilder.Global).
+func (w *WidgetBuilder) Global() *WidgetBuilder {
+	w.global = true
+	sc := scopes(w.global, w.records)
+	w.w.Scope = &sc
+	return w
+}
 
 // NewWidget is the widget name of the group group, not registered (a
 // dynamic one: GroupBuilder.Dynamic).

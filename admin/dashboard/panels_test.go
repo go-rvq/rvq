@@ -88,7 +88,7 @@ func TestPanelErrors(t *testing.T) {
 type scopeRec struct{ ID uint }
 
 // The scope of a panel's request: its id and, of a panel of a record, the
-// record's (the page's {id}, else the query's) when the user may read it —
+// record of the page's path (never a query's) when the user may read it —
 // none, or one they may not, refused; the panel of an event its query's,
 // the home's by default.
 func TestScope(t *testing.T) {
@@ -97,42 +97,79 @@ func TestScope(t *testing.T) {
 	org := b.Panel("org")
 	org.record = presets.NewModelBuilder(presets.New(i18n.New()), &scopeRec{})
 	org.readable = func(_ *web.EventContext, id string) bool { return id != "8" }
-	scope := func(pn *Panel, ctx *web.EventContext) (Scope, bool) {
+	scope := func(pn *Panel, url, id string) (Scope, bool) {
+		ctx := &web.EventContext{R: httptest.NewRequest("POST", url, nil)}
+		if id != "" {
+			ctx.R.SetPathValue("id", id)
+		}
 		ctx, ok := pn.scoped(ctx)
 		return ScopeOf(ctx), ok
 	}
-
-	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/admin/orgs/7/painel", nil)}
-	ctx.R.SetPathValue("id", "7")
-	if s, ok := scope(org, ctx); !ok || s.Panel != "org" || s.Record != "7" {
+	if s, ok := scope(org, "/admin/orgs/7/painel?record=9", "7"); !ok || s.Panel != "org" || s.Record != "7" {
 		t.Errorf("the page of the record: %+v %v", s, ok)
 	}
-	ctx = &web.EventContext{R: httptest.NewRequest("POST", "/admin/dashboard/widget?panel=org&record=9", nil)}
-	if s, ok := scope(org, ctx); !ok || s.Record != "9" {
-		t.Errorf("the record of the query: %+v %v", s, ok)
-	}
-	ctx, _ = org.scoped(ctx)
-	if c := org.in(ctx); c == org || c.recordParam != "9" {
-		t.Error("out of the record's page, its events carry no record")
-	}
-	// a record the user may not read, of the page or of the query; none
-	for _, url := range []string{"/admin/orgs/8/painel", "/admin/dashboard/widget?panel=org&record=8", "/admin?panel=org"} {
-		ctx = &web.EventContext{R: httptest.NewRequest("POST", url, nil)}
-		if strings.HasPrefix(url, "/admin/orgs/") {
-			ctx.R.SetPathValue("id", "8")
-		}
-		if s, ok := scope(org, ctx); ok || s.Record != "" {
+	// a record the user may not read; one of a query; none
+	for url, id := range map[string]string{"/admin/orgs/8/painel": "8", "/admin/dashboard/widget?panel=org&record=9": "", "/admin?panel=org": ""} {
+		if s, ok := scope(org, url, id); ok || s.Record != "" {
 			t.Errorf("%s: in the scope %+v", url, s)
 		}
 	}
-	ctx = &web.EventContext{R: httptest.NewRequest("POST", "/admin?record=9", nil)}
-	if s, ok := scope(home, ctx); !ok || s.Panel != PanelHome || s.Record != "" {
+	if s, ok := scope(home, "/admin?record=9", ""); !ok || s.Panel != PanelHome || s.Record != "" {
 		t.Errorf("the home: %+v", s)
 	}
 	for url, want := range map[string]*Panel{"/": home, "/?panel=org": org, "/?panel=none": nil} {
 		if got := b.panelOf(httptest.NewRequest("POST", url, nil)); got != want {
 			t.Errorf("%s: the panel %v", url, got)
 		}
+	}
+}
+
+// The scope of the widgets (Scopes): a group of none declared, global — on
+// the panels of no record; Records, on the panels of a record of their
+// models alone; Global and Records, on both; a widget's own in place of its
+// group's. AllGroups skips the others; a panel that takes one by name not of
+// its scope panics once built.
+func TestScopes(t *testing.T) {
+	p := presets.New(i18n.New())
+	orgMB := presets.NewModelBuilder(p, &scopeRec{})
+	projMB := presets.NewModelBuilder(p, &struct{ ID uint }{})
+	b := New(nil, nil)
+	b.Group("sys").Widget("cpu", nil).Widget("org-cpu", func(w *WidgetBuilder) { w.Records(orgMB) })
+	b.Group("orgs").Records(orgMB).Widget("members", nil).Widget("all", func(w *WidgetBuilder) { w.Global() })
+	b.Group("fin").Global().Records(orgMB, projMB).Widget("saldo", nil)
+	home := b.Panel(PanelHome).AllGroups()
+	org := b.Panel("org").AllGroups()
+	org.record = orgMB
+	proj := b.Panel("proj").AllGroups()
+	proj.record = projMB
+	ids := func(pn *Panel) (out []string) {
+		for _, w := range pn.all() {
+			out = append(out, w.ID)
+		}
+		return
+	}
+	for pn, want := range map[*Panel][]string{
+		home: {"sys/cpu", "orgs/all", "fin/saldo"},
+		org:  {"sys/org-cpu", "orgs/members", "fin/saldo"},
+		proj: {"fin/saldo"},
+	} {
+		if got := ids(pn); !slices.Equal(got, want) {
+			t.Errorf("%s: %v, want %v", pn.id, got, want)
+		}
+	}
+	if panics(b.check) {
+		t.Error("every panel of its scope: a panic")
+	}
+	home.Group(b.GetGroup("orgs"))
+	if !panics(b.check) {
+		t.Error("the home takes the group of the organizations: no panic")
+	}
+	b = New(nil, nil)
+	b.Group("sys").Widget("cpu", nil)
+	pn := b.Panel("org").Widget(b.GetGroup("sys").GetWidget("cpu"))
+	pn.record = orgMB
+	if !panics(b.check) {
+		t.Error("a panel of a record takes a global widget: no panic")
 	}
 }
 
