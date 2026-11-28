@@ -179,7 +179,7 @@ func (b *Builder) catalogWidget(ctx *web.EventContext, w *Widget) h.HTMLComponen
 		if pn.record != nil {
 			continue
 		}
-		ctx = pn.scoped(ctx)
+		ctx, _ = pn.scoped(ctx) // of no record: always
 		return body.AppendChildren(
 			h.Div(h.Text(msgs.Preview)).Class("text-subtitle-1 font-weight-bold mt-4 mb-2"),
 			pn.cards(ctx, w.ID),

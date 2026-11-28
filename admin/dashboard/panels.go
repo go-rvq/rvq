@@ -35,7 +35,10 @@ type Panel struct {
 	intro        func(ctx *web.EventContext) h.HTMLComponent
 	// record: the model whose records' detail it is a page of (Record)
 	record *presets.ModelBuilder
-	path   string
+	// readable says the user of the request may read the record id of the
+	// panel (Record: readable)
+	readable func(ctx *web.EventContext, id string) bool
+	path     string
 	// recordParam: the record of the request out of a page of the record
 	// (the page of a widget: its query's), given to its events (event)
 	recordParam string
@@ -147,7 +150,7 @@ func (pn *Panel) Home() *Panel {
 // ("/painel"): its scope the record of the page (ScopeOf). Its page is
 // returned by RecordPage (for the menu: a group's page, the selector's).
 func (pn *Panel) Record(mb *presets.ModelBuilder, path string) *Panel {
-	pn.record, pn.path = mb, path
+	pn.record, pn.path, pn.readable = mb, path, readable(mb)
 	mb.Detailing().PagesRegistrator().New(presets.HttpPage(path).TitleFunc(pn.TTitle).MenuIcon("mdi-view-dashboard-outline")).
 		RecordLayout(func(ctx *web.EventContext, _ model.ID, _ []model.ID, _ func() (any, error)) (r web.PageResponse, err error) {
 			return pn.Page(ctx)
@@ -262,17 +265,38 @@ func WithScope(r *http.Request, s Scope) *http.Request {
 }
 
 // scoped is ctx in the scope of the panel: its record the page's (the
-// {id} of its path — the events are at the page's URL).
-func (pn *Panel) scoped(ctx *web.EventContext) *web.EventContext {
+// {id} of its path — the events are at the page's URL), else the query's (a
+// widget's page). ok false: a panel of a record with none, or one the user
+// may not read — nothing of it is shown (not found).
+func (pn *Panel) scoped(ctx *web.EventContext) (_ *web.EventContext, ok bool) {
 	s := Scope{Panel: pn.id}
 	if pn.record != nil {
 		s.Record = ctx.R.PathValue(presets.ParamID)
 		if s.Record == "" {
 			s.Record = ctx.R.FormValue(paramRecord)
 		}
+		if s.Record == "" || !pn.readable(ctx, s.Record) {
+			return ctx, false
+		}
 	}
 	ctx.R = WithScope(ctx.R, s)
-	return ctx
+	return ctx, true
+}
+
+// readable says the user of the request may read the record id of mb: its
+// permission of reading, and its fetch as its detail does it (the model's
+// scope of reading: the records shared with the user, their own) — the
+// parents of the request's path (none out of a page of the record: a
+// nested model's record is then refused).
+func readable(mb *presets.ModelBuilder) func(ctx *web.EventContext, id string) bool {
+	return func(ctx *web.EventContext, id string) bool {
+		mid, err := mb.ParseRecordID(id)
+		if err != nil || mb.Permissioner().Reader(ctx.R, mid, presets.ParentsModelID(ctx.R)...).Denied() {
+			return false
+		}
+		fetch := mb.Detailing().GetFetchFunc()
+		return fetch != nil && fetch(mb.NewModel(), mid, ctx) == nil
+	}
 }
 
 // paramRecord is the record of a panel's request out of a page of the record

@@ -64,7 +64,10 @@ func (b *Builder) installWidgetPage() {
 			if pn == nil {
 				return b.p.DefaultNotFoundPageFunc(ctx)
 			}
-			ctx = pn.scoped(ctx)
+			ctx, ok := pn.scoped(ctx)
+			if !ok {
+				return b.p.DefaultNotFoundPageFunc(ctx)
+			}
 			return pn.in(ctx).widgetPage(ctx)
 		}).
 		Build()

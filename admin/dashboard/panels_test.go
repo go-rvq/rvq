@@ -88,28 +88,45 @@ func TestPanelErrors(t *testing.T) {
 type scopeRec struct{ ID uint }
 
 // The scope of a panel's request: its id and, of a panel of a record, the
-// record's (the page's {id}, else the query's); the panel of an event its
-// query's, the home's by default.
+// record's (the page's {id}, else the query's) when the user may read it —
+// none, or one they may not, refused; the panel of an event its query's,
+// the home's by default.
 func TestScope(t *testing.T) {
 	b := New(nil, nil)
 	home := b.Panel(PanelHome)
 	org := b.Panel("org")
 	org.record = presets.NewModelBuilder(presets.New(i18n.New()), &scopeRec{})
+	org.readable = func(_ *web.EventContext, id string) bool { return id != "8" }
+	scope := func(pn *Panel, ctx *web.EventContext) (Scope, bool) {
+		ctx, ok := pn.scoped(ctx)
+		return ScopeOf(ctx), ok
+	}
 
 	ctx := &web.EventContext{R: httptest.NewRequest("GET", "/admin/orgs/7/painel", nil)}
 	ctx.R.SetPathValue("id", "7")
-	if s := ScopeOf(org.scoped(ctx)); s.Panel != "org" || s.Record != "7" {
-		t.Errorf("the page of the record: %+v", s)
+	if s, ok := scope(org, ctx); !ok || s.Panel != "org" || s.Record != "7" {
+		t.Errorf("the page of the record: %+v %v", s, ok)
 	}
 	ctx = &web.EventContext{R: httptest.NewRequest("POST", "/admin/dashboard/widget?panel=org&record=9", nil)}
-	if s := ScopeOf(org.scoped(ctx)); s.Record != "9" {
-		t.Errorf("the record of the query: %+v", s)
+	if s, ok := scope(org, ctx); !ok || s.Record != "9" {
+		t.Errorf("the record of the query: %+v %v", s, ok)
 	}
+	ctx, _ = org.scoped(ctx)
 	if c := org.in(ctx); c == org || c.recordParam != "9" {
 		t.Error("out of the record's page, its events carry no record")
 	}
+	// a record the user may not read, of the page or of the query; none
+	for _, url := range []string{"/admin/orgs/8/painel", "/admin/dashboard/widget?panel=org&record=8", "/admin?panel=org"} {
+		ctx = &web.EventContext{R: httptest.NewRequest("POST", url, nil)}
+		if strings.HasPrefix(url, "/admin/orgs/") {
+			ctx.R.SetPathValue("id", "8")
+		}
+		if s, ok := scope(org, ctx); ok || s.Record != "" {
+			t.Errorf("%s: in the scope %+v", url, s)
+		}
+	}
 	ctx = &web.EventContext{R: httptest.NewRequest("POST", "/admin?record=9", nil)}
-	if s := ScopeOf(home.scoped(ctx)); s.Panel != PanelHome || s.Record != "" {
+	if s, ok := scope(home, ctx); !ok || s.Panel != PanelHome || s.Record != "" {
 		t.Errorf("the home: %+v", s)
 	}
 	for url, want := range map[string]*Panel{"/": home, "/?panel=org": org, "/?panel=none": nil} {

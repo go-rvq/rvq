@@ -62,9 +62,13 @@ func (b *Panel) panelCard(ctx *web.EventContext, msgs *Messages, w *Widget, peri
 // GroupPage draws the widgets of the group group of the panel — those
 // visible for the request, in the group's order — in a page of their own
 // (the page of a group of the menu, presets.PageMenuGroup: an area's), the
-// period chosen at its top (in the URL), in the panel's scope.
+// period chosen at its top (in the URL), in the panel's scope; nothing of a
+// record the user may not read.
 func (b *Panel) GroupPage(ctx *web.EventContext, group string) h.HTMLComponent {
-	ctx = b.scoped(ctx)
+	ctx, ok := b.scoped(ctx)
+	if !ok {
+		return nil
+	}
 	msgs := MessagesOf(ctx.Context())
 	prefs := b.LoadPrefs(userID(ctx.R))
 	period := PeriodOf(ctx.R, b.Now(), cmp.Or(prefs.Period, PeriodDefault))

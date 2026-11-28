@@ -85,4 +85,28 @@ func TestOrgPanel(t *testing.T) {
 	if scope.Panel != PanelOrg || scope.Record != org.ID.String() {
 		t.Errorf("the scope of the widget: %+v", scope)
 	}
+
+	// another's organization (the user does not read it): nothing of it,
+	// at its page or by the query of an event elsewhere (at the page of
+	// theirs, the page's own wins)
+	other := &models.Organizacao{Nome: "Beta Ltda", OwnerID: model.UUID(uuid.New())}
+	db.Create(other)
+	for _, url := range []string{
+		"/admin/orgs/" + other.ID.String() + PainelPath + "?panel=org&widget=orgs/probe",
+		page + "?panel=org&widget=orgs/probe&record=" + other.ID.String(),
+		"/admin?panel=org&widget=orgs/probe&record=" + other.ID.String(),
+	} {
+		scope = dashboard.Scope{}
+		r := multipartestutils.NewMultipartBuilder().PageURL(url).EventFunc(dashboard.EventLoad).BuildEventFuncRequest()
+		w = httptest.NewRecorder()
+		b.ServeHTTP(w, as(r))
+		if scope.Record == other.ID.String() || strings.Contains(url, "/admin?") && strings.Contains(w.Body.String(), "probed") {
+			t.Errorf("%s: another's organization loaded (%d)", url, w.Code)
+		}
+	}
+	w = httptest.NewRecorder()
+	b.ServeHTTP(w, as(httptest.NewRequest("GET", "/admin/orgs/"+other.ID.String()+PainelPath, nil)))
+	if strings.Contains(w.Body.String(), "data-dashboard-widget") {
+		t.Error("the page of another's organization shows its widgets")
+	}
 }

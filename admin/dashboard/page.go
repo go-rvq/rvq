@@ -72,7 +72,12 @@ func (b *Builder) onPanel(f func(pn *Panel, ctx *web.EventContext) (web.EventRes
 			http.NotFound(ctx.W, ctx.R)
 			return r, nil
 		}
-		return f(pn, pn.scoped(ctx))
+		ctx, ok := pn.scoped(ctx)
+		if !ok {
+			http.NotFound(ctx.W, ctx.R)
+			return r, nil
+		}
+		return f(pn, ctx)
 	}
 }
 
@@ -110,7 +115,10 @@ func periodQuery(ev *web.VueEventTagBuilder, r *http.Request, p Period) *web.Vue
 // Page is the panel's page (the admin's home page, a record's dashboard):
 // its widgets, customized by the user (?customize=1).
 func (b *Panel) Page(ctx *web.EventContext) (r web.PageResponse, err error) {
-	ctx = b.scoped(ctx)
+	ctx, ok := b.scoped(ctx)
+	if !ok {
+		return b.p.DefaultNotFoundPageFunc(ctx)
+	}
 	msgs := MessagesOf(ctx.Context())
 	prefs := b.LoadPrefs(userID(ctx.R))
 	def := cmp.Or(prefs.Period, PeriodDefault)
